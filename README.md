@@ -12,7 +12,7 @@ Numpy 1.7.1
 
 Example:
 ========
-<pre><code>
+```python3
 student = BayesianModel()
 # instantiates a new Bayseian Model called "student"
 
@@ -55,5 +55,4 @@ new_cpd = student.observed_cpd("grade")
 
 student.reset()
 # makes all parameters non-observed and resets model to initial state with initial user-gived CPDs
-
-</code></pre>
+```
