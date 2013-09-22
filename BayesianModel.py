@@ -35,7 +35,7 @@ class BayesianModel(nx.DiGraph):
         """Adds nodes to graph with node-labels as provided in function.
         """
         for item in args:
-            if not isinstance(item, 'str'):
+            if not isinstance(item, str):
                 raise TypeError("Name of nodes must be strings.")
 
         self.add_nodes_from(args)
@@ -45,9 +45,9 @@ class BayesianModel(nx.DiGraph):
         joint to all nodes in 'head' with the direction of each edge is
         from a node in 'tail' to a node in 'head'.
         """
-        if isinstance(tail, 'str'):
+        if isinstance(tail, str):
             tail = string_to_tuple(tail)
-        if isinstance(head, 'str'):
+        if isinstance(head, str):
             head = string_to_tuple(head)
 
         for end_node in head:
@@ -94,7 +94,7 @@ class BayesianModel(nx.DiGraph):
         """Prints states in alphabetical order"""
         return (
             [self.node[node]['states'][index][0] for
-            index in range(len(self.node[node]['states']))]
+            index in range(len(self.node[node]['states']))])
 
 
     def add_rule_for_parents(self, node, parents):
