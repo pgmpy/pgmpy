@@ -32,7 +32,7 @@ class BayesianModel(nx.DiGraph):
 
         self.add_nodes_from(args)
 
-    def __string_to_tuple(string):
+    def __string_to_tuple(self, string):
         """Converts a single string into a tuple with a string element."""
         return (string,)
 
@@ -42,9 +42,9 @@ class BayesianModel(nx.DiGraph):
         from a node in 'tail' to a node in 'head'.
         """
         if isinstance(tail, str):
-            tail = __string_to_tuple(tail)
+            tail = self.__string_to_tuple(tail)
         if isinstance(head, str):
-            head = __string_to_tuple(head)
+            head = self.__string_to_tuple(head)
 
         for end_node in head:
             for start_node in tail:

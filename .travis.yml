@@ -1,0 +1,10 @@
+language: python
+python:
+    - "3.3"
+install:
+    - "pip install networkx"
+    - "pip insatll numpy"
+    - "pip insatll scipy"
+script: nosetests
+notifications:
+    email: false
