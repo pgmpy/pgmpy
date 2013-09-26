@@ -1,6 +1,10 @@
 language: python
 python:
     - "3.3"
+virtualenv:
+    system_site_packages: true
+before_install:
+    - sudo apt-get install -qq python-numpy python-scipy
 install:
     - "pip install networkx"
     - "pip install numpy"
