@@ -5,11 +5,6 @@ import numpy as np
 import ExceptionsPgmPy as epp
 
 
-def string_to_tuple(string):
-    """Converts a single string into a tuple with a string element."""
-    return (string,)
-
-
 class BayesianModel(nx.DiGraph):
     """ Public Methods
     --------------
@@ -37,15 +32,19 @@ class BayesianModel(nx.DiGraph):
 
         self.add_nodes_from(args)
 
+    def __string_to_tuple(string):
+        """Converts a single string into a tuple with a string element."""
+        return (string,)
+
     def add_edges(self, tail, head):
         """Takes two tuples of nodes as input. All nodes in 'tail' are
         joint to all nodes in 'head' with the direction of each edge is
         from a node in 'tail' to a node in 'head'.
         """
         if isinstance(tail, str):
-            tail = string_to_tuple(tail)
+            tail = __string_to_tuple(tail)
         if isinstance(head, str):
-            head = string_to_tuple(head)
+            head = __string_to_tuple(head)
 
         for end_node in head:
             for start_node in tail:
