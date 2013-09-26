@@ -3,8 +3,8 @@ python:
     - "3.3"
 install:
     - "pip install networkx"
-    - "pip insatll numpy"
-    - "pip insatll scipy"
+    - "pip install numpy"
+    - "pip install scipy"
 script: nosetests
 notifications:
     email: false
