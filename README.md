@@ -5,10 +5,10 @@ Python Library for Probabilistic Graphical Models
 
 Dependencies:
 =============
-Python 3.3  
-NetworkX 1.8.1  
-Scipy 0.12.1  
-Numpy 1.7.1  
+Python 3.3
+NetworkX 1.8.1
+Scipy 0.12.1
+Numpy 1.7.1
 
 Example:
 ========
