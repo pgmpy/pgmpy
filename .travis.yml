@@ -12,6 +12,7 @@ install:
     - "pip install -q networkx"
     - "pip install -q numpy --upgrade"
     - "pip install -q scipy --upgrade"
+    - "pip install -q nose"
 script: nosetests
 notifications:
     email: false
