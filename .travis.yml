@@ -9,9 +9,9 @@ before_install:
     - sudo apt-get install -qq python-numpy 
     - sudo apt-get install -qq python-scipy
 install:
-    - "pip install networkx"
-    - "pip install numpy --upgrade"
-    - "pip install scipy --upgrade"
+    - "pip install -q networkx"
+    - "pip install -q numpy --upgrade"
+    - "pip install -q scipy --upgrade"
 script: nosetests
 notifications:
     email: false
