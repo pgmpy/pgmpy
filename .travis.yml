@@ -4,11 +4,14 @@ python:
 virtualenv:
     system_site_packages: true
 before_install:
-    - sudo apt-get build-dep -qq python-numpy python-scipy
+    - sudo apt-get build-dep -qq python-numpy
+    - suod apt-get build-dep -qq python-scipy
+    - sudo apt-get install -qq python-numpy 
+    - sudo apt-get install -qq python-scipy
 install:
     - "pip install networkx"
-    - "pip install numpy"
-    - "pip install scipy"
+    - "pip install numpy --upgrade"
+    - "pip install scipy --upgrade"
 script: nosetests
 notifications:
     email: false
