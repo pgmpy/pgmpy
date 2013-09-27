@@ -16,7 +16,7 @@ class TestModel(unittest.TestCase):
         self.assertSameElements(self.G.nodes(), ['a', 'b', 'c', 'd'])
 
     def test_add_nodes_non_string(self):
-        self.assertSameElements(TypeError, self.G.add_nodes, [1, 2, 3, 4])
+        self.assertRaises(TypeError, self.G.add_nodes, [1, 2, 3, 4])
 
     def test_add_edges_both_tuples(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
