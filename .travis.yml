@@ -8,11 +8,12 @@ before_install:
     - sudo apt-get build-dep -qq python-scipy
     - sudo apt-get install -qq python-numpy 
     - sudo apt-get install -qq python-scipy
+    - sudo apt-get install -qq python3-pip
 install:
-    - "pip install -q networkx"
-    - "pip install -q numpy --upgrade"
-    - "pip install -q scipy --upgrade"
-#    - "pip install -q nose"
+    - "pip3 install -q networkx"
+    - "pip3 install -q numpy --upgrade"
+    - "pip3 install -q scipy --upgrade"
+    - "pip3 install -q nose"
 script: nosetests
 notifications:
     email: false
