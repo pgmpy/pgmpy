@@ -7,8 +7,8 @@ before_install:
     - sudo apt-get install -qq python-numpy python-scipy
 install:
     - "pip install networkx"
-    - "pip install numpy"
-    - "pip install scipy"
+#    - "pip install numpy"
+#    - "pip install scipy"
 script: nosetests
 notifications:
     email: false
