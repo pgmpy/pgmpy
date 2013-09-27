@@ -1,6 +1,6 @@
 language: python
 python:
-    - "3.3"
+    - "3.2"
 virtualenv:
     system_site_packages: true
 before_install:
@@ -12,10 +12,10 @@ before_install:
     - sudo aptitude install python3-setuptools
     - sudo easy_install3 pip
 install:
-    - "pip3 install -q networkx"
-    - "pip3 install -q numpy --upgrade"
-    - "pip3 install -q scipy --upgrade"
-    - "pip3 install -q nose"
+    - "pip-3.2 install -q networkx"
+    - "pip-3.2 install -q numpy --upgrade"
+    - "pip-3.2 install -q scipy --upgrade"
+    - "pip-3.2 install -q nose"
 script: nosetests
 notifications:
     email: false
