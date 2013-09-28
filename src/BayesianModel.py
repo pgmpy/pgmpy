@@ -159,27 +159,27 @@ class BayesianModel(nx.DiGraph):
             return 'incoming'
 
     def active_trail(start, end):
-        """Returns active trail between start and end nodes if exist 
+        """Returns active trail between start and end nodes if exist
         else returns None"""
         G = self.to_undirected()
         for path in nx.all_simple_paths(G, start, end):
             for i in range(1, len(path)-1):
-                #direction_1 is the direction of edge from previous node to 
+                #direction_1 is the direction of edge from previous node to
                 #current node
                 direction_1 = _direction(path[i], path[i-1])
-                #direction_2 is the direction of edge from current node to 
+                #direction_2 is the direction of edge from current node to
                 #next node
                 direction_2 = _direction(path[i], path[i+1])
                 child_observed = _is_child_observed(path[i])
-                if direction_1 == 'incoming' and direction_2 == 'outgoing'
-                and child_observed:
-                        break
-                elif direction_1 == 'incoming' and direction_2 == 'incoming'
-                and child_observed:
-                        break
-                elif direction_1 == 'outgoing' and direction_2 == 'outgoing'
-                and child_observed:
-                        break
+                if (direction_1 == 'incoming' and
+                        direction_2 == 'outgoing' and child_observed):
+                    break
+                elif (direction_1 == 'incoming'
+                        and direction_2 == 'incoming' and child_observed):
+                    break
+                elif (direction_1 == 'outgoing'
+                        and direction_2 == 'outgoing' and child_observed):
+                    break
                 return path
         return None
 
