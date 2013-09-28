@@ -60,8 +60,45 @@ class TestNodeProperties(unittest.TestCase):
     def test_parents(self):
         self.assertSameElements(self.G.node['c']['_parents'], ['a', 'b'])
         self.assertSameElements(self.G.node['d']['_parents'], ['a', 'b'])
-#        self.assertRaises(KeyError, self.G.node['a']['_parents'])
-#        self.assertRaises(KeyError, self.G.node['b']['_parents'])
+# TODO       self.assertRaises(KeyError, self.G.node['a']['_parents'])
+# TODO       self.assertRaises(KeyError, self.G.node['b']['_parents'])
+    
+# TODO add test_default_rule
+
+    def test_add_states(self):
+        self.G.add_states('a', ('test_state_3', 'test_state_1',
+            'test_state_2'))
+        self.G.add_states('b', ('test_state_2', 'test_state_1'))
+        self.G.add_states('c', ('test_state_1',))
+        self.G.add_states('d', ('test_state_1', 'test_state_2'))
+        self.assertEqual(self.G.node['a']['_states'], [['test_state_1', 0],
+            ['test_state_2', 0], ['test_state_3', 0]])
+        self.assertEqual(self.G.node['b']['_states'], [['test_state_1', 0],
+            ['test_state_2', 0]])
+        self.assertEqual(self.G.node['c']['_states'], [['test_state_1', 0]])
+        self.assertEqual(self.G.node['d']['_states'], [['test_state_1', 0],
+            ['test_state_2', 0]])
+
+# TODO add test_default_rule_for_states
+    
+# TODO    def test_rule_for_states
+
+    def test_states_function(self): 
+        self.G.add_states('a', ('test_state_3', 'test_state_1',
+            'test_state_2'))
+        self.G.add_states('b', ('test_state_2', 'test_state_1'))
+        self.G.add_states('c', ('test_state_1',))
+        self.G.add_states('d', ('test_state_1', 'test_state_2'))
+        states = {'a':[], 'b':[], 'c':[], 'd':[]}
+        nodes = ['a', 'b', 'c', 'd']
+        for node in nodes:
+            for state in self.G.states(node):
+                states[node].append(state)
+        self.assertEqual(states['a'], ['test_state_1', 'test_state_2',
+            'test_state_3'])
+        self.assertEqual(states['b'], ['test_state_1', 'test_state_2'])
+        self.assertEqual(states['c'], ['test_state_1'])
+        self.assertEqual(states['d'], ['test_state_1', 'test_state_2'])
             
     def tearDown(self):
         del self.G
