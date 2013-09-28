@@ -132,9 +132,56 @@ class BayesianModel(nx.DiGraph):
         #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
         """
         self.node[node]['_cpd'] = np.array(cpd)
-                
+
     def cpd(self, node):
         return self.node[node]['_cpd']
+
+    def _is_child_observed(node):
+        """Returns True if any descendant of the node
+        is observed"""
+        if node.observed:
+            return True
+        else:
+            child_dict = nx.bfs_successors(G, node)
+            for child in child_dict.keys():
+                for child_ in child_dict[child]:
+                    if child_.observed:
+                        return True
+            return False
+
+    def _direction(start, end):
+        """Returns 'outgoing' if direction is from start to end
+        else returns 'incoming'"""
+        out_edges = G.out_edges(start)
+        if (start, end) in out_edges:
+            return 'outgoing'
+        else:
+            return 'incoming'
+
+    def active_trail(start, end):
+        """Returns active trail between start and end nodes if exist 
+        else returns None"""
+        G = self.to_undirected()
+        for path in nx.all_simple_paths(G, start, end):
+            for i in range(1, len(path)-1):
+                #direction_1 is the direction of edge from previous node to 
+                #current node
+                direction_1 = _direction(path[i], path[i-1])
+                #direction_2 is the direction of edge from current node to 
+                #next node
+                direction_2 = _direction(path[i], path[i+1])
+                child_observed = _is_child_observed(path[i])
+                if direction_1 == 'incoming' and direction_2 == 'outgoing'
+                and child_observed:
+                        break
+                elif direction_1 == 'incoming' and direction_2 == 'incoming'
+                and child_observed:
+                        break
+                elif direction_1 == 'outgoing' and direction_2 == 'outgoing'
+                and child_observed:
+                        break
+                return path
+        return None
 
 if __name__ == '__main__':
     student = BayesianModel()
