@@ -8,18 +8,19 @@ import ExceptionsPgmPy as epp
 class BayesianModel(nx.DiGraph):
     """ Public Methods
     --------------
-    Graph:
-    add_nodes(*args)
-    add_edges(tail, head)
-
-    Node:
-    set_states(node, states)
-    add_rule_for_states(node, states)
-    states(node)
-    add_rule_for_parents(node, parents)
-    parents(node)
-    add_cpd(node, cpd)
-    cpd(node)
+    add_nodes('node1', 'node2', ...)
+    add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
+    set_states('node1', ('state1', 'state2', ...))
+    get_states('node1')
+    add_rule_for_states('node1', ('state2', 'state1', ...))
+    add_rule_for_parents('node1', ('parent1', 'parent2', ...))
+    get_parents('node1')
+    set_cpd('node1', cpd1)
+    get_cpd('node1')
+    set_observed(observations, reset=False)
+    reset_observed('node1', ...)
+    reset_observed()
+    is_observed('node1')
     """
     #__init__ is inherited
     def add_nodes(self, *args):
@@ -29,7 +30,6 @@ class BayesianModel(nx.DiGraph):
         for item in args:
             if not isinstance(item, str):
                 raise TypeError("Name of nodes must be strings.")
-
         self.add_nodes_from(args)
 
     def _string_to_tuple(self, string):
@@ -58,18 +58,33 @@ class BayesianModel(nx.DiGraph):
     def set_states(self, node, states):
         """Adds state-name from 'state' tuple to 'node'."""
         self.node[node]['_states'] = [
-            [state, 0] for state in sorted(states)]
+            [state, False] for state in sorted(states)]
         self.node[node]['_rule_for_states'] = (
             n for n in range(len(states)))
+        self._calc_observed(node)
         #internal storage = [['a',0],['b',0],['c',0],]
         #user-given order = ('c','a','b')
         #_rule_for_states = (2,0,1)
         #Rule will contain indices with which internal order should be
         #accessed
 
+    def _calc_observed(self, node):
+        """
+        Return True if any of the states of the node are observed
+        @param node:
+        @return:
+        """
+
+        for state in self.node[node]['_states']:
+            if state[1]:
+                self.node[node]['_observed'] = True
+                break
+        else:
+            self.node[node]['_observed'] = False
+
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-        #check whether all states are mentioned?
+        #TODO check whether all states are mentioned?
         _order = list()
         for user_given_state in states:
             for state in self.node[node]['_states']:
@@ -182,12 +197,45 @@ class BayesianModel(nx.DiGraph):
                 return path
         return None
 
-    #def set_observed(self, node, observations):
-    #    """
-    #    @param node:
-    #    @param observations: dictionary with
-    #    @return:
-    #    """
+    def set_observed(self, observations, reset=False):
+        """
+        Sets states of nodes as observed.
+
+        @param observations: dictionary with key as node and value as a tuple of states that are observed
+        @return:
+        """
+        #TODO check if multiple states of same node can be observed
+        #TODO if not above then, put validation
+        for _node in observations:
+            for user_given_state in observations[_node]:
+                for state in self.node[_node]['_states']:
+                    if state[0] == user_given_state:
+                        state[1] = True if not reset else False
+                        break
+            self._calc_observed(_node)
+
+    def reset_observed(self, nodes=False):
+        """Resets observed-status of given nodes.
+
+        Will not change a particular state. For that use, set_observed with reset=True.
+
+        If no arguments are given, all states of all nodes are reset.
+        @param nodes:
+        @return:
+        """
+        if nodes is False:
+            _to_reset = self.nodes()
+        elif isinstance(nodes, str):
+            _to_reset = self._string_to_tuple(nodes)
+        else:
+            _to_reset = nodes
+        for node in _to_reset:
+            for state in self.node[node]['_states']:
+                state[1] = False
+            self._calc_observed(node)
+
+    def is_observed(self, node):
+        return self.node[node]['_observed']
 
 
 if __name__ == '__main__':
