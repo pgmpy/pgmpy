@@ -1,4 +1,4 @@
-PgmPy [![Build Status](https://travis-ci.org/PgmPy/PgmPy.png)](https://travis-ci.org/PgmPy/PgmPy)
+PgmPy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy)
 =====
 
 Python Library for Probabilistic Graphical Models
