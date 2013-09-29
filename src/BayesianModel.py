@@ -8,18 +8,19 @@ import ExceptionsPgmPy as epp
 class BayesianModel(nx.DiGraph):
     """ Public Methods
     --------------
-    Graph:
-    add_nodes(*args)
-    add_edges(tail, head)
-
-    Node:
-    add_states(node, states)
-    add_rule_for_states(node, states)
-    states(node)
-    add_rule_for_parents(node, parents)
-    parents(node)
-    add_cpd(node, cpd)
-    cpd(node)
+    add_nodes('node1', 'node2', ...)
+    add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
+    set_states('node1', ('state1', 'state2', ...))
+    get_states('node1')
+    add_rule_for_states('node1', ('state2', 'state1', ...))
+    add_rule_for_parents('node1', ('parent1', 'parent2', ...))
+    get_parents('node1')
+    set_cpd('node1', cpd1)
+    get_cpd('node1')
+    set_observed(observations, reset=False)
+    reset_observed('node1', ...)
+    reset_observed()
+    is_observed('node1')
     """
     #__init__ is inherited
     def add_nodes(self, *args):
@@ -29,7 +30,6 @@ class BayesianModel(nx.DiGraph):
         for item in args:
             if not isinstance(item, str):
                 raise TypeError("Name of nodes must be strings.")
-
         self.add_nodes_from(args)
 
     def _string_to_tuple(self, string):
@@ -55,22 +55,36 @@ class BayesianModel(nx.DiGraph):
             self.node[end_node]['_rule_for_parents'] = (
                 index for index in range(len(head)))
 
-    def add_states(self, node, states):
+    def set_states(self, node, states):
         """Adds state-name from 'state' tuple to 'node'."""
         self.node[node]['_states'] = [
-            [state, 0] for state in sorted(states)]
+            [state, False] for state in sorted(states)]
         self.node[node]['_rule_for_states'] = (
             n for n in range(len(states)))
+        self._calc_observed(node)
         #internal storage = [['a',0],['b',0],['c',0],]
         #user-given order = ('c','a','b')
         #_rule_for_states = (2,0,1)
         #Rule will contain indices with which internal order should be
         #accessed
 
-    #def add_state(self, node, state):
+    def _calc_observed(self, node):
+        """
+        Return True if any of the states of the node are observed
+        @param node:
+        @return:
+        """
+
+        for state in self.node[node]['_states']:
+            if state[1]:
+                self.node[node]['_observed'] = True
+                break
+        else:
+            self.node[node]['_observed'] = False
+
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-        #check whether all states are mentioned?
+        #TODO check whether all states are mentioned?
         _order = list()
         for user_given_state in states:
             for state in self.node[node]['_states']:
@@ -79,7 +93,7 @@ class BayesianModel(nx.DiGraph):
                     break
         self.node[node]['_rule_for_states'] = tuple(_order)
 
-    def states(self, node):
+    def get_states(self, node):
         """Returns tuple with states in user-defined order"""
         for index in self.node[node]['_rule_for_states']:
             yield self.node[node]['_states'][index][0]
@@ -101,12 +115,12 @@ class BayesianModel(nx.DiGraph):
                     break
         self.node[node]['_rule_for_parents'] = tuple(_ord)
 
-    def parents(self, node):
+    def get_parents(self, node):
         """Returns tuple with parents in order"""
         for index in self.node[node]['_rule_for_parents']:
             yield self.node[node]['_parents'][index]
 
-    def add_cpd(self, node, cpd):
+    def set_cpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
 
         It is expected that CPD given will be a 2D array such that
@@ -116,7 +130,7 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        student.add_states('grades', ('A','C','B'))
+        student.set_states('grades', ('A','C','B'))
         student.add_rule_for_parents('grades', ('diff', 'intel'))
         student.add_rule_for_states('grades', ('A', 'B', 'C'))
         student.add_cpd('grade',
@@ -133,10 +147,10 @@ class BayesianModel(nx.DiGraph):
         """
         self.node[node]['_cpd'] = np.array(cpd)
 
-    def cpd(self, node):
+    def get_cpd(self, node):
         return self.node[node]['_cpd']
 
-    def _is_child_observed(node):
+    def _is_child_observed(self, node):
         """Returns True if any descendant of the node
         is observed"""
         if node.observed:
@@ -149,7 +163,7 @@ class BayesianModel(nx.DiGraph):
                         return True
             return False
 
-    def _direction(start, end):
+    def _direction(self, start, end):
         """Returns 'outgoing' if direction is from start to end
         else returns 'incoming'"""
         out_edges = G.out_edges(start)
@@ -158,7 +172,7 @@ class BayesianModel(nx.DiGraph):
         else:
             return 'incoming'
 
-    def active_trail(start, end):
+    def active_trail(self, start, end):
         """Returns active trail between start and end nodes if exist
         else returns None"""
         G = self.to_undirected()
@@ -183,16 +197,57 @@ class BayesianModel(nx.DiGraph):
                 return path
         return None
 
+    def set_observed(self, observations, reset=False):
+        """
+        Sets states of nodes as observed.
+
+        @param observations: dictionary with key as node and value as a tuple of states that are observed
+        @return:
+        """
+        #TODO check if multiple states of same node can be observed
+        #TODO if not above then, put validation
+        for _node in observations:
+            for user_given_state in observations[_node]:
+                for state in self.node[_node]['_states']:
+                    if state[0] == user_given_state:
+                        state[1] = True if not reset else False
+                        break
+            self._calc_observed(_node)
+
+    def reset_observed(self, nodes=False):
+        """Resets observed-status of given nodes.
+
+        Will not change a particular state. For that use, set_observed with reset=True.
+
+        If no arguments are given, all states of all nodes are reset.
+        @param nodes:
+        @return:
+        """
+        if nodes is False:
+            _to_reset = self.nodes()
+        elif isinstance(nodes, str):
+            _to_reset = self._string_to_tuple(nodes)
+        else:
+            _to_reset = nodes
+        for node in _to_reset:
+            for state in self.node[node]['_states']:
+                state[1] = False
+            self._calc_observed(node)
+
+    def is_observed(self, node):
+        return self.node[node]['_observed']
+
+
 if __name__ == '__main__':
     student = BayesianModel()
     student.add_nodes('diff', 'intel', 'grades')
     student.add_edges(('diff', 'intel'), ('grades',))
     print(sorted(student.edges()))
-    student.add_states('diff', ('hard', 'easy'))
+    student.set_states('diff', ('hard', 'easy'))
     print([m for m in student.states('diff')])
-    student.add_states('intel', ('smart', 'avg', 'dumb'))
+    student.set_states('intel', ('smart', 'avg', 'dumb'))
     print([m for m in student.states('intel')])
-    student.add_states('grades', ('A', 'B', 'C'))
+    student.set_states('grades', ('A', 'B', 'C'))
     print([m for m in student.states('grades')])
     student.add_rule_for_parents('grades', ('intel', 'diff'))
     print([m for m in student.parents('grades')])
