@@ -13,7 +13,7 @@ class BayesianModel(nx.DiGraph):
     add_edges(tail, head)
 
     Node:
-    add_states(node, states)
+    set_states(node, states)
     add_rule_for_states(node, states)
     states(node)
     add_rule_for_parents(node, parents)
@@ -55,7 +55,7 @@ class BayesianModel(nx.DiGraph):
             self.node[end_node]['_rule_for_parents'] = (
                 index for index in range(len(head)))
 
-    def add_states(self, node, states):
+    def set_states(self, node, states):
         """Adds state-name from 'state' tuple to 'node'."""
         self.node[node]['_states'] = [
             [state, 0] for state in sorted(states)]
@@ -67,7 +67,6 @@ class BayesianModel(nx.DiGraph):
         #Rule will contain indices with which internal order should be
         #accessed
 
-    #def add_state(self, node, state):
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
         #check whether all states are mentioned?
@@ -79,7 +78,7 @@ class BayesianModel(nx.DiGraph):
                     break
         self.node[node]['_rule_for_states'] = tuple(_order)
 
-    def states(self, node):
+    def get_states(self, node):
         """Returns tuple with states in user-defined order"""
         for index in self.node[node]['_rule_for_states']:
             yield self.node[node]['_states'][index][0]
@@ -101,12 +100,12 @@ class BayesianModel(nx.DiGraph):
                     break
         self.node[node]['_rule_for_parents'] = tuple(_ord)
 
-    def parents(self, node):
+    def get_parents(self, node):
         """Returns tuple with parents in order"""
         for index in self.node[node]['_rule_for_parents']:
             yield self.node[node]['_parents'][index]
 
-    def add_cpd(self, node, cpd):
+    def set_cpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
 
         It is expected that CPD given will be a 2D array such that
@@ -116,7 +115,7 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        student.add_states('grades', ('A','C','B'))
+        student.set_states('grades', ('A','C','B'))
         student.add_rule_for_parents('grades', ('diff', 'intel'))
         student.add_rule_for_states('grades', ('A', 'B', 'C'))
         student.add_cpd('grade',
@@ -133,7 +132,7 @@ class BayesianModel(nx.DiGraph):
         """
         self.node[node]['_cpd'] = np.array(cpd)
 
-    def cpd(self, node):
+    def get_cpd(self, node):
         return self.node[node]['_cpd']
 
     def _is_child_observed(node):
@@ -183,16 +182,24 @@ class BayesianModel(nx.DiGraph):
                 return path
         return None
 
+    #def set_observed(self, node, observations):
+    #    """
+    #    @param node:
+    #    @param observations: dictionary with
+    #    @return:
+    #    """
+
+
 if __name__ == '__main__':
     student = BayesianModel()
     student.add_nodes('diff', 'intel', 'grades')
     student.add_edges(('diff', 'intel'), ('grades',))
     print(sorted(student.edges()))
-    student.add_states('diff', ('hard', 'easy'))
+    student.set_states('diff', ('hard', 'easy'))
     print([m for m in student.states('diff')])
-    student.add_states('intel', ('smart', 'avg', 'dumb'))
+    student.set_states('intel', ('smart', 'avg', 'dumb'))
     print([m for m in student.states('intel')])
-    student.add_states('grades', ('A', 'B', 'C'))
+    student.set_states('grades', ('A', 'B', 'C'))
     print([m for m in student.states('grades')])
     student.add_rule_for_parents('grades', ('intel', 'diff'))
     print([m for m in student.parents('grades')])
