@@ -135,7 +135,7 @@ class BayesianModel(nx.DiGraph):
     def get_cpd(self, node):
         return self.node[node]['_cpd']
 
-    def _is_child_observed(node):
+    def _is_child_observed(self, node):
         """Returns True if any descendant of the node
         is observed"""
         if node.observed:
@@ -148,7 +148,7 @@ class BayesianModel(nx.DiGraph):
                         return True
             return False
 
-    def _direction(start, end):
+    def _direction(self, start, end):
         """Returns 'outgoing' if direction is from start to end
         else returns 'incoming'"""
         out_edges = G.out_edges(start)
@@ -157,7 +157,7 @@ class BayesianModel(nx.DiGraph):
         else:
             return 'incoming'
 
-    def active_trail(start, end):
+    def active_trail(self, start, end):
         """Returns active trail between start and end nodes if exist
         else returns None"""
         G = self.to_undirected()
