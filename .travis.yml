@@ -5,16 +5,17 @@ virtualenv:
     system_site_packages: true
 before_install:
 #    - sudo apt-get build-dep -qq python-numpy
-    - sudo apt-get build-dep -y python-scipy
+#    - sudo apt-get build-dep -y python-scipy
 #    - sudo apt-get install -qq python-numpy 
 #    - sudo apt-get install -qq python-scipy
+    - sudo apt-get install -qq python-numpy python-scipy
     - sudo apt-get install -y aptitude
     - sudo aptitude install -y python3-setuptools
     - sudo easy_install3 pip
 install:
     - "pip-3.2 install networkx"
-    - "pip-3.2 install numpy"
-    - "pip-3.2 install scipy"
+    - "pip-3.2 install numpy --upgrade"
+    - "pip-3.2 install scipy --upgrade"
     - "pip-3.2 install nose"
 script: nosetests
 notifications:
