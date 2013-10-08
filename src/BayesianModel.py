@@ -201,7 +201,8 @@ class BayesianModel(nx.DiGraph):
         """
         Sets states of nodes as observed.
 
-        @param observations: dictionary with key as node and value as a tuple of states that are observed
+        @param observations: dictionary with key as node and value as a tuple
+                             of states that are observed
         @return:
         """
         #TODO check if multiple states of same node can be observed
@@ -217,7 +218,8 @@ class BayesianModel(nx.DiGraph):
     def reset_observed(self, nodes=False):
         """Resets observed-status of given nodes.
 
-        Will not change a particular state. For that use, set_observed with reset=True.
+        Will not change a particular state. For that use, set_observed
+            with reset=True.
 
         If no arguments are given, all states of all nodes are reset.
         @param nodes:
