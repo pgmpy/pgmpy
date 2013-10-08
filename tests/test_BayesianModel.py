@@ -93,7 +93,7 @@ class TestNodeProperties(unittest.TestCase):
         states = {'a': [], 'b': [], 'c': [], 'd': []}
         nodes = ['a', 'b', 'c', 'd']
         for node in nodes:
-            for state in self.G.states(node):
+            for state in self.G.get_states(node):
                 states[node].append(state)
         self.assertEqual(states['a'], ['test_state_1', 'test_state_2',
                                        'test_state_3'])
