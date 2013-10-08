@@ -12,10 +12,10 @@ before_install:
     - sudo aptitude install -y python3-setuptools
     - sudo easy_install3 pip
 install:
-    - "pip-3.2 install -q networkx"
-    - "pip-3.2 install -q numpy"
-    - "pip-3.2 install -q scipy"
-    - "pip-3.2 install -q nose"
+    - "pip-3.2 install networkx"
+    - "pip-3.2 install numpy"
+    - "pip-3.2 install scipy"
+    - "pip-3.2 install nose"
 script: nosetests
 notifications:
     email:
