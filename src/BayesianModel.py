@@ -21,6 +21,8 @@ class BayesianModel(nx.DiGraph):
     reset_observed('node1', ...)
     reset_observed()
     is_observed('node1')
+    active_trail_nodes('node1')
+    is_active_trail('node1', 'node2')
     """
     #__init__ is inherited
     def add_nodes(self, *args):
@@ -221,6 +223,9 @@ class BayesianModel(nx.DiGraph):
         -------
         >>> student.add_nodes('diff', 'intel', 'grades')
         >>> student.add_edges(('diff', 'intel'), ('grades',))
+        >>> student.set_states('diff', ('hard', 'easy'))
+        >>> student.set_states('intel', ('smart', 'avg', 'dumb'))
+        >>> student.set_states('grades', ('A', 'B', 'C'))
         >>> student.set_observation({'grades': 'A'})
         >>> student.active_trail_nodes('diff')
         ['diff', 'intel']
@@ -248,6 +253,7 @@ class BayesianModel(nx.DiGraph):
                     if _node in ancestors_list:
                         for parent in self.predecessors(_node):
                             visit_list += (parent, 'up'),
+        active_nodes = list(set(active_nodes))
         return active_nodes
 
     def is_active_trail(self, start, end):
@@ -259,18 +265,3 @@ class BayesianModel(nx.DiGraph):
             return True
         else:
             return False
-if __name__ == '__main__':
-    student = BayesianModel()
-    student.add_nodes('diff', 'intel', 'grades')
-    student.add_edges(('diff', 'intel'), ('grades',))
-    print(sorted(student.edges()))
-    student.set_states('diff', ('hard', 'easy'))
-    print([m for m in student.states('diff')])
-    student.set_states('intel', ('smart', 'avg', 'dumb'))
-    print([m for m in student.states('intel')])
-    student.set_states('grades', ('A', 'B', 'C'))
-    print([m for m in student.states('grades')])
-    student.add_rule_for_parents('grades', ('intel', 'diff'))
-    print([m for m in student.parents('grades')])
-    student.add_rule_for_states('grades', ('C', 'A', 'B'))
-    print([m for m in student.states('grades')])
