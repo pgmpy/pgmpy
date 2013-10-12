@@ -21,6 +21,8 @@ class BayesianModel(nx.DiGraph):
     reset_observed('node1', ...)
     reset_observed()
     is_observed('node1')
+    active_trail_nodes('node1')
+    is_active_trail('node1', 'node2')
     """
     #__init__ is inherited
     def add_nodes(self, *args):
@@ -130,14 +132,14 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        student.set_states('grades', ('A','C','B'))
-        student.add_rule_for_parents('grades', ('diff', 'intel'))
-        student.add_rule_for_states('grades', ('A', 'B', 'C'))
-        student.add_cpd('grade',
-                        [[0.1,0.1,0.1,0.1,0.1,0.1],
-                        [0.1,0.1,0.1,0.1,0.1,0.1],
-                        [0.8,0.8,0.8,0.8,0.8,0.8]]
-                        )
+        >>> student.set_states('grades', ('A','C','B'))
+        >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
+        >>> student.add_rule_for_states('grades', ('A', 'B', 'C'))
+        >>> student.add_cpd('grade',
+        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
+        ...             [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
+        ...             )
 
         #diff:       easy                 hard
         #intel: dumb   avg   smart    dumb  avg   smart
@@ -149,53 +151,6 @@ class BayesianModel(nx.DiGraph):
 
     def get_cpd(self, node):
         return self.node[node]['_cpd']
-
-    def _is_child_observed(self, node):
-        """Returns True if any descendant of the node
-        is observed"""
-        if node.observed:
-            return True
-        else:
-            child_dict = nx.bfs_successors(G, node)
-            for child in child_dict.keys():
-                for child_ in child_dict[child]:
-                    if child_.observed:
-                        return True
-            return False
-
-    def _direction(self, start, end):
-        """Returns 'outgoing' if direction is from start to end
-        else returns 'incoming'"""
-        out_edges = G.out_edges(start)
-        if (start, end) in out_edges:
-            return 'outgoing'
-        else:
-            return 'incoming'
-
-    def active_trail(self, start, end):
-        """Returns active trail between start and end nodes if exist
-        else returns None"""
-        G = self.to_undirected()
-        for path in nx.all_simple_paths(G, start, end):
-            for i in range(1, len(path)-1):
-                #direction_1 is the direction of edge from previous node to
-                #current node
-                direction_1 = _direction(path[i], path[i-1])
-                #direction_2 is the direction of edge from current node to
-                #next node
-                direction_2 = _direction(path[i], path[i+1])
-                child_observed = _is_child_observed(path[i])
-                if (direction_1 == 'incoming' and
-                        direction_2 == 'outgoing' and child_observed):
-                    break
-                elif (direction_1 == 'incoming'
-                        and direction_2 == 'incoming' and child_observed):
-                    break
-                elif (direction_1 == 'outgoing'
-                        and direction_2 == 'outgoing' and child_observed):
-                    break
-                return path
-        return None
 
     def set_observed(self, observations, reset=False):
         """
@@ -239,19 +194,74 @@ class BayesianModel(nx.DiGraph):
     def is_observed(self, node):
         return self.node[node]['_observed']
 
+    def _get_ancestors_observation(self, observation):
+        """Returns ancestors of all the observed elements"""
+        obs_list = [obs for obs in observation]
+        ancestors_list = []
+        while obs_list:
+            node = obs_list.pop()
+            if node not in ancestors_list:
+                obs_list += self.predecessors(node)
+            ancestors_list += [node]
+        return ancestors_list
 
-if __name__ == '__main__':
-    student = BayesianModel()
-    student.add_nodes('diff', 'intel', 'grades')
-    student.add_edges(('diff', 'intel'), ('grades',))
-    print(sorted(student.edges()))
-    student.set_states('diff', ('hard', 'easy'))
-    print([m for m in student.states('diff')])
-    student.set_states('intel', ('smart', 'avg', 'dumb'))
-    print([m for m in student.states('intel')])
-    student.set_states('grades', ('A', 'B', 'C'))
-    print([m for m in student.states('grades')])
-    student.add_rule_for_parents('grades', ('intel', 'diff'))
-    print([m for m in student.parents('grades')])
-    student.add_rule_for_states('grades', ('C', 'A', 'B'))
-    print([m for m in student.states('grades')])
+    def _get_observed_list(self):
+        """Returns a list of all observed nodes"""
+        return [_node for _node in self.nodes()
+                if self.node[_node]['_observed']]
+
+    def active_trail_nodes(self, start):
+        """Returns all the nodes reachable from start via an active trail
+
+        -------------------------------------------------------------------
+        Details of algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
+        -------------------------------------------------------------------
+
+        EXAMPLE
+        -------
+        >>> student.add_nodes('diff', 'intel', 'grades')
+        >>> student.add_edges(('diff', 'intel'), ('grades',))
+        >>> student.set_states('diff', ('hard', 'easy'))
+        >>> student.set_states('intel', ('smart', 'avg', 'dumb'))
+        >>> student.set_states('grades', ('A', 'B', 'C'))
+        >>> student.set_observation({'grades': 'A'})
+        >>> student.active_trail_nodes('diff')
+        ['diff', 'intel']
+        """
+        observed_list = self._get_observed_list()
+        ancestors_list = self._get_ancestors_observation(observed_list)
+        visit_list = [(start, 'up')]
+        traversed_list = []
+        active_nodes = []
+        while visit_list:
+            _node, direction = visit_list.pop()
+            if (_node, direction) not in traversed_list:
+                if _node not in observed_list:
+                    active_nodes += [_node]
+                traversed_list += (_node, direction),
+                if direction == 'up' and _node not in observed_list:
+                    for parent in self.predecessors(_node):
+                        visit_list += (parent, 'up'),
+                    for child in self.successors(_node):
+                        visit_list += (child, 'down'),
+                elif direction == 'down':
+                    if _node not in observed_list:
+                        for child in self.successors(_node):
+                            visit_list += (child, 'down'),
+                    if _node in ancestors_list:
+                        for parent in self.predecessors(_node):
+                            visit_list += (parent, 'up'),
+        active_nodes = list(set(active_nodes))
+        return active_nodes
+
+    def is_active_trail(self, start, end):
+        """Returns True if there is any active trail
+        between start and end node"""
+        if end in self.predecessors(start) or end in self.successors(start):
+            return True
+        elif end in self.active_trail_nodes(start):
+            return True
+        else:
+            return False
