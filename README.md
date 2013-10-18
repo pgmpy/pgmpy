@@ -1,7 +1,8 @@
 PgmPy
 =====
 
-Python Library for Probabilistic Graphical Models
+Python Library for Probabilistic Graphical Models  
+Mailing List: pgmpy@googlegroups.com
 
 Dependencies:
 =============
