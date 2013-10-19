@@ -1,0 +1,11 @@
+[run]
+omit =
+    */python?.?/*
+    */lib-python/?.?/*.py
+    */site-packages/networkx/*
+    */site-packages/nose/*
+    */unittest2/*
+    */site-packages/numpy/*
+
+exclude_lines =
+    if __name__ == .__main__.:
