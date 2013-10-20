@@ -2,7 +2,7 @@
 
 import networkx as nx
 import numpy as np
-import ExceptionsPgmPy as epp
+import Exceptions
 
 
 class BayesianModel(nx.DiGraph):
