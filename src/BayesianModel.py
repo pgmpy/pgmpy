@@ -63,8 +63,7 @@ class BayesianModel(nx.DiGraph):
             for start_node in tail:
                 self.add_edge(start_node, end_node)
 
-            self.node[end_node]['_parents'] = sorted(
-                self.predecessors(end_node))
+            self.node[end_node]['_parents'] = self.predecessors(end_node)
             self.node[end_node]['_rule_for_parents'] = (
                 index for index in range(len(head)))
 
