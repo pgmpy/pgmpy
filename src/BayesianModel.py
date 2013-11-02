@@ -25,24 +25,35 @@ class BayesianModel(nx.DiGraph):
     is_active_trail('node1', 'node2')
     """
     #__init__ is inherited
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return (string,)
+
     def add_nodes(self, *args):
-        """Adds nodes to graph with node-labels as provided in function.
-        Currently, only string-labels are allowed.
+        """Adds nodes to graph with node-labels as provided.
+        Node-labels have to be strings.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model.add_nodes("difficulty", "intelligence", "grades")
         """
+        #TODO allow adding of nodes from tuple?
         for item in args:
             if not isinstance(item, str):
                 raise TypeError("Name of nodes must be strings.")
         self.add_nodes_from(args)
-
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with a string element."""
-        return (string,)
+        #add_nodes_from() is method of nx.Graph
 
     def add_edges(self, tail, head):
         """Takes two tuples of nodes as input. All nodes in 'tail' are
-        joint to all nodes in 'head' with the direction of each edge is
+        joint to all nodes in 'head' with the direction of each edge being
         from a node in 'tail' to a node in 'head'.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model.add_edges(("difficulty", "intelligence"), "grades")
         """
+        #Converting string arguments into tuple arguments
         if isinstance(tail, str):
             tail = self._string_to_tuple(tail)
         if isinstance(head, str):
