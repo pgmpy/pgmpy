@@ -3,6 +3,7 @@
 import networkx as nx
 import numpy as np
 import Exceptions
+import CPDs
 
 
 class BayesianModel(nx.DiGraph):
@@ -168,7 +169,7 @@ class BayesianModel(nx.DiGraph):
         for index in self.node[node]['_rule_for_parents']:
             yield self.node[node]['_parents'][index]
 
-    def set_cpd(self, node, cpd):
+    def set_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
 
         It is expected that CPD given will be a 2D array such that
@@ -193,7 +194,7 @@ class BayesianModel(nx.DiGraph):
         #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
         #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
         """
-        self.node[node]['_cpd'] = np.array(cpd)
+        self.node[node]['_cpd'] = CPDs.TabularCPD(cpd)
 
     def get_cpd(self, node):
         return self.node[node]['_cpd']
