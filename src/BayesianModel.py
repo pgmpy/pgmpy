@@ -90,13 +90,13 @@ class BayesianModel(nx.DiGraph):
         else:
             self.node[node]['_observed'] = False
 
-    def _all_states_mentioned(self, node, states):
-        """"Returns True if set(states) is exactly equal to the set of states
-        of the Node.
+    def _no_missing_states(self, node, states):
+        """"Returns True if all the states of the node are present in the
+        argument states.
 
         EXAMPLE
         -------
-        >>> bayesian_model._all_states_mentioned('difficulty', ('hard', 'easy'))
+        >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
         True
         >>> bayesian_model._all_states_mentioned('difficulty', ('hard'))
         MissingStatesError: The following states are missing: 'easy'
@@ -104,15 +104,33 @@ class BayesianModel(nx.DiGraph):
         _all_states = set()
         for state in self.node[node]['_states']:
             _all_states.add(state['name'])
-        leftout_states = _all_states - set(states)
+        missing_states = _all_states - set(states)
+
+        if missing_states:
+            raise Exceptions.MissingStatesError(missing_states)
+        else:
+            return True
+
+    def _no_extra_states(self, node, states):
+        """"Returns True if the argument states contains only the states
+         present in Node.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model._no_extra_states('difficulty', ('hard', 'easy'))
+        True
+        """
+        _all_states = set()
+        for state in self.node[node]['_states']:
+            _all_states.add(state['name'])
         extra_states = set(states) - _all_states
 
-        if leftout_states:
-            raise Exceptions.MissingStatesError(leftout_states)
-        elif extra_states:
+        if extra_states:
             raise Exceptions.ExtraStatesError(extra_states)
         else:
             return True
+
+
 
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
@@ -131,26 +149,37 @@ class BayesianModel(nx.DiGraph):
         for index in self.node[node]['_rule_for_states']:
             yield self.node[node]['_states'][index]['name']
 
-    def _all_parents_mentioned(self, node, parents):
+    def _no_extra_parents(self, node, parents):
         """"Returns True if set(states) is exactly equal to the set of states
         of the Node.
 
         EXAMPLE
         -------
-        >>> bayesian_model._all_parents_mentioned('grades', ('difficutly',
+        >>> bayesian_model._no_extra_parents('grades', ('difficutly',
         ...                                                 'intelligence'))
         True
-        >>> bayesian_model._all_parents_mentioned('grades', ('difficulty'))
-        MissingParentsError: The following parents are missing: 'intelligence'
         """
         _all_parents = set(self.node[node]['_parents'])
-        leftout_parents = _all_parents - set(parents)
         extra_parents = set(parents) - _all_parents
-
-        if leftout_parents:
-            raise Exceptions.MissingParentsError(leftout_parents)
-        elif extra_parents:
+        if extra_parents:
             raise Exceptions.ExtraParentsError(extra_parents)
+        else:
+            return True
+
+    def _no_missing_parents(self, node, parents):
+        """"Returns True if all parents of node are present in the
+        argument parents.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model._no_missing_parents('grades', ('difficutly',
+        ...                                                 'intelligence'))
+        True
+        """
+        _all_parents = set(self.node[node]['_parents'])
+        missing_parents = _all_parents - set(parents)
+        if missing_parents:
+            raise Exceptions.MissingParentsError(missing_parents)
         else:
             return True
 
@@ -179,10 +208,10 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> student.set_states('grades', ('A','C','B'))
+        >>> student.add_states('grades', ('A','C','B'))
         >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.add_rule_for_states('grades', ('A', 'B', 'C'))
-        >>> student.add_cpd('grade',
+        >>> student.add_tabularcpd('grade',
         ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
@@ -199,35 +228,34 @@ class BayesianModel(nx.DiGraph):
     def get_cpd(self, node):
         return self.node[node]['_cpd'].table
 
-    def set_observed(self, observations, reset=False):
+    def add_observations(self, observations, reset=False):
         """
         Sets states of nodes as observed.
 
-        @param observations: dictionary with key as node and value as a tuple
-                             of states that are observed
-        @return:
+        observations: dictionary with key as node and value as the
+                      states that is observed
+        reset: if reset is True, the observation status is reset
         """
         #TODO check if multiple states of same node can be observed
-        #TODO if not above then, put validation
+        #TODO if above then, change code accordingly
         for _node in observations:
             for user_given_state in observations[_node]:
-                for state in self.node[_node]['_states']:
-                    if state[0] == user_given_state:
-                        state[1] = True if not reset else False
-                        break
-            self._calc_observed(_node)
+                if self._no_extra_states(_node, (user_given_state,)):
+                    for state in self.node[_node]['_states']:
+                        if state['name'] == user_given_state:
+                            state['observed_status'] = True if not reset else False
+                            break
+                        self._update_node_observed_status(_node)
 
-    def reset_observed(self, nodes=False):
+    def reset_observed_nodes(self, nodes=None):
         """Resets observed-status of given nodes.
 
-        Will not change a particular state. For that use, set_observed
-            with reset=True.
+        Will not change a particular state. For that use,
+        add_observations with reset=True.
 
         If no arguments are given, all states of all nodes are reset.
-        @param nodes:
-        @return:
         """
-        if nodes is False:
+        if nodes is None:
             _to_reset = self.nodes()
         elif isinstance(nodes, str):
             _to_reset = self._string_to_tuple(nodes)
@@ -235,8 +263,8 @@ class BayesianModel(nx.DiGraph):
             _to_reset = nodes
         for node in _to_reset:
             for state in self.node[node]['_states']:
-                state[1] = False
-            self._calc_observed(node)
+                state['observed_status'] = False
+            self._update_node_observed_status(node)
 
     def is_observed(self, node):
         return self.node[node]['_observed']
