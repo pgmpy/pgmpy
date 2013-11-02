@@ -67,40 +67,59 @@ class BayesianModel(nx.DiGraph):
             self.node[end_node]['_rule_for_parents'] = (
                 index for index in range(len(head)))
 
-    def set_states(self, node, states):
-        """Adds state-name from 'state' tuple to 'node'."""
+    def add_states(self, node, states):
+        """Adds the names of states from the tuple 'states' to given 'node'."""
         self.node[node]['_states'] = [
-            [state, False] for state in sorted(states)]
+            {'name': state, 'observed_status': False} for state in states]
         self.node[node]['_rule_for_states'] = (
             n for n in range(len(states)))
-        self._calc_observed(node)
-        #internal storage = [['a',0],['b',0],['c',0],]
-        #user-given order = ('c','a','b')
-        #_rule_for_states = (2,0,1)
-        #Rule will contain indices with which internal order should be
-        #accessed
+        self._update_node_observed_status(node)
 
-    def _calc_observed(self, node):
+    def _update_node_observed_status(self, node):
         """
-        Return True if any of the states of the node are observed
-        @param node:
-        @return:
-        """
+        Updates '_observed' in the node-dictionary.
 
+        If any of the states of a node are observed, node.['_observed']
+        is made True. Otherwise, it is False.
+        """
         for state in self.node[node]['_states']:
-            if state[1]:
+            if state['observed_status']:
                 self.node[node]['_observed'] = True
                 break
         else:
             self.node[node]['_observed'] = False
 
+    def _all_states_mentioned(self, node, states):
+        """"Returns True if set(states) is exactly equal to the set of states
+        of the Node.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model._all_states_mentioned('difficulty', ('hard', 'easy'))
+        True
+        >>> bayesian_model._all_states_mentioned('difficulty', ('hard'))
+        MissingStatesError: The following states are missing: 'easy'
+        """
+        _all_states = set()
+        for state in self.node[node]['_states']:
+            _all_states.add(state['name'])
+        leftout_states = _all_states - set(states)
+        extra_states = set(states) - _all_states
+
+        if leftout_states:
+            return("The following states are missing: " + str(leftout_states))
+        elif extra_states:
+            return("The following are not states of this node: ", str(extra_states))
+        else:
+            return True
+
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-        #TODO check whether all states are mentioned?
+
         _order = list()
         for user_given_state in states:
             for state in self.node[node]['_states']:
-                if state[0] == user_given_state:
+                if state['name'] == user_given_state:
                     _order.append(self.node[node]['_states'].index(state))
                     break
         self.node[node]['_rule_for_states'] = tuple(_order)

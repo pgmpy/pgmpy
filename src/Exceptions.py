@@ -18,3 +18,19 @@ class ExtraParentsError(Exception):
 
     def __str__(self):
         return repr("Following are not parents: " + str(extra))
+
+class MissingStatesError(Exception):
+    def __init__(self, missing):
+        Exception.__init__(self)
+        self.missing = missing
+
+    def __str__(self):
+        return repr("States are missing: " + str(missing))
+
+class ExtraStatesError(Exception):
+    def __init__(self, extra):
+        Exception.__init__(self)
+        self.extra = extra
+
+    def __str__(self):
+        return repr("Following are not states: " + str(extra))
