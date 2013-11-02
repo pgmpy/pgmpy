@@ -169,7 +169,7 @@ class BayesianModel(nx.DiGraph):
         for index in self.node[node]['_rule_for_parents']:
             yield self.node[node]['_parents'][index]
 
-    def set_tablularcpd(self, node, cpd):
+    def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
 
         It is expected that CPD given will be a 2D array such that
@@ -197,7 +197,7 @@ class BayesianModel(nx.DiGraph):
         self.node[node]['_cpd'] = CPDs.TabularCPD(cpd)
 
     def get_cpd(self, node):
-        return self.node[node]['_cpd']
+        return self.node[node]['_cpd'].table
 
     def set_observed(self, observations, reset=False):
         """
