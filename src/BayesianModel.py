@@ -298,10 +298,10 @@ class BayesianModel(nx.DiGraph):
         -------
         >>> student.add_nodes('diff', 'intel', 'grades')
         >>> student.add_edges(('diff', 'intel'), ('grades',))
-        >>> student.set_states('diff', ('hard', 'easy'))
-        >>> student.set_states('intel', ('smart', 'avg', 'dumb'))
-        >>> student.set_states('grades', ('A', 'B', 'C'))
-        >>> student.set_observation({'grades': 'A'})
+        >>> student.add_states('diff', ('hard', 'easy'))
+        >>> student.add_states('intel', ('smart', 'avg', 'dumb'))
+        >>> student.add_states('grades', ('A', 'B', 'C'))
+        >>> student.add_observations({'grades': 'A'})
         >>> student.active_trail_nodes('diff')
         ['diff', 'intel']
         """
