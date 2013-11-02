@@ -107,44 +107,61 @@ class BayesianModel(nx.DiGraph):
         extra_states = set(states) - _all_states
 
         if leftout_states:
-            return("The following states are missing: " + str(leftout_states))
+            raise Exceptions.MissingStatesError(leftout_states)
         elif extra_states:
-            return("The following are not states of this node: ", str(extra_states))
+            raise Exceptions.ExtraStatesError(extra_states)
         else:
             return True
 
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-
-        _order = list()
-        for user_given_state in states:
-            for state in self.node[node]['_states']:
-                if state['name'] == user_given_state:
-                    _order.append(self.node[node]['_states'].index(state))
-                    break
-        self.node[node]['_rule_for_states'] = tuple(_order)
+        if self._all_states_mentioned(node, states):
+            _order = list()
+            for user_given_state in states:
+                for state in self.node[node]['_states']:
+                    if state['name'] == user_given_state:
+                        _order.append(self.node[node]
+                                      ['_states'].index(state))
+                        break
+            self.node[node]['_rule_for_states'] = tuple(_order)
 
     def get_states(self, node):
         """Returns tuple with states in user-defined order"""
         for index in self.node[node]['_rule_for_states']:
-            yield self.node[node]['_states'][index][0]
+            yield self.node[node]['_states'][index]['name']
+
+    def _all_parents_mentioned(self, node, parents):
+        """"Returns True if set(states) is exactly equal to the set of states
+        of the Node.
+
+        EXAMPLE
+        -------
+        >>> bayesian_model._all_parents_mentioned('grades', ('difficutly',
+        ...                                                 'intelligence'))
+        True
+        >>> bayesian_model._all_parents_mentioned('grades', ('difficulty'))
+        MissingParentsError: The following parents are missing: 'intelligence'
+        """
+        _all_parents = set(self.node[node]['_parents'])
+        leftout_parents = _all_parents - set(parents)
+        extra_parents = set(parents) - _all_parents
+
+        if leftout_parents:
+            raise Exceptions.MissingParentsError(leftout_parents)
+        elif extra_parents:
+            raise Exceptions.ExtraParentsError(extra_parents)
+        else:
+            return True
 
     def add_rule_for_parents(self, node, parents):
-        #check if all parents are mentioned and no extra parents are
-        ##present
-        #_extra = set(parents) - set(self.predecessors(node))
-        #_missing = set(self.predecessors(node)) - set(parents)
-        #if not len(_missing):
-            #raise epp.MissingParentsError(_missing)
-        #if not len(_extra):
-            #raise epp.ExtraParentsError(_extra)
-        _ord = list()
-        for user_given_parent in parents:
-            for parent in self.node[node]['_parents']:
-                if parent == user_given_parent:
-                    _ord.append(self.node[node]['_parents'].index(parent))
-                    break
-        self.node[node]['_rule_for_parents'] = tuple(_ord)
+        if self._all_parents_mentioned(node, parents):
+            _order = list()
+            for user_given_parent in parents:
+                for parent in self.node[node]['_parents']:
+                    if parent == user_given_parent:
+                        _order.append(self.node[node]['_parents'].index(parent))
+                        break
+            self.node[node]['_rule_for_parents'] = tuple(_order)
 
     def get_parents(self, node):
         """Returns tuple with parents in order"""
