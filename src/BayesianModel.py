@@ -184,13 +184,13 @@ class BayesianModel(nx.DiGraph):
     def add_rule_for_parents(self, node, parents):
         if self._all_parents_mentioned(node, parents):
             _order = list()
-            for user_given_parent in parents:
-                for parent in self.node[node]['_parents']:
-                    if parent == user_given_parent:
-                        _order.append(
-                            self.node[node]['_parents'].index(parent))
-                        break
-            self.node[node]['_rule_for_parents'] = tuple(_order)
+            for user_given_parent, parent in itertools.product(
+                    parents, self.node[node]['_parents']):
+                if parent == user_given_parent:
+                    _order.append(
+                        self.node[node]['_parents'].index(parent))
+                    break
+        self.node[node]['_rule_for_parents'] = tuple(_order)
 
     def get_parents(self, node):
         """Returns tuple with parents in order"""
