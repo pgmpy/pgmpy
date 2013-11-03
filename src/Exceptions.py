@@ -3,34 +3,32 @@
 
 
 class MissingParentsError(Exception):
-    def __init__(self, missing):
-        Exception.__init__(self)
+    def __init__(self, *missing):
         self.missing = missing
 
     def __str__(self):
-        return repr("Parents are missing: " + str(missing))
+        return repr("Parents are missing: " + str(self.missing))
 
 
 class ExtraParentsError(Exception):
-    def __init__(self, extra):
-        Exception.__init__(self)
+    def __init__(self, *extra):
         self.extra = extra
 
     def __str__(self):
-        return repr("Following are not parents: " + str(extra))
+        return repr("Following are not parents: " + str(self.extra))
+
 
 class MissingStatesError(Exception):
-    def __init__(self, missing):
-        Exception.__init__(self)
+    def __init__(self, *missing):
         self.missing = missing
 
     def __str__(self):
-        return repr("States are missing: " + str(missing))
+        return repr("States are missing: " + str(self.missing))
+
 
 class ExtraStatesError(Exception):
-    def __init__(self, extra):
-        Exception.__init__(self)
+    def __init__(self, *extra):
         self.extra = extra
 
     def __str__(self):
-        return repr("Following are not states: " + str(extra))
+        return repr("Following are not states: " + str(self.extra))
