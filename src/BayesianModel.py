@@ -129,8 +129,6 @@ class BayesianModel(nx.DiGraph):
         else:
             return True
 
-
-
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
         if self._all_states_mentioned(node, states):
@@ -188,7 +186,8 @@ class BayesianModel(nx.DiGraph):
             for user_given_parent in parents:
                 for parent in self.node[node]['_parents']:
                     if parent == user_given_parent:
-                        _order.append(self.node[node]['_parents'].index(parent))
+                        _order.append(
+                            self.node[node]['_parents'].index(parent))
                         break
             self.node[node]['_rule_for_parents'] = tuple(_order)
 
@@ -242,7 +241,8 @@ class BayesianModel(nx.DiGraph):
                 if self._no_extra_states(_node, (user_given_state,)):
                     for state in self.node[_node]['_states']:
                         if state['name'] == user_given_state:
-                            state['observed_status'] = True if not reset else False
+                            state['observed_status'] = True if not reset \
+                                else False
                             break
                         self._update_node_observed_status(_node)
 
