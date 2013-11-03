@@ -4,6 +4,7 @@ import networkx as nx
 import numpy as np
 import Exceptions
 import CPDs
+import itertools
 
 
 class BayesianModel(nx.DiGraph):
@@ -133,12 +134,12 @@ class BayesianModel(nx.DiGraph):
         """Sets new rule for order of states"""
         if self._all_states_mentioned(node, states):
             _order = list()
-            for user_given_state in states:
-                for state in self.node[node]['_states']:
-                    if state['name'] == user_given_state:
-                        _order.append(self.node[node]
-                                      ['_states'].index(state))
-                        break
+            for user_given_state, state in itertools.product(
+                    states, self.node[node]['_states']):
+                if state['name'] == user_given_state:
+                    _order.append(self.node[node]
+                                  ['_states'].index(state))
+                    break
             self.node[node]['_rule_for_states'] = tuple(_order)
 
     def get_states(self, node):
