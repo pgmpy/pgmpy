@@ -1,5 +1,5 @@
 import unittest
-import BayesianModel as bm
+import BayesianModel.BayesianModel as bm
 import networkx as nx
 
 

@@ -3,7 +3,7 @@
 import networkx as nx
 import numpy as np
 import Exceptions
-import CPDs
+from BayesianModel import CPDs
 import itertools
 
 
