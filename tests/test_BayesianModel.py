@@ -65,39 +65,44 @@ class TestNodeProperties(unittest.TestCase):
 
 # TODO add test_default_rule
 
-    def test_set_states(self):
-        self.G.set_states('a', ('test_state_3', 'test_state_1',
+# TODO check test_add_states again
+    def test_add_states(self):
+        self.G.add_states('a', ('test_state_3', 'test_state_1',
                                 'test_state_2'))
-        self.G.set_states('b', ('test_state_2', 'test_state_1'))
-        self.G.set_states('c', ('test_state_1',))
-        self.G.set_states('d', ('test_state_1', 'test_state_2'))
-        self.assertEqual(self.G.node['a']['_states'], [['test_state_1', 0],
-                                                       ['test_state_2', 0],
-                                                       ['test_state_3', 0]])
-        self.assertEqual(self.G.node['b']['_states'], [['test_state_1', 0],
-                                                       ['test_state_2', 0]])
-        self.assertEqual(self.G.node['c']['_states'], [['test_state_1', 0]])
-        self.assertEqual(self.G.node['d']['_states'], [['test_state_1', 0],
-                                                       ['test_state_2', 0]])
+        self.G.add_states('b', ('test_state_2', 'test_state_1'))
+        self.G.add_states('c', ('test_state_1',))
+        self.G.add_states('d', ('test_state_1', 'test_state_2'))
+        self.assertEqual(self.G.node['a']['_states'],
+                         [{'name': 'test_state_3', 'observed_status': False},
+                          {'name': 'test_state_1', 'observed_status': False},
+                          {'name': 'test_state_2', 'observed_status': False}])
+        self.assertEqual(self.G.node['b']['_states'],
+                         [{'name': 'test_state_2', 'observed_status': False},
+                          {'name': 'test_state_1', 'observed_status': False}])
+        self.assertEqual(self.G.node['c']['_states'],
+                         [{'name': 'test_state_1', 'observed_status': False}])
+        self.assertEqual(self.G.node['d']['_states'],
+                         [{'name': 'test_state_1', 'observed_status': False},
+                          {'name': 'test_state_2', 'observed_status': False}])
 
 # TODO add test_default_rule_for_states
 
 # TODO    def test_rule_for_states
-
+# TODO check test_states_fuction again
     def test_states_function(self):
-        self.G.set_states('a', ('test_state_3', 'test_state_1',
+        self.G.add_states('a', ('test_state_3', 'test_state_1',
                                 'test_state_2'))
-        self.G.set_states('b', ('test_state_2', 'test_state_1'))
-        self.G.set_states('c', ('test_state_1',))
-        self.G.set_states('d', ('test_state_1', 'test_state_2'))
+        self.G.add_states('b', ('test_state_2', 'test_state_1'))
+        self.G.add_states('c', ('test_state_1',))
+        self.G.add_states('d', ('test_state_1', 'test_state_2'))
         states = {'a': [], 'b': [], 'c': [], 'd': []}
         nodes = ['a', 'b', 'c', 'd']
         for node in nodes:
             for state in self.G.get_states(node):
                 states[node].append(state)
-        self.assertEqual(states['a'], ['test_state_1', 'test_state_2',
-                                       'test_state_3'])
-        self.assertEqual(states['b'], ['test_state_1', 'test_state_2'])
+        self.assertEqual(states['a'], ['test_state_3', 'test_state_1',
+                                       'test_state_2'])
+        self.assertEqual(states['b'], ['test_state_2', 'test_state_1'])
         self.assertEqual(states['c'], ['test_state_1'])
         self.assertEqual(states['d'], ['test_state_1', 'test_state_2'])
 
