@@ -307,6 +307,11 @@ class BayesianModel(nx.DiGraph):
         """
         observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_observation(observed_list)
+        """
+        Direction of flow of information
+        up ->  from parent to child
+        down -> from child to parent
+        """
         visit_list = [(start, 'up')]
         traversed_list = []
         active_nodes = []
