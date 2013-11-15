@@ -60,13 +60,13 @@ class BayesianModel(nx.DiGraph):
         if isinstance(head, str):
             head = self._string_to_tuple(head)
 
-        for end_node in head:
-            for start_node in tail:
-                self.add_edge(start_node, end_node)
+        for head_node in head:
+            for tail_node in tail:
+                self.add_edge(tail_node, head_node)
 
-            self.node[end_node]['_parents'] = self.predecessors(end_node)
-            self.node[end_node]['_rule_for_parents'] = (
-                index for index in range(len(head)))
+            self.node[head_node]['_parents'] = self.predecessors(head_node)
+            self.node[head_node]['_rule_for_parents'] = (
+                index for index in range(len(tail)))
 
     def add_states(self, node, states):
         """Adds the names of states from the tuple 'states' to given 'node'."""
@@ -194,8 +194,10 @@ class BayesianModel(nx.DiGraph):
 
     def get_parents(self, node):
         """Returns tuple with parents in order"""
+
         for index in self.node[node]['_rule_for_parents']:
-            yield self.node[node]['_parents'][index]
+            yield (self.node[node]['_parents'][index])
+
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
