@@ -194,9 +194,10 @@ class BayesianModel(nx.DiGraph):
 
     def get_parents(self, node):
         """Returns tuple with parents in order"""
-
+        _parent_list = list()
         for index in self.node[node]['_rule_for_parents']:
-            yield (self.node[node]['_parents'][index])
+            _parent_list.append(self.node[node]['_parents'][index])
+        return _parent_list
 
 
     def add_tablularcpd(self, node, cpd):
@@ -348,3 +349,4 @@ class BayesianModel(nx.DiGraph):
             return True
         else:
             return False
+
