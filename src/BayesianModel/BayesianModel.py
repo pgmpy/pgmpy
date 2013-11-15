@@ -5,6 +5,7 @@ import numpy as np
 import Exceptions
 from BayesianModel import CPDs
 import itertools
+from scipy import sparse
 
 
 class BayesianModel(nx.DiGraph):
@@ -24,6 +25,7 @@ class BayesianModel(nx.DiGraph):
     is_observed('node1')
     active_trail_nodes('node1')
     is_active_trail('node1', 'node2')
+    marginal_probability('node')
     """
     #__init__ is inherited
     def _string_to_tuple(self, string):
@@ -367,7 +369,10 @@ class BayesianModel(nx.DiGraph):
 
     def marginal_probability(self, node):
         """
-        Returns marginalized probability distribution of a node
+        Returns marginalized probability distribution of a node.
+
+        EXAMPLE
+        -------
         >>> student.add_nodes('diff', 'intel', 'grades')
         >>> student.add_edges(('diff', 'intel'), ('grades',))
         >>> student.add_states('diff', ('hard', 'easy'))
@@ -384,9 +389,18 @@ class BayesianModel(nx.DiGraph):
                [ 0.368]])
         """
         parent_list = [parent for parent in self._get_parent_objects(node)]
+        num_parents = len(parent_list)
         mar_dist = self.node[node]['_cpd'].table
+        """
+        Kronecker product of two arrays
+        kron(a,b)[k0,k1,...,kN] = [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
+                                   [  ...                              ...   ],
+                                   [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
+        """
         for num, val in enumerate(reversed(parent_list)):
-            mar_dist = np.dot(mar_dist, np.kron(np.identity(len(parent_list)-num),
-                                                val['_cpd'].table))
+            #_mat is compressed sparse row matrix
+            _mat = sparse.csr_matrix(np.kron(np.identity(num_parents-num),
+                                             val['_cpd'].table))
+            mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
 
         return mar_dist
