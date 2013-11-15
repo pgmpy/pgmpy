@@ -98,8 +98,6 @@ class BayesianModel(nx.DiGraph):
         -------
         >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
         True
-        >>> bayesian_model._all_states_mentioned('difficulty', ('hard'))
-        MissingStatesError: The following states are missing: 'easy'
         """
         _all_states = set()
         for state in self.node[node]['_states']:
@@ -132,7 +130,8 @@ class BayesianModel(nx.DiGraph):
 
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-        if self._all_states_mentioned(node, states):
+        if self._no_extra_states(node, states) and \
+                self._no_missing_states(node, states):
             _order = list()
             for user_given_state, state in itertools.product(
                     states, self.node[node]['_states']):
@@ -182,7 +181,8 @@ class BayesianModel(nx.DiGraph):
             return True
 
     def add_rule_for_parents(self, node, parents):
-        if self._all_parents_mentioned(node, parents):
+        if self._no_missing_parents(node, parents) and \
+                self._no_extra_parents(node, parents):
             _order = list()
             for user_given_parent, parent in itertools.product(
                     parents, self.node[node]['_parents']):
@@ -210,8 +210,9 @@ class BayesianModel(nx.DiGraph):
         >>> student.add_states('grades', ('A','C','B'))
         >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.add_rule_for_states('grades', ('A', 'B', 'C'))
-        >>> student.add_tabularcpd('grade',
-        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
+        >>> student.add_tabularcpd('grades',
+        ...             [[0.1,0
+        .1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
