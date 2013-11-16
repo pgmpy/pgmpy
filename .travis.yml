@@ -5,7 +5,7 @@ virtualenv:
     system_site_packages: true
 before_install:
     - sudo apt-get install -qq python-numpy
-    - git clone http://github.com/scipy/scipy.git scipy; cd scipy; sudo python3 setup.py install
+    - git clone http://github.com/scipy/scipy.git scipy; cd scipy; sudo python3.2 setup.py install
     - sudo apt-get install -y aptitude
     - sudo aptitude install -y python3-setuptools
     - sudo easy_install3 pip
