@@ -5,6 +5,7 @@ import numpy as np
 import Exceptions
 from BayesianModel import CPDs
 import itertools
+from scipy import sparse
 
 
 class BayesianModel(nx.DiGraph):
@@ -24,6 +25,7 @@ class BayesianModel(nx.DiGraph):
     is_observed('node1')
     active_trail_nodes('node1')
     is_active_trail('node1', 'node2')
+    marginal_probability('node')
     """
     #__init__ is inherited
     def _string_to_tuple(self, string):
@@ -60,21 +62,23 @@ class BayesianModel(nx.DiGraph):
         if isinstance(head, str):
             head = self._string_to_tuple(head)
 
-        for end_node in head:
-            for start_node in tail:
-                self.add_edge(start_node, end_node)
+        for head_node in head:
+            for tail_node in tail:
+                self.add_edge(tail_node, head_node)
 
-            self.node[end_node]['_parents'] = self.predecessors(end_node)
-            self.node[end_node]['_rule_for_parents'] = (
-                index for index in range(len(head)))
+            self.node[head_node]['_parents'] = self.predecessors(head_node)
+            self.node[head_node]['_rule_for_parents'] = [
+                index for index in range(len(tail))]
+        #TODO _rule_for_parents needs to made into a generator
 
     def add_states(self, node, states):
         """Adds the names of states from the tuple 'states' to given 'node'."""
         self.node[node]['_states'] = [
             {'name': state, 'observed_status': False} for state in states]
-        self.node[node]['_rule_for_states'] = (
-            n for n in range(len(states)))
+        self.node[node]['_rule_for_states'] = [
+            n for n in range(len(states))]
         self._update_node_observed_status(node)
+        #TODO _rule_for_states needs to made into a generator
 
     def _update_node_observed_status(self, node):
         """
@@ -98,8 +102,6 @@ class BayesianModel(nx.DiGraph):
         -------
         >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
         True
-        >>> bayesian_model._all_states_mentioned('difficulty', ('hard'))
-        MissingStatesError: The following states are missing: 'easy'
         """
         _all_states = set()
         for state in self.node[node]['_states']:
@@ -132,7 +134,8 @@ class BayesianModel(nx.DiGraph):
 
     def add_rule_for_states(self, node, states):
         """Sets new rule for order of states"""
-        if self._all_states_mentioned(node, states):
+        if self._no_extra_states(node, states) and \
+                self._no_missing_states(node, states):
             _order = list()
             for user_given_state, state in itertools.product(
                     states, self.node[node]['_states']):
@@ -140,12 +143,16 @@ class BayesianModel(nx.DiGraph):
                     _order.append(self.node[node]
                                   ['_states'].index(state))
                     break
-            self.node[node]['_rule_for_states'] = tuple(_order)
+            self.node[node]['_rule_for_states'] = _order
+            #TODO _rule_for_states needs to made into a generator
 
     def get_states(self, node):
         """Returns tuple with states in user-defined order"""
+        _list_states = list()
         for index in self.node[node]['_rule_for_states']:
-            yield self.node[node]['_states'][index]['name']
+            _list_states.append(self.node[node]['_states'][index]['name'])
+        return _list_states
+    #TODO get_states() needs to made into a generator
 
     def _no_extra_parents(self, node, parents):
         """"Returns True if set(states) is exactly equal to the set of states
@@ -182,7 +189,8 @@ class BayesianModel(nx.DiGraph):
             return True
 
     def add_rule_for_parents(self, node, parents):
-        if self._all_parents_mentioned(node, parents):
+        if self._no_missing_parents(node, parents) and \
+                self._no_extra_parents(node, parents):
             _order = list()
             for user_given_parent, parent in itertools.product(
                     parents, self.node[node]['_parents']):
@@ -190,12 +198,24 @@ class BayesianModel(nx.DiGraph):
                     _order.append(
                         self.node[node]['_parents'].index(parent))
                     break
-        self.node[node]['_rule_for_parents'] = tuple(_order)
+        self.node[node]['_rule_for_parents'] = _order
+        #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
-        """Returns tuple with parents in order"""
+        """Returns tuple with name of parents in order"""
+        _str_parent_list = list()
         for index in self.node[node]['_rule_for_parents']:
-            yield self.node[node]['_parents'][index]
+            _str_parent_list.append(self.node[node]['_parents'][index])
+        return _str_parent_list
+    #TODO get_parents() needs to made into a generator
+
+    def _get_parent_objects(self, node):
+        """Returns tuple with parent-objects in order"""
+        _obj_parent_list = list()
+        for _parent in self.get_parents(node):
+            _obj_parent_list.append(self.node[_parent])
+        return _obj_parent_list
+    #TODO _get_parent_objects() needs to made into a generator
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
@@ -210,8 +230,9 @@ class BayesianModel(nx.DiGraph):
         >>> student.add_states('grades', ('A','C','B'))
         >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.add_rule_for_states('grades', ('A', 'B', 'C'))
-        >>> student.add_tabularcpd('grade',
-        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
+        >>> student.add_tabularcpd('grades',
+        ...             [[0.1,0
+        .1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
@@ -307,6 +328,11 @@ class BayesianModel(nx.DiGraph):
         """
         observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_observation(observed_list)
+        """
+        Direction of flow of information
+        up ->  from parent to child
+        down -> from child to parent
+        """
         visit_list = [(start, 'up')]
         traversed_list = []
         active_nodes = []
@@ -340,3 +366,41 @@ class BayesianModel(nx.DiGraph):
             return True
         else:
             return False
+
+    def marginal_probability(self, node):
+        """
+        Returns marginalized probability distribution of a node.
+
+        EXAMPLE
+        -------
+        >>> student.add_nodes('diff', 'intel', 'grades')
+        >>> student.add_edges(('diff', 'intel'), ('grades',))
+        >>> student.add_states('diff', ('hard', 'easy'))
+        >>> student.add_states('intel', ('smart', 'dumb'))
+        >>> student.add_states('grades', ('good', 'bad'))
+        >>> student.add_tabularcpd('grades',
+        ...             [[0.7, 0.6, 0.6, 0.2],
+        ...             [0.3, 0.4, 0.4, 0.8]],
+        ...             )
+        >>> student.add_tabularcpd('diff', [[0.7],[0.3]])
+        >>> student.add_tabularcpd('intel', [[0.8], [0.2]])
+        >>> student.marginal_probability('grades')
+        array([[ 0.632],
+               [ 0.368]])
+        """
+        parent_list = [parent for parent in self._get_parent_objects(node)]
+        num_parents = len(parent_list)
+        mar_dist = self.node[node]['_cpd'].table
+        """
+        Kronecker product of two arrays
+        kron(a,b)[k0,k1,...,kN] = [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
+                                   [  ...                              ...   ],
+                                   [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
+        """
+        for num, val in enumerate(reversed(parent_list)):
+            #_mat is compressed sparse row matrix
+            _mat = sparse.csr_matrix(np.kron(np.identity(num_parents-num),
+                                             val['_cpd'].table))
+            mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
+
+        return mar_dist
