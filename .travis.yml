@@ -3,10 +3,9 @@ python:
     - "3.2"
 virtualenv:
     system_site_packages: true
-SITE_PKG_DIR=$VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages
-rm -f $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/no-global-site-packages.txt 
 before_install:
-    - sudo apt-get install -qq python-numpy python-scipy
+    - sudo apt-get install -qq python-numpy
+    - git clone http://github.com/scipy/scipy.git scipy; cd scipy; sudo python3 setup.py install
     - sudo apt-get install -y aptitude
     - sudo aptitude install -y python3-setuptools
     - sudo easy_install3 pip
