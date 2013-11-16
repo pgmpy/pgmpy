@@ -15,7 +15,7 @@ before_install:
 install:
     - "pip-3.2 install networkx"
     - "pip-3.2 install numpy --upgrade"
-#    - "pip-3.2 install scipy --upgrade"
+    - "pip-3.2 install scipy --upgrade"
     - "pip-3.2 install nose"
     - "pip-3.2 install coveralls"
 script: nosetests --with-coverage --cover-package=pgmpy/src
