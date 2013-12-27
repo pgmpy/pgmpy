@@ -4,12 +4,12 @@ python:
 virtualenv:
     system_site_packages: true
 before_install:
-    - sudo apt-get install -qq python-numpy
+    - sudo apt-get build-dep -qq python-numpy
+    - sudo apt-get build-dep -qq python-scipy
     - sudo apt-get install -y aptitude
     - sudo aptitude install -y python3-setuptools
     - sudo easy_install3 pip
     - pip-3.2 install numpy --upgrade
-    - git clone http://github.com/scipy/scipy.git scipy; cd scipy; sudo python3.2 setup.py install
 install:
     - "pip-3.2 install networkx"
     - "pip-3.2 install numpy --upgrade"
