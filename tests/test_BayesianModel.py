@@ -14,7 +14,8 @@ class TestModel(unittest.TestCase):
 
     def test_add_nodes_string(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
-        self.assertListEqual(sorted(self.G.nodes()), sorted(['a', 'b', 'c', 'd']))
+        self.assertListEqual(sorted(self.G.nodes()),
+                             sorted(['a', 'b', 'c', 'd']))
 
     def test_add_nodes_non_string(self):
         self.assertRaises(TypeError, self.G.add_nodes, [1, 2, 3, 4])
@@ -22,29 +23,34 @@ class TestModel(unittest.TestCase):
     def test_add_edges_both_tuples(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
         self.G.add_edges(('a', 'b'), ('c', 'd'))
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'c'), ('a', 'd'),
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'c'), ('a', 'd'),
                                                  ('b', 'c'), ('b', 'd')]))
 
     def test_add_edges_tail_string(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
         self.G.add_edges('a', ('b', 'c'))
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'b'), ('a', 'c')]))
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'b'), ('a', 'c')]))
 
     def test_add_edges_head_string(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
         self.G.add_edges(('a', 'b'), 'c')
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'c'), ('b', 'c')]))
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'c'), ('b', 'c')]))
 
     def test_add_edges_both_string(self):
         self.G.add_nodes('a', 'b')
         self.G.add_edges('a', 'b')
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'b')]))
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'b')]))
 
     def test_add_edges_multiple_times(self):
         self.G.add_nodes('a', 'b', 'c', 'd')
         self.G.add_edges('a', ('c', 'd'))
         self.G.add_edges('b', ('c', 'd'))
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'c'), ('a', 'd'),
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'c'), ('a', 'd'),
                                                  ('b', 'c'), ('b', 'd')]))
 
     def tearDown(self):
@@ -59,8 +65,10 @@ class TestNodeProperties(unittest.TestCase):
         self.G.add_edges(('a', 'b'), ('c', 'd'))
 
     def test_parents(self):
-        self.assertListEqual(sorted(self.G.node['c']['_parents']), sorted(['a', 'b']))
-        self.assertListEqual(sorted(self.G.node['d']['_parents']), sorted(['a', 'b']))
+        self.assertListEqual(sorted(self.G.node['c']['_parents']),
+                             sorted(['a', 'b']))
+        self.assertListEqual(sorted(self.G.node['d']['_parents']),
+                             sorted(['a', 'b']))
 # TODO       self.assertRaises(KeyError, self.G.node['a']['_parents'])
 # TODO       self.assertRaises(KeyError, self.G.node['b']['_parents'])
 
