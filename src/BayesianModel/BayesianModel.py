@@ -334,7 +334,9 @@ class BayesianModel(nx.DiGraph):
     def is_active_trail(self, start, end):
         """Returns True if there is any active trail
         between start and end node"""
-        if end in self.predecessors(start) or end in self.successors(start) \
-                or end in self.active_trail_nodes(start):
+        if end in self.predecessors(start) or end in self.successors(start):
             return True
-        return False
+        elif end in self.active_trail_nodes(start):
+            return True
+        else:
+            return False
