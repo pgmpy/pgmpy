@@ -9,7 +9,8 @@ from scipy import sparse
 
 
 class BayesianModel(nx.DiGraph):
-    """ Public Methods
+    """
+    Public Methods
     --------------
     add_nodes('node1', 'node2', ...)
     add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
@@ -32,44 +33,76 @@ class BayesianModel(nx.DiGraph):
         """Converts a single string into a tuple with one string element."""
         return (string,)
 
-    def add_nodes(self, *args):
-        """Adds nodes to graph with node-labels as provided.
-        Node-labels have to be strings.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model.add_nodes("difficulty", "intelligence", "grades")
+    def add_node(self, node):
         """
-        #TODO allow adding of nodes from tuple?
-        for item in args:
-            if not isinstance(item, str):
-                raise TypeError("Name of nodes must be strings.")
-        self.add_nodes_from(args)
-        #add_nodes_from() is method of nx.Graph
+        Add a single node to the Graph.
 
-    def add_edges(self, tail, head):
+        Parameters
+        ----------
+        node: node
+              A node can only be a string.
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel()
+        >>> G.add_node('difficulty')
+        """
+        if not isinstance(node, str):
+            raise TypeError("Name of nodes must be strings")
+
+        nx.DiGraph.add_node(self, node)
+
+    def add_nodes_from(self, nodes):
+        """
+        Add multiple nodes to the Graph.
+
+        Parameters
+        ----------
+        nodes: iterable container
+               A container of nodes (list, dict, set, etc.).
+
+        See Also
+        --------
+        add_node
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel()
+        >>> G.add_nodes_from(['diff', 'intel', 'grade'])
+        """
+        if not all([isinstance(elem, str) for elem in nodes]):
+            raise TypeError("Name of nodes must be strings")
+
+        nx.DiGraph.add_nodes_from(self, nodes)
+
+    def add_edges(self, *args):
         """Takes two tuples of nodes as input. All nodes in 'tail' are
         joint to all nodes in 'head' with the direction of each edge being
         from a node in 'tail' to a node in 'head'.
 
         EXAMPLE
         -------
-        >>> bayesian_model.add_edges(("difficulty", "intelligence"), "grades")
+        >>> bayesian_model.add_edges([('difficulty', 'grade'), ('intelligence', 'grades')])
         """
         #Converting string arguments into tuple arguments
-        if isinstance(tail, str):
-            tail = self._string_to_tuple(tail)
-        if isinstance(head, str):
-            head = self._string_to_tuple(head)
-
-        for head_node in head:
-            for tail_node in tail:
-                self.add_edge(tail_node, head_node)
-
-            self.node[head_node]['_parents'] = self.predecessors(head_node)
-            self.node[head_node]['_rule_for_parents'] = [
-                index for index in range(len(tail))]
+        # if isinstance(tail, str):
+        #     tail = self._string_to_tuple(tail)
+        # if isinstance(head, str):
+        #     head = self._string_to_tuple(head)
+        #
+        # for head_node in head:
+        #     for tail_node in tail:
+        #         self.add_edge(tail_node, head_node)
+        self.add_edges_from(args)
+        for node in self.nodes():
+            self.node[node]['_parents'] = self.predecessors(node)
+            self.node[node]['_rule_for_parents'] = [
+                index for index in range(len(self.neighbors(node)))]
+        # self.node[head_node]['_parents'] = self.predecessors(head_node)
+        # self.node[head_node]['_rule_for_parents'] = [
+        #         index for index in range(len(tail))]
         #TODO _rule_for_parents needs to made into a generator
+            #TODO after each call to add_edges or call update node _parents and update _rule_for_parents
 
     def add_states(self, node, states):
         """Adds the names of states from the tuple 'states' to given 'node'."""
@@ -360,9 +393,8 @@ class BayesianModel(nx.DiGraph):
     def is_active_trail(self, start, end):
         """Returns True if there is any active trail
         between start and end node"""
-        if end in self.predecessors(start) or end in self.successors(start):
-            return True
-        elif end in self.active_trail_nodes(start):
+        if end in self.predecessors(start) or end in self.successors(start)\
+                or end in self.active_trail_nodes(start):
             return True
         else:
             return False
