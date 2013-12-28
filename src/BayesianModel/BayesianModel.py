@@ -42,6 +42,10 @@ class BayesianModel(nx.DiGraph):
         node: node
               A node can only be a string.
 
+        See Also
+        --------
+        add_nodes_from
+
         Examples
         --------
         >>> G = bm.BayesianModel()
