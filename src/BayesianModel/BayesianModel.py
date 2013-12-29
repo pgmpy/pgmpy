@@ -30,9 +30,9 @@ class BayesianModel(nx.DiGraph):
     """
     def __init__(self, data=None):
         if not data is None:
-            for elem in itertools.chain(*data):
-                if not isinstance(elem, str):
-                    raise TypeError("Name of nodes must be strings")
+            if not all(isinstance(elem, str)
+                       for elem in itertools.chain(*data)):
+                raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.__init__(self, data)
 
