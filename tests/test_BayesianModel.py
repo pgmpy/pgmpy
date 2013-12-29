@@ -1,5 +1,6 @@
 import unittest
 import BayesianModel.BayesianModel as bm
+from Exceptions import Exceptions
 import networkx as nx
 import help_functions as hf
 
@@ -21,6 +22,10 @@ class TestModel(unittest.TestCase):
     def test_class_init_with_data_nonstring(self):
         self.assertRaises(TypeError, bm.BayesianModel, [(1, 2), (2, 3)])
 
+    def test_class_init_with_data_selfloop(self):
+        self.assertRaises(Exceptions.SelfLoopError, bm.BayesianModel,
+                          [('a', 'a')])
+
     def test_add_node_string(self):
         self.G.add_node('a')
         self.assertListEqual(self.G.nodes(), ['a'])
@@ -41,22 +46,34 @@ class TestModel(unittest.TestCase):
         self.assertListEqual(self.G.edges(), [('d', 'e')])
         self.G.add_nodes_from(['a', 'b', 'c'])
         self.G.add_edge('a', 'b')
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), [['a', 'b'], ['d', 'e']])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             [['a', 'b'], ['d', 'e']])
 
     def test_add_edge_nonstring(self):
         self.assertRaises(TypeError, self.G.add_edge, 1, 2)
 
+    def test_add_edge_selfloop(self):
+        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edge, 'a', 'a')
+
     def test_add_edges_from_string(self):
         self.G.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), [['a', 'b'], ['b', 'c']])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             [['a', 'b'], ['b', 'c']])
         self.G.add_nodes_from(['d', 'e', 'f'])
         self.G.add_edges_from([('d', 'e'), ('e', 'f')])
-        self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c', 'd', 'e', 'f'])
-        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'b'), ('b', 'c'), ('d', 'e'), ('e', 'f')]))
+        self.assertListEqual(sorted(self.G.nodes()),
+                             ['a', 'b', 'c', 'd', 'e', 'f'])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             hf.recursive_sorted([('a', 'b'), ('b', 'c'),
+                                                  ('d', 'e'), ('e', 'f')]))
 
     def test_add_edges_from_nonstring(self):
         self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
+
+    def test_add_edges_from_self_loop(self):
+        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edges_from,
+                          [('a', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
         self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
@@ -70,45 +87,6 @@ class TestModel(unittest.TestCase):
         self.assertListEqual(self.G.predecessors('a'), [])
         self.assertListEqual(self.G.predecessors('b'), ['a'])
         self.assertListEqual(self.G.predecessors('c'), ['b'])
-
-
-    # def test_add_edges(self):
-    #     self.G.add_node('a', 'b', 'c', 'd')
-    #     self.G.add_edges([('a', 'b'), ('c', 'd')])
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          [('a', 'b'), ('c', 'd')])
-    #
-    # def test_add_edges_both_tuples(self):
-    #     self.G.add_nodes('a', 'b', 'c', 'd')
-    #     self.G.add_edges([('a', 'b'), ('c', 'd')])
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          [('a', 'b'), ('c', 'd')])
-    #
-    # def test_add_edges_tail_string(self):
-    #     self.G.add_nodes('a', 'b', 'c', 'd')
-    #     self.G.add_edges(('a', 'b'), ('a', 'c'))
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          hf.recursive_sorted([('a', 'b'), ('a', 'c')]))
-    #
-    # def test_add_edges_head_string(self):
-    #     self.G.add_nodes('a', 'b', 'c', 'd')
-    #     self.G.add_edges(('a', 'c'), ('a', 'b'))
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          hf.recursive_sorted([('a', 'c'), ('b', 'c')]))
-    #
-    # def test_add_edges_both_string(self):
-    #     self.G.add_nodes('a', 'b')
-    #     self.G.add_edges(('a', 'b'))
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          hf.recursive_sorted([('a', 'b')]))
-    #
-    # def test_add_edges_multiple_times(self):
-    #     self.G.add_nodes('a', 'b', 'c', 'd')
-    #     self.G.add_edges(('a', 'c'), ('a', 'd'))
-    #     self.G.add_edges(('b', 'c'), ('b', 'd'))
-    #     self.assertListEqual(hf.recursive_sorted(self.G.edges()),
-    #                          hf.recursive_sorted([('a', 'c'), ('a', 'd'),
-    #                                              ('b', 'c'), ('b', 'd')]))
 
     def tearDown(self):
         del self.G
