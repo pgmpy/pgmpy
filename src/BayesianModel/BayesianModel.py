@@ -28,12 +28,17 @@ class BayesianModel(nx.DiGraph):
     is_active_trail('node1', 'node2')
     marginal_probability('node')
     """
-    def __init__(self, data=None):
-        if not data is None and not \
-                all(isinstance(elem, str) for elem in itertools.chain(*data)):
+    def __init__(self, ebunch=None):
+        # TODO: Add checks for self loops
+        if not ebunch is None and not \
+                all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
             raise TypeError("Name of nodes must be strings")
 
-        nx.DiGraph.__init__(self, data)
+        nx.DiGraph.__init__(self, ebunch)
+
+        if not ebunch is None:
+            self._update_node_parents(set(itertools.chain(*ebunch)))
+        # TODO: call _update_node_rule_for_parents
 
     def add_node(self, node):
         """
@@ -105,11 +110,13 @@ class BayesianModel(nx.DiGraph):
         """
         #string check required because if nodes not present networkx
         #automatically adds those nodes
+        #TODO: Add check for self loops
         if not(isinstance(u, str) and isinstance(v, str)):
             raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.add_edge(self, u, v)
-        #TODO: call _update_node_parents and _update_node_rule_for_parents
+        self._update_node_parents([u, v])
+        #TODO: call _update_node_rule_for_parents
             #Converting string arguments into tuple arguments
             # if isinstance(tail, str):
             #     tail = self._string_to_tuple(tail)
@@ -153,14 +160,21 @@ class BayesianModel(nx.DiGraph):
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
         """
+        # TODO: Add check for self loops
         if not all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
             raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.add_edges_from(self, ebunch)
-        #TODO: call _update_node_parents and _update_node_rule_for_parents
+        self._update_node_parents(set(itertools.chain(*ebunch)))
+        #TODO: call _update_node_rule_for_parents
 
-    def _update_node_parents(self):
-        pass
+    def _update_node_parents(self, node_list):
+        """
+        Function to update each node's _parent attribute.
+        This function is called when new node or new edge is added.
+        """
+        for node in node_list:
+            self.node[node]['_parents'] = self.predecessors(node)
 
     def _update_node_rule_for_parents(self):
         pass
