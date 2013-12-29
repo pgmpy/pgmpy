@@ -13,9 +13,9 @@ class TestModel(unittest.TestCase):
         self.assertIsInstance(self.G, nx.DiGraph)
 
     def test_class_init_with_data_string(self):
-        self.g_data = bm.BayesianModel([('a', 'b'), ('b', 'c')])
-        self.assertListEqual(sorted(self.g_data.nodes()), ['a', 'b', 'c'])
-        self.assertListEqual(hf.recursive_sorted(self.g_data.edges()),
+        self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(sorted(self.g.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(hf.recursive_sorted(self.g.edges()),
                              [['a', 'b'], ['b', 'c']])
 
     def test_class_init_with_data_nonstring(self):
@@ -57,6 +57,20 @@ class TestModel(unittest.TestCase):
 
     def test_add_edges_from_nonstring(self):
         self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
+
+    def test_update_node_parents_bm_constructor(self):
+        self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(self.g.predecessors('a'), [])
+        self.assertListEqual(self.g.predecessors('b'), ['a'])
+        self.assertListEqual(self.g.predecessors('c'), ['b'])
+
+    def test_update_node_parents(self):
+        self.G.add_nodes_from(['a', 'b', 'c'])
+        self.G.add_edges_from([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(self.G.predecessors('a'), [])
+        self.assertListEqual(self.G.predecessors('b'), ['a'])
+        self.assertListEqual(self.G.predecessors('c'), ['b'])
+
 
     # def test_add_edges(self):
     #     self.G.add_node('a', 'b', 'c', 'd')
