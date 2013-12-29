@@ -34,7 +34,8 @@ class BayesianModel(nx.DiGraph):
                 if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
                     raise TypeError("Name of nodes must be strings")
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
+                    raise Exceptions.SelfLoopError("Self Loops are"
+                                                   " not allowed", edge)
 
         nx.DiGraph.__init__(self, ebunch)
 
@@ -139,7 +140,8 @@ class BayesianModel(nx.DiGraph):
             # self.node[head_node]['_parents'] = self.predecessors(head_node)
             # self.node[head_node]['_rule_for_parents'] = [
             #         index for index in range(len(tail))]
-        #TODO: _rule_for_parents needs to made into a generator # Right now I have no idea why this is needed.
+        #TODO: _rule_for_parents needs to made into a generator
+        #TODO: Right now I have no idea why this ^ TODO is needed.
 
     def add_edges_from(self, ebunch):
         """
@@ -169,9 +171,8 @@ class BayesianModel(nx.DiGraph):
                 if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
                     raise TypeError("Name of nodes must be strings")
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
-        # if not all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
-        #     raise TypeError("Name of nodes must be strings")
+                    raise Exceptions.SelfLoopError("Self Loops "
+                                                   "are not allowed", edge)
 
         nx.DiGraph.add_edges_from(self, ebunch)
 
