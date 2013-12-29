@@ -32,3 +32,11 @@ class ExtraStatesError(Exception):
 
     def __str__(self):
         return repr("Following are not states: " + str(self.extra))
+
+
+class SelfLoopError(Exception):
+    def __init__(self, *extra):
+        self.extra = extra
+
+    def __str__(self):
+        return repr(str(self.extra))
