@@ -29,16 +29,11 @@ class BayesianModel(nx.DiGraph):
     marginal_probability('node')
     """
     def __init__(self, data=None):
-        if not data is None:
-            if not all(isinstance(elem, str)
-                       for elem in itertools.chain(*data)):
-                raise TypeError("Name of nodes must be strings")
+        if not data is None and not \
+                all(isinstance(elem, str) for elem in itertools.chain(*data)):
+            raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.__init__(self, data)
-
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
 
     def add_node(self, node):
         """
@@ -51,7 +46,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        add_nodes_from
+        add_nodes_from : add a collection of nodes
 
         Examples
         --------
@@ -74,7 +69,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        add_node
+        add_node : add a single node
 
         Examples
         --------
@@ -86,34 +81,93 @@ class BayesianModel(nx.DiGraph):
 
         nx.DiGraph.add_nodes_from(self, nodes)
 
-    def add_edges(self, *args):
-        """Takes two tuples of nodes as input. All nodes in 'tail' are
-        joint to all nodes in 'head' with the direction of each edge being
-        from a node in 'tail' to a node in 'head'.
+    def add_edge(self, u, v):
+        """
+        Add an edge between u and v.
+
+        The nodes u and v will be automatically added if they are
+        not already in the graph
+
+        Parameters
+        ----------
+        u,v : nodes
+              Nodes must be strings.
+
+        See Also
+        --------
+        add_edges_from : add a collection of edges
 
         EXAMPLE
         -------
-        >>> bayesian_model.add_edges([('difficulty', 'grade'), ('intelligence', 'grades')])
+        >>> G = bm.BayesianModel()
+        >>> G.add_nodes_from(['grade', 'intel'])
+        >>> G.add_edge('grade', 'intel')
         """
-        #Converting string arguments into tuple arguments
-        # if isinstance(tail, str):
-        #     tail = self._string_to_tuple(tail)
-        # if isinstance(head, str):
-        #     head = self._string_to_tuple(head)
-        #
-        # for head_node in head:
-        #     for tail_node in tail:
-        #         self.add_edge(tail_node, head_node)
-        self.add_edges_from(args)
-        for node in self.nodes():
-            self.node[node]['_parents'] = self.predecessors(node)
-            self.node[node]['_rule_for_parents'] = [
-                index for index in range(len(self.neighbors(node)))]
-        # self.node[head_node]['_parents'] = self.predecessors(head_node)
-        # self.node[head_node]['_rule_for_parents'] = [
-        #         index for index in range(len(tail))]
-        #TODO _rule_for_parents needs to made into a generator
-        #TODO after each call to add_edges or call update node _parents and update _rule_for_parents
+        #string check required because if nodes not present networkx
+        #automatically adds those nodes
+        if not(isinstance(u, str) and isinstance(v, str)):
+            raise TypeError("Name of nodes must be strings")
+
+        nx.DiGraph.add_edge(self, u, v)
+        #TODO: call _update_node_parents and _update_node_rule_for_parents
+            #Converting string arguments into tuple arguments
+            # if isinstance(tail, str):
+            #     tail = self._string_to_tuple(tail)
+            # if isinstance(head, str):
+            #     head = self._string_to_tuple(head)
+            #
+            # for head_node in head:
+            #     for tail_node in tail:
+            #         self.add_edge(tail_node, head_node)
+
+            # self.add_edges_from(args)
+            # for node in self.nodes():
+            #     self.node[node]['_parents'] = self.predecessors(node)
+            #     self.node[node]['_rule_for_parents'] = [
+            #         index for index in range(len(self.neighbors(node)))]
+            # self.node[head_node]['_parents'] = self.predecessors(head_node)
+            # self.node[head_node]['_rule_for_parents'] = [
+            #         index for index in range(len(tail))]
+        #TODO: _rule_for_parents needs to made into a generator # Right now I have no idea why this is needed.
+
+    def add_edges_from(self, ebunch):
+        """
+        Add all the edges in ebunch.
+
+        If nodes referred in the ebunch are not already present, they
+        will be automatically added. Node names should be strings.
+
+        Parameters
+        ----------
+        ebunch : container of edges
+            Each edge given in the container will be added to the graph.
+            The edges must be given as 2-tuples (u,v).
+
+        See Also
+        --------
+        add_edge : Add a single edge
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel()
+        >>> G.add_nodes_from(['diff', 'intel', 'grade'])
+        >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
+        """
+        if not all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
+            raise TypeError("Name of nodes must be strings")
+
+        nx.DiGraph.add_edges_from(self, ebunch)
+        #TODO: call _update_node_parents and _update_node_rule_for_parents
+
+    def _update_node_parents(self):
+        pass
+
+    def _update_node_rule_for_parents(self):
+        pass
+
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return string,
 
     def add_states(self, node, states):
         """Adds the names of states from the tuple 'states' to given 'node'."""

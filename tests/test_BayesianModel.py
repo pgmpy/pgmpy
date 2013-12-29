@@ -25,15 +25,38 @@ class TestModel(unittest.TestCase):
         self.G.add_node('a')
         self.assertListEqual(self.G.nodes(), ['a'])
 
+    def test_add_node_nonstring(self):
+        self.assertRaises(TypeError, self.G.add_node, 1)
+
     def test_add_nodes_from_string(self):
         self.G.add_nodes_from(['a', 'b', 'c', 'd'])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c', 'd'])
 
-    def test_add_node_nonstring(self):
-        self.assertRaises(TypeError, self.G.add_node, 1)
-
     def test_add_nodes_from_non_string(self):
         self.assertRaises(TypeError, self.G.add_nodes_from, [1, 2, 3, 4])
+
+    def test_add_edge_string(self):
+        self.G.add_edge('d', 'e')
+        self.assertListEqual(sorted(self.G.nodes()), ['d', 'e'])
+        self.assertListEqual(self.G.edges(), [('d', 'e')])
+        self.G.add_nodes_from(['a', 'b', 'c'])
+        self.G.add_edge('a', 'b')
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()), [['a', 'b'], ['d', 'e']])
+
+    def test_add_edge_nonstring(self):
+        self.assertRaises(TypeError, self.G.add_edge, 1, 2)
+
+    def test_add_edges_from_string(self):
+        self.G.add_edges_from([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()), [['a', 'b'], ['b', 'c']])
+        self.G.add_nodes_from(['d', 'e', 'f'])
+        self.G.add_edges_from([('d', 'e'), ('e', 'f')])
+        self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c', 'd', 'e', 'f'])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()), hf.recursive_sorted([('a', 'b'), ('b', 'c'), ('d', 'e'), ('e', 'f')]))
+
+    def test_add_edges_from_nonstring(self):
+        self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
 
     # def test_add_edges(self):
     #     self.G.add_node('a', 'b', 'c', 'd')
