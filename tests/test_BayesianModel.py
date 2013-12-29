@@ -9,8 +9,17 @@ class TestModel(unittest.TestCase):
     def setUp(self):
         self.G = bm.BayesianModel()
 
-    def test_class_init(self):
+    def test_class_init_without_data(self):
         self.assertIsInstance(self.G, nx.DiGraph)
+
+    def test_class_init_with_data_string(self):
+        self.g_data = bm.BayesianModel([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(sorted(self.g_data.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(hf.recursive_sorted(self.g_data.edges()),
+                             [['a', 'b'], ['b', 'c']])
+
+    def test_class_init_with_data_nonstring(self):
+        self.assertRaises(TypeError, bm.BayesianModel, [(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.G.add_node('a')

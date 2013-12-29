@@ -28,10 +28,17 @@ class BayesianModel(nx.DiGraph):
     is_active_trail('node1', 'node2')
     marginal_probability('node')
     """
-    #__init__ is inherited
+    def __init__(self, data=None):
+        if not data is None:
+            for elem in itertools.chain(*data):
+                if not isinstance(elem, str):
+                    raise TypeError("Name of nodes must be strings")
+
+        nx.DiGraph.__init__(self, data)
+
     def _string_to_tuple(self, string):
         """Converts a single string into a tuple with one string element."""
-        return (string,)
+        return string,
 
     def add_node(self, node):
         """
@@ -106,7 +113,7 @@ class BayesianModel(nx.DiGraph):
         # self.node[head_node]['_rule_for_parents'] = [
         #         index for index in range(len(tail))]
         #TODO _rule_for_parents needs to made into a generator
-            #TODO after each call to add_edges or call update node _parents and update _rule_for_parents
+        #TODO after each call to add_edges or call update node _parents and update _rule_for_parents
 
     def add_states(self, node, states):
         """Adds the names of states from the tuple 'states' to given 'node'."""
