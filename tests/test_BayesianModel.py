@@ -1,5 +1,6 @@
 import unittest
 import BayesianModel.BayesianModel as bm
+from Exceptions import Exceptions
 import networkx as nx
 import help_functions as hf
 
@@ -20,6 +21,9 @@ class TestModel(unittest.TestCase):
 
     def test_class_init_with_data_nonstring(self):
         self.assertRaises(TypeError, bm.BayesianModel, [(1, 2), (2, 3)])
+
+    def test_class_init_with_data_selfloop(self):
+        self.assertRaises(Exceptions.SelfLoopError, bm.BayesianModel, [('a', 'a')])
 
     def test_add_node_string(self):
         self.G.add_node('a')
@@ -46,6 +50,9 @@ class TestModel(unittest.TestCase):
     def test_add_edge_nonstring(self):
         self.assertRaises(TypeError, self.G.add_edge, 1, 2)
 
+    def test_add_edge_selfloop(self):
+        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edge, 'a', 'a')
+
     def test_add_edges_from_string(self):
         self.G.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
@@ -57,6 +64,9 @@ class TestModel(unittest.TestCase):
 
     def test_add_edges_from_nonstring(self):
         self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
+
+    def test_add_edges_from_self_loop(self):
+        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edges_from, [('a', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
         self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])

@@ -2,7 +2,7 @@
 
 import networkx as nx
 import numpy as np
-import Exceptions
+from Exceptions import Exceptions
 from BayesianModel import CPDs
 import itertools
 from scipy import sparse
@@ -29,10 +29,12 @@ class BayesianModel(nx.DiGraph):
     marginal_probability('node')
     """
     def __init__(self, ebunch=None):
-        # TODO: Add checks for self loops
-        if not ebunch is None and not \
-                all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
-            raise TypeError("Name of nodes must be strings")
+        if ebunch is not None:
+            for edge in ebunch:
+                if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
+                    raise TypeError("Name of nodes must be strings")
+                if edge[0] == edge[1]:
+                    raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
 
         nx.DiGraph.__init__(self, ebunch)
 
@@ -110,11 +112,13 @@ class BayesianModel(nx.DiGraph):
         """
         #string check required because if nodes not present networkx
         #automatically adds those nodes
-        #TODO: Add check for self loops
+        if u == v:
+            raise Exceptions.SelfLoopError("Self Loops are not allowed")
         if not(isinstance(u, str) and isinstance(v, str)):
             raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.add_edge(self, u, v)
+
         self._update_node_parents([u, v])
         #TODO: call _update_node_rule_for_parents
             #Converting string arguments into tuple arguments
@@ -160,11 +164,17 @@ class BayesianModel(nx.DiGraph):
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
         """
-        # TODO: Add check for self loops
-        if not all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
-            raise TypeError("Name of nodes must be strings")
+        if ebunch is not None:
+            for edge in ebunch:
+                if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
+                    raise TypeError("Name of nodes must be strings")
+                if edge[0] == edge[1]:
+                    raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
+        # if not all(isinstance(elem, str) for elem in itertools.chain(*ebunch)):
+        #     raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.add_edges_from(self, ebunch)
+
         self._update_node_parents(set(itertools.chain(*ebunch)))
         #TODO: call _update_node_rule_for_parents
 
