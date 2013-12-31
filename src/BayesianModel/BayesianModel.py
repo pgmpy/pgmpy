@@ -40,8 +40,9 @@ class BayesianModel(nx.DiGraph):
         nx.DiGraph.__init__(self, ebunch)
 
         if not ebunch is None:
-            self._update_node_parents(set(itertools.chain(*ebunch)))
-        # TODO: call _update_node_rule_for_parents
+            new_nodes = set(itertools.chain(*ebunch))
+            self._update_node_parents(new_nodes)
+            self._update_node_rule_for_parents(new_nodes)
 
     def add_node(self, node):
         """
@@ -66,6 +67,9 @@ class BayesianModel(nx.DiGraph):
 
         nx.DiGraph.add_node(self, node)
 
+        self._update_node_parents([node])
+        self._update_node_rule_for_parents([node])
+
     def add_nodes_from(self, nodes):
         """
         Add multiple nodes to the Graph.
@@ -88,6 +92,9 @@ class BayesianModel(nx.DiGraph):
             raise TypeError("Name of nodes must be strings")
 
         nx.DiGraph.add_nodes_from(self, nodes)
+
+        self._update_node_parents(nodes)
+        self._update_node_rule_for_parents(nodes)
 
     def add_edge(self, u, v):
         """
@@ -121,25 +128,7 @@ class BayesianModel(nx.DiGraph):
         nx.DiGraph.add_edge(self, u, v)
 
         self._update_node_parents([u, v])
-        #TODO: call _update_node_rule_for_parents
-            #Converting string arguments into tuple arguments
-            # if isinstance(tail, str):
-            #     tail = self._string_to_tuple(tail)
-            # if isinstance(head, str):
-            #     head = self._string_to_tuple(head)
-            #
-            # for head_node in head:
-            #     for tail_node in tail:
-            #         self.add_edge(tail_node, head_node)
-
-            # self.add_edges_from(args)
-            # for node in self.nodes():
-            #     self.node[node]['_parents'] = self.predecessors(node)
-            #     self.node[node]['_rule_for_parents'] = [
-            #         index for index in range(len(self.neighbors(node)))]
-            # self.node[head_node]['_parents'] = self.predecessors(head_node)
-            # self.node[head_node]['_rule_for_parents'] = [
-            #         index for index in range(len(tail))]
+        self._update_node_rule_for_parents([u, v])
         #TODO: _rule_for_parents needs to made into a generator
         #TODO: Right now I have no idea why this ^ TODO is needed.
 
@@ -176,8 +165,9 @@ class BayesianModel(nx.DiGraph):
 
         nx.DiGraph.add_edges_from(self, ebunch)
 
-        self._update_node_parents(set(itertools.chain(*ebunch)))
-        #TODO: call _update_node_rule_for_parents
+        new_nodes = set(itertools.chain(*ebunch))
+        self._update_node_parents(new_nodes)
+        self._update_node_rule_for_parents(new_nodes)
 
     def _update_node_parents(self, node_list):
         """
@@ -187,8 +177,22 @@ class BayesianModel(nx.DiGraph):
         for node in node_list:
             self.node[node]['_parents'] = self.predecessors(node)
 
-    def _update_node_rule_for_parents(self):
-        pass
+    # TODO: I don't know what the fuck is this function doing. So someone please review it.
+    def _update_node_rule_for_parents(self, node_list):
+        """
+        Function to update each node's _rule_for_parents attribute.
+        This function is called when new node or new edge is added.
+        """
+        for node in node_list:
+            self.node[node]['_rule_for_parents'] = [index for index in range(len(self.neighbors(node)))]
+        ################ Just for reference: Earlier Code ####################
+        # for head_node in head:                                             #
+        #     for tail_node in tail:                                         #
+        #         self.add_edge(tail_node, head_node)                        #
+        #     self.node[head_node]['_parents'] = self.predecessors(head_node)#
+        #     self.node[head_node]['_rule_for_parents'] = [                  #
+        #             index for index in range(len(tail))]                   #
+        ######################################################################
 
     def _string_to_tuple(self, string):
         """Converts a single string into a tuple with one string element."""
