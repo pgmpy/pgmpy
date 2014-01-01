@@ -262,7 +262,8 @@ class BayesianModel(nx.DiGraph):
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        if any(state['observed_status'] for state in self.node[node]['_states']):
+        if any(state['observed_status'] for state in
+               self.node[node]['_states']):
             self.node[node]['_observed'] = True
         else:
             self.node[node]['_observed'] = False
@@ -276,16 +277,11 @@ class BayesianModel(nx.DiGraph):
         >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
         True
         """
-        _all_states = set()
-        for state in self.node[node]['_states']:
-            _all_states.add(state['name'])
-        missing_states = _all_states - set(states)
-
-        if missing_states:
-            raise Exceptions.MissingStatesError(missing_states)
-        else:
+        if sorted(self.node[node]['_states']) == sorted(states):
             return True
-
+        else:
+            raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
+        
     def _no_extra_states(self, node, states):
         """"Returns True if the argument states contains only the states
          present in Node.
