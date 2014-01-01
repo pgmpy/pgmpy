@@ -205,18 +205,28 @@ class BayesianModel(nx.DiGraph):
         from __init__ deletes the graph.
         """
         if delete_graph:
-            simple_cycles = [loop for loop in nx.simple_cycle(self)]
+            if ebunch is not None:
+                for edge in ebunch:
+                    if edge[0] == edge[1]:
+                        del self
+                        raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
+
+            simple_cycles = [loop for loop in nx.simple_cycles(self)]
             if simple_cycles:
                 del self
-                raise Exceptions.SelfLoopError("Self Loops are not allowed", simple_cycles)
+                raise Exceptions.CycleError("Cycles are not allowed", simple_cycles)
         else:
+            for edge in ebunch:
+                if edge[0] == edge[1]:
+                    raise Exceptions.SelfLoopError("Self loops are not allowed", edge)
+
             import copy
             test_G = copy.deepcopy(self)
-            test_G.add_nodes_from(ebunch)
-            simple_cycles = [loop for loop in nx.simple_cycle(self)]
+            nx.DiGraph.add_edges_from(test_G, ebunch)
+            simple_cycles = [loop for loop in nx.simple_cycles(test_G)]
             if simple_cycles:
                 del test_G
-                raise Exceptions.selfLoopError("Self loops are not allowed", simple_cycles)
+                raise Exceptions.CycleError("Cycles are not allowed", simple_cycles)
             return 1
 
     def _string_to_tuple(self, string):
