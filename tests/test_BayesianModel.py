@@ -26,6 +26,9 @@ class TestModel(unittest.TestCase):
         self.assertRaises(Exceptions.SelfLoopError, bm.BayesianModel,
                           [('a', 'a')])
 
+    def test_class_init_with_data_cycle(self):
+        self.assertRaises(Exceptions.CycleError, bm.BayesianModel, [('a', 'b'), ('b', 'c'), ('c', 'a')])
+
     def test_add_node_string(self):
         self.G.add_node('a')
         self.assertListEqual(self.G.nodes(), ['a'])
@@ -55,6 +58,10 @@ class TestModel(unittest.TestCase):
     def test_add_edge_selfloop(self):
         self.assertRaises(Exceptions.SelfLoopError, self.G.add_edge, 'a', 'a')
 
+    def test_add_edge_result_cycle(self):
+        self.G.add_edges_from([('a', 'b'), ('a', 'c')])
+        self.assertRaises(Exceptions.CycleError, self.G.add_edge, 'c', 'a')
+
     def test_add_edges_from_string(self):
         self.G.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
@@ -74,6 +81,9 @@ class TestModel(unittest.TestCase):
     def test_add_edges_from_self_loop(self):
         self.assertRaises(Exceptions.SelfLoopError, self.G.add_edges_from,
                           [('a', 'a')])
+
+    def test_add_edges_from_result_cycle(self):
+        self.assertRaises(Exceptions.CycleError, self.G.add_edges_from, [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
         self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
