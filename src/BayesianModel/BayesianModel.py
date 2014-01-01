@@ -230,19 +230,29 @@ class BayesianModel(nx.DiGraph):
                                             simple_cycles)
             return 1
 
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
-
     def add_states(self, node, states):
-        """Adds the names of states from the tuple 'states' to given 'node'."""
-        self.node[node]['_states'] = [
-            {'name': state, 'observed_status': False} for state in states]
-        self.node[node]['_rule_for_states'] = [
-            n for n in range(len(states))]
+        """
+        Adds the names of states from 'states' to given 'node'.
+        """
+        try:
+            self.node[node]['_states'].append([{'name': state,
+                                                'observed_status': False}
+                                               for state in states])
+        except KeyError:
+            self.node[node]['_states'] = [
+                {'name': state, 'observed_status': False} for state in states]
+
+        self._update_rule_for_states(node, len(states))
+    ################# For Reference ########################
+    #   self.node[node]['_rule_for_states'] = [            #
+    #       n for n in range(len(states))]                 #
+    ########################################################
         self._update_node_observed_status(node)
 
         #TODO _rule_for_states needs to made into a generator
+
+    def _update_rule_for_states(self, node, number_of_states):
+        self.node[node]['_rule_for_states'] = [n for n in range(number_of_states)]
 
     def _update_node_observed_status(self, node):
         """
@@ -380,6 +390,10 @@ class BayesianModel(nx.DiGraph):
             _obj_parent_list.append(self.node[_parent])
         return _obj_parent_list
     #TODO _get_parent_objects() needs to made into a generator
+
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return string,
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
