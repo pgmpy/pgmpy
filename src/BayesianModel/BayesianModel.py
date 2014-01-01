@@ -230,19 +230,30 @@ class BayesianModel(nx.DiGraph):
                                             simple_cycles)
             return 1
 
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
-
     def add_states(self, node, states):
-        """Adds the names of states from the tuple 'states' to given 'node'."""
-        self.node[node]['_states'] = [
-            {'name': state, 'observed_status': False} for state in states]
-        self.node[node]['_rule_for_states'] = [
-            n for n in range(len(states))]
+        """
+        Adds the names of states from 'states' to given 'node'.
+        """
+        try:
+            self.node[node]['_states'].append([{'name': state,
+                                                'observed_status': False}
+                                               for state in states])
+        except KeyError:
+            self.node[node]['_states'] = [
+                {'name': state, 'observed_status': False} for state in states]
+
+        self._update_rule_for_states(node, len(states))
+    ################# For Reference ########################
+    #   self.node[node]['_rule_for_states'] = [            #
+    #       n for n in range(len(states))]                 #
+    ########################################################
         self._update_node_observed_status(node)
 
         #TODO _rule_for_states needs to made into a generator
+
+    def _update_rule_for_states(self, node, number_of_states):
+        self.node[node]['_rule_for_states'] = \
+            [n for n in range(number_of_states)]
 
     def _update_node_observed_status(self, node):
         """
@@ -251,10 +262,9 @@ class BayesianModel(nx.DiGraph):
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        for state in self.node[node]['_states']:
-            if state['observed_status']:
-                self.node[node]['_observed'] = True
-                break
+        if any(state['observed_status'] for state in
+               self.node[node]['_states']):
+            self.node[node]['_observed'] = True
         else:
             self.node[node]['_observed'] = False
 
@@ -267,15 +277,10 @@ class BayesianModel(nx.DiGraph):
         >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
         True
         """
-        _all_states = set()
-        for state in self.node[node]['_states']:
-            _all_states.add(state['name'])
-        missing_states = _all_states - set(states)
-
-        if missing_states:
-            raise Exceptions.MissingStatesError(missing_states)
-        else:
+        if sorted(self.node[node]['_states']) == sorted(states):
             return True
+        else:
+            raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
 
     def _no_extra_states(self, node, states):
         """"Returns True if the argument states contains only the states
@@ -286,11 +291,7 @@ class BayesianModel(nx.DiGraph):
         >>> bayesian_model._no_extra_states('difficulty', ('hard', 'easy'))
         True
         """
-        _all_states = set()
-        for state in self.node[node]['_states']:
-            _all_states.add(state['name'])
-        extra_states = set(states) - _all_states
-
+        extra_states = set(states) - set(self.node[node]['_states'])
         if extra_states:
             raise Exceptions.ExtraStatesError(extra_states)
         else:
@@ -380,6 +381,10 @@ class BayesianModel(nx.DiGraph):
             _obj_parent_list.append(self.node[_parent])
         return _obj_parent_list
     #TODO _get_parent_objects() needs to made into a generator
+
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return string,
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
