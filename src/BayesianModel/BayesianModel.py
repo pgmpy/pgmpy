@@ -281,7 +281,7 @@ class BayesianModel(nx.DiGraph):
             return True
         else:
             raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
-        
+
     def _no_extra_states(self, node, states):
         """"Returns True if the argument states contains only the states
          present in Node.
@@ -291,11 +291,7 @@ class BayesianModel(nx.DiGraph):
         >>> bayesian_model._no_extra_states('difficulty', ('hard', 'easy'))
         True
         """
-        _all_states = set()
-        for state in self.node[node]['_states']:
-            _all_states.add(state['name'])
-        extra_states = set(states) - _all_states
-
+        extra_states = set(states) - set(self.node[node]['_states'])
         if extra_states:
             raise Exceptions.ExtraStatesError(extra_states)
         else:
