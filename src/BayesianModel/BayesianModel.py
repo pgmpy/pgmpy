@@ -31,12 +31,6 @@ class BayesianModel(nx.DiGraph):
     def __init__(self, ebunch=None):
         if ebunch is not None:
             self._check_node_string(set(itertools.chain(*ebunch)))
-            # for edge in ebunch:
-            #     if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
-            #         raise TypeError("Name of nodes must be strings")
-            #     if edge[0] == edge[1]:
-            #         raise Exceptions.SelfLoopError("Self Loops are"
-            #                                        " not allowed", edge)
 
         nx.DiGraph.__init__(self, ebunch)
 
@@ -172,14 +166,16 @@ class BayesianModel(nx.DiGraph):
         for node in node_list:
             self.node[node]['_parents'] = self.predecessors(node)
 
-    # TODO: I don't know what the fuck is this function doing. So someone please review it.
+    # TODO: I don't know what the fuck is this function doing.
+    # So someone please review it.
     def _update_node_rule_for_parents(self, node_list):
         """
         Function to update each node's _rule_for_parents attribute.
         This function is called when new node or new edge is added.
         """
         for node in node_list:
-            self.node[node]['_rule_for_parents'] = [index for index in range(len(self.neighbors(node)))]
+            self.node[node]['_rule_for_parents'] = \
+                [index for index in range(len(self.neighbors(node)))]
         ################ Just for reference: Earlier Code ####################
         # for head_node in head:                                             #
         #     for tail_node in tail:                                         #
@@ -192,7 +188,8 @@ class BayesianModel(nx.DiGraph):
     def _check_node_string(self, node_list):
         """
         Checks if all the newly added node are strings.
-        Called from __init__, add_node, add_nodes_from, add_edge and add_edges_from
+        Called from __init__, add_node, add_nodes_from, add_edge and
+        add_edges_from
         """
         for node in node_list:
             if not (isinstance(node, str)):
@@ -201,24 +198,27 @@ class BayesianModel(nx.DiGraph):
     def _check_graph(self, ebunch=None, delete_graph=False):
         """
         Checks for self loops and cycles in the graph.
-        If finds any, reverts the graph to previous state or in case when called
-        from __init__ deletes the graph.
+        If finds any, reverts the graph to previous state or
+        in case when called from __init__ deletes the graph.
         """
         if delete_graph:
             if ebunch is not None:
                 for edge in ebunch:
                     if edge[0] == edge[1]:
                         del self
-                        raise Exceptions.SelfLoopError("Self Loops are not allowed", edge)
+                        raise Exceptions.SelfLoopError("Self Loops"
+                                                       "are not allowed", edge)
 
             simple_cycles = [loop for loop in nx.simple_cycles(self)]
             if simple_cycles:
                 del self
-                raise Exceptions.CycleError("Cycles are not allowed", simple_cycles)
+                raise Exceptions.CycleError("Cycles are not allowed",
+                                            simple_cycles)
         else:
             for edge in ebunch:
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self loops are not allowed", edge)
+                    raise Exceptions.SelfLoopError("Self loops are not"
+                                                   "allowed", edge)
 
             import copy
             test_G = copy.deepcopy(self)
@@ -226,7 +226,8 @@ class BayesianModel(nx.DiGraph):
             simple_cycles = [loop for loop in nx.simple_cycles(test_G)]
             if simple_cycles:
                 del test_G
-                raise Exceptions.CycleError("Cycles are not allowed", simple_cycles)
+                raise Exceptions.CycleError("Cycles are not allowed",
+                                            simple_cycles)
             return 1
 
     def _string_to_tuple(self, string):
