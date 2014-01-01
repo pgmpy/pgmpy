@@ -30,17 +30,19 @@ class BayesianModel(nx.DiGraph):
     """
     def __init__(self, ebunch=None):
         if ebunch is not None:
-            for edge in ebunch:
-                if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
-                    raise TypeError("Name of nodes must be strings")
-                if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self Loops are"
-                                                   " not allowed", edge)
+            self._check_node_string(set(itertools.chain(*ebunch)))
+            # for edge in ebunch:
+            #     if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
+            #         raise TypeError("Name of nodes must be strings")
+            #     if edge[0] == edge[1]:
+            #         raise Exceptions.SelfLoopError("Self Loops are"
+            #                                        " not allowed", edge)
 
         nx.DiGraph.__init__(self, ebunch)
 
-        if not ebunch is None:
+        if ebunch is not None:
             new_nodes = set(itertools.chain(*ebunch))
+            self._check_graph(delete_graph=True)
             self._update_node_parents(new_nodes)
             self._update_node_rule_for_parents(new_nodes)
 
@@ -62,9 +64,9 @@ class BayesianModel(nx.DiGraph):
         >>> G = bm.BayesianModel()
         >>> G.add_node('difficulty')
         """
-        if not isinstance(node, str):
-            raise TypeError("Name of nodes must be strings")
-
+        # if not isinstance(node, str):
+        #     raise TypeError("Name of nodes must be strings")
+        self._check_node_string([node])
         nx.DiGraph.add_node(self, node)
 
         self._update_node_parents([node])
@@ -88,9 +90,9 @@ class BayesianModel(nx.DiGraph):
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
-        if not all([isinstance(elem, str) for elem in nodes]):
-            raise TypeError("Name of nodes must be strings")
-
+        # if not all([isinstance(elem, str) for elem in nodes]):
+        #     raise TypeError("Name of nodes must be strings")
+        self._check_node_string(nodes)
         nx.DiGraph.add_nodes_from(self, nodes)
 
         self._update_node_parents(nodes)
@@ -120,12 +122,9 @@ class BayesianModel(nx.DiGraph):
         """
         #string check required because if nodes not present networkx
         #automatically adds those nodes
-        if u == v:
-            raise Exceptions.SelfLoopError("Self Loops are not allowed")
-        if not(isinstance(u, str) and isinstance(v, str)):
-            raise TypeError("Name of nodes must be strings")
-
-        nx.DiGraph.add_edge(self, u, v)
+        self._check_node_string([u, v])
+        if self._check_graph([(u, v)], delete_graph=False):
+            nx.DiGraph.add_edge(self, u, v)
 
         self._update_node_parents([u, v])
         self._update_node_rule_for_parents([u, v])
@@ -156,14 +155,10 @@ class BayesianModel(nx.DiGraph):
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
         """
         if ebunch is not None:
-            for edge in ebunch:
-                if not (isinstance(edge[0], str) and isinstance(edge[1], str)):
-                    raise TypeError("Name of nodes must be strings")
-                if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self Loops "
-                                                   "are not allowed", edge)
+            self._check_node_string(set(itertools.chain(*ebunch)))
 
-        nx.DiGraph.add_edges_from(self, ebunch)
+        if self._check_graph(ebunch, delete_graph=False):
+            nx.DiGraph.add_edges_from(self, ebunch)
 
         new_nodes = set(itertools.chain(*ebunch))
         self._update_node_parents(new_nodes)
@@ -194,6 +189,36 @@ class BayesianModel(nx.DiGraph):
         #             index for index in range(len(tail))]                   #
         ######################################################################
 
+    def _check_node_string(self, node_list):
+        """
+        Checks if all the newly added node are strings.
+        Called from __init__, add_node, add_nodes_from, add_edge and add_edges_from
+        """
+        for node in node_list:
+            if not (isinstance(node, str)):
+                raise TypeError("Node names must be strings")
+
+    def _check_graph(self, ebunch=None, delete_graph=False):
+        """
+        Checks for self loops and cycles in the graph.
+        If finds any, reverts the graph to previous state or in case when called
+        from __init__ deletes the graph.
+        """
+        if delete_graph:
+            simple_cycles = [loop for loop in nx.simple_cycle(self)]
+            if simple_cycles:
+                del self
+                raise Exceptions.SelfLoopError("Self Loops are not allowed", simple_cycles)
+        else:
+            import copy
+            test_G = copy.deepcopy(self)
+            test_G.add_nodes_from(ebunch)
+            simple_cycles = [loop for loop in nx.simple_cycle(self)]
+            if simple_cycles:
+                del test_G
+                raise Exceptions.selfLoopError("Self loops are not allowed", simple_cycles)
+            return 1
+
     def _string_to_tuple(self, string):
         """Converts a single string into a tuple with one string element."""
         return string,
@@ -205,6 +230,7 @@ class BayesianModel(nx.DiGraph):
         self.node[node]['_rule_for_states'] = [
             n for n in range(len(states))]
         self._update_node_observed_status(node)
+
         #TODO _rule_for_states needs to made into a generator
 
     def _update_node_observed_status(self, node):
