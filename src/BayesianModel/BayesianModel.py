@@ -231,6 +231,8 @@ class BayesianModel(nx.DiGraph):
             return 1
 
     def add_states(self, node, states):
+        # TODO: Add the functionality to accept states of multiple
+        # nodes in a single call.
         """
         Adds the names of states from 'states' to given 'node'.
         """
@@ -257,11 +259,12 @@ class BayesianModel(nx.DiGraph):
 
     def _update_node_observed_status(self, node):
         """
-        Updates '_observed' in the node-dictionary.
+        Updates '_observed' attribute of the node.
 
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
+        print([state['observed_status'] for state in self.node[node]['_states']])
         if any(state['observed_status'] for state in
                self.node[node]['_states']):
             self.node[node]['_observed'] = True
@@ -269,13 +272,9 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_observed'] = False
 
     def _no_missing_states(self, node, states):
-        """"Returns True if all the states of the node are present in the
+        """
+        Returns True if all the states of the node are present in the
         argument states.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
-        True
         """
         if sorted(self.node[node]['_states']) == sorted(states):
             return True
@@ -283,13 +282,9 @@ class BayesianModel(nx.DiGraph):
             raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
 
     def _no_extra_states(self, node, states):
-        """"Returns True if the argument states contains only the states
+        """"
+        Returns True if the argument states contains only the states
          present in Node.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_extra_states('difficulty', ('hard', 'easy'))
-        True
         """
         extra_states = set(states) - set(self.node[node]['_states'])
         if extra_states:
