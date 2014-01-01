@@ -252,7 +252,8 @@ class BayesianModel(nx.DiGraph):
         #TODO _rule_for_states needs to made into a generator
 
     def _update_rule_for_states(self, node, number_of_states):
-        self.node[node]['_rule_for_states'] = [n for n in range(number_of_states)]
+        self.node[node]['_rule_for_states'] = \
+            [n for n in range(number_of_states)]
 
     def _update_node_observed_status(self, node):
         """
@@ -261,10 +262,8 @@ class BayesianModel(nx.DiGraph):
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        for state in self.node[node]['_states']:
-            if state['observed_status']:
-                self.node[node]['_observed'] = True
-                break
+        if any(state['observed_status'] for state in self.node[node]['_states']):
+            self.node[node]['_observed'] = True
         else:
             self.node[node]['_observed'] = False
 
