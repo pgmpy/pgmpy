@@ -234,7 +234,25 @@ class BayesianModel(nx.DiGraph):
         # TODO: Add the functionality to accept states of multiple
         # nodes in a single call.
         """
-        Adds the names of states from 'states' to given 'node'.
+        Adds states to the node.
+
+        Parameters
+        ----------
+        node  :  Graph node
+                Must be already present in the Model
+
+        states :  Container of states
+                Can be list or tuple of states.
+
+        See Also
+        --------
+        get_states
+
+        Examples
+        --------
+        G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        G.add_states('diff', ['easy', 'hard'])
+        G.add_states('intel', ['dumb', 'smart'])
         """
         try:
             self.node[node]['_states'].extend([{'name': state,
