@@ -264,7 +264,6 @@ class BayesianModel(nx.DiGraph):
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        print([state['observed_status'] for state in self.node[node]['_states']])
         if any(state['observed_status'] for state in
                self.node[node]['_states']):
             self.node[node]['_observed'] = True
