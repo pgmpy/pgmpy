@@ -231,18 +231,38 @@ class BayesianModel(nx.DiGraph):
             return 1
 
     def add_states(self, node, states):
+        # TODO: Add the functionality to accept states of multiple
+        # nodes in a single call.
         """
-        Adds the names of states from 'states' to given 'node'.
+        Adds states to the node.
+
+        Parameters
+        ----------
+        node  :  Graph node
+                Must be already present in the Model
+
+        states :  Container of states
+                Can be list or tuple of states.
+
+        See Also
+        --------
+        get_states
+
+        Examples
+        --------
+        G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        G.add_states('diff', ['easy', 'hard'])
+        G.add_states('intel', ['dumb', 'smart'])
         """
         try:
-            self.node[node]['_states'].append([{'name': state,
+            self.node[node]['_states'].extend([{'name': state,
                                                 'observed_status': False}
                                                for state in states])
         except KeyError:
             self.node[node]['_states'] = [
                 {'name': state, 'observed_status': False} for state in states]
 
-        self._update_rule_for_states(node, len(states))
+        self._update_rule_for_states(node, len(self.node[node]['_states']))
     ################# For Reference ########################
     #   self.node[node]['_rule_for_states'] = [            #
     #       n for n in range(len(states))]                 #
@@ -257,7 +277,7 @@ class BayesianModel(nx.DiGraph):
 
     def _update_node_observed_status(self, node):
         """
-        Updates '_observed' in the node-dictionary.
+        Updates '_observed' attribute of the node.
 
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
@@ -269,29 +289,25 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_observed'] = False
 
     def _no_missing_states(self, node, states):
-        """"Returns True if all the states of the node are present in the
-        argument states.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_missing_states('difficulty', ('hard', 'easy'))
-        True
         """
-        if sorted(self.node[node]['_states']) == sorted(states):
+        Returns True if all the states of the node are present in the
+        argument states.
+        """
+        # TODO: Feels that this function is wrong, if it is opposite of
+        # _no_extra_states
+        node_states = [state['name'] for state in self.node[node]['_states']]
+        if sorted(node_states) == sorted(states):
             return True
         else:
-            raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
+            raise Exceptions.MissingStatesError(set(node_states) - set(states))
 
     def _no_extra_states(self, node, states):
-        """"Returns True if the argument states contains only the states
+        """"
+        Returns True if the argument states contains only the states
          present in Node.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_extra_states('difficulty', ('hard', 'easy'))
-        True
         """
-        extra_states = set(states) - set(self.node[node]['_states'])
+        node_states = [state['name'] for state in self.node[node]['_states']]
+        extra_states = set(states) - set(node_states)
         if extra_states:
             raise Exceptions.ExtraStatesError(extra_states)
         else:

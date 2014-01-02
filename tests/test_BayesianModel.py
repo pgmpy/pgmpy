@@ -5,7 +5,7 @@ import networkx as nx
 import help_functions as hf
 
 
-class TestModel(unittest.TestCase):
+class TestBaseModelCreation(unittest.TestCase):
 
     def setUp(self):
         self.G = bm.BayesianModel()
@@ -25,6 +25,9 @@ class TestModel(unittest.TestCase):
     def test_class_init_with_data_selfloop(self):
         self.assertRaises(Exceptions.SelfLoopError, bm.BayesianModel,
                           [('a', 'a')])
+
+    def test_class_init_with_data_cycle(self):
+        self.assertRaises(Exceptions.CycleError, bm.BayesianModel, [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_add_node_string(self):
         self.G.add_node('a')
@@ -55,6 +58,10 @@ class TestModel(unittest.TestCase):
     def test_add_edge_selfloop(self):
         self.assertRaises(Exceptions.SelfLoopError, self.G.add_edge, 'a', 'a')
 
+    def test_add_edge_result_cycle(self):
+        self.G.add_edges_from([('a', 'b'), ('a', 'c')])
+        self.assertRaises(Exceptions.CycleError, self.G.add_edge, 'c', 'a')
+
     def test_add_edges_from_string(self):
         self.G.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
@@ -74,6 +81,9 @@ class TestModel(unittest.TestCase):
     def test_add_edges_from_self_loop(self):
         self.assertRaises(Exceptions.SelfLoopError, self.G.add_edges_from,
                           [('a', 'a')])
+
+    def test_add_edges_from_result_cycle(self):
+        self.assertRaises(Exceptions.CycleError, self.G.add_edges_from, [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
         self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
@@ -130,6 +140,54 @@ class TestModel(unittest.TestCase):
         del self.G
 
 
+class TestBayesianModelMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.G = bm.BayesianModel([('a', 'd'), ('b', 'd'), ('d', 'e'), ('b', 'c')])
+
+    def test_add_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.G.add_states('b', [4, 5])
+        self.G.add_states('c', [6, 7])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3])
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2])
+        self.assertFalse(self.G.node['a']['_observed'])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['b']['_states']]), [4, 5])
+        self.assertListEqual(self.G.node['b']['_rule_for_states'], [0, 1])
+        self.assertFalse(self.G.node['b']['_observed'])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['c']['_states']]), [6, 7])
+        self.assertListEqual(self.G.node['c']['_rule_for_states'], [0, 1])
+        self.assertFalse(self.G.node['c']['_observed'])
+        self.G.add_states('a', [8, 9])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3, 8, 9])
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
+        self.assertFalse(self.G.node['a']['_observed'])
+
+    def test_update_rule_for_states(self):
+        self.G._update_rule_for_states('a', 4)
+        self.G._update_rule_for_states('b', 1)
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3])
+        self.assertListEqual(self.G.node['b']['_rule_for_states'], [0])
+        self.G._update_rule_for_states('a', 5)
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
+
+    def test_update_node_observed_status(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertFalse(self.G.node['a']['_observed'])
+        self.G.node['a']['_states'][0]['observed_status'] = True
+        self.G._update_node_observed_status('a')
+        self.assertTrue(self.G.node['a']['_observed'])
+
+    def test_no_missing_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertTrue(self.G._no_missing_states('a', [1, 2, 3]))
+        self.assertRaises(Exceptions.MissingStatesError, self.G._no_missing_states, 'a', [1, 2])
+
+    def test_no_extra_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertTrue(self.G._no_extra_states('a', [1, 2]))
+        self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
+        self.assertRaises(Exceptions.ExtraStatesError, self.G._no_extra_states, 'a', [1, 2, 3, 4])
 # class TestNodeProperties(unittest.TestCase):
 #
 #     def setUp(self):
