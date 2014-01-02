@@ -183,6 +183,11 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G._no_missing_states('a', [1, 2, 3]))
         self.assertRaises(Exceptions.MissingStatesError, self.G._no_missing_states, 'a', [1, 2])
 
+    def test_no_extra_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertTrue(self.G._no_extra_states('a', [1, 2]))
+        self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
+        self.assertRaises(Exceptions.ExtraStatesError, self.G._no_extra_states, 'a', [1, 2, 3, 4])
 # class TestNodeProperties(unittest.TestCase):
 #
 #     def setUp(self):
