@@ -5,7 +5,7 @@ import networkx as nx
 import help_functions as hf
 
 
-class TestModel(unittest.TestCase):
+class TestBaseModelCreation(unittest.TestCase):
 
     def setUp(self):
         self.G = bm.BayesianModel()
@@ -140,6 +140,20 @@ class TestModel(unittest.TestCase):
         del self.G
 
 
+class TestBayesianModelMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.G = bm.BayesianModel([('a', 'd'), ('b', 'd'), ('d', 'e'), ('b', 'c')])
+
+    def test_add_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.G.add_states('b', [4, 5])
+        self.G.add_states('c', [6, 7])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['b']['_states']]), [4, 5])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['c']['_states']]), [6, 7])
+        self.G.add_states('a', [8, 9])
+        self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3, 8, 9])
 # class TestNodeProperties(unittest.TestCase):
 #
 #     def setUp(self):

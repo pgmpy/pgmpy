@@ -237,7 +237,7 @@ class BayesianModel(nx.DiGraph):
         Adds the names of states from 'states' to given 'node'.
         """
         try:
-            self.node[node]['_states'].append([{'name': state,
+            self.node[node]['_states'].extend([{'name': state,
                                                 'observed_status': False}
                                                for state in states])
         except KeyError:
