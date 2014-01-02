@@ -275,10 +275,11 @@ class BayesianModel(nx.DiGraph):
         Returns True if all the states of the node are present in the
         argument states.
         """
-        if sorted(self.node[node]['_states']) == sorted(states):
+        node_states = [state['name'] for state in self.node[node]['_states']]
+        if sorted(node_states) == sorted(states):
             return True
         else:
-            raise Exceptions.MissingStatesError(set(self.node[node]['_states']) - set(states))
+            raise Exceptions.MissingStatesError(set(node_states) - set(states))
 
     def _no_extra_states(self, node, states):
         """"
