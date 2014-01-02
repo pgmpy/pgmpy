@@ -150,10 +150,24 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G.add_states('b', [4, 5])
         self.G.add_states('c', [6, 7])
         self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3])
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2])
         self.assertListEqual(sorted([node['name'] for node in self.G.node['b']['_states']]), [4, 5])
+        self.assertListEqual(self.G.node['b']['_rule_for_states'], [0, 1])
         self.assertListEqual(sorted([node['name'] for node in self.G.node['c']['_states']]), [6, 7])
+        self.assertListEqual(self.G.node['c']['_rule_for_states'], [0, 1])
         self.G.add_states('a', [8, 9])
         self.assertListEqual(sorted([node['name'] for node in self.G.node['a']['_states']]), [1, 2, 3, 8, 9])
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
+
+    def test_update_rule_for_states(self):
+        self.G._update_rule_for_states('a', 4)
+        self.G._update_rule_for_states('b', 1)
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3])
+        self.assertListEqual(self.G.node['b']['_rule_for_states'], [0])
+        self.G._update_rule_for_states('a', 5)
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
+
+
 # class TestNodeProperties(unittest.TestCase):
 #
 #     def setUp(self):

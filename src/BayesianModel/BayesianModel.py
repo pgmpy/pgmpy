@@ -244,7 +244,7 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_states'] = [
                 {'name': state, 'observed_status': False} for state in states]
 
-        self._update_rule_for_states(node, len(states))
+        self._update_rule_for_states(node, len(self.node[node]['_states']))
     ################# For Reference ########################
     #   self.node[node]['_rule_for_states'] = [            #
     #       n for n in range(len(states))]                 #
