@@ -158,6 +158,47 @@ class BayesianModel(nx.DiGraph):
         self._update_node_parents(new_nodes)
         self._update_node_rule_for_parents(new_nodes)
 
+    def add_states(self, node, states):
+        # TODO: Add the functionality to accept states of multiple
+        # nodes in a single call.
+        """
+        Adds states to the node.
+
+        Parameters
+        ----------
+        node  :  Graph node
+                Must be already present in the Model
+
+        states :  Container of states
+                Can be list or tuple of states.
+
+        See Also
+        --------
+        get_states
+
+        Examples
+        --------
+        G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        G.add_states('diff', ['easy', 'hard'])
+        G.add_states('intel', ['dumb', 'smart'])
+        """
+        try:
+            self.node[node]['_states'].extend([{'name': state,
+                                                'observed_status': False}
+                                               for state in states])
+        except KeyError:
+            self.node[node]['_states'] = [
+                {'name': state, 'observed_status': False} for state in states]
+
+        self._update_rule_for_states(node, len(self.node[node]['_states']))
+    ################# For Reference ########################
+    #   self.node[node]['_rule_for_states'] = [            #
+    #       n for n in range(len(states))]                 #
+    ########################################################
+        self._update_node_observed_status(node)
+
+        #TODO _rule_for_states needs to made into a generator
+
     def _update_node_parents(self, node_list):
         """
         Function to update each node's _parent attribute.
@@ -228,48 +269,7 @@ class BayesianModel(nx.DiGraph):
                 del test_G
                 raise Exceptions.CycleError("Cycles are not allowed",
                                             simple_cycles)
-            return 1
-
-    def add_states(self, node, states):
-        # TODO: Add the functionality to accept states of multiple
-        # nodes in a single call.
-        """
-        Adds states to the node.
-
-        Parameters
-        ----------
-        node  :  Graph node
-                Must be already present in the Model
-
-        states :  Container of states
-                Can be list or tuple of states.
-
-        See Also
-        --------
-        get_states
-
-        Examples
-        --------
-        G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
-        G.add_states('diff', ['easy', 'hard'])
-        G.add_states('intel', ['dumb', 'smart'])
-        """
-        try:
-            self.node[node]['_states'].extend([{'name': state,
-                                                'observed_status': False}
-                                               for state in states])
-        except KeyError:
-            self.node[node]['_states'] = [
-                {'name': state, 'observed_status': False} for state in states]
-
-        self._update_rule_for_states(node, len(self.node[node]['_states']))
-    ################# For Reference ########################
-    #   self.node[node]['_rule_for_states'] = [            #
-    #       n for n in range(len(states))]                 #
-    ########################################################
-        self._update_node_observed_status(node)
-
-        #TODO _rule_for_states needs to made into a generator
+            return True
 
     def _update_rule_for_states(self, node, number_of_states):
         self.node[node]['_rule_for_states'] = \
