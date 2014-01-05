@@ -208,7 +208,7 @@ class TestBayesianModelMethods(unittest.TestCase):
     def test_no_missing_parents(self):
         self.assertTrue(self.G._no_missing_parents('d', ['a', 'b']))
         self.assertTrue(self.G._no_missing_parents('d', ['a', 'b', 'c']))
-        self.assertRaises(Exceptions.MissingParentError, self.G._no_missing_parents, 'd', ['a'])
+        self.assertRaises(Exceptions.MissingParentsError, self.G._no_missing_parents, 'd', ['a'])
 
     def tearDown(self):
         del self.G
