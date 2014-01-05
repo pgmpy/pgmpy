@@ -200,6 +200,11 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
         self.assertRaises(Exceptions.ExtraStatesError, self.G._no_extra_states, 'a', [1, 2, 3, 4])
 
+    def test_no_extra_parents(self):
+        self.assertTrue(self.G._no_extra_parents('d', ['a', 'b']))
+        self.assertRaises(Exceptions.ExtraParentsError, self.G._no_extra_parents, 'd', ['a', 'b', 'c'])
+        self.assertTrue(self.G._no_extra_parents('d', ['a']))
+
     def tearDown(self):
         del self.G
 
