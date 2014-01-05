@@ -370,7 +370,8 @@ class BayesianModel(nx.DiGraph):
             return True
 
     def _no_missing_parents(self, node, parents):
-        """"Returns True if all parents of node are present in the
+        """"
+        Returns True if all parents of node are present in the
         argument parents.
 
         EXAMPLE
@@ -379,8 +380,7 @@ class BayesianModel(nx.DiGraph):
         ...                                                 'intelligence'))
         True
         """
-        _all_parents = set(self.node[node]['_parents'])
-        missing_parents = _all_parents - set(parents)
+        missing_parents = set(self.node[node]['_parents']) - set(parents)
         if missing_parents:
             raise Exceptions.MissingParentsError(missing_parents)
         else:
