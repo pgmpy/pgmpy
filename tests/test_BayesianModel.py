@@ -163,6 +163,17 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
         self.assertFalse(self.G.node['a']['_observed'])
 
+    def test_get_states(self):
+        self.G = bm.BayesianModel([('a', 'd')])
+        self.G.add_states('a', [1, 2, 3])
+        self.G.add_states('d', [4, 5])
+        self.assertListEqual(self.G.get_states('a'), [1, 2, 3])
+        self.assertListEqual(self.G.get_states('d'), [4, 5])
+        self.G.node['a']['_rule_for_states'] = [1, 0, 2]
+        self.assertListEqual(self.G.get_states('a'), [2, 1, 3])
+        self.G.node['d']['_rule_for_states'] = [0, 1]
+        self.assertListEqual(self.G.get_states('d'), [4, 5])
+
     def test_update_rule_for_states(self):
         self.G._update_rule_for_states('a', 4)
         self.G._update_rule_for_states('b', 1)
@@ -188,6 +199,16 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G._no_extra_states('a', [1, 2]))
         self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
         self.assertRaises(Exceptions.ExtraStatesError, self.G._no_extra_states, 'a', [1, 2, 3, 4])
+
+    def test_no_extra_parents(self):
+        self.assertTrue(self.G._no_extra_parents('d', ['a', 'b']))
+        self.assertRaises(Exceptions.ExtraParentsError, self.G._no_extra_parents, 'd', ['a', 'b', 'c'])
+        self.assertTrue(self.G._no_extra_parents('d', ['a']))
+
+    def test_no_missing_parents(self):
+        self.assertTrue(self.G._no_missing_parents('d', ['a', 'b']))
+        self.assertTrue(self.G._no_missing_parents('d', ['a', 'b', 'c']))
+        self.assertRaises(Exceptions.MissingParentsError, self.G._no_missing_parents, 'd', ['a'])
 
     def tearDown(self):
         del self.G
