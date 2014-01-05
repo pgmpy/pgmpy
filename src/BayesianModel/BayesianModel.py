@@ -199,6 +199,31 @@ class BayesianModel(nx.DiGraph):
 
         #TODO _rule_for_states needs to made into a generator
 
+    def get_states(self, node):
+        """
+        Returns a tuple with states in user-defined order
+
+        Parameters
+        ----------
+        node  :   node
+                Graph Node. Must be already present in the Model.
+
+        See Also
+        --------
+        set_states
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.get_states('diff')
+        """
+        _list_states = []
+        for index in self.node[node]['_rule_for_states']:
+            _list_states.append(self.node[node]['_states'][index]['name'])
+        return _list_states
+    #TODO get_states() needs to made into a generator
+
     def _update_node_parents(self, node_list):
         """
         Function to update each node's _parent attribute.
@@ -327,33 +352,9 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_rule_for_states'] = _order
             #TODO _rule_for_states needs to made into a generator
 
-    def get_states(self, node):
-        """
-        Returns a tuple with states in user-defined order
-
-        Parameters
-        ----------
-        node  :   node
-                Graph Node. Must be already present in the Model.
-
-        See Also
-        --------
-        set_states
-
-        Examples
-        --------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.get_states('diff')
-        """
-        _list_states = []
-        for index in self.node[node]['_rule_for_states']:
-            _list_states.append(self.node[node]['_states'][index]['name'])
-        return _list_states
-    #TODO get_states() needs to made into a generator
-
     def _no_extra_parents(self, node, parents):
-        """"Returns True if set(states) is exactly equal to the set of states
+        """"
+        Returns True if set(states) is exactly equal to the set of states
         of the Node.
 
         EXAMPLE
@@ -362,8 +363,7 @@ class BayesianModel(nx.DiGraph):
         ...                                                 'intelligence'))
         True
         """
-        _all_parents = set(self.node[node]['_parents'])
-        extra_parents = set(parents) - _all_parents
+        extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
             raise Exceptions.ExtraParentsError(extra_parents)
         else:
