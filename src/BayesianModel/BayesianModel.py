@@ -178,9 +178,9 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
-        G.add_states('diff', ['easy', 'hard'])
-        G.add_states('intel', ['dumb', 'smart'])
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.add_states('intel', ['dumb', 'smart'])
         """
         try:
             self.node[node]['_states'].extend([{'name': state,
@@ -317,7 +317,7 @@ class BayesianModel(nx.DiGraph):
         """Sets new rule for order of states"""
         if self._no_extra_states(node, states) and \
                 self._no_missing_states(node, states):
-            _order = list()
+            _order = []
             for user_given_state, state in itertools.product(
                     states, self.node[node]['_states']):
                 if state['name'] == user_given_state:
@@ -328,8 +328,25 @@ class BayesianModel(nx.DiGraph):
             #TODO _rule_for_states needs to made into a generator
 
     def get_states(self, node):
-        """Returns tuple with states in user-defined order"""
-        _list_states = list()
+        """
+        Returns a tuple with states in user-defined order
+
+        Parameters
+        ----------
+        node  :   node
+                Graph Node. Must be already present in the Model.
+
+        See Also
+        --------
+        set_states
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.get_states('diff')
+        """
+        _list_states = []
         for index in self.node[node]['_rule_for_states']:
             _list_states.append(self.node[node]['_states'][index]['name'])
         return _list_states
