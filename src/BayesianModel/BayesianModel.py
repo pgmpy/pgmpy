@@ -16,7 +16,7 @@ class BayesianModel(nx.DiGraph):
     add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
     add_states('node1', ('state1', 'state2', ...))
     get_states('node1')
-    add_rule_for_states('node1', ('state2', 'state1', ...))
+    set_rule_for_states('node1', ('state2', 'state1', ...))
     add_rule_for_parents('node1', ('parent1', 'parent2', ...))
     get_parents('node1')
     add_tablularcpd('node1', cpd1)
@@ -353,19 +353,68 @@ class BayesianModel(nx.DiGraph):
         else:
             return True
 
-    def add_rule_for_states(self, node, states):
-        """Sets new rule for order of states"""
+    def get_rule_for_states(self, node):
+        """
+        Check the order in which the CPD is expected
+
+        Parameters
+        ----------
+        node   : graph node
+                The node for which to check the rule.
+
+        See Also
+        --------
+        set_rule_for_states
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.add_states('grade', ['C', 'A', 'C'])
+        >>> G.get_rule_for_states('diff')
+        >>> G.get_rule_for_states('grade')
+        """
+        current_rule = self.node[node]['_rule_for_states']
+        return [self.node[node]['_states'][index]['name'] for index in current_rule]
+
+    def set_rule_for_states(self, node, states):
+        """
+        Change the order in which the CPD is expected
+
+        Parameters
+        ----------
+        node  :  Graph Node
+                Node for which the order needs to be changed
+
+        states : List
+                List of the states of node in the order in which
+                CPD will be entered
+
+        See Also
+        --------
+        get_rule_for_states
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.get_rule_for_states('diff')
+        ['easy', 'hard']
+        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
+        >>> G.get_rule_for_states('diff')
+        ['hard', 'easy']
+        """
         if self._no_extra_states(node, states) and \
                 self._no_missing_states(node, states):
-            _order = []
-            for user_given_state, state in itertools.product(
-                    states, self.node[node]['_states']):
-                if state['name'] == user_given_state:
-                    _order.append(self.node[node]
-                                  ['_states'].index(state))
-                    break
-            self.node[node]['_rule_for_states'] = _order
-            #TODO _rule_for_states needs to made into a generator
+            new_rule = []
+            for user_given_state in states:
+                for state in self.node[node]['_states']:
+                    if state['name'] == user_given_state:
+                        new_rule.append(self.node[node]['_states'].index(state))
+                        break
+
+            self.node[node]['_rule_for_states'] = new_rule
+            #TODO: _rule_for_states needs to made into a generator
 
     def _no_extra_parents(self, node, parents):
         """"
@@ -446,7 +495,7 @@ class BayesianModel(nx.DiGraph):
         -------
         >>> student.add_states('grades', ('A','C','B'))
         >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
-        >>> student.add_rule_for_states('grades', ('A', 'B', 'C'))
+        >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
         >>> student.add_tabularcpd('grades',
         ...             [[0.1,0
         .1,0.1,0.1,0.1,0.1],
