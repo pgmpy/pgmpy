@@ -427,14 +427,8 @@ class BayesianModel(nx.DiGraph):
 
     def _no_extra_parents(self, node, parents):
         """"
-        Returns True if set(states) is exactly equal to the set of states
-        of the Node.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_extra_parents('grades', ('difficutly',
-        ...                                                 'intelligence'))
-        True
+        Returns True if parents has no other element other than those present in
+        node's _parents' list.
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
@@ -446,12 +440,6 @@ class BayesianModel(nx.DiGraph):
         """"
         Returns True if all parents of node are present in the
         argument parents.
-
-        EXAMPLE
-        -------
-        >>> bayesian_model._no_missing_parents('grades', ('difficutly',
-        ...                                                 'intelligence'))
-        True
         """
         missing_parents = set(self.node[node]['_parents']) - set(parents)
         if missing_parents:
