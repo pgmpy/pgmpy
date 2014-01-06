@@ -213,6 +213,15 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G._no_missing_parents('d', ['a', 'b', 'c']))
         self.assertRaises(Exceptions.MissingParentsError, self.G._no_missing_parents, 'd', ['a'])
 
+    def test_get_rule_for_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertListEqual(self.G.get_rule_for_states('a'), [1, 2, 3])
+
+    def test_set_rule_for_states(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.G.set_rule_for_states('a', [3, 1, 2])
+        self.assertListEqual(self.G.get_rule_for_states('a'), [3, 1, 2])
+
     def tearDown(self):
         del self.G
 
