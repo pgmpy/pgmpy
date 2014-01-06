@@ -181,6 +181,9 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertListEqual(self.G.node['b']['_rule_for_states'], [0])
         self.G._update_rule_for_states('a', 5)
         self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2, 3, 4])
+        self.G.node['a']['_rule_for_states'] = [1, 0, 2]
+        self.G._update_rule_for_states('a', 5)
+        self.assertListEqual(self.G.node['a']['_rule_for_states'], [1, 0, 2, 3, 4])
 
     def test_update_node_observed_status(self):
         self.G.add_states('a', [1, 2, 3])
