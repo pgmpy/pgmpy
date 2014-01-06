@@ -17,7 +17,7 @@ class BayesianModel(nx.DiGraph):
     add_states('node1', ('state1', 'state2', ...))
     get_states('node1')
     set_rule_for_states('node1', ('state2', 'state1', ...))
-    add_rule_for_parents('node1', ('parent1', 'parent2', ...))
+    set_rule_for_parents('node1', ('parent1', 'parent2', ...))
     get_parents('node1')
     add_tablularcpd('node1', cpd1)
     get_cpd('node1')
@@ -328,6 +328,16 @@ class BayesianModel(nx.DiGraph):
         else:
             self.node[node]['_observed'] = False
 
+    def _all_states_present_in_list(self, node, states_list):
+        """
+        Checks if all the states of node are present in state_list.
+        If present returns True else returns False.
+        """
+        if sorted(states_list) == sorted(self.node[node]['_states']):
+            return True
+        else:
+            return False
+
     def _no_missing_states(self, node, states):
         """
         Returns True if all the states of the node are present in the
@@ -404,8 +414,7 @@ class BayesianModel(nx.DiGraph):
         >>> G.get_rule_for_states('diff')
         ['hard', 'easy']
         """
-        if self._no_extra_states(node, states) and \
-                self._no_missing_states(node, states):
+        if self._all_states_present_in_list(node, states):
             new_rule = []
             for user_given_state in states:
                 for state in self.node[node]['_states']:
@@ -450,17 +459,17 @@ class BayesianModel(nx.DiGraph):
         else:
             return True
 
-    def add_rule_for_parents(self, node, parents):
+    def set_rule_for_parents(self, node, parents):
         if self._no_missing_parents(node, parents) and \
                 self._no_extra_parents(node, parents):
-            _order = []
-            for user_given_parent, parent in itertools.product(
-                    parents, self.node[node]['_parents']):
-                if parent == user_given_parent:
-                    _order.append(
-                        self.node[node]['_parents'].index(parent))
-                    break
-        self.node[node]['_rule_for_parents'] = _order
+            new_order = []
+            for user_given_parent in parents:
+                for parent in self.node[node]['_parents']:
+                    if parent == user_given_parent:
+                        new_order.append(self.node[node]['_parents'].index(parent))
+                        break
+
+        self.node[node]['_rule_for_parents'] = new_order
         #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
@@ -494,7 +503,7 @@ class BayesianModel(nx.DiGraph):
         EXAMPLE
         -------
         >>> student.add_states('grades', ('A','C','B'))
-        >>> student.add_rule_for_parents('grades', ('diff', 'intel'))
+        >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
         >>> student.add_tabularcpd('grades',
         ...             [[0.1,0
