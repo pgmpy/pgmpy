@@ -303,14 +303,17 @@ class BayesianModel(nx.DiGraph):
         If present the just adds numbers for the new states in the previously
         existing rule.
         """
-        if self.node[node]['_rule_for_states']:
+        try:
+            present_rule = self.node[node]['_rule_for_states']
+        except KeyError:
+            present_rule = None
+
+        if not present_rule:
             self.node[node]['_rule_for_states'] = \
                 [n for n in range(number_of_states)]
         else:
             self.node[node]['_rule_for_states'].extend([
-                index for index in range(
-                    len(self.node[node]['_rule_for_states']),
-                    number_of_states)])
+                index for index in range(len(present_rule), number_of_states)])
 
     def _update_node_observed_status(self, node):
         """
