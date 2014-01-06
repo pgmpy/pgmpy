@@ -333,7 +333,7 @@ class BayesianModel(nx.DiGraph):
         Checks if all the states of node are present in state_list.
         If present returns True else returns False.
         """
-        if sorted(states_list) == sorted(self.node[node]['_states']):
+        if sorted(states_list) == sorted([state['name'] for state in self.node[node]['_states']]):
             return True
         else:
             return False
