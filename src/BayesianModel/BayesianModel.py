@@ -425,6 +425,16 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_rule_for_states'] = new_rule
             #TODO: _rule_for_states needs to made into a generator
 
+    def _is_node_parents_equal_parents_list(self, node, parents_list):
+        """
+        Returns true if parents_list has exactly those elements that are
+        node's parents.
+        """
+        if set(parents_list) == set(self.node[node]['_parents']):
+            return True
+        else:
+            return False
+
     def _no_extra_parents(self, node, parents):
         """"
         Returns True if parents has no other element other than those present in
