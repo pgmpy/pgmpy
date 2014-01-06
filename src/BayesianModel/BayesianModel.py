@@ -297,8 +297,20 @@ class BayesianModel(nx.DiGraph):
             return True
 
     def _update_rule_for_states(self, node, number_of_states):
-        self.node[node]['_rule_for_states'] = \
-            [n for n in range(number_of_states)]
+        """
+        Checks if rule_for_states is already present for the node.
+        If not present simply sets it to [0, 1, 2 ... ]
+        If present the just adds numbers for the new states in the previously
+        existing rule.
+        """
+        if self.node[node]['_rule_for_states']:
+            self.node[node]['_rule_for_states'] = \
+                [n for n in range(number_of_states)]
+        else:
+            self.node[node]['_rule_for_states'].extend([
+                index for index in range(
+                    len(self.node[node]['_rule_for_states']),
+                    number_of_states)])
 
     def _update_node_observed_status(self, node):
         """
@@ -389,7 +401,7 @@ class BayesianModel(nx.DiGraph):
     def add_rule_for_parents(self, node, parents):
         if self._no_missing_parents(node, parents) and \
                 self._no_extra_parents(node, parents):
-            _order = list()
+            _order = []
             for user_given_parent, parent in itertools.product(
                     parents, self.node[node]['_parents']):
                 if parent == user_given_parent:
