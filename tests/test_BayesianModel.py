@@ -222,6 +222,17 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G.set_rule_for_states('a', [3, 1, 2])
         self.assertListEqual(self.G.get_rule_for_states('a'), [3, 1, 2])
 
+    def test_all_states_present_in_list(self):
+        self.G.add_states('a', [1, 2, 3])
+        self.assertTrue(self.G._all_states_present_in_list('a', [1, 2, 3]))
+        self.assertTrue(self.G._all_states_present_in_list('a', [2, 1, 3]))
+        self.assertFalse(self.G._all_states_present_in_list('a', [1, 2]))
+
+    def test_is_node_parents_equal_parents_list(self):
+        self.assertTrue(self.G._is_node_parents_equal_parents_list('d', ['a', 'b']))
+        self.assertTrue(self.G._is_node_parents_equal_parents_list('d', ['b', 'a']))
+        self.assertFalse(self.G._is_node_parents_equal_parents_list('d', ['a']))
+
     def tearDown(self):
         del self.G
 
