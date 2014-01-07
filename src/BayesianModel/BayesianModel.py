@@ -512,11 +512,29 @@ class BayesianModel(nx.DiGraph):
         #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
-        """Returns tuple with name of parents in order"""
-        _str_parent_list = list()
-        for index in self.node[node]['_rule_for_parents']:
-            _str_parent_list.append(self.node[node]['_parents'][index])
-        return _str_parent_list
+        """
+        Returns a list of parents of node in order according to the rule
+        set for parents.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        get_rule_for_parents
+        set_rule_for_parents
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT'), ('grade', 'reco')])
+        >>> G.get_parents('grade')
+        ['diff', 'intel']
+        >>> G.set_rule_for_parents('grade', ['intel', 'diff'])
+        >>> G.get_parents('grade')
+        ['intel', 'diff']
+        """
+        return self.get_rule_for_parents(node)
     #TODO get_parents() needs to made into a generator
 
     def _get_parent_objects(self, node):
