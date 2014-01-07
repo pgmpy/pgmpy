@@ -230,10 +230,8 @@ class BayesianModel(nx.DiGraph):
         This function is called when new node or new edge is added.
         """
         for node in node_list:
-            self.node[node]['_parents'] = self.predecessors(node)
+            self.node[node]['_parents'] = sorted(self.predecessors(node))
 
-    # TODO: I don't know what the fuck is this function doing.
-    # So someone please review it.
     def _update_node_rule_for_parents(self, node_list):
         """
         Function to update each node's _rule_for_parents attribute.
@@ -241,7 +239,7 @@ class BayesianModel(nx.DiGraph):
         """
         for node in node_list:
             self.node[node]['_rule_for_parents'] = \
-                [index for index in range(len(self.neighbors(node)))]
+                [index for index in range(len(self.predecessors(node)))]
         ################ Just for reference: Earlier Code ####################
         # for head_node in head:                                             #
         #     for tail_node in tail:                                         #
@@ -375,6 +373,8 @@ class BayesianModel(nx.DiGraph):
         See Also
         --------
         set_rule_for_states
+        get_rule_for_parents
+        set_rule_for_parents
 
         Examples
         --------
@@ -403,6 +403,8 @@ class BayesianModel(nx.DiGraph):
         See Also
         --------
         get_rule_for_states
+        get_rule_for_parents
+        set_rule_for_parents
 
         Example
         -------
@@ -430,7 +432,7 @@ class BayesianModel(nx.DiGraph):
         Returns true if parents_list has exactly those elements that are
         node's parents.
         """
-        if set(parents_list) == set(self.node[node]['_parents']):
+        if sorted(parents_list) == sorted(self.node[node]['_parents']):
             return True
         else:
             return False
@@ -457,9 +459,48 @@ class BayesianModel(nx.DiGraph):
         else:
             return True
 
+    def get_rule_for_parents(self, node):
+        #TODO: DocString needs to be improved
+        """
+        Gets the order of the parents
+
+        Parameters
+        ----------
+        node  : Graph Node
+                Node whose rule is needed
+
+        See Also
+        --------
+        set_rule_for_parents
+        get_rule_for_states
+        set_rule_for_states
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        """
+        current_rule = self.node[node]['_rule_for_parents']
+        return [self.node[node]['_parents'][index] for index in current_rule]
+
     def set_rule_for_parents(self, node, parents):
-        if self._no_missing_parents(node, parents) and \
-                self._no_extra_parents(node, parents):
+        """
+        Set a new rule for the parents of the node.
+
+        Parameters
+        ----------
+        node  :  Graph node
+                Node for which new rule is to be set.
+        parents: List
+               A list of names of the parents of the node in the order
+                in which the rule needs to be set.
+
+        See Also
+        --------
+        get_rule_for_parents
+        get_rule_for_states
+        set_rule_for_states
+        """
+        if self._is_node_parents_equal_parents_list(node, parents):
             new_order = []
             for user_given_parent in parents:
                 for parent in self.node[node]['_parents']:
