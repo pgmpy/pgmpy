@@ -503,12 +503,12 @@ class BayesianModel(nx.DiGraph):
         if self._is_node_parents_equal_parents_list(node, parents):
             new_order = []
             for user_given_parent in parents:
-                for parent in self.node[node]['_parents']:
-                    if parent == user_given_parent:
-                        new_order.append(self.node[node]['_parents'].index(parent))
+                for index in range(len(self.node[node]['_parents'])):
+                    if self.node[node]['_parents'][index] == user_given_parent:
+                        new_order.append(index)
                         break
 
-        self.node[node]['_rule_for_parents'] = new_order
+            self.node[node]['_rule_for_parents'] = new_order
         #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
