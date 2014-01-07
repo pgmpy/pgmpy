@@ -538,11 +538,11 @@ class BayesianModel(nx.DiGraph):
     #TODO get_parents() needs to made into a generator
 
     def _get_parent_objects(self, node):
-        """Returns tuple with parent-objects in order"""
-        _obj_parent_list = list()
-        for _parent in self.get_parents(node):
-            _obj_parent_list.append(self.node[_parent])
-        return _obj_parent_list
+        """
+        Returns a list of those node objects which are parents of the argument node.
+        """
+        return [self.node[parent] for parent in self.get_parents(node)]
+
     #TODO _get_parent_objects() needs to made into a generator
 
     def _string_to_tuple(self, string):
