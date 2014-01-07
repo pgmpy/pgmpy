@@ -178,7 +178,8 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>>                       ('intel', 'sat')])
         >>> G.add_states('diff', ['easy', 'hard'])
         >>> G.add_states('intel', ['dumb', 'smart'])
         """
@@ -214,7 +215,8 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>>                       ('intel', 'sat')])
         >>> G.add_states('diff', ['easy', 'hard'])
         >>> G.get_states('diff')
         """
@@ -230,10 +232,8 @@ class BayesianModel(nx.DiGraph):
         This function is called when new node or new edge is added.
         """
         for node in node_list:
-            self.node[node]['_parents'] = self.predecessors(node)
+            self.node[node]['_parents'] = sorted(self.predecessors(node))
 
-    # TODO: I don't know what the fuck is this function doing.
-    # So someone please review it.
     def _update_node_rule_for_parents(self, node_list):
         """
         Function to update each node's _rule_for_parents attribute.
@@ -241,7 +241,7 @@ class BayesianModel(nx.DiGraph):
         """
         for node in node_list:
             self.node[node]['_rule_for_parents'] = \
-                [index for index in range(len(self.neighbors(node)))]
+                [index for index in range(len(self.predecessors(node)))]
         ################ Just for reference: Earlier Code ####################
         # for head_node in head:                                             #
         #     for tail_node in tail:                                         #
@@ -333,7 +333,8 @@ class BayesianModel(nx.DiGraph):
         Checks if all the states of node are present in state_list.
         If present returns True else returns False.
         """
-        if sorted(states_list) == sorted([state['name'] for state in self.node[node]['_states']]):
+        if sorted(states_list) == sorted([state['name'] for state
+                                          in self.node[node]['_states']]):
             return True
         else:
             return False
@@ -375,6 +376,8 @@ class BayesianModel(nx.DiGraph):
         See Also
         --------
         set_rule_for_states
+        get_rule_for_parents
+        set_rule_for_parents
 
         Examples
         --------
@@ -385,7 +388,8 @@ class BayesianModel(nx.DiGraph):
         >>> G.get_rule_for_states('grade')
         """
         current_rule = self.node[node]['_rule_for_states']
-        return [self.node[node]['_states'][index]['name'] for index in current_rule]
+        return [self.node[node]['_states'][index]['name']
+                for index in current_rule]
 
     def set_rule_for_states(self, node, states):
         """
@@ -403,6 +407,8 @@ class BayesianModel(nx.DiGraph):
         See Also
         --------
         get_rule_for_states
+        get_rule_for_parents
+        set_rule_for_parents
 
         Example
         -------
@@ -419,7 +425,8 @@ class BayesianModel(nx.DiGraph):
             for user_given_state in states:
                 for state in self.node[node]['_states']:
                     if state['name'] == user_given_state:
-                        new_rule.append(self.node[node]['_states'].index(state))
+                        new_rule.append(
+                            self.node[node]['_states'].index(state))
                         break
 
             self.node[node]['_rule_for_states'] = new_rule
@@ -430,15 +437,15 @@ class BayesianModel(nx.DiGraph):
         Returns true if parents_list has exactly those elements that are
         node's parents.
         """
-        if set(parents_list) == set(self.node[node]['_parents']):
+        if sorted(parents_list) == sorted(self.node[node]['_parents']):
             return True
         else:
             return False
 
     def _no_extra_parents(self, node, parents):
         """"
-        Returns True if parents has no other element other than those present in
-        node's _parents' list.
+        Returns True if parents has no other element other than those
+        present in node's _parents' list.
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
@@ -457,38 +464,93 @@ class BayesianModel(nx.DiGraph):
         else:
             return True
 
+    def get_rule_for_parents(self, node):
+        #TODO: DocString needs to be improved
+        """
+        Gets the order of the parents
+
+        Parameters
+        ----------
+        node  : Graph Node
+                Node whose rule is needed
+
+        See Also
+        --------
+        set_rule_for_parents
+        get_rule_for_states
+        set_rule_for_states
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        """
+        current_rule = self.node[node]['_rule_for_parents']
+        return [self.node[node]['_parents'][index] for index in current_rule]
+
     def set_rule_for_parents(self, node, parents):
-        if self._no_missing_parents(node, parents) and \
-                self._no_extra_parents(node, parents):
+        """
+        Set a new rule for the parents of the node.
+
+        Parameters
+        ----------
+        node  :  Graph node
+                Node for which new rule is to be set.
+        parents: List
+               A list of names of the parents of the node in the order
+                in which the rule needs to be set.
+
+        See Also
+        --------
+        get_rule_for_parents
+        get_rule_for_states
+        set_rule_for_states
+        """
+        if self._is_node_parents_equal_parents_list(node, parents):
             new_order = []
             for user_given_parent in parents:
-                for parent in self.node[node]['_parents']:
-                    if parent == user_given_parent:
-                        new_order.append(self.node[node]['_parents'].index(parent))
+                for index in range(len(self.node[node]['_parents'])):
+                    if self.node[node]['_parents'][index] == user_given_parent:
+                        new_order.append(index)
                         break
 
-        self.node[node]['_rule_for_parents'] = new_order
+            self.node[node]['_rule_for_parents'] = new_order
         #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
-        """Returns tuple with name of parents in order"""
-        _str_parent_list = list()
-        for index in self.node[node]['_rule_for_parents']:
-            _str_parent_list.append(self.node[node]['_parents'][index])
-        return _str_parent_list
+        """
+        Returns a list of parents of node in order according to the rule
+        set for parents.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        get_rule_for_parents
+        set_rule_for_parents
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>>                       ('intel', 'SAT'), ('grade', 'reco')])
+        >>> G.get_parents('grade')
+        ['diff', 'intel']
+        >>> G.set_rule_for_parents('grade', ['intel', 'diff'])
+        >>> G.get_parents('grade')
+        ['intel', 'diff']
+        """
+        return self.get_rule_for_parents(node)
     #TODO get_parents() needs to made into a generator
 
     def _get_parent_objects(self, node):
-        """Returns tuple with parent-objects in order"""
-        _obj_parent_list = list()
-        for _parent in self.get_parents(node):
-            _obj_parent_list.append(self.node[_parent])
-        return _obj_parent_list
-    #TODO _get_parent_objects() needs to made into a generator
+        """
+        Returns a list of those node objects which are parents of
+        the argument node.
+        """
+        return [self.node[parent] for parent in self.get_parents(node)]
 
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
+    #TODO _get_parent_objects() needs to made into a generator
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
@@ -676,3 +738,7 @@ class BayesianModel(nx.DiGraph):
             mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
 
         return mar_dist
+
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return string,
