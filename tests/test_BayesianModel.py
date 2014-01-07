@@ -247,6 +247,10 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G.set_rule_for_parents('d', ['b', 'a'])
         self.assertListEqual(self.G.get_parents('d'), ['b', 'a'])
 
+    def test_get_parent_objects(self):
+        self.assertListEqual(self.G._get_parent_objects('d'), [self.G.node['a'], self.G.node['b']])
+        self.assertListEqual(self.G._get_parent_objects('a'), [])
+
     def tearDown(self):
         del self.G
 
