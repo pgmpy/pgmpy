@@ -178,7 +178,8 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>>                       ('intel', 'sat')])
         >>> G.add_states('diff', ['easy', 'hard'])
         >>> G.add_states('intel', ['dumb', 'smart'])
         """
@@ -214,7 +215,8 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'), ('intel', 'sat')])
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>>                       ('intel', 'sat')])
         >>> G.add_states('diff', ['easy', 'hard'])
         >>> G.get_states('diff')
         """
@@ -331,7 +333,8 @@ class BayesianModel(nx.DiGraph):
         Checks if all the states of node are present in state_list.
         If present returns True else returns False.
         """
-        if sorted(states_list) == sorted([state['name'] for state in self.node[node]['_states']]):
+        if sorted(states_list) == sorted([state['name'] for state
+                                          in self.node[node]['_states']]):
             return True
         else:
             return False
@@ -385,7 +388,8 @@ class BayesianModel(nx.DiGraph):
         >>> G.get_rule_for_states('grade')
         """
         current_rule = self.node[node]['_rule_for_states']
-        return [self.node[node]['_states'][index]['name'] for index in current_rule]
+        return [self.node[node]['_states'][index]['name']
+                for index in current_rule]
 
     def set_rule_for_states(self, node, states):
         """
@@ -421,7 +425,8 @@ class BayesianModel(nx.DiGraph):
             for user_given_state in states:
                 for state in self.node[node]['_states']:
                     if state['name'] == user_given_state:
-                        new_rule.append(self.node[node]['_states'].index(state))
+                        new_rule.append(
+                            self.node[node]['_states'].index(state))
                         break
 
             self.node[node]['_rule_for_states'] = new_rule
@@ -439,8 +444,8 @@ class BayesianModel(nx.DiGraph):
 
     def _no_extra_parents(self, node, parents):
         """"
-        Returns True if parents has no other element other than those present in
-        node's _parents' list.
+        Returns True if parents has no other element other than those
+        present in node's _parents' list.
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
@@ -527,7 +532,8 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT'), ('grade', 'reco')])
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>>                       ('intel', 'SAT'), ('grade', 'reco')])
         >>> G.get_parents('grade')
         ['diff', 'intel']
         >>> G.set_rule_for_parents('grade', ['intel', 'diff'])
@@ -539,15 +545,12 @@ class BayesianModel(nx.DiGraph):
 
     def _get_parent_objects(self, node):
         """
-        Returns a list of those node objects which are parents of the argument node.
+        Returns a list of those node objects which are parents of
+        the argument node.
         """
         return [self.node[parent] for parent in self.get_parents(node)]
 
     #TODO _get_parent_objects() needs to made into a generator
-
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
 
     def add_tablularcpd(self, node, cpd):
         """Adds given CPD to node as numpy.array
@@ -735,3 +738,7 @@ class BayesianModel(nx.DiGraph):
             mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
 
         return mar_dist
+
+    def _string_to_tuple(self, string):
+        """Converts a single string into a tuple with one string element."""
+        return string,
