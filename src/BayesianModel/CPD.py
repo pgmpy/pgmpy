@@ -5,6 +5,8 @@ import numpy as np
 
 
 class TabularCPD():
-    """Represents the CPD of a node in tabular form"""
+    """
+    Represents the CPD of a node in tabular form
+    """
     def __init__(self, cpd):
         self.table = np.array(cpd)
