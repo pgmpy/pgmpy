@@ -226,6 +226,28 @@ class BayesianModel(nx.DiGraph):
         return _list_states
     #TODO get_states() needs to made into a generator
 
+    def number_of_states(self, node):
+        """
+        Returns the number of states of node.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        set_states
+        get_states
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT')])
+        >>> G.add_states('grade', ['A', 'B', 'C'])
+        >>> G.number_of_states('grade')
+        3
+        """
+        return len(self.node[node]['_states'])
+
     def _update_node_parents(self, node_list):
         """
         Function to update each node's _parent attribute.
@@ -543,6 +565,20 @@ class BayesianModel(nx.DiGraph):
         return self.get_rule_for_parents(node)
     #TODO get_parents() needs to made into a generator
 
+    def number_of_parents(self, node):
+        """
+        Returns the number of parents of node
+
+        node  :  Graph node
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'sat')])
+        >>> G.number_of_parents('grade')
+        2
+        """
+        return len(self.node[node]['_parents'])
+
     def _get_parent_objects(self, node):
         """
         Returns a list of those node objects which are parents of
@@ -566,7 +602,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        get_tabularcpd
+        get_cpd
         get_rule_for_parents
         set_rule_for_parents
         get_rule_for_states
@@ -592,8 +628,25 @@ class BayesianModel(nx.DiGraph):
         """
         self.node[node]['_cpd'] = CPD.TabularCPD(cpd)
 
-    def get_cpd(self, node):
-        return self.node[node]['_cpd'].table
+    def get_cpd(self, node, beautify=False):
+        """
+        Returns the CPD of the node.
+
+        node  :  Graph node
+
+        beautify : If set to True returns an ASCII art table of the CPD
+                    with parents and states else if beautify=False, returns
+                    a simple numpy.ndarray object of the CPD table
+
+        See Also
+        --------
+        set_cpd
+        """
+        if beautify:
+            #TODO: ASCII art table
+            pass
+        else:
+            return self.node[node]['_cpd'].get_cpd()
 
     def add_observations(self, observations, reset=False):
         """
