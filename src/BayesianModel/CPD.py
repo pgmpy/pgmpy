@@ -10,3 +10,6 @@ class TabularCPD():
     """
     def __init__(self, cpd):
         self.table = np.array(cpd)
+
+    def get_cpd(self):
+        return self.table
