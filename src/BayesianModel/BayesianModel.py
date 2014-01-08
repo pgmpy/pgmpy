@@ -3,7 +3,7 @@
 import networkx as nx
 import numpy as np
 from Exceptions import Exceptions
-from BayesianModel import CPDs
+from BayesianModel import CPD
 import itertools
 from scipy import sparse
 
@@ -225,6 +225,28 @@ class BayesianModel(nx.DiGraph):
             _list_states.append(self.node[node]['_states'][index]['name'])
         return _list_states
     #TODO get_states() needs to made into a generator
+
+    def number_of_states(self, node):
+        """
+        Returns the number of states of node.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        set_states
+        get_states
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT')])
+        >>> G.add_states('grade', ['A', 'B', 'C'])
+        >>> G.number_of_states('grade')
+        3
+        """
+        return len(self.node[node]['_states'])
 
     def _update_node_parents(self, node_list):
         """
@@ -543,6 +565,20 @@ class BayesianModel(nx.DiGraph):
         return self.get_rule_for_parents(node)
     #TODO get_parents() needs to made into a generator
 
+    def number_of_parents(self, node):
+        """
+        Returns the number of parents of node
+
+        node  :  Graph node
+
+        Example
+        -------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'sat')])
+        >>> G.number_of_parents('grade')
+        2
+        """
+        return len(self.node[node]['_parents'])
+
     def _get_parent_objects(self, node):
         """
         Returns a list of those node objects which are parents of
@@ -552,22 +588,34 @@ class BayesianModel(nx.DiGraph):
 
     #TODO _get_parent_objects() needs to made into a generator
 
-    def add_tablularcpd(self, node, cpd):
-        """Adds given CPD to node as numpy.array
+    def set_cpd(self, node, cpd):
+        """
+        Add CPD (Conditional Probability Distribution) to the node.
 
-        It is expected that CPD given will be a 2D array such that
-        the order of probabilities in the array will be in according
-        to the rules specified for parent and states.
-        An example is shown below.
+        Parameters
+        ----------
+        node  :  Graph node
+                Node to which CPD will be added
+
+        cpd  :  2D list or tuple of the CPD. The 2D array should be
+                according to the rule specified for parents and states.
+
+        See Also
+        --------
+        get_cpd
+        get_rule_for_parents
+        set_rule_for_parents
+        get_rule_for_states
+        set_rule_for_states
 
         EXAMPLE
         -------
+        >>> student = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
         >>> student.add_states('grades', ('A','C','B'))
         >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
-        >>> student.add_tabularcpd('grades',
-        ...             [[0.1,0
-        .1,0.1,0.1,0.1,0.1],
+        >>> student.set_cpd('grades',
+        ...             [[0.1,0,1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
@@ -578,10 +626,27 @@ class BayesianModel(nx.DiGraph):
         #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
         #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
         """
-        self.node[node]['_cpd'] = CPDs.TabularCPD(cpd)
+        self.node[node]['_cpd'] = CPD.TabularCPD(cpd)
 
-    def get_cpd(self, node):
-        return self.node[node]['_cpd'].table
+    def get_cpd(self, node, beautify=False):
+        """
+        Returns the CPD of the node.
+
+        node  :  Graph node
+
+        beautify : If set to True returns an ASCII art table of the CPD
+                    with parents and states else if beautify=False, returns
+                    a simple numpy.ndarray object of the CPD table
+
+        See Also
+        --------
+        set_cpd
+        """
+        if beautify:
+            #TODO: ASCII art table
+            pass
+        else:
+            return self.node[node]['_cpd'].get_cpd()
 
     def add_observations(self, observations, reset=False):
         """
@@ -712,12 +777,12 @@ class BayesianModel(nx.DiGraph):
         >>> student.add_states('diff', ('hard', 'easy'))
         >>> student.add_states('intel', ('smart', 'dumb'))
         >>> student.add_states('grades', ('good', 'bad'))
-        >>> student.add_tabularcpd('grades',
+        >>> student.set_cpd('grades',
         ...             [[0.7, 0.6, 0.6, 0.2],
         ...             [0.3, 0.4, 0.4, 0.8]],
         ...             )
-        >>> student.add_tabularcpd('diff', [[0.7],[0.3]])
-        >>> student.add_tabularcpd('intel', [[0.8], [0.2]])
+        >>> student.set_cpd('diff', [[0.7],[0.3]])
+        >>> student.set_cpd('intel', [[0.8], [0.2]])
         >>> student.marginal_probability('grades')
         array([[ 0.632],
                [ 0.368]])

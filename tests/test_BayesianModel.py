@@ -3,6 +3,7 @@ import BayesianModel.BayesianModel as bm
 from Exceptions import Exceptions
 import networkx as nx
 import help_functions as hf
+import numpy as np
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -274,6 +275,30 @@ class TestBayesianModelMethods(unittest.TestCase):
     def tearDown(self):
         del self.G
 
+
+class TestBayesianModelCPD(unittest.TestCase):
+
+    def setUp(self):
+        self.G = bm.BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
+                                   ('i', 's')])
+        self.G.add_states('d', ['easy', 'hard'])
+        self.G.add_states('g', ['A', 'B', 'C'])
+        self.G.add_states('i', ['dumb', 'smart'])
+        self.G.add_states('s', ['bad', 'avg', 'good'])
+        self.G.add_states('l', ['yes', 'no'])
+
+    def test_add_cpd(self):
+        self.G.add_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])
+        self.assertIsInstance(self.G.node['g']['_cpd'], bm.CPD.TabularCPD)
+        np.testing.assert_array_equal(self.G.node['g']['_cpd'].get_cpd(), np.array((
+            [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
+
+    def tearDown(self):
+        del self.G
 
 if __name__ == '__main__':
         unittest.main()

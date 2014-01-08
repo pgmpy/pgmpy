@@ -1,4 +1,4 @@
 from . import BayesianModel
-from . import CPDs
+from . import CPD
 
-__all__ = ['BayesianModel', 'CPDs']
+__all__ = ['BayesianModel', 'CPD.py']
