@@ -745,9 +745,11 @@ class BayesianModel(nx.DiGraph):
         return ancestors_list
 
     def _get_observed_list(self):
-        """Returns a list of all observed nodes"""
-        return [_node for _node in self.nodes()
-                if self.node[_node]['_observed']]
+        """
+        Returns a list of all observed nodes
+        """
+        return [node for node in self.nodes()
+                if self.node[node]['_observed']]
 
     def active_trail_nodes(self, start):
         """Returns all the nodes reachable from start via an active trail
@@ -846,4 +848,3 @@ class BayesianModel(nx.DiGraph):
             mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
 
         return mar_dist
-    
