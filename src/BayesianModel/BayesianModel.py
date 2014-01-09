@@ -733,15 +733,14 @@ class BayesianModel(nx.DiGraph):
         """
         return self.node[node]['_observed']
 
-    def _get_ancestors_observation(self, observation):
-        """Returns ancestors of all the observed elements"""
-        obs_list = [obs for obs in observation]
-        ancestors_list = []
-        while obs_list:
-            node = obs_list.pop()
-            if node not in ancestors_list:
-                obs_list += self.predecessors(node)
-            ancestors_list += [node]
+    def _get_ancestors_observation(self, observed_list):
+        """
+        Returns a list of all ancestors of all the observed nodes.
+        """
+        ancestors_list = set()
+        for node in observed_list:
+            for predecessor in self.predecessors(node):
+                ancestors_list.add(predecessor)
         return ancestors_list
 
     def _get_observed_list(self):
