@@ -846,7 +846,4 @@ class BayesianModel(nx.DiGraph):
             mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
 
         return mar_dist
-
-    def _string_to_tuple(self, string):
-        """Converts a single string into a tuple with one string element."""
-        return string,
+    
