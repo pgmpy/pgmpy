@@ -6,6 +6,7 @@ from Exceptions import Exceptions
 from BayesianModel import CPD
 import itertools
 from scipy import sparse
+import sys
 
 
 class BayesianModel(nx.DiGraph):
@@ -294,18 +295,19 @@ class BayesianModel(nx.DiGraph):
                 for edge in ebunch:
                     if edge[0] == edge[1]:
                         del self
-                        raise Exceptions.SelfLoopError("Self Loops"
-                                                       "are not allowed", edge)
+                        raise Exceptions.SelfLoopError("Self Loops are not allowed",
+                                                       edge)
 
             simple_cycles = [loop for loop in nx.simple_cycles(self)]
             if simple_cycles:
                 del self
                 raise Exceptions.CycleError("Cycles are not allowed",
                                             simple_cycles)
+            return True
         else:
             for edge in ebunch:
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self loops are not"
+                    raise Exceptions.SelfLoopError("Self loops are not "
                                                    "allowed", edge)
 
             import copy
@@ -648,46 +650,87 @@ class BayesianModel(nx.DiGraph):
         else:
             return self.node[node]['_cpd'].get_cpd()
 
-    def add_observations(self, observations, reset=False):
+    def set_observations(self, observations, reset=False):
+        #TODO: Complete examples
         """
-        Sets states of nodes as observed.
+        Sets state of node as observed.
 
-        observations: dictionary with key as node and value as the
-                      states that is observed
-        reset: if reset is True, the observation status is reset
+        Parameters
+        ----------
+        observations  :  A dictionary of the form of {node : state}
+                        containing all the observed nodes.
+
+        reset :  if reset is True, the observation status is reset
+
+        See Also
+        --------
+        reset_observations
+        is_observed
+
+        Examples
+        --------
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('grade', 'reco'))])
+        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.add_cpd()
+        >>> G.set_observations({'diff': 'easy'})
         """
         #TODO check if multiple states of same node can be observed
         #TODO if above then, change code accordingly
-        for _node in observations:
-            for user_given_state in observations[_node]:
-                if self._no_extra_states(_node, (user_given_state,)):
-                    for state in self.node[_node]['_states']:
-                        if state['name'] == user_given_state:
-                            state['observed_status'] = True if not reset \
-                                else False
-                            break
-                        self._update_node_observed_status(_node)
+        for node, state in observations.items():
+            found = 0
+            for state in self.node[node]['_states']:
+                if state['name'] == state:
+                    state['observed_status'] = True if not reset else False
+                    found = 1
+                    break
+            if found:
+                self._update_node_observed_status(node)
+            else:
+                raise Exceptions.StateError("State: ", state, " not found for node: ", node)
 
-    def reset_observed_nodes(self, nodes=None):
-        """Resets observed-status of given nodes.
-
-        Will not change a particular state. For that use,
-        add_observations with reset=True.
+    def reset_observations(self, nodes=None):
+        """
+        Resets observed-status of given nodes. Will not change a particular
+        state. For that use, add_observations with reset=True.
 
         If no arguments are given, all states of all nodes are reset.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        set_observations
+        is_observed
         """
         if nodes is None:
-            _to_reset = self.nodes()
-        elif isinstance(nodes, str):
-            _to_reset = self._string_to_tuple(nodes)
-        else:
-            _to_reset = nodes
-        for node in _to_reset:
-            for state in self.node[node]['_states']:
-                state['observed_status'] = False
-            self._update_node_observed_status(node)
+            nodes = self.nodes()
+        try:
+            for node in nodes:
+                for state in self.node[node]['_states']:
+                    state['observed_status'] = False
+                self._update_node_observed_status(node)
+        except KeyError:
+            raise Exceptions.NodeNotFoundError("Node not found", node)
 
     def is_observed(self, node):
+        #TODO: Write an example
+        """
+        Check if node is observed. If observed returns True.
+
+        Parameters
+        ----------
+        node  :  Graph Node
+
+        See Also
+        --------
+        set_observations
+        reset_observations
+
+        Example
+        -------
+        """
         return self.node[node]['_observed']
 
     def _get_ancestors_observation(self, observation):
