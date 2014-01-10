@@ -377,6 +377,9 @@ class TestBayesianModelCPD(unittest.TestCase):
             else:
                 self.assertFalse(state['observed_status'])
 
+    def test_reset_observations_node_error(self):
+        self.assertRaises(Exceptions.NodeNotFoundError, self.G.reset_observations, 'j')
+
     def tearDown(self):
         del self.G
 
