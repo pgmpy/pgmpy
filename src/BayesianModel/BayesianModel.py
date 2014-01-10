@@ -678,9 +678,9 @@ class BayesianModel(nx.DiGraph):
         #TODO if above then, change code accordingly
         for node, state in observations.items():
             found = 0
-            for state in self.node[node]['_states']:
-                if state['name'] == state:
-                    state['observed_status'] = True if not reset else False
+            for _state in self.node[node]['_states']:
+                if _state['name'] == state:
+                    _state['observed_status'] = True if not reset else False
                     found = 1
                     break
             if found:
@@ -734,6 +734,7 @@ class BayesianModel(nx.DiGraph):
         return self.node[node]['_observed']
 
     def _get_ancestors_observation(self, observed_list):
+        # TODO: Either function name and doc is wrong or the function
         """
         Returns a list of all ancestors of all the observed nodes.
         """
