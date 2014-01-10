@@ -288,17 +288,26 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.G.add_states('s', ['bad', 'avg', 'good'])
         self.G.add_states('l', ['yes', 'no'])
 
-    def test_add_cpd(self):
+    def test_set_cpd(self):
         self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])
         self.assertIsInstance(self.G.node['g']['_cpd'], bm.CPD.TabularCPD)
-        np.testing.assert_array_equal(self.G.node['g']['_cpd'].get_cpd(), np.array((
+        np.testing.assert_array_equal(self.G.node['g']['_cpd'].table, np.array((
             [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
 
-    #TODO: add tests for get_cpd
+    def test_get_cpd(self):
+        self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])
+        np.testing.assert_array_equal(self.G.get_cpd('g'), np.array((
+            [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
+
+    
 
     def tearDown(self):
         del self.G
