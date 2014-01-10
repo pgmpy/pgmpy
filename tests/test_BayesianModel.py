@@ -307,7 +307,26 @@ class TestBayesianModelCPD(unittest.TestCase):
              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
 
-    
+    def test_set_observations_single_state_reset_false(self):
+        self.G.set_observations({'d': 'easy'})
+        for state in self.G.node['d']['_states']:
+            if state['name'] == 'easy':
+                break
+        self.assertTrue(state['observed_status'])
+        self.assertTrue(self.G.node['d']['_observed'])
+
+    def test_set_observation_multiple_state_reset_false(self):
+        self.G.set_observations({'d': 'easy', 'g': 'A'})
+        for state in self.G.node['d']['_states']:
+            if state['name'] == 'easy':
+                break
+        self.assertTrue(state['observed_status'])
+        self.assertTrue(self.G.node['d']['_observed'])
+        for state in self.G.node['g']['_states']:
+            if state['name'] == 'A':
+                break
+        self.assertTrue(state['observed_status'])
+        self.assertTrue(self.G.node['g']['_observed'])
 
     def tearDown(self):
         del self.G
