@@ -328,6 +328,55 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertTrue(state['observed_status'])
         self.assertTrue(self.G.node['g']['_observed'])
 
+    def test_set_observation_multiple_state_reset_false_not_found(self):
+        self.assertRaises(Exceptions.StateError, self.G.set_observations, {'d': 'unknow_state'})
+
+    def test_set_observations_single_state_reset_true(self):
+        self.G.set_observations({'d': 'easy'})
+        self.G.set_observations({'d': 'easy'}, reset=True)
+        for state in self.G.node['d']['_states']:
+            if state['name'] == 'easy':
+                break
+        self.assertFalse(state['observed_status'])
+        self.assertFalse(self.G.node['g']['_observed'])
+
+    def test_set_observations_multiple_state_reset_true(self):
+        self.G.set_observations({'d': 'easy', 'g': 'A', 'i': 'dumb'})
+        self.G.set_observations({'d': 'easy', 'i': 'dumb'}, reset=True)
+        for state in self.G.node['d']['_states']:
+            if state['name'] == 'easy':
+                break
+        self.assertFalse(state['observed_status'])
+        self.assertFalse(self.G.node['d']['_observed'])
+        for state in self.G.node['g']['_states']:
+            if state['name'] == 'A':
+                break
+        self.assertTrue(state['observed_status'])
+        self.assertTrue(self.G.node['g']['_observed'])
+
+    def test_reset_observation_node_none(self):
+        self.G.set_observations({'d': 'easy', 'g': 'A'})
+        self.G.reset_observations()
+        self.assertFalse(self.G.node['d']['_observed'])
+        for state in self.G.node['d']['_states']:
+            self.assertFalse(state['observed_status'])
+        self.assertFalse(self.G.node['g']['_observed'])
+        for state in self.G.node['g']['_states']:
+            self.assertFalse(state['observed_status'])
+
+    def test_reset_observations_node_not_none(self):
+        self.G.set_observations({'d': 'easy', 'g': 'A'})
+        self.G.reset_observations('d')
+        self.assertFalse(self.G.node['d']['_observed'])
+        for state in self.G.node['d']['_states']:
+            self.assertFalse(state['observed_status'])
+        self.assertTrue(self.G.node['g']['_observed'])
+        for state in self.G.node['g']['_states']:
+            if state['name'] == 'A':
+                self.assertTrue(state['observed_status'])
+            else:
+                self.assertFalse(state['observed_status'])
+
     def tearDown(self):
         del self.G
 
