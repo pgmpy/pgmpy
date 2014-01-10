@@ -385,6 +385,15 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertTrue(self.G.is_observed('d'))
         self.assertFalse(self.G.is_observed('i'))
 
+    def test_get_ancestros_observation(self):
+        self.G.set_observations({'d': 'easy', 'g': 'A'})
+        self.assertListEqual(list(self.G._get_ancestors_observation(['d'])), [])
+        self.assertListEqual(list(sorted(self.G._get_ancestors_observation(['d', 'g']))), ['d', 'i'])
+
+    def test_get_observed_list(self):
+        self.G.set_observations({'d': 'hard', 'i': 'smart'})
+        self.assertListEqual(sorted(self.G._get_observed_list()), ['d', 'i'])
+
     def tearDown(self):
         del self.G
 
