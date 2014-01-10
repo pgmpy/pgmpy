@@ -734,6 +734,7 @@ class BayesianModel(nx.DiGraph):
         return self.node[node]['_observed']
 
     def _get_ancestors_observation(self, observed_list):
+        # TODO: Either function name and doc is wrong or the function
         """
         Returns a list of all ancestors of all the observed nodes.
         """
