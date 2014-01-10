@@ -380,6 +380,11 @@ class TestBayesianModelCPD(unittest.TestCase):
     def test_reset_observations_node_error(self):
         self.assertRaises(Exceptions.NodeNotFoundError, self.G.reset_observations, 'j')
 
+    def test_is_observed(self):
+        self.G.set_observations({'d': 'easy'})
+        self.assertTrue(self.G.is_observed('d'))
+        self.assertFalse(self.G.is_observed('i'))
+
     def tearDown(self):
         del self.G
 
