@@ -678,9 +678,9 @@ class BayesianModel(nx.DiGraph):
         #TODO if above then, change code accordingly
         for node, state in observations.items():
             found = 0
-            for state in self.node[node]['_states']:
-                if state['name'] == state:
-                    state['observed_status'] = True if not reset else False
+            for _state in self.node[node]['_states']:
+                if _state['name'] == state:
+                    _state['observed_status'] = True if not reset else False
                     found = 1
                     break
             if found:
