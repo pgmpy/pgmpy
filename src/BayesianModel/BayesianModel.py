@@ -159,7 +159,7 @@ class BayesianModel(nx.DiGraph):
         self._update_node_parents(new_nodes)
         self._update_node_rule_for_parents(new_nodes)
 
-    def add_states(self, node, states):
+    def set_states(self, states_dic):
         # TODO: Add the functionality to accept states of multiple
         # nodes in a single call.
         """
@@ -167,11 +167,8 @@ class BayesianModel(nx.DiGraph):
 
         Parameters
         ----------
-        node  :  Graph node
-                Must be already present in the Model
-
-        states :  Container of states
-                Can be list or tuple of states.
+        states_dic :  Dictionary ({node : [state1, state2]})
+                Dictionary of nodes to their list of states
 
         See Also
         --------
@@ -181,23 +178,23 @@ class BayesianModel(nx.DiGraph):
         --------
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.add_states('intel', ['dumb', 'smart'])
+        >>> G.add_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
         """
-        try:
-            self.node[node]['_states'].extend([{'name': state,
-                                                'observed_status': False}
-                                               for state in states])
-        except KeyError:
-            self.node[node]['_states'] = [
-                {'name': state, 'observed_status': False} for state in states]
+        for node, states in states_dic.items():
+            try:
+                self.node[node]['_states'].extend([{'name': state,
+                                                    'observed_status': False}
+                                                   for state in states])
+            except KeyError:
+                self.node[node]['_states'] = [
+                    {'name': state, 'observed_status': False} for state in states]
 
-        self._update_rule_for_states(node, len(self.node[node]['_states']))
+            self._update_rule_for_states(node, len(self.node[node]['_states']))
     ################# For Reference ########################
     #   self.node[node]['_rule_for_states'] = [            #
     #       n for n in range(len(states))]                 #
     ########################################################
-        self._update_node_observed_status(node)
+            self._update_node_observed_status(node)
 
         #TODO _rule_for_states needs to made into a generator
 
@@ -817,11 +814,11 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> student.add_nodes('diff', 'intel', 'grades')
-        >>> student.add_edges(('diff', 'intel'), ('grades',))
-        >>> student.add_states('diff', ('hard', 'easy'))
-        >>> student.add_states('intel', ('smart', 'dumb'))
-        >>> student.add_states('grades', ('good', 'bad'))
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grades')])
+        >>> student.add_states('diff', ['hard', 'easy'])
+        >>> student.add_states('intel', ['smart', 'dumb'])
+        >>> student.add_states('grades', ['good', 'bad'])
         >>> student.set_cpd('grades',
         ...             [[0.7, 0.6, 0.6, 0.2],
         ...             [0.3, 0.4, 0.4, 0.8]],
