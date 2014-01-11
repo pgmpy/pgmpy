@@ -151,9 +151,7 @@ class TestBayesianModelMethods(unittest.TestCase):
                                    ('d', 'e'), ('b', 'c')])
 
     def test_add_states(self):
-        self.G.add_states('a', [1, 2, 3])
-        self.G.add_states('b', [4, 5])
-        self.G.add_states('c', [6, 7])
+        self.G.set_states({'a': [1, 2, 3], 'b': [4, 5], 'c': [6, 7]})
         self.assertListEqual(sorted([node['name'] for node in
                                      self.G.node['a']['_states']]), [1, 2, 3])
         self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2])
@@ -166,7 +164,7 @@ class TestBayesianModelMethods(unittest.TestCase):
                                      self.G.node['c']['_states']]), [6, 7])
         self.assertListEqual(self.G.node['c']['_rule_for_states'], [0, 1])
         self.assertFalse(self.G.node['c']['_observed'])
-        self.G.add_states('a', [8, 9])
+        self.G.set_states({'a': [8, 9]})
         self.assertListEqual(sorted([node['name'] for node in
                                      self.G.node['a']['_states']]),
                              [1, 2, 3, 8, 9])
@@ -176,8 +174,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_get_states(self):
         self.G = bm.BayesianModel([('a', 'd')])
-        self.G.add_states('a', [1, 2, 3])
-        self.G.add_states('d', [4, 5])
+        self.G.set_states({'a': [1, 2, 3], 'd': [4, 5]})
         self.assertListEqual(self.G.get_states('a'), [1, 2, 3])
         self.assertListEqual(self.G.get_states('d'), [4, 5])
         self.G.node['a']['_rule_for_states'] = [1, 0, 2]
@@ -200,20 +197,20 @@ class TestBayesianModelMethods(unittest.TestCase):
                              [1, 0, 2, 3, 4])
 
     def test_update_node_observed_status(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.assertFalse(self.G.node['a']['_observed'])
         self.G.node['a']['_states'][0]['observed_status'] = True
         self.G._update_node_observed_status('a')
         self.assertTrue(self.G.node['a']['_observed'])
 
     def test_no_missing_states(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.assertTrue(self.G._no_missing_states('a', [1, 2, 3]))
         self.assertRaises(Exceptions.MissingStatesError,
                           self.G._no_missing_states, 'a', [1, 2])
 
     def test_no_extra_states(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.assertTrue(self.G._no_extra_states('a', [1, 2]))
         self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
         self.assertRaises(Exceptions.ExtraStatesError,
@@ -232,16 +229,16 @@ class TestBayesianModelMethods(unittest.TestCase):
                           self.G._no_missing_parents, 'd', ['a'])
 
     def test_get_rule_for_states(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.assertListEqual(self.G.get_rule_for_states('a'), [1, 2, 3])
 
     def test_set_rule_for_states(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.G.set_rule_for_states('a', [3, 1, 2])
         self.assertListEqual(self.G.get_rule_for_states('a'), [3, 1, 2])
 
     def test_all_states_present_in_list(self):
-        self.G.add_states('a', [1, 2, 3])
+        self.G.set_states({'a': [1, 2, 3]})
         self.assertTrue(self.G._all_states_present_in_list('a', [1, 2, 3]))
         self.assertTrue(self.G._all_states_present_in_list('a', [2, 1, 3]))
         self.assertFalse(self.G._all_states_present_in_list('a', [1, 2]))
@@ -282,11 +279,7 @@ class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
         self.G = bm.BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
                                    ('i', 's')])
-        self.G.add_states('d', ['easy', 'hard'])
-        self.G.add_states('g', ['A', 'B', 'C'])
-        self.G.add_states('i', ['dumb', 'smart'])
-        self.G.add_states('s', ['bad', 'avg', 'good'])
-        self.G.add_states('l', ['yes', 'no'])
+        self.G.set_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'], 'l': ['yes', 'no']})
 
     def test_set_cpd(self):
         self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
