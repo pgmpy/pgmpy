@@ -132,3 +132,9 @@ class Factor:
             marg_factor += self.values[np.array(sum_index) +
                                        i*cum_cardinality[index]]
         return marg_factor
+
+    def normalize(self):
+        """
+        Normalizes the values of factor so that they sum to 1.
+        """
+        self.values = self.values/np.sum(self.values)
