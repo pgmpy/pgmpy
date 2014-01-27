@@ -10,6 +10,7 @@ class Factor:
     Public Methods
     --------------
     assignment(index)
+    marginalize([variable_list])
     """
 
     def __init__(self, variables, cardinality, value):
@@ -30,23 +31,23 @@ class Factor:
             defined above, we have the following mapping from variable
             assignments to the index of the row vector in the value field:
             -+-----+-----+-----+-------------------+
-            |  x1 |  x2 |  x3 |    phi(x1, x2, x2)|
+            |  x1 |  x2 |  x3 |    phi(x1, x2, x2) |
             -+-----+-----+-----+-------------------+
-            | x1_0| x2_0| x3_0|     phi.value(0)  |
+            | x1_0| x2_0| x3_0|     phi.value(0)   |
             -+-----+-----+-----+-------------------+
-            | x1_1| x2_0| x3_0|     phi.value(1)  |
+            | x1_1| x2_0| x3_0|     phi.value(1)   |
             -+-----+-----+-----+-------------------+
-            | x1_0| x2_1| x3_0|     phi.value(2)  |
+            | x1_0| x2_1| x3_0|     phi.value(2)   |
             -+-----+-----+-----+-------------------+
-            | x1_1| x2_1| x3_0|     phi.value(3)  |
+            | x1_1| x2_1| x3_0|     phi.value(3)   |
             -+-----+-----+-----+-------------------+
-            | x1_0| x2_0| x3_1|     phi.value(4)  |
+            | x1_0| x2_0| x3_1|     phi.value(4)   |
             -+-----+-----+-----+-------------------+
-            | x1_1| x2_0| x3_1|     phi.value(5)  |
+            | x1_1| x2_0| x3_1|     phi.value(5)   |
             -+-----+-----+-----+-------------------+
-            | x1_0| x2_1| x3_1|     phi.value(6)  |
-             -+-----+-----+-----+-------------------+
-            | x1_1| x2_1| x3_1|     phi.value(7)  |
+            | x1_0| x2_1| x3_1|     phi.value(6)   |
+            -+-----+-----+-----+-------------------+
+            | x1_1| x2_1| x3_1|     phi.value(7)   |
             -+-----+-----+-----+-------------------+
             """
         self.variables = OrderedDict()
@@ -54,7 +55,10 @@ class Factor:
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
-        self.value = np.array(value)
+        num_elems = np.cumprod(self.cardinality)[-1]
+        self.values = np.array(value)
+        if not self.values.shape[0] == num_elems:
+            raise Exceptions.SizeError("Incompetant value array")
 
     def assignment(self, index):
         """
@@ -77,3 +81,54 @@ class Factor:
         mat = mat.astype('int')
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in mat]
+
+    def marginalize(self, variables):
+        """
+        Modifies the factor with marginalized values.
+        Paramters
+        ---------
+        variables: string, list-type
+            name of variable to be marginalized
+        Example:
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.marginalize(['x1', 'x3'])
+        >>> phi.values
+        array([ 14.,  22.,  30.])
+        >>> phi.variables
+        OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
+        """
+        if not isinstance(variables, list):
+            variables = [variables]
+        for variable in variables:
+            if variable not in self.variables:
+                raise Exceptions.ScopeError("%s not in scope" % variable)
+        for variable in variables:
+            self.values = self._marginalize_single_variable(variable)
+            index = list(self.variables.keys()).index(variable)
+            del(self.variables[variable])
+            self.cardinality = np.delete(self.cardinality, index)
+
+    def _marginalize_single_variable(self, variable):
+        """
+        Returns marginalised factor for a single variable
+        Paramters
+        ---------
+        variable_name: string
+            name of variable to be marginalized
+
+        Example:
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi._marginalize_single_variable('x1')
+        array([  1.,   5.,   9.,  13.,  17.,  21.])
+        """
+        index = list(self.variables.keys()).index(variable)
+        cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality)))
+        num_elements = cum_cardinality[-1]
+        sum_index = [j for i in range(0, num_elements,
+                                      cum_cardinality[index+1])
+                     for j in range(i, i+cum_cardinality[index])]
+        marg_factor = np.zeros(num_elements/self.cardinality[index])
+        for i in range(self.cardinality[index]):
+            marg_factor += self.values[np.array(sum_index) +
+                                       i*cum_cardinality[index]]
+        return marg_factor
