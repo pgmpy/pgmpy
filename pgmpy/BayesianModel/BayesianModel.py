@@ -2,11 +2,10 @@
 
 import networkx as nx
 import numpy as np
-from Exceptions import Exceptions
-from BayesianModel import CPD
+from pgmpy.Exceptions import Exceptions
+from pgmpy.BayesianModel import CPD
 import itertools
 from scipy import sparse
-import sys
 
 
 class BayesianModel(nx.DiGraph):
