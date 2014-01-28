@@ -11,6 +11,8 @@ class Factor:
     --------------
     assignment(index)
     marginalize([variable_list])
+    reduce([variable_values_list])
+    normalise()
     """
 
     def __init__(self, variables, cardinality, value):
@@ -56,7 +58,7 @@ class Factor:
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
         num_elems = np.cumprod(self.cardinality)[-1]
-        self.values = np.array(value)
+        self.values = np.array(value, dtype=np.double)
         if not self.values.shape[0] == num_elems:
             raise Exceptions.SizeError("Incompetant value array")
 
@@ -138,3 +140,41 @@ class Factor:
         Normalizes the values of factor so that they sum to 1.
         """
         self.values = self.values/np.sum(self.values)
+
+    def reduce(self, values):
+        """
+        Reduces the factor to the context of given variable
+        values.
+        Parameters
+        ----------
+        values: string, list-type
+            name of the variable values
+
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.reduce(['x1_0', 'x2_0'])
+        >>> phi.values
+        array([0, 6])
+        """
+        if not isinstance(values, list):
+            values = [values]
+        for value in values:
+            if not '_' in value:
+                raise TypeError("Values should be in the form of "
+                                "variablename_index")
+            var, value_index = value.split('_')
+            if not var in self.variables:
+                raise Exceptions.ScopeError("%s not in scope" % var)
+            index = list(self.variables.keys()).index(var)
+            value_index = int(value_index)
+            if not (value_index < self.cardinality[index]):
+                raise Exceptions.SizeError("Value is "
+                                           "greater than max possible value")
+            cum_cardinality = np.concatenate(([1],
+                                              np.cumprod(self.cardinality)))
+            num_elements = cum_cardinality[-1]
+            index_arr = [j for i in range(0, num_elements,
+                                          cum_cardinality[index+1])
+                         for j in range(i, i+cum_cardinality[index])]
+            self.values = self.values[np.array(index_arr)]
+            del(self.variables[var])
+            self.cardinality = np.delete(self.cardinality, index)
