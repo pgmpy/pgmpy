@@ -1,3 +1,3 @@
-from . import Factor
+from Factor import Factor
 
 __all__ = ["Factor"]
