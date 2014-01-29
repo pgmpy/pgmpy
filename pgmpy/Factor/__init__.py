@@ -1,3 +1,3 @@
-from Factor import Factor
+from .Factor import *
 
-__all__ = ["Factor"]
+__all__ = ["Factor", "CPD"]
