@@ -1,6 +1,30 @@
 #/usr/bin/env python
 
+USE_CYTHON = True
+
+import sys
 from distutils.core import setup
+from distutils.extension import Extension
+
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    USE_CYTHON = False
+
+ext_modules = []
+cmdclass = {}
+
+if USE_CYTHON:
+    ext_modules.extend([
+        Extension("pgmpy.Factor._factor_product",
+                  ["pgmpy/Factor/_factor_product.pyx"])
+    ])
+    cmdclass.update({'build_ext': build_ext})
+else:
+    ext_modules.extend([
+        Extension("pgmpy.Factor._factor_product",
+                  ["pgmpy/Factor/_factor_product.c"])
+    ])
 
 setup(
     name="pgmpy",
@@ -8,6 +32,8 @@ setup(
               "pgmpy.BayesianModel",
               "pgmpy.Exceptions",
               "pgmpy.Factor"],
+    cmdclass=cmdclass,
+    ext_modules=ext_modules,
     version="0.1.0",
     author=open("AUTHORS.rst").read(),
     url="https://github.com/pgmpy/pgmpy",
