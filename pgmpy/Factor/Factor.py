@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pgmpy.Exceptions import Exceptions
+from pgmpy import Exceptions
 import numpy as np
 from collections import OrderedDict
 
