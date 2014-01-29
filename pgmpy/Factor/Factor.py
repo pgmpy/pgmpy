@@ -65,7 +65,17 @@ class Factor:
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
-        >>> phi = Factor(['diff', 'intel'], [2, 2])
+
+        Parameters
+        ----------
+        index: integer, list-type, ndarray
+            index or indices whose assignment is to be computed
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
+        >>> import numpy as np
+        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [['diff_1', 'intel_0'], ['diff_0', 'intel_1']]
         """
@@ -87,11 +97,15 @@ class Factor:
     def marginalize(self, variables):
         """
         Modifies the factor with marginalized values.
+
         Paramters
         ---------
         variables: string, list-type
             name of variable to be marginalized
-        Example:
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
@@ -113,12 +127,15 @@ class Factor:
     def _marginalize_single_variable(self, variable):
         """
         Returns marginalised factor for a single variable
+
         Paramters
         ---------
         variable_name: string
             name of variable to be marginalized
 
-        Example:
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi._marginalize_single_variable('x1')
         array([  1.,   5.,   9.,  13.,  17.,  21.])
@@ -143,17 +160,20 @@ class Factor:
 
     def reduce(self, values):
         """
-        Reduces the factor to the context of given variable
-        values.
+        Reduces the factor to the context of given variable values.
+
         Parameters
         ----------
         values: string, list-type
             name of the variable values
 
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce(['x1_0', 'x2_0'])
         >>> phi.values
-        array([0, 6])
+        array([0., 6.])
         """
         if not isinstance(values, list):
             values = [values]
