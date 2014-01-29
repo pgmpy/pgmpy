@@ -26,9 +26,9 @@ class Factor:
         value: list, array_like
             List or array of values of factor.
             A Factor's values are stored in a row vector in the value
-            using an ordering such that the left-most variables as defined in the
-            variable field cycle through their values the fastest. More concretely,
-            for factor
+            using an ordering such that the left-most variables as defined in
+            the variable field cycle through their values the fastest. More
+            concretely, for factor
             >>>phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
             defined above, we have the following mapping from variable
             assignments to the index of the row vector in the value field:
@@ -133,12 +133,6 @@ class Factor:
         variable_name: string
             name of variable to be marginalized
 
-        Examples
-        --------
-        >>> from pgmpy.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi._marginalize_single_variable('x1')
-        array([  1.,   5.,   9.,  13.,  17.,  21.])
         """
         index = list(self.variables.keys()).index(variable)
         cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality)))
