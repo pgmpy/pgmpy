@@ -4,7 +4,10 @@ from distutils.core import setup
 
 setup(
     name="pgmpy",
-    packages=["pgmpy"],
+    packages=["pgmpy",
+              "pgmpy.BayesianModel",
+              "pgmpy.Exceptions",
+              "pgmpy.Factor"],
     version="0.1.0",
     author=open("AUTHORS.rst").read(),
     url="https://github.com/pgmpy/pgmpy",
