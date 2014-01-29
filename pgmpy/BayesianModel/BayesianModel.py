@@ -712,6 +712,8 @@ class BayesianModel(nx.DiGraph):
         set_observations
         is_observed
         """
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
         if nodes is None:
             nodes = self.nodes()
         try:
