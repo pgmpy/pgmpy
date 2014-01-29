@@ -128,7 +128,7 @@ class Factor:
         """
         Returns marginalised factor for a single variable
 
-        Paramters
+        Parameters
         ---------
         variable_name: string
             name of variable to be marginalized
