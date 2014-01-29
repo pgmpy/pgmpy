@@ -444,8 +444,9 @@ class BayesianModel(nx.DiGraph):
         >>> G.set_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
         ['easy', 'hard']
+        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
         >>> G.get_rule_for_states('diff')
-        ['dumb', 'smart']
+        ['hard', 'easy']
         """
         if self._all_states_present_in_list(node, states):
             new_rule = []
