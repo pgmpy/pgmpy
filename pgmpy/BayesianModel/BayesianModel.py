@@ -435,8 +435,6 @@ class BayesianModel(nx.DiGraph):
         Returns True if all the states of the node are present in the
         argument states.
         """
-        #TODO: Feels that this function is wrong, if it is opposite of
-        # _no_extra_states
         node_states = [state['name'] for state in self.node[node]['_states']]
         if sorted(node_states) == sorted(states):
             return True
@@ -523,7 +521,7 @@ class BayesianModel(nx.DiGraph):
                         break
 
             self.node[node]['_rule_for_states'] = new_rule
-            
+
     def _is_node_parents_equal_parents_list(self, node, parents_list):
         """
         Returns true if parents_list has exactly those elements that are
