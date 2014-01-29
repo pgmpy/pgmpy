@@ -81,16 +81,21 @@ class BayesianModel(nx.DiGraph):
         --------------
         add_node('node1')
         add_nodes_from(['node1', 'node2', ...])
+        add_edge('node1')
         add_edges_from([('node1', 'node2'),('node3', 'node4')])
         set_states({node : [state1, state2]})
         get_states('node1')
+        number_of_state('node1')
+        get_rule_for_states('node1')
         set_rule_for_states({'node1': ['state2', 'state1', ...]})
+        get_rule_for_parents('node1')
         set_rule_for_parents({'node1': ['parent1', 'parent2', ...]})
         get_parents('node1')
+        number_of_parents('node1')
         set_cpd('node1', cpd1)
         get_cpd('node1')
         set_observations({'node1': ['observed_state1', 'observed_state2'],
-                          'node2': 'observed_state1'}, reset=False)
+                          'node2': 'observed_state1'})
         reset_observations(['node1', 'node2'])
         is_observed('node1')
         active_trail_nodes('node1')
@@ -154,8 +159,6 @@ class BayesianModel(nx.DiGraph):
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
-        # if not all([isinstance(elem, str) for elem in nodes]):
-        #     raise TypeError("Name of nodes must be strings")
         self._check_node_string(nodes)
         nx.DiGraph.add_nodes_from(self, nodes)
 
@@ -180,7 +183,7 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> from pgmpy import BayesianModel as bm
+        >>> from pgmpy import BayesianModel as bm/home/abinash/software_packages/numpy-1.7.1
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
@@ -286,7 +289,9 @@ class BayesianModel(nx.DiGraph):
         >>>                       ('intel', 'sat')])
         >>> G.set_states({'diff': ['easy', 'hard'],
         ...               'intel': ['dumb', 'smart']})
-        >>> G.get_states('diff')
+        >>> states = G.get_states('diff')
+        >>> for state in states:
+        ...     print(state)
         """
         _list_states = (self.node[node]['_states'][index]['name']
                         for index in self.node[node]['_rule_for_states'])
@@ -723,16 +728,40 @@ class BayesianModel(nx.DiGraph):
         else:
             return self.node[node]['_cpd'].get_cpd()
 
-    def set_observations(self, observations, reset=False):
+    def _change_state_observed(self, node, state, reset):
+        """
+        Changes observed status of state of a node
+
+        Parameters
+        ----------
+        node: Graph node
+
+        state: string (node state)
+
+        reset: bool
+            changes observed_status to False if reset is True
+            changes observed_status to True if reset is False
+        """
+        found = 0
+        for _state in self.node[node]['_states']:
+            if _state['name'] == state:
+                _state['observed_status'] = not reset
+                found = 1
+        if found:
+            self._update_node_observed_status(node)
+        else:
+            raise Exceptions.StateError("State: ", state,
+                                        " not found for node: ", node)
+
+    def set_observations(self, observations):
         """
         Sets state of node as observed.
 
         Parameters
         ----------
-        observations  :  A dictionary of the form of {node : state}
-                        containing all the observed nodes.
-
-        reset :  if reset is True, the observation status is reset
+        observations : dict
+            A dictionary of the form of {node : [states...]} or
+            {node: state} containing all the nodes to be observed.
 
         See Also
         --------
@@ -741,25 +770,18 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         ...                       ('grade', 'reco'))])
         >>> G.set_states({'diff': ['easy', 'hard']})
-        >>> G.set_observations({'diff': 'easy'})
+        >>> G.set_observations({'diff': ['easy', 'hard']})
         """
-        #TODO check if multiple states of same node can be observed
-        #TODO if above then, change code accordingly
-        for node, state in observations.items():
-            found = 0
-            for _state in self.node[node]['_states']:
-                if _state['name'] == state:
-                    _state['observed_status'] = True if not reset else False
-                    found = 1
-                    break
-            if found:
-                self._update_node_observed_status(node)
+        for node, states in observations.items():
+            if isinstance(states, (list, tuple, set)):
+                for state in states:
+                    self._change_state_observed(node, state, reset=False)
             else:
-                raise Exceptions.StateError("State: ", state,
-                                            " not found for node: ", node)
+                self._change_state_observed(node, states, reset=False)
 
     def reset_observations(self, nodes=None):
         """
@@ -770,24 +792,45 @@ class BayesianModel(nx.DiGraph):
 
         Parameters
         ----------
-        node  :  Graph Node
+        node : Graph Node, dict
+            list of nodes or node whose observed_status is to be reset
+            dict of {node: [states...]} when observed_status of states
+            is to be reset.
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
+        >>> G.get_rule_for_states('diff')
+        >>> G.get_rule_for_states('grade')
+        >>> G.set_observations({'grade': ['A']})
+        >>> G.reset_observations({'grade': 'A'})
 
         See Also
         --------
         set_observations
         is_observed
         """
-        if nodes is None:
-            nodes = self.nodes()
-        if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]
-        try:
-            for node in nodes:
-                for state in self.node[node]['_states']:
-                    state['observed_status'] = False
-                self._update_node_observed_status(node)
-        except KeyError:
-            raise Exceptions.NodeNotFoundError("Node not found", node)
+        if isinstance(nodes, dict):
+            for node, states in nodes.items():
+                if isinstance(states, (list, tuple, set)):
+                    for state in states:
+                        self._change_state_observed(node, state, reset=True)
+                else:
+                    self._change_state_observed(node, states, reset=True)
+        else:
+            if nodes is None:
+                nodes = self.nodes()
+            if not isinstance(nodes, (list, tuple)):
+                nodes = [nodes]
+            try:
+                for node in nodes:
+                    for state in self.node[node]['_states']:
+                        state['observed_status'] = False
+                    self._update_node_observed_status(node)
+            except KeyError:
+                raise Exceptions.NodeNotFoundError("Node not found", node)
 
     def is_observed(self, node):
         """
@@ -843,15 +886,14 @@ class BayesianModel(nx.DiGraph):
                 if self.node[node]['_observed']]
 
     def active_trail_nodes(self, start):
-        """Returns all the nodes reachable from start via an active trail
+        """
+        Returns all the nodes reachable from start via an active trail
 
-        -------------------------------------------------------------------
-        Details of algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
-        -------------------------------------------------------------------
+        Parameters
+        ----------
+        start: Graph node
 
-        EXAMPLE
+        Examples
         -------
         >>> from pgmpy import BayesianModel as bm
         >>> student = bm.BayesianModel()
@@ -863,6 +905,17 @@ class BayesianModel(nx.DiGraph):
         >>> student.set_observations({'grades': 'A'})
         >>> student.active_trail_nodes('diff')
         ['diff', 'intel']
+
+        See Also
+        --------
+        is_active_trail(start, end)
+
+        -------------------------------------------------------------------
+        Details of algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
+        -------------------------------------------------------------------
+
         """
         observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_of(observed_list)
@@ -896,8 +949,32 @@ class BayesianModel(nx.DiGraph):
         return active_nodes
 
     def is_active_trail(self, start, end):
-        """Returns True if there is any active trail
-        between start and end node"""
+        """
+        Returns True if there is any active trail between start and end node
+
+        Parameters
+        ----------
+        start : Graph Node
+
+        end : Graph Node
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grades': ['A', 'B', 'C']})
+        >>> student.set_observations({'grades': 'A'})
+        >>> student.is_active_trail('diff', 'intel')
+        True
+
+        See Also
+        --------
+        active_trail_nodes('start')
+        """
         if end in self.active_trail_nodes(start):
             return True
         else:
