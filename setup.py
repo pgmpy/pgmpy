@@ -1,8 +1,7 @@
-#/usr/bin/env python
+#/usr/bin/env python3
 
 USE_CYTHON = True
 
-import sys
 from distutils.core import setup
 from distutils.extension import Extension
 
