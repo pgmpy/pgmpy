@@ -3,7 +3,7 @@
 import networkx as nx
 import numpy as np
 from pgmpy.Exceptions import Exceptions
-from pgmpy.BayesianModel import CPD
+from pgmpy.Factor import CPD
 import itertools
 from scipy import sparse
 
