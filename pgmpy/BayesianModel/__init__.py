@@ -1,3 +1,3 @@
-from BayesianModel import BayesianModel
+from .BayesianModel import BayesianModel
 
 __all__ = ['BayesianModel']
