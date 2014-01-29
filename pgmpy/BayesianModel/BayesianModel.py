@@ -81,6 +81,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
@@ -110,6 +111,7 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
@@ -144,6 +146,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
@@ -175,6 +178,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
         >>> G.add_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
