@@ -13,8 +13,8 @@ class BayesianModel(nx.DiGraph):
     Public Methods
     --------------
     add_nodes('node1', 'node2', ...)
-    add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
-    add_states('node1', ('state1', 'state2', ...))
+    add_edges_from([('node1', 'node2'),('node3', 'node4')])
+    set_states({node : [state1, state2]})
     get_states('node1')
     set_rule_for_states('node1', ('state2', 'state1', ...))
     set_rule_for_parents('node1', ('parent1', 'parent2', ...))
@@ -55,6 +55,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_node('difficulty')
         """
@@ -181,7 +182,7 @@ class BayesianModel(nx.DiGraph):
         >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.add_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
+        >>> G.set_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
             try:
@@ -216,9 +217,10 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
         >>> G.get_states('diff')
         """
         _list_states = []
@@ -242,9 +244,10 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT')])
-        >>> G.add_states('grade', ['A', 'B', 'C'])
-        >>> G.number_of_states('grade')
+        >>> G.set_states({'diff': ['easy', 'hard']})
+        >>> G.number_of_states('diff')
         3
         """
         return len(self.node[node]['_states'])
@@ -405,9 +408,9 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.add_states('grade', ['C', 'A', 'C'])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
         >>> G.get_rule_for_states('diff')
         >>> G.get_rule_for_states('grade')
         """
@@ -436,13 +439,13 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
-        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
         ['easy', 'hard']
-        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
         >>> G.get_rule_for_states('diff')
-        ['hard', 'easy']
+        ['dumb', 'smart']
         """
         if self._all_states_present_in_list(node, states):
             new_rule = []
@@ -556,6 +559,7 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         >>>                       ('intel', 'SAT'), ('grade', 'reco')])
         >>> G.get_parents('grade')
@@ -575,6 +579,7 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'sat')])
         >>> G.number_of_parents('grade')
         2
@@ -612,8 +617,11 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> student = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
-        >>> student.add_states('grades', ('A','C','B'))
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                    'intel': ['dumb', 'smart'],
+        ...                    'grades': ['A', 'B', 'C']})
         >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
         >>> student.set_cpd('grades',
@@ -651,7 +659,6 @@ class BayesianModel(nx.DiGraph):
             return self.node[node]['_cpd'].get_cpd()
 
     def set_observations(self, observations, reset=False):
-        #TODO: Complete examples
         """
         Sets state of node as observed.
 
@@ -669,9 +676,9 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('grade', 'reco'))])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.add_cpd()
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('grade', 'reco'))])
+        >>> G.set_states({'diff': ['easy', 'hard']})
         >>> G.set_observations({'diff': 'easy'})
         """
         #TODO check if multiple states of same node can be observed
@@ -715,7 +722,6 @@ class BayesianModel(nx.DiGraph):
             raise Exceptions.NodeNotFoundError("Node not found", node)
 
     def is_observed(self, node):
-        #TODO: Write an example
         """
         Check if node is observed. If observed returns True.
 
@@ -730,6 +736,13 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_node('grades')
+        >>> student.set_states({'grades': ['A', 'B']})
+        >>> student.set_observations({'grades': 'A'})
+        >>> student.is_observed('grades')
+        True
         """
         return self.node[node]['_observed']
 
@@ -762,12 +775,14 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> student.add_nodes('diff', 'intel', 'grades')
-        >>> student.add_edges(('diff', 'intel'), ('grades',))
-        >>> student.add_states('diff', ('hard', 'easy'))
-        >>> student.add_states('intel', ('smart', 'avg', 'dumb'))
-        >>> student.add_states('grades', ('A', 'B', 'C'))
-        >>> student.add_observations({'grades': 'A'})
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grades': ['A', 'B', 'C']})
+        >>> student.set_observations({'grades': 'A'})
         >>> student.active_trail_nodes('diff')
         ['diff', 'intel']
         """
@@ -817,11 +832,13 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grades')])
-        >>> student.add_states('diff', ['hard', 'easy'])
-        >>> student.add_states('intel', ['smart', 'dumb'])
-        >>> student.add_states('grades', ['good', 'bad'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grades': ['good', 'bad']})
         >>> student.set_cpd('grades',
         ...             [[0.7, 0.6, 0.6, 0.2],
         ...             [0.3, 0.4, 0.4, 0.8]],
