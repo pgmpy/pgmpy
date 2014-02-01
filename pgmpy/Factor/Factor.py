@@ -3,7 +3,8 @@
 from pgmpy import Exceptions
 import numpy as np
 from collections import OrderedDict
-
+from pgmpy.Factor._factor_product import _factor_product
+import functools
 
 class Factor:
     """
@@ -93,6 +94,25 @@ class Factor:
         mat = mat.astype('int')
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in mat]
+
+    def get_cardinality(self, variable):
+        """
+        Returns cardinality of a given variable
+
+        Parameters
+        ----------
+        variable: string
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.get_cardinality('x1')
+        2
+        """
+        if variable not in self.variables:
+            raise Exceptions.ScopeError("%s not in scope" % variable)
+        return self.cardinality[list(self.variables.keys()).index(variable)]
 
     def marginalize(self, variables):
         """
@@ -192,3 +212,81 @@ class Factor:
             self.values = self.values[np.array(index_arr)]
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
+
+
+def _bivar_factor_product(phi1, phi2):
+    """
+    Returns product of two factors.
+
+    Parameters
+    ----------
+    phi1: Factor
+
+    phi2: Factor
+
+    See Also
+    --------
+    factor_product
+    """
+    vars1 = list(phi1.variables.keys())
+    vars2 = list(phi2.variables.keys())
+    common_var_list = [var1 for var1 in vars1 for var2 in vars2
+                       if var1 == var2]
+    if common_var_list:
+        common_var_index_list = np.array([[vars1.index(var), vars2.index(var)]
+                                          for var in common_var_list])
+        common_card_product = np.prod([phi1.cardinality[index[0]] for index
+                                       in common_var_index_list])
+        size = np.prod(phi1.cardinality) * np.prod(
+            phi2.cardinality) / common_card_product
+        product = _factor_product(phi1.values,
+                                  phi2.values,
+                                  size,
+                                  common_var_index_list,
+                                  phi1.cardinality,
+                                  phi2.cardinality)
+        variables = vars1
+        variables.extend(var for var in phi2.variables
+                         if var not in common_var_list)
+        cardinality = list(phi1.cardinality)
+        cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
+                           if var not in common_var_list)
+        phi = Factor(variables, cardinality, product)
+        return phi
+    else:
+        size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
+        product = _factor_product(phi1.values,
+                                  phi2.values,
+                                  size)
+        variables = vars1 + vars2
+        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
+        phi = Factor(variables, cardinality, product)
+        return phi
+
+
+def factor_product(*args):
+    """
+    Returns factor product of multiple factors.
+
+    Parameters
+    ----------
+    factor1, factor2, .....: Factor
+        factors to be multiplied
+
+    Examples
+    --------
+    >>> from pgmpy.Factor import Factor, factor_product
+    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> phi = factor_product(phi1, phi2)
+    >>> phi.variables
+    OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
+                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+
+    See Also
+    --------
+    _bivar_factor_product
+    """
+    if not all(isinstance(phi, Factor) for phi in args):
+        raise TypeError("Input parameters must be factors")
+    return functools.reduce(_bivar_factor_product, args)
