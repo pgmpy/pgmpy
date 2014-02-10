@@ -6,6 +6,7 @@ from collections import OrderedDict
 from pgmpy.Factor._factor_product import _factor_product
 import functools
 
+
 class Factor:
     """
     Public Methods
