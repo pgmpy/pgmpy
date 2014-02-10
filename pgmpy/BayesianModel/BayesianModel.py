@@ -688,14 +688,14 @@ class BayesianModel(nx.DiGraph):
         EXAMPLE
         -------
         >>> from pgmpy import BayesianModel as bm
-        >>> student = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
+        >>> student = bm.BayesianModel([('diff', 'grades'), ('intel', 'grades')])
         >>> student.set_states({'diff': ['easy', 'hard'],
-        ...                    'intel': ['dumb', 'smart'],
+        ...                    'intel': ['dumb', 'avg', 'smart'],
         ...                    'grades': ['A', 'B', 'C']})
         >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
         >>> student.set_cpd('grades',
-        ...             [[0.1,0,1,0.1,0.1,0.1,0.1],
+        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
@@ -706,7 +706,11 @@ class BayesianModel(nx.DiGraph):
         #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
         #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
         """
-        self.node[node]['_cpd'] = CPD.TabularCPD(cpd)
+        evidence = self.get_rule_for_parents(node)[::-1]
+        evidence_card = [self.number_of_states(parent) for parent in evidence]
+        self.node[node]['_cpd'] = CPD.TabularCPD(node,
+                                                 self.number_of_states(node),
+                                                 cpd, evidence, evidence_card)
 
     def get_cpd(self, node, beautify=False):
         """
