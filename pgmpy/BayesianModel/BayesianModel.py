@@ -2,34 +2,106 @@
 
 import networkx as nx
 import numpy as np
-from Exceptions import Exceptions
-from BayesianModel import CPD
 import itertools
 from scipy import sparse
-import sys
+from pgmpy import Exceptions
+from pgmpy.Factor import CPD
 
 
 class BayesianModel(nx.DiGraph):
-    """
-    Public Methods
-    --------------
-    add_nodes('node1', 'node2', ...)
-    add_edges(('node1', 'node2', ...), ('node3', 'node4', ...))
-    add_states('node1', ('state1', 'state2', ...))
-    get_states('node1')
-    set_rule_for_states('node1', ('state2', 'state1', ...))
-    set_rule_for_parents('node1', ('parent1', 'parent2', ...))
-    get_parents('node1')
-    add_tablularcpd('node1', cpd1)
-    get_cpd('node1')
-    add_observations(observations, reset=False)
-    reset_observed_nodes('node1', ...)
-    is_observed('node1')
-    active_trail_nodes('node1')
-    is_active_trail('node1', 'node2')
-    marginal_probability('node')
-    """
     def __init__(self, ebunch=None):
+        """
+        Base class for bayesian model.
+
+        A BayesianModel stores nodes and edges with conditional probability
+        distribution (cpd) and other attributes.
+
+        BayesianModel hold directed edges.  Self loops are not allowed neither
+        multiple (parallel) edges.
+
+        Nodes should be strings.
+
+        Edges are represented as links between nodes.
+
+        Parameters
+        ----------
+        data : input graph
+            Data to initialize graph.  If data=None (default) an empty
+            graph is created.  The data can be an edge list, or any
+            NetworkX graph object.
+
+        See Also
+        --------
+
+        Examples
+        --------
+        Create an empty bayesian model with no nodes and no edges.
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel()
+
+        G can be grown in several ways.
+
+        **Nodes:**
+
+        Add one node at a time:
+
+        >>> G.add_node('a')
+
+        Add the nodes from any container (a list, set or tuple or the nodes
+        from another graph).
+
+        >>> G.add_nodes_from(['a', 'b'])
+
+        **Edges:**
+
+        G can also be grown by adding edges.
+
+        Add one edge,
+
+        >>> G.add_edge('a', 'b')
+
+        a list of edges,
+
+        >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+
+        If some edges connect nodes not yet in the model, the nodes
+        are added automatically.  There are no errors when adding
+        nodes or edges that already exist.
+
+        **Shortcuts:**
+
+        Many common graph features allow python syntax to speed reporting.
+
+        >>> 'a' in G     # check if node in graph
+        True
+        >>> len(G)  # number of nodes in graph
+        3
+
+        Public Methods
+        --------------
+        add_node('node1')
+        add_nodes_from(['node1', 'node2', ...])
+        add_edge('node1')
+        add_edges_from([('node1', 'node2'),('node3', 'node4')])
+        set_states({node : [state1, state2]})
+        get_states('node1')
+        number_of_state('node1')
+        get_rule_for_states('node1')
+        set_rule_for_states({'node1': ['state2', 'state1', ...]})
+        get_rule_for_parents('node1')
+        set_rule_for_parents({'node1': ['parent1', 'parent2', ...]})
+        get_parents('node1')
+        number_of_parents('node1')
+        set_cpd('node1', cpd1)
+        get_cpd('node1')
+        set_observations({'node1': ['observed_state1', 'observed_state2'],
+                          'node2': 'observed_state1'})
+        reset_observations(['node1', 'node2'])
+        is_observed('node1')
+        active_trail_nodes('node1')
+        is_active_trail('node1', 'node2')
+        marginal_probability('node1')
+        """
         if ebunch is not None:
             self._check_node_string(set(itertools.chain(*ebunch)))
 
@@ -56,6 +128,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_node('difficulty')
         """
@@ -82,11 +155,10 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
-        # if not all([isinstance(elem, str) for elem in nodes]):
-        #     raise TypeError("Name of nodes must be strings")
         self._check_node_string(nodes)
         nx.DiGraph.add_nodes_from(self, nodes)
 
@@ -111,6 +183,7 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
+        >>> from pgmpy import BayesianModel as bm/home/abinash/software_packages/numpy-1.7.1
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
@@ -123,8 +196,6 @@ class BayesianModel(nx.DiGraph):
 
         self._update_node_parents([u, v])
         self._update_node_rule_for_parents([u, v])
-        #TODO: _rule_for_parents needs to made into a generator
-        #TODO: Right now I have no idea why this ^ TODO is needed.
 
     def add_edges_from(self, ebunch):
         """
@@ -145,6 +216,7 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
@@ -160,8 +232,6 @@ class BayesianModel(nx.DiGraph):
         self._update_node_rule_for_parents(new_nodes)
 
     def set_states(self, states_dic):
-        # TODO: Add the functionality to accept states of multiple
-        # nodes in a single call.
         """
         Adds states to the node.
 
@@ -176,9 +246,11 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.add_states({'diff': ['easy', 'hard'], 'intel': ['dumb', 'smart']})
+        >>> G.set_states({'diff': ['easy', 'hard'],
+        ...               'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
             try:
@@ -187,20 +259,19 @@ class BayesianModel(nx.DiGraph):
                                                    for state in states])
             except KeyError:
                 self.node[node]['_states'] = [
-                    {'name': state, 'observed_status': False} for state in states]
+                    {'name': state, 'observed_status': False}
+                    for state in states]
 
             self._update_rule_for_states(node, len(self.node[node]['_states']))
-    ################# For Reference ########################
-    #   self.node[node]['_rule_for_states'] = [            #
-    #       n for n in range(len(states))]                 #
-    ########################################################
+        ################# For Reference ########################
+        #   self.node[node]['_rule_for_states'] = [            #
+        #       n for n in range(len(states))]                 #
+        ########################################################
             self._update_node_observed_status(node)
-
-        #TODO _rule_for_states needs to made into a generator
 
     def get_states(self, node):
         """
-        Returns a tuple with states in user-defined order
+        Returns a generator object with states in user-defined order
 
         Parameters
         ----------
@@ -213,16 +284,18 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.get_states('diff')
+        >>> G.set_states({'diff': ['easy', 'hard'],
+        ...               'intel': ['dumb', 'smart']})
+        >>> states = G.get_states('diff')
+        >>> for state in states:
+        ...     print(state)
         """
-        _list_states = []
-        for index in self.node[node]['_rule_for_states']:
-            _list_states.append(self.node[node]['_states'][index]['name'])
+        _list_states = (self.node[node]['_states'][index]['name']
+                        for index in self.node[node]['_rule_for_states'])
         return _list_states
-    #TODO get_states() needs to made into a generator
 
     def number_of_states(self, node):
         """
@@ -239,9 +312,11 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'SAT')])
-        >>> G.add_states('grade', ['A', 'B', 'C'])
-        >>> G.number_of_states('grade')
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('intel', 'SAT')])
+        >>> G.set_states({'diff': ['easy', 'hard']})
+        >>> G.number_of_states('diff')
         3
         """
         return len(self.node[node]['_states'])
@@ -366,8 +441,6 @@ class BayesianModel(nx.DiGraph):
         Returns True if all the states of the node are present in the
         argument states.
         """
-        # TODO: Feels that this function is wrong, if it is opposite of
-        # _no_extra_states
         node_states = [state['name'] for state in self.node[node]['_states']]
         if sorted(node_states) == sorted(states):
             return True
@@ -403,9 +476,9 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.add_states('grade', ['C', 'A', 'C'])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
         >>> G.get_rule_for_states('diff')
         >>> G.get_rule_for_states('grade')
         """
@@ -434,8 +507,10 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
-        >>> G.add_states('diff', ['easy', 'hard'])
+        >>> G.set_states({'diff': ['easy', 'hard'],
+        ...               'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
         ['easy', 'hard']
         >>> G.set_rule_for_states('diff', ['hard', 'easy'])
@@ -452,7 +527,6 @@ class BayesianModel(nx.DiGraph):
                         break
 
             self.node[node]['_rule_for_states'] = new_rule
-            #TODO: _rule_for_states needs to made into a generator
 
     def _is_node_parents_equal_parents_list(self, node, parents_list):
         """
@@ -487,7 +561,6 @@ class BayesianModel(nx.DiGraph):
             return True
 
     def get_rule_for_parents(self, node):
-        #TODO: DocString needs to be improved
         """
         Gets the order of the parents
 
@@ -504,7 +577,13 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> G.get_rule_for_parents('grades')
+        ['diff', 'intel']
+        >>> G.set_rule_for_states({'grades': ['intel', 'diff']})
+        >>> G.get_rule_for_parents('grades')
+        ['intel', 'diff']
         """
         current_rule = self.node[node]['_rule_for_parents']
         return [self.node[node]['_parents'][index] for index in current_rule]
@@ -536,7 +615,6 @@ class BayesianModel(nx.DiGraph):
                         break
 
             self.node[node]['_rule_for_parents'] = new_order
-        #TODO _rule_for_parents needs to made into a generator
 
     def get_parents(self, node):
         """
@@ -554,6 +632,7 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         >>>                       ('intel', 'SAT'), ('grade', 'reco')])
         >>> G.get_parents('grade')
@@ -562,8 +641,7 @@ class BayesianModel(nx.DiGraph):
         >>> G.get_parents('grade')
         ['intel', 'diff']
         """
-        return self.get_rule_for_parents(node)
-    #TODO get_parents() needs to made into a generator
+        return iter(self.get_rule_for_parents(node))
 
     def number_of_parents(self, node):
         """
@@ -573,7 +651,9 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('intel', 'sat')])
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('intel', 'sat')])
         >>> G.number_of_parents('grade')
         2
         """
@@ -584,9 +664,7 @@ class BayesianModel(nx.DiGraph):
         Returns a list of those node objects which are parents of
         the argument node.
         """
-        return [self.node[parent] for parent in self.get_parents(node)]
-
-    #TODO _get_parent_objects() needs to made into a generator
+        return (self.node[parent] for parent in self.get_parents(node))
 
     def set_cpd(self, node, cpd):
         """
@@ -610,12 +688,15 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> student = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
-        >>> student.add_states('grades', ('A','C','B'))
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                    'intel': ['dumb', 'avg', 'smart'],
+        ...                    'grades': ['A', 'B', 'C']})
         >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
         >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
         >>> student.set_cpd('grades',
-        ...             [[0.1,0,1,0.1,0.1,0.1,0.1],
+        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
@@ -626,7 +707,11 @@ class BayesianModel(nx.DiGraph):
         #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
         #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
         """
-        self.node[node]['_cpd'] = CPD.TabularCPD(cpd)
+        evidence = self.get_rule_for_parents(node)[::-1]
+        evidence_card = [self.number_of_states(parent) for parent in evidence]
+        self.node[node]['_cpd'] = CPD.TabularCPD(node,
+                                                 self.number_of_states(node),
+                                                 cpd, evidence, evidence_card)
 
     def get_cpd(self, node, beautify=False):
         """
@@ -648,17 +733,40 @@ class BayesianModel(nx.DiGraph):
         else:
             return self.node[node]['_cpd'].get_cpd()
 
-    def set_observations(self, observations, reset=False):
-        #TODO: Complete examples
+    def _change_state_observed(self, node, state, reset):
+        """
+        Changes observed status of state of a node
+
+        Parameters
+        ----------
+        node: Graph node
+
+        state: string (node state)
+
+        reset: bool
+            changes observed_status to False if reset is True
+            changes observed_status to True if reset is False
+        """
+        found = 0
+        for _state in self.node[node]['_states']:
+            if _state['name'] == state:
+                _state['observed_status'] = not reset
+                found = 1
+        if found:
+            self._update_node_observed_status(node)
+        else:
+            raise Exceptions.StateError("State: ", state,
+                                        " not found for node: ", node)
+
+    def set_observations(self, observations):
         """
         Sets state of node as observed.
 
         Parameters
         ----------
-        observations  :  A dictionary of the form of {node : state}
-                        containing all the observed nodes.
-
-        reset :  if reset is True, the observation status is reset
+        observations : dict
+            A dictionary of the form of {node : [states...]} or
+            {node: state} containing all the nodes to be observed.
 
         See Also
         --------
@@ -667,24 +775,18 @@ class BayesianModel(nx.DiGraph):
 
         Examples
         --------
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'), ('grade', 'reco'))])
-        >>> G.add_states('diff', ['easy', 'hard'])
-        >>> G.add_cpd()
-        >>> G.set_observations({'diff': 'easy'})
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('grade', 'reco'))])
+        >>> G.set_states({'diff': ['easy', 'hard']})
+        >>> G.set_observations({'diff': ['easy', 'hard']})
         """
-        #TODO check if multiple states of same node can be observed
-        #TODO if above then, change code accordingly
-        for node, state in observations.items():
-            found = 0
-            for _state in self.node[node]['_states']:
-                if _state['name'] == state:
-                    _state['observed_status'] = True if not reset else False
-                    found = 1
-                    break
-            if found:
-                self._update_node_observed_status(node)
+        for node, states in observations.items():
+            if isinstance(states, (list, tuple, set)):
+                for state in states:
+                    self._change_state_observed(node, state, reset=False)
             else:
-                raise Exceptions.StateError("State: ", state, " not found for node: ", node)
+                self._change_state_observed(node, states, reset=False)
 
     def reset_observations(self, nodes=None):
         """
@@ -695,25 +797,47 @@ class BayesianModel(nx.DiGraph):
 
         Parameters
         ----------
-        node  :  Graph Node
+        node : Graph Node, dict
+            list of nodes or node whose observed_status is to be reset
+            dict of {node: [states...]} when observed_status of states
+            is to be reset.
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
+        >>> G.get_rule_for_states('diff')
+        >>> G.get_rule_for_states('grade')
+        >>> G.set_observations({'grade': ['A']})
+        >>> G.reset_observations({'grade': 'A'})
 
         See Also
         --------
         set_observations
         is_observed
         """
-        if nodes is None:
-            nodes = self.nodes()
-        try:
-            for node in nodes:
-                for state in self.node[node]['_states']:
-                    state['observed_status'] = False
-                self._update_node_observed_status(node)
-        except KeyError:
-            raise Exceptions.NodeNotFoundError("Node not found", node)
+        if isinstance(nodes, dict):
+            for node, states in nodes.items():
+                if isinstance(states, (list, tuple, set)):
+                    for state in states:
+                        self._change_state_observed(node, state, reset=True)
+                else:
+                    self._change_state_observed(node, states, reset=True)
+        else:
+            if nodes is None:
+                nodes = self.nodes()
+            if not isinstance(nodes, (list, tuple)):
+                nodes = [nodes]
+            try:
+                for node in nodes:
+                    for state in self.node[node]['_states']:
+                        state['observed_status'] = False
+                    self._update_node_observed_status(node)
+            except KeyError:
+                raise Exceptions.NodeNotFoundError("Node not found", node)
 
     def is_observed(self, node):
-        #TODO: Write an example
         """
         Check if node is observed. If observed returns True.
 
@@ -728,18 +852,35 @@ class BayesianModel(nx.DiGraph):
 
         Example
         -------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_node('grades')
+        >>> student.set_states({'grades': ['A', 'B']})
+        >>> student.set_observations({'grades': 'A'})
+        >>> student.is_observed('grades')
+        True
         """
         return self.node[node]['_observed']
 
-    def _get_ancestors_observation(self, observed_list):
-        # TODO: Either function name and doc is wrong or the function
+    def _get_ancestors_of(self, obs_nodes_list):
         """
         Returns a list of all ancestors of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
         """
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
+
         ancestors_list = set()
-        for node in observed_list:
-            for predecessor in self.predecessors(node):
-                ancestors_list.add(predecessor)
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in ancestors_list:
+                nodes_list.update(self.predecessors(node))
+            ancestors_list.add(node)
         return ancestors_list
 
     def _get_observed_list(self):
@@ -750,7 +891,29 @@ class BayesianModel(nx.DiGraph):
                 if self.node[node]['_observed']]
 
     def active_trail_nodes(self, start):
-        """Returns all the nodes reachable from start via an active trail
+        """
+        Returns all the nodes reachable from start via an active trail
+
+        Parameters
+        ----------
+        start: Graph node
+
+        Examples
+        -------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grades': ['A', 'B', 'C']})
+        >>> student.set_observations({'grades': 'A'})
+        >>> student.active_trail_nodes('diff')
+        ['diff', 'intel']
+
+        See Also
+        --------
+        is_active_trail(start, end)
 
         -------------------------------------------------------------------
         Details of algorithm can be found in 'Probabilistic Graphical Model
@@ -758,91 +921,66 @@ class BayesianModel(nx.DiGraph):
         Page 75 Algorithm 3.1
         -------------------------------------------------------------------
 
-        EXAMPLE
-        -------
-        >>> student.add_nodes('diff', 'intel', 'grades')
-        >>> student.add_edges(('diff', 'intel'), ('grades',))
-        >>> student.add_states('diff', ('hard', 'easy'))
-        >>> student.add_states('intel', ('smart', 'avg', 'dumb'))
-        >>> student.add_states('grades', ('A', 'B', 'C'))
-        >>> student.add_observations({'grades': 'A'})
-        >>> student.active_trail_nodes('diff')
-        ['diff', 'intel']
         """
         observed_list = self._get_observed_list()
-        ancestors_list = self._get_ancestors_observation(observed_list)
-        """
-        Direction of flow of information
-        up ->  from parent to child
-        down -> from child to parent
-        """
-        visit_list = [(start, 'up')]
-        traversed_list = []
-        active_nodes = []
+        ancestors_list = self._get_ancestors_of(observed_list)
+
+        # Direction of flow of information
+        # up ->  from parent to child
+        # down -> from child to parent
+
+        visit_list = set()
+        visit_list.add((start, 'up'))
+        traversed_list = set()
+        active_nodes = set()
         while visit_list:
-            _node, direction = visit_list.pop()
-            if (_node, direction) not in traversed_list:
-                if _node not in observed_list:
-                    active_nodes += [_node]
-                traversed_list += (_node, direction),
-                if direction == 'up' and _node not in observed_list:
-                    for parent in self.predecessors(_node):
-                        visit_list += (parent, 'up'),
-                    for child in self.successors(_node):
-                        visit_list += (child, 'down'),
+            node, direction = visit_list.pop()
+            if (node, direction) not in traversed_list:
+                if node not in observed_list:
+                    active_nodes.add(node)
+                traversed_list.add((node, direction))
+                if direction == 'up' and node not in observed_list:
+                    for parent in self.predecessors(node):
+                        visit_list.add((parent, 'up'))
+                    for child in self.successors(node):
+                        visit_list.add((child, 'down'))
                 elif direction == 'down':
-                    if _node not in observed_list:
-                        for child in self.successors(_node):
-                            visit_list += (child, 'down'),
-                    if _node in ancestors_list:
-                        for parent in self.predecessors(_node):
-                            visit_list += (parent, 'up'),
-        active_nodes = list(set(active_nodes))
+                    if node not in observed_list:
+                        for child in self.successors(node):
+                            visit_list.add((child, 'down'))
+                    if node in ancestors_list:
+                        for parent in self.predecessors(node):
+                            visit_list.add((parent, 'up'))
         return active_nodes
 
     def is_active_trail(self, start, end):
-        """Returns True if there is any active trail
-        between start and end node"""
-        if end in self.predecessors(start) or end in self.successors(start)\
-                or end in self.active_trail_nodes(start):
+        """
+        Returns True if there is any active trail between start and end node
+
+        Parameters
+        ----------
+        start : Graph Node
+
+        end : Graph Node
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grades': ['A', 'B', 'C']})
+        >>> student.set_observations({'grades': 'A'})
+        >>> student.is_active_trail('diff', 'intel')
+        True
+
+        See Also
+        --------
+        active_trail_nodes('start')
+        """
+        if end in self.active_trail_nodes(start):
             return True
         else:
             return False
-
-    def marginal_probability(self, node):
-        """
-        Returns marginalized probability distribution of a node.
-
-        EXAMPLE
-        -------
-        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grades')])
-        >>> student.add_states('diff', ['hard', 'easy'])
-        >>> student.add_states('intel', ['smart', 'dumb'])
-        >>> student.add_states('grades', ['good', 'bad'])
-        >>> student.set_cpd('grades',
-        ...             [[0.7, 0.6, 0.6, 0.2],
-        ...             [0.3, 0.4, 0.4, 0.8]],
-        ...             )
-        >>> student.set_cpd('diff', [[0.7],[0.3]])
-        >>> student.set_cpd('intel', [[0.8], [0.2]])
-        >>> student.marginal_probability('grades')
-        array([[ 0.632],
-               [ 0.368]])
-        """
-        parent_list = [parent for parent in self._get_parent_objects(node)]
-        num_parents = len(parent_list)
-        mar_dist = self.node[node]['_cpd'].table
-        """
-        Kronecker product of two arrays
-        kron(a,b)[k0,k1,...,kN] = [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
-                                   [  ...                              ...   ],
-                                   [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
-        """
-        for num, val in enumerate(reversed(parent_list)):
-            #_mat is compressed sparse row matrix
-            _mat = sparse.csr_matrix(np.kron(np.identity(num_parents-num),
-                                             val['_cpd'].table))
-            mar_dist = sparse.csr_matrix.dot(mar_dist, _mat)
-
-        return mar_dist

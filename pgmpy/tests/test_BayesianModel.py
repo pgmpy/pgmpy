@@ -326,6 +326,7 @@ class TestBayesianModelCPD(unittest.TestCase):
 
     def test_set_observations_single_state_reset_true(self):
         self.G.set_observations({'d': 'easy'})
+        #TODO change this as the function has changed
         self.G.set_observations({'d': 'easy'}, reset=True)
         for state in self.G.node['d']['_states']:
             if state['name'] == 'easy':
