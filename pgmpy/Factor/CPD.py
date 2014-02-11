@@ -51,25 +51,27 @@ class TabularCPD(Factor):
         if not isinstance(event, str):
             raise TypeError("Event must be a string")
         self.event = event
+        variables = [event]
         if not isinstance(event_card, int):
             raise TypeError("Event cardinality must be an integer")
         self.event_card = event_card
-        if evidence and not isinstance(evidence, (list, set, tuple)):
-            evidence = [evidence]
-        self.evidence = evidence
-        if evidence_card and not isinstance(evidence_card, (list, set, tuple)):
-            evidence_card = [evidence_card]
-        self.evidence_card = evidence_card
-        if not len(evidence_card) == len(evidence):
-            raise Exceptions.CardinalityError("Cardinality of all "
-                                              "evidences not specified")
-        self.cpd = np.array(values)
-        if len(self.cpd.shape) is not 2:
-            raise TypeError("Values must be a 2d list/array")
-        variables = [event]
-        variables.extend(evidence)
         cardinality = [event_card]
-        cardinality.extend(evidence_card)
+        if evidence_card:
+            if not isinstance(evidence_card, (list, set, tuple)):
+                evidence_card = [evidence_card]
+            cardinality.extend(evidence_card)
+        self.evidence_card = evidence_card
+        if evidence:
+            if not isinstance(evidence, (list, set, tuple)):
+                evidence = [evidence]
+            variables.extend(evidence)
+            if not len(evidence_card) == len(evidence):
+                raise Exceptions.CardinalityError("Cardinality of all "
+                                                  "evidences not specified")
+        self.evidence = evidence
+        if len(np.array(values).shape) is not 2:
+            raise TypeError("Values must be a 2d list/array")
+        self.cpd = np.array(values)
         Factor.__init__(self, variables, cardinality, self.cpd.flatten('F'))
 
     def marginalize(self, variables):
