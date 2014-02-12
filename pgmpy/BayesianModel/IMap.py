@@ -1,3 +1,56 @@
+class IMap:
+    """
+    Set of Independence Assertions.
+
+    Public Methods
+    --------------
+    add_assertions
+    get_imap
+    """
+    def __init__(self, *assertions):
+        """
+        Initialize the IMap with Independence Assertions.
+
+        Parameters
+        ----------
+        assertions: Lists or Tuples
+                Each assertion is a list or tuple of variable, independent_of and given.
+
+        Examples
+        --------
+        >>> imap = IMap(['X', 'Y', 'Z'],
+        >>>             ['a', ['b', 'c'], 'd'],
+        >>>             ['l', ['m', 'n'], 'o'])
+        """
+        self.imap = set()
+        for assertion in assertions:
+            self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+
+    def get_imap(self):
+        """
+        Returns the imap which is a set of IndependenceAssertion objects.
+        """
+        return self.imap
+
+    def add_assertions(self, *assertions):
+        """
+        Adds assertions to imap.
+
+        Parameters
+        ----------
+        assertions: Lists or Tuples
+                Each assertion is a list or tuple of variable, independent_of and given.
+
+        Examples
+        --------
+        >>> imap = IMap()
+        >>> imap.add_assertions(['X', 'Y', 'Z'])
+        >>> imap.add_assertions(['a', ['b', 'c'], 'd'])
+        """
+        for assertion in assertions:
+            self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+
+
 class IndependenceAssertion:
     """
     Represents Independence Assertion.
