@@ -1,6 +1,9 @@
 class IMap:
     """
-    Set of Independence Assertions.
+    Base class for IMap.
+    IMap is a set of Conditional Independence (eg: "X is independent of Y given Z" where X, Y and Z
+    are random variables) or Independence(eg: "X is independent of Y" where X and Y
+    are random variables) assertions.
 
     Public Methods
     --------------
@@ -9,15 +12,21 @@ class IMap:
     """
     def __init__(self, *assertions):
         """
-        Initialize the IMap with Independence Assertions.
+        Initialize the IMap with Conditional Independence or Independence assertions.
 
         Parameters
         ----------
         assertions: Lists or Tuples
-                Each assertion is a list or tuple of variable, independent_of and given.
+                Each assertion is a list or tuple of the form: [variable, independent_of and given]
+                eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
 
         Examples
         --------
+        Creating an IMap object with one independence assertion: Random Variable X is independent of Y
+        >>> imap = IMap(['X', 'Y'])
+
+        Creating an IMap object with three conditional independence assertions:
+        First assertion is Random Variable X is independent of Y given Z.
         >>> imap = IMap(['X', 'Y', 'Z'],
         >>>             ['a', ['b', 'c'], 'd'],
         >>>             ['l', ['m', 'n'], 'o'])
