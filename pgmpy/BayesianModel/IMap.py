@@ -38,6 +38,15 @@ class IMap:
     def get_imap(self):
         """
         Returns the imap which is a set of IndependenceAssertion objects.
+
+        See Also
+        --------
+        add_assertions
+
+        Examples
+        --------
+        >>> imap = IMap(['X', 'Y', 'Z'])
+        >>> imap.get_imap()
         """
         return self.imap
 
@@ -62,10 +71,10 @@ class IMap:
 
 class IndependenceAssertion:
     """
-    Represents Independence Assertion.
+    Represents Conditional Independence or Independence assertion.
 
-    Has 3 attributes: variable, independent_of, given.
-    The attributes for (U |  X, Y |  Z) read as
+    Each assertion has 3 attributes: variable, independent_of, given.
+    The attributes for (U || X, Y | Z) read as
                          ---
     Random Variable U is independent of X and Y given Z would be:
 
@@ -84,6 +93,15 @@ class IndependenceAssertion:
 
         Parameters
         ----------
+
+             independent_of
+                  ^
+      variable   /   given
+         ^      /     ^
+         |     /      |
+        (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
+          ---
+
         variable: String or List
                 Random Variable which is independent.
 
@@ -129,6 +147,11 @@ class IndependenceAssertion:
         See Also
         --------
         set_assertion
+
+        Examples
+        --------
+        >>> asser = IndependenceAssertion('X', 'Y', 'Z')
+        >>> asser.get_assertion()
         """
         return self.variable, self.independent_of, self.given
 
@@ -138,23 +161,33 @@ class IndependenceAssertion:
 
         Parameters
         ----------
+
+             independent_of
+                  ^
+      variable   /   given
+         ^      /     ^
+         |     /      |
+        (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
+          ---
+
         variable: String or List
                 Random Variable which is independent.
 
         independent_of: String or list of strings.
-                Random Variables with which variable is independent of
+                Random Variables from which variable is independent
 
         given: String or list of strings.
-                Random Variables with which variable is independent of independent_of given given.
-
-        Example
-        -------
-        For a random variable U independent of X and Y given Z, the function should be called as
-        >>> set_assertion('U', ['X', 'Y'], 'Z')
-        >>> set_assertion('U', ['X', 'Y'], ['Z', 'A'])
+                Random Variables given which variable is independent of independent_of.
 
         See Also
         --------
         get_assertion
+
+        Example
+        -------
+        For a random variable U independent of X and Y given Z, the function should be called as
+        >>> asser = IndependenceAssertion()
+        >>> asser.set_assertion('U', ['X', 'Y'], 'Z')
+        >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
         """
         self.__init__(variable, independent_of, given)
