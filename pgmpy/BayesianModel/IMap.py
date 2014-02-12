@@ -28,8 +28,8 @@ class IMap:
         Creating an IMap object with three conditional independence assertions:
         First assertion is Random Variable X is independent of Y given Z.
         >>> imap = IMap(['X', 'Y', 'Z'],
-        >>>             ['a', ['b', 'c'], 'd'],
-        >>>             ['l', ['m', 'n'], 'o'])
+        ...             ['a', ['b', 'c'], 'd'],
+        ...             ['l', ['m', 'n'], 'o'])
         """
         self.imap = set()
         for assertion in assertions:
