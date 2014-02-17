@@ -18,7 +18,7 @@ class IMap:
         Parameters
         ----------
         assertions: Lists or Tuples
-                Each assertion is a list or tuple of the form: [variable, independent_of and given]
+                Each assertion is a list or tuple of the form: [event1, event2 and event3]
                 eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
 
         Examples
