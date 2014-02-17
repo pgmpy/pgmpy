@@ -51,3 +51,49 @@ class TestIndependenceAssertion(unittest.TestCase):
 
     def tearDown(self):
         del self.assertion
+
+
+class IMapTestCase:
+
+    def assertIndependenceAssertionEqual(self, assertion1, assertion2):
+        if not (assertion1.event1 == assertion2.event1):
+            raise AssertionError(assertion1.event1 + "is not equal to" + assertion2.event1)
+        if not (assertion1.event2 == assertion2.event2):
+            raise AssertionError(assertion1.event2 + "is not equal to" + assertion2.event2)
+        if not (assertion1.event3 == assertion2.event3):
+            raise AssertionError(assertion1.event3 + "is not equal to" + assertion2.event3)
+
+    def assertImapEqual(self, imap1, imap2):
+        if len(imap1) == len(imap2):
+            for map1, map2 in zip(imap1, imap2):
+                self.assertIndependenceAssertionEqual(map1, map2)
+
+
+class TestIMap(unittest.TestCase, IMapTestCase):
+
+    def setUp(self):
+        self.imap1 = imap.IMap()
+
+    def test_init(self):
+        self.imap2 = imap.IMap(['X', 'Y'])
+        self.assertIndependenceAssertionEqual(self.imap2.imap.pop, imap.IndependenceAssertion('X', 'Y'))
+        self.imap2 = imap.IMap(['X', 'Y', 'Z'])
+        self.assertIndependenceAssertionEqual(self.imap2.imap.pop, imap.IndependenceAssertion('X', 'Y', 'Z'))
+        self.imap2 = imap.IMap(['X', 'Y'], ['A', 'B', 'C'], [['L'], ['M', 'N'], 'O'])
+        self.assertImapEqual(self.imap2.imap, {imap.IndependenceAssertion('X', 'Y'),
+                                               imap.IndependenceAssertion('A', 'B', 'C'),
+                                               imap.IndependenceAssertion(['L'], ['M', 'N'], 'O')})
+
+    def test_add_assertions(self):
+        self.imap1.add_assertions(['X', 'Y', 'Z'])
+        self.assertIndependenceAssertionEqual(self.imap1.imap.pop, imap.IndependenceAssertion(['X', 'Y', 'Z']))
+
+    def test_get_imap(self):
+        self.imap1.add_assertions(['X', 'Y', 'Z'])
+        self.assertImapEqual(self.imap1.imap, {imap.IndependenceAssertion('X', 'Y', 'Z')})
+        self.imap1.add_assertions([['A', 'B'], ['C', 'D'], ['E', 'F']])
+        self.assertImapEqual(self.imap1.imap, {imap.IndependenceAssertion('X', 'Y', 'Z'),
+                                               imap.IndependenceAssertion(['A', 'B'], ['C', 'D'], ['E', 'F'])})
+
+    def tearUp(self):
+        del self.imap
