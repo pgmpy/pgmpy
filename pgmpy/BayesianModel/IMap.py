@@ -70,6 +70,14 @@ class IMap:
             self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
     def get_factorized_product(self, random_variables=None, latex=False):
+        #TODO: Write this whole function
+        """
+        The problem right now is that the factorized product for all
+        P(A, B, C), P(B, A, C) etc should be same but on solving normally
+        we get different results which have to be simplified to a simpler
+        form. How to do that ??? and also how to decide which is the most
+        simplified form???
+        """
         pass
 
 
