@@ -9,6 +9,7 @@ class IMap:
     --------------
     add_assertions
     get_imap
+    get_factorized_product
     """
     def __init__(self, *assertions):
         """
@@ -68,77 +69,80 @@ class IMap:
         for assertion in assertions:
             self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
+    def get_factorized_product(self, random_variables=None, latex=False):
+        pass
+
 
 class IndependenceAssertion:
     """
     Represents Conditional Independence or Independence assertion.
 
-    Each assertion has 3 attributes: variable, independent_of, given.
+    Each assertion has 3 attributes: event1, event2, event3.
     The attributes for (U || X, Y | Z) read as
                          ---
     Random Variable U is independent of X and Y given Z would be:
 
-    variable = {U}
-    independent_of = {X, Y}
-    given = {Z}
+    event1 = {U}
+    event2 = {X, Y}
+    event3 = {Z}
 
     Public Methods
     --------------
     get_assertion
     set_assertion
     """
-    def __init__(self, variable=[], independent_of=[], given=[]):
+    def __init__(self, event1=[], event2=[], event3=[]):
         """
-        Initialize an IndependenceAssertion object with variable, independent_of and given attributes.
+        Initialize an IndependenceAssertion object with event1, event2 and event3 attributes.
 
         Parameters
         ----------
 
-             independent_of
+                event2
                   ^
-      variable   /   given
+      event1     /   event3
          ^      /     ^
          |     /      |
         (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
           ---
 
-        variable: String or List
+        event1: String or List of strings
                 Random Variable which is independent.
 
-        independent_of: String or list of strings.
-                Random Variables from which variable is independent
+        event2: String or list of strings.
+                Random Variables from which event1 is independent
 
-        given: String or list of strings.
-                Random Variables given which variable is independent of independent_of.
+        event3: String or list of strings.
+                Random Variables given which event1 is independent of event2.
 
         Examples
         --------
         >>> assertion = IndependenceAssertion('U', 'X')
         >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
         >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
-        >>> assertion = IndependenceAssertion('U', ['X', 'Y'], ['Z', 'A'])
+        >>> assertion = IndependenceAssertion(['U', 'V'], ['X', 'Y'], ['Z', 'A'])
         """
-        if variable and not independent_of:
-            raise Exception.Needed('independent_of')
-        if any([independent_of, given]) and not variable:
+        if event1 and not event2:
+            raise Exception.Needed('event2 needed')
+        if any([event2, event3]) and not event1:
             raise Exception.Needed('variable')
-        if given and not all([variable, independent_of]):
+        if event3 and not all([event1, event2]):
             raise Exception.Needed('variable' if not variable else 'independent_of')
 
-        self.variable = set(self._return_list_if_str(variable))
-        self.independent_of = set(self._return_list_if_str(independent_of))
-        self.given = set(self._return_list_if_str(given))
+        self.event1 = set(self._return_list_if_str(event1))
+        self.event2 = set(self._return_list_if_str(event2))
+        self.event3 = set(self._return_list_if_str(event3))
 
     @staticmethod
-    def _return_list_if_str(variable):
+    def _return_list_if_str(event):
         """
         If variable is a string returns a list containing variable.
         Else returns variable itself.
         """
-        if isinstance(variable, str):
-            return [variable]
+        if isinstance(event, str):
+            return [event]
         else:
-            return variable
+            return event
 
     def get_assertion(self):
         """
@@ -153,31 +157,31 @@ class IndependenceAssertion:
         >>> asser = IndependenceAssertion('X', 'Y', 'Z')
         >>> asser.get_assertion()
         """
-        return self.variable, self.independent_of, self.given
+        return self.event1, self.event2, self.event3
 
-    def set_assertion(self, variable, independent_of, given=[]):
+    def set_assertion(self, event1, event2, event3=[]):
         """
-        Sets the attributes variable, independent_of and given.
+        Sets the attributes event1, event2 and event3.
 
         Parameters
         ----------
 
-             independent_of
+               event2
                   ^
-      variable   /   given
+       event1    /   event3
          ^      /     ^
          |     /      |
         (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
           ---
 
-        variable: String or List
+        event1: String or List
                 Random Variable which is independent.
 
-        independent_of: String or list of strings.
-                Random Variables from which variable is independent
+        event2: String or list of strings.
+                Random Variables from which event1 is independent
 
-        given: String or list of strings.
-                Random Variables given which variable is independent of independent_of.
+        event3: String or list of strings.
+                Random Variables given which event1 is independent of event2.
 
         See Also
         --------
@@ -190,4 +194,4 @@ class IndependenceAssertion:
         >>> asser.set_assertion('U', ['X', 'Y'], 'Z')
         >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
         """
-        self.__init__(variable, independent_of, given)
+        self.__init__(event1, event2, event3)
