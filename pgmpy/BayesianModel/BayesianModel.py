@@ -987,9 +987,13 @@ class BayesianModel(nx.DiGraph):
 
     def check_model(self):
         """
-        Checks the model for various errors.
+        Checks the model for various errors. This method checks for the following errors:
+        1. Checks if the sum of probabilities for each state is equal to 1. Tolerance for sum = 0.01.
         """
-
+        for node in self.nodes():
+            cpd = self.get_cpd(node)
+            if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
+                raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
 
     def get_independencies(self, latex=False):
         pass
