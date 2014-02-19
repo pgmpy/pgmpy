@@ -731,7 +731,7 @@ class BayesianModel(nx.DiGraph):
             #TODO: ASCII art table
             pass
         else:
-            return self.node[node]['_cpd'].get_cpd()
+            return self.node[node]['_cpd']
 
     def _change_state_observed(self, node, state, reset):
         """
@@ -978,9 +978,22 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        active_trail_nodes('start')
+        active_trail_nodes('start')0
         """
         if end in self.active_trail_nodes(start):
             return True
         else:
             return False
+
+    def check_model(self):
+        """
+        Checks the model for various errors.
+        """
+
+
+    def get_independencies(self, latex=False):
+        pass
+
+    def get_factorized_product(self, latex=False):
+        #TODO: refer to IMap class for explanation why this is not implemented.
+        pass
