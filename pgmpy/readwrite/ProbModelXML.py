@@ -85,8 +85,9 @@ For the student example the ProbModelXML file should be:
         <Potential type="Table" role="ConditionalProbability" label=string>
             <Comment>CPDs in the form of table</Comment>
             <AdditionalProperties />
-            <state>
-                <name>
+            <!--
+                There is no specification in the paper about how the tables should be represented.
+            -->
         </Potential>
     </ProbNet>
     <Policies />
