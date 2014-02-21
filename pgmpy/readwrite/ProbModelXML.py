@@ -117,7 +117,15 @@ except ImportError:
 warnings.warn("Not Complete. Please use only for reading and writing Bayesian Models.")
 
 
-class ProbModelXMLObject(object):
+def generate_probmodelxml(G, encoding='utf-8', prettyprint=True,
+                          language='English', comment=None):
+    writer = ProbModelXMLWriter(G, encoding=encoding, prettyprint=prettyprint,
+                                language=language, comment=comment)
+    for line in str(writer).splitlines():
+        yield line
+
+
+class ProbModelXMLWriter(object):
     def __init__(self, network, encoding='utf-8', prettyprint=True,
                  language='English', comment=None):
         #TODO: add policies, InferenceOptions, Evidence
@@ -204,6 +212,31 @@ class ProbModelXMLObject(object):
 
     def add_potential(self):
         pass
+
+    def dump(self, stream):
+        if self.prettyprint:
+            self.indent(self.xml)
+        document = etree.ElementTree(self.xml)
+        header = '<?xml version="1.0" encoding="%s"?>' % self.encoding
+        stream.write(header.encode(self.encoding))
+        document.write(stream, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        # in-place prettyprint formatter
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
 
 @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
