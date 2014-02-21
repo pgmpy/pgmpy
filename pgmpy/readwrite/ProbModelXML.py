@@ -102,7 +102,6 @@ For the student example the ProbModelXML file should be:
 </ProbModelXML>
 """
 import warnings
-import sys
 import networkx as nx
 try:
     from lxml import etree
@@ -115,40 +114,39 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
-warnings.warn("Not Complete. Please use only for reading and writing Bayesian Models only.")
+warnings.warn("Not Complete. Please use only for reading and writing Bayesian Models.")
 
 
-class ProbModelXMLWriter(object):
+class ProbModelXMLObject(object):
     def __init__(self, network, encoding='utf-8', prettyprint=True,
                  language='English', comment=None):
+        #TODO: add policies, InferenceOptions, Evidence
         self.encoding = encoding
         self.prettyprint = prettyprint
-        self.language = language
-        self.comment = comment
         self.xml = etree.Element("ProbModelXML", attrib={'formatVersion': '1.0'})
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
-        etree.SubElement(self.probnet, 'Comment').text = self.comment
-        etree.SubElement(self.probnet, 'Language').text = self.language
+        etree.SubElement(self.probnet, 'Language').text = language
+        etree.SubElement(self.probnet, 'Comment').text = comment
 
         if isinstance(network, nx.DiGraph):
             self.probnet.attrib['type'] = 'BayesianNetwork'
-            self.add_bayesian_network()
         elif isinstance(network, nx.Graph):
             self.probnet.attrib['type'] = 'MarkovNetwork'
-            self.add_markov_network()
+        self.add_network(network)
 
     def __str__(self):
         return etree.tostring(self.xml, encoding=self.encoding, prettyprint=self.prettyprint)
 
-    def add_bayesian_network(self, network):
+    def add_network(self, network):
         for node in network.nodes():
-            self.add_variables(node)
+            self.add_variable(node, type='FiniteStatae', role='Chance',
+                              states=network.get_states(node))
             self.add_potential(node)
         for edge in network.edges():
-            self.add_links(edge)
+            self.add_link(edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
 
     def add_policies(self):
         pass
@@ -162,32 +160,47 @@ class ProbModelXMLWriter(object):
     def add_additional_constraints(self):
         pass
 
-    def add_comment(self):
-        pass
+    def add_comment(self, comment):
+        self.xml.xpath('//ProbNet/Comment')[0].text = comment
 
-    def add_language(self):
-        pass
+    def add_language(self, language):
+        self.xml.xpath('//Language')[0].text = language
 
-    def add_additional_properties(self):
-        pass
+    def add_additional_properties(self, **kwargs):
+        add_prop = etree.SubElement(self.xml, 'AdditionalProperties')
+        for key, value in kwargs:
+            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def add_states(self):
-        pass
+    def add_state(self, state, node, **kwargs):
+        states = self.xml.xpath('//Variable[@name="' + node + '"]/States')[0]
+        s = etree.SubElement(states, 'State', attrib={'name': state})
+        add_prop = etree.SubElement(s, 'AdditionalProperties')
+        for key, value in kwargs:
+            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def add_variables(self, name, type='FiniteState', role='Chance', comment=None,
-                      coordinates=None, states=None):
-        variable = etree.SubElement(self.variables, 'Variable', attrib={'name': node,
-                                                                        'type': 'FiniteState',
-                                                                        'role': 'Chance'})
+    def add_variable(self, name, type='FiniteState', role='Chance', comment=None,
+                      coordinates=None, states=None, **kwargs):
+        #TODO: Add feature for accepting additional properties of states.
+        variable = etree.SubElement(self.variables, 'Variable', attrib={'name': name,
+                                                                        'type': type,
+                                                                        'role': role})
         etree.SubElement(variable, 'Comment').text = comment
         etree.SubElement(variable, 'Coordinates').text = coordinates
-        etree.SubElement(variable, 'AdditionalProperties')
+        add_prop = etree.SubElement(variable, 'AdditionalProperties')
+        for key, value in kwargs.items():
+            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
         state = variable.SubElement(variable, 'States')
         for s in states:
             etree.SubElement(state, 'State', attrib={'name': s}).append(etree.Element('AdditionalProperties'))
 
-    def add_links(self, edge):
-        pass
+    def add_link(self, edge, comment=None, label=None, is_directed='0', **kwargs):
+        link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
+                                                            'directed': is_directed})
+        etree.SubElement(link, 'Comment').text = comment
+        etree.SubElement(link, 'Label').text = label
+        add_prop = etree.SubElement(link, 'AdditionalProperties')
+        for key, value in kwargs.items():
+            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
     def add_potential(self):
         pass
