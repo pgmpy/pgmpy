@@ -238,6 +238,16 @@ class ProbModelXMLWriter(object):
                 elem.tail = i
 
 
+class ProbModelXMLReader(object):
+    def __init__(self, path=None, string=None):
+        if path is not None:
+            self.xml = etree.ElementTree(file=path)
+        elif string is not None:
+            self.xml = etree.fromstring(string)
+        else:
+            raise ValueError("Must specify either 'path' or 'string' as kwarg.")
+        #TODO: add parsing code 
+
 @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     pass
