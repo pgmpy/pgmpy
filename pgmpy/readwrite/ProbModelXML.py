@@ -103,6 +103,7 @@ For the student example the ProbModelXML file should be:
 """
 import warnings
 import networkx as nx
+from pgmpy import BayesianModel as bm
 try:
     from lxml import etree
 except ImportError:
@@ -239,6 +240,7 @@ class ProbModelXMLWriter(object):
 
 
 class ProbModelXMLReader(object):
+    #TODO: add methods to parse policies, inferenceoption, evidence etc.
     def __init__(self, path=None, string=None):
         if path is not None:
             self.xml = etree.ElementTree(file=path)
@@ -246,7 +248,67 @@ class ProbModelXMLReader(object):
             self.xml = etree.fromstring(string)
         else:
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
-        #TODO: add parsing code 
+
+    def make_network(self):
+        network_type = self.xml.xpath('//ProbModel')[0].attrib['type']
+        if network_type == 'BayesianNetwork':
+            G = bm.BayesianModel()
+        elif network_type == 'MarkovModel':
+            G = bm.MarkovModel()
+
+        self.add_graph_properties(G, self.xml.xpath('//ProbNet')[0])
+        #Add nodes
+        for variable in self.xml.xpath('//Variables')[0].iterchildren():
+            self.add_node(G, variable)
+
+        #Add edges
+        for edge in self.xml.xpath('//Links')[0].iterchildren():
+            self.add_edge(G, edge)
+
+        #TODO: parse potential
+
+    @staticmethod
+    def add_graph_properties(G, probnet):
+        if probnet.xpath('Comment'):
+            G.graph['Comment'] = probnet.xpath('Comment').text
+        if probnet.xpath('Language'):
+            G.graph['Language'] = probnet.xpath('Language').text
+        if probnet.xpath('AdditionalProperties'):
+            for prop in probnet.xpath('AdditionalProperties')[0].iterchildren():
+                #G.graph['AdditionalPorperty'][name] = value
+
+    @staticmethod
+    def add_node(G, variable):
+        #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
+        name = variable.attrib['name']
+        G.add_node(name)
+        if variable.xpath('Comment'):
+            G[name]['Comment'] = variable.xpath('Comment')[0].text
+        if variable.xpath('Coordinates'):
+            G[name]['Coordinates'] = {key: value for key, value in variable.xpath('Coordinates')[0].attrib.items()}
+        if variable.xpath('AdditionalProperties'):
+            for prop in variable.xpath('AdditionalProperties')[0].iterchildren():
+                G[name]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+        if not variable.xpath('States'):
+            warnings.warn("States not available for node: " + name)
+        else:
+            G.set_states({name: [state.attrib['name'] for state in variable.xpath('States')[0].iterchildren()]})
+            #TODO: check if additional properties can be parsed here
+
+    @staticmethod
+    def add_edge(G, edge):
+        var1 = edge.attrib['var1']
+        var2 = edge.attrib['var2']
+        G.add_edge(var1, var2)
+        if edge.xpath('Comment'):
+        #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
+            G[var1][var2]['Comment'] = edge.xpath('Comment').text
+        if edge.xpath('Label'):
+            G[var1][var2]['Label'] = edge.xpath('Label').text
+        if edge.xpath('AdditionalProperties'):
+            for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
+                G[var1][var2]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+
 
 @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
