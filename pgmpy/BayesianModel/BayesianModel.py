@@ -346,7 +346,8 @@ class BayesianModel(nx.DiGraph):
         #             index for index in range(len(tail))]                   #
         ######################################################################
 
-    def _check_node_string(self, node_list):
+    @staticmethod
+    def _check_node_string(node_list):
         """
         Checks if all the newly added node are strings.
         Called from __init__, add_node, add_nodes_from, add_edge and
