@@ -253,6 +253,9 @@ class BayesianModel(nx.DiGraph):
         ...               'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
+            if isinstance(states, str):
+                states = [states]
+
             try:
                 self.node[node]['_states'].extend([{'name': state,
                                                     'observed_status': False}
