@@ -8,7 +8,8 @@ For the student example the ProbModelXML file should be:
     <ProbNet type=BayesianNetwork >
         <AdditionalConstraints />
         <Comment>
-            Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller
+            Student example model from Probabilistic Graphical Models:
+            Principles and Techniques by Daphne Koller
         </Comment>
         <Language>
             English
@@ -43,7 +44,8 @@ For the student example the ProbModelXML file should be:
                     <State name="grade_C"><AdditionalProperties /></State>
                 </States>
             </Variable>
-            <Variable name="recommendation_letter" type="FiniteState" role="Chance">
+            <Variable name="recommendation_letter" type="FiniteState"
+                    role="Chance">
                 <Comment />
                 <Coordinates />
                 <AdditionalProperties />
@@ -79,7 +81,8 @@ For the student example the ProbModelXML file should be:
                 <AdditionalProperties />
             </Link>
             <Link var1="grade" var2="recommendation_letter" directed=1>
-                <Comment>Directed Edge from grade to recommendation_letter</Comment>
+                <Comment>Directed Edge from grade to
+                    recommendation_letter</Comment>
                 <Label>grad_to_reco</Label>
                 <AdditionalProperties />
             </Link>
@@ -88,7 +91,8 @@ For the student example the ProbModelXML file should be:
             <Comment>CPDs in the form of table</Comment>
             <AdditionalProperties />
             <!--
-                There is no specification in the paper about how the tables should be represented.
+                There is no specification in the paper about
+                how the tables should be represented.
             -->
         </Potential>
     </ProbNet>
@@ -96,7 +100,8 @@ For the student example the ProbModelXML file should be:
     <InferenceOptions />
     <Evidence>
         <EvidenceCase>
-            <Finding variable=string state=string stateIndex=integer numericValue=number/>
+            <Finding variable=string state=string stateIndex=integer
+                numericValue=number/>
         </EvidenceCase>
     </Evidence>
 </ProbModelXML>
@@ -118,7 +123,8 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
-warnings.warn("Not Complete. Please use only for reading and writing Bayesian Models.")
+warnings.warn("Not Complete. Please use only for "
+              "reading and writing Bayesian Models.")
 
 
 def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
@@ -141,10 +147,10 @@ def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
     >>> for line in pgmpy.readwrite.generate_ProbModelXML(G):  #doctest: +SKIP
     ...     print(line)
     """
-    writer = ProbModelXMLWriter(G, encoding=encoding, prettyprint=prettyprint,
-                                language=language, comment=comment)
+    writer = ProbModelXMLWriter(G, encoding=encoding, prettyprint=prettyprint)
     for line in str(writer).splitlines():
         yield line
+
 
 @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
@@ -168,8 +174,10 @@ def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     >>> G = nx.path_graph(4)
     >>> pgmpy.readwrite.write_probmodelxml(G, "test.probmodelxml")
     """
-    writer = ProbModelXMLWriter(model, path, encoding=encoding, prettyprint=prettyprint)
+    writer = ProbModelXMLWriter(model, path, encoding=encoding,
+                                prettyprint=prettyprint)
     writer.dump(path)
+
 
 @open_file(0, mode='rb')
 def read_probmodelxml(path):
@@ -184,8 +192,8 @@ def read_probmodelxml(path):
     Returns
     -------
     model : NetworkX Graph
-            A BayesianModel or MarkovModel object depending on the type of model
-            the XML represents.
+            A BayesianModel or MarkovModel object depending on the
+            type of model the XML represents.
 
     Examples
     --------
@@ -265,7 +273,8 @@ class ProbModelXMLWriter(object):
         """
         Return the XML as string.
         """
-        return etree.tostring(self.xml, encoding=self.encoding, prettyprint=self.prettyprint)
+        return etree.tostring(self.xml, encoding=self.encoding,
+                              prettyprint=self.prettyprint)
 
     def _add_network(self, network):
         """
@@ -273,7 +282,7 @@ class ProbModelXMLWriter(object):
         """
         for node in network.nodes():
             self._add_variable(node, type='FiniteStatae', role='Chance',
-                              states=network.get_states(node))
+                               states=network.get_states(node))
             self._add_potential(node)
         for edge in network.edges():
             self._add_link(edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
@@ -320,8 +329,8 @@ class ProbModelXMLWriter(object):
         for key, value in kwargs:
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def _add_variable(self, name, type='FiniteState', role='Chance', comment=None,
-                      coordinates=None, states=None, **kwargs):
+    def _add_variable(self, name, type='FiniteState', role='Chance',
+                      comment=None, coordinates=None, states=None, **kwargs):
         """
         Adds a node to the ProbModelXML.
         """
