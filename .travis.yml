@@ -6,9 +6,10 @@ virtualenv:
 before_install:
     - sudo apt-get build-dep -qq python3-numpy
     - sudo apt-get build-dep -qq python3-scipy
-    - sudo apt-get install -y aptitude
-    - sudo aptitude install -y python3-setuptools
-    - sudo easy_install3 pip
+    - sudo apt-get install python3-pip
+#    - sudo apt-get install -y aptitude
+#    - sudo aptitude install -y python3-setuptools
+#    - sudo easy_install3 pip
     - pip-3.2 install numpy --upgrade
 install:
     - "pip-3.2 install networkx"
