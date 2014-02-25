@@ -13,14 +13,14 @@ before_install:
 #    - sudo apt-get install -y aptitude
 #    - sudo aptitude install -y python3-setuptools
 #    - sudo easy_install3 pip
-    - pip3 install numpy --upgrade
+#    - pip3 -q install numpy --upgrade
 install:
-    - "pip3 install networkx"
-    - "pip3 install numpy --upgrade"
-    - "pip3 install scipy --upgrade"
-    - "pip3 install nose"
-    - "pip3 install coveralls"
-script: nosetests --with-coverage --cover-package=pgmpy/src
+    - "pip3 -q install networkx"
+    - "pip3 -q install numpy --upgrade"
+    - "pip3 -q install scipy --upgrade"
+    - "pip3 -q install nose"
+    - "pip3 -q install coveralls"
+script: nosetests --with-coverage --cover-package=pgmpy/pgmpy
 after_success:
     coveralls
 notifications:
