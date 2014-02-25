@@ -1,6 +1,6 @@
 class IMap:
     """
-    Base class for IMap.
+    **Base class for IMap.**
     IMap is a set of Conditional Independence (eg: "X is independent of Y given Z" where X, Y and Z
     are random variables) or Independence(eg: "X is independent of Y" where X and Y
     are random variables) assertions.
