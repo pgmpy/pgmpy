@@ -16,8 +16,8 @@ before_install:
 #    - pip3 -q install numpy --upgrade
 install:
     - "pip3 -q install networkx"
-    - "pip3 -q install numpy --upgrade"
-    - "pip3 -q install scipy --upgrade"
+    - "pip3  install numpy --upgrade"
+    - "pip3  install scipy --upgrade"
     - "pip3 -q install nose"
     - "pip3 -q install coveralls"
 script: nosetests --with-coverage --cover-package=pgmpy/pgmpy
