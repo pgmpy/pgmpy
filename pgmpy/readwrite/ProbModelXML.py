@@ -101,6 +101,9 @@ For the student example the ProbModelXML file should be:
     </Evidence>
 </ProbModelXML>
 """
+__all__ = ['write_probmodelxml', 'read_probmodelxml', 'generate_probmodelxml',
+           'parse_probmodelxml', 'ProbModelXMLReader', 'ProbModelXMLWriter']
+
 import warnings
 import networkx as nx
 from pgmpy import BayesianModel as bm
@@ -219,6 +222,9 @@ def parse_probmodelxml(string):
 
 
 class ProbModelXMLWriter(object):
+    """
+
+    """
     def __init__(self, network, encoding='utf-8', prettyprint=True,
                  language='English', comment=None):
         #TODO: add policies, InferenceOptions, Evidence
