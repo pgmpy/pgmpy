@@ -223,11 +223,28 @@ def parse_probmodelxml(string):
 
 class ProbModelXMLWriter(object):
     """
-
+    Class for writing models in ProbModelXML format.
     """
-    def __init__(self, network, encoding='utf-8', prettyprint=True,
-                 language='English', comment=None):
+    def __init__(self, model, encoding='utf-8', prettyprint=True):
+        """
+        Initialize a ProbModelXMLWriter Object.
+
+        Parameters
+        ----------
+        model : A BayesianModel or MarkovModel
+            The model to write.
+        encoding : string (optional)
+            Encoding for text data
+        prettyprint : bool (optional)
+            If True uses line breaks and indentation in output XML.
+
+        Examples
+        --------
+        >>> G = nx.path_graph(4)
+        >>> writer = ProbModelXMLWriter(G)
+        """
         #TODO: add policies, InferenceOptions, Evidence
+        #TODO: add parsing of language and comments and additional properties
         self.encoding = encoding
         self.prettyprint = prettyprint
         self.xml = etree.Element("ProbModelXML", attrib={'formatVersion': '1.0'})
@@ -235,58 +252,79 @@ class ProbModelXMLWriter(object):
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
-        etree.SubElement(self.probnet, 'Language').text = language
-        etree.SubElement(self.probnet, 'Comment').text = comment
+        #etree.SubElement(self.probnet, 'Language').text = language
+        #etree.SubElement(self.probnet, 'Comment').text = comment
 
-        if isinstance(network, nx.DiGraph):
+        if isinstance(model, nx.DiGraph):
             self.probnet.attrib['type'] = 'BayesianNetwork'
-        elif isinstance(network, nx.Graph):
+        elif isinstance(model, nx.Graph):
             self.probnet.attrib['type'] = 'MarkovNetwork'
-        self.add_network(network)
+        self._add_network(model)
 
     def __str__(self):
+        """
+        Return the XML as string.
+        """
         return etree.tostring(self.xml, encoding=self.encoding, prettyprint=self.prettyprint)
 
-    def add_network(self, network):
+    def _add_network(self, network):
+        """
+        Adds a network to the XML.
+        """
         for node in network.nodes():
-            self.add_variable(node, type='FiniteStatae', role='Chance',
+            self._add_variable(node, type='FiniteStatae', role='Chance',
                               states=network.get_states(node))
-            self.add_potential(node)
+            self._add_potential(node)
         for edge in network.edges():
-            self.add_link(edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
+            self._add_link(edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
 
-    def add_policies(self):
+    def _add_policies(self):
         pass
 
-    def add_inference_options(self):
+    def _add_inference_options(self):
         pass
 
-    def add_evidence(self):
+    def _add_evidence(self):
         pass
 
-    def add_additional_constraints(self):
+    def _add_additional_constraints(self):
         pass
 
-    def add_comment(self, comment):
+    def _add_comment(self, comment):
+        """
+        Set Comment attribute of the ProbModelXML.
+        """
         self.xml.xpath('//ProbNet/Comment')[0].text = comment
 
-    def add_language(self, language):
+    def _add_language(self, language):
+        """
+        Set Language attribute of the ProbModelXML.
+        """
         self.xml.xpath('//Language')[0].text = language
 
-    def add_additional_properties(self, **kwargs):
+    def _add_additional_properties(self, **kwargs):
+        """
+        Sets AdditionalProperties of the ProbModelXML.
+        """
         add_prop = etree.SubElement(self.xml, 'AdditionalProperties')
         for key, value in kwargs:
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def add_state(self, state, node, **kwargs):
+    def _add_state(self, state, node, **kwargs):
+        """
+        Adds state to the node in the ProbModelXML.
+        """
         states = self.xml.xpath('//Variable[@name="' + node + '"]/States')[0]
         s = etree.SubElement(states, 'State', attrib={'name': state})
         add_prop = etree.SubElement(s, 'AdditionalProperties')
         for key, value in kwargs:
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def add_variable(self, name, type='FiniteState', role='Chance', comment=None,
+    def _add_variable(self, name, type='FiniteState', role='Chance', comment=None,
                       coordinates=None, states=None, **kwargs):
+        """
+        Adds a node to the ProbModelXML.
+        """
         #TODO: Add feature for accepting additional properties of states.
         variable = etree.SubElement(self.variables, 'Variable', attrib={'name': name,
                                                                         'type': type,
@@ -300,7 +338,10 @@ class ProbModelXMLWriter(object):
         for s in states:
             etree.SubElement(state, 'State', attrib={'name': s}).append(etree.Element('AdditionalProperties'))
 
-    def add_link(self, edge, comment=None, label=None, is_directed='0', **kwargs):
+    def _add_link(self, edge, comment=None, label=None, is_directed='0', **kwargs):
+        """
+        Adds an edge to the ProbModelXML.
+        """
         link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
                                                             'directed': is_directed})
         etree.SubElement(link, 'Comment').text = comment
@@ -309,10 +350,13 @@ class ProbModelXMLWriter(object):
         for key, value in kwargs.items():
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def add_potential(self):
+    def _add_potential(self):
         pass
 
     def dump(self, stream):
+        """
+        Dumps the data to stream after appending header.
+        """
         if self.prettyprint:
             self.indent(self.xml)
         document = etree.ElementTree(self.xml)
@@ -321,7 +365,9 @@ class ProbModelXMLWriter(object):
         document.write(stream, encoding=self.encoding)
 
     def indent(self, elem, level=0):
-        # in-place prettyprint formatter
+        """
+        Inplace prettyprint formatter.
+        """
         i = "\n" + level*"  "
         if len(elem):
             if not elem.text or not elem.text.strip():
@@ -338,8 +384,25 @@ class ProbModelXMLWriter(object):
 
 
 class ProbModelXMLReader(object):
+    """
+    Class for reading ProbModelXML format from files or strings.
+    """
     #TODO: add methods to parse policies, inferenceoption, evidence etc.
     def __init__(self, path=None, string=None):
+        """
+        Initialize an instance of ProbModelXMLReader class.
+
+        Parameters
+        ----------
+        path : file or string
+            File containing ProbModelXML information.
+        string : string
+            String containing ProbModelXML information.
+
+        Example
+        -------
+        >>> reader = ProbModelXMLReader('test.ProbModelXML')
+        """
         if path is not None:
             self.xml = etree.ElementTree(file=path)
         elif string is not None:
@@ -348,6 +411,10 @@ class ProbModelXMLReader(object):
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
 
     def make_network(self):
+        """
+        Returns a BayesianModel or MarkovModel object depending on the
+        type of ProbModelXML passed to ProbModelXMLReader class.
+        """
         network_type = self.xml.xpath('//ProbModel')[0].attrib['type']
         if network_type == 'BayesianNetwork':
             G = bm.BayesianModel()
