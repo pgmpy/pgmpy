@@ -125,6 +125,22 @@ def generate_probmodelxml(G, encoding='utf-8', prettyprint=True,
     for line in str(writer).splitlines():
         yield line
 
+@open_file(1, mode='wb')
+def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
+    writer = ProbModelXMLWriter(model, path, encoding='utf-8', prettyprint=True)
+    writer.dump(path)
+
+@open_file(0, mode='rb')
+def read_probmodelxml(path=None, string=None):
+    if path:
+        reader = ProbModelXMLReader(path=path)
+    elif string:
+        reader = ProbModelXMLReader(path=string)
+    else:
+        warnings.warn("Either path or string required. None given.")
+
+    return reader.make_network()
+
 
 class ProbModelXMLWriter(object):
     def __init__(self, network, encoding='utf-8', prettyprint=True,
@@ -265,7 +281,13 @@ class ProbModelXMLReader(object):
         for edge in self.xml.xpath('//Links')[0].iterchildren():
             self.add_edge(G, edge)
 
+        #Add CPD
+        for potential in self.xml.xpath('//Potential')[0].iterchildren():
+            self.add_potential(G, potential)
+
         #TODO: parse potential
+
+        return G
 
     @staticmethod
     def add_graph_properties(G, probnet):
@@ -275,7 +297,8 @@ class ProbModelXMLReader(object):
             G.graph['Language'] = probnet.xpath('Language').text
         if probnet.xpath('AdditionalProperties'):
             for prop in probnet.xpath('AdditionalProperties')[0].iterchildren():
-                #G.graph['AdditionalPorperty'][name] = value
+                G.graph['AdditionalProperty'][prop.attrib['name']] = prop.attrib['value']
+        #TODO: Add method to read AdditionalContraints
 
     @staticmethod
     def add_node(G, variable):
@@ -309,7 +332,7 @@ class ProbModelXMLReader(object):
             for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
                 G[var1][var2]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
-
-@open_file(1, mode='wb')
-def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
-    pass
+    @staticmethod
+    def add_potential(G, potential):
+        #TODO: Add code to read potential
+        pass
