@@ -118,8 +118,26 @@ except ImportError:
 warnings.warn("Not Complete. Please use only for reading and writing Bayesian Models.")
 
 
-def generate_probmodelxml(G, encoding='utf-8', prettyprint=True,
-                          language='English', comment=None):
+def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
+    """
+    Generate ProbModelXML lines for model.
+
+    Parameters
+    ----------
+    model : Graph
+        The Bayesian or Markov Model
+    encoding : string (optional)
+        Encoding for text data
+    prettyprint: bool (optional)
+        If True uses line breaks and indenting in output XML.
+
+    Examples
+    --------
+    >>> G = nx.path_graph(5)
+    >>> s = pgmpy.readwrite.generate_ProbModelXML(G) # doctest: +SKIP
+    >>> for line in pgmpy.readwrite.generate_ProbModelXML(G):  #doctest: +SKIP
+    ...     print(line)
+    """
     writer = ProbModelXMLWriter(G, encoding=encoding, prettyprint=prettyprint,
                                 language=language, comment=comment)
     for line in str(writer).splitlines():
@@ -127,18 +145,76 @@ def generate_probmodelxml(G, encoding='utf-8', prettyprint=True,
 
 @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
-    writer = ProbModelXMLWriter(model, path, encoding='utf-8', prettyprint=True)
+    """
+    Write model in ProbModelXML format to path.
+
+    Parameters
+    ----------
+    model : A NetworkX graph
+            Bayesian network or Markov network
+    path : file or string
+            File or filename to write.
+            Filenames ending in .gz or .bz2 will be compressed.
+    encoding : string (optional)
+            Encoding for text data.
+    prettyprint : bool (optional)
+            If True use line breaks and indenting in output XML.
+
+    Examples
+    --------
+    >>> G = nx.path_graph(4)
+    >>> pgmpy.readwrite.write_probmodelxml(G, "test.probmodelxml")
+    """
+    writer = ProbModelXMLWriter(model, path, encoding=encoding, prettyprint=prettyprint)
     writer.dump(path)
 
 @open_file(0, mode='rb')
-def read_probmodelxml(path=None, string=None):
-    if path:
-        reader = ProbModelXMLReader(path=path)
-    elif string:
-        reader = ProbModelXMLReader(path=string)
-    else:
-        warnings.warn("Either path or string required. None given.")
+def read_probmodelxml(path):
+    """
+    Read model in ProbModelXML format from path.
 
+    Parameters
+    ----------
+    path : file or string
+        file or filename from which to read.
+
+    Returns
+    -------
+    model : NetworkX Graph
+            A BayesianModel or MarkovModel object depending on the type of model
+            the XML represents.
+
+    Examples
+    --------
+    >>> G = pgmpy.readwrite.read_probmodelxml('test.probModelXML')
+    """
+    reader = ProbModelXMLReader(path=path)
+    return reader.make_network()
+
+
+def parse_probmodelxml(string):
+    """
+    Read model in ProbModelXML format from string.
+
+    Parameters
+    ----------
+    string : string
+        String containing ProbModelXML information.
+        (e.g., contents of a ProbModelXML file).
+
+    Returns
+    -------
+    model : NetworkX Graph
+        A BayesianModel or MarkovModel object depending on the XML given.
+
+    Examples
+    --------
+    >>> G = nx.path_graph(4)
+    >>> linefeed = chr(10)
+    >>> s = linefeed.join(pgmpy.readwrite.generate_probmodelxml(G))
+    >>> H = pgmpy.readwrite.parse_probmodelxml(s)
+    """
+    reader = ProbModelXMLReader(string=string)
     return reader.make_network()
 
 
