@@ -1,19 +1,19 @@
-class IMap:
+class Independencies:
     """
-    Base class for IMap.
-    IMap is a set of Conditional Independence (eg: "X is independent of Y given Z" where X, Y and Z
-    are random variables) or Independence(eg: "X is independent of Y" where X and Y
-    are random variables) assertions.
+    Base class for Independencies.
+    Independencies class represents a set of Conditional Independence assertions (eg: "X is independent of Y given Z" where X, Y and Z
+    are random variables) or Independence assertions (eg: "X is independent of Y" where X and Y
+    are random variables).
 
     Public Methods
     --------------
     add_assertions
-    get_imap
+    get_independencies
     get_factorized_product
     """
     def __init__(self, *assertions):
         """
-        Initialize the IMap with Conditional Independence or Independence assertions.
+        Initialize the Independencies Class with Conditional Independence assertions or Independence assertions.
 
         Parameters
         ----------
@@ -23,22 +23,22 @@ class IMap:
 
         Examples
         --------
-        Creating an IMap object with one independence assertion: Random Variable X is independent of Y
-        >>> imap = IMap(['X', 'Y'])
+        Creating an Independencies object with one independence assertion: Random Variable X is independent of Y
+        >>> independencies = Independencies(['X', 'Y'])
 
-        Creating an IMap object with three conditional independence assertions:
+        Creating an Independencies object with three conditional independence assertions:
         First assertion is Random Variable X is independent of Y given Z.
-        >>> imap = IMap(['X', 'Y', 'Z'],
+        >>> independencies = Independencies(['X', 'Y', 'Z'],
         ...             ['a', ['b', 'c'], 'd'],
         ...             ['l', ['m', 'n'], 'o'])
         """
-        self.imap = set()
+        self.independencies = set()
         for assertion in assertions:
-            self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
-    def get_imap(self):
+    def get_independencies(self):
         """
-        Returns the imap which is a set of IndependenceAssertion objects.
+        Returns the independencies object which is a set of IndependenceAssertion objects.
 
         See Also
         --------
@@ -46,14 +46,14 @@ class IMap:
 
         Examples
         --------
-        >>> imap = IMap(['X', 'Y', 'Z'])
-        >>> imap.get_imap()
+        >>> independencies = Independencies(['X', 'Y', 'Z'])
+        >>> independencies.get_independencies()
         """
-        return self.imap
+        return self.independencies
 
     def add_assertions(self, *assertions):
         """
-        Adds assertions to imap.
+        Adds assertions to Independencies.
 
         Parameters
         ----------
@@ -62,12 +62,12 @@ class IMap:
 
         Examples
         --------
-        >>> imap = IMap()
-        >>> imap.add_assertions(['X', 'Y', 'Z'])
-        >>> imap.add_assertions(['a', ['b', 'c'], 'd'])
+        >>> independencies = Independencies()
+        >>> independencies.add_assertions(['X', 'Y', 'Z'])
+        >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """
         for assertion in assertions:
-            self.imap.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
     def get_factorized_product(self, random_variables=None, latex=False):
         #TODO: Write this whole function
