@@ -893,13 +893,20 @@ class BayesianModel(nx.DiGraph):
         return [node for node in self.nodes()
                 if self.node[node]['_observed']]
 
-    def active_trail_nodes(self, start):
+    def active_trail_nodes(self, start, observed=None, additional_observed=None):
         """
         Returns all the nodes reachable from start via an active trail
 
         Parameters
         ----------
         start: Graph node
+
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computer assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
 
         Examples
         -------
@@ -925,7 +932,12 @@ class BayesianModel(nx.DiGraph):
         -------------------------------------------------------------------
 
         """
-        observed_list = self._get_observed_list()
+        if not observed:
+            observed_list = [observed] if isinstance(observed, str) else observed
+        elif not additional_observed:
+            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
+        else:
+            observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
@@ -956,7 +968,7 @@ class BayesianModel(nx.DiGraph):
                             visit_list.add((parent, 'up'))
         return active_nodes
 
-    def is_active_trail(self, start, end):
+    def is_active_trail(self, start, end, observed=None, additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
 
@@ -965,6 +977,13 @@ class BayesianModel(nx.DiGraph):
         start : Graph Node
 
         end : Graph Node
+
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computer assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
 
         Examples
         --------
@@ -983,7 +1002,7 @@ class BayesianModel(nx.DiGraph):
         --------
         active_trail_nodes('start')0
         """
-        if end in self.active_trail_nodes(start):
+        if end in self.active_trail_nodes(start, observed, additional_observed):
             return True
         else:
             return False
@@ -993,14 +1012,26 @@ class BayesianModel(nx.DiGraph):
         Checks the model for various errors. This method checks for the following errors:
         1. Checks if the sum of probabilities for each state is equal to 1. Tolerance for sum = 0.01.
         """
+        #TODO: Add tests
         for node in self.nodes():
             cpd = self.get_cpd(node)
             if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
                 raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
 
     def get_independencies(self, latex=False):
-        pass
+        import pgmpy.BayesianModel.Independencies as Independencies
+        independence = Independencies.Independencies()
+        for start in (len(self.nodes())):
+            for end in range(start+1, len(self.nodes())):
+                if not self.is_active_trail(start, end):
+                    independence.add_assertion(start, end)
 
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
+        pass
+
+    def is_iequivalent(self, model):
+        pass
+
+    def is_imap(self, independence):
         pass
