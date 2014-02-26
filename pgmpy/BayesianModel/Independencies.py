@@ -69,6 +69,19 @@ class Independencies:
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
+    def reduce(self):
+        """
+        Add function to remove duplicate Independence Assertions
+        """
+        pass
+
+    def latex_string(self):
+        """
+        Returns a list of string.
+        Each string represents the IndependenceAssertion in latex.
+        """
+        return [assertion.latex_string() for assertion in self.get_independencies()]
+
     def get_factorized_product(self, random_variables=None, latex=False):
         #TODO: Write this whole function
         """
@@ -203,3 +216,6 @@ class IndependenceAssertion:
         >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
         """
         self.__init__(event1, event2, event3)
+
+    def latex_string(self):
+        return ', '.join(self.event1) + ' \perp ' + ', '.join(self.event2) + ' \mid ' + ', '.join(self.event3)

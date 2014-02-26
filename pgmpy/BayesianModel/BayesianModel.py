@@ -1020,11 +1020,38 @@ class BayesianModel(nx.DiGraph):
 
     def get_independencies(self, latex=False):
         import pgmpy.BayesianModel.Independencies as Independencies
-        independence = Independencies.Independencies()
-        for start in (len(self.nodes())):
-            for end in range(start+1, len(self.nodes())):
-                if not self.is_active_trail(start, end):
-                    independence.add_assertion(start, end)
+        from copy import deepcopy
+
+        independencies = Independencies.Independencies()
+        ######### Incase changes to is_active_trail and active_trail_nodes is reverted back ##########
+        ######### Then make a deepcopy of self and operate on it ######################
+        # model_copy = deepcopy(self)
+        #
+        # def set_observed(model_copy, nodes):
+        #     """
+        #     nodes --> list or tuple
+        #     sets nodes' observed values to True
+        #     """
+        #     for node in nodes:
+        #         model_copy.node[node]['_observed'] = True
+        #
+        # def reset_observed(model_copy):
+        #     for node in model_copy.nodes():
+        #         model_copy.node[node]['_observed'] = False
+
+        for start in (self.nodes()):
+            for r in (1, len(self.nodes())):
+                for observed in itertools.combinations(self.nodes(), r):
+                    independent_variables = self.active_trail_nodes(start, observed=observed)
+                    if independent_variables:
+                        independencies.add_assertions(start, independent_variables, observed)
+
+        independencies.reduce()
+
+        if not latex:
+            return independencies
+        else:
+            return independencies.latex_string()
 
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
