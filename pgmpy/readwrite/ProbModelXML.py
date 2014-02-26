@@ -260,8 +260,15 @@ class ProbModelXMLWriter(object):
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
-        #etree.SubElement(self.probnet, 'Language').text = language
-        #etree.SubElement(self.probnet, 'Comment').text = comment
+        try:
+            etree.SubElement(self.probnet, 'Language').text = model.graph['Language']
+        except KeyError:
+            pass
+        try:
+            etree.SubElement(self.probnet, 'Comment').text = model.graph['Comment']
+        except KeyError:
+            pass
+        self._add_additional_properties(model)
 
         if isinstance(model, nx.DiGraph):
             self.probnet.attrib['type'] = 'BayesianNetwork'
@@ -281,11 +288,11 @@ class ProbModelXMLWriter(object):
         Adds a network to the XML.
         """
         for node in network.nodes():
-            self._add_variable(node, type='FiniteStatae', role='Chance',
+            self._add_variable(network, node, type='FiniteStatae', role='Chance',
                                states=network.get_states(node))
-            self._add_potential(node)
+            self._add_potential(network, node)
         for edge in network.edges():
-            self._add_link(edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
+            self._add_link(network, edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
 
     def _add_policies(self):
         pass
@@ -299,64 +306,56 @@ class ProbModelXMLWriter(object):
     def _add_additional_constraints(self):
         pass
 
-    def _add_comment(self, comment):
-        """
-        Set Comment attribute of the ProbModelXML.
-        """
-        self.xml.xpath('//ProbNet/Comment')[0].text = comment
+    # def _add_comment(self, comment):
+    #     """
+    #     Set Comment attribute of the ProbModelXML.
+    #     """
+    #     self.xml.xpath('//ProbNet/Comment')[0].text = comment
+    #
+    # def _add_language(self, language):
+    #     """
+    #     Set Language attribute of the ProbModelXML.
+    #     """
+    #     self.xml.xpath('//Language')[0].text = language
 
-    def _add_language(self, language):
-        """
-        Set Language attribute of the ProbModelXML.
-        """
-        self.xml.xpath('//Language')[0].text = language
-
-    def _add_additional_properties(self, **kwargs):
+    def _add_additional_properties(self, model):
         """
         Sets AdditionalProperties of the ProbModelXML.
         """
         add_prop = etree.SubElement(self.xml, 'AdditionalProperties')
-        for key, value in kwargs:
+        for key, value in model.graph['AdditionalProperties'].items():
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def _add_state(self, state, node, **kwargs):
-        """
-        Adds state to the node in the ProbModelXML.
-        """
-        states = self.xml.xpath('//Variable[@name="' + node + '"]/States')[0]
-        s = etree.SubElement(states, 'State', attrib={'name': state})
-        add_prop = etree.SubElement(s, 'AdditionalProperties')
-        for key, value in kwargs:
-            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
-
-    def _add_variable(self, name, type='FiniteState', role='Chance',
-                      comment=None, coordinates=None, states=None, **kwargs):
+    def _add_variable(self, model, name):
         """
         Adds a node to the ProbModelXML.
         """
         #TODO: Add feature for accepting additional properties of states.
         variable = etree.SubElement(self.variables, 'Variable', attrib={'name': name,
-                                                                        'type': type,
-                                                                        'role': role})
-        etree.SubElement(variable, 'Comment').text = comment
-        etree.SubElement(variable, 'Coordinates').text = coordinates
+                                                                        'type': model[name]['type'],
+                                                                        'role': model[name]['role']})
+        etree.SubElement(variable, 'Comment').text = model[variable]['Comment']
+        etree.SubElement(variable, 'Coordinates').text = model[variable]['Coordinates']
         add_prop = etree.SubElement(variable, 'AdditionalProperties')
-        for key, value in kwargs.items():
+        for key, value in model[name]['AdditionalProperties']:
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
-        state = variable.SubElement(variable, 'States')
-        for s in states:
-            etree.SubElement(state, 'State', attrib={'name': s}).append(etree.Element('AdditionalProperties'))
+        states = variable.SubElement(variable, 'States')
+        for s in model.get_states(name):
+            state = etree.SubElement(states, 'State', attrib={'name': s})
+            #TODO: Check how to write AdditionalProperties here.
 
-    def _add_link(self, edge, comment=None, label=None, is_directed='0', **kwargs):
+    def _add_link(self, model, edge, is_directed):
         """
         Adds an edge to the ProbModelXML.
         """
-        link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
+        var1 = edge[0]
+        var2 = edge[1]
+        link = etree.SubElement(self.links, 'Link', attrib={'var1': var1, 'var2': var2,
                                                             'directed': is_directed})
-        etree.SubElement(link, 'Comment').text = comment
-        etree.SubElement(link, 'Label').text = label
+        etree.SubElement(link, 'Comment').text = model[var1][var2]['Comment']
+        etree.SubElement(link, 'Label').text = model[var1][var2]['Label']
         add_prop = etree.SubElement(link, 'AdditionalProperties')
-        for key, value in kwargs.items():
+        for key, value in model[var1][var2]['AdditionalProperties'].items():
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
     def _add_potential(self):
@@ -463,6 +462,8 @@ class ProbModelXMLReader(object):
         #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
         name = variable.attrib['name']
         G.add_node(name)
+        G[name]['type'] = variable.attrib['type']
+        G[name]['roles'] = variable.attrib['roles']
         if variable.xpath('Comment'):
             G[name]['Comment'] = variable.xpath('Comment')[0].text
         if variable.xpath('Coordinates'):
