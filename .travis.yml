@@ -23,6 +23,6 @@ install:
 script: nosetests --with-coverage --cover-package=pgmpy/pgmpy
 after_success:
     coveralls
-notifications:
-    email:
-        - pgmpy@googlegroups.com
+#notifications:
+#    email:
+#        - pgmpy@googlegroups.com
