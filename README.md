@@ -73,3 +73,7 @@ active_trail = student.is_active_trail('grade', 'intel')
 # returns True if active trail exists between grade and intel
 
 ```
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/pgmpy/pgmpy/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
