@@ -253,6 +253,9 @@ class BayesianModel(nx.DiGraph):
         ...               'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
+            if isinstance(states, str):
+                states = [states]
+
             try:
                 self.node[node]['_states'].extend([{'name': state,
                                                     'observed_status': False}
@@ -737,7 +740,7 @@ class BayesianModel(nx.DiGraph):
             #TODO: ASCII art table
             pass
         else:
-            return self.node[node]['_cpd'].get_cpd()
+            return self.node[node]['_cpd']
 
     def _change_state_observed(self, node, state, reset):
         """
@@ -984,9 +987,26 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        active_trail_nodes('start')
+        active_trail_nodes('start')0
         """
         if end in self.active_trail_nodes(start):
             return True
         else:
             return False
+
+    def check_model(self):
+        """
+        Checks the model for various errors. This method checks for the following errors:
+        1. Checks if the sum of probabilities for each state is equal to 1. Tolerance for sum = 0.01.
+        """
+        for node in self.nodes():
+            cpd = self.get_cpd(node)
+            if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
+                raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
+
+    def get_independencies(self, latex=False):
+        pass
+
+    def get_factorized_product(self, latex=False):
+        #TODO: refer to IMap class for explanation why this is not implemented.
+        pass
