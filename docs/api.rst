@@ -35,4 +35,3 @@ Independencies module
 
 .. autoclass:: IndependenceAssertion
    :members:
-   
