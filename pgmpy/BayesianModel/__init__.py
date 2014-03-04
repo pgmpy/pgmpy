@@ -1,5 +1,7 @@
 from .BayesianModel import *
-from .IMap import *
+from .Independencies import *
+from .MarkovModel import *
 
 __all__ = ['BayesianModel',
-           'IMap']
+           'Independencies',
+           'MarkovModel']
