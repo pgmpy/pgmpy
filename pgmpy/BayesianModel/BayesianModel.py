@@ -9,8 +9,7 @@ from pgmpy.Factor import CPD
 
 
 class BayesianModel(nx.DiGraph):
-    def __init__(self, ebunch=None):
-        """
+    """
         Base class for bayesian model.
 
         A BayesianModel stores nodes and edges with conditional probability
@@ -102,6 +101,7 @@ class BayesianModel(nx.DiGraph):
         is_active_trail('node1', 'node2')
         marginal_probability('node1')
         """
+    def __init__(self, ebunch=None):
         if ebunch is not None:
             self._check_node_string(set(itertools.chain(*ebunch)))
 
@@ -931,8 +931,6 @@ class BayesianModel(nx.DiGraph):
         Details of algorithm can be found in 'Probabilistic Graphical Model
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
-
-
         """
         observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_of(observed_list)
