@@ -3,7 +3,6 @@
 import networkx as nx
 import numpy as np
 import itertools
-from scipy import sparse
 from pgmpy import Exceptions
 from pgmpy.Factor import CPD
 
@@ -28,9 +27,6 @@ class BayesianModel(nx.DiGraph):
             Data to initialize graph.  If data=None (default) an empty
             graph is created.  The data can be an edge list, or any
             NetworkX graph object.
-
-        See Also
-        --------
 
         Examples
         --------
@@ -924,7 +920,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        is_active_trail(start, end)
+        is_active_trail
 
         References
         ----------
@@ -988,7 +984,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        active_trail_nodes('start')0
+        active_trail_nodes
         """
         if end in self.active_trail_nodes(start):
             return True
