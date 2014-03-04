@@ -23,6 +23,7 @@ pgmpy API Reference
       Nodes should be strings.
 
       Edges are represented as links between nodes.
+
       Parameters
       ----------
       data : input graph
@@ -76,3 +77,5 @@ pgmpy API Reference
       True
       >>> len(G)  # number of nodes in graph
       3
+
+   .. module:: pgmpy.Independencies
