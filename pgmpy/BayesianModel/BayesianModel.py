@@ -31,6 +31,7 @@ class BayesianModel(nx.DiGraph):
         Examples
         --------
         Create an empty bayesian model with no nodes and no edges.
+
         >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
 
