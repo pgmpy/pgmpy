@@ -901,14 +901,16 @@ class BayesianModel(nx.DiGraph):
 
     def active_trail_nodes(self, start):
         """
-        Returns all the nodes reachable from start via an active trail
+        Returns all the nodes reachable from start via an active trail.
 
         Parameters
         ----------
+
         start: Graph node
 
         Examples
-        -------
+        --------
+
         >>> from pgmpy import BayesianModel as bm
         >>> student = bm.BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
@@ -924,11 +926,12 @@ class BayesianModel(nx.DiGraph):
         --------
         is_active_trail(start, end)
 
-        -------------------------------------------------------------------
+        References
+        ----------
         Details of algorithm can be found in 'Probabilistic Graphical Model
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
-        -------------------------------------------------------------------
+
 
         """
         observed_list = self._get_observed_list()
