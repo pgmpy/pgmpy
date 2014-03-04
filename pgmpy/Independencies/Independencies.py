@@ -175,6 +175,14 @@ class IndependenceAssertion:
         """
         Sets the attributes event1, event2 and event3.
 
+        .. math:: U \perp X, Y | Z
+
+        event1 = {U}
+
+        event2 = {X, Y}
+
+        event3 = {Z}
+        
         Parameters
         ----------
         event1: String or List
