@@ -1,4 +1,0 @@
-networkx==1.8.1
-numpy==1.7.1
-scipy==0.12.1
-cython==0.19
