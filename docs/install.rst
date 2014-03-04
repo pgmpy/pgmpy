@@ -21,11 +21,11 @@ You can install all these requirements by issuing ::
 
 .. note::
 
-    In order to build the documentation you will need sphinx::
+    In order to build the documentation you will need sphinx ::
 
         $ sudo pip3 install sphinx
 
-    In order to run tests you will need nose::
+    In order to run tests you will need nose ::
 
         $ sudo pip3 install nose
 
