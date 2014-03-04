@@ -19,3 +19,14 @@ Factor module
 
 .. autoclass:: Factor
    :members:
+
+Independencies module
+---------------------
+
+.. module:: pgmpy.Independencies
+
+.. autoclass:: Independencies
+   :members:
+
+.. autoclass:: IndependenceAssertion
+   :members:
