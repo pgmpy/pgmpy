@@ -1,4 +1,4 @@
-WIKI
+Wiki
 ====
 
 GSoC 2014 Ideas
