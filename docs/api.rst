@@ -20,6 +20,11 @@ Factor module
 .. autoclass:: Factor
    :members:
 
+.. module:: pgmpy.Factor.CPD
+
+.. autoclass:: TabularCPD
+   :members:
+
 Independencies module
 ---------------------
 
@@ -30,3 +35,4 @@ Independencies module
 
 .. autoclass:: IndependenceAssertion
    :members:
+   
