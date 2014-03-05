@@ -1,8 +1,9 @@
-PgmPy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
+PgmPy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/pgmpy/pgmpy/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 =====
 
 Python Library for Probabilistic Graphical Models  
-Mailing List: pgmpy@googlegroups.com
+Mailing List: pgmpy@googlegroups.com  
+irc: #pgmpy on freenode.net
 
 Dependencies:
 =============
@@ -29,9 +30,8 @@ student = bm.BayesianModel()
 student.add_nodes_from(['diff', 'intel', 'grade'])
 # adds nodes labelled 'diff', 'intel', 'grade' to student
 
-student.add_edges_from(['diff', 'grade'], ['intel', 'grade'])
+student.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
 # adds directed edges from 'diff' to 'grade' and 'intel' to 'grade'
-
 
 student.set_states({'diff': ['hard', 'easy']})
 student.set_rule_for_states('diff', ['easy', 'hard'])
@@ -46,9 +46,9 @@ student.set_cpd('intel', [[0.5], [0.3], [0.2]])
 #avg=0.3
 #smart=0.2
 
-student.set_states({'grades': ['A','C','B']})
-student.set_rule_for_parents('grades', ['diff', 'intel'])
-student.set_rule_for_states('grades', ['A', 'B', 'C'])
+student.set_states({'grade': ['A','C','B']})
+student.set_rule_for_parents('grade', ['diff', 'intel'])
+student.set_rule_for_states('grade', ['A', 'B', 'C'])
 student.set_cpd('grade',
                 [[0.1,0.1,0.1,0.1,0.1,0.1],
                 [0.1,0.1,0.1,0.1,0.1,0.1], 
@@ -61,11 +61,11 @@ student.set_cpd('grade',
 #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
 #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
 
-student.set_observation({'intel': 'smart', 'diff': 'easy'})
+student.set_observations({'intel': 'smart', 'diff': 'easy'})
 # observed parameters are that intel of student is smart and
 # difficulty is easy
 
-student.reset_observation('intel')
+student.reset_observations('intel')
 # reset observations for intel
 
 active_trail = student.is_active_trail('grade', 'intel')

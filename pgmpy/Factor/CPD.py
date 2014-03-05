@@ -8,6 +8,42 @@ from pgmpy import Exceptions
 
 class TabularCPD(Factor):
     """
+    Defines the conditional probability distribution table (cpd table)
+
+    Example
+    -------
+    For a distribution of P(grade|intel, diff)
+
+    +-------+--------------------+------------------+
+    |diff   |      easy          |    hard          |
+    +-------+-----+------+-------+------+----+------+
+    |intel  |dumb |  avg | smart | dumb |avg |smart |
+    +-------+-----+------+-------+------+----+------+
+    |gradeA |0.1  |  0.1 |  0.1  | 0.1  |0.1 | 0.1  |
+    +-------+-----+------+-------+------+----+------+
+    |gradeB |0.1  |  0.1 |  0.1  | 0.1  |0.1 | 0.1  |
+    +-------+-----+------+-------+------+----+------+
+    |gradeC |0.8  |  0.8 |  0.8  | 0.8  |0.8 | 0.8  |
+    +-------+-----+------+-------+------+----+------+
+
+    values should be
+    [[0.1,0.1,0.1,0.1,0.1,0.1],
+    [0.1,0.1,0.1,0.1,0.1,0.1],
+    [0.8,0.8,0.8,0.8,0.8,0.8]]
+
+    Parameters
+    ----------
+    event: string
+        event whose cpd table is defined
+    event_card: integer
+        cardinality of event
+    values: 2d array, 2d list
+        values of the cpd table
+    evidence: string, list-type
+        evidences(if any) w.r.t. which cpd is defined
+    evidence_card: integer, list-type
+        cardinality of evidences
+
     Public Methods
     --------------
     marginalize([variables_list])
@@ -16,38 +52,6 @@ class TabularCPD(Factor):
     """
     def __init__(self, event, event_card, values,
                  evidence=None, evidence_card=None):
-        """
-        Defines the conditional probability distribution table (cpd table)
-
-        Parameters
-        ----------
-        event: string
-            event whose cpd table is defined
-        event_card: integer
-            cardinality of event
-        values: 2d array, 2d list
-            values of the cpd table
-
-            example
-            for a distribution of P(grade|intel, diff)
-
-            diff:       easy                 hard
-            intel: dumb   avg   smart    dumb  avg   smart
-            gradeA: 0.1    0.1    0.1     0.1  0.1    0.1
-            gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
-            gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
-
-            values should be
-            [[0.1,0.1,0.1,0.1,0.1,0.1],
-            [0.1,0.1,0.1,0.1,0.1,0.1],
-            [0.8,0.8,0.8,0.8,0.8,0.8]]
-
-        evidence: string, list-type
-            evidences(if any) w.r.t. which cpd is defined
-        evidence_card: integer, list-type
-            cardinality of evidences
-
-        """
         if not isinstance(event, str):
             raise TypeError("Event must be a string")
         self.event = event
