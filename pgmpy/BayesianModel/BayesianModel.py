@@ -3,14 +3,12 @@
 import networkx as nx
 import numpy as np
 import itertools
-from scipy import sparse
 from pgmpy import Exceptions
 from pgmpy.Factor import CPD
 
 
 class BayesianModel(nx.DiGraph):
-    def __init__(self, ebunch=None):
-        """
+    """
         Base class for bayesian model.
 
         A BayesianModel stores nodes and edges with conditional probability
@@ -30,12 +28,10 @@ class BayesianModel(nx.DiGraph):
             graph is created.  The data can be an edge list, or any
             NetworkX graph object.
 
-        See Also
-        --------
-
         Examples
         --------
         Create an empty bayesian model with no nodes and no edges.
+
         >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
 
@@ -102,6 +98,7 @@ class BayesianModel(nx.DiGraph):
         is_active_trail('node1', 'node2')
         marginal_probability('node1')
         """
+    def __init__(self, ebunch=None):
         if ebunch is not None:
             self._check_node_string(set(itertools.chain(*ebunch)))
 
@@ -704,11 +701,17 @@ class BayesianModel(nx.DiGraph):
         ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
         ...             )
 
-        #diff:       easy                 hard
-        #intel: dumb   avg   smart    dumb  avg   smart
-        #gradeA: 0.1    0.1    0.1     0.1  0.1    0.1
-        #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
-        #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
+        +------+-----------------------+---------------------+
+        |diff: |          easy         |         hard        |
+        +------+------+------+---------+------+------+-------+
+        |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
+        +------+------+------+---------+------+------+-------+
+        |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+        +------+------+------+---------+------+------+-------+
+        |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+        +------+------+------+---------+------+------+-------+
+        |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
+        +------+------+------+---------+------+------+-------+
         """
         evidence = self.get_rule_for_parents(node)[::-1]
         evidence_card = [self.number_of_states(parent) for parent in evidence]
@@ -895,14 +898,16 @@ class BayesianModel(nx.DiGraph):
 
     def active_trail_nodes(self, start):
         """
-        Returns all the nodes reachable from start via an active trail
+        Returns all the nodes reachable from start via an active trail.
 
         Parameters
         ----------
+
         start: Graph node
 
         Examples
-        -------
+        --------
+
         >>> from pgmpy import BayesianModel as bm
         >>> student = bm.BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
@@ -916,14 +921,13 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        is_active_trail(start, end)
+        is_active_trail
 
-        -------------------------------------------------------------------
+        References
+        ----------
         Details of algorithm can be found in 'Probabilistic Graphical Model
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
-        -------------------------------------------------------------------
-
         """
         observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_of(observed_list)
@@ -981,7 +985,7 @@ class BayesianModel(nx.DiGraph):
 
         See Also
         --------
-        active_trail_nodes('start')0
+        active_trail_nodes
         """
         if end in self.active_trail_nodes(start):
             return True

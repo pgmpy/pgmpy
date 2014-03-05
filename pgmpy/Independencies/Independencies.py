@@ -4,6 +4,26 @@ class Independencies:
     Independencies class represents a set of Conditional Independence assertions (eg: "X is independent of Y given Z" where X, Y and Z
     are random variables) or Independence assertions (eg: "X is independent of Y" where X and Y
     are random variables).
+    Initialize the Independencies Class with Conditional Independence assertions or Independence assertions.
+
+    Parameters
+    ----------
+    assertions: Lists or Tuples
+            Each assertion is a list or tuple of the form: [event1, event2 and event3]
+            eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
+
+    Examples
+    --------
+    Creating an Independencies object with one independence assertion: Random Variable X is independent of Y
+
+    >>> independencies = Independencies(['X', 'Y'])
+
+    Creating an Independencies object with three conditional independence assertions:
+    First assertion is Random Variable X is independent of Y given Z.
+
+    >>> independencies = Independencies(['X', 'Y', 'Z'],
+    ...             ['a', ['b', 'c'], 'd'],
+    ...             ['l', ['m', 'n'], 'o'])
 
     Public Methods
     --------------
@@ -12,26 +32,6 @@ class Independencies:
     get_factorized_product
     """
     def __init__(self, *assertions):
-        """
-        Initialize the Independencies Class with Conditional Independence assertions or Independence assertions.
-
-        Parameters
-        ----------
-        assertions: Lists or Tuples
-                Each assertion is a list or tuple of the form: [event1, event2 and event3]
-                eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
-
-        Examples
-        --------
-        Creating an Independencies object with one independence assertion: Random Variable X is independent of Y
-        >>> independencies = Independencies(['X', 'Y'])
-
-        Creating an Independencies object with three conditional independence assertions:
-        First assertion is Random Variable X is independent of Y given Z.
-        >>> independencies = Independencies(['X', 'Y', 'Z'],
-        ...             ['a', ['b', 'c'], 'd'],
-        ...             ['l', ['m', 'n'], 'o'])
-        """
         self.independencies = set()
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
@@ -71,13 +71,13 @@ class Independencies:
 
     def get_factorized_product(self, random_variables=None, latex=False):
         #TODO: Write this whole function
-        """
-        The problem right now is that the factorized product for all
-        P(A, B, C), P(B, A, C) etc should be same but on solving normally
-        we get different results which have to be simplified to a simpler
-        form. How to do that ??? and also how to decide which is the most
-        simplified form???
-        """
+        #
+        #The problem right now is that the factorized product for all
+        #P(A, B, C), P(B, A, C) etc should be same but on solving normally
+        #we get different results which have to be simplified to a simpler
+        #form. How to do that ??? and also how to decide which is the most
+        #simplified form???
+        #
         pass
 
 
@@ -86,13 +86,36 @@ class IndependenceAssertion:
     Represents Conditional Independence or Independence assertion.
 
     Each assertion has 3 attributes: event1, event2, event3.
-    The attributes for (U || X, Y | Z) read as
-                         ---
-    Random Variable U is independent of X and Y given Z would be:
+    The attributes for
+
+    .. math:: U \perp X, Y | Z
+
+    is read as: Random Variable U is independent of X and Y given Z would be:
 
     event1 = {U}
+
     event2 = {X, Y}
+
     event3 = {Z}
+
+    Parameters
+    ----------
+    event1: String or List of strings
+            Random Variable which is independent.
+
+    event2: String or list of strings.
+            Random Variables from which event1 is independent
+
+    event3: String or list of strings.
+            Random Variables given which event1 is independent of event2.
+
+    Examples
+    --------
+    >>> assertion = IndependenceAssertion('U', 'X')
+    >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
+    >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
+    >>> assertion = IndependenceAssertion(['U', 'V'], ['X', 'Y'], ['Z', 'A'])
+
 
     Public Methods
     --------------
@@ -103,32 +126,13 @@ class IndependenceAssertion:
         """
         Initialize an IndependenceAssertion object with event1, event2 and event3 attributes.
 
-        Parameters
-        ----------
-
-                event2
+                  event2
                   ^
       event1     /   event3
          ^      /     ^
          |     /      |
         (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
           ---
-
-        event1: String or List of strings
-                Random Variable which is independent.
-
-        event2: String or list of strings.
-                Random Variables from which event1 is independent
-
-        event3: String or list of strings.
-                Random Variables given which event1 is independent of event2.
-
-        Examples
-        --------
-        >>> assertion = IndependenceAssertion('U', 'X')
-        >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
-        >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
-        >>> assertion = IndependenceAssertion(['U', 'V'], ['X', 'Y'], ['Z', 'A'])
         """
         if event1 and not event2:
             raise Exception.Needed('event2 needed')
@@ -171,17 +175,16 @@ class IndependenceAssertion:
         """
         Sets the attributes event1, event2 and event3.
 
+        .. math:: U \perp X, Y | Z
+
+        event1 = {U}
+
+        event2 = {X, Y}
+
+        event3 = {Z}
+        
         Parameters
         ----------
-
-               event2
-                  ^
-       event1    /   event3
-         ^      /     ^
-         |     /      |
-        (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
-          ---
-
         event1: String or List
                 Random Variable which is independent.
 

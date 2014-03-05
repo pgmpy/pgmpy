@@ -1,3 +1,4 @@
 from .BayesianModel import *
 
-__all__ = ['BayesianModel']
+__all__ = ['BayesianModel',
+           ]
