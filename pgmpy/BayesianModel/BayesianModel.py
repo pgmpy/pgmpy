@@ -620,6 +620,7 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_rule_for_parents'] = new_order
 
     def get_parents(self, node):
+        # TODO: Update docstrings
         """
         Returns a list of parents of node in order according to the rule
         set for parents.
@@ -734,7 +735,7 @@ class BayesianModel(nx.DiGraph):
             #TODO: ASCII art table
             pass
         else:
-            return self.node[node]['_cpd']
+            return self.node[node]['_cpd'].cpd
 
     def _change_state_observed(self, node, state, reset):
         """
