@@ -7,6 +7,7 @@
    :height: 220 px
    :width: 220 px
    :scale: 50 %
+   :align: center
 
 Welcome to pgmpy's documentation!
 =================================
