@@ -23,7 +23,6 @@ You can install all these requirements by issuing ::
    In order to build the documentation you will need :code:`sphinx` and to run the tests you will need :code:`nose` ::
 
        $ sudo pip3 install sphinx nose
-
 On Red Hat and clones (e.g CentOS), install the dependencies using::
 
     $ sudo yum -y install gcc gcc-c++ python3-devel python3-pip
