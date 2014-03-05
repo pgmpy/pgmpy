@@ -20,6 +20,7 @@ You can install all these requirements by issuing ::
     $ sudo pip3 install networkx numpy scipy cython
 
 .. note::
+
    In order to build the documentation you will need :code:`sphinx` and to run the tests you will need :code:`nose` ::
 
        $ sudo pip3 install sphinx nose

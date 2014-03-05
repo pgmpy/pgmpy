@@ -3,6 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: images/logo.jpeg
+   :height: 220 px
+   :width: 220 px
+   :scale: 50 %
+
 Welcome to pgmpy's documentation!
 =================================
 
