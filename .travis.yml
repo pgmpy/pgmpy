@@ -18,9 +18,9 @@ install:
     - "pip3 -q install cython"
     - "pip3 -q install networkx"
     - "pip3  install numpy --upgrade"
-    - "pip3  install scipy --upgrade"
+#    - "pip3  install scipy --upgrade"
     - "pip3 -q install nose"
-    - "sudo python3 setup.py install"
+    - "sudo python3 setup.py develop"
     - "pip3 -q install coveralls"
 script: nosetests3 --with-coverage --cover-package=pgmpy/pgmpy
 after_success:
