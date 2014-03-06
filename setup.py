@@ -49,7 +49,7 @@ setup(
     long_description=open("README.md").read(),
     install_requires=[
         "networkx >= 1.8.1",
-        "scipy >= 0.12.1",
+#        "scipy >= 0.12.1",
 #        "numpy >= 1.7.1",
         "nose >= 1.3.0",
         "coveralls >= 0.4"
