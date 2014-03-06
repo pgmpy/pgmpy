@@ -1,3 +1,6 @@
+from pgmpy import Exceptions
+
+
 class Independencies:
     """
     Base class for Independencies.
@@ -151,11 +154,11 @@ class IndependenceAssertion:
           ---
         """
         if event1 and not event2:
-            raise Exception.Needed('event2 needed')
+            raise Exceptions.RequiredError('event2 needed')
         if any([event2, event3]) and not event1:
-            raise Exception.Needed('variable')
+            raise Exceptions.RequiredError('event1')
         if event3 and not all([event1, event2]):
-            raise Exception.Needed('variable' if not variable else 'independent_of')
+            raise Exceptions.RequiredError('event1' if not event1 else 'event2')
 
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
