@@ -1,10 +1,13 @@
 #/usr/bin/env python3
+import ez_setup
+ez_setup.use_setuptools()
 
 USE_CYTHON = True
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from distutils.extension import Extension
 import numpy as np
+
 try:
     from Cython.Distutils import build_ext
 except ImportError:
@@ -27,13 +30,7 @@ else:
 
 setup(
     name="pgmpy",
-    packages=["pgmpy",
-              "pgmpy.BayesianModel",
-              "pgmpy.Exceptions",
-              "pgmpy.Factor",
-              "pgmpy.Independencies",
-              "pgmpy.MarkovModel",
-              "pgmpy.readwrite"],
+    packages=find_packages(exclude=['tests']),
     cmdclass=cmdclass,
     ext_modules=ext_modules,
     version="0.1.0",
