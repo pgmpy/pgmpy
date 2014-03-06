@@ -22,7 +22,7 @@ install:
     - "pip3 -q install nose"
     - "sudo python3 setup.py install"
     - "pip3 -q install coveralls"
-script: nosetests3 ../pgmpy/ --with-coverage --cover-package=pgmpy/pgmpy
+script: nosetests3 --with-coverage --cover-package=pgmpy/pgmpy
 after_success:
     coveralls
 notifications:
