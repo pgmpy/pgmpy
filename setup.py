@@ -4,7 +4,7 @@ USE_CYTHON = True
 
 from setuptools import setup
 from distutils.extension import Extension
-
+import numpy as np
 try:
     from Cython.Distutils import build_ext
 except ImportError:
@@ -54,5 +54,6 @@ setup(
         "networkx >= 1.8.1",
         "scipy >= 0.12.1",
         "numpy >= 1.7.1"
-    ]
+    ],
+    include_dirs = [np.get_include()]
 )
