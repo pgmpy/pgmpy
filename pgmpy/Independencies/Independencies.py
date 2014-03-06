@@ -34,7 +34,10 @@ class Independencies:
     def __init__(self, *assertions):
         self.independencies = set()
         for assertion in assertions:
-            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            try:
+                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            except IndexError:
+                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
     def get_independencies(self):
         """
