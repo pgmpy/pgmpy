@@ -4,26 +4,26 @@ USE_CYTHON = True
 
 from setuptools import setup
 from distutils.extension import Extension
-from Cython.Build import cythonize
 
 try:
     from Cython.Distutils import build_ext
 except ImportError:
     USE_CYTHON = False
 
-ext_modules = cythonize('pgmpy/Factor/_factor_product.pyx')
-cmdclass = {'build_ext': build_ext}
+ext_modules = []
+cmdclass = {}
 
 if USE_CYTHON:
     ext_modules.extend([
         Extension("pgmpy.Factor._factor_product",
                   ["pgmpy/Factor/_factor_product.pyx"])
     ])
+    cmdclass.update({'build_ext': build_ext})
 else:
-    ext_modules.append(
+    ext_modules.extend([
         Extension("pgmpy.Factor._factor_product",
                   ["pgmpy/Factor/_factor_product.c"])
-    )
+    ])
 
 setup(
     name="pgmpy",
@@ -33,8 +33,7 @@ setup(
               "pgmpy.Factor",
               "pgmpy.Independencies",
               "pgmpy.MarkovModel",
-#              "pgmpy.readwrite"
-            ],
+              "pgmpy.readwrite"],
     cmdclass=cmdclass,
     ext_modules=ext_modules,
     version="0.1.0",
@@ -51,9 +50,9 @@ setup(
         "Topic :: Scientific/Engineering"
     ],
     long_description=open("README.md").read(),
-#    install_requires=[
-#        "networkx >= 1.8.1",
-#        "scipy >= 0.12.1",
-#        "numpy >= 1.7.1"
-#    ]
+    install_requires=[
+        "networkx >= 1.8.1",
+        "scipy >= 0.12.1",
+        "numpy >= 1.7.1"
+    ]
 )
