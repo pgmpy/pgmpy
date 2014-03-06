@@ -152,7 +152,7 @@ def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
         yield line
 
 
-@open_file(1, mode='wb')
+#@open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     """
     Write model in ProbModelXML format to path.
@@ -179,7 +179,7 @@ def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     writer.dump(path)
 
 
-@open_file(0, mode='rb')
+#@open_file(0, mode='rb')
 def read_probmodelxml(path):
     """
     Read model in ProbModelXML format from path.

@@ -1,3 +1,6 @@
+from pgmpy import Exceptions
+
+
 class Independencies:
     """
     Base class for Independencies.
@@ -34,7 +37,10 @@ class Independencies:
     def __init__(self, *assertions):
         self.independencies = set()
         for assertion in assertions:
-            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            try:
+                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            except IndexError:
+                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
     def get_independencies(self):
         """
@@ -68,6 +74,19 @@ class Independencies:
         """
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+
+    def reduce(self):
+        """
+        Add function to remove duplicate Independence Assertions
+        """
+        pass
+
+    def latex_string(self):
+        """
+        Returns a list of string.
+        Each string represents the IndependenceAssertion in latex.
+        """
+        return [assertion.latex_string() for assertion in self.get_independencies()]
 
     def get_factorized_product(self, random_variables=None, latex=False):
         #TODO: Write this whole function
@@ -135,11 +154,11 @@ class IndependenceAssertion:
           ---
         """
         if event1 and not event2:
-            raise Exception.Needed('event2 needed')
+            raise Exceptions.RequiredError('event2 needed')
         if any([event2, event3]) and not event1:
-            raise Exception.Needed('variable')
+            raise Exceptions.RequiredError('event1')
         if event3 and not all([event1, event2]):
-            raise Exception.Needed('variable' if not variable else 'independent_of')
+            raise Exceptions.RequiredError('event1' if not event1 else 'event2')
 
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
@@ -206,3 +225,6 @@ class IndependenceAssertion:
         >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
         """
         self.__init__(event1, event2, event3)
+
+    def latex_string(self):
+        return ', '.join(self.event1) + ' \perp ' + ', '.join(self.event2) + ' \mid ' + ', '.join(self.event3)

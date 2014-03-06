@@ -617,6 +617,7 @@ class BayesianModel(nx.DiGraph):
             self.node[node]['_rule_for_parents'] = new_order
 
     def get_parents(self, node):
+        # TODO: Update docstrings
         """
         Returns a list of parents of node in order according to the rule
         set for parents.
@@ -737,7 +738,7 @@ class BayesianModel(nx.DiGraph):
             #TODO: ASCII art table
             pass
         else:
-            return self.node[node]['_cpd']
+            return self.node[node]['_cpd'].cpd
 
     def _change_state_observed(self, node, state, reset):
         """
@@ -896,7 +897,7 @@ class BayesianModel(nx.DiGraph):
         return [node for node in self.nodes()
                 if self.node[node]['_observed']]
 
-    def active_trail_nodes(self, start):
+    def active_trail_nodes(self, start, observed=None, additional_observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
 
@@ -904,6 +905,13 @@ class BayesianModel(nx.DiGraph):
         ----------
 
         start: Graph node
+
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computer assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
 
         Examples
         --------
@@ -929,7 +937,12 @@ class BayesianModel(nx.DiGraph):
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
         """
-        observed_list = self._get_observed_list()
+        if not observed:
+            observed_list = [observed] if isinstance(observed, str) else observed
+        elif not additional_observed:
+            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
+        else:
+            observed_list = self._get_observed_list()
         ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
@@ -960,7 +973,7 @@ class BayesianModel(nx.DiGraph):
                             visit_list.add((parent, 'up'))
         return active_nodes
 
-    def is_active_trail(self, start, end):
+    def is_active_trail(self, start, end, observed=None, additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
 
@@ -969,6 +982,13 @@ class BayesianModel(nx.DiGraph):
         start : Graph Node
 
         end : Graph Node
+
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computer assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
 
         Examples
         --------
@@ -987,7 +1007,7 @@ class BayesianModel(nx.DiGraph):
         --------
         active_trail_nodes
         """
-        if end in self.active_trail_nodes(start):
+        if end in self.active_trail_nodes(start, observed, additional_observed):
             return True
         else:
             return False
@@ -997,14 +1017,54 @@ class BayesianModel(nx.DiGraph):
         Checks the model for various errors. This method checks for the following errors:
         1. Checks if the sum of probabilities for each state is equal to 1. Tolerance for sum = 0.01.
         """
+        #TODO: Add tests
         for node in self.nodes():
             cpd = self.get_cpd(node)
             if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
                 raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
 
     def get_independencies(self, latex=False):
-        pass
+        import pgmpy.BayesianModel.Independencies as Independencies
+        from copy import deepcopy
+
+        independencies = Independencies.Independencies()
+        ######### Incase changes to is_active_trail and active_trail_nodes is reverted back ##########
+        ######### Then make a deepcopy of self and operate on it ######################
+        # model_copy = deepcopy(self)
+        #
+        # def set_observed(model_copy, nodes):
+        #     """
+        #     nodes --> list or tuple
+        #     sets nodes' observed values to True
+        #     """
+        #     for node in nodes:
+        #         model_copy.node[node]['_observed'] = True
+        #
+        # def reset_observed(model_copy):
+        #     for node in model_copy.nodes():
+        #         model_copy.node[node]['_observed'] = False
+
+        for start in (self.nodes()):
+            for r in (1, len(self.nodes())):
+                for observed in itertools.combinations(self.nodes(), r):
+                    independent_variables = self.active_trail_nodes(start, observed=observed)
+                    if independent_variables:
+                        independencies.add_assertions(start, independent_variables, observed)
+
+        independencies.reduce()
+
+        if not latex:
+            return independencies
+        else:
+            return independencies.latex_string()
 
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
+
+    def is_iequivalent(self, model):
+        pass
+
+    def is_imap(self, independence):
+        pass
+
