@@ -798,7 +798,7 @@ class BayesianModel(nx.DiGraph):
     def reset_observations(self, nodes=None):
         """
         Resets observed-status of given nodes. Will not change a particular
-        state. For that use, _change_state_observed with reset=True.
+        state. For that use, add_observations with reset=True.
 
         If no arguments are given, all states of all nodes are reset.
 
@@ -910,7 +910,7 @@ class BayesianModel(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computed  assuming these nodes to be observed along with
+            If given the active trail would be computer assuming these nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples
@@ -943,11 +943,7 @@ class BayesianModel(nx.DiGraph):
             observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
         else:
             observed_list = self._get_observed_list()
-        if observed_list:
-            ancestors_list = self._get_ancestors_of(observed_list)
-        else:
-            observed_list = []
-            ancestors_list = []
+        ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -991,7 +987,7 @@ class BayesianModel(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
+            If given the active trail would be computer assuming these nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples
