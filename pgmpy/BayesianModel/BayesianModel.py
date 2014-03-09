@@ -943,7 +943,11 @@ class BayesianModel(nx.DiGraph):
             observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
         else:
             observed_list = self._get_observed_list()
-        ancestors_list = self._get_ancestors_of(observed_list)
+        if observed_list:
+            ancestors_list = self._get_ancestors_of(observed_list)
+        else:
+            observed_list = []
+            ancestors_list = []
 
         # Direction of flow of information
         # up ->  from parent to child
