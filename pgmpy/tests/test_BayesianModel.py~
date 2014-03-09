@@ -390,13 +390,13 @@ class TestBayesianModelCPD(unittest.TestCase):
 
     def test_active_trail_nodes(self):
         self.G.set_observations({'d': 'hard'})
-        self.assertSetEqual(set(self.G.active_trail_nodes('d')), set(['d', 'g', 'l']))
+        self.assertSetEqual(set(self.G.active_trail_nodes('l')), set(['d', 'g', 'l']))
 
     def test_is_active_trail(self):
         self.G.set_observations({'d': 'easy'})
         self.assertTrue(self.G.is_active_trail('d', 'g'))
         self.assertTrue(self.G.is_active_trail('d', 'l'))
-        self.assertFalse(self.G.is_active_trail('d', 'i'))
+        self.assertFalse(self.G.is_active_trail('s', 'i'))
         
 
     def tearDown(self):
