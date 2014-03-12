@@ -2,6 +2,7 @@ PgmPy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci
 =====
 
 Python Library for Probabilistic Graphical Models  
+Documentation: [pgmpy](http://pgmpy.readthedocs.org/en/latest/)  
 Mailing List: pgmpy@googlegroups.com  
 irc: #pgmpy on freenode.net
 
