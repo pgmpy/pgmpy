@@ -14,7 +14,7 @@ class BayesianModel(nx.DiGraph):
         A BayesianModel stores nodes and edges with conditional probability
         distribution (cpd) and other attributes.
 
-        BayesianModel hold directed edges.  Self loops are not allowed neither
+        BayesianModel holds directed edges.  Self loops are not allowed neither
         multiple (parallel) edges.
 
         Nodes should be strings.
@@ -26,7 +26,7 @@ class BayesianModel(nx.DiGraph):
         data : input graph
             Data to initialize graph.  If data=None (default) an empty
             graph is created.  The data can be an edge list, or any
-            NetworkX graph object.
+            NetworkX DiGraph object.
 
         Examples
         --------
@@ -81,7 +81,7 @@ class BayesianModel(nx.DiGraph):
         add_edges_from([('node1', 'node2'),('node3', 'node4')])
         set_states({node : [state1, state2]})
         get_states('node1')
-        number_of_state('node1')
+        number_of_states('node1')
         get_rule_for_states('node1')
         set_rule_for_states({'node1': ['state2', 'state1', ...]})
         get_rule_for_parents('node1')
@@ -180,13 +180,13 @@ class BayesianModel(nx.DiGraph):
 
         EXAMPLE
         -------
-        >>> from pgmpy import BayesianModel as bm/home/abinash/software_packages/numpy-1.7.1
+        >>> from pgmpy import BayesianModel as bm
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
         """
-        #string check required because if nodes not present networkx
-        #automatically adds those nodes
+        # string check required because if nodes not present networkx
+        # automatically adds those nodes
         self._check_node_string([u, v])
         if self._check_graph([(u, v)], delete_graph=False):
             nx.DiGraph.add_edge(self, u, v)
