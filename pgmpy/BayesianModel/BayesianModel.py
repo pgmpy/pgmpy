@@ -937,9 +937,9 @@ class BayesianModel(nx.DiGraph):
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
         """
-        if not observed:
+        if observed:
             observed_list = [observed] if isinstance(observed, str) else observed
-        elif not additional_observed:
+        elif additional_observed:
             observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
         else:
             observed_list = self._get_observed_list()
