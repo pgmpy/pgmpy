@@ -946,8 +946,8 @@ class BayesianModel(nx.DiGraph):
         ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
+        # up ->  from child to parent
+        # down -> from parent to child
 
         visit_list = set()
         visit_list.add((start, 'up'))
@@ -1007,10 +1007,51 @@ class BayesianModel(nx.DiGraph):
         --------
         active_trail_nodes
         """
+        """
+        Previous code ----
         if end in self.active_trail_nodes(start, observed, additional_observed):
             return True
         else:
             return False
+        """
+        if observed:
+            observed_list = [observed] if isinstance(observed, str) else observed
+        elif additional_observed:
+            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
+        else:
+            observed_list = self._get_observed_list()
+        ancestors_list = self._get_ancestors_of(observed_list)
+
+        # Direction of flow of information
+        # up ->  from child to parent
+        # down -> from parent to child
+
+        visit_list = set()
+        visit_list.add((start, 'up'))
+        traversed_list = set()
+        active_nodes = set()
+        ret_value = False
+        while visit_list:
+            node, direction = visit_list.pop()
+            if (node, direction) not in traversed_list:
+                if node not in observed_list:
+                    if node == end:
+                       ret_value = True
+                       break
+                traversed_list.add((node, direction))
+                if direction == 'up' and node not in observed_list:
+                    for parent in self.predecessors(node):
+                        visit_list.add((parent, 'up'))
+                    for child in self.successors(node):
+                        visit_list.add((child, 'down'))
+                elif direction == 'down':
+                    if node not in observed_list:
+                        for child in self.successors(node):
+                            visit_list.add((child, 'down'))
+                    if node in ancestors_list:
+                        for parent in self.predecessors(node):
+                            visit_list.add((parent, 'up'))
+        return ret_value
 
     def check_model(self):
         """
