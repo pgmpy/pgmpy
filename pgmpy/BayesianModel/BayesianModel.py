@@ -1082,10 +1082,40 @@ class BayesianModel(nx.DiGraph):
 
     def is_iequivalent(self, model):
         """
+        Returns True if the two models are I-equivalent. 
+        Note that the function doesn't check for graph isomorphism and
+        assumes that the node-name is same
+
+        Parameters
+        ----------
+        model : The other graph with which comparison is done
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> base = bm.BayesianModel()
+        >>> base.add_nodes_from(['diff', 'intel', 'grade'])
+        >>> student = base.copy()
+        >>> st1 = base.copy()
+        >>> st2= base.copy()
+        >>> student.add_edges_from([('diff', 'grade') ,('intel', 'grade')])
+        >>> st1.add_edges_from([('diff', 'grade') ,('grade', 'intel')])
+        >>> student.is_iequivalent(st1)
+        False
+        >>> st2.add_edges_from([('grade', 'diff') ,('intel', 'grade')])
+        >>> st2.is_iequivalent(st1)
+        True
+        
+        References
+        ----------
         The algorithm for checking if two models are equivalent is to
         first check if the two models have the same skeleton. If they have the 
         same skeleton , then we need to check their set immoralities. If the set 
         immoralities are also same, then the two models arr equivalent,
+        """
+        """Assumption : The node names are same in both the graphs ,,
+        this method doesn't really check for graph isomorphism.
+        That is an open problem in any case :p
         """
         #TODO: add test cases
         node1=self.nodes()[0]
@@ -1100,7 +1130,7 @@ class BayesianModel(nx.DiGraph):
            if node in visited_list:
               continue
            visited_list.add(node)
-           print("working with ", node)
+           #print("working with ", node)
            pred1 = self.predecessors(node)
            succ1 = self.successors(node)
            pred2 = model.predecessors(node)
@@ -1115,7 +1145,7 @@ class BayesianModel(nx.DiGraph):
            nbr2.update(pred2)
            nbr2.update(succ2)
            if not nbr1 == nbr2:
-              print ("Neighbour set not equal")
+              print ("Neighbour set of the node "+node+" not equal")
               flag=True
               break
            " Adding the nbrs to the tree "
@@ -1139,9 +1169,9 @@ class BayesianModel(nx.DiGraph):
                     else:
                        imm2.add((pred2[j],pred2[i]))
            if not (imm1==imm2):
-              print (imm1)
-              print (imm2)
-              print ("Immoralities not same")
+              #print (imm1)
+              #print (imm2)
+              print ("Immoralities at "+node+" are not same")
               flag=True
               break
         """Done with the loop"""
@@ -1150,11 +1180,6 @@ class BayesianModel(nx.DiGraph):
            return True
         else:
            return False
-              
-
-           
-
-
 
     def is_imap(self, independence):
         pass
