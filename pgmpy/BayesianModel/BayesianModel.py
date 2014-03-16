@@ -931,51 +931,14 @@ class BayesianModel(nx.DiGraph):
         --------
         is_active_trail
 
-        References
-        ----------
-        Details of algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
         """
-        if observed:
-            observed_list = [observed] if isinstance(observed, str) else observed
-        elif additional_observed:
-            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
-        else:
-            observed_list = self._get_observed_list()
-        ancestors_list = self._get_ancestors_of(observed_list)
+        return self.is_active_trail(start,None,observed,additional_observed)
 
-        # Direction of flow of information
-        # up ->  from child to parent
-        # down -> from parent to child
-
-        visit_list = set()
-        visit_list.add((start, 'up'))
-        traversed_list = set()
-        active_nodes = set()
-        while visit_list:
-            node, direction = visit_list.pop()
-            if (node, direction) not in traversed_list:
-                if node not in observed_list:
-                    active_nodes.add(node)
-                traversed_list.add((node, direction))
-                if direction == 'up' and node not in observed_list:
-                    for parent in self.predecessors(node):
-                        visit_list.add((parent, 'up'))
-                    for child in self.successors(node):
-                        visit_list.add((child, 'down'))
-                elif direction == 'down':
-                    if node not in observed_list:
-                        for child in self.successors(node):
-                            visit_list.add((child, 'down'))
-                    if node in ancestors_list:
-                        for parent in self.predecessors(node):
-                            visit_list.add((parent, 'up'))
-        return active_nodes
-
-    def is_active_trail(self, start, end, observed=None, additional_observed=None):
+        
+    def is_active_trail(self, start, end=None, observed=None, additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
+        Returns a set of all the nodes reachable from start via an active trail if end == None
 
         Parameters
         ----------
@@ -1002,13 +965,21 @@ class BayesianModel(nx.DiGraph):
         >>> student.set_observations({'grades': 'A'})
         >>> student.is_active_trail('diff', 'intel')
         True
+        >>> student.is_active_trail('diff')
+        ['diff', 'intel']
 
         See Also
         --------
         active_trail_nodes
+        
+        References
+        ----------
+        Details of algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
         """
         """
-        Previous code ----
+        Previous code
         if end in self.active_trail_nodes(start, observed, additional_observed):
             return True
         else:
@@ -1035,7 +1006,9 @@ class BayesianModel(nx.DiGraph):
             node, direction = visit_list.pop()
             if (node, direction) not in traversed_list:
                 if node not in observed_list:
-                    if node == end:
+                    if end == None:
+                       active_nodes.add(node)
+                    elif node == end:
                        ret_value = True
                        break
                 traversed_list.add((node, direction))
@@ -1051,7 +1024,11 @@ class BayesianModel(nx.DiGraph):
                     if node in ancestors_list:
                         for parent in self.predecessors(node):
                             visit_list.add((parent, 'up'))
-        return ret_value
+        if end==None:
+            return active_nodes
+        else:
+            return ret_value
+
 
     def check_model(self):
         """
@@ -1104,7 +1081,80 @@ class BayesianModel(nx.DiGraph):
         pass
 
     def is_iequivalent(self, model):
-        pass
+        """
+        The algorithm for checking if two models are equivalent is to
+        first check if the two models have the same skeleton. If they have the 
+        same skeleton , then we need to check their set immoralities. If the set 
+        immoralities are also same, then the two models arr equivalent,
+        """
+        #TODO: add test cases
+        node1=self.nodes()[0]
+        if node1 not in model.nodes():
+           return False
+        visited_list=set()
+        dfs_list = set()
+        dfs_list.add(node1)
+        flag=False
+        while dfs_list:
+           node = dfs_list.pop()
+           if node in visited_list:
+              continue
+           visited_list.add(node)
+           print("working with ", node)
+           pred1 = self.predecessors(node)
+           succ1 = self.successors(node)
+           pred2 = model.predecessors(node)
+           succ2 = model.successors(node)
+           " Need to check if the neighbour set is same "
+           " So take all neighbours, add them to a set and check if the two are same "
+           " O(size of neighbour set) operation because of using sets "
+           nbr1 = set()
+           nbr1.update(pred1)
+           nbr1.update(succ1)
+           nbr2 = set()
+           nbr2.update(pred2)
+           nbr2.update(succ2)
+           if not nbr1 == nbr2:
+              print ("Neighbour set not equal")
+              flag=True
+              break
+           " Adding the nbrs to the tree "
+           dfs_list.update(nbr1)
+           " Identifying immoralities in the two models"
+
+           imm1 = set()
+           imm2 = set()
+           for i in range(len(pred1)):
+              for j in range(i+1,len(pred1)):
+                 if not self.has_edge(pred1[i],pred1[j]):
+                    if pred1[i]<pred1[j]:
+                       imm1.add((pred1[i],pred1[j]))
+                    else:
+                       imm1.add((pred1[j],pred1[i]))
+           for i in range(len(pred2)):
+              for j in range(i+1,len(pred2)):
+                 if not self.has_edge(pred2[i],pred2[j]):
+                    if pred2[i]<pred2[j]:
+                       imm2.add((pred2[i],pred2[j]))
+                    else:
+                       imm2.add((pred2[j],pred2[i]))
+           if not (imm1==imm2):
+              print (imm1)
+              print (imm2)
+              print ("Immoralities not same")
+              flag=True
+              break
+        """Done with the loop"""
+        " If flag = false still then the graphs are same else not"
+        if(flag==False):
+           return True
+        else:
+           return False
+              
+
+           
+
+
 
     def is_imap(self, independence):
         pass
