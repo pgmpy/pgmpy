@@ -1079,6 +1079,22 @@ class BayesianModel(nx.DiGraph):
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
+ 
+    def _findImm(self, nodes):
+      """
+      Returns the immoralities centred at a node X when all the predecessors of X
+      are given in nodes. So just check for every pair in nodes if they have an edge 
+      in between. If not, then it is an immorality centred at X
+      """
+      imm1 = set()
+      for i in range(len(nodes)):
+         for j in range(i+1,len(nodes)):
+            if not self.has_edge(nodes[i],nodes[j]):
+               if nodes[i]<nodes[j]:
+                  imm1.add((nodes[i],nodes[j]))
+               else:
+                  imm1.add((nodes[j],nodes[i]))
+      return imm1
 
     def is_iequivalent(self, model):
         """
@@ -1088,7 +1104,8 @@ class BayesianModel(nx.DiGraph):
 
         Parameters
         ----------
-        model : The other graph with which comparison is done
+        model : graph
+           The other graph with which comparison is done
 
         Examples
         --------
@@ -1097,7 +1114,7 @@ class BayesianModel(nx.DiGraph):
         >>> base.add_nodes_from(['diff', 'intel', 'grade'])
         >>> student = base.copy()
         >>> st1 = base.copy()
-        >>> st2= base.copy()
+        >>> st2 = base.copy()
         >>> student.add_edges_from([('diff', 'grade') ,('intel', 'grade')])
         >>> st1.add_edges_from([('diff', 'grade') ,('grade', 'intel')])
         >>> student.is_iequivalent(st1)
@@ -1112,8 +1129,10 @@ class BayesianModel(nx.DiGraph):
         first check if the two models have the same skeleton. If they have the 
         same skeleton , then we need to check their set immoralities. If the set 
         immoralities are also same, then the two models arr equivalent,
-        """
-        """Assumption : The node names are same in both the graphs ,,
+
+        Assumption 
+        ----------
+        The node names are same in both the graphs ,,
         this method doesn't really check for graph isomorphism.
         That is an open problem in any case :p
         """
@@ -1122,8 +1141,7 @@ class BayesianModel(nx.DiGraph):
         if node1 not in model.nodes():
            return False
         visited_list=set()
-        dfs_list = set()
-        dfs_list.add(node1)
+        dfs_list = {node1}
         flag=False
         while dfs_list:
            node = dfs_list.pop()
@@ -1138,12 +1156,8 @@ class BayesianModel(nx.DiGraph):
            " Need to check if the neighbour set is same "
            " So take all neighbours, add them to a set and check if the two are same "
            " O(size of neighbour set) operation because of using sets "
-           nbr1 = set()
-           nbr1.update(pred1)
-           nbr1.update(succ1)
-           nbr2 = set()
-           nbr2.update(pred2)
-           nbr2.update(succ2)
+           nbr1 = set(pred1) | set(succ1)
+           nbr2 = set(pred2) | set(succ2)
            if not nbr1 == nbr2:
               print ("Neighbour set of the node "+node+" not equal")
               flag=True
@@ -1152,29 +1166,15 @@ class BayesianModel(nx.DiGraph):
            dfs_list.update(nbr1)
            " Identifying immoralities in the two models"
 
-           imm1 = set()
-           imm2 = set()
-           for i in range(len(pred1)):
-              for j in range(i+1,len(pred1)):
-                 if not self.has_edge(pred1[i],pred1[j]):
-                    if pred1[i]<pred1[j]:
-                       imm1.add((pred1[i],pred1[j]))
-                    else:
-                       imm1.add((pred1[j],pred1[i]))
-           for i in range(len(pred2)):
-              for j in range(i+1,len(pred2)):
-                 if not self.has_edge(pred2[i],pred2[j]):
-                    if pred2[i]<pred2[j]:
-                       imm2.add((pred2[i],pred2[j]))
-                    else:
-                       imm2.add((pred2[j],pred2[i]))
+           imm1 = self._findImm(pred1)
+           imm2 = self._findImm(pred2)
            if not (imm1==imm2):
               #print (imm1)
               #print (imm2)
               print ("Immoralities at "+node+" are not same")
               flag=True
               break
-        """Done with the loop"""
+        "Done with the loop"
         " If flag = false still then the graphs are same else not"
         if(flag==False):
            return True
