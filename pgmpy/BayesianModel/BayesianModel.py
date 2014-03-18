@@ -1086,15 +1086,15 @@ class BayesianModel(nx.DiGraph):
       are given in nodes. So just check for every pair in nodes if they have an edge 
       in between. If not, then it is an immorality centred at X
       """
-      imm1 = set()
+      immoralities1 = set()
       for i in range(len(nodes)):
          for j in range(i+1,len(nodes)):
             if not self.has_edge(nodes[i],nodes[j]):
                if nodes[i]<nodes[j]:
-                  imm1.add((nodes[i],nodes[j]))
+                  immoralities1.add((nodes[i],nodes[j]))
                else:
-                  imm1.add((nodes[j],nodes[i]))
-      return imm1
+                  immoralities1.add((nodes[j],nodes[i]))
+      return immoralities1
 
     def is_iequivalent(self, model):
         """
@@ -1149,15 +1149,15 @@ class BayesianModel(nx.DiGraph):
               continue
            visited_list.add(node)
            #print("working with ", node)
-           pred1 = self.predecessors(node)
-           succ1 = self.successors(node)
-           pred2 = model.predecessors(node)
-           succ2 = model.successors(node)
+           predecessors1 = self.predecessors(node)
+           sucessors1 = self.successors(node)
+           predecessors2 = model.predecessors(node)
+           sucessors2 = model.successors(node)
            " Need to check if the neighbour set is same "
            " So take all neighbours, add them to a set and check if the two are same "
            " O(size of neighbour set) operation because of using sets "
-           nbr1 = set(pred1) | set(succ1)
-           nbr2 = set(pred2) | set(succ2)
+           nbr1 = set(predecessors1) | set(sucessors1)
+           nbr2 = set(predecessors2) | set(sucessors2)
            if not nbr1 == nbr2:
               print ("Neighbour set of the node "+node+" not equal")
               flag=True
@@ -1166,11 +1166,11 @@ class BayesianModel(nx.DiGraph):
            dfs_list.update(nbr1)
            " Identifying immoralities in the two models"
 
-           imm1 = self._findImm(pred1)
-           imm2 = self._findImm(pred2)
-           if not (imm1==imm2):
-              #print (imm1)
-              #print (imm2)
+           immoralities1 = self._findImm(predecessors1)
+           immoralities2 = self._findImm(predecessors2)
+           if not (immoralities1==immoralities2):
+              #print (immoralities1)
+              #print (immoralities2)
               print ("Immoralities at "+node+" are not same")
               flag=True
               break
