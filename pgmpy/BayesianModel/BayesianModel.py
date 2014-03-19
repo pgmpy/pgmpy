@@ -1080,21 +1080,21 @@ class BayesianModel(nx.DiGraph):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
  
-    def _findImm(self, nodes):
-      """
-      Returns the immoralities centred at a node X when all the predecessors of X
-      are given in nodes. So just check for every pair in nodes if they have an edge 
-      in between. If not, then it is an immorality centred at X
-      """
-      immoralities1 = set()
-      for i in range(len(nodes)):
-         for j in range(i+1,len(nodes)):
-            if not self.has_edge(nodes[i],nodes[j]):
-               if nodes[i]<nodes[j]:
-                  immoralities1.add((nodes[i],nodes[j]))
-               else:
-                  immoralities1.add((nodes[j],nodes[i]))
-      return immoralities1
+    def _find_immoralities(self, nodes):
+        """
+        Returns the immoralities centred at a node X when all the predecessors of X
+        are given in nodes. So just check for every pair in nodes if they have an edge 
+        in between. If not, then it is an immorality centred at X
+        """
+        immoralities = set()
+        for i in range(len(nodes)):
+            for j in range(i+1,len(nodes)):
+                if not self.has_edge(nodes[i],nodes[j]):
+                    if nodes[i] < nodes[j]:
+                        immoralities.add((nodes[i],nodes[j]))
+                    else:
+                        immoralities.add((nodes[j],nodes[i]))
+        return immoralities
 
     def is_iequivalent(self, model):
         """
@@ -1137,49 +1137,28 @@ class BayesianModel(nx.DiGraph):
         That is an open problem in any case :p
         """
         #TODO: add test cases
-        node1=self.nodes()[0]
-        if node1 not in model.nodes():
-           return False
-        visited_list=set()
-        dfs_list = {node1}
-        flag=False
+        if self.nodes()[0] not in model.nodes():
+            return False
+        visited_list = set()
+        dfs_list = {self.nodes()[0]}
+        flag = False
         while dfs_list:
-           node = dfs_list.pop()
-           if node in visited_list:
-              continue
-           visited_list.add(node)
-           #print("working with ", node)
-           predecessors1 = self.predecessors(node)
-           sucessors1 = self.successors(node)
-           predecessors2 = model.predecessors(node)
-           sucessors2 = model.successors(node)
-           " Need to check if the neighbour set is same "
-           " So take all neighbours, add them to a set and check if the two are same "
-           " O(size of neighbour set) operation because of using sets "
-           nbr1 = set(predecessors1) | set(sucessors1)
-           nbr2 = set(predecessors2) | set(sucessors2)
-           if not nbr1 == nbr2:
-              print ("Neighbour set of the node "+node+" not equal")
-              flag=True
-              break
-           " Adding the nbrs to the tree "
-           dfs_list.update(nbr1)
-           " Identifying immoralities in the two models"
+            node = dfs_list.pop()
+            if node in visited_list:
+                continue
+            visited_list.add(node)
+            if not set(self.predecessors(node) + self.successors(node)) == set(model.predecessors(node) + model.successors(node)):
+                print ("Neighbour set of the node " + node + " not equal")
+                flag = True
+                break
+ 
+            dfs_list.update(self.predecessors(node) + self.successors(node))
 
-           immoralities1 = self._findImm(predecessors1)
-           immoralities2 = self._findImm(predecessors2)
-           if not (immoralities1==immoralities2):
-              #print (immoralities1)
-              #print (immoralities2)
-              print ("Immoralities at "+node+" are not same")
-              flag=True
-              break
-        "Done with the loop"
-        " If flag = false still then the graphs are same else not"
-        if(flag==False):
-           return True
-        else:
-           return False
+            if not (self._find_immoralities(self.predecessors(node)) == model._find_immoralities(model.predecessors(node))):
+                print ("Immoralities at " + node + " are not same")
+                flag = True
+                break
+        return False if flag else True
 
     def is_imap(self, independence):
         pass
