@@ -97,3 +97,7 @@ class TestIndependencies(unittest.TestCase, IndependenciesTestCase):
 
     def tearUp(self):
         del self.Independencies
+
+
+if __name__ == '__main__':
+        unittest.main()
