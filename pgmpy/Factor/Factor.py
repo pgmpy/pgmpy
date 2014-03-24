@@ -68,9 +68,8 @@ class Factor:
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
-        num_elems = np.cumprod(self.cardinality)[-1]
         self.values = np.array(value, dtype=np.double)
-        if not self.values.shape[0] == num_elems:
+        if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
     def assignment(self, index):
