@@ -91,7 +91,7 @@ class Factor:
         """
         if not isinstance(index, np.ndarray):
             index = np.atleast_1d(index)
-        max_index = np.cumprod(self.cardinality)[-1] - 1
+        max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
         mat = np.floor(np.tile(np.atleast_2d(index).T,
