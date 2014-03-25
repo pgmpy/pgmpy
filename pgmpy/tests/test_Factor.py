@@ -83,7 +83,7 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce_sizeerror(self):
         self.assertRaises(Exceptions.SizeError, self.phi1.reduce, 'x3_5')
 
-    def factor_product(self):
+    def test_factor_product(self):
         from pgmpy import Factor
         phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
