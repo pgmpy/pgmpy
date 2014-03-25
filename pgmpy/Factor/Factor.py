@@ -208,8 +208,7 @@ class Factor:
             if not var in self.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
             index = list(self.variables.keys()).index(var)
-            value_index = int(value_index)
-            if not (value_index < self.cardinality[index]):
+            if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
             cum_cardinality = np.concatenate(([1],
@@ -291,10 +290,6 @@ def factor_product(*args):
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
-
-    See Also
-    --------
-    _bivar_factor_product
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
