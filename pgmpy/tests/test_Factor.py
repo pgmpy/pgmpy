@@ -1,6 +1,6 @@
 import unittest
 from pgmpy.Factor import Factor
-from pgmpy.tests import help_functions as hf
+import help_functions as hf
 from collections import OrderedDict
 import numpy.testing as np_test
 import numpy as np
