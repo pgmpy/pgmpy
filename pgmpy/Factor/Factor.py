@@ -208,8 +208,7 @@ class Factor:
             if not var in self.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
             index = list(self.variables.keys()).index(var)
-            value_index = int(value_index)
-            if not (value_index < self.cardinality[index]):
+            if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
             cum_cardinality = np.concatenate(([1],
