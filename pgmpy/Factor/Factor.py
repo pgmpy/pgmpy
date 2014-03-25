@@ -290,10 +290,6 @@ def factor_product(*args):
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
-
-    See Also
-    --------
-    _bivar_factor_product
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
