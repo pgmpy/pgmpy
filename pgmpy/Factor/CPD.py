@@ -46,9 +46,10 @@ class TabularCPD(Factor):
 
     Public Methods
     --------------
+    get_cpd()
     marginalize([variables_list])
-    reduce([values_list])
     normalize()
+    reduce([values_list])
     """
     def __init__(self, event, event_card, values,
                  evidence=None, evidence_card=None):
