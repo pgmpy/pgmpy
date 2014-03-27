@@ -175,3 +175,63 @@ class TestTabularCPDInit(unittest.TestCase):
                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]],
                           ['evi1', 'evi2'], [5, 6])
+
+
+class TestTabularCPDMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                           [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                           [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+                              evidence=['intel', 'diff'], evidence_card=[3, 2])
+
+    def test_marginalize_1(self):
+        self.cpd.marginalize('diff')
+        self.assertListEqual(self.cpd.evidence, ['intel'])
+        self.assertListEqual(self.cpd.evidence_card, [3])
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[0.2, 0.2, 0.2],
+                                                           [0.2, 0.2, 0.2],
+                                                           [1.6, 1.6, 1.6]]))
+
+    def test_marginalize_2(self):
+        self.cpd.marginalize('grade')
+        self.assertListEqual(self.cpd.evidence, ['intel', 'diff'])
+        self.assertListEqual(self.cpd.evidence_card, [3, 2])
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]))
+
+    def test_normalize(self):
+        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
+                                       ['intel', 'diff'], [2, 2])
+        cpd_un_normalized.normalize()
+        np_test.assert_array_almost_equal(cpd_un_normalized.cpd, np.array([[0.63636364, 0.33333333, 0.6, 0.2],
+                                                                           [0.36363636, 0.66666667, 0.4, 0.8]]))
+
+    def test_reduce_1(self):
+        self.cpd.reduce('diff_0')
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[0.1, 0.1, 0.1],
+                                                           [0.1, 0.1, 0.1],
+                                                           [0.8, 0.8, 0.8]]))
+
+    def test_reduce_2(self):
+        self.cpd.reduce('intel_0')
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[0.1, 0.1],
+                                                           [0.1, 0.1],
+                                                           [0.8, 0.8]]))
+
+    def test_reduce_3(self):
+        self.cpd.reduce(['intel_0', 'diff_0'])
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[0.1],
+                                                           [0.1],
+                                                           [0.8]]))
+
+    def test_reduce_4(self):
+        self.cpd.reduce('grade_0')
+        np_test.assert_array_equal(self.cpd.cpd, np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]]))
+
+    def test_get_cpd(self):
+        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+
+    def tearDown(self):
+        del self.cpd
