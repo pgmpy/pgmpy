@@ -987,7 +987,7 @@ class BayesianModel(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computer assuming these nodes to be observed along with
+            If given the active trail would be computed assuming these nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples
