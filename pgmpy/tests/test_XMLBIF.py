@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 
 
-class XMLBIFReaderMethods(unittest.TestCase):
+class TestXMLBIFReaderMethods(unittest.TestCase):
     def setUp(self):
         self.reader = XMLBIFReader("""
         <?xml version="1.0" encoding="US-ASCII"?>
