@@ -6,8 +6,7 @@ import numpy.testing as np_test
 
 class TestXMLBIFReaderMethods(unittest.TestCase):
     def setUp(self):
-        self.reader = XMLBIFReader("""
-        <?xml version="1.0" encoding="US-ASCII"?>
+        self.reader = XMLBIFReader(string="""
         <BIF VERSION="0.3">
         <NETWORK>
         <NAME>Dog-Problem</NAME>
@@ -114,7 +113,8 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                           ['bowel-problem', 'dog-out'],
                           ['family-out', 'light-on'],
                           ['dog-out', 'hear-bark']]
-        self.assertListEqual(self.reader.get_edges(), edges_expected)
+        self.assertListEqual(sorted(self.reader.get_edges()),
+                             sorted(edges_expected))
 
     def test_get_cpd(self):
         cpd_expected = {'bowel-problem': np.array([[0.01],
