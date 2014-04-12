@@ -132,5 +132,16 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             np_test.assert_array_equal(cpd_expected[variable],
                                        cpd[variable])
 
+    def test_get_property(self):
+        property_expected = {'bowel-problem': ['position = (190, 69)'],
+                             'dog-out': ['position = (155, 165)'],
+                             'family-out': ['position = (112, 69)'],
+                             'hear-bark': ['position = (154, 241)'],
+                             'light-on': ['position = (73, 165)']}
+        property = self.reader.get_property()
+        for variable in property_expected:
+            self.assertListEqual(property_expected[variable],
+                                 property[variable])
+
     def tearDown(self):
         del self.reader

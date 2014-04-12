@@ -32,7 +32,9 @@ class XMLBIFReader:
 
         Example
         -------
-        >>> reader = XMLBIFReader("sample.xml")
+        # xmlbif_test.xml is the file present in
+        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+        >>> reader = XMLBIFReader("xmlbif_test.xml")
         """
         if path:
             self.tree = etree.ElementTree(file=path)
@@ -45,6 +47,7 @@ class XMLBIFReader:
         self.variable_states = None
         self.variable_parents = None
         self.variable_CPD = None
+        self.variable_property = None
 
     def get_variables(self):
         """
@@ -52,8 +55,6 @@ class XMLBIFReader:
 
         Example
         -------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
@@ -70,8 +71,6 @@ class XMLBIFReader:
 
         Example
         -------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_edges()
         [['family-out', 'light-on'],
@@ -95,8 +94,6 @@ class XMLBIFReader:
 
         Example
         -------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_states()
         {'bowel-problem': ['true', 'false'],
@@ -118,8 +115,6 @@ class XMLBIFReader:
 
         Example
         -------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_parents()
         {'bowel-problem': [],
@@ -142,8 +137,6 @@ class XMLBIFReader:
 
         Example
         -------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_cpd()
         {'bowel-problem': array([[ 0.01],
@@ -172,3 +165,24 @@ class XMLBIFReader:
                                arr.size//len(self.variable_states[variable])))
             self.variable_CPD[variable] = arr
         return self.variable_CPD
+
+    def get_property(self):
+        """
+        Returns the property of the variable
+
+        Example
+        -------
+        >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
+        >>> reader.get_property()
+        {'bowel-problem': ['position = (190, 69)'],
+         'dog-out': ['position = (155, 165)'],
+         'family-out': ['position = (112, 69)'],
+         'hear-bark': ['position = (154, 241)'],
+         'light-on': ['position = (73, 165)']}
+        """
+        root = self.tree.getroot()
+        network = root.find('NETWORK')
+        self.variable_property = {variable.find('NAME').text:
+                                      [property.text for property in variable.findall('PROPERTY')]
+                                  for variable in network.findall('VARIABLE')}
+        return self.variable_property
