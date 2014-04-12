@@ -82,55 +82,55 @@ class XMLBIFReaderMethods(unittest.TestCase):
         </BIF>
         """)
 
-        def test_get_variables(self):
-            var_expected = ['light-on', 'bowel-problem', 'dog-out',
-                            'hear-bark', 'family-out']
-            self.assertListEqual(self.reader.get_variables(), var_expected)
+    def test_get_variables(self):
+        var_expected = ['light-on', 'bowel-problem', 'dog-out',
+                        'hear-bark', 'family-out']
+        self.assertListEqual(self.reader.get_variables(), var_expected)
 
-        def test_get_states(self):
-            states_expected = {'bowel-problem': ['true', 'false'],
-                               'dog-out': ['true', 'false'],
-                               'family-out': ['true', 'false'],
-                               'hear-bark': ['true', 'false'],
-                               'light-on': ['true', 'false']}
-            states = self.reader.get_states()
-            for variable in states_expected:
-                self.assertListEqual(states_expected[variable],
-                                     states[variable])
+    def test_get_states(self):
+        states_expected = {'bowel-problem': ['true', 'false'],
+                           'dog-out': ['true', 'false'],
+                           'family-out': ['true', 'false'],
+                           'hear-bark': ['true', 'false'],
+                           'light-on': ['true', 'false']}
+        states = self.reader.get_states()
+        for variable in states_expected:
+            self.assertListEqual(states_expected[variable],
+                                 states[variable])
 
-        def test_get_parents(self):
-            parents_expected = {'bowel-problem': [],
-                                'dog-out': ['family-out', 'bowel-problem'],
-                                'family-out': [],
-                                'hear-bark': ['dog-out'],
-                                'light-on': ['family-out']}
-            parents = self.reader.get_parents()
-            for variable in parents_expected:
-                self.assertListEqual(parents_expected[variable],
-                                     parents[variable])
+    def test_get_parents(self):
+        parents_expected = {'bowel-problem': [],
+                            'dog-out': ['family-out', 'bowel-problem'],
+                            'family-out': [],
+                            'hear-bark': ['dog-out'],
+                            'light-on': ['family-out']}
+        parents = self.reader.get_parents()
+        for variable in parents_expected:
+            self.assertListEqual(parents_expected[variable],
+                                 parents[variable])
 
-        def test_get_edges(self):
-            edges_expected = [['family-out', 'dog-out'],
-                              ['bowel-problem', 'dog-out'],
-                              ['family-out', 'light-on'],
-                              ['dog-out', 'hear-bark']]
-            self.assertListEqual(self.reader.get_edges(), edges_expected)
+    def test_get_edges(self):
+        edges_expected = [['family-out', 'dog-out'],
+                          ['bowel-problem', 'dog-out'],
+                          ['family-out', 'light-on'],
+                          ['dog-out', 'hear-bark']]
+        self.assertListEqual(self.reader.get_edges(), edges_expected)
 
-        def test_get_cpd(self):
-            cpd_expected = {'bowel-problem': np.array([[0.01],
-                                                       [0.99]]),
-                            'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
-                                                 [0.9, 0.1, 0.3, 0.7]]),
-                            'family-out': np.array([[0.15],
-                                                    [0.85]]),
-                            'hear-bark':  np.array([[0.7,  0.3],
-                                                    [0.01,  0.99]]),
-                            'light-on': np.array([[0.6,  0.4],
-                                                  [0.05,  0.95]])}
-            cpd = self.reader.get_cpd()
-            for variable in cpd_expected:
-                np_test.assert_array_equal(cpd_expected[variable],
-                                           cpd[variable])
+    def test_get_cpd(self):
+        cpd_expected = {'bowel-problem': np.array([[0.01],
+                                                   [0.99]]),
+                        'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
+                                             [0.9, 0.1, 0.3, 0.7]]),
+                        'family-out': np.array([[0.15],
+                                                [0.85]]),
+                        'hear-bark':  np.array([[0.7,  0.3],
+                                                [0.01,  0.99]]),
+                        'light-on': np.array([[0.6,  0.4],
+                                              [0.05,  0.95]])}
+        cpd = self.reader.get_cpd()
+        for variable in cpd_expected:
+            np_test.assert_array_equal(cpd_expected[variable],
+                                       cpd[variable])
 
-        def tearDown(self):
-            del self.reader
+    def tearDown(self):
+        del self.reader
