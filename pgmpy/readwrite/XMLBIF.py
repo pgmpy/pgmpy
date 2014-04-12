@@ -37,9 +37,9 @@ class XMLBIFReader:
         >>> reader = XMLBIFReader("xmlbif_test.xml")
         """
         if path:
-            self.tree = etree.ElementTree(file=path)
+            self.root = etree.ElementTree(file=path).getroot()
         elif string:
-            self.tree = etree.fromstring(string)
+            self.root = etree.fromstring(string)
         else:
             raise ValueError("Must specify either path or string")
         self.variables = None
@@ -59,8 +59,7 @@ class XMLBIFReader:
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
         """
-        root = self.tree.getroot()
-        network = root.find('NETWORK')
+        network = self.root.find('NETWORK')
         self.variables = [variable.find('NAME').text
                           for variable in network.findall('VARIABLE')]
         return self.variables
@@ -79,8 +78,7 @@ class XMLBIFReader:
          ['dog-out', 'hear-bark']]
         """
         if self.variable_parents is None:
-            root = self.tree.getroot()
-            network = root.find('NETWORK')
+            network = self.root.find('NETWORK')
             self.variable_parents = {definition.find('FOR').text:
                                          [edge.text for edge in definition.findall('GIVEN')][::-1]
                                      for definition in network.findall('DEFINITION')}
@@ -102,8 +100,7 @@ class XMLBIFReader:
          'hear-bark': ['true', 'false'],
          'light-on': ['true', 'false']}
         """
-        root = self.tree.getroot()
-        network = root.find('NETWORK')
+        network = self.root.find('NETWORK')
         self.variable_states = {variable.find('NAME').text:
                                     [outcome.text for outcome in variable.findall('OUTCOME')]
                                 for variable in network.findall('VARIABLE')}
@@ -124,8 +121,7 @@ class XMLBIFReader:
          'light-on': ['family-out']}
         """
         if self.variable_parents is None:
-            root = self.tree.getroot()
-            network = root.find('NETWORK')
+            network = self.root.find('NETWORK')
             self.variable_parents = {definition.find('FOR').text:
                                          [edge.text for edge in definition.findall('GIVEN')][::-1]
                                      for definition in network.findall('DEFINITION')}
@@ -150,8 +146,7 @@ class XMLBIFReader:
          'light-on': array([[ 0.6 ,  0.4 ],
                             [ 0.05,  0.95]])}
         """
-        root = self.tree.getroot()
-        network = root.find('NETWORK')
+        network = self.root.find('NETWORK')
         self.variable_CPD = {definition.find('FOR').text: list(map(float, table.text.split()))
                              for definition in network.findall('DEFINITION')
                              for table in definition.findall('TABLE')}
@@ -180,8 +175,7 @@ class XMLBIFReader:
          'hear-bark': ['position = (154, 241)'],
          'light-on': ['position = (73, 165)']}
         """
-        root = self.tree.getroot()
-        network = root.find('NETWORK')
+        network = self.root.find('NETWORK')
         self.variable_property = {variable.find('NAME').text:
                                       [property.text for property in variable.findall('PROPERTY')]
                                   for variable in network.findall('VARIABLE')}
