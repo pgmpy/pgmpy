@@ -37,9 +37,9 @@ class XMLBIFReader:
         >>> reader = XMLBIFReader("xmlbif_test.xml")
         """
         if path:
-            self.root = etree.ElementTree(file=path).getroot()
+            self.network = etree.ElementTree(file=path).getroot().find('NETWORK')
         elif string:
-            self.root = etree.fromstring(string)
+            self.network = etree.fromstring(string).find('NETWORK')
         else:
             raise ValueError("Must specify either path or string")
         self.variables = None
@@ -59,9 +59,8 @@ class XMLBIFReader:
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
         """
-        network = self.root.find('NETWORK')
         self.variables = [variable.find('NAME').text
-                          for variable in network.findall('VARIABLE')]
+                          for variable in self.network.findall('VARIABLE')]
         return self.variables
 
     def get_edges(self):
@@ -78,10 +77,9 @@ class XMLBIFReader:
          ['dog-out', 'hear-bark']]
         """
         if self.variable_parents is None:
-            network = self.root.find('NETWORK')
             self.variable_parents = {definition.find('FOR').text:
                                          [edge.text for edge in definition.findall('GIVEN')][::-1]
-                                     for definition in network.findall('DEFINITION')}
+                                     for definition in self.network.findall('DEFINITION')}
         self.edge_list = [[value, key] for key in self.variable_parents
                           for value in self.variable_parents[key]]
         return self.edge_list
@@ -100,10 +98,9 @@ class XMLBIFReader:
          'hear-bark': ['true', 'false'],
          'light-on': ['true', 'false']}
         """
-        network = self.root.find('NETWORK')
         self.variable_states = {variable.find('NAME').text:
                                     [outcome.text for outcome in variable.findall('OUTCOME')]
-                                for variable in network.findall('VARIABLE')}
+                                for variable in self.network.findall('VARIABLE')}
         return self.variable_states
 
     def get_parents(self):
@@ -121,10 +118,9 @@ class XMLBIFReader:
          'light-on': ['family-out']}
         """
         if self.variable_parents is None:
-            network = self.root.find('NETWORK')
             self.variable_parents = {definition.find('FOR').text:
                                          [edge.text for edge in definition.findall('GIVEN')][::-1]
-                                     for definition in network.findall('DEFINITION')}
+                                     for definition in self.network.findall('DEFINITION')}
         return self.variable_parents
 
     def get_cpd(self):
@@ -146,14 +142,13 @@ class XMLBIFReader:
          'light-on': array([[ 0.6 ,  0.4 ],
                             [ 0.05,  0.95]])}
         """
-        network = self.root.find('NETWORK')
         self.variable_CPD = {definition.find('FOR').text: list(map(float, table.text.split()))
-                             for definition in network.findall('DEFINITION')
+                             for definition in self.network.findall('DEFINITION')
                              for table in definition.findall('TABLE')}
         if self.variable_states is None:
             self.variable_states = {variable.find('NAME').text:
                                         [outcome.text for outcome in variable.findall('OUTCOME')]
-                                    for variable in network.findall('VARIABLE')}
+                                    for variable in self.network.findall('VARIABLE')}
         for variable in self.variable_CPD:
             arr = np.array(self.variable_CPD[variable])
             arr = arr.reshape((len(self.variable_states[variable]),
@@ -175,8 +170,7 @@ class XMLBIFReader:
          'hear-bark': ['position = (154, 241)'],
          'light-on': ['position = (73, 165)']}
         """
-        network = self.root.find('NETWORK')
         self.variable_property = {variable.find('NAME').text:
                                       [property.text for property in variable.findall('PROPERTY')]
-                                  for variable in network.findall('VARIABLE')}
+                                  for variable in self.network.findall('VARIABLE')}
         return self.variable_property
