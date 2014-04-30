@@ -147,6 +147,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
     def tearDown(self):
         del self.reader
 
+
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     def setUp(self):
         xml = """
@@ -223,9 +224,8 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         </NETWORK>
         </BIF>
         """
-        fout = open("test_bif.xml", "w+")
-        fout.write(xml)
-        fout.close()
+        with open("test_bif.xml", 'w') as fout:
+            fout.write(xml)
         self.reader = XMLBIFReader("test_bif.xml")
 
     def test_get_variables(self):
