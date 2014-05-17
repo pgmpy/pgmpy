@@ -5,7 +5,7 @@ For the student example the ProbModelXML file should be:
 
 <?xml version=“1.0” encoding=“UTF-8”?>
 <ProbModelXML formatVersion=“1.0”>
-    <ProbNet type=BayesianNetwork >
+    <ProbNet type="BayesianNetwork">
         <AdditionalConstraints />
         <Comment>
             Student example model from Probabilistic Graphical Models:
@@ -391,11 +391,12 @@ class ProbModelXMLWriter(object):
                 elem.tail = i
 
 
-class ProbModelXMLReader(object):
+class ProbModelXMLReader:
     """
     Class for reading ProbModelXML format from files or strings.
     """
     #TODO: add methods to parse policies, inferenceoption, evidence etc.
+    #TODO: add reading formatVersion
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of ProbModelXMLReader class.
@@ -418,80 +419,78 @@ class ProbModelXMLReader(object):
         else:
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
 
-    def make_network(self):
+    def create_probnet(self):
         """
         Returns a BayesianModel or MarkovModel object depending on the
         type of ProbModelXML passed to ProbModelXMLReader class.
         """
-        network_type = self.xml.xpath('//ProbModel')[0].attrib['type']
-        if network_type == 'BayesianNetwork':
-            G = bm.BayesianModel()
-        elif network_type == 'MarkovModel':
-            G = bm.MarkovModel()
+        # Add general properties
+        probnet_elem = self.xml.find('ProbNet')
+        self.probnet['type'] = probnet_elem.attrib['type']
+        #TODO: AdditionalConstraints
+        self.add_comment(probnet_elem.find('Comment').text)
+        self.add_language(probnet_elem.find('language').text)
+        for prop in probnet_elem.find('AdditionalProperty').iterchildren():
+            self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
-        self.add_graph_properties(G, self.xml.xpath('//ProbNet')[0])
-        #Add nodes
-        for variable in self.xml.xpath('//Variables')[0].iterchildren():
-            self.add_node(G, variable)
+        # Add nodes
+        for variable in probnet_elem.find('Variables').iterchildren():
+            self.add_node(variable)
 
-        #Add edges
+        # Add edges
         for edge in self.xml.xpath('//Links')[0].iterchildren():
-            self.add_edge(G, edge)
+            self.add_edge(edge)
 
-        #Add CPD
+        # Add CPD
         for potential in self.xml.xpath('//Potential')[0].iterchildren():
-            self.add_potential(G, potential)
+            self.add_potential(potential)
 
-        #TODO: parse potential
+    #TODO: No specification on additionalconstraints present in the research paper
+    def add_probnet_additionalconstraints(self):
+        pass
 
-        return G
+    def add_comment(self, comment):
+        self.probnet['comment'] = comment
 
-    @staticmethod
-    def add_graph_properties(G, probnet):
-        if probnet.xpath('Comment'):
-            G.graph['Comment'] = probnet.xpath('Comment').text
-        if probnet.xpath('Language'):
-            G.graph['Language'] = probnet.xpath('Language').text
-        if probnet.xpath('AdditionalProperties'):
-            for prop in probnet.xpath('AdditionalProperties')[0].iterchildren():
-                G.graph['AdditionalProperty'][prop.attrib['name']] = prop.attrib['value']
-        #TODO: Add method to read AdditionalContraints
+    def add_language(self, language):
+        self.probnet['language'] = language
 
     @staticmethod
-    def add_node(G, variable):
+    def add_additional_property(place, prop):
+        place[prop.attrib['name']] = prop.attrib['value']
+
+    def add_node(self, variable):
         #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
-        name = variable.attrib['name']
-        G.add_node(name)
-        G[name]['type'] = variable.attrib['type']
-        G[name]['roles'] = variable.attrib['roles']
-        if variable.xpath('Comment'):
-            G[name]['Comment'] = variable.xpath('Comment')[0].text
-        if variable.xpath('Coordinates'):
-            G[name]['Coordinates'] = {key: value for key, value in variable.xpath('Coordinates')[0].attrib.items()}
+        variable_name = variable.attrib['name']
+        self.probnet['Variables'][variable_name] = {}
+        self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
+        self.probnet['Variables'][variable_name]['roles'] = variable.attrib['roles']
+        if variable.find('Comment'):
+            self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
+        if variable.find('Coordinates'):
+            self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
         if variable.xpath('AdditionalProperties'):
-            for prop in variable.xpath('AdditionalProperties')[0].iterchildren():
-                G[name]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+            for prop in variable.find('AdditionalProperties').iterchildren():
+                self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
+                    prop.attrib['value']
         if not variable.xpath('States'):
-            warnings.warn("States not available for node: " + name)
+            warnings.warn("States not available for node: " + variable_name)
         else:
-            G.set_states({name: [state.attrib['name'] for state in variable.xpath('States')[0].iterchildren()]})
-            #TODO: check if additional properties can be parsed here
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States').iterchildren()}
 
-    @staticmethod
-    def add_edge(G, edge):
+    def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
-        G.add_edge(var1, var2)
+        self.probnet['edges'][(var1, var2)] = {}
         if edge.xpath('Comment'):
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
-            G[var1][var2]['Comment'] = edge.xpath('Comment').text
+            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
         if edge.xpath('Label'):
-            G[var1][var2]['Label'] = edge.xpath('Label').text
+            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label').text
         if edge.xpath('AdditionalProperties'):
             for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
-                G[var1][var2]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+                self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
-    @staticmethod
-    def add_potential(G, potential):
+    def add_potential(self, potential):
         #TODO: Add code to read potential
         pass
