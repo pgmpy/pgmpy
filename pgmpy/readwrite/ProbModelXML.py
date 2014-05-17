@@ -491,7 +491,6 @@ class ProbModelXMLReader:
             for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
-    @staticmethod
-    def add_potential(G, potential):
+    def add_potential(self, potential):
         #TODO: Add code to read potential
         pass
