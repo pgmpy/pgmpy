@@ -1063,7 +1063,7 @@ class BayesianModel(nx.DiGraph):
         #         model_copy.node[node]['_observed'] = False
 
         for start in (self.nodes()):
-            for r in (1, len(self.nodes())):
+            for r in range(0, len(self.nodes())):
                 for observed in itertools.combinations(self.nodes(), r):
                     independent_variables = self.active_trail_nodes(start, observed=observed)
                     if independent_variables:
