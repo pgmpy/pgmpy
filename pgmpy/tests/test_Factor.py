@@ -110,6 +110,32 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    def test_factor_product2(self):
+        from pgmpy import Factor
+        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        factor_product = phi.product(phi1)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 0, 0, 0, 0, 1,
+                                             2, 3, 0, 2, 4, 6,
+                                             0, 3, 6, 9]))
+        self.assertEqual(factor_product.variables, OrderedDict([
+            ('x1', ['x1_0', 'x1_1']),
+            ('x2', ['x2_0', 'x2_1']),
+            ('x3', ['x3_0', 'x3_1']),
+            ('x4', ['x4_0', 'x4_1'])]
+        ))
+
+        phi = Factor.Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
+        factor_product = phi.product(phi1)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 1, 0, 3, 0, 5, 0, 3, 4, 9, 8, 15]))
+        self.assertEqual(factor_product.variables, OrderedDict(
+            [('x1', ['x1_0', 'x1_1', 'x1_2']),
+             ('x2', ['x2_0', 'x2_1']),
+             ('x3', ['x3_0', 'x3_1'])]))
+
     def tearDown(self):
         del self.phi
         del self.phi1
