@@ -416,7 +416,7 @@ class ProbModelXMLReader:
         ---------------------------
         { probnet: { type:
                      Comment:
-                     language:
+                     Language:
                      AdditionalProperty: { property_name1: property_value1,
                                            property_name2: property_value2,
                                                         ....
@@ -445,7 +445,8 @@ class ProbModelXMLReader:
                                                   }
                                       .........
                                  }
-                     edges: { (var1, var2): { Comment:
+                     edges: { (var1, var2): { directed:
+                                              Comment:
                                               Label:
                                               AdditionalProperty: { property_name1: property_value1,
                                                                     property_name2: property_value2,
@@ -479,7 +480,7 @@ class ProbModelXMLReader:
         self.probnet['type'] = probnet_elem.attrib['type']
         #TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
-        self.add_language(probnet_elem.find('language').text)
+        self.add_language(probnet_elem.find('Language').text)
         for prop in probnet_elem.find('AdditionalProperty').iterchildren():
             self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
@@ -532,6 +533,7 @@ class ProbModelXMLReader:
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
         self.probnet['edges'][(var1, var2)] = {}
+        self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         if edge.xpath('Comment'):
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
             self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
