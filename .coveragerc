@@ -6,6 +6,7 @@ omit =
     */unittest2/*
     */dist-packages/numpy/*
     */dist-packages/nose/*
+    */dist-packages/lxml/*
 
 exclude_lines =
     # Have to re-enable the standard pragma
