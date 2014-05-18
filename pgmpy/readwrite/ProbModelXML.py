@@ -411,6 +411,54 @@ class ProbModelXMLReader:
         Example
         -------
         >>> reader = ProbModelXMLReader('test.ProbModelXML')
+
+        Structure of Probnet Object
+        ---------------------------
+        { probnet: { type:
+                     Comment:
+                     language:
+                     AdditionalProperty: { property_name1: property_value1,
+                                           property_name2: property_value2,
+                                                        ....
+                                         }
+                     Variables: { variable_name1: { type:
+                                                    roles:
+                                                    Comment:
+                                                    Coordinates:
+                                                    AdditionalProperty: { property_name1: property_value1,
+                                                                          property_name2: property_value2,
+                                                                                      ....
+                                                                        }
+                                                    states: { state1: {AdditionalProperty: {
+                                                                                             ....
+                                                                                             ....
+                                                                                           }
+                                                              state2: {AdditionalProperty: {
+                                                                                             ....
+                                                                                             ....
+                                                                                           }
+                                                                 .....
+                                                            }
+                                                  }
+                                  variable_name2: {
+                                                    ...........
+                                                  }
+                                      .........
+                                 }
+                     edges: { (var1, var2): { Comment:
+                                              Label:
+                                              AdditionalProperty: { property_name1: property_value1,
+                                                                    property_name2: property_value2,
+                                                                               .....
+                                                                  }
+                              (var3, var4): {
+                                              .....
+                                              .....
+                                            }
+                                   ........
+                            }
+                    }
+        }
         """
         if path is not None:
             self.xml = etree.ElementTree(file=path)
@@ -418,7 +466,7 @@ class ProbModelXMLReader:
             self.xml = etree.fromstring(string)
         else:
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
-        
+
         self.create_probnet()
 
     def create_probnet(self):
