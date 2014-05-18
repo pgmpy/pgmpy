@@ -221,6 +221,27 @@ class Factor:
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
 
+    def product(self, *factors):
+        """
+        Returns the factor product with factors.
+
+        Parameters
+        ----------
+        *factors: Factor1, Factor2, ...
+            Factors to be multiplied
+
+        Example
+        -------
+        >>> from pgmpy.Factor import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi = phi1.product(phi2)
+        >>> phi.variables
+        OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
+                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+        """
+        return factor_product(self, *factors)
+
 
 def _bivar_factor_product(phi1, phi2):
     """
