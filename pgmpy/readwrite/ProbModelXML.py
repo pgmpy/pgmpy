@@ -418,6 +418,8 @@ class ProbModelXMLReader:
             self.xml = etree.fromstring(string)
         else:
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
+        
+        self.create_probnet()
 
     def create_probnet(self):
         """
