@@ -3,9 +3,10 @@ omit =
     */python?.?/*
     */lib-python/?.?/*.py
     */site-packages/networkx/*
-    */site-packages/nose/*
     */unittest2/*
-    */site-packages/numpy/*
+    */dist-packages/numpy/*
+    */dist-packages/nose/*
+    */dist-packages/lxml/*
 
 exclude_lines =
     # Have to re-enable the standard pragma

@@ -5,7 +5,7 @@ For the student example the ProbModelXML file should be:
 
 <?xml version=“1.0” encoding=“UTF-8”?>
 <ProbModelXML formatVersion=“1.0”>
-    <ProbNet type=BayesianNetwork >
+    <ProbNet type="BayesianNetwork">
         <AdditionalConstraints />
         <Comment>
             Student example model from Probabilistic Graphical Models:
@@ -229,11 +229,11 @@ def parse_probmodelxml(string):
     return reader.make_network()
 
 
-class ProbModelXMLWriter(object):
+class ProbModelXMLWriter:
     """
     Class for writing models in ProbModelXML format.
     """
-    def __init__(self, model, encoding='utf-8', prettyprint=True):
+    def __init__(self, model_data, encoding='utf-8', prettyprint=True):
         """
         Initialize a ProbModelXMLWriter Object.
 
@@ -248,33 +248,39 @@ class ProbModelXMLWriter(object):
 
         Examples
         --------
-        >>> G = nx.path_graph(4)
-        >>> writer = ProbModelXMLWriter(G)
         """
         #TODO: add policies, InferenceOptions, Evidence
         #TODO: add parsing of language and comments and additional properties
+        self.data = model_data
         self.encoding = encoding
         self.prettyprint = prettyprint
+
+        #Creating initial tags
         self.xml = etree.Element("ProbModelXML", attrib={'formatVersion': '1.0'})
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
-        try:
-            etree.SubElement(self.probnet, 'Language').text = model.graph['Language']
-        except KeyError:
-            pass
-        try:
-            etree.SubElement(self.probnet, 'Comment').text = model.graph['Comment']
-        except KeyError:
-            pass
-        self._add_additional_properties(model)
 
-        if isinstance(model, nx.DiGraph):
-            self.probnet.attrib['type'] = 'BayesianNetwork'
-        elif isinstance(model, nx.Graph):
-            self.probnet.attrib['type'] = 'MarkovNetwork'
-        self._add_network(model)
+        #adding information for probnet
+        self.probnet.attrib['type'] = self.data['probnet']['type']
+        try:
+            etree.SubElement(self.probnet, 'Language').text = self.data['probnet']['Language']
+        except KeyError:
+            pass
+        try:
+            etree.SubElement(self.probnet, 'Comment').text = self.data['probnet']['Comment']
+        except KeyError:
+            pass
+        self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperty'])
+
+        #Add variables
+        for variable in self.data['probnet']['Variables']:
+            self._add_variable(variable)
+
+        #Add edges
+        for edge in self.data['probnet']['edges']:
+            self._add_link(edge)
 
     def __str__(self):
         """
@@ -283,80 +289,44 @@ class ProbModelXMLWriter(object):
         return etree.tostring(self.xml, encoding=self.encoding,
                               prettyprint=self.prettyprint)
 
-    def _add_network(self, network):
-        """
-        Adds a network to the XML.
-        """
-        for node in network.nodes():
-            self._add_variable(network, node, type='FiniteStatae', role='Chance',
-                               states=network.get_states(node))
-            self._add_potential(network, node)
-        for edge in network.edges():
-            self._add_link(network, edge, is_directed='1' if isinstance(network, nx.DiGraph) else '0')
-
-    def _add_policies(self):
-        pass
-
-    def _add_inference_options(self):
-        pass
-
-    def _add_evidence(self):
-        pass
-
-    def _add_additional_constraints(self):
-        pass
-
-    # def _add_comment(self, comment):
-    #     """
-    #     Set Comment attribute of the ProbModelXML.
-    #     """
-    #     self.xml.xpath('//ProbNet/Comment')[0].text = comment
-    #
-    # def _add_language(self, language):
-    #     """
-    #     Set Language attribute of the ProbModelXML.
-    #     """
-    #     self.xml.xpath('//Language')[0].text = language
-
-    def _add_additional_properties(self, model):
+    @staticmethod
+    def _add_additional_properties(position, properties_dict):
         """
         Sets AdditionalProperties of the ProbModelXML.
         """
-        add_prop = etree.SubElement(self.xml, 'AdditionalProperties')
-        for key, value in model.graph['AdditionalProperties'].items():
+        add_prop = etree.SubElement(position, 'AdditionalProperties')
+        for key, value in properties_dict.items():
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
 
-    def _add_variable(self, model, name):
+    def _add_variable(self, variable):
         """
         Adds a node to the ProbModelXML.
         """
         #TODO: Add feature for accepting additional properties of states.
-        variable = etree.SubElement(self.variables, 'Variable', attrib={'name': name,
-                                                                        'type': model[name]['type'],
-                                                                        'role': model[name]['role']})
-        etree.SubElement(variable, 'Comment').text = model[variable]['Comment']
-        etree.SubElement(variable, 'Coordinates').text = model[variable]['Coordinates']
-        add_prop = etree.SubElement(variable, 'AdditionalProperties')
-        for key, value in model[name]['AdditionalProperties']:
+        variable_data = self.data['probnet']['Variables'][variable]
+        variable_element = etree.SubElement(self.variables, 'Variable', attrib={'name': variable,
+                                                                                'type': variable_data['type'],
+                                                                                'role': variable_data['role']})
+        etree.SubElement(variable_element, 'Comment').text = variable_data['Comment']
+        etree.SubElement(variable_element, 'Coordinates').text = variable_data['Coordinates']
+        add_prop = etree.SubElement(variable_element, 'AdditionalProperties')
+        for key, value in variable_data['AdditionalProperties'].items():
             etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
-        states = variable.SubElement(variable, 'States')
-        for s in model.get_states(name):
+        states = variable.SubElement(variable_element, 'States')
+        for s in variable_data['States']:
             state = etree.SubElement(states, 'State', attrib={'name': s})
-            #TODO: Check how to write AdditionalProperties here.
+            self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperty'])
 
-    def _add_link(self, model, edge, is_directed):
+    def _add_link(self, edge):
         """
         Adds an edge to the ProbModelXML.
         """
-        var1 = edge[0]
-        var2 = edge[1]
-        link = etree.SubElement(self.links, 'Link', attrib={'var1': var1, 'var2': var2,
-                                                            'directed': is_directed})
-        etree.SubElement(link, 'Comment').text = model[var1][var2]['Comment']
-        etree.SubElement(link, 'Label').text = model[var1][var2]['Label']
-        add_prop = etree.SubElement(link, 'AdditionalProperties')
-        for key, value in model[var1][var2]['AdditionalProperties'].items():
-            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
+        edge_data = self.data['probnet']['edges'][edge]
+        link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
+                                                            'directed': edge_data['directed']})
+        etree.SubElement(link, 'Comment').text = edge_data['Comment']
+        etree.SubElement(link, 'Label').text = edge_data['Label']
+        self._add_additional_properties(link, edge_data['AdditionalProperty'])
 
     def _add_potential(self):
         pass
@@ -391,11 +361,12 @@ class ProbModelXMLWriter(object):
                 elem.tail = i
 
 
-class ProbModelXMLReader(object):
+class ProbModelXMLReader:
     """
     Class for reading ProbModelXML format from files or strings.
     """
     #TODO: add methods to parse policies, inferenceoption, evidence etc.
+    #TODO: add reading formatVersion
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of ProbModelXMLReader class.
@@ -410,6 +381,55 @@ class ProbModelXMLReader(object):
         Example
         -------
         >>> reader = ProbModelXMLReader('test.ProbModelXML')
+
+        Structure of Probnet Object
+        ---------------------------
+        { probnet: { type:
+                     Comment:
+                     Language:
+                     AdditionalProperty: { property_name1: property_value1,
+                                           property_name2: property_value2,
+                                                        ....
+                                         }
+                     Variables: { variable_name1: { type:
+                                                    roles:
+                                                    Comment:
+                                                    Coordinates:
+                                                    AdditionalProperty: { property_name1: property_value1,
+                                                                          property_name2: property_value2,
+                                                                                      ....
+                                                                        }
+                                                    states: { state1: {AdditionalProperty: {
+                                                                                             ....
+                                                                                             ....
+                                                                                           }
+                                                              state2: {AdditionalProperty: {
+                                                                                             ....
+                                                                                             ....
+                                                                                           }
+                                                                 .....
+                                                            }
+                                                  }
+                                  variable_name2: {
+                                                    ...........
+                                                  }
+                                      .........
+                                 }
+                     edges: { (var1, var2): { directed:
+                                              Comment:
+                                              Label:
+                                              AdditionalProperty: { property_name1: property_value1,
+                                                                    property_name2: property_value2,
+                                                                               .....
+                                                                  }
+                              (var3, var4): {
+                                              .....
+                                              .....
+                                            }
+                                   ........
+                            }
+                    }
+        }
         """
         if path is not None:
             self.xml = etree.ElementTree(file=path)
@@ -418,80 +438,81 @@ class ProbModelXMLReader(object):
         else:
             raise ValueError("Must specify either 'path' or 'string' as kwarg.")
 
-    def make_network(self):
+        self.create_probnet()
+
+    def create_probnet(self):
         """
         Returns a BayesianModel or MarkovModel object depending on the
         type of ProbModelXML passed to ProbModelXMLReader class.
         """
-        network_type = self.xml.xpath('//ProbModel')[0].attrib['type']
-        if network_type == 'BayesianNetwork':
-            G = bm.BayesianModel()
-        elif network_type == 'MarkovModel':
-            G = bm.MarkovModel()
+        # Add general properties
+        probnet_elem = self.xml.find('ProbNet')
+        self.probnet['type'] = probnet_elem.attrib['type']
+        #TODO: AdditionalConstraints
+        self.add_comment(probnet_elem.find('Comment').text)
+        self.add_language(probnet_elem.find('Language').text)
+        for prop in probnet_elem.find('AdditionalProperty').iterchildren():
+            self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
-        self.add_graph_properties(G, self.xml.xpath('//ProbNet')[0])
-        #Add nodes
-        for variable in self.xml.xpath('//Variables')[0].iterchildren():
-            self.add_node(G, variable)
+        # Add nodes
+        for variable in probnet_elem.find('Variables').iterchildren():
+            self.add_node(variable)
 
-        #Add edges
+        # Add edges
         for edge in self.xml.xpath('//Links')[0].iterchildren():
-            self.add_edge(G, edge)
+            self.add_edge(edge)
 
-        #Add CPD
+        # Add CPD
         for potential in self.xml.xpath('//Potential')[0].iterchildren():
-            self.add_potential(G, potential)
+            self.add_potential(potential)
 
-        #TODO: parse potential
+    #TODO: No specification on additionalconstraints present in the research paper
+    def add_probnet_additionalconstraints(self):
+        pass
 
-        return G
+    def add_comment(self, comment):
+        self.probnet['comment'] = comment
 
-    @staticmethod
-    def add_graph_properties(G, probnet):
-        if probnet.xpath('Comment'):
-            G.graph['Comment'] = probnet.xpath('Comment').text
-        if probnet.xpath('Language'):
-            G.graph['Language'] = probnet.xpath('Language').text
-        if probnet.xpath('AdditionalProperties'):
-            for prop in probnet.xpath('AdditionalProperties')[0].iterchildren():
-                G.graph['AdditionalProperty'][prop.attrib['name']] = prop.attrib['value']
-        #TODO: Add method to read AdditionalContraints
+    def add_language(self, language):
+        self.probnet['language'] = language
 
     @staticmethod
-    def add_node(G, variable):
+    def add_additional_property(place, prop):
+        place[prop.attrib['name']] = prop.attrib['value']
+
+    def add_node(self, variable):
         #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
-        name = variable.attrib['name']
-        G.add_node(name)
-        G[name]['type'] = variable.attrib['type']
-        G[name]['roles'] = variable.attrib['roles']
-        if variable.xpath('Comment'):
-            G[name]['Comment'] = variable.xpath('Comment')[0].text
-        if variable.xpath('Coordinates'):
-            G[name]['Coordinates'] = {key: value for key, value in variable.xpath('Coordinates')[0].attrib.items()}
+        variable_name = variable.attrib['name']
+        self.probnet['Variables'][variable_name] = {}
+        self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
+        self.probnet['Variables'][variable_name]['roles'] = variable.attrib['roles']
+        if variable.find('Comment'):
+            self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
+        if variable.find('Coordinates'):
+            self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
         if variable.xpath('AdditionalProperties'):
-            for prop in variable.xpath('AdditionalProperties')[0].iterchildren():
-                G[name]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+            for prop in variable.find('AdditionalProperties').iterchildren():
+                self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
+                    prop.attrib['value']
         if not variable.xpath('States'):
-            warnings.warn("States not available for node: " + name)
+            warnings.warn("States not available for node: " + variable_name)
         else:
-            G.set_states({name: [state.attrib['name'] for state in variable.xpath('States')[0].iterchildren()]})
-            #TODO: check if additional properties can be parsed here
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States').iterchildren()}
 
-    @staticmethod
-    def add_edge(G, edge):
+    def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
-        G.add_edge(var1, var2)
+        self.probnet['edges'][(var1, var2)] = {}
+        self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         if edge.xpath('Comment'):
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
-            G[var1][var2]['Comment'] = edge.xpath('Comment').text
+            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
         if edge.xpath('Label'):
-            G[var1][var2]['Label'] = edge.xpath('Label').text
+            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label').text
         if edge.xpath('AdditionalProperties'):
             for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
-                G[var1][var2]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+                self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
-    @staticmethod
-    def add_potential(G, potential):
+    def add_potential(self, potential):
         #TODO: Add code to read potential
         pass

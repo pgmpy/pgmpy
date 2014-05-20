@@ -933,7 +933,6 @@ class BayesianModel(nx.DiGraph):
 
         """
         return self.is_active_trail(start,None,observed,additional_observed)
-
         
     def is_active_trail(self, start, end=None, observed=None, additional_observed=None):
         """
@@ -950,7 +949,7 @@ class BayesianModel(nx.DiGraph):
             If given the active trail would be computed assuming these nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computer assuming these nodes to be observed along with
+            If given the active trail would be computed assuming these nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples

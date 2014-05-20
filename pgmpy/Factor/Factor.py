@@ -11,66 +11,67 @@ class Factor:
     """
     Base class for *Factor*.
 
-    >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-
-    Defined above, we have the following mapping from variable
-    assignments to the index of the row vector in the value field:
-
-    +-----+-----+-----+-------------------+
-    |  x1 |  x2 |  x3 |    phi(x1, x2, x2)|
-    +-----+-----+-----+-------------------+
-    | x1_0| x2_0| x3_0|     phi.value(0)  |
-    +-----+-----+-----+-------------------+
-    | x1_1| x2_0| x3_0|     phi.value(1)  |
-    +-----+-----+-----+-------------------+
-    | x1_0| x2_1| x3_0|     phi.value(2)  |
-    +-----+-----+-----+-------------------+
-    | x1_1| x2_1| x3_0|     phi.value(3)  |
-    +-----+-----+-----+-------------------+
-    | x1_0| x2_0| x3_1|     phi.value(4)  |
-    +-----+-----+-----+-------------------+
-    | x1_1| x2_0| x3_1|     phi.value(5)  |
-    +-----+-----+-----+-------------------+
-    | x1_0| x2_1| x3_1|     phi.value(6)  |
-    +-----+-----+-----+-------------------+
-    | x1_1| x2_1| x3_1|     phi.value(7)  |
-    +-----+-----+-----+-------------------+
-
-    Parameters
-    ----------
-    variables: list
-        List of scope of factor
-    cardinality: list, array_like
-        List of cardinality of each variable
-    value: list, array_like
-        List or array of values of factor.
-        A Factor's values are stored in a row vector in the value
-        using an ordering such that the left-most variables as defined in
-        the variable field cycle through their values the fastest. More
-        concretely, for factor
-
-
-
     Public Methods
     --------------
     assignment(index)
+    get_cardinality(variable)
     marginalize([variable_list])
-    reduce([variable_values_list])
     normalise()
+    product(*factors)
+    reduce([variable_values_list])
     """
 
     def __init__(self, variables, cardinality, value):
         """
+        Initialize a Factor class.
 
-            """
+        Defined above, we have the following mapping from variable
+        assignments to the index of the row vector in the value field:
+
+        +-----+-----+-----+-------------------+
+        |  x1 |  x2 |  x3 |    phi(x1, x2, x2)|
+        +-----+-----+-----+-------------------+
+        | x1_0| x2_0| x3_0|     phi.value(0)  |
+        +-----+-----+-----+-------------------+
+        | x1_1| x2_0| x3_0|     phi.value(1)  |
+        +-----+-----+-----+-------------------+
+        | x1_0| x2_1| x3_0|     phi.value(2)  |
+        +-----+-----+-----+-------------------+
+        | x1_1| x2_1| x3_0|     phi.value(3)  |
+        +-----+-----+-----+-------------------+
+        | x1_0| x2_0| x3_1|     phi.value(4)  |
+        +-----+-----+-----+-------------------+
+        | x1_1| x2_0| x3_1|     phi.value(5)  |
+        +-----+-----+-----+-------------------+
+        | x1_0| x2_1| x3_1|     phi.value(6)  |
+        +-----+-----+-----+-------------------+
+        | x1_1| x2_1| x3_1|     phi.value(7)  |
+        +-----+-----+-----+-------------------+
+
+        Parameters
+        ----------
+        variables: list
+            List of scope of factor
+        cardinality: list, array_like
+            List of cardinality of each variable
+        value: list, array_like
+            List or array of values of factor.
+            A Factor's values are stored in a row vector in the value
+            using an ordering such that the left-most variables as defined in
+            the variable field cycle through their values the fastest. More
+            concretely, for factor
+
+        Examples
+        --------
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        """
         self.variables = OrderedDict()
         for variable, card in zip(variables, cardinality):
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
-        num_elems = np.cumprod(self.cardinality)[-1]
         self.values = np.array(value, dtype=np.double)
-        if not self.values.shape[0] == num_elems:
+        if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
     def assignment(self, index):
@@ -92,7 +93,7 @@ class Factor:
         """
         if not isinstance(index, np.ndarray):
             index = np.atleast_1d(index)
-        max_index = np.cumprod(self.cardinality)[-1] - 1
+        max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
         mat = np.floor(np.tile(np.atleast_2d(index).T,
@@ -209,8 +210,7 @@ class Factor:
             if not var in self.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
             index = list(self.variables.keys()).index(var)
-            value_index = int(value_index)
-            if not (value_index < self.cardinality[index]):
+            if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
             cum_cardinality = np.concatenate(([1],
@@ -222,6 +222,55 @@ class Factor:
             self.values = self.values[np.array(index_arr)]
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
+
+    def product(self, *factors):
+        """
+        Returns the factor product with factors.
+
+        Parameters
+        ----------
+        *factors: Factor1, Factor2, ...
+            Factors to be multiplied
+
+        Example
+        -------
+        >>> from pgmpy.Factor import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi = phi1.product(phi2)
+        >>> phi.variables
+        OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
+                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+        """
+        return factor_product(self, *factors)
+
+    def __str__(self):
+        string = ""
+        for var in reversed(self.variables):
+            string += str(var) + "\t"
+        string += 'phi(' + ', '.join(self.variables) + ')'
+        string += "\n"
+
+        #fun and gen are functions to generate the different values of variables in the table.
+        #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
+        #by 1.
+        def fun(b, index=len(self.cardinality)-1):
+            b[index] += 1
+            if b[index] == self.cardinality[index]:
+                b[index] = 0
+                fun(index-1)
+            return b
+
+        def gen():
+            b = [] * len(self.variables)
+            for i in range(np.prod(self.cardinality)):
+                yield fun(b)
+
+        for prob in gen():
+            prob_list = [self.variables[i] + '_' + prob[i] for i in range(len(self.variables))]
+            string += '\t'.join(prob_list) + '\n'
+
+        return string
 
 
 def _bivar_factor_product(phi1, phi2):
@@ -292,10 +341,6 @@ def factor_product(*args):
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
-
-    See Also
-    --------
-    _bivar_factor_product
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
