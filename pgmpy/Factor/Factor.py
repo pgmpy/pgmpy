@@ -244,6 +244,34 @@ class Factor:
         """
         return factor_product(self, *factors)
 
+    def __str__(self):
+        string = ""
+        for var in reversed(self.variables):
+            string += str(var) + "\t"
+        string += 'phi(' + ', '.join(self.variables) + ')'
+        string += "\n"
+
+        #fun and gen are functions to generate the different values of variables in the table.
+        #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
+        #by 1.
+        def fun(b, index=len(self.cardinality)-1):
+            b[index] += 1
+            if b[index] == self.cardinality[index]:
+                b[index] = 0
+                fun(index-1)
+            return b
+
+        def gen():
+            b = [] * len(self.variables)
+            for i in range(np.prod(self.cardinality)):
+                yield fun(b)
+
+        for prob in gen():
+            prob_list = [self.variables[i] + '_' + prob[i] for i in range(len(self.variables))]
+            string += '\t'.join(prob_list) + '\n'
+
+        return string
+
 
 def _bivar_factor_product(phi1, phi2):
     """
