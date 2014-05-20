@@ -388,6 +388,44 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.G.set_observations({'d': 'hard', 'i': 'smart'})
         self.assertListEqual(sorted(self.G._get_observed_list()), ['d', 'i'])
 
+    def test_active_trail_nodes(self):
+        self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('i')), ['g', 'i', 'l', 's'])
+        
+    def test_active_trail_nodes_args(self):
+        self.assertEqual(sorted(self.G.active_trail_nodes('d', 'g')), ['d', 'i', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('l', 'g')), ['l'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s' , ['i', 'l'])), ['s'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', ['d', 'l'])), ['g', 'i', 's'])
+
+    def test_is_active_trail_triplets(self):
+        self.assertTrue(self.G.is_active_trail('d', 'l'))
+        self.assertTrue(self.G.is_active_trail('g', 's'))
+        self.assertFalse(self.G.is_active_trail('d', 'i'))
+        self.G.set_observations({'g': 'A'})
+        self.assertTrue(self.G.is_active_trail('d', 'i'))
+        self.assertFalse(self.G.is_active_trail('d', 'l'))
+        self.assertFalse(self.G.is_active_trail('i', 'l'))
+        self.G.reset_observations()
+        self.G.set_observations({'l': 'yes'})
+        self.assertTrue(self.G.is_active_trail('d', 'i'))
+        self.G.reset_observations()
+        self.G.set_observations({'i': 'smart'})
+        self.assertFalse(self.G.is_active_trail('g', 's'))
+
+    def test_is_active_trail(self):
+        self.assertFalse(self.G.is_active_trail('d', 's'))
+        self.assertTrue(self.G.is_active_trail('s', 'l'))
+        self.G.set_observations({'g': 'A'})
+        self.assertTrue(self.G.is_active_trail('d', 's'))
+        self.assertFalse(self.G.is_active_trail('s', 'l'))
+
+    def test_is_active_trail_args(self):
+        self.assertFalse(self.G.is_active_trail('s', 'l', 'i'))
+        self.assertFalse(self.G.is_active_trail('s', 'l', 'g'))
+        self.assertTrue(self.G.is_active_trail('d', 's', 'l'))
+        self.assertFalse(self.G.is_active_trail('d', 's', ['i', 'l']))
+
     def tearDown(self):
         del self.G
 
