@@ -75,6 +75,7 @@ class Independencies:
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
+        #TODO: write reduce function.
     def reduce(self):
         """
         Add function to remove duplicate Independence Assertions
