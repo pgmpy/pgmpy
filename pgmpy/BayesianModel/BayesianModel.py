@@ -897,7 +897,8 @@ class BayesianModel(nx.DiGraph):
         return [node for node in self.nodes()
                 if self.node[node]['_observed']]
 
-    def active_trail_nodes(self, start, observed=None, additional_observed=None):
+    def active_trail_nodes(self, start, observed=None,\
+            additional_observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
 
@@ -907,10 +908,12 @@ class BayesianModel(nx.DiGraph):
         start: Graph node
 
         observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
+            If given the active trail would be computed
+            assuming these nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computer assuming these nodes to be observed along with
+            If given the active trail would be computer assuming
+            these nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples
@@ -931,51 +934,16 @@ class BayesianModel(nx.DiGraph):
         --------
         is_active_trail
 
-        References
-        ----------
-        Details of algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
         """
-        if observed:
-            observed_list = [observed] if isinstance(observed, str) else observed
-        elif additional_observed:
-            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
-        else:
-            observed_list = self._get_observed_list()
-        ancestors_list = self._get_ancestors_of(observed_list)
+        return self.is_active_trail(start, None, observed, additional_observed)
 
-        # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
 
-        visit_list = set()
-        visit_list.add((start, 'up'))
-        traversed_list = set()
-        active_nodes = set()
-        while visit_list:
-            node, direction = visit_list.pop()
-            if (node, direction) not in traversed_list:
-                if node not in observed_list:
-                    active_nodes.add(node)
-                traversed_list.add((node, direction))
-                if direction == 'up' and node not in observed_list:
-                    for parent in self.predecessors(node):
-                        visit_list.add((parent, 'up'))
-                    for child in self.successors(node):
-                        visit_list.add((child, 'down'))
-                elif direction == 'down':
-                    if node not in observed_list:
-                        for child in self.successors(node):
-                            visit_list.add((child, 'down'))
-                    if node in ancestors_list:
-                        for parent in self.predecessors(node):
-                            visit_list.add((parent, 'up'))
-        return active_nodes
-
-    def is_active_trail(self, start, end, observed=None, additional_observed=None):
+    def is_active_trail(self, start, end=None, observed=None,\
+            additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
+        Returns a set of all the nodes reachable from start via an active
+        trail if end == None
 
         Parameters
         ----------
@@ -984,10 +952,12 @@ class BayesianModel(nx.DiGraph):
         end : Graph Node
 
         observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
+            If given the active trail would be computed assuming these
+            nodes to be observed.
 
         additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
+            If given the active trail would be computer assuming these
+            nodes to be observed along with
             the nodes marked as observed in the model.
 
         Examples
@@ -1002,15 +972,72 @@ class BayesianModel(nx.DiGraph):
         >>> student.set_observations({'grades': 'A'})
         >>> student.is_active_trail('diff', 'intel')
         True
+        >>> student.is_active_trail('diff')
+        ['diff', 'intel']
 
         See Also
         --------
         active_trail_nodes
+
+        References
+        ----------
+        Details of algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
         """
+        """
+        Previous code
         if end in self.active_trail_nodes(start, observed, additional_observed):
             return True
         else:
             return False
+        """
+        if observed:
+            observed_list = [observed] if isinstance(observed, str)\
+                    else observed
+        elif additional_observed:
+            observed_list = list(set(self._get_observed_list() + [observed]\
+                    if isinstance(observed, str) else observed))
+        else:
+            observed_list = self._get_observed_list()
+        ancestors_list = self._get_ancestors_of(observed_list)
+
+        # Direction of flow of information
+        # up ->  from child to parent
+        # down -> from parent to child
+
+        visit_list = set()
+        visit_list.add((start, 'up'))
+        traversed_list = set()
+        active_nodes = set()
+        ret_value = False
+        while visit_list:
+            node, direction = visit_list.pop()
+            if (node, direction) not in traversed_list:
+                if node not in observed_list:
+                    if end == None:
+                        active_nodes.add(node)
+                    elif node == end:
+                        ret_value = True
+                        break
+                traversed_list.add((node, direction))
+                if direction == 'up' and node not in observed_list:
+                    for parent in self.predecessors(node):
+                        visit_list.add((parent, 'up'))
+                    for child in self.successors(node):
+                        visit_list.add((child, 'down'))
+                elif direction == 'down':
+                    if node not in observed_list:
+                        for child in self.successors(node):
+                            visit_list.add((child, 'down'))
+                    if node in ancestors_list:
+                        for parent in self.predecessors(node):
+                            visit_list.add((parent, 'up'))
+        if end == None:
+            return active_nodes
+        else:
+            return ret_value
+
 
     def check_model(self):
         """
@@ -1045,7 +1072,7 @@ class BayesianModel(nx.DiGraph):
         #         model_copy.node[node]['_observed'] = False
 
         for start in (self.nodes()):
-            for r in (1, len(self.nodes())):
+            for r in range(0, len(self.nodes())):
                 for observed in itertools.combinations(self.nodes(), r):
                     independent_variables = self.active_trail_nodes(start, observed=observed)
                     if independent_variables:
@@ -1062,8 +1089,86 @@ class BayesianModel(nx.DiGraph):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
+    def _find_immoralities(self, nodes):
+        """
+        Returns the immoralities centred at a node X when all
+        the predecessors of X are given in nodes. So just check for
+        every pair in nodes if they have an edge
+        in between. If not, then it is an immorality centred at X
+        """
+        immoralities = set()
+        for i in range(len(nodes)):
+            for j in range(i+1, len(nodes)):
+                if not self.has_edge(nodes[i], nodes[j]):
+                    if nodes[i] < nodes[j]:
+                        immoralities.add((nodes[i], nodes[j]))
+                    else:
+                        immoralities.add((nodes[j], nodes[i]))
+        return immoralities
+
     def is_iequivalent(self, model):
-        pass
+        """
+        Returns True if the two models are I-equivalent.
+        Note that the function doesn't check for graph isomorphism and
+        assumes that the node-name is same
+
+        Parameters
+        ----------
+        model : graph
+           The other graph with which comparison is done
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> base = bm.BayesianModel()
+        >>> base.add_nodes_from(['diff', 'intel', 'grade'])
+        >>> student = base.copy()
+        >>> st1 = base.copy()
+        >>> st2 = base.copy()
+        >>> student.add_edges_from([('diff', 'grade') ,('intel', 'grade')])
+        >>> st1.add_edges_from([('diff', 'grade') ,('grade', 'intel')])
+        >>> student.is_iequivalent(st1)
+        False
+        >>> st2.add_edges_from([('grade', 'diff') ,('intel', 'grade')])
+        >>> st2.is_iequivalent(st1)
+        True
+
+        References
+        ----------
+        The algorithm for checking if two models are equivalent is to
+        first check if the two models have the same skeleton. If they have the
+        same skeleton , then we need to check their set immoralities. If the set
+        immoralities are also same, then the two models arr equivalent,
+
+        Assumption
+        ----------
+        The node names are same in both the graphs ,,
+        this method doesn't really check for graph isomorphism.
+        That is an open problem in any case :p
+        """
+        #TODO: add test cases
+        if self.nodes()[0] not in model.nodes():
+            return False
+        visited_list = set()
+        dfs_list = {self.nodes()[0]}
+        flag = False
+        while dfs_list:
+            node = dfs_list.pop()
+            if node in visited_list:
+                continue
+            visited_list.add(node)
+            if not set(self.predecessors(node) + self.successors(node)) ==\
+                    set(model.predecessors(node) + model.successors(node)):
+                print("Neighbour set of the node " + node + " not equal")
+                flag = True
+                break
+            dfs_list.update(self.predecessors(node) + self.successors(node))
+            if not self._find_immoralities(self.predecessors(node)) ==\
+                    model._find_immoralities(model.predecessors(node)):
+                print ("Immoralities at " + node + " are not same")
+                flag = True
+                break
+        return False if flag else True
 
     def is_imap(self, independence):
         pass
