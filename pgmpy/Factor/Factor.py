@@ -272,6 +272,9 @@ class Factor:
 
         return string
 
+    def __mul__(self, other):
+        return self.product(other)
+
 
 def _bivar_factor_product(phi1, phi2):
     """
