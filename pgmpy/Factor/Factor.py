@@ -262,7 +262,7 @@ class Factor:
             return b
 
         def gen():
-            b = [] * len(self.variables)
+            b = [0] * len(self.variables)
             for i in range(np.prod(self.cardinality)):
                 yield fun(b)
 
