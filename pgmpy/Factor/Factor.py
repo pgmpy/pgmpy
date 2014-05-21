@@ -272,6 +272,15 @@ class Factor:
 
         return string
 
+    def __mul__(self, other):
+        return self.product(other)
+
+    def __eq__(self, other):
+        if self.variables == other.variables and self.cardinality == other.cardinality and self.values == other.values:
+            return True
+        else:
+            return False
+
 
 def _bivar_factor_product(phi1, phi2):
     """
