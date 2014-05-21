@@ -54,9 +54,32 @@ class JointProbabilityDistribution(Factor.Factor):
 
         Examples
         --------
+        >>> from pgmpy.Factor import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         """
         if np.isclose(np.sum(values), 1):
             Factor.Factor.__init__(self, variables, cardinality, values)
         else:
             raise ValueError("The probability values doesn't sum to 1.")
+
+    def marginal_distribution(self, variables):
+        """
+        Returns the marginal distribution over variables.
+
+        Parameters
+        ----------
+        variables: string, list
+                Variable or list of variables over which marginal distribution needs
+                to be calculated
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> values = np.random.rand(12)
+        >>> prob = JointProbabilityDistribution(['x1, x2, x3'], [2, 3, 2], values/np.sum(values))
+        >>> prob.marginal_distribution('x1')
+        >>> prob.marginal_distribution(['x1', 'x2'])
+        """
+        self.marginalize(set(self.variables) - set(variables if isinstance(variables, (list, set, dict, tuple))
+                                                   else [variables]))
+
