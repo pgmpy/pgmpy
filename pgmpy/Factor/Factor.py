@@ -258,23 +258,26 @@ class Factor:
             b[index] += 1
             if b[index] == self.cardinality[index]:
                 b[index] = 0
-                fun(index-1)
+                fun(b, index-1)
             return b
 
         def gen():
             b = [0] * len(self.variables)
-            for i in range(np.prod(self.cardinality)):
+            yield b
+            for i in range(np.prod(self.cardinality)-1):
                 yield fun(b)
 
+        value_index = 0
         for prob in gen():
-            prob_list = [self.variables[i] + '_' + prob[i] for i in range(len(self.variables))]
-            string += '\t'.join(prob_list) + '\n'
+            prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
+            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) + '\n'
+            value_index += 1
 
         return string
 
     def __mul__(self, other):
         return self.product(other)
-
+    
     def __eq__(self, other):
         if self.variables == other.variables and self.cardinality == other.cardinality and self.values == other.values:
             return True
