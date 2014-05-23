@@ -245,10 +245,13 @@ class Factor:
         return factor_product(self, *factors)
 
     def __str__(self):
+        return self._str('phi')
+
+    def _str(self, phi_or_p):
         string = ""
-        for var in reversed(self.variables):
+        for var in self.variables:
             string += str(var) + "\t"
-        string += 'phi(' + ', '.join(self.variables) + ')'
+        string += phi_or_p + '(' + ', '.join(self.variables) + ')'
         string += "\n"
 
         #fun and gen are functions to generate the different values of variables in the table.
@@ -277,7 +280,7 @@ class Factor:
 
     def __mul__(self, other):
         return self.product(other)
-    
+
     def __eq__(self, other):
         if self.variables == other.variables and self.cardinality == other.cardinality and self.values == other.values:
             return True
