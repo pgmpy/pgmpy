@@ -9,6 +9,7 @@ class JointProbabilityDistribution(Factor):
 
     Public Methods
     --------------
+    conditional_distribution(values)
     create_bayesian_model()
     get_independencies()
     pmap()
@@ -125,14 +126,37 @@ class JointProbabilityDistribution(Factor):
         >>> prob.get_independencies()
         """
         if condition:
-            # condition the Joint Probability Distribution
-            pass
+            self.conditional_distribution(condition)
         independencies = Independencies()
         from itertools import combinations
         for variable_pair in combinations(list(self.variables), 2):
             if self.marginal_distribution(variable_pair) == self.marginal_distribution(variable_pair[0]) * self.marginal_distribution(variable_pair[1]):
                 independencies.add_assertions(variable_pair)
         return independencies
+
+    def conditional_distribution(self, values):
+        """
+        Returns Conditional Probability Distribution after setting values to 1.
+
+        Parameters
+        ----------
+        values: string or array_like
+            The values on which to condition the Joint Probability Distribution.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
+        >>> prob.conditional_distribution('x1_1')
+        >>> print(prob)
+            x2      x3      P(x1, x2)
+            x2_0    x3_0    0.25
+            x2_0    x3_1    0.25
+            x2_1    x3_0    0.25
+            x2_1    x3_1    0.25
+        """
+        self.reduce(values)
+        self.normalize()
 
     def minimal_imap(self, order):
         pass
