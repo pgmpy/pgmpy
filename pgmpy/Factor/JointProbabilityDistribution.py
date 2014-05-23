@@ -126,8 +126,7 @@ class JointProbabilityDistribution(Factor):
         >>> prob.get_independencies()
         """
         if condition:
-            # condition the Joint Probability Distribution
-            pass
+            self.conditional_distribution(condition)
         independencies = Independencies()
         from itertools import combinations
         for variable_pair in combinations(list(self.variables), 2):
