@@ -156,6 +156,7 @@ class JointProbabilityDistribution(Factor):
             x2_1    x3_1    0.25
         """
         self.reduce(values)
+        self.normalize()
 
     def minimal_imap(self, order):
         pass
