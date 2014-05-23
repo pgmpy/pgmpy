@@ -64,6 +64,9 @@ class JointProbabilityDistribution(Factor.Factor):
         else:
             raise ValueError("The probability values doesn't sum to 1.")
 
+    def __str__(self):
+        return self._str('P')
+
     def marginal_distribution(self, variables):
         """
         Returns the marginal distribution over variables.
