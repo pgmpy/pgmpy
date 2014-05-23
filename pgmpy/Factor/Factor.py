@@ -246,7 +246,7 @@ class Factor:
 
     def __str__(self):
         string = ""
-        for var in reversed(self.variables):
+        for var in self.variables:
             string += str(var) + "\t"
         string += 'phi(' + ', '.join(self.variables) + ')'
         string += "\n"
@@ -277,7 +277,7 @@ class Factor:
 
     def __mul__(self, other):
         return self.product(other)
-    
+
     def __eq__(self, other):
         if self.variables == other.variables and self.cardinality == other.cardinality and self.values == other.values:
             return True
