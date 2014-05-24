@@ -13,15 +13,11 @@ class MarkovModel(nx.Graph):
     """
         Base class for markov model.
 
-        A BayesianModel stores nodes and edges with conditional probability
-        distribution (cpd) and other attributes.
+        A BayesianModel stores nodes and edges with potentials
 
-        BayesianModel hold directed edges.  Self loops are not allowed neither
-        multiple (parallel) edges.
+        BayesianModel hold undirected edges.
 
-        Nodes should be strings.
-
-        Edges are represented as links between nodes.
+        IMP NOTE : Nodes should be strings.
 
         Parameters
         ----------
@@ -34,8 +30,8 @@ class MarkovModel(nx.Graph):
         --------
         Create an empty bayesian model with no nodes and no edges.
 
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.BayesianModel()
 
         G can be grown in several ways.
 
@@ -127,8 +123,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> G =mm.BayesianModel()
         >>> G.add_node('difficulty')
         """
         self._check_node_string([node])
@@ -151,8 +147,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
         for node in nodes:
@@ -543,8 +539,8 @@ class MarkovModel(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import BayesianModel as bm
-        >>> student = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.BayesianModel()
         >>> student.add_node('grades')
         >>> student.set_states({'grades': ['A', 'B']})
         >>> student.set_observations({'grades': 'A'})
@@ -584,11 +580,11 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
         ...                       ('grade', 'reco'))])
         >>> G.set_states({'diff': ['easy', 'hard']})
-        >>> G.set_observations({'diff': ['easy', 'hard']})
+        >>> G.set_observations({'diff': 'easy'})
         """
         for node, state in observations.items():
             self.set_observation(node,state)
@@ -615,7 +611,30 @@ class MarkovModel(nx.Graph):
                 val += self.norm_h(pos+1, node_list, value_list)
             return val
 
+
     def get_normalization_constant_brute_force(self):
+        """
+        Get the normalization constant for all the factors
+
+        Parameters
+        ----------
+
+        See Also
+        --------
+        norm_h
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.MarkovModel()
+        >>> student.add_nodes_from(['diff', 'intel'])
+        >>> student.set_states({'diff': ['hard', 'easy']})
+        >>> student.set_states({'intel': ['avg', 'dumb', 'smart']})
+        >>> student.add_edge('diff','intel')
+        >>> factor = student.set_potentials(['diff','intel'], [0.1,0.1,0.1,0.1,0.1,0.1])
+        >>> print(student.get_normalization_constant_brute_force())
+        0.6000000000000001
+        """
         value_list = []
         for i in range(0, self.number_of_nodes()):
             value_list.append(0)
