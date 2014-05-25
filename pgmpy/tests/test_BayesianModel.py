@@ -2,7 +2,7 @@ import unittest
 from pgmpy import BayesianModel as bm
 from pgmpy import Exceptions
 import networkx as nx
-import pgmpy.tests.help_functions as hf
+import help_functions as hf
 
 
 class TestBaseModelCreation(unittest.TestCase):
