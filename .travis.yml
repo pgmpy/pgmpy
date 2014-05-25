@@ -2,7 +2,7 @@ language: python
 python:
     - "3.3"
 virtualenv:
-    system_site_packages: true
+    system_site_packages: false
 before_install:
     - sudo apt-get update
     - sudo apt-get build-dep -qq python3-numpy
