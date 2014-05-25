@@ -108,6 +108,9 @@ class JointProbabilityDistribution(Factor):
         self.marginalize(list(set(list(self.variables)) - set(variables if isinstance(variables, (list, set, dict, tuple))
                                                               else [variables])))
 
+    def check_independence(self, event1, event2, event3):
+        pass
+
     def get_independencies(self, condition=None):
         """
         Returns the independent variables in the joint probability distribution.
@@ -130,7 +133,10 @@ class JointProbabilityDistribution(Factor):
         independencies = Independencies()
         from itertools import combinations
         for variable_pair in combinations(list(self.variables), 2):
-            if self.marginal_distribution(variable_pair) == self.marginal_distribution(variable_pair[0]) * self.marginal_distribution(variable_pair[1]):
+            from copy import deepcopy
+            if JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair) == \
+                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[0]) * \
+                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[1]):
                 independencies.add_assertions(variable_pair)
         return independencies
 
@@ -159,7 +165,37 @@ class JointProbabilityDistribution(Factor):
         self.normalize()
 
     def minimal_imap(self, order):
-        pass
+        """
+        Returns a Bayesian Model which is minimal IMap of the Joint Probability Distribution
+        considering the order of the variables.
+
+        Parameters
+        ----------
+        order: array-like
+            The order of the random variables.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        >>> bayesian_model = prob.minimal_imap(order=['x2', 'x1', 'x3'])
+        >>> bayesian_model
+        <pgmpy.BayesianModel.BayesianModel.BayesianModel at 0x7fd7440a9320>
+        """
+        from pgmpy import BayesianModel as bm
+        import itertools
+
+        def combinations(u):
+            for r in range(len(u) + 1):
+                for i in itertools.combinations(u, r):
+                    yield i
+
+        G = bm.BayesianModel()
+        for variable_index in range(len(order)):
+            u = order[:variable_index]
+            for subset in combinations(u):
+                if self.check_independence(order[variable_index], set(u)-set(subset), subset):
+                    G.add_edges_from([(variable, order[variable_index]) for variable in subset])
 
     def pmap(self):
         pass
