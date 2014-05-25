@@ -1,3 +1,3 @@
 from .MarkovModel import *
 
-__all__ = []
+__all__ = ['MarkovModel',]
