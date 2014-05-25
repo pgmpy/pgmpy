@@ -108,8 +108,43 @@ class JointProbabilityDistribution(Factor):
         self.marginalize(list(set(list(self.variables)) - set(variables if isinstance(variables, (list, set, dict, tuple))
                                                               else [variables])))
 
-    def check_independence(self, event1, event2, event3):
-        pass
+    def check_independence(self, event1, event2, event3=None):
+        """
+        Check if the Joint Probability Distribution satisfies the given independence condition.
+
+        Parameters
+        ----------
+        event1: list or string
+            random variable whose independence is to be checked.
+        event2: list or string
+            random variable from which event1 is independent.
+        event3: list or string
+            event1 is independent of event2 given event3.
+
+        For random variables say X, Y, Z to check if X is independent of Y given Z.
+        event1 should be either X or Y.
+        event2 should be either Y or X.
+        event3 should Z.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        >>> prob.check_independence('x1', 'x2')
+        True
+        >>> prob.check_independence(['x1'], ['x2'], 'x3')
+        True
+        """
+        from itertools import product
+        from copy import deepcopy
+        if event3:
+            self.conditional_distribution(event3)
+        for variable_pair in product(event1, event2):
+            if JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair) != \
+                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[0]) * \
+                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[1]):
+                return False
+        return True
 
     def get_independencies(self, condition=None):
         """
