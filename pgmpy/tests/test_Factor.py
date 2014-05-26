@@ -141,6 +141,11 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    def test_eq(self):
+        self.assertFalse(self.phi == self.phi1)
+        self.assertTrue(self.phi == self.phi)
+        self.assertTrue(self.phi1 == self.phi1)
+
     def tearDown(self):
         del self.phi
         del self.phi1
