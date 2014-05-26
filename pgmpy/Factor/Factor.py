@@ -296,7 +296,8 @@ class Factor:
         return self.product(other)
 
     def __eq__(self, other):
-        if self.variables == other.variables and self.cardinality == other.cardinality and self.values == other.values:
+        if self.variables == other.variables and all(self.cardinality == other.cardinality) \
+                and all(self.values == other.values):
             return True
         else:
             return False
