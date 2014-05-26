@@ -545,7 +545,7 @@ class BayesianModel(nx.DiGraph):
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
-            raise Exceptions.ExtraParentsError(extra_parents)
+            raise ValueError(extra_parents)
         else:
             return True
 
