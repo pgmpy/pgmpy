@@ -28,6 +28,10 @@ class TestFactorMethods(unittest.TestCase):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
 
+    def test_scope(self):
+        self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
+        self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
+
     def test_assignment(self):
         self.assertListEqual(self.phi.assignment([0]), [['x1_0', 'x2_0', 'x3_0']])
         self.assertListEqual(self.phi.assignment([4, 5, 6]), [['x1_0', 'x2_0', 'x3_1'],
@@ -136,6 +140,11 @@ class TestFactorMethods(unittest.TestCase):
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
+
+    def test_eq(self):
+        self.assertFalse(self.phi == self.phi1)
+        self.assertTrue(self.phi == self.phi)
+        self.assertTrue(self.phi1 == self.phi1)
 
     def tearDown(self):
         del self.phi

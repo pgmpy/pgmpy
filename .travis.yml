@@ -18,7 +18,7 @@ before_install:
 install:
 #    - "pip3 -q install cython"
 #    - "pip3 -q install networkx"
-#    - "pip3  install numpy --upgrade"
+    - "pip3  install numpy --upgrade"
 #    - "pip3  install scipy --upgrade"
 #    - "pip3 -q install nose"
 #    - "pip3 -q install coveralls"
