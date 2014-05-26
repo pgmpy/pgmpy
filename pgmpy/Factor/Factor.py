@@ -74,6 +74,18 @@ class Factor:
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
+    def scope(self):
+        """
+        Returns the scope of the factor.
+
+        Examples
+        --------
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
+        >>> phi.scope()
+        ['x1', 'x2', 'x3']
+        """
+        return list(self.variables)
+
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -246,6 +258,8 @@ class Factor:
 
     def __str__(self):
         return self._str('phi')
+
+    __repr__ = __str__
 
     def _str(self, phi_or_p):
         string = ""
