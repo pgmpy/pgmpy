@@ -368,19 +368,19 @@ class BayesianModel(nx.DiGraph):
                 for edge in ebunch:
                     if edge[0] == edge[1]:
                         del self
-                        raise Exceptions.SelfLoopError("Self Loops are not allowed",
+                        raise ValueError("Self Loops are not allowed",
                                                        edge)
 
             simple_cycles = [loop for loop in nx.simple_cycles(self)]
             if simple_cycles:
                 del self
-                raise Exceptions.CycleError("Cycles are not allowed",
+                raise ValueError("Cycles are not allowed",
                                             simple_cycles)
             return True
         else:
             for edge in ebunch:
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self loops are not "
+                    raise ValueError("Self loops are not "
                                                    "allowed", edge)
 
             import copy
@@ -389,7 +389,7 @@ class BayesianModel(nx.DiGraph):
             simple_cycles = [loop for loop in nx.simple_cycles(test_G)]
             if simple_cycles:
                 del test_G
-                raise Exceptions.CycleError("Cycles are not allowed",
+                raise ValueError("Cycles are not allowed",
                                             simple_cycles)
             return True
 
@@ -445,7 +445,7 @@ class BayesianModel(nx.DiGraph):
         if sorted(node_states) == sorted(states):
             return True
         else:
-            raise Exceptions.MissingStatesError(set(node_states) - set(states))
+            raise ValueError(set(node_states) - set(states))
 
     def _no_extra_states(self, node, states):
         """"
@@ -455,7 +455,7 @@ class BayesianModel(nx.DiGraph):
         node_states = [state['name'] for state in self.node[node]['_states']]
         extra_states = set(states) - set(node_states)
         if extra_states:
-            raise Exceptions.ExtraStatesError(extra_states)
+            raise ValueError(extra_states)
         else:
             return True
 
@@ -545,7 +545,7 @@ class BayesianModel(nx.DiGraph):
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
-            raise Exceptions.ExtraParentsError(extra_parents)
+            raise ValueError(extra_parents)
         else:
             return True
 
@@ -556,7 +556,7 @@ class BayesianModel(nx.DiGraph):
         """
         missing_parents = set(self.node[node]['_parents']) - set(parents)
         if missing_parents:
-            raise Exceptions.MissingParentsError(missing_parents)
+            raise ValueError(missing_parents)
         else:
             return True
 
@@ -762,7 +762,7 @@ class BayesianModel(nx.DiGraph):
         if found:
             self._update_node_observed_status(node)
         else:
-            raise Exceptions.StateError("State: ", state,
+            raise ValueError("State: ", state,
                                         " not found for node: ", node)
 
     def set_observations(self, observations):
@@ -841,8 +841,9 @@ class BayesianModel(nx.DiGraph):
                     for state in self.node[node]['_states']:
                         state['observed_status'] = False
                     self._update_node_observed_status(node)
-            except KeyError:
-                raise Exceptions.NodeNotFoundError("Node not found", node)
+            except KeyError as err:
+                err.message = "Node not found" + str(node)
+                raise
 
     def is_observed(self, node):
         """
@@ -1021,7 +1022,7 @@ class BayesianModel(nx.DiGraph):
         for node in self.nodes():
             cpd = self.get_cpd(node)
             if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
-                raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
+                raise ValueError("Sum of probabilities of states is not equal to 1")
 
     def get_independencies(self, latex=False):
         import pgmpy.BayesianModel.Independencies as Independencies
