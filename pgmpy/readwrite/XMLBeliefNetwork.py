@@ -9,6 +9,8 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
+__all__ = ['XBNReader']
+
 
 class XBNReader:
     """
@@ -54,7 +56,7 @@ class XBNReader:
         {'NAME': "Notebook.Cancer Example From Neapolitan",
          'ROOT': "Cancer"}
         """
-        return {key: value for key,value in self.network.items()}
+        return {key: value for key, value in self.network.items()}
 
     def get_bnmodel_name(self):
         """
@@ -88,7 +90,16 @@ class XBNReader:
         --------
         >>> reader = XBNReader('xbn_test.xml')
         >>> reader.get_variables()
-        ['a', 'b', 'c', 'd', 'e']
+        {'a': {'TYPE': 'discrete', 'XPOS': '13495',
+               'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
+               'STATES': ['Present', 'Absent']}
+        'b': {'TYPE': 'discrete', 'XPOS': '11290',
+               'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
+               'STATES': ['Present', 'Absent']},
+        'c': {....},
+        'd': {....},
+        'e': {....}
+        }
         """
         variables = {}
         for variable in self.bnmodel.find('VARIABLES'):
@@ -143,8 +154,8 @@ class XBNReader:
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
             variable_name = dist.find('PRIVATE').get('NAME')
             distribution[variable_name] = {'TYPE': dist.get('TYPE')}
-            if dist.find('CONDSET'):
+            if dist.find('CONDSET') is not None:
                 distribution[variable_name]['CONDSET'] = [var.get('NAME') for var in dist.find('CONDSET').findall('CONDELEM')]
-            distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.split())) for dpi in dist.find('DPIS')])
+            distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
