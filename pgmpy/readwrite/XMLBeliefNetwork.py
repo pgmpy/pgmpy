@@ -166,3 +166,155 @@ class XBNReader:
             distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
+
+
+class XBNWriter:
+    """
+    Base class for writing XML Belief Network file format.
+    """
+    def __init__(self):
+        """
+        Initializer for XBNWriter class
+        """
+        self.network = etree.Element('ANALYSISNOTEBOOK')
+        self.bnmodel = etree.SubElement(self.network, 'BNMODEL')
+
+    def set_analysisnotebook(self, **data):
+        """
+        Set attributes for ANALYSISNOTEBOOK tag
+
+        Parameters
+        ----------
+        **data: dict
+            {name: value} for the attributes to be set.
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer = XBNWriter()
+        >>> writer.set_analysisnotebook(NAME="Notebook.Cancer Example From Neapolitan",
+        >>>                             ROOT='Cancer')
+        """
+        for key, value in data.items():
+            self.network.set(str(key), str(value))
+
+    def set_bnmodel_name(self, name):
+        """
+        Set the name of the BNMODEL.
+
+        Parameters
+        ----------
+        name: str
+            Name of the BNModel.
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer = XBNWriter()
+        >>> writer.set_bnmodel_name("Cancer")
+        """
+        self.bnmodel.set('NAME', str(name))
+
+    def set_static_properties(self, **data):
+        """
+        Set STATICPROPERTIES tag for the network
+
+        Parameters
+        ----------
+        **data: dict
+            {name: value} for name and value of the property.
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer = XBNWriter()
+        >>> writer.set_static_properties(FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS")
+        """
+        static_prop = etree.SubElement(self.bnmodel, 'STATICPROPERTIES')
+        for key, value in data.items():
+            etree.SubElement(static_prop, key, attrib={'VALUE': value})
+
+    def set_variables(self, data):
+        """
+        Set variables for the network.
+
+        Parameters
+        ----------
+        data: dict
+            data is dict in the form:
+                {'a': {'TYPE': 'discrete', 'XPOS': '13495',
+                       'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
+                       'STATES': ['Present', 'Absent']}
+                'b': {'TYPE': 'discrete', 'XPOS': '11290',
+                       'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
+                       'STATES': ['Present', 'Absent']}, ...
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer = XBNWriter()
+        >>> writer.set_variables({'a': {'TYPE': 'discrete', 'XPOS': '13495',
+        >>>                             'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
+        >>>                             'STATES': ['Present', 'Absent']}
+        >>>                       'b': {'TYPE': 'discrete', 'XPOS': '11290',
+        >>>                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
+        >>>                             'STATES': ['Present', 'Absent']}})
+        """
+        variables = etree.SubElement(self.bnmodel)
+        for var in data:
+            variable = etree.SubElement(variables, 'VAR', attrib={'NAME': var, 'TYPE': data[var]['TYPE'],
+                                                                  'XPOS': data[var]['XPOS'], 'YPOS': data[var]['YPOS']})
+            etree.SubElement(variable, 'DESCRIPTION', data[var]['DESCRIPTION'])
+            for state in data[var]['STATES']:
+                etree.SubElement(variable, 'STATENAME').text = state
+
+    def set_edges(self, edge_list):
+        """
+        Set edges/arc in the network.
+
+        Parameters
+        ----------
+        edge_list: array_like
+            list, tuple, dict or set whose each elements has two values (parent, child).
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer = XBNWriter()
+        >>> writer.set_edges([('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
+        """
+        structure = etree.SubElement(self.bnmodel, 'STRUCTURE')
+        for edge in edge_list:
+            etree.SubElement(structure, 'ARC', attrib={'PARENT': edge[0], 'CHILD': edge[1]})
+
+    def set_distributions(self, data):
+        """
+        Set distributions in the network.
+
+        Parameters
+        ----------
+        data: dict
+            dict in the form of:
+                {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
+                 'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
+                                                          [ 0.6,  0.4]]),
+                       'CONDSET': ['c']}, ... }
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> writer =XBNWriter()
+        >>> writer.set_distributions({'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
+        >>>                           'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
+        >>>                                                                    [ 0.6,  0.4]]),
+        >>>                                 'CONDSET': ['c']}})
+        """
+        distributions = etree.SubElement(self.bnmodel, 'DISTRIBUTIONS')
+        for var in data:
+            dist = etree.SubElement(distributions, 'DIST', attrib=data[var]['TYPE'])
+            etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
+            if 'CONDSET' in data:
+                condset = etree.SubElement(dist, 'CONDSET')
+                for cond in data[var]['CONDSET']:
+                    etree.SubElement(condset, 'CONDELEM', attrib={'NAME': cond})
+            #TODO: Add DPIS.
