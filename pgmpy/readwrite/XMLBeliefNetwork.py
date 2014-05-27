@@ -155,6 +155,7 @@ class XBNReader:
                  [ 0.7 ,  0.3 ],
                  [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}}
         """
+        #TODO: add parsing of DPI INDEXEX.
         import numpy as np
         distribution = {}
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
