@@ -9,12 +9,12 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
-__all__ = ['XBNReader']
+__all__ = ['XBNReader', 'XBNWriter']
 
 
 class XBNReader:
     """
-    Base class for XML Belief Network File Format.
+    Base class for reading XML Belief Network File Format.
     """
     def __init__(self, path=None, string=None):
         """
@@ -143,11 +143,17 @@ class XBNReader:
         --------
         >>> reader = XBNReader('xbn_test.xml')
         >>> reader.get_distributions()
-        {'a': array([ 0.2,  0.8]),
-         'e': array([[ 0.8,  0.2], [ 0.6,  0.4]]),
-         'd': array([[ 0.8 ,  0.2 ], [ 0.9 ,  0.1 ], [ 0.7 ,  0.3 ], [ 0.05,  0.95]]),
-         'b': array([[ 0.8,  0.2], [ 0.2,  0.8]]),
-         'c': array([[ 0.2 ,  0.8 ], [ 0.05,  0.95]])}
+        {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
+         'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
+                 [ 0.6,  0.4]]), 'CONDSET': ['c']},
+         'b': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
+                 [ 0.2,  0.8]]), 'CONDSET': ['a']},
+         'c': {'TYPE': 'discrete', 'DPIS': array([[ 0.2 ,  0.8 ],
+                 [ 0.05,  0.95]]), 'CONDSET': ['a']},
+         'd': {'TYPE': 'discrete', 'DPIS': array([[ 0.8 ,  0.2 ],
+                 [ 0.9 ,  0.1 ],
+                 [ 0.7 ,  0.3 ],
+                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}}
         """
         import numpy as np
         distribution = {}
