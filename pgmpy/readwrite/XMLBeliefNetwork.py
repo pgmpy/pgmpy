@@ -145,17 +145,16 @@ class XBNReader:
         >>> reader.get_distributions()
         {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
          'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.6,  0.4]]), 'CONDSET': ['c']},
+                 [ 0.6,  0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
          'b': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.2,  0.8]]), 'CONDSET': ['a']},
+                 [ 0.2,  0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
          'c': {'TYPE': 'discrete', 'DPIS': array([[ 0.2 ,  0.8 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['a']},
+                 [ 0.05,  0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
          'd': {'TYPE': 'discrete', 'DPIS': array([[ 0.8 ,  0.2 ],
                  [ 0.9 ,  0.1 ],
                  [ 0.7 ,  0.3 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}}
+                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
         """
-        #TODO: add parsing of DPI INDEXEX.
         import numpy as np
         distribution = {}
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
@@ -163,6 +162,9 @@ class XBNReader:
             distribution[variable_name] = {'TYPE': dist.get('TYPE')}
             if dist.find('CONDSET') is not None:
                 distribution[variable_name]['CONDSET'] = [var.get('NAME') for var in dist.find('CONDSET').findall('CONDELEM')]
+                distribution[variable_name]['CARDINALITY'] = np.array([len(set(np.array([list(map(int, dpi.get('INDEXES').split()))
+                                                                                         for dpi in dist.find('DPIS')])[:, i]))
+                                                                       for i in range(len(distribution[variable_name]['CONDSET']))])
             distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
@@ -175,6 +177,10 @@ class XBNWriter:
     def __init__(self):
         """
         Initializer for XBNWriter class
+
+        Reference
+        ---------
+        http://xml.coverpages.org/xbn-MSdefault19990414.html
         """
         self.network = etree.Element('ANALYSISNOTEBOOK')
         self.bnmodel = etree.SubElement(self.network, 'BNMODEL')
@@ -307,9 +313,15 @@ class XBNWriter:
         >>> writer.set_distributions({'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
         >>>                           'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
         >>>                                                                    [ 0.6,  0.4]]),
-        >>>                                 'CONDSET': ['c']}})
+        >>>                                 'CONDSET': ['c'], 'CARDINALITY': [2]},
+        >>>                                      ................    })
         """
         distributions = etree.SubElement(self.bnmodel, 'DISTRIBUTIONS')
+
+        def get_arr():
+            #TODO: funtion to return values as used in print of factor class. Need to find a good way to write this.
+            pass
+
         for var in data:
             dist = etree.SubElement(distributions, 'DIST', attrib=data[var]['TYPE'])
             etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
@@ -317,4 +329,10 @@ class XBNWriter:
                 condset = etree.SubElement(dist, 'CONDSET')
                 for cond in data[var]['CONDSET']:
                     etree.SubElement(condset, 'CONDELEM', attrib={'NAME': cond})
-            #TODO: Add DPIS.
+
+                dpis = etree.SubElement(dist, 'DPIS')
+                for dpi in range(len(data[var]['DPIS'])):
+                    etree.SubElement(dpis, "DPI", attrib={'INDEXES': ' ' + ' '.join(map(str, get_arr())) + ' '})
+
+            for dpi in range(len(dist.find('DPIS'))):
+                dpi.text = ' ' + ' '.join(map(str, data[var]['DPIS'][dpi]))
