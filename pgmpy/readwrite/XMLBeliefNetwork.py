@@ -163,6 +163,9 @@ class XBNReader:
             distribution[variable_name] = {'TYPE': dist.get('TYPE')}
             if dist.find('CONDSET') is not None:
                 distribution[variable_name]['CONDSET'] = [var.get('NAME') for var in dist.find('CONDSET').findall('CONDELEM')]
+                distribution[variable_name]['CARDINALITY'] = np.array([len(set(np.array([list(map(int, dpi.get('INDEXES').split()))
+                                                                                         for dpi in dist.find('DPIS')])[:, i]))
+                                                                       for i in range(len(distribution[variable_name]['CONDSET']))])
             distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
