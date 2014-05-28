@@ -175,6 +175,10 @@ class XBNWriter:
     def __init__(self):
         """
         Initializer for XBNWriter class
+
+        Reference
+        ---------
+        http://xml.coverpages.org/xbn-MSdefault19990414.html
         """
         self.network = etree.Element('ANALYSISNOTEBOOK')
         self.bnmodel = etree.SubElement(self.network, 'BNMODEL')
