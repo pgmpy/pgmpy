@@ -145,15 +145,15 @@ class XBNReader:
         >>> reader.get_distributions()
         {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
          'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.6,  0.4]]), 'CONDSET': ['c']},
+                 [ 0.6,  0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
          'b': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.2,  0.8]]), 'CONDSET': ['a']},
+                 [ 0.2,  0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
          'c': {'TYPE': 'discrete', 'DPIS': array([[ 0.2 ,  0.8 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['a']},
+                 [ 0.05,  0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
          'd': {'TYPE': 'discrete', 'DPIS': array([[ 0.8 ,  0.2 ],
                  [ 0.9 ,  0.1 ],
                  [ 0.7 ,  0.3 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}}
+                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
         """
         #TODO: add parsing of DPI INDEXEX.
         import numpy as np
