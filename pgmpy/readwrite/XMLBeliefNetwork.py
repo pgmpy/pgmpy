@@ -37,7 +37,7 @@ class XBNReader:
         http://xml.coverpages.org/xbn-MSdefault19990414.html
         """
         if path:
-            self.network = etree.ElementTree(file=path).getroot()
+            self.network = etree.parse(path).getroot()
         elif string:
             self.network = etree.fromstring(string)
         else:
