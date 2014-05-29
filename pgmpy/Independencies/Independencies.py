@@ -4,24 +4,30 @@ from pgmpy import Exceptions
 class Independencies:
     """
     Base class for Independencies.
-    Independencies class represents a set of Conditional Independence assertions (eg: "X is independent of Y given Z" where X, Y and Z
-    are random variables) or Independence assertions (eg: "X is independent of Y" where X and Y
-    are random variables).
-    Initialize the Independencies Class with Conditional Independence assertions or Independence assertions.
+    Independencies class represents a set of Conditional Independence
+    assertions (eg: "X is independent of Y given Z" where X, Y and Z
+    are random variables) or Independence assertions (eg: "X is
+    independent of Y" where X and Y are random variables).
+    Initialize the Independencies Class with Conditional Independence
+    assertions or Independence assertions.
 
     Parameters
     ----------
     assertions: Lists or Tuples
-            Each assertion is a list or tuple of the form: [event1, event2 and event3]
-            eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
+            Each assertion is a list or tuple of the form: [event1,
+            event2 and event3]
+            eg: assertion ['X', 'Y', 'Z'] would be X is independent
+            of Y given Z.
 
     Examples
     --------
-    Creating an Independencies object with one independence assertion: Random Variable X is independent of Y
+    Creating an Independencies object with one independence assertion:
+    Random Variable X is independent of Y
 
     >>> independencies = Independencies(['X', 'Y'])
 
-    Creating an Independencies object with three conditional independence assertions:
+    Creating an Independencies object with three conditional
+    independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
     >>> independencies = Independencies(['X', 'Y', 'Z'],
