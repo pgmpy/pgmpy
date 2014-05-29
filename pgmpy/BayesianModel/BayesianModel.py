@@ -974,6 +974,52 @@ class BayesianModel(nx.DiGraph):
                             visit_list.add((parent, 'up'))
         return active_nodes
 
+    def local_independencies(self, variables):
+        """
+        Returns a Independencies object containing the local independencies
+        of each of the variables.
+
+        Parameters
+        ----------
+        variables: str or array like
+            variables whose local independencies are to found.
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
+        >>>                         ('grade', 'letter'), ('intel', 'SAT')])
+        >>> ind = student.local_independencies('grade')
+        >>> ind.event1
+        {'grade'}
+        >>> ind.event2
+        {'SAT'}
+        >>> ind.event3
+        {'diff', 'intel'}
+        """
+        def dfs(node):
+            """
+            Returns the descendents of node.
+
+            Since there can't be any cycles in the Bayesian Network. This is a
+            very simple dfs which doen't remember which nodes it has visited.
+            """
+            descendents = []
+            visit = [node]
+            while visit:
+                n = visit.pop()
+                neighbors = self.neighbors(n)
+                visit.extend(neighbors)
+                descendents.extend(neighbors)
+            return descendents
+
+        from pgmpy.Independencies import Independencies
+        independencies = Independencies()
+        for variable in [variables] if isinstance(variables, str) else variables:
+            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)), set(self.get_parents(variable)))
+        return independencies
+
     def is_active_trail(self, start, end, observed=None, additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
@@ -1068,4 +1114,3 @@ class BayesianModel(nx.DiGraph):
 
     def is_imap(self, independence):
         pass
-
