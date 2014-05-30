@@ -269,6 +269,21 @@ class TestBayesianModelMethods(unittest.TestCase):
                              [self.G.node['a'], self.G.node['b']])
         self.assertListEqual(list(self.G._get_parent_objects('a')), [])
 
+    def test_moral_graph(self):
+        moral_graph = self.G.moral_graph()
+        self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
+        for edge in moral_graph.edges():
+            self.assertTrue(edge in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')] or
+                            (edge[1], edge[0]) in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')])
+
+    def test_moral_graph_with_edge_present_over_parents(self):
+        G = bm.BayesianModel([('a', 'd'), ('d', 'e'), ('b', 'd'), ('b', 'c'), ('a', 'b')])
+        moral_graph = G.moral_graph()
+        self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
+        for edge in moral_graph.edges():
+            self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
+                            (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
+
     def tearDown(self):
         del self.G
 

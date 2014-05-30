@@ -1105,6 +1105,32 @@ class BayesianModel(nx.DiGraph):
         else:
             return independencies.latex_string()
 
+    def moral_graph(self):
+        """
+        Returns the moral graph of the network.
+
+        Examples
+        --------
+        >>> import pgmpy.BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>>                       ('intel', 'SAT'), ('grade', 'letter')])
+        >>> moral_graph = G.moral_graph()
+        >>> type(moral_graph)
+        networkx.classes.graph.Graph
+        >>> moral_graph.nodes()
+        ['diff', 'grade', 'intel', 'SAT', 'letter']
+        >>> moral_graph.edges()
+        [('diff', 'intel'), ('diff', 'grade'), ('intel', 'grade'),
+        ('intel', 'SAT'), ('grade', 'letter')]
+        """
+        moral_graph = self.copy()
+        parents_dict = {}
+        for node in self.nodes():
+            parents_dict[node] = self.get_parents(node)
+        for node, parents in parents_dict.items():
+            moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
+        return moral_graph.to_undirected()
+
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
