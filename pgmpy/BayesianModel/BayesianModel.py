@@ -1128,7 +1128,7 @@ class BayesianModel(nx.DiGraph):
         for node in self.nodes():
             parents_dict[node] = self.get_parents(node)
         for node, parents in parents_dict.items():
-            moral_graph.add_edges_from(itertools.combinations(parents, 2))
+            moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
         return moral_graph.to_undirected()
 
     def get_factorized_product(self, latex=False):
