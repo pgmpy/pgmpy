@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
+import numpy as np
 from pgmpy.Factor import Factor
 from pgmpy.Independencies import Independencies
-import numpy as np
 
 
 class JointProbabilityDistribution(Factor):

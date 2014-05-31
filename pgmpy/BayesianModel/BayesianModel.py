@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
+import itertools
 import networkx as nx
 import numpy as np
-import itertools
-from pgmpy import Exceptions
 from pgmpy.Factor import CPD
 
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from pgmpy import Exceptions
-import numpy as np
-from collections import OrderedDict
-from pgmpy.Factor._factor_product import _factor_product
 import functools
+from collections import OrderedDict
+import numpy as np
+from pgmpy import Exceptions
+from pgmpy.Factor._factor_product import _factor_product
 
 
 class Factor:

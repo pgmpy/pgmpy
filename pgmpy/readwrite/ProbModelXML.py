@@ -110,8 +110,6 @@ __all__ = ['write_probmodelxml', 'read_probmodelxml', 'generate_probmodelxml',
            'parse_probmodelxml', 'ProbModelXMLReader', 'ProbModelXMLWriter']
 
 import warnings
-import networkx as nx
-from pgmpy import BayesianModel as bm
 try:
     from lxml import etree
 except ImportError:
@@ -122,6 +120,8 @@ except ImportError:
             import xml.etree.ElementTree as etree
         except ImportError:
             print("Failed to import ElementTree from any known place")
+
+import networkx as nx
 
 warnings.warn("Not Complete. Please use only for "
               "reading and writing Bayesian Models.")

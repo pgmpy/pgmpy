@@ -1,8 +1,8 @@
+import os
 import unittest
-from pgmpy.readwrite import XMLBIFReader
 import numpy as np
 import numpy.testing as np_test
-import os
+from pgmpy.readwrite import XMLBIFReader
 
 
 class TestXMLBIFReaderMethodsString(unittest.TestCase):
