@@ -2,6 +2,7 @@
 """Contains the different formats of CPDs used in PGM"""
 
 import numpy as np
+import networkx as nx
 from pgmpy.Factor import Factor
 from pgmpy import Exceptions
 
@@ -165,3 +166,106 @@ class TabularCPD(Factor):
         Returns the cpd
         """
         return self.cpd
+
+
+# class Tree:
+#     """
+#     Base Class for the structure of TreeCPD.
+#     """
+#
+#     class Node:
+#         """
+#         Base Class for the node.
+#         """
+#         def __init__(self, name):
+#             self.name = name
+#             self.left_child = None
+#             self.right_child = None
+#             self.left = None
+#             self.right = None
+#             self.parent = None
+#
+#     def __init__(self, root=None):
+#         """
+#         Constructs an empty tree if root not given else creates a tree
+#         with a root node.
+#
+#         Parameters
+#         ----------
+#         root: string or tuple.
+#             root node of the tree.
+#
+#         Examples
+#         --------
+#         >>> from pgmpy.Factor.CPD import Tree
+#         >>> tree = Tree('encyclopedia')
+#         >>> another_tree = Tree(('encyclo', 'science'))
+#         """
+#         self.nodes = []
+#         self.edges = []
+#         if root:
+#             self.root = Tree.Node(root)
+#             self.nodes.append(self.root)
+#
+#     def add_node(self, node):
+#         """
+#         Adds a node to the tree.
+#
+#         Parameters
+#         ----------
+#         node: string or tuple.
+#             Name of the node to add.
+#         """
+#         self.nodes.append(Tree.Node(node))
+
+class TreeCPD(nx.DiGraph):
+    """
+    Base Class for Tree CPD.
+    """
+    def __init__(self):
+        """
+        Creates an empty Tree CPD
+
+        Example
+        -------
+        To construct a tree like:
+                    B
+             0 /         \1
+              /          \
+        P(A|b_0)         C
+                   0/         \1
+                   /           \
+            P(A|b_1, c_0)      D
+                          0/       \
+                          /         \
+            P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
+
+        >>> from pgmpy.Factor import CPD, Factor
+        >>> tree = CPD.TreeCPD()
+        >>> tree.add_nodes_from(['B', 'C', 'D', Factor])
+        """
+        self.tree = nx.DiGraph(self)
+
+    def add_edge(self, u, v, label, attr_dict=None, **attr):
+        """
+        Add an edge between u and v.
+
+        The nodes u and v will be automatically added if they are
+        not already in the graph.
+
+        Parameters
+        ----------
+        u,v: nodes
+            Nodes can be hashable (and not None) Python objects.
+        label:
+        attr_dict: dictionary, optional (default= no attributes)
+            Dictionary of edge attributes. Key/Value pairs will
+            update existing data associated with the edge.
+        attr: Keyword arguments, optional
+            Edge data (or labels or objects) can be assigned using
+            keyword arguments.
+
+        Examples
+        --------
+
+        """
