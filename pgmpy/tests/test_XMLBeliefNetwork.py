@@ -1,8 +1,8 @@
-from pgmpy.readwrite import XMLBeliefNetwork
-import numpy as np
 import unittest
-import numpy.testing as np_test
 from io import StringIO
+import numpy as np
+import numpy.testing as np_test
+from pgmpy.readwrite import XMLBeliefNetwork
 
 
 class TestXBNReader(unittest.TestCase):

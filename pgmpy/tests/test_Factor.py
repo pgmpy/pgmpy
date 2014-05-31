@@ -1,12 +1,12 @@
 import unittest
+from collections import OrderedDict
+import numpy as np
+import numpy.testing as np_test
 from pgmpy.Factor import Factor
 from pgmpy.Factor.CPD import TabularCPD
-import help_functions as hf
-from collections import OrderedDict
-import numpy.testing as np_test
-import numpy as np
 from pgmpy import Exceptions
 from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
+import help_functions as hf
 
 
 class TestFactorInit(unittest.TestCase):

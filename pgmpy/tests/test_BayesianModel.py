@@ -1,7 +1,6 @@
 import unittest
-from pgmpy import BayesianModel as bm
-from pgmpy import Exceptions
 import networkx as nx
+from pgmpy import BayesianModel as bm
 import help_functions as hf
 
 
