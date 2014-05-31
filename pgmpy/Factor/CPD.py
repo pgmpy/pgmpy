@@ -168,67 +168,24 @@ class TabularCPD(Factor):
         return self.cpd
 
 
-# class Tree:
-#     """
-#     Base Class for the structure of TreeCPD.
-#     """
-#
-#     class Node:
-#         """
-#         Base Class for the node.
-#         """
-#         def __init__(self, name):
-#             self.name = name
-#             self.left_child = None
-#             self.right_child = None
-#             self.left = None
-#             self.right = None
-#             self.parent = None
-#
-#     def __init__(self, root=None):
-#         """
-#         Constructs an empty tree if root not given else creates a tree
-#         with a root node.
-#
-#         Parameters
-#         ----------
-#         root: string or tuple.
-#             root node of the tree.
-#
-#         Examples
-#         --------
-#         >>> from pgmpy.Factor.CPD import Tree
-#         >>> tree = Tree('encyclopedia')
-#         >>> another_tree = Tree(('encyclo', 'science'))
-#         """
-#         self.nodes = []
-#         self.edges = []
-#         if root:
-#             self.root = Tree.Node(root)
-#             self.nodes.append(self.root)
-#
-#     def add_node(self, node):
-#         """
-#         Adds a node to the tree.
-#
-#         Parameters
-#         ----------
-#         node: string or tuple.
-#             Name of the node to add.
-#         """
-#         self.nodes.append(Tree.Node(node))
-
 class TreeCPD(nx.DiGraph):
     """
     Base Class for Tree CPD.
     """
-    def __init__(self):
+    def __init__(self, data=None):
         """
-        Creates an empty Tree CPD
+        Creates an empty Tree CPD.
+
+        Parameters
+        ----------
+        data: input tree
+            Data to initialize the tree. If data=None (default) an empty
+            tree is created. The data can be an edge list with label for
+            each edge. Label should be the observed value of the variable.
 
         Example
         -------
-        To construct a tree like:
+        For P(A|B, C, D), to construct a tree like:
                     B
              0 /         \1
               /          \
@@ -241,10 +198,18 @@ class TreeCPD(nx.DiGraph):
             P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
 
         >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD()
-        >>> tree.add_nodes_from(['B', 'C', 'D', Factor])
+        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+        >>>                     ('B', 'C', '1'),
+        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+        >>>                     ('C', 'D', '1'),
+        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1])),
+        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]))])
+
         """
-        self.tree = nx.DiGraph(self)
+        nx.DiGraph.__init__(self)
+        #TODO: Check cycles and self loops.
+        for edge in data:
+            self.add_edge(edge[0], edge[1], label=edge[2])
 
     def add_edge(self, u, v, label, attr_dict=None, **attr):
         """
@@ -269,3 +234,8 @@ class TreeCPD(nx.DiGraph):
         --------
 
         """
+        nx.DiGraph(self, u, v, label=label)
+
+    def add_edges_from(self, data):
+        for edge in data:
+            self.add_edge(edge[0], edge[1], edge[2])
