@@ -221,21 +221,43 @@ class TreeCPD(nx.DiGraph):
         Parameters
         ----------
         u,v: nodes
-            Nodes can be hashable (and not None) Python objects.
-        label:
+            Nodes can be any hashable (and not None) Python object.
+        label: string
+            Label should be value of the variable observed.
+            (underscore separated if multiple variables)
         attr_dict: dictionary, optional (default= no attributes)
             Dictionary of edge attributes. Key/Value pairs will
             update existing data associated with the edge.
         attr: Keyword arguments, optional
-            Edge data (or labels or objects) can be assigned using
-            keyword arguments.
+            Edge data can be assigned using keyword arguments.
 
         Examples
         --------
 
         """
-        nx.DiGraph(self, u, v, label=label)
+        nx.DiGraph.add_edge(self, u, v, label=label)
 
-    def add_edges_from(self, data):
-        for edge in data:
-            self.add_edge(edge[0], edge[1], edge[2])
+    def add_edges_from(self, ebunch, attr_dict=None, **attr):
+        """
+        Add all the edges in ebunch.
+
+        Parameters
+        ----------
+        ebunch : container of edges
+            Each edge given in the container will be added to the
+            graph. The edges must be given as as 3-tuples (u,v,label).
+        attr_dict : dictionary, optional (default= no attributes)
+            Dictionary of edge attributes.  Key/value pairs will
+            update existing data associated with each edge.
+        attr : keyword arguments, optional
+            Edge data (or labels or objects) can be assigned using
+            keyword arguments.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import CPD, Factor
+        >>> tree = CPD.TreeCPD()
+        >>> tree.add_edges_from([('B', 'C', '1'), ('C', 'D', '1'),
+        >>>                     ('D', Factor(['A'], [2], [0.6, 0.4]))])
+        """
+        nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
