@@ -355,12 +355,12 @@ class TestTreeCPDInit(unittest.TestCase):
         self.assertTrue(('C', 'D') in tree.edges())
         self.assertTrue(('B', 'C') in tree.edges())
 
-        self.assertTrue(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], '0')
-        self.assertTrue(tree['B']['C']['label'], '1')
-        self.assertTrue(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], '0')
-        self.assertTrue(tree['C']['D']['label'], '1')
-        self.assertTrue(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
-        self.assertTrue(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], '1')
+        self.assertEqual(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], '0')
+        self.assertEqual(tree['B']['C']['label'], '1')
+        self.assertEqual(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], '0')
+        self.assertEqual(tree['C']['D']['label'], '1')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], '1')
 
     def test_init_multi_variable_nodes(self):
         tree = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), '0_0'),
@@ -384,8 +384,43 @@ class TestTreeCPDInit(unittest.TestCase):
         self.assertTrue(('D', Factor(['A'], [2], [0.4, 0.6])) in tree.edges())
         self.assertTrue(('E', Factor(['A'], [2], [0.8, 0.2])) in tree.edges())
 
-        self.assertTrue(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], '0_0')
-        self.assertTrue(tree[('B', 'C')]['D'], '0_1')
-        self.assertTrue(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
-        self.assertTrue(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], '0')
+        self.assertEqual(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], '0_0')
+        self.assertEqual(tree[('B', 'C')]['D']['label'], '0_1')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertEqual(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], '0')
 
+
+class TestTreeCPD(unittest.TestCase):
+
+    def setUp(self):
+        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                              ('B', 'C', '1'),
+                              ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                              ('C', 'D', '1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+
+        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), '0_0'),
+                              (('B', 'C'), 'D', '0_1'),
+                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), '1_0'),
+                              (('B', 'C'), 'E', '1_1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
+                              ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
+                              ('E', Factor(['A'], [2], [0.8, 0.2]), '1')
+                              ])
+
+    def test_add_edge(self):
+        self.tree1.add_edge('yolo', 'yo', '0')
+        self.assertTrue('yolo' in self.tree1.nodes() and 'yo' in self.tree1.nodes())
+        self.assertTrue(('yolo', 'yo') in self.tree1.edges())
+        self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
+
+    def test_add_edges_from(self):
+        self.tree1.add_edge([('yolo', 'yo', '0'), ('hello', 'world', '1')])
+        self.assertTrue('yolo' in self.tree1.nodes() and 'yo' in self.tree1.nodes() and
+                        'hello' in self.tree1.nodes() and 'world' in self.tree1.nodes())
+        self.assertTrue(('yolo', 'yo') in self.tree1.edges())
+        self.assertTrue(('hello', 'world') in self.tree1.edges())
+        self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
+        self.assertEqual(self.tree1['hello']['world']['label'], '1')
