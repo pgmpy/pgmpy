@@ -202,8 +202,8 @@ class TreeCPD(nx.DiGraph):
         >>>                     ('B', 'C', '1'),
         >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
         >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1])),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]))])
+        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
         """
         nx.DiGraph.__init__(self)
@@ -260,4 +260,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edges_from([('B', 'C', '1'), ('C', 'D', '1'),
         >>>                     ('D', Factor(['A'], [2], [0.6, 0.4]))])
         """
+        for edge in ebunch:
+            if len(edge) == 2:
+                raise ValueError("Each edge tuple must have 3 values (u,v,label).")
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
