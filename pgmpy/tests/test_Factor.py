@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.testing as np_test
 from pgmpy.Factor import Factor
-from pgmpy.Factor.CPD import TabularCPD
+from pgmpy.Factor.CPD import TabularCPD, TreeCPD
 from pgmpy import Exceptions
 from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
 import help_functions as hf
@@ -328,3 +328,64 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.jpd
+
+
+class TestTreeCPDInit(unittest.TestCase):
+
+    def test_init_single_variable_nodes(self):
+        tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                        ('B', 'C', '1'),
+                        ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                        ('C', 'D', '1'),
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+
+        self.assertTrue('B' in tree.nodes())
+        self.assertTrue('C' in tree.nodes())
+        self.assertTrue('D' in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.1, 0.9]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.4, 0.6]) in tree.nodes())
+
+        self.assertTrue(('B', Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.1, 0.9]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.9, 0.1]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.4, 0.6]) in tree.edges()))
+        self.assertTrue(('C', 'D') in tree.edges())
+        self.assertTrue(('B', 'C') in tree.edges())
+
+        self.assertTrue(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], '0')
+        self.assertTrue(tree['B']['C']['label'], '1')
+        self.assertTrue(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], '0')
+        self.assertTrue(tree['C']['D']['label'], '1')
+        self.assertTrue(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertTrue(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], '1')
+
+    def test_init_multi_variable_nodes(self):
+        tree = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), '0_0'),
+                        (('B', 'C'), 'D', '0_1'),
+                        (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), '1_0'),
+                        (('B', 'C'), 'E', '1_1'),
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
+                        ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
+                        ('E', Factor(['A'], [2], [0.8, 0.2]), '1')
+                        ])
+
+        self.assertTrue(('B', 'C') in tree.nodes())
+        self.assertTrue('D' in tree.nodes())
+        self.assertTrue('E' in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+
+        self.assertTrue((('B', 'C'), Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+        self.assertTrue((('B', 'C'), 'E') in tree.edges())
+        self.assertTrue(('D', Factor(['A'], [2], [0.4, 0.6])) in tree.edges())
+        self.assertTrue(('E', Factor(['A'], [2], [0.8, 0.2])) in tree.edges())
+
+        self.assertTrue(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], '0_0')
+        self.assertTrue(tree[('B', 'C')]['D'], '0_1')
+        self.assertTrue(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertTrue(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], '0')
+
