@@ -14,7 +14,7 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1'], 'x3': ['x3_0', 'x3_1']}
-        hf.assertOrderedDictEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        self.assertEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8))
 
@@ -417,7 +417,7 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
 
     def test_add_edges_from(self):
-        self.tree1.add_edge([('yolo', 'yo', '0'), ('hello', 'world', '1')])
+        self.tree1.add_edges_from([('yolo', 'yo', '0'), ('hello', 'world', '1')])
         self.assertTrue('yolo' in self.tree1.nodes() and 'yo' in self.tree1.nodes() and
                         'hello' in self.tree1.nodes() and 'world' in self.tree1.nodes())
         self.assertTrue(('yolo', 'yo') in self.tree1.edges())
