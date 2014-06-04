@@ -20,17 +20,11 @@ Factor module
 .. autoclass:: Factor
    :members:
 
-.. module:: pgmpy.Factor
-
 .. autoclass:: TabularCPD
    :members:
 
-.. module:: pgmpy.Factor
-
 .. autoclass:: TreeCPD
    :members:
-
-.. module:: pgmpy.Factor
 
 .. autoclass:: JointProbabilityDistribution
    :members:
