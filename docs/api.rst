@@ -20,9 +20,13 @@ Factor module
 .. autoclass:: Factor
    :members:
 
-.. module:: pgmpy.Factor.CPD
-
 .. autoclass:: TabularCPD
+   :members:
+
+.. autoclass:: TreeCPD
+   :members:
+
+.. autoclass:: JointProbabilityDistribution
    :members:
 
 Independencies module
@@ -34,4 +38,24 @@ Independencies module
    :members:
 
 .. autoclass:: IndependenceAssertion
+   :members:
+
+readwrite module
+----------------
+
+.. module:: pgmpy.readwrite
+
+.. autoclass:: XBNReader
+   :members:
+
+.. autoclass:: XBNWriter
+   :members:
+
+.. autoclass:: XMLBIFReader
+   :members:
+
+.. autoclass:: ProbModelXMLReader
+   :members:
+
+.. autoclass:: ProbModelXMLWriter
    :members:

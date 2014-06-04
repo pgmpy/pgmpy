@@ -7,5 +7,7 @@ __all__ = ['ProbModelXMLReader',
            'generate_probmodelxml',
            'parse_probmodelxml',
            'write_probmodelxml',
+           'read_probmodelxml',
            'XMLBIFReader',
-           'XMLBIFWriter']
+           'XBNReader',
+           'XBNWriter']

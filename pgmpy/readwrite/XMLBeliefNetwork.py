@@ -9,8 +9,6 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
-__all__ = ['XBNReader', 'XBNWriter']
-
 
 class XBNReader:
     """
@@ -336,3 +334,4 @@ class XBNWriter:
 
             for dpi in range(len(dist.find('DPIS'))):
                 dpi.text = ' ' + ' '.join(map(str, data[var]['DPIS'][dpi]))
+
