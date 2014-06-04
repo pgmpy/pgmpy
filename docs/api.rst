@@ -39,3 +39,23 @@ Independencies module
 
 .. autoclass:: IndependenceAssertion
    :members:
+
+readwrite module
+----------------
+
+.. module:: pgmpy.readwrite
+
+.. autoclass:: XBNReader
+   :members:
+
+.. autoclass:: XBNWriter
+   :members:
+
+.. autoclass:: XMLBIFReader
+   :members:
+
+.. autoclass:: ProbModelXMLReader
+   :members:
+
+.. autoclass:: ProbModelXMLWriter
+   :members:
