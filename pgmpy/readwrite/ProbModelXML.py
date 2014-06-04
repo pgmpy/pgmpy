@@ -106,8 +106,6 @@ For the student example the ProbModelXML file should be:
     </Evidence>
 </ProbModelXML>
 """
-__all__ = ['write_probmodelxml', 'read_probmodelxml', 'generate_probmodelxml',
-           'parse_probmodelxml', 'ProbModelXMLReader', 'ProbModelXMLWriter']
 
 import warnings
 try:
@@ -516,3 +514,4 @@ class ProbModelXMLReader:
     def add_potential(self, potential):
         #TODO: Add code to read potential
         pass
+
