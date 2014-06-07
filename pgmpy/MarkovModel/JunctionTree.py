@@ -1,12 +1,10 @@
 __author__ = 'navin'
 
-import pgmpy.MarkovModel.UndirectedGraph as ug
+
+from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
 
 
-class JunctionTree(ug.UndirectedGraph):
-
-    def __init__(self):
-        pass
+class JunctionTree(UndirectedGraph):
 
     def addJTEdges(self):
         nodes = self.nodes()

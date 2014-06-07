@@ -28,6 +28,9 @@ class TestBaseModelCreation(unittest.TestCase):
             self.assertTrue(G.isTriangulated())
             i+=1
 
+    def test_spannningTree(self):
+        pass
+
     def tearDown(self):
         pass
 
