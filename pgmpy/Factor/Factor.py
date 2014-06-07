@@ -106,6 +106,20 @@ class Factor:
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in mat]
 
+    def get_value(self, node_assignments):
+        temp = np.cumprod(np.concatenate(([1], self.cardinality[:-1])))
+        x = np.sum(temp * node_assignments)
+        return self.values[x]
+
+
+    def get_value_from_node_dict(self, all_node_assignments):
+        index_for_variables =[]
+        for var in self.variables.keys():
+            index_for_variables.append(all_node_assignments[var])
+        return self.get_value(index_for_variables)
+
+
+
     def get_cardinality(self, variable):
         """
         Returns cardinality of a given variable
@@ -243,7 +257,8 @@ class Factor:
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
         return factor_product(self, *factors)
-
+    def getVariables(self):
+        return self.variables
     def __str__(self):
         return self._str('phi')
 

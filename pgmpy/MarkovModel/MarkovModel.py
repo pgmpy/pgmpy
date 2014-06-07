@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 
 import itertools
-
 import networkx as nx
+from blist import sortedlist, sortedset
+from pgmpy.Factor.Factor import Factor
+from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
+from heapq import heappush,heappop, heapify
 
-from .Exceptions import ObservationNotFound
-from .Exceptions import FactorNodesNotInClique
-from .Factor import *
 
 
-class MarkovModel(nx.Graph):
+
+class MarkovModel(UndirectedGraph):
     """
         Base class for markov model.
 
-        A BayesianModel stores nodes and edges with potentials
+        A MarkovModel stores nodes and edges with potentials
 
-        BayesianModel hold undirected edges.
+        MarkovModel hold undirected edges.
 
         IMP NOTE : Nodes should be strings.
 
@@ -31,7 +32,7 @@ class MarkovModel(nx.Graph):
         Create an empty bayesian model with no nodes and no edges.
 
         >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.BayesianModel()
+        >>> G = mm.MarkovModel()
 
         G can be grown in several ways.
 
@@ -77,25 +78,16 @@ class MarkovModel(nx.Graph):
         add_nodes_from(['node1', 'node2', ...])
         add_edge('node1')
         add_edges_from([('node1', 'node2'),('node3', 'node4')])
-        set_states({node : [state1, state2]})
+        add_states({node : [state1, state2]})
         get_states('node1')
         number_of_state('node1')
         get_rule_for_states('node1')
         set_rule_for_states({'node1': ['state2', 'state1', ...]})
-        get_rule_for_parents('node1')
-        set_rule_for_parents({'node1': ['parent1', 'parent2', ...]})
-        get_parents('node1')
-        number_of_parents('node1')
-        set_cpd('node1', cpd1)
-        get_cpd('node1')
         set_observations({'node1': ['observed_state1', 'observed_state2'],
                           'node2': 'observed_state1'})
-        reset_observations(['node1', 'node2'])
         is_observed('node1')
-        active_trail_nodes('node1')
-        is_active_trail('node1', 'node2')
-        marginal_probability('node1')
         """
+
     def __init__(self, ebunch=None):
         if ebunch is not None:
             nodes = set(itertools.chain(*ebunch))
@@ -107,8 +99,6 @@ class MarkovModel(nx.Graph):
         self._factors = []
 
     def add_node(self, node):
-        # if not isinstance(node, str):
-        #     raise TypeError("Name of nodes must be strings")
         """
         Add a single node to the Graph.
 
@@ -124,11 +114,12 @@ class MarkovModel(nx.Graph):
         Examples
         --------
         >>> from pgmpy import MarkovModel as mm
-        >>> G =mm.BayesianModel()
+        >>> G =mm.MarkovModel()
         >>> G.add_node('difficulty')
         """
         self._check_node_string([node])
         nx.Graph.add_node(self, node)
+        self.node[node]["_states"] = []
         self.setIsObserved(node, False)
 
 
@@ -148,12 +139,12 @@ class MarkovModel(nx.Graph):
         Examples
         --------
         >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.BayesianModel()
+        >>> G = mm.MarkovModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
         for node in nodes:
             self.add_node(node)
-        #self._update_node_parents(nodes)
+            #self._update_node_parents(nodes)
 
     def add_edge(self, u, v):
         """
@@ -238,12 +229,12 @@ class MarkovModel(nx.Graph):
         """
         if isinstance(nodes, str):
             nodes = [nodes]
-        states_dict={}
+        states_dict = {}
         for node in nodes:
-            states_dict[node]=[0,1]
+            states_dict[node] = [0, 1]
         self.set_states(states_dict)
 
-    def set_states(self, states_dic):
+    def add_states(self, states_dic):
         """
         Adds states to the node.
 
@@ -265,11 +256,10 @@ class MarkovModel(nx.Graph):
         ...               'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
-            if '_states' in self.node[node].keys():
-                self.node[node]['_states'].extend(states)
-            else:
-                self.node[node]['_states'] = states
-            self.setIsObserved(node,  False)
+            self.node[node]['_states'].extend(states)
+
+    def remove_all_states(self, node):
+        self.node[node]["_states"] = []
 
     def get_states(self, node):
         """
@@ -295,7 +285,9 @@ class MarkovModel(nx.Graph):
         >>> for state in states:
         ...     print(state)
         """
+
         return self.node[node]['_states']
+
 
     def number_of_states(self, node):
         """
@@ -319,7 +311,8 @@ class MarkovModel(nx.Graph):
         >>> G.number_of_states('diff')
         3
         """
-        return len(self.node[node]['_states'])
+
+        return len(self.get_states(node))
 
 
     @staticmethod
@@ -484,17 +477,22 @@ class MarkovModel(nx.Graph):
         +------+------+------+---------+------+------+-------+
         """
         if not self.inClique(nodes):
-            raise FactorNodesNotInClique(nodes)
-        node_objects_list = []
+            raise Exception("Nodes are not in a single clique.")
+        expLen = 1
+        card = []
         for node in nodes:
-            node_objects_list.append((node,self.node[node]))
-        factor = Factor(node_objects_list, potentials)
+            num_states = self.number_of_states(node)
+            card.append(num_states)
+            expLen *= num_states
+        if (expLen != len(potentials)):
+            raise Exception("Invalid potentials")
+        factor = Factor(nodes, card, potentials)
         self._factors.append(factor)
         return factor
 
     def inClique(self, nodes):
-        for n1 in range(0,len(nodes)):
-            for n2 in range(n1+1,len(nodes)):
+        for n1 in range(0, len(nodes)):
+            for n2 in range(n1 + 1, len(nodes)):
                 if not self.has_edge(nodes[n1], nodes[n2]):
                     return False
         return True
@@ -557,11 +555,11 @@ class MarkovModel(nx.Graph):
             self.unset_observation(node)
 
     def set_observation(self, node, observation):
-        self.setIsObserved(node,True)
+        self.setIsObserved(node, True)
         if observation in self.node[node]['_states']:
-            self.node[node]['observed']=observation
+            self.node[node]['observed'] = observation
         else:
-            raise ObservationNotFound("Observation "+observation+" not found for "+node)
+            raise Exception("Observation " + observation + " not found for " + node)
 
     def set_observations(self, observations):
         """
@@ -587,7 +585,7 @@ class MarkovModel(nx.Graph):
         >>> G.set_observations({'diff': 'easy'})
         """
         for node, state in observations.items():
-            self.set_observation(node,state)
+            self.set_observation(node, state)
 
     def _get_observed_list(self):
         """
@@ -595,20 +593,21 @@ class MarkovModel(nx.Graph):
         """
         return [node for node in self.nodes()
                 if self.node[node]['_isObserved']]
+
     def norm_h(self, pos, node_list, value_list):
         if pos == self.number_of_nodes():
             val = 1
-            assignment_dict={}
+            assignment_dict = {}
             for i in range(0, self.number_of_nodes()):
-                assignment_dict[node_list[i]]=value_list[i]
+                assignment_dict[node_list[i]] = value_list[i]
             for factor in self._factors:
-                val *= factor.get_potential_index_assignment(assignment_dict)
+                val *= factor.get_value_from_node_dict(assignment_dict)
             return val
         else:
             val = 0
             for i in range(0, len(self.node[node_list[pos]]['_states'])):
-                value_list[pos]=i
-                val += self.norm_h(pos+1, node_list, value_list)
+                value_list[pos] = i
+                val += self.norm_h(pos + 1, node_list, value_list)
             return val
 
 
@@ -640,3 +639,28 @@ class MarkovModel(nx.Graph):
             value_list.append(0)
         val = self.norm_h(0, self.nodes(), value_list)
         return val
+
+
+
+
+
+
+
+    def makeJunctionTree(self, triangulation_technique):
+        jt = self.junctionTreeTechniques(triangulation_technique,True)
+        self.addFactorsToJt(jt)
+        return jt
+
+    def addFactorsToJt(self, jt):
+        for node in jt.nodes():
+            jt.node[node]["factors"]=[]
+        for factor in self._factors:
+            vars = set(factor.getVariables())
+            for node in jt.nodes():
+                maxcliqueNodes = set(jt.node[node]["clique_nodes"])
+                if len(vars.difference(maxcliqueNodes))==0:
+                    jt.node[node]["factors"].append(factor)
+                    break
+            raise Exception("The factor "+factor+" doesn't correspond to any maxclique")
+
+
