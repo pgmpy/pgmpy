@@ -362,7 +362,7 @@ class RuleCPD:
 
     def scope(self):
         """
-        Returns the scope of the Rule CPD.
+        Returns a set of variables which is the scope of the Rule CPD.
 
         Examples
         --------
@@ -374,15 +374,34 @@ class RuleCPD:
         >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
         >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
         >>> rule.scope()
-        ['A', 'B', 'C']
+        {'A', 'B', 'C'}
         """
         scope = set()
         for rule in self.rules:
             scope.update([assignment.split('_')[0] for assignment in rule])
         return scope
 
-    def to_tabular_cpd(self):
-        pass
+    def cardinality(self):
+        """
+        Returns a dict of variable: cardinality.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
+        >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
+        >>> rule.cardinality()
+        {'A': 2, 'B': 2, 'C': 2}
+        """
+        from itertools import chain
+        from collections import Counter
+        assignments = list(set(chain(*self.rules)))
+        return dict(Counter([element.split('_')[0] for element in assignments]))
+
 
     def to_tree_cpd(self):
         pass
