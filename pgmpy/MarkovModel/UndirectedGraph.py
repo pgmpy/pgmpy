@@ -1,14 +1,16 @@
-from heapq import heappush,heappop, heapify
+from heapq import heappush, heappop, heapify
 import networkx as nx
 
-debug=False
+debug = False
+
+
 def p(x):
     if debug:
         print(x)
 
-class UndirectedGraph(nx.Graph):
 
-    def equalGraphs(self, G2):
+class UndirectedGraph(nx.Graph):
+    def equal_graphs(self, graph2):
         """
         Just to check if the current graph is same as G2 in terms of nodes and edges
 
@@ -18,99 +20,18 @@ class UndirectedGraph(nx.Graph):
             The other graph
 
         """
-        nodeSet1=set(self.nodes())
-        nodeSet2=set(G2.nodes())
-        if nodeSet1 != nodeSet2:
+        assert isinstance(graph2, UndirectedGraph)
+        node_set1 = set(self.nodes())
+        node_set2 = set(graph2.nodes())
+        if node_set1 != node_set2:
             return False
-        edgeSet1=set(self.edges())
-        edgeSet2 = set(G2.edges())
-        if edgeSet1 != edgeSet2:
+        edge_set1 = set(self.edges())
+        edge_set2 = set(graph2.edges())
+        if edge_set1 != edge_set2:
             return False
         return True
 
-
-
-    def maxCardinalitySearch(self, actionNum):
-        """
-        Applying the maximum cardinality search algo. Refer to Algo 9.3 (Koller)
-        Used to check for triangularity and to find the max-cliques if the graph is
-        already triangulated
-
-        Parameters
-        -----------
-        actionNum:
-                #actionNum 0 just checks for triangularity
-                #actionNum 1 returns clique size
-                #actionNum 2 just returns the junction tree
-        """
-        from pgmpy.MarkovModel.JunctionTree import JunctionTree
-
-        jt=JunctionTree()
-        jtnode = 0
-        L = set()
-        L_nbrs = {}
-        for node in self.nodes():
-            L_nbrs[node]=[]
-
-        U=[(-0,node) for node in self.nodes()]
-        heapify(U)
-        max_clique_size = 0
-        firstIt=True
-        prevNode = (None, None)
-        while len(U)!=0:
-            top = heappop(U)
-            curr_node = top[1]
-            if curr_node in L:
-                continue
-            L.add(curr_node)
-            p("Working with "+str(curr_node))
-            for nbr in self.neighbors(curr_node):
-                if nbr not in L:
-                    L_nbrs[nbr].append(curr_node)
-                    heappush(U,(-len(L_nbrs[nbr]),nbr))
-            cliqueCheckReqd = L_nbrs[curr_node]
-            p(str(cliqueCheckReqd))
-
-            if not self.checkClique(cliqueCheckReqd):
-                print("Not a triangulated graph")
-                return False
-
-            C_curr = len(L_nbrs[curr_node])
-
-            if firstIt or C_curr >= prevNode[1] +1:
-                p(prevNode[1])
-                #Dont form a clique now
-            else:
-                #add a clique node to the junction Tree
-                jtnode+=1
-                jt.add_node(jtnode)
-                cliqueNodes = L_nbrs[prevNode[0]]+[prevNode[0]]
-                jt.node[jtnode]["clique_nodes"]=cliqueNodes
-                print("making a clique with "+str(cliqueNodes))
-                max_clique_size=max(max_clique_size,len(cliqueNodes))
-            prevNode = (curr_node, C_curr)
-            p("prev "+str(prevNode))
-            firstIt=False
-
-        jtnode+=1
-        jt.add_node(jtnode)
-        cliqueNodes = L_nbrs[prevNode[0]]+[prevNode[0]]
-        jt.node[jtnode]["clique_nodes"]=cliqueNodes
-        p("making a clique with "+str(cliqueNodes))
-        max_clique_size=max(max_clique_size,len(cliqueNodes))
-
-
-        if actionNum==0:
-            return True
-        elif actionNum==1:
-            return max_clique_size
-        elif actionNum==2:
-            jt.addJTEdges()
-            return jt
-
-
-
-    def isTriangulated(self):
+    def is_triangulated(self):
         """
         Just checks if the graph is triangulated
 
@@ -123,20 +44,16 @@ class UndirectedGraph(nx.Graph):
 
         Example
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> G.junctionTreeTechniques(2,False,True)
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> G.jt_techniques(2,False,True)
         4
-        >>> G.isTriangulated()
+        >>> G.is_triangulated()
         True
         """
-        ret = self.maxCardinalitySearch(0)
+        ret = nx.is_chordal(self)
         return ret
-
-
-
-
 
     def print_graph(self, s):
         """
@@ -154,9 +71,9 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
         >>> G.print_graph("Test Printing")
         Printing the graph Test Printing<<<
         10( {} ) : {'8': {}, '5': {}, '7': {}}
@@ -176,10 +93,10 @@ class UndirectedGraph(nx.Graph):
 
         print("Printing the graph " + s + "<<<")
         for node in self.nodes():
-            print(str(node) + "( " + str(self.node[node]) +" ) : "+str(self[node]))
+            print(str(node) + "( " + str(self.node[node]) + " ) : " + str(self[node]))
         print(">>>")
 
-    def checkClique(self, nodes):
+    def check_clique(self, nodes):
         """
         Check if a given set of nodes form a clique
 
@@ -194,21 +111,21 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> G.checkClique([1,2,3])
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> G.check_clique([1,2,3])
         False
 
         """
         for i in range(len(nodes)):
-            for j in range(i+1,len(nodes)):
-                if not self.has_edge(nodes[i],nodes[j]):
+            for j in range(i + 1, len(nodes)):
+                if not self.has_edge(nodes[i], nodes[j]):
                     return False
         return True
 
-    def makeClique(self, clique_nodes):
-        new_edges=[]
+    def make_clique(self, clique_nodes):
+        new_edges = []
         for i in range(len(clique_nodes)):
             a = clique_nodes[i]
             for j in range(i + 1, len(clique_nodes)):
@@ -216,18 +133,17 @@ class UndirectedGraph(nx.Graph):
                 if not self.has_edge(a, b):
                     p("Edge added b/w " + a + " and " + b)
                     self.add_edge(a, b)
-                    new_edges.append((a,b))
+                    new_edges.append((a, b))
         return new_edges
 
-
-    def _junctionTree1(self, returnJunctionTree=True, triangulateGraph=False, f=None):
+    def _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
         """
         Applies the basic junction creation algorithms.
         Refer to Algorithm 9.4 in PGM (Koller)
 
         Parameters
         ----------
-        returnJunctionTree  :  boolean
+        return_junction_tree  :  boolean
                 returns the junction tree if yes, size of max clique if no
 
         triangulateGraph :
@@ -243,18 +159,19 @@ class UndirectedGraph(nx.Graph):
         private function
         """
         from pgmpy.MarkovModel.JunctionTree import JunctionTree
+
         jt = JunctionTree()
         jtnode = 0
-        nodes = [(f(self,node),node) for node in self.nodes()]
+        nodes = [(f(self, node), node) for node in self.nodes()]
         heapify(nodes)
         p(str(nodes))
-        max_clique_size= 0
+        max_clique_size = 0
         triangulated_nodes = set()
         new_edges = []
-        while len(nodes)!=0:
+        while len(nodes) != 0:
             min_el = heappop(nodes)
             curr_node = min_el[1]
-            p("Popped "+str(curr_node))
+            p("Popped " + str(curr_node))
             if curr_node in triangulated_nodes:
                 p("continued")
                 continue
@@ -280,38 +197,46 @@ class UndirectedGraph(nx.Graph):
                     clique_nodes.append(node)
             jt.node[jtnode]["clique_nodes"] = clique_nodes
             p(str(clique_nodes))
-            max_clique_size=max(max_clique_size,len(clique_nodes))
-            p("Working with "+str(curr_node))
-            new_edges_temp = self.makeClique(clique_nodes)
+            max_clique_size = max(max_clique_size, len(clique_nodes))
+            p("Working with " + str(curr_node))
+            new_edges_temp = self.make_clique(clique_nodes)
             new_edges.extend(new_edges_temp)
             for node in clique_nodes:
-                heappush(nodes,(f(self, node), node))
-        if not triangulateGraph:
+                heappush(nodes, (f(self, node), node))
+        if not triangulate_graph:
             for edge in new_edges:
-                self.remove_edge(edge[0],edge[1])
-        if not returnJunctionTree:
+                self.remove_edge(edge[0], edge[1])
+        if not return_junction_tree:
             return max_clique_size
-        jt.addJTEdges()
+        jt.add_jt_edges()
         return jt
 
-    def junctionTreeFromTriangulatedGraph(self, returnJunctionTree):
+    def jt_from_chordal_graph(self, return_junction_tree):
         """
 
         """
-        if returnJunctionTree:
-            ind = 2
+        from pgmpy import MarkovModel
+
+        if return_junction_tree:
+            cliques = nx.chordal_graph_cliques(self)
+            jt = MarkovModel.JunctionTree()
+            jtnode = 0
+            for max_clique in cliques:
+                jtnode += 1
+                jt.add_node(jtnode)
+                jt.node[jtnode]["clique_nodes"] = max_clique
+            jt.add_jt_edges()
+            return jt
         else:
-            ind=1
-        return self.maxCardinalitySearch(ind)
+            return nx.chordal_graph_treewidth(self) + 1
 
-
-    def junctionTreeOptimal(self, returnJunctionTree, triangulateGraph):
+    def jt_optimal(self, return_junction_tree, triangulate_graph):
         """
         Exponential strategy to find the optimal junction tree creation strategy
 
         Parameters
         ----------
-        returnJunctionTree  :  boolean
+        return_junction_tree  :  boolean
                 returns the junction tree if yes, size of max clique if no
 
         triangulateGraph :
@@ -321,27 +246,25 @@ class UndirectedGraph(nx.Graph):
         -------
 
         """
-        pass
-
+        return None
 
     @staticmethod
-    def minFillHeu(graph,node):
+    def min_fill_heuristic(graph, node):
         """
         Minimum-fill heuristic
         """
         nbrs = graph.neighbors(node)
-        num_edges=0
+        num_edges = 0
         for i in range(len(nbrs)):
-            for j in range(i+1,len(nbrs)):
-                if(graph.has_edge(nbrs[i],nbrs[j])):
-                    num_edges+=1
-        val = ((len(nbrs)*(len(nbrs)-1))/2) - num_edges
+            for j in range(i + 1, len(nbrs)):
+                if graph.has_edge(nbrs[i], nbrs[j]):
+                    num_edges += 1
+        val = ((len(nbrs) * (len(nbrs) - 1)) / 2) - num_edges
         return val
 
-
-    def bestTriangulationHeuristic(self):
+    def best_triangulation_heuristic(self):
         """
-        Tries every triangulation heuristic defined in junctionTreeTechniques and finds
+        Tries every triangulation heuristic defined in jt_techniques and finds
         the best one
 
         Parameters
@@ -350,32 +273,29 @@ class UndirectedGraph(nx.Graph):
 
         See Also
         --------
-        junctionTreeTechniques
+        jt_techniques
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> G.bestTriangulationHeuristic()
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> G.best_triangulation_heuristic()
         2
         """
-        i=2
-        minCliqueSize = int("inf")
-        minCliqueTechnique = -1
+        i = 2
+        min_clique_size = int("inf")
+        min_clique_technique = -1
         while True:
-            size = self.junctionTreeCliqueSize(i)
-            if size==False:
+            size = self.jt_tree_width(i)
+            if not size:
                 break
-            if size < minCliqueSize:
-                minCliqueTechnique=i
-                minCliqueSize=size
-        return minCliqueTechnique
+            if size < min_clique_size:
+                min_clique_technique = i
+                min_clique_size = size
+        return min_clique_technique
 
-
-
-
-    def junctionTreeTechniques(self, triangulation_technique, returnJunctionTree, triangulateGraph):
+    def jt_techniques(self, triangulation_technique, return_junction_tree, triangulate_graph):
         """
         Returns the junction tree or the max clique size depending on a triangulation technique
         Takes option about whether to retain the edges added during triangulation
@@ -390,52 +310,51 @@ class UndirectedGraph(nx.Graph):
                 3 : Min =fill
                 4 : Max-neighbour
 
-        returnJunctionTree : boolean
+        return_junction_tree : boolean
                 Returns the junction tree if true, returns the triangulated graph otherwise
 
-        triangulateGraph : boolean
+        triangulate_graph : boolean
                 Retains the edges added during triangulation, if yes. Deletes the edges
                 otherwise
 
         See Also
         --------
         junctionTree1
-        junctionTreeOptimal
-        junctionTreeFromTriangulatedGraph
+        jt_optimal
+        jt_from_chordal_graph
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> G.junctionTreeCliqueSize(2)
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> G.jt_tree_width(2)
         4
         """
-
-
-        if triangulation_technique==0:
-            ret = self.junctionTreeFromTriangulatedGraph(returnJunctionTree)
+        ret=None
+        if triangulation_technique == 0:
+            ret = self.jt_from_chordal_graph(return_junction_tree)
             if not ret:
                 raise Exception(" Graph Is Not Triangulated ")
-        if triangulation_technique==1:
-            ret=self.junctionTreeOptimal(returnJunctionTree, triangulateGraph)
-        if triangulation_technique==2:
-            f = (lambda graph,node:len(graph.neighbors(node)))
-            ret=self._junctionTree1(returnJunctionTree,triangulateGraph,f)
-        elif triangulation_technique==3:
-            f = (lambda  graph, node: UndirectedGraph.minFillHeu(graph,node) )
-            ret = self._junctionTree1(returnJunctionTree, triangulateGraph,f)
-        elif triangulation_technique==4:
-            f = (lambda graph,node:-len(graph.neighbors(node)))
-            ret = self._junctionTree1(returnJunctionTree, triangulateGraph,f)
-        elif triangulation_technique==5:
-            f=(lambda graph,node: 5)
-            ret = self._junctionTree1(returnJunctionTree, triangulateGraph,f)
+        if triangulation_technique == 1:
+            ret = self.jt_optimal(return_junction_tree, triangulate_graph)
+        if triangulation_technique == 2:
+            f = (lambda graph, node: len(graph.neighbors(node)))
+            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
+        elif triangulation_technique == 3:
+            f = (lambda graph, node: UndirectedGraph.min_fill_heuristic(graph, node))
+            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
+        elif triangulation_technique == 4:
+            f = (lambda graph, node: -len(graph.neighbors(node)))
+            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
+        elif triangulation_technique == 5:
+            f = (lambda graph, node: 5)
+            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
         else:
             ret = False
         return ret
 
-    def junctionTreeCliqueSize(self, triangulation_technique):
+    def jt_tree_width(self, triangulation_technique):
         """
         Returns the max-clique size that a triangulation technique will return
         It removes all the edges it added while triangulating it and hence doesn't affect the graph
@@ -444,25 +363,25 @@ class UndirectedGraph(nx.Graph):
         ----------
         triangulation_technique  :  integer
                 The index of the triangulation technique to use
-                See the documentation of junctionTreeTechniques function to see the
+                See the documentation of jt_techniques function to see the
                 index corresponding to each heuristic
 
         See Also
         --------
-        junctionTreeTechniques
+        jt_techniques
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> G.junctionTreeCliqueSize(2)
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> G.jt_tree_width(2)
         4
         """
 
-        return self.junctionTreeTechniques(triangulation_technique,False, False)
+        return self.jt_techniques(triangulation_technique, False, False)
 
-    def makeJunctionTree(self, triangulation_technique):
+    def make_jt(self, triangulation_technique):
         """
         Return the junction Tree after triangulating it using the triangulation_technique.
         It removes all the edges it added while triangulating it and hence doesn't affect the graph
@@ -471,27 +390,25 @@ class UndirectedGraph(nx.Graph):
         ----------
         triangulation_technique  :  integer
                 The index of the triangulation technique to use
-                See the documentation of junctionTreeTechniques function to see the
+                See the documentation of jt_techniques function to see the
                 index corresponding to each heuristic
 
         See Also
         --------
-        junctionTreeTechniques
+        jt_techniques
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
-        >>> jt=G.makeJunctionTree(2)
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
+        >>> jt=G.make_jt(2)
         >>> jt
         """
 
-        return self.junctionTreeTechniques(triangulation_technique, True, False)
+        return self.jt_techniques(triangulation_technique, True, False)
 
-
-
-    def readSimpleFormatGraph(self, filename):
+    def read_simple_format(self, filename):
         """
         Read the graph from a file assuming a very simple graph reading format
 
@@ -502,24 +419,19 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.UndirectedGraph()
-        >>> G.readSimpleFormatGraph("graph")
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.UndirectedGraph()
+        >>> G.read_simple_format("graph")
         """
-        file = open(filename,"r")
+        file = open(filename, "r")
         num_nodes = int(file.readline())
         for i in range(num_nodes):
             self.add_node(str(i))
         #print("nodes"+str(num_nodes))
         file.readline()
-        edge = ""
         while True:
             edge = file.readline()
             if not edge:
                 break
             nodes = edge.split()
-            self.add_edge(nodes[0],nodes[1])
-
-
-
-
+            self.add_edge(nodes[0], nodes[1])
