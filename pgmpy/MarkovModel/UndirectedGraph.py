@@ -379,7 +379,7 @@ class UndirectedGraph(nx.Graph):
         4
         """
 
-        return self.jt_techniques(triangulation_technique, False, False)
+        return self.jt_techniques(triangulation_technique, False, False)-1
 
     def make_jt(self, triangulation_technique):
         """
