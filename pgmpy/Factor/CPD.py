@@ -264,3 +264,32 @@ class TreeCPD(nx.DiGraph):
             if len(edge) == 2:
                 raise ValueError("Each edge tuple must have 3 values (u,v,label).")
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
+
+    def to_tabular_cpd(self, variable, parents_order=None):
+        root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
+        evidence = []
+        evidence_card = []
+
+        #dfs for finding the evidences and evidence cardinalities.
+        def dfs(node):
+            if isinstance(node, tuple):
+                evidence.extend(node)
+                labels = [value['label'] for value in self.edge[node].values()]
+                for i in range(len(node)):
+                    evidence_card.append(max([list(map(int, element.split('_'))) for element in labels], key=lambda t: t[i])[i] + 1)
+
+            elif isinstance(node, str):
+                evidence.append(node)
+                evidence_card.append(self.out_degree(node))
+
+            for out_edge in self.out_edges_iter(node):
+                dfs(out_edge[1])
+
+        dfs(root)
+
+        if parents_order:
+            #TODO: reorder the evidence and evidence_card list
+            pass
+
+    def to_rule_cpd(self):
+        pass
