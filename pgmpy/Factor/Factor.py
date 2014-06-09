@@ -118,6 +118,52 @@ class Factor:
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in mat]
 
+    def get_value(self, node_assignments):
+        """
+        Returns the potential value given the assignment to every node variable
+        in a list in the order of variables. The values given are in terms of
+        indexes (ith index means the i+1 th observation)
+
+        Parameters
+        ----------
+        node_assignments : list
+            dictionary containing the assignment of values to a number of variables
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.get_value([1,1,1])
+        9.0
+
+        """
+        temp = np.cumprod(np.concatenate(([1], self.cardinality[:-1])))
+        x = np.sum(temp * node_assignments)
+        return self.values[x]
+
+    def get_value_from_node_dict(self, all_node_assignments):
+        """
+        Returns the potential value given the assignment to every node variable
+        in a dictionary. The values given are in terms of indexes (ith index
+        means the i+1 th observation)
+
+        Parameters
+        ----------
+        node_assignments : dictionary
+            dictionary containing the assignment of values to a number of variables
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> print(phi.get_value_from_node_dict({'x1':1,'x2':2, 'x3':0, 'x4':2, 'x5':1}))
+        5.0
+        """
+        index_for_variables =[]
+        for var in self.variables.keys():
+            index_for_variables.append(all_node_assignments[var])
+        return self.get_value(index_for_variables)
+
     def get_cardinality(self, variable):
         """
         Returns cardinality of a given variable
