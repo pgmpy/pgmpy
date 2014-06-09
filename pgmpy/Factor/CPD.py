@@ -293,3 +293,101 @@ class TreeCPD(nx.DiGraph):
 
     def to_rule_cpd(self):
         pass
+
+
+class RuleCPD:
+    def __init__(self, variable, rules=None):
+        """
+        Base class for Rule CPD.
+
+        Parameters
+        ----------
+        variable: str
+            The variable for which the CPD is to be defined.
+
+        rules: dict. (optional)
+            dict of rules. Each rule should be in the form of
+            tuple_of_assignment: probability.
+            For example: ('A_0', 'J_0'): 0.8
+
+        Examples
+        --------
+        For constructing a RuleCPD on variable A with the following rules:
+            p1: <A_0, B_0; 0.8>
+            p2: <A_1, B_0; 0.2>
+            p3: <A_0, B_1, C_0; 0.4>
+            p4: <A_1, B_1, C_0; 0.6>
+            p5: <A_0, B_1, C_1; 0.9>
+            p6: <A_1, B_1, C_1; 0.1>
+
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
+        >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
+        """
+        self.variable = variable
+        self.rules = rules
+        self._verify(to_delete=True)
+
+    def _verify(self, to_delete=False):
+        pass
+
+    def add_rules(self, rules):
+        """
+        Add one or more rules to the Rule CPD.
+
+        Parameters
+        ----------
+        rules: dict
+            dict of rules. Each rule should be in the form of
+            tuple_of_assignment: probability.
+            For example: ('A_0', 'J_0'): 0.8
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD(variable='A')
+        >>> rule.add_rules({('A_0', 'B_0'): 0.8,
+        >>>                 ('A_1', 'B_0'): 0.2})
+        """
+        for rule in rules:
+            self.rules[rule] = rules[rule]
+        if not self._verify(to_delete=False):
+            for rule in rules:
+                del(self.rules[rule])
+            raise ValueError("Please check the values of the rules")
+
+    def scope(self):
+        """
+        Returns the scope of the Rule CPD.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
+        >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
+        >>> rule.scope()
+        ['A', 'B', 'C']
+        """
+        scope = set()
+        for rule in self.rules:
+            scope.update([assignment.split('_')[0] for assignment in rule])
+        return scope
+
+    def to_tabular_cpd(self):
+        pass
+
+    def to_tree_cpd(self):
+        pass
+
+    def __str__(self):
+        for index, key in enumerate(self.rules):
+            key_string = ', '.join(key)
+            print('p' + index + ':<' + key_string + '; ' + str(self.rules[key]) + '>')
