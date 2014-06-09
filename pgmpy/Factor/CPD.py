@@ -402,6 +402,46 @@ class RuleCPD:
         assignments = list(set(chain(*self.rules)))
         return dict(Counter([element.split('_')[0] for element in assignments]))
 
+    def to_tabular_cpd(self, parents_order=None):
+        """
+        Returns an equivalent TabularCPD.
+
+        Parameters
+        ----------
+        parents_order: array-like. list, tuple. (optional)
+            The order of the evidence variables.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_0', 'C_1'): 0.3,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
+        >>> rule.to_tabular_cpd()
+        """
+        if not parents_order:
+            parents_order = sorted(list(self.scope() - {self.variable}))
+        cardinality_dict = self.cardinality()
+        tabular_cpd = [[0 for i in range(np.product(list(cardinality_dict.values())))]
+                       for j in range(cardinality_dict[self.variable])]
+        for rule, value in self.rules:
+            start, end = 0, np.product(list(cardinality_dict.values()))
+            for var in sorted(rule):
+                if var.split('_')[0] != self.variable:
+                    start, end = start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]), \
+                                 start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1)
+                else:
+                    var_assignment = int(var.split('_')[1])
+            for index in range(start, end):
+                tabular_cpd[var_assignment][index] = value
+
+        return TabularCPD(self.variable, cardinality_dict[self.variable], tabular_cpd,
+                          parents_order, [cardinality_dict[var] for var in parents_order])
 
     def to_tree_cpd(self):
         pass
