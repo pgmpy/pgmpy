@@ -1,7 +1,7 @@
 import unittest
 import networkx as nx
 from pgmpy import BayesianModel as bm
-import help_functions as hf
+import pgmpy.tests.help_functions as hf
 
 
 class TestBaseModelCreation(unittest.TestCase):
