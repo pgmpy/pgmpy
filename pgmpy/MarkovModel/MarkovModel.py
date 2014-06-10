@@ -27,8 +27,8 @@ class MarkovModel(UndirectedGraph):
         --------
         Create an empty bayesian model with no nodes and no edges.
 
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel()
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.MarkovModel()
 
         G can be grown in several ways.
 
@@ -85,13 +85,14 @@ class MarkovModel(UndirectedGraph):
         """
 
     def __init__(self, ebunch=None):
+        nodes = []
         if ebunch is not None:
             nodes = set(itertools.chain(*ebunch))
             self._check_node_string(nodes)
         nx.Graph.__init__(self, ebunch)
         if ebunch is not None:
             for node in nodes:
-                self.setIsObserved(node, False)
+                self._set_is_observed(node, False)
         self._factors = []
 
     def add_node(self, node):
@@ -116,8 +117,7 @@ class MarkovModel(UndirectedGraph):
         self._check_node_string([node])
         nx.Graph.add_node(self, node)
         self.node[node]["_states"] = []
-        self.setIsObserved(node, False)
-
+        self._set_is_observed(node, False)
 
     def add_nodes_from(self, nodes):
         """
@@ -160,8 +160,8 @@ class MarkovModel(UndirectedGraph):
 
         EXAMPLE
         -------
-        >>> from pgmpy import BayesianModel as bm/home/abinash/software_packages/numpy-1.7.1
-        >>> G = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
         """
@@ -171,9 +171,22 @@ class MarkovModel(UndirectedGraph):
             self.add_node(u)
         if v not in self.nodes():
             self.add_node(v)
+        self._edge_check((u, v))
         nx.Graph.add_edge(self, u, v)
 
         #self._update_node_parents([u, v])
+
+    @staticmethod
+    def _edge_check(edge):
+        """
+        Just ensures that the edge doesn't contain a self-loop
+
+        Parameters
+        ----------
+        edge : Tuple of two nodes
+        """
+        if edge[0] == edge[1]:
+            raise ValueError('Self-loops are not allowed', edge)
 
     def add_edges_from(self, ebunch, attr_dict=None, **attr):
         """
@@ -194,8 +207,8 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel()
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
         """
@@ -217,11 +230,11 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
-        ...               'intel': ['dumb', 'smart']})
+        >>> G.set_boolean_states(['diff','intel'])
+
         """
         if isinstance(nodes, str):
             nodes = [nodes]
@@ -245,16 +258,64 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
         >>>                       ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
+        >>> G.add_states({'diff': ['easy', 'hard'],
         ...               'intel': ['dumb', 'smart']})
         """
         for node, states in states_dic.items():
             self.node[node]['_states'].extend(states)
 
+    def set_states(self, states_dic):
+        """
+        Adds states to the node.
+
+        Parameters
+        ----------
+        states_dic :  Dictionary ({node : [state1, state2]})
+                Dictionary of nodes to their list of states
+
+        See Also
+        --------
+        get_states
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+        >>>                       ('intel', 'sat')])
+        >>> G.set_states({'diff': ['easy', 'hard'],
+        ...               'intel': ['dumb', 'smart']})
+        """
+        for node, states in states_dic.items():
+            self.node[node]['_states'] = states
+
     def remove_all_states(self, node):
+        """
+        Remove all the states of a node
+
+        Parameters
+        ----------
+        node :  The node for which the states have to be removed
+
+        See Also
+        --------
+        add_states
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+        ...            ('intel', 'sat')])
+        >>> G.add_states({'diff': ['easy', 'hard'],
+        ...    'intel': ['dumb', 'smart']})
+        >>> G.get_states('diff')
+        ['easy', 'hard']
+        >>> G.remove_all_states('diff')
+        >>> G.get_states('diff')
+        []
+        """
         self.node[node]["_states"] = []
 
     def get_states(self, node):
@@ -272,18 +333,16 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade'),
-        >>>                       ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
-        ...               'intel': ['dumb', 'smart']})
-        >>> states = G.get_states('diff')
-        >>> for state in states:
-        ...     print(state)
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+        ...            ('intel', 'sat')])
+        >>> G.add_states({'diff': ['easy', 'hard'],
+        ...    'intel': ['dumb', 'smart']})
+        >>> G.get_states('diff')
+        ['easy', 'hard']
         """
 
         return self.node[node]['_states']
-
 
     def number_of_states(self, node):
         """
@@ -300,16 +359,15 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
         ...                       ('intel', 'SAT')])
         >>> G.set_states({'diff': ['easy', 'hard']})
         >>> G.number_of_states('diff')
-        3
+        2
         """
 
         return len(self.get_states(node))
-
 
     @staticmethod
     def _check_node_string(node_list):
@@ -339,11 +397,13 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         --------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'intel'), ('diff', 'grade')])
-        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
+        >>> from pgmpy import MarkovModel
+        >>> G = MarkovModel.MarkovModel([('diff', 'grade'), ('diff', 'intel')])
+        >>> G.set_states({'diff': ['easy', 'hard'],
+        ...               'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
-        >>> G.get_rule_for_states('grade')
+        ['easy', 'hard']
+        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
         """
         return self.node[node]['_states']
 
@@ -368,8 +428,8 @@ class MarkovModel(UndirectedGraph):
 
         Example
         -------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('diff', 'intel')])
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('diff', 'intel')])
         >>> G.set_states({'diff': ['easy', 'hard'],
         ...               'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
@@ -381,7 +441,6 @@ class MarkovModel(UndirectedGraph):
         self.node[node]['_states'] = states
 
     def get_neighbours(self, node):
-        # TODO: Update docstrings
         """
         Returns a list of parents of node in order according to the rule
         set for parents.
@@ -397,14 +456,11 @@ class MarkovModel(UndirectedGraph):
 
         Example
         -------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
-        >>>                       ('intel', 'SAT'), ('grade', 'reco')])
-        >>> G.get_parents('grade')
-        ['diff', 'intel']
-        >>> G.set_rule_for_parents('grade', ['intel', 'diff'])
-        >>> G.get_parents('grade')
-        ['intel', 'diff']
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('intel', 'SAT'), ('grade', 'reco')])
+        >>> G.get_neighbours('grade')
+        ['intel', 'diff','reco']
         """
         return nx.Graph.neighbors(self, node)
 
@@ -416,44 +472,37 @@ class MarkovModel(UndirectedGraph):
 
         Example
         -------
-        >>> from pgmpy import BayesianModel as bm
-        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
         ...                       ('intel', 'sat')])
-        >>> G.number_of_parents('grade')
+        >>> G.number_of_neighbours('grade')
         2
         """
         return len(self.get_neighbours(node))
 
-
     def set_potentials(self, nodes, potentials):
         """
-        Add CPD (Conditional Probability Distribution) to the node.
+        Add Factor to the node.
 
         Parameters
         ----------
-        node  :  Graph node
-                Node to which CPD will be added
+        nodes  :  Graph node
+                Nodes for which the Factor is defined
 
-        cpd  :  2D list or tuple of the CPD. The 2D array should be
-                according to the rule specified for parents and states.
+        potentials  :  2D list or tuple of the CPD. The 2D array should be
+                according to the order in the nodes
 
         See Also
         --------
-        get_cpd
-        get_rule_for_parents
-        set_rule_for_parents
-        get_rule_for_states
-        set_rule_for_states
 
         EXAMPLE
         -------
-        >>> from pgmpy import BayesianModel as bm
-        >>> student = bm.BayesianModel([('diff', 'grades'), ('intel', 'grades')])
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.MarkovModel([('diff', 'grades'), ('intel', 'grades')])
         >>> student.set_states({'diff': ['easy', 'hard'],
         ...                    'intel': ['dumb', 'avg', 'smart'],
         ...                    'grades': ['A', 'B', 'C']})
-        >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
-        >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
+
         >>> student.set_cpd('grades',
         ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...             [0.1,0.1,0.1,0.1,0.1,0.1],
@@ -472,21 +521,21 @@ class MarkovModel(UndirectedGraph):
         |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
         +------+------+------+---------+------+------+-------+
         """
-        if not self.inClique(nodes):
+        if not self.in_clique(nodes):
             raise Exception("Nodes are not in a single clique.")
-        expLen = 1
+        exp_len = 1
         card = []
         for node in nodes:
             num_states = self.number_of_states(node)
             card.append(num_states)
-            expLen *= num_states
-        if (expLen != len(potentials)):
+            exp_len *= num_states
+        if exp_len != len(potentials):
             raise Exception("Invalid potentials")
         factor = Factor(nodes, card, potentials)
         self._factors.append(factor)
         return factor
 
-    def inClique(self, nodes):
+    def in_clique(self, nodes):
         for n1 in range(0, len(nodes)):
             for n2 in range(n1 + 1, len(nodes)):
                 if not self.has_edge(nodes[n1], nodes[n2]):
@@ -509,7 +558,7 @@ class MarkovModel(UndirectedGraph):
         """
         return self._factors
 
-    def setIsObserved(self, node, tf):
+    def _set_is_observed(self, node, tf):
         """
         Updates '_observed' attribute of the node.
 
@@ -518,7 +567,7 @@ class MarkovModel(UndirectedGraph):
         """
         self.node[node]['_isObserved'] = tf
 
-    def getIsObserved(self, node):
+    def is_observed(self, node):
         """
         Check if node is observed. If observed returns True.
 
@@ -534,7 +583,7 @@ class MarkovModel(UndirectedGraph):
         Example
         -------
         >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.BayesianModel()
+        >>> student = mm.MarkovModel()
         >>> student.add_node('grades')
         >>> student.set_states({'grades': ['A', 'B']})
         >>> student.set_observations({'grades': 'A'})
@@ -543,19 +592,55 @@ class MarkovModel(UndirectedGraph):
         """
         return self.node[node]['_isObserved']
 
-    def unset_observation(self, node):
-        self.setIsObserved(node, False)
-
-    def unset_observations(self, node_list):
-        for node in node_list:
-            self.unset_observation(node)
-
     def set_observation(self, node, observation):
-        self.setIsObserved(node, True)
+        """
+        Sets state of node as observed.
+
+        Parameters
+        ----------
+        node : str
+            The node for which the observation is set
+        observation:str
+            The state to which the node is set
+
+        See Also
+        --------
+        unset_observation
+        is_observed
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('grade', 'reco'))])
+        >>> G.set_state({'diff': ['easy', 'hard']})
+        >>> G.set_observation('diff', 'easy')
+        """
+        self._set_is_observed(node, True)
         if observation in self.node[node]['_states']:
             self.node[node]['observed'] = observation
         else:
-            raise Exception("Observation " + observation + " not found for " + node)
+            raise ValueError("Observation " + observation + " not found for " + node)
+
+    def get_observation(self, node):
+        """
+        Returns the observation of the given node
+
+        Parameters
+        ----------
+        node: str
+            The node for which the observation is to returned
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('grade', 'reco'))])
+        >>> G.set_state({'diff': ['easy', 'hard']})
+        >>> G.set_observation('diff', 'easy')
+        >>> G.get_set_observation('diff')
+        'easy'
+        """
+        return self.node[node]['observed']
 
     def set_observations(self, observations):
         """
@@ -569,7 +654,7 @@ class MarkovModel(UndirectedGraph):
 
         See Also
         --------
-        reset_observations
+        unset_observations
         is_observed
 
         Examples
@@ -590,7 +675,56 @@ class MarkovModel(UndirectedGraph):
         return [node for node in self.nodes()
                 if self.node[node]['_isObserved']]
 
-    def norm_h(self, pos, node_list, value_list):
+    def unset_observation(self, node):
+        """
+        Unset the observation for the node
+
+        Parameters
+        -----------
+        node: The node for which the observation has to be unset
+
+        Example
+        -------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
+        ...                            ('i', 's')])
+        >>> G.add_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'],
+        ...               'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
+        ...               'l': ['yes', 'no']})
+        >>> G.set_observations({'d': 'easy', 'g': 'A'})
+        >>> G.unset_observation('d')
+        """
+        self._set_is_observed(node, False)
+        self.node[node]['observed'] = ''
+
+    def unset_observations(self, node_list):
+        """
+        Unsets the observation for all the nodes in the node_list
+
+        Parameters
+        ----------
+        node_list : List of nodes
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
+        ...                            ('i', 's')])
+        >>> G.add_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'],
+        ...               'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
+        ...               'l': ['yes', 'no']})
+        >>> G.set_observations({'d': 'easy', 'g': 'A'})
+        >>> G.unset_observation('d')
+        """
+        for node in node_list:
+            self.unset_observation(node)
+
+
+    def _norm_h(self, pos, node_list, value_list):
+        """
+        Helper function for get_normaliztion_constant_brute_force
+        Helping in recursion
+        """
         if pos == self.number_of_nodes():
             val = 1
             assignment_dict = {}
@@ -603,7 +737,7 @@ class MarkovModel(UndirectedGraph):
             val = 0
             for i in range(0, len(self.node[node_list[pos]]['_states'])):
                 value_list[pos] = i
-                val += self.norm_h(pos + 1, node_list, value_list)
+                val += self._norm_h(pos + 1, node_list, value_list)
             return val
 
 
@@ -616,7 +750,7 @@ class MarkovModel(UndirectedGraph):
 
         See Also
         --------
-        norm_h
+        _norm_h
 
         Examples
         --------
@@ -633,24 +767,24 @@ class MarkovModel(UndirectedGraph):
         value_list = []
         for i in range(0, self.number_of_nodes()):
             value_list.append(0)
-        val = self.norm_h(0, self.nodes(), value_list)
+        val = self._norm_h(0, self.nodes(), value_list)
         return val
 
-    def makeJunctionTree(self, triangulation_technique):
-        jt = self.junctionTreeTechniques(triangulation_technique,True)
+    def make_jt(self, triangulation_technique):
+        jt = UndirectedGraph.make_jt(self, triangulation_technique)
         self.addFactorsToJt(jt)
         return jt
 
     def addFactorsToJt(self, jt):
         for node in jt.nodes():
-            jt.node[node]["factors"]=[]
+            jt.node[node]["factors"] = []
         for factor in self._factors:
             vars = set(factor.getVariables())
             for node in jt.nodes():
                 maxcliqueNodes = set(jt.node[node]["clique_nodes"])
-                if len(vars.difference(maxcliqueNodes))==0:
+                if len(vars.difference(maxcliqueNodes)) == 0:
                     jt.node[node]["factors"].append(factor)
                     break
-            raise Exception("The factor "+factor+" doesn't correspond to any maxclique")
+            raise Exception("The factor " + factor + " doesn't correspond to any maxclique")
 
 

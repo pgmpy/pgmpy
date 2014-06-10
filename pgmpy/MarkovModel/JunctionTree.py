@@ -1,9 +1,9 @@
 import networkx as nx
-from pgmpy import MarkovModel as mm
+from pgmpy.MarkovModel.MarkovModel import UndirectedGraph
 
 debug=False
 
-class JunctionTree(mm.UndirectedGraph):
+class JunctionTree(UndirectedGraph):
     """
     This class is meant to represent junction trees (Called as clique trees popularly).
     It will contain a lot of functionalities to work on junction trees and to run
