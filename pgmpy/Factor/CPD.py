@@ -325,8 +325,8 @@ class RuleCPD:
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
         >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
-        >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
+        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1})
         """
         self.variable = variable
         if rules:
@@ -461,6 +461,7 @@ class RuleCPD:
                           parents_order, [cardinality_dict[var] for var in parents_order])
 
     def to_tree_cpd(self):
+        #TODO:
         pass
 
     def __str__(self):
