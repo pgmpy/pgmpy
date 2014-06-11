@@ -333,10 +333,23 @@ class RuleCPD:
             self.rules = rules
         else:
             self.rules = {}
-        self._verify(to_delete=True)
+        verify = self._verify()
+        if not verify[0]:
+            del self
+            raise ValueError(str(verify[1]) + " and " + str(verify[2]) + " point to the same assignment")
 
-    def _verify(self, to_delete=False):
-        pass
+    def _verify(self):
+        """
+        Verifies the RuleCPD for multiple values of the
+        assignment.
+        """
+        for rule_index in range(len(self.rules) - 1):
+            for another_rule_index in range(rule_index + 1, self.rules):
+                smaller, larger = (self.rules[rule_index], self.rules[another_rule_index]) if len(self.rules[rule_index]) < len(self.rules[another_rule_index]) \
+                    else (self.rules[another_rule_index], self.rules[rule_index])
+                if not set(smaller) - set(larger):
+                    return False, smaller, larger
+        return True
 
     def add_rules(self, rules):
         """
@@ -358,10 +371,11 @@ class RuleCPD:
         """
         for rule in rules:
             self.rules[rule] = rules[rule]
-        if not self._verify(to_delete=False):
+        verify = self._verify()
+        if not verify[0]:
             for rule in rules:
                 del(self.rules[rule])
-            raise ValueError("Please check the values of the rules")
+            raise ValueError(str(verify[1]) + " and " + str(verify[2]) + " point to the same assignment")
 
     def scope(self):
         """
