@@ -329,7 +329,10 @@ class RuleCPD:
         >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
         """
         self.variable = variable
-        self.rules = rules
+        if rules:
+            self.rules = rules
+        else:
+            self.rules = {}
         self._verify(to_delete=True)
 
     def _verify(self, to_delete=False):
