@@ -343,13 +343,12 @@ class RuleCPD:
         Verifies the RuleCPD for multiple values of the
         assignment.
         """
-        for rule_index in range(len(self.rules) - 1):
-            for another_rule_index in range(rule_index + 1, self.rules):
-                smaller, larger = (self.rules[rule_index], self.rules[another_rule_index]) if len(self.rules[rule_index]) < len(self.rules[another_rule_index]) \
-                    else (self.rules[another_rule_index], self.rules[rule_index])
-                if not set(smaller) - set(larger):
-                    return False, smaller, larger
-        return True
+        from itertools import combinations
+        for rule, another_rule in combinations(self.rules, 2):
+            rule, another_rule = (rule, another_rule) if len(rule) < len(another_rule) else (another_rule, rule)
+            if not set(rule) - set(another_rule):
+                return False, rule, another_rule
+        return True,
 
     def add_rules(self, rules):
         """
