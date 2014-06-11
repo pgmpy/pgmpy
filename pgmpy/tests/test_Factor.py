@@ -6,7 +6,7 @@ from pgmpy.Factor import Factor
 from pgmpy.Factor.CPD import TabularCPD, TreeCPD
 from pgmpy import Exceptions
 from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
-import pgmpy.tests.help_functions as hf
+from pgmpy.Factor.CPD import RuleCPD
 
 
 class TestFactorInit(unittest.TestCase):
@@ -424,3 +424,87 @@ class TestTreeCPD(unittest.TestCase):
         self.assertTrue(('hello', 'world') in self.tree1.edges())
         self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
         self.assertEqual(self.tree1['hello']['world']['label'], '1')
+
+
+class TestRuleCPDInit(unittest.TestCase):
+
+    def test_init_without_errors_rules_none(self):
+        rule_cpd = RuleCPD('A')
+        self.assertEqual(rule_cpd.variable, 'A')
+
+    def test_init_without_errors_rules_not_none(self):
+        rule_cpd = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+                                 ('A_1', 'B_0'): 0.2,
+                                 ('A_0', 'B_1', 'C_0'): 0.4,
+                                 ('A_1', 'B_1', 'C_0'): 0.6,
+                                 ('A_0', 'B_1', 'C_1'): 0.9,
+                                 ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(rule_cpd.variable, 'A')
+        self.assertEqual(rule_cpd.rules, {('A_0', 'B_0'): 0.8,
+                                          ('A_1', 'B_0'): 0.2,
+                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                          ('A_0', 'B_1', 'C_1'): 0.9,
+                                          ('A_1', 'B_1', 'C_1'): 0.1})
+
+    def test_init_with_errors(self):
+        self.assertRaises(ValueError, RuleCPD, 'A', {('A_0',): 0.5,
+                                                     ('A_0', 'B_0'): 0.8,
+                                                     ('A_1', 'B_0'): 0.2,
+                                                     ('A_0', 'B_1', 'C_0'): 0.4,
+                                                     ('A_1', 'B_1', 'C_0'): 0.6,
+                                                     ('A_0', 'B_1', 'C_1'): 0.9,
+                                                     ('A_1', 'B_1', 'C_1'): 0.1})
+
+
+class TestRuleCPDMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.rule_cpd_with_rules = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+                                                 ('A_1', 'B_0'): 0.2,
+                                                 ('A_0', 'B_1', 'C_0'): 0.4,
+                                                 ('A_1', 'B_1', 'C_0'): 0.6})
+        self.rule_cpd_without_rules = RuleCPD('A')
+
+    def test_add_rules_single(self):
+        self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_with_rules.rules, {('A_0', 'B_0'): 0.8,
+                                                          ('A_1', 'B_0'): 0.2,
+                                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                                          ('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_with_rules.variable, 'A')
+        self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_without_rules.rules, {('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_without_rules.variable, 'A')
+
+    def test_add_rules_multiple(self):
+        self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
+                                            ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_with_rules.rules, {('A_0', 'B_0'): 0.8,
+                                                          ('A_1', 'B_0'): 0.2,
+                                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                                          ('A_0', 'B_1', 'C_1'): 0.9,
+                                                          ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_with_rules.variable, 'A')
+        self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
+                                               ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_without_rules.rules, {('A_0', 'B_1', 'C_1'): 0.9,
+                                                             ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_without_rules.variable, 'A')
+
+    def test_add_rules_error(self):
+        self.assertRaises(ValueError, self.rule_cpd_with_rules.add_rules, {('A_0',): 0.8})
+
+    def test_scope(self):
+        self.assertEqual(self.rule_cpd_with_rules.scope(), {'A', 'B', 'C'})
+        self.assertEqual(self.rule_cpd_without_rules.scope(), set())
+
+    def test_cardinality(self):
+        self.assertEqual(self.rule_cpd_with_rules.cardinality(), {'A': 2, 'B': 2, 'C': 1})
+        self.assertEqual(self.rule_cpd_without_rules.cardinality(), {})
+
+    def tearDown(self):
+        del self.rule_cpd_without_rules
+        del self.rule_cpd_with_rules
