@@ -325,15 +325,30 @@ class RuleCPD:
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
         >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_!'): 0.9,
-        >>>                      ('A_1', 'B_1', 'C_1'): 0.1}
+        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1})
         """
         self.variable = variable
-        self.rules = rules
-        self._verify(to_delete=True)
+        if rules:
+            self.rules = rules
+        else:
+            self.rules = {}
+        verify = self._verify()
+        if not verify[0]:
+            del self
+            raise ValueError(str(verify[1]) + " and " + str(verify[2]) + " point to the same assignment")
 
-    def _verify(self, to_delete=False):
-        pass
+    def _verify(self):
+        """
+        Verifies the RuleCPD for multiple values of the
+        assignment.
+        """
+        from itertools import combinations
+        for rule, another_rule in combinations(self.rules, 2):
+            rule, another_rule = (rule, another_rule) if len(rule) < len(another_rule) else (another_rule, rule)
+            if not set(rule) - set(another_rule):
+                return False, rule, another_rule
+        return True,
 
     def add_rules(self, rules):
         """
@@ -355,10 +370,11 @@ class RuleCPD:
         """
         for rule in rules:
             self.rules[rule] = rules[rule]
-        if not self._verify(to_delete=False):
+        verify = self._verify()
+        if not verify[0]:
             for rule in rules:
                 del(self.rules[rule])
-            raise ValueError("Please check the values of the rules")
+            raise ValueError(str(verify[1]) + " and " + str(verify[2]) + " point to the same assignment")
 
     def scope(self):
         """
@@ -444,6 +460,7 @@ class RuleCPD:
                           parents_order, [cardinality_dict[var] for var in parents_order])
 
     def to_tree_cpd(self):
+        #TODO:
         pass
 
     def __str__(self):
