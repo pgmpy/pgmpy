@@ -48,6 +48,14 @@ class Independencies:
             except IndexError:
                 self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
+    def __str__(self):
+        string = ""
+        for assertion in self.independencies:
+            string += assertion.__str__() + '\n'
+        return string
+
+    __repr__ = __str__
+
     def get_independencies(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
@@ -170,6 +178,11 @@ class IndependenceAssertion:
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
         self.event3 = set(self._return_list_if_str(event3))
+
+    def __str__(self):
+        return ', '.join(self.event1) + ' _|_ ' + ', '.join(self.event2) + ' | ' + ', '.join(self.event3)
+
+    __repr__ = __str__
 
     @staticmethod
     def _return_list_if_str(event):
