@@ -435,8 +435,8 @@ class RuleCPD:
         >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
         >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
         >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
-        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_0', 'C_1'): 0.3,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
         >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
         >>> rule.to_tabular_cpd()
         """
@@ -464,6 +464,11 @@ class RuleCPD:
         pass
 
     def __str__(self):
-        for index, key in enumerate(self.rules):
+        from collections import OrderedDict
+        string = ""
+        for index, key in enumerate(OrderedDict(sorted(self.rules.items(), key=lambda t: len(t[0])))):
             key_string = ', '.join(key)
-            print('p' + index + ':<' + key_string + '; ' + str(self.rules[key]) + '>')
+            string += 'p' + str(index) + ': <' + key_string + '; ' + str(self.rules[key]) + '>' + '\n'
+        return string
+
+    __repr__ = __str__
