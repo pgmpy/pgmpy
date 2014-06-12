@@ -1016,7 +1016,7 @@ class BayesianModel(nx.DiGraph):
         from pgmpy.Independencies import Independencies
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
-            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)), set(self.get_parents(variable))])
+            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)) - {variable}, set(self.get_parents(variable))])
         return independencies
 
     def is_active_trail(self, start, end, observed=None, additional_observed=None):
