@@ -77,8 +77,6 @@ class MarkovModel(UndirectedGraph):
         add_states({node : [state1, state2]})
         get_states('node1')
         number_of_state('node1')
-        get_rule_for_states('node1')
-        set_rule_for_states({'node1': ['state2', 'state1', ...]})
         set_observations({'node1': ['observed_state1', 'observed_state2'],
                           'node2': 'observed_state1'})
         is_observed('node1')
@@ -214,6 +212,22 @@ class MarkovModel(UndirectedGraph):
         """
         for edge in ebunch:
             self.add_edge(*edge)
+
+    def number_of_neighbours(self, node):
+        """
+        Returns the number of parents of node
+
+        node  :  Graph node
+
+        Example
+        -------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('intel', 'sat')])
+        >>> G.number_of_neighbours('grade')
+        2
+        """
+        return len(self.neighbors(node))
 
     def set_boolean_states(self, nodes):
         """
@@ -382,7 +396,7 @@ class MarkovModel(UndirectedGraph):
 
     def get_rule_for_states(self, node):
         """
-        Check the order in which the CPD is expected
+        Check the order of states in which factor values are expected
 
         Parameters
         ----------
@@ -392,8 +406,6 @@ class MarkovModel(UndirectedGraph):
         See Also
         --------
         set_rule_for_states
-        get_rule_for_parents
-        set_rule_for_parents
 
         Examples
         --------
@@ -403,9 +415,8 @@ class MarkovModel(UndirectedGraph):
         ...               'intel': ['dumb', 'smart']})
         >>> G.get_rule_for_states('diff')
         ['easy', 'hard']
-        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
         """
-        return self.node[node]['_states']
+        return self.get_states(node)
 
     def set_rule_for_states(self, node, states):
         """
@@ -423,8 +434,6 @@ class MarkovModel(UndirectedGraph):
         See Also
         --------
         get_rule_for_states
-        get_rule_for_parents
-        set_rule_for_parents
 
         Example
         -------
@@ -440,123 +449,15 @@ class MarkovModel(UndirectedGraph):
         """
         self.node[node]['_states'] = states
 
-    def get_neighbours(self, node):
+    def _in_clique(self, nodes):
         """
-        Returns a list of parents of node in order according to the rule
-        set for parents.
-
-        Parameters
-        ----------
-        node  :  Graph Node
-
-        See Also
-        --------
-        get_rule_for_parents
-        set_rule_for_parents
-
-        Example
-        -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('intel', 'SAT'), ('grade', 'reco')])
-        >>> G.get_neighbours('grade')
-        ['intel', 'diff','reco']
+        Check if the nodes belong to a singhle click in the graph
         """
-        return nx.Graph.neighbors(self, node)
-
-    def number_of_neighbours(self, node):
-        """
-        Returns the number of parents of node
-
-        node  :  Graph node
-
-        Example
-        -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('intel', 'sat')])
-        >>> G.number_of_neighbours('grade')
-        2
-        """
-        return len(self.get_neighbours(node))
-
-    def set_potentials(self, nodes, potentials):
-        """
-        Add Factor to the node.
-
-        Parameters
-        ----------
-        nodes  :  Graph node
-                Nodes for which the Factor is defined
-
-        potentials  :  2D list or tuple of the CPD. The 2D array should be
-                according to the order in the nodes
-
-        See Also
-        --------
-
-        EXAMPLE
-        -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.MarkovModel([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.set_states({'diff': ['easy', 'hard'],
-        ...                    'intel': ['dumb', 'avg', 'smart'],
-        ...                    'grades': ['A', 'B', 'C']})
-
-        >>> student.set_cpd('grades',
-        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
-        ...             [0.1,0.1,0.1,0.1,0.1,0.1],
-        ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
-        ...             )
-
-        +------+-----------------------+---------------------+
-        |diff: |          easy         |         hard        |
-        +------+------+------+---------+------+------+-------+
-        |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
-        +------+------+------+---------+------+------+-------+
-        |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
-        +------+------+------+---------+------+------+-------+
-        """
-        if not self.in_clique(nodes):
-            raise Exception("Nodes are not in a single clique.")
-        exp_len = 1
-        card = []
-        for node in nodes:
-            num_states = self.number_of_states(node)
-            card.append(num_states)
-            exp_len *= num_states
-        if exp_len != len(potentials):
-            raise Exception("Invalid potentials")
-        factor = Factor(nodes, card, potentials)
-        self._factors.append(factor)
-        return factor
-
-    def in_clique(self, nodes):
         for n1 in range(0, len(nodes)):
             for n2 in range(n1 + 1, len(nodes)):
                 if not self.has_edge(nodes[n1], nodes[n2]):
                     return False
         return True
-
-    def get_potentials(self, nodes, beautify=False):
-        """
-        Returns the CPD of the node.
-
-        node  :  Graph node
-
-        beautify : If set to True returns an ASCII art table of the CPD
-                    with parents and states else if beautify=False, returns
-                    a simple numpy.ndarray object of the CPD table
-
-        See Also
-        --------
-        set_cpd
-        """
-        return self._factors
 
     def _set_is_observed(self, node, tf):
         """
@@ -565,7 +466,7 @@ class MarkovModel(UndirectedGraph):
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        self.node[node]['_isObserved'] = tf
+        self.node[node]['_is_observed'] = tf
 
     def is_observed(self, node):
         """
@@ -590,7 +491,7 @@ class MarkovModel(UndirectedGraph):
         >>> student.is_observed('grades')
         True
         """
-        return self.node[node]['_isObserved']
+        return self.node[node]['_is_observed']
 
     def set_observation(self, node, observation):
         """
@@ -622,26 +523,6 @@ class MarkovModel(UndirectedGraph):
         else:
             raise ValueError("Observation " + observation + " not found for " + node)
 
-    def get_observation(self, node):
-        """
-        Returns the observation of the given node
-
-        Parameters
-        ----------
-        node: str
-            The node for which the observation is to returned
-        Examples
-        --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('grade', 'reco'))])
-        >>> G.set_state({'diff': ['easy', 'hard']})
-        >>> G.set_observation('diff', 'easy')
-        >>> G.get_set_observation('diff')
-        'easy'
-        """
-        return self.node[node]['observed']
-
     def set_observations(self, observations):
         """
         Sets state of node as observed.
@@ -668,12 +549,32 @@ class MarkovModel(UndirectedGraph):
         for node, state in observations.items():
             self.set_observation(node, state)
 
+    def get_observation(self, node):
+        """
+        Returns the observation of the given node
+
+        Parameters
+        ----------
+        node: str
+            The node for which the observation is to returned
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                       ('grade', 'reco'))])
+        >>> G.set_state({'diff': ['easy', 'hard']})
+        >>> G.set_observation('diff', 'easy')
+        >>> G.get_set_observation('diff')
+        'easy'
+        """
+        return self.node[node]['observed']
+
     def _get_observed_list(self):
         """
         Returns a list of all observed nodes
         """
         return [node for node in self.nodes()
-                if self.node[node]['_isObserved']]
+                if self.node[node]['_is_observed']]
 
     def unset_observation(self, node):
         """
@@ -719,6 +620,78 @@ class MarkovModel(UndirectedGraph):
         for node in node_list:
             self.unset_observation(node)
 
+    def get_factors(self):
+        """
+        Returns the factors that have been added till now to the graph
+
+        Examples
+        --------
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.MarkovModel([('diff', 'intel'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                    'intel': ['dumb', 'smart'],
+        ...                    'grades': ['A', 'B', 'C']})
+        >>> f = student.add_factor(['diff','intel'],
+        ...             range(4))
+        >>> student.get_factors()
+        [diff	intel	phi(diff, intel)
+        diff_0	intel_0	0.0
+        diff_0	intel_1	1.0
+        diff_1	intel_0	2.0
+        diff_1	intel_1	3.0
+        ]
+        """
+        return self._factors
+
+    def add_factor(self, nodes, potentials):
+        """
+        Add Factors to the graph
+        See Factor class for the order of potential values
+
+        Parameters
+        ----------
+        nodes  :  Graph node
+                The set of nodes for which the factor is defined
+
+        potential  :  Array of values
+                The potential values for each assignment of nodes
+                based on the order of node in nodes and the rule_for_states
+
+        See Also
+        --------
+        get_factors
+        set_rule_for_states
+        Factor class in Factor module
+
+        EXAMPLE
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.MarkovModel([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.set_states({'diff': ['easy', 'hard'],
+        ...                    'intel': ['dumb', 'smart'],
+        ...                    'grades': ['A', 'B', 'C']})
+        >>> factor = student.add_factor(['diff','grades'], range(6))
+        >>> factor
+        diff	grades	phi(diff, grades)
+        diff_0	grades_0	0.0
+        diff_0	grades_1	1.0
+        diff_0	grades_2	2.0
+        diff_1	grades_0	3.0
+        diff_1	grades_1	4.0
+        diff_1	grades_2	5.0
+        """
+        if not self._in_clique(nodes):
+            raise ValueError("Nodes are not in a single clique.")
+        exp_len = 1
+        card = []
+        for node in nodes:
+            num_states = self.number_of_states(node)
+            card.append(num_states)
+            exp_len *= num_states
+        if exp_len != len(potentials):
+            raise ValueError("Invalid potentials")
+        factor = Factor(nodes, card, potentials)
+        self._factors.append(factor)
+        return factor
 
     def _norm_h(self, pos, node_list, value_list):
         """
@@ -741,9 +714,9 @@ class MarkovModel(UndirectedGraph):
             return val
 
 
-    def get_normalization_constant_brute_force(self):
+    def normalization_constant_brute_force(self):
         """
-        Get the normalization constant for all the factors
+        Get the normalization constant using brute force technique
 
         Parameters
         ----------
@@ -760,8 +733,8 @@ class MarkovModel(UndirectedGraph):
         >>> student.set_states({'diff': ['hard', 'easy']})
         >>> student.set_states({'intel': ['avg', 'dumb', 'smart']})
         >>> student.add_edge('diff','intel')
-        >>> factor = student.set_potentials(['diff','intel'], [0.1,0.1,0.1,0.1,0.1,0.1])
-        >>> print(student.get_normalization_constant_brute_force())
+        >>> factor = student.add_factor(['diff','intel'], [0.1,0.1,0.1,0.1,0.1,0.1])
+        >>> print(student.normalization_constant_brute_force())
         0.6000000000000001
         """
         value_list = []
@@ -771,20 +744,80 @@ class MarkovModel(UndirectedGraph):
         return val
 
     def make_jt(self, triangulation_technique):
+        """
+        Makes the junction tree for the MarkovModel
+
+        Parameter
+        ---------
+        triangulation_technique : int
+            Index of the triangulation technique to be used
+            See jt_techniques in Undirected Graph for documentation on
+            the triangulation techniques and the technique_num for each
+            technique
+
+        Example
+        -------
+        >>> from pgmpy import MarkovModel as mm
+        >>> student = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),('intel','grade')])
+        >>> student.add_states({'diff': ['easy', 'hard'],
+        ...             'intel': ['dumb', 'smart'],
+        ...             'grade': ['A','B','C']})
+        >>> factor = student.add_factor(['diff','intel'], range(4))
+        >>> factor2 = student.add_factor(['intel','grade'], range(6))
+        >>> factor3 = student.add_factor(['diff','grade'], range(6))
+        >>> jt = student.make_jt(2)
+        >>> jt.print_graph("Printing the Junction Tree")
+        Printing the graph Printing the Junction Tree<<<
+        1	( {'factors': [diff	intel	phi(diff, intel)
+        diff_0	intel_0	0.0
+        diff_0	intel_1	1.0
+        diff_1	intel_0	2.0
+        diff_1	intel_1	3.0
+        , intel	grade	phi(intel, grade)
+        intel_0	grade_0	0.0
+        intel_0	grade_1	1.0
+        intel_0	grade_2	2.0
+        intel_1	grade_0	3.0
+        intel_1	grade_1	4.0
+        intel_1	grade_2	5.0
+        , diff	grade	phi(diff, grade)
+        diff_0	grade_0	0.0
+        diff_0	grade_1	1.0
+        diff_0	grade_2	2.0
+        diff_1	grade_0	3.0
+        diff_1	grade_1	4.0
+        diff_1	grade_2	5.0
+        ], 'clique_nodes': ['diff', 'grade', 'intel']} ) : []
+        >>>
+        """
         jt = UndirectedGraph.make_jt(self, triangulation_technique)
-        self.addFactorsToJt(jt)
+        #jt.print_graph("after making the junction tree")
+        self._copy_factors_to_jt(jt)
         return jt
 
-    def addFactorsToJt(self, jt):
+    def _copy_factors_to_jt(self, jt):
+        """
+        Given a junction tree, this adds all the factors to appropriate nodes
+        in the junction tree
+
+        Parameters
+        ----------
+        jt : The completely made junction tree ready to be attached to factors
+        """
         for node in jt.nodes():
             jt.node[node]["factors"] = []
         for factor in self._factors:
-            vars = set(factor.getVariables())
+            vars = set(factor.get_variables())
+            #print("Vars for the factor "+str(vars))
+            flag=False
             for node in jt.nodes():
                 maxcliqueNodes = set(jt.node[node]["clique_nodes"])
+                #print(maxcliqueNodes)
                 if len(vars.difference(maxcliqueNodes)) == 0:
                     jt.node[node]["factors"].append(factor)
+                    flag=True
                     break
-            raise Exception("The factor " + factor + " doesn't correspond to any maxclique")
+            if not flag:
+                raise ValueError("The factor " + str(factor) + " doesn't correspond to any maxclique")
 
 

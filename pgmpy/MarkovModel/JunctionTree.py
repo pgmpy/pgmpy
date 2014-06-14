@@ -9,7 +9,7 @@ class JunctionTree(UndirectedGraph):
     It will contain a lot of functionalities to work on junction trees and to run
     inference algorithms on JunctionTrees,
     """
-    def add_jt_edges(self):
+    def _add_jt_edges(self):
         """
         This adds appropriate edges to the junction tree graph. Given a junction tree
         with all the nodes containing cliques of the MarkovModel, running the function
@@ -23,13 +23,13 @@ class JunctionTree(UndirectedGraph):
 
         See Also
         --------
-        _junction_tree1, jt_from_chordal_graph in UndirectedGraph.py
+        _junction_tree1, _jt_from_chordal_graph in UndirectedGraph.py
         """
         nodes = self.nodes()
         num_nodes = self.number_of_nodes()
         for i in range(num_nodes):
             for j in range(i + 1, num_nodes):
-                print(self.node[nodes[i]]["clique_nodes"])
+                #print(self.node[nodes[i]]["clique_nodes"])
                 set1 = set(self.node[nodes[i]]["clique_nodes"])
                 set2 = set(self.node[nodes[j]]["clique_nodes"])
                 set3 = set1.intersection(set2)

@@ -118,6 +118,19 @@ class Factor:
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in mat]
 
+    def get_variables(self):
+        """
+        Returns the variables associated with the node
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> print(phi.get_variables())
+        ['x1', 'x2', 'x3']
+        """
+        return [var for var in self.variables.keys()]
+
     def get_value(self, node_assignments):
         """
         Returns the potential value given the assignment to every node variable
@@ -333,10 +346,9 @@ class Factor:
         value_index = 0
         for prob in gen():
             prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) + '\n'
+            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) +'\n'
             value_index += 1
-
-        return string
+        return string[:-1]
 
     def __mul__(self, other):
         return self.product(other)

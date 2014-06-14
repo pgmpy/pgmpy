@@ -16,8 +16,16 @@ class UndirectedGraph(nx.Graph):
 
         Parameters
         ----------
-        G2:
+        graph2:
             The other graph
+
+        Example
+        ------
+        >>> from pgmpy import MarkovModel as mm
+        >>> g1 = mm.MarkovModel([('a','b'),('b','c'),('c','a')])
+        >>> g2 = mm.MarkovModel([('a','c'),('a','b'),('b','c')])
+        >>> print(g1.equal_graphs(g2))
+        True
 
         """
         assert isinstance(graph2, UndirectedGraph)
@@ -55,6 +63,13 @@ class UndirectedGraph(nx.Graph):
         ret = nx.is_chordal(self)
         return ret
 
+    def __str__(self):
+        """
+        Prints all the nodes and edges for each node.
+        Also prints the node if any is present
+        """
+        self.print_graph("")
+
     def print_graph(self, s):
         """
         Prints the graph in a particular fashion.
@@ -76,24 +91,27 @@ class UndirectedGraph(nx.Graph):
         >>> G.read_simple_format("graph")
         >>> G.print_graph("Test Printing")
         Printing the graph Test Printing<<<
-        10( {} ) : {'8': {}, '5': {}, '7': {}}
-        1( {} ) : {'0': {}, '2': {}, '4': {}, '8': {}}
-        0( {} ) : {'1': {}, '8': {}, '3': {}}
-        3( {} ) : {'9': {}, '0': {}, '8': {}}
-        2( {} ) : {'1': {}, '4': {}, '7': {}, '6': {}}
-        5( {} ) : {'9': {}, '8': {}, '10': {}}
-        4( {} ) : {'1': {}, '8': {}, '2': {}, '7': {}}
-        7( {} ) : {'10': {}, '2': {}, '4': {}, '6': {}}
-        6( {} ) : {'2': {}, '7': {}}
-        9( {} ) : {'3': {}, '5': {}}
-        8( {} ) : {'10': {}, '1': {}, '0': {}, '3': {}, '5': {}, '4': {}}
+        10	['8', '5', '7']
+        1	['0', '2', '4', '8']
+        0	['1', '8', '3']
+        3	['9', '0', '8']
+        2	['1', '4', '7', '6']
+        5	['9', '8', '10']
+        4	['1', '8', '2', '7']
+        7	['10', '2', '4', '6']
+        6	['2', '7']
+        9	['3', '5']
+        8	['10', '1', '0', '3', '5', '4']
         >>>
-
         """
 
         print("Printing the graph " + s + "<<<")
         for node in self.nodes():
-            print(str(node) + "( " + str(self.node[node]) + " ) : " + str(self[node]))
+            str_node = str(node)+"\t"
+            if self.node[node]:
+                str_node += "( " + str(self.node[node]) + " ) : "
+            str_node += str(self.neighbors(node))
+            print(str_node)
         print(">>>")
 
     def check_clique(self, nodes):
@@ -136,7 +154,7 @@ class UndirectedGraph(nx.Graph):
                     new_edges.append((a, b))
         return new_edges
 
-    def _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
+    def  _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
         """
         Applies the basic junction creation algorithms.
         Refer to Algorithm 9.4 in PGM (Koller)
@@ -164,41 +182,43 @@ class UndirectedGraph(nx.Graph):
         jtnode = 0
         nodes = [(f(self, node), node) for node in self.nodes()]
         heapify(nodes)
-        p(str(nodes))
+        #p(str(nodes))
         max_clique_size = 0
         triangulated_nodes = set()
         new_edges = []
         while len(nodes) != 0:
             min_el = heappop(nodes)
             curr_node = min_el[1]
-            p("Popped " + str(curr_node))
+            #p("Popped " + str(curr_node))
             if curr_node in triangulated_nodes:
-                p("continued")
                 continue
-
+            p("Working with " + str(curr_node))
             triangulated_nodes.add(curr_node)
             flag = False
-            set2 = set(self.neighbors(curr_node))
+            clique_nodes = [curr_node]
+            clique_nodes += [node for node in self.neighbors(curr_node)
+                                    if node not in triangulated_nodes]
+            set2=set(clique_nodes)
+            #p(set2)
             for nbr in self.neighbors(curr_node):
                 if nbr in triangulated_nodes:
                     set1 = set(self.neighbors(nbr))
-                    if set2 - set1 is None:
+                    set1.add(nbr)
+                    if len(set2 - set1) == 0 :
                         flag = True
+                        #p(set1)
                         break
             if flag:
+                #p("break")
                 break
             #actual triangulation begins here
             #Take all the neighbours and connect them. Done
             jtnode += 1
             jt.add_node(jtnode)
-            clique_nodes = []
-            for node in self.neighbors(curr_node):
-                if node not in triangulated_nodes:
-                    clique_nodes.append(node)
             jt.node[jtnode]["clique_nodes"] = clique_nodes
-            p(str(clique_nodes))
+            #p(str(clique_nodes))
             max_clique_size = max(max_clique_size, len(clique_nodes))
-            p("Working with " + str(curr_node))
+
             new_edges_temp = self.make_clique(clique_nodes)
             new_edges.extend(new_edges_temp)
             for node in clique_nodes:
@@ -207,13 +227,19 @@ class UndirectedGraph(nx.Graph):
             for edge in new_edges:
                 self.remove_edge(edge[0], edge[1])
         if not return_junction_tree:
-            return max_clique_size
-        jt.add_jt_edges()
+            return max_clique_size - 1
+        jt._add_jt_edges()
         return jt
 
-    def jt_from_chordal_graph(self, return_junction_tree):
+    def _jt_from_chordal_graph(self, return_junction_tree):
         """
+        Creates a Junction tree with appropriate edges from a graph
+        which is known to be chordal
 
+        Parameters
+        ----------
+        return_junction_tree:
+            return the junction tree, if true else return tree-width
         """
         from pgmpy import MarkovModel
 
@@ -225,12 +251,12 @@ class UndirectedGraph(nx.Graph):
                 jtnode += 1
                 jt.add_node(jtnode)
                 jt.node[jtnode]["clique_nodes"] = max_clique
-            jt.add_jt_edges()
+            jt._add_jt_edges()
             return jt
         else:
-            return nx.chordal_graph_treewidth(self) + 1
+            return nx.chordal_graph_treewidth(self)
 
-    def jt_optimal(self, return_junction_tree, triangulate_graph):
+    def _jt_optimal(self, return_junction_tree, triangulate_graph):
         """
         Exponential strategy to find the optimal junction tree creation strategy
 
@@ -244,12 +270,13 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
+        to be done when this function is to be written
 
         """
         return None
 
     @staticmethod
-    def min_fill_heuristic(graph, node):
+    def _min_fill_heuristic(graph, node):
         """
         Minimum-fill heuristic
         """
@@ -320,29 +347,30 @@ class UndirectedGraph(nx.Graph):
         See Also
         --------
         junctionTree1
-        jt_optimal
-        jt_from_chordal_graph
+        _jt_optimal
+        _jt_from_chordal_graph
 
         Example
         -------
         >>> from pgmpy import MarkovModel
         >>> G = MarkovModel.UndirectedGraph()
         >>> G.read_simple_format("graph")
-        >>> G.jt_tree_width(2)
+        >>> G.jt_techniques(2, False, False)
         4
         """
         ret=None
         if triangulation_technique == 0:
-            ret = self.jt_from_chordal_graph(return_junction_tree)
+            ret = self._jt_from_chordal_graph(return_junction_tree)
+            #print(ret)
             if not ret:
                 raise Exception(" Graph Is Not Triangulated ")
-        if triangulation_technique == 1:
-            ret = self.jt_optimal(return_junction_tree, triangulate_graph)
-        if triangulation_technique == 2:
+        elif triangulation_technique == 1:
+            ret = self._jt_optimal(return_junction_tree, triangulate_graph)
+        elif triangulation_technique == 2:
             f = (lambda graph, node: len(graph.neighbors(node)))
             ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
         elif triangulation_technique == 3:
-            f = (lambda graph, node: UndirectedGraph.min_fill_heuristic(graph, node))
+            f = (lambda graph, node: UndirectedGraph._min_fill_heuristic(graph, node))
             ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
         elif triangulation_technique == 4:
             f = (lambda graph, node: -len(graph.neighbors(node)))
@@ -379,7 +407,8 @@ class UndirectedGraph(nx.Graph):
         4
         """
 
-        return self.jt_techniques(triangulation_technique, False, False)-1
+        val = self.jt_techniques(triangulation_technique, False, False)
+        return val
 
     def make_jt(self, triangulation_technique):
         """
