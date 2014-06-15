@@ -507,4 +507,4 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
-        del self.rule_cpd_with_rules
+

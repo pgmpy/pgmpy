@@ -1,5 +1,5 @@
 import unittest
-import help_functions as hf
+from pgmpy.tests import help_functions as hf
 from pgmpy import MarkovModel as mm
 
 

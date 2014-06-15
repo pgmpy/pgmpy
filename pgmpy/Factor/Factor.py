@@ -353,7 +353,7 @@ class Factor:
         value_index = 0
         for prob in gen():
             prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) +'\n'
+            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) + '\n'
             value_index += 1
         return string[:-1]
 
@@ -376,6 +376,7 @@ class Factor:
         """
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
+
 
 def _bivar_factor_divide(phi1, phi2):
     vars1 = list(phi1.variables.keys())
@@ -400,6 +401,7 @@ def _bivar_factor_divide(phi1, phi2):
     cardinality = list(phi1.cardinality)
     phi = Factor(variables, cardinality, product)
     return phi
+
 
 def _bivar_factor_product(phi1, phi2):
     """
@@ -473,6 +475,7 @@ def factor_product(*args):
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
     return functools.reduce(_bivar_factor_product, args)
+
 
 def factor_divide(factor1, factor2):
     if not (isinstance(factor1, Factor) and isinstance(factor2, Factor)):
