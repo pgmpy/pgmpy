@@ -792,32 +792,7 @@ class MarkovModel(UndirectedGraph):
         """
         jt = UndirectedGraph.make_jt(self, triangulation_technique)
         #jt.print_graph("after making the junction tree")
-        self._copy_factors_to_jt(jt)
+        jt.insert_factors(self.get_factors())
         return jt
-
-    def _copy_factors_to_jt(self, jt):
-        """
-        Given a junction tree, this adds all the factors to appropriate nodes
-        in the junction tree
-
-        Parameters
-        ----------
-        jt : The completely made junction tree ready to be attached to factors
-        """
-        for node in jt.nodes():
-            jt.node[node]["factors"] = []
-        for factor in self._factors:
-            vars = set(factor.get_variables())
-            #print("Vars for the factor "+str(vars))
-            flag=False
-            for node in jt.nodes():
-                maxcliqueNodes = set(jt.node[node]["clique_nodes"])
-                #print(maxcliqueNodes)
-                if len(vars.difference(maxcliqueNodes)) == 0:
-                    jt.node[node]["factors"].append(factor)
-                    flag=True
-                    break
-            if not flag:
-                raise ValueError("The factor " + str(factor) + " doesn't correspond to any maxclique")
 
 

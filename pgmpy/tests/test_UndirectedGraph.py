@@ -54,6 +54,7 @@ class TestBaseModelCreation(unittest.TestCase):
         graph = mm.UndirectedGraph()
         graph.read_simple_format("test_graphs/clique_graph")
         ret = graph.check_clique(graph.nodes())
+        self.assertTrue(ret)
 
     def tearDown(self):
         pass

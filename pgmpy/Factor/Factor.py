@@ -226,6 +226,10 @@ class Factor:
             del(self.variables[variable])
             self.cardinality = np.delete(self.cardinality, index)
 
+    def marginalize_except(self, vars):
+        marginalize_variables = [var for var in self.variables if var not in vars]
+        self.marginalize(marginalize_variables)
+
     def _marginalize_single_variable(self, variable):
         """
         Returns marginalised factor for a single variable
@@ -315,6 +319,9 @@ class Factor:
         """
         return factor_product(self, *factors)
 
+    def divide(self, factor):
+        return factor_divide(self, factor)
+
     def __str__(self):
         return self._str('phi')
 
@@ -370,6 +377,29 @@ class Factor:
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
 
+def _bivar_factor_divide(phi1, phi2):
+    vars1 = list(phi1.variables.keys())
+    vars2 = list(phi2.variables.keys())
+    set_var1 = set(vars1)
+    set_var2 = set(vars2)
+    if len(set_var2 - set_var1) != 0:
+        raise ValueError("The vars in phi2 are not a subset of vars in phi1")
+    common_var_list = vars2
+    common_var_index_list = np.array([[vars1.index(var), vars2.index(var)]
+                                      for var in common_var_list])
+    common_card_product = np.prod([phi1.cardinality[index[0]] for index
+                                   in common_var_index_list])
+    size = np.prod(phi1.cardinality)
+    product = _factor_divide(phi1.values,
+                              phi2.values,
+                              size,
+                              common_var_index_list,
+                              phi1.cardinality,
+                              phi2.cardinality)
+    variables = vars1
+    cardinality = list(phi1.cardinality)
+    phi = Factor(variables, cardinality, product)
+    return phi
 
 def _bivar_factor_product(phi1, phi2):
     """
@@ -443,3 +473,8 @@ def factor_product(*args):
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
     return functools.reduce(_bivar_factor_product, args)
+
+def factor_divide(factor1, factor2):
+    if not (isinstance(factor1, Factor) and isinstance(factor2, Factor)):
+        raise TypeError("Input parameters must be factors")
+    return _bivar_factor_divide(factor1, factor2)

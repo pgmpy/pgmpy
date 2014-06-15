@@ -83,3 +83,38 @@ def _factor_product(np.ndarray[double, ndim=1] x,
                 count += 1
 
     return product_arr
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+def _factor_divide(np.ndarray[double, ndim=1] x,
+                    np.ndarray[double, ndim=1] y,
+                    DTYPE_t size,
+                    np.ndarray[DTYPE_t, ndim=2] common_index=None,
+                    np.ndarray[DTYPE_t, ndim=1] x_card=None,
+                    np.ndarray[DTYPE_t, ndim=1] y_card=None):
+
+    cdef:
+        np.ndarray[double, ndim=1] product_arr = np.zeros(size)
+        unsigned int count = 0
+        unsigned int xmax = x.shape[0]
+        unsigned int ymax = y.shape[0]
+        unsigned int i, j, left_y
+        np.ndarray[DTYPE_t, ndim=1] x_iter, y_iter
+
+    cdef bint CHECK = 1
+    if common_index is None and x_card is None and y_card is None:
+        CHECK = 0
+
+    if CHECK:
+        y_iter, left_y = pattern_gen(x_card, y_card, common_index)
+        x_iter = np.tile(np.arange(np.prod(x_card)), left_y).astype(DTYPE)
+        for i, j in zip(x_iter, y_iter):
+            product_arr[count] = x[i]/y[j]
+            count += 1
+    else:
+        for i in range(ymax):
+            for j in range(xmax):
+                product_arr[count] = x[j]/y[i]
+                count += 1
+
+    return product_arr
