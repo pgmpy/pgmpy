@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
+import itertools
 import networkx as nx
 import numpy as np
-import itertools
-from pgmpy import Exceptions
 from pgmpy.Factor import CPD
 
 
@@ -368,19 +367,19 @@ class BayesianModel(nx.DiGraph):
                 for edge in ebunch:
                     if edge[0] == edge[1]:
                         del self
-                        raise Exceptions.SelfLoopError("Self Loops are not allowed",
+                        raise ValueError("Self Loops are not allowed",
                                                        edge)
 
             simple_cycles = [loop for loop in nx.simple_cycles(self)]
             if simple_cycles:
                 del self
-                raise Exceptions.CycleError("Cycles are not allowed",
+                raise ValueError("Cycles are not allowed",
                                             simple_cycles)
             return True
         else:
             for edge in ebunch:
                 if edge[0] == edge[1]:
-                    raise Exceptions.SelfLoopError("Self loops are not "
+                    raise ValueError("Self loops are not "
                                                    "allowed", edge)
 
             import copy
@@ -389,7 +388,7 @@ class BayesianModel(nx.DiGraph):
             simple_cycles = [loop for loop in nx.simple_cycles(test_G)]
             if simple_cycles:
                 del test_G
-                raise Exceptions.CycleError("Cycles are not allowed",
+                raise ValueError("Cycles are not allowed",
                                             simple_cycles)
             return True
 
@@ -445,7 +444,7 @@ class BayesianModel(nx.DiGraph):
         if sorted(node_states) == sorted(states):
             return True
         else:
-            raise Exceptions.MissingStatesError(set(node_states) - set(states))
+            raise ValueError(set(node_states) - set(states))
 
     def _no_extra_states(self, node, states):
         """"
@@ -455,7 +454,7 @@ class BayesianModel(nx.DiGraph):
         node_states = [state['name'] for state in self.node[node]['_states']]
         extra_states = set(states) - set(node_states)
         if extra_states:
-            raise Exceptions.ExtraStatesError(extra_states)
+            raise ValueError(extra_states)
         else:
             return True
 
@@ -545,7 +544,7 @@ class BayesianModel(nx.DiGraph):
         """
         extra_parents = set(parents) - set(self.node[node]['_parents'])
         if extra_parents:
-            raise Exceptions.ExtraParentsError(extra_parents)
+            raise ValueError(extra_parents)
         else:
             return True
 
@@ -556,7 +555,7 @@ class BayesianModel(nx.DiGraph):
         """
         missing_parents = set(self.node[node]['_parents']) - set(parents)
         if missing_parents:
-            raise Exceptions.MissingParentsError(missing_parents)
+            raise ValueError(missing_parents)
         else:
             return True
 
@@ -762,7 +761,7 @@ class BayesianModel(nx.DiGraph):
         if found:
             self._update_node_observed_status(node)
         else:
-            raise Exceptions.StateError("State: ", state,
+            raise ValueError("State: ", state,
                                         " not found for node: ", node)
 
     def set_observations(self, observations):
@@ -841,8 +840,9 @@ class BayesianModel(nx.DiGraph):
                     for state in self.node[node]['_states']:
                         state['observed_status'] = False
                     self._update_node_observed_status(node)
-            except KeyError:
-                raise Exceptions.NodeNotFoundError("Node not found", node)
+            except KeyError as err:
+                err.message = "Node not found" + str(node)
+                raise
 
     def is_observed(self, node):
         """
@@ -973,6 +973,52 @@ class BayesianModel(nx.DiGraph):
                             visit_list.add((parent, 'up'))
         return active_nodes
 
+    def local_independencies(self, variables):
+        """
+        Returns a Independencies object containing the local independencies
+        of each of the variables.
+
+        Parameters
+        ----------
+        variables: str or array like
+            variables whose local independencies are to found.
+
+        Examples
+        --------
+        >>> from pgmpy import BayesianModel as bm
+        >>> student = bm.BayesianModel()
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
+        >>>                         ('grade', 'letter'), ('intel', 'SAT')])
+        >>> ind = student.local_independencies('grade')
+        >>> ind.event1
+        {'grade'}
+        >>> ind.event2
+        {'SAT'}
+        >>> ind.event3
+        {'diff', 'intel'}
+        """
+        def dfs(node):
+            """
+            Returns the descendents of node.
+
+            Since there can't be any cycles in the Bayesian Network. This is a
+            very simple dfs which doen't remember which nodes it has visited.
+            """
+            descendents = []
+            visit = [node]
+            while visit:
+                n = visit.pop()
+                neighbors = self.neighbors(n)
+                visit.extend(neighbors)
+                descendents.extend(neighbors)
+            return descendents
+
+        from pgmpy.Independencies import Independencies
+        independencies = Independencies()
+        for variable in [variables] if isinstance(variables, str) else variables:
+            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)) - {variable}, set(self.get_parents(variable))])
+        return independencies
+
     def is_active_trail(self, start, end, observed=None, additional_observed=None):
         """
         Returns True if there is any active trail between start and end node
@@ -1021,7 +1067,7 @@ class BayesianModel(nx.DiGraph):
         for node in self.nodes():
             cpd = self.get_cpd(node)
             if not np.allclose(np.sum(cpd, axis=0), np.ones(self.number_of_states(node)), atol=0.01):
-                raise Exceptions.BayesianModelError("Sum of probabilities of states is not equal to 1")
+                raise ValueError("Sum of probabilities of states is not equal to 1")
 
     def get_independencies(self, latex=False):
         import pgmpy.BayesianModel.Independencies as Independencies
@@ -1058,6 +1104,32 @@ class BayesianModel(nx.DiGraph):
         else:
             return independencies.latex_string()
 
+    def moral_graph(self):
+        """
+        Returns the moral graph of the network.
+
+        Examples
+        --------
+        >>> import pgmpy.BayesianModel as bm
+        >>> G = bm.BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>>                       ('intel', 'SAT'), ('grade', 'letter')])
+        >>> moral_graph = G.moral_graph()
+        >>> type(moral_graph)
+        networkx.classes.graph.Graph
+        >>> moral_graph.nodes()
+        ['diff', 'grade', 'intel', 'SAT', 'letter']
+        >>> moral_graph.edges()
+        [('diff', 'intel'), ('diff', 'grade'), ('intel', 'grade'),
+        ('intel', 'SAT'), ('grade', 'letter')]
+        """
+        moral_graph = self.copy()
+        parents_dict = {}
+        for node in self.nodes():
+            parents_dict[node] = self.get_parents(node)
+        for node, parents in parents_dict.items():
+            moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
+        return moral_graph.to_undirected()
+
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
@@ -1067,4 +1139,3 @@ class BayesianModel(nx.DiGraph):
 
     def is_imap(self, independence):
         pass
-

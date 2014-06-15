@@ -1,11 +1,12 @@
 import unittest
-from pgmpy.Factor import Factor
-from pgmpy.Factor.CPD import TabularCPD
-import help_functions as hf
 from collections import OrderedDict
-import numpy.testing as np_test
 import numpy as np
+import numpy.testing as np_test
+from pgmpy.Factor import Factor
+from pgmpy.Factor.CPD import TabularCPD, TreeCPD
 from pgmpy import Exceptions
+from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
+from pgmpy.Factor.CPD import RuleCPD
 
 
 class TestFactorInit(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1'], 'x3': ['x3_0', 'x3_1']}
-        hf.assertOrderedDictEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        self.assertEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8))
 
@@ -26,6 +27,10 @@ class TestFactorMethods(unittest.TestCase):
     def setUp(self):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+
+    def test_scope(self):
+        self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
+        self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
 
     def test_assignment(self):
         self.assertListEqual(self.phi.assignment([0]), [['x1_0', 'x2_0', 'x3_0']])
@@ -109,6 +114,37 @@ class TestFactorMethods(unittest.TestCase):
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
+
+    def test_factor_product2(self):
+        from pgmpy import Factor
+        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        factor_product = phi.product(phi1)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 0, 0, 0, 0, 1,
+                                             2, 3, 0, 2, 4, 6,
+                                             0, 3, 6, 9]))
+        self.assertEqual(factor_product.variables, OrderedDict([
+            ('x1', ['x1_0', 'x1_1']),
+            ('x2', ['x2_0', 'x2_1']),
+            ('x3', ['x3_0', 'x3_1']),
+            ('x4', ['x4_0', 'x4_1'])]
+        ))
+
+        phi = Factor.Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
+        factor_product = phi.product(phi1)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 1, 0, 3, 0, 5, 0, 3, 4, 9, 8, 15]))
+        self.assertEqual(factor_product.variables, OrderedDict(
+            [('x1', ['x1_0', 'x1_1', 'x1_2']),
+             ('x2', ['x2_0', 'x2_1']),
+             ('x3', ['x3_0', 'x3_1'])]))
+
+    def test_eq(self):
+        self.assertFalse(self.phi == self.phi1)
+        self.assertTrue(self.phi == self.phi)
+        self.assertTrue(self.phi1 == self.phi1)
 
     def tearDown(self):
         del self.phi
@@ -235,3 +271,240 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.cpd
+
+
+class TestJointProbabilityDistributionInit(unittest.TestCase):
+
+    def test_jpd_init(self):
+        jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
+        np_test.assert_array_equal(jpd.values, np.ones(12)/12)
+        dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1', 'x2_2'], 'x3': ['x3_0', 'x3_1']}
+        self.assertEqual(jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+
+    def test_jpd_init_exception(self):
+        self.assertRaises(ValueError, JPD, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+
+
+class TestJointProbabilityDistributionMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12)/12)
+
+    def test_jpd_marginal_distribution_list(self):
+        self.jpd.marginal_distribution(['x1', 'x2'])
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.16666667, 0.16666667, 0.16666667,
+                                                                     0.16666667, 0.16666667, 0.16666667]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
+        dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1', 'x2_2']}
+        self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+
+    def test_marginal_distribution_str(self):
+        self.jpd.marginal_distribution('x1')
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
+        dic = {'x1': ['x1_0', 'x1_1']}
+        self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+
+    def test_conditional_distribution_list(self):
+        self.jpd.conditional_distribution(['x1_1', 'x2_0'])
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
+        dic = {'x3': ['x3_0', 'x3_1']}
+        self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+
+    def test_conditional_distribution_str(self):
+        self.jpd.conditional_distribution('x1_1')
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([ 0.16666667,  0.16666667,
+                                                                      0.16666667,  0.16666667,
+                                                                      0.16666667,  0.16666667]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([3, 2]))
+        dic = {'x2': ['x2_0', 'x2_1', 'x2_2'], 'x3': ['x3_0', 'x3_1']}
+        self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+
+    def tearDown(self):
+        del self.jpd
+
+
+class TestTreeCPDInit(unittest.TestCase):
+
+    def test_init_single_variable_nodes(self):
+        tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                        ('B', 'C', '1'),
+                        ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                        ('C', 'D', '1'),
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+
+        self.assertTrue('B' in tree.nodes())
+        self.assertTrue('C' in tree.nodes())
+        self.assertTrue('D' in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.1, 0.9]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.4, 0.6]) in tree.nodes())
+
+        self.assertTrue(('B', Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.1, 0.9]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.9, 0.1]) in tree.edges()))
+        self.assertTrue(('B', Factor(['A'], [2], [0.4, 0.6]) in tree.edges()))
+        self.assertTrue(('C', 'D') in tree.edges())
+        self.assertTrue(('B', 'C') in tree.edges())
+
+        self.assertEqual(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], '0')
+        self.assertEqual(tree['B']['C']['label'], '1')
+        self.assertEqual(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], '0')
+        self.assertEqual(tree['C']['D']['label'], '1')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], '1')
+
+    def test_init_multi_variable_nodes(self):
+        tree = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), '0_0'),
+                        (('B', 'C'), 'D', '0_1'),
+                        (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), '1_0'),
+                        (('B', 'C'), 'E', '1_1'),
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
+                        ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
+                        ('E', Factor(['A'], [2], [0.8, 0.2]), '1')
+                        ])
+
+        self.assertTrue(('B', 'C') in tree.nodes())
+        self.assertTrue('D' in tree.nodes())
+        self.assertTrue('E' in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+        self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+
+        self.assertTrue((('B', 'C'), Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+        self.assertTrue((('B', 'C'), 'E') in tree.edges())
+        self.assertTrue(('D', Factor(['A'], [2], [0.4, 0.6])) in tree.edges())
+        self.assertTrue(('E', Factor(['A'], [2], [0.8, 0.2])) in tree.edges())
+
+        self.assertEqual(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], '0_0')
+        self.assertEqual(tree[('B', 'C')]['D']['label'], '0_1')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
+        self.assertEqual(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], '0')
+
+
+class TestTreeCPD(unittest.TestCase):
+
+    def setUp(self):
+        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                              ('B', 'C', '1'),
+                              ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                              ('C', 'D', '1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+
+        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), '0_0'),
+                              (('B', 'C'), 'D', '0_1'),
+                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), '1_0'),
+                              (('B', 'C'), 'E', '1_1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
+                              ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
+                              ('E', Factor(['A'], [2], [0.8, 0.2]), '1')
+                              ])
+
+    def test_add_edge(self):
+        self.tree1.add_edge('yolo', 'yo', '0')
+        self.assertTrue('yolo' in self.tree1.nodes() and 'yo' in self.tree1.nodes())
+        self.assertTrue(('yolo', 'yo') in self.tree1.edges())
+        self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
+
+    def test_add_edges_from(self):
+        self.tree1.add_edges_from([('yolo', 'yo', '0'), ('hello', 'world', '1')])
+        self.assertTrue('yolo' in self.tree1.nodes() and 'yo' in self.tree1.nodes() and
+                        'hello' in self.tree1.nodes() and 'world' in self.tree1.nodes())
+        self.assertTrue(('yolo', 'yo') in self.tree1.edges())
+        self.assertTrue(('hello', 'world') in self.tree1.edges())
+        self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
+        self.assertEqual(self.tree1['hello']['world']['label'], '1')
+
+
+class TestRuleCPDInit(unittest.TestCase):
+
+    def test_init_without_errors_rules_none(self):
+        rule_cpd = RuleCPD('A')
+        self.assertEqual(rule_cpd.variable, 'A')
+
+    def test_init_without_errors_rules_not_none(self):
+        rule_cpd = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+                                 ('A_1', 'B_0'): 0.2,
+                                 ('A_0', 'B_1', 'C_0'): 0.4,
+                                 ('A_1', 'B_1', 'C_0'): 0.6,
+                                 ('A_0', 'B_1', 'C_1'): 0.9,
+                                 ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(rule_cpd.variable, 'A')
+        self.assertEqual(rule_cpd.rules, {('A_0', 'B_0'): 0.8,
+                                          ('A_1', 'B_0'): 0.2,
+                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                          ('A_0', 'B_1', 'C_1'): 0.9,
+                                          ('A_1', 'B_1', 'C_1'): 0.1})
+
+    def test_init_with_errors(self):
+        self.assertRaises(ValueError, RuleCPD, 'A', {('A_0',): 0.5,
+                                                     ('A_0', 'B_0'): 0.8,
+                                                     ('A_1', 'B_0'): 0.2,
+                                                     ('A_0', 'B_1', 'C_0'): 0.4,
+                                                     ('A_1', 'B_1', 'C_0'): 0.6,
+                                                     ('A_0', 'B_1', 'C_1'): 0.9,
+                                                     ('A_1', 'B_1', 'C_1'): 0.1})
+
+
+class TestRuleCPDMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.rule_cpd_with_rules = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+                                                 ('A_1', 'B_0'): 0.2,
+                                                 ('A_0', 'B_1', 'C_0'): 0.4,
+                                                 ('A_1', 'B_1', 'C_0'): 0.6})
+        self.rule_cpd_without_rules = RuleCPD('A')
+
+    def test_add_rules_single(self):
+        self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_with_rules.rules, {('A_0', 'B_0'): 0.8,
+                                                          ('A_1', 'B_0'): 0.2,
+                                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                                          ('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_with_rules.variable, 'A')
+        self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_without_rules.rules, {('A_0', 'B_1', 'C_1'): 0.9})
+        self.assertEqual(self.rule_cpd_without_rules.variable, 'A')
+
+    def test_add_rules_multiple(self):
+        self.rule_cpd_with_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
+                                            ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_with_rules.rules, {('A_0', 'B_0'): 0.8,
+                                                          ('A_1', 'B_0'): 0.2,
+                                                          ('A_0', 'B_1', 'C_0'): 0.4,
+                                                          ('A_1', 'B_1', 'C_0'): 0.6,
+                                                          ('A_0', 'B_1', 'C_1'): 0.9,
+                                                          ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_with_rules.variable, 'A')
+        self.rule_cpd_without_rules.add_rules({('A_0', 'B_1', 'C_1'): 0.9,
+                                               ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_without_rules.rules, {('A_0', 'B_1', 'C_1'): 0.9,
+                                                             ('A_1', 'B_1', 'C_1'): 0.1})
+        self.assertEqual(self.rule_cpd_without_rules.variable, 'A')
+
+    def test_add_rules_error(self):
+        self.assertRaises(ValueError, self.rule_cpd_with_rules.add_rules, {('A_0',): 0.8})
+
+    def test_scope(self):
+        self.assertEqual(self.rule_cpd_with_rules.scope(), {'A', 'B', 'C'})
+        self.assertEqual(self.rule_cpd_without_rules.scope(), set())
+
+    def test_cardinality(self):
+        self.assertEqual(self.rule_cpd_with_rules.cardinality(), {'A': 2, 'B': 2, 'C': 1})
+        self.assertEqual(self.rule_cpd_without_rules.cardinality(), {})
+
+    def tearDown(self):
+        del self.rule_cpd_without_rules
+        del self.rule_cpd_with_rules

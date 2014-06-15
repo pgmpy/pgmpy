@@ -12,8 +12,6 @@ except ImportError:
             print("Failed to import ElementTree from any known place")
 import numpy as np
 
-__all__ = ['XMLBIFReader']
-
 
 class XMLBIFReader:
     """
@@ -30,8 +28,8 @@ class XMLBIFReader:
         string : str
             String of XMLBIF data
 
-        Example
-        -------
+        Examples
+        --------
         # xmlbif_test.xml is the file present in
         # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
         >>> reader = XMLBIFReader("xmlbif_test.xml")
@@ -53,8 +51,8 @@ class XMLBIFReader:
         """
         Returns list of variables of the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
@@ -67,8 +65,8 @@ class XMLBIFReader:
         """
         Returns the edges of the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_edges()
         [['family-out', 'light-on'],
@@ -88,8 +86,8 @@ class XMLBIFReader:
         """
         Returns the states of variables present in the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_states()
         {'bowel-problem': ['true', 'false'],
@@ -107,8 +105,8 @@ class XMLBIFReader:
         """
         Returns the parents of the variables present in the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_parents()
         {'bowel-problem': [],
@@ -127,8 +125,8 @@ class XMLBIFReader:
         """
         Returns the CPD of the variables present in the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_cpd()
         {'bowel-problem': array([[ 0.01],
@@ -160,8 +158,8 @@ class XMLBIFReader:
         """
         Returns the property of the variable
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
         >>> reader.get_property()
         {'bowel-problem': ['position = (190, 69)'],
@@ -174,3 +172,4 @@ class XMLBIFReader:
                                       [property.text for property in variable.findall('PROPERTY')]
                                   for variable in self.network.findall('VARIABLE')}
         return self.variable_property
+

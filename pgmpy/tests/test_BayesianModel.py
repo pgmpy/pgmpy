@@ -1,9 +1,7 @@
 import unittest
-from pgmpy import BayesianModel as bm
-from pgmpy import Exceptions
 import networkx as nx
-import help_functions as hf
-import numpy as np
+from pgmpy import BayesianModel as bm
+import pgmpy.tests.help_functions as hf
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -59,11 +57,11 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertRaises(TypeError, self.G.add_edge, 1, 2)
 
     def test_add_edge_selfloop(self):
-        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edge, 'a', 'a')
+        self.assertRaises(ValueError, self.G.add_edge, 'a', 'a')
 
     def test_add_edge_result_cycle(self):
         self.G.add_edges_from([('a', 'b'), ('a', 'c')])
-        self.assertRaises(Exceptions.CycleError, self.G.add_edge, 'c', 'a')
+        self.assertRaises(ValueError, self.G.add_edge, 'c', 'a')
 
     def test_add_edges_from_string(self):
         self.G.add_edges_from([('a', 'b'), ('b', 'c')])
@@ -82,11 +80,11 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
 
     def test_add_edges_from_self_loop(self):
-        self.assertRaises(Exceptions.SelfLoopError, self.G.add_edges_from,
+        self.assertRaises(ValueError, self.G.add_edges_from,
                           [('a', 'a')])
 
     def test_add_edges_from_result_cycle(self):
-        self.assertRaises(Exceptions.CycleError, self.G.add_edges_from,
+        self.assertRaises(ValueError, self.G.add_edges_from,
                           [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
@@ -206,26 +204,26 @@ class TestBayesianModelMethods(unittest.TestCase):
     def test_no_missing_states(self):
         self.G.set_states({'a': [1, 2, 3]})
         self.assertTrue(self.G._no_missing_states('a', [1, 2, 3]))
-        self.assertRaises(Exceptions.MissingStatesError,
+        self.assertRaises(ValueError,
                           self.G._no_missing_states, 'a', [1, 2])
 
     def test_no_extra_states(self):
         self.G.set_states({'a': [1, 2, 3]})
         self.assertTrue(self.G._no_extra_states('a', [1, 2]))
         self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
-        self.assertRaises(Exceptions.ExtraStatesError,
+        self.assertRaises(ValueError,
                           self.G._no_extra_states, 'a', [1, 2, 3, 4])
 
     def test_no_extra_parents(self):
         self.assertTrue(self.G._no_extra_parents('d', ['a', 'b']))
-        self.assertRaises(Exceptions.ExtraParentsError,
+        self.assertRaises(ValueError,
                           self.G._no_extra_parents, 'd', ['a', 'b', 'c'])
         self.assertTrue(self.G._no_extra_parents('d', ['a']))
 
     def test_no_missing_parents(self):
         self.assertTrue(self.G._no_missing_parents('d', ['a', 'b']))
         self.assertTrue(self.G._no_missing_parents('d', ['a', 'b', 'c']))
-        self.assertRaises(Exceptions.MissingParentsError,
+        self.assertRaises(ValueError,
                           self.G._no_missing_parents, 'd', ['a'])
 
     def test_get_rule_for_states(self):
@@ -269,6 +267,21 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertListEqual(list(self.G._get_parent_objects('d')),
                              [self.G.node['a'], self.G.node['b']])
         self.assertListEqual(list(self.G._get_parent_objects('a')), [])
+
+    def test_moral_graph(self):
+        moral_graph = self.G.moral_graph()
+        self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
+        for edge in moral_graph.edges():
+            self.assertTrue(edge in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')] or
+                            (edge[1], edge[0]) in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')])
+
+    def test_moral_graph_with_edge_present_over_parents(self):
+        G = bm.BayesianModel([('a', 'd'), ('d', 'e'), ('b', 'd'), ('b', 'c'), ('a', 'b')])
+        moral_graph = G.moral_graph()
+        self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
+        for edge in moral_graph.edges():
+            self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
+                            (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
     def tearDown(self):
         del self.G
@@ -322,7 +335,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertTrue(self.G.node['g']['_observed'])
 
     def test_set_observation_multiple_state_reset_false_not_found(self):
-        self.assertRaises(Exceptions.StateError, self.G.set_observations, {'d': 'unknow_state'})
+        self.assertRaises(ValueError, self.G.set_observations, {'d': 'unknow_state'})
 
     def test_reset_observations_single_state(self):
         self.G.reset_observations({'d': 'easy'})
@@ -372,7 +385,7 @@ class TestBayesianModelCPD(unittest.TestCase):
                 self.assertFalse(state['observed_status'])
 
     def test_reset_observations_node_error(self):
-        self.assertRaises(Exceptions.NodeNotFoundError, self.G.reset_observations, 'j')
+        self.assertRaises(KeyError, self.G.reset_observations, 'j')
 
     def test_is_observed(self):
         self.G.set_observations({'d': 'easy'})

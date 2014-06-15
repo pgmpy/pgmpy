@@ -2,7 +2,7 @@ language: python
 python:
     - "3.3"
 virtualenv:
-    system_site_packages: true
+    system_site_packages: false
 before_install:
     - sudo apt-get update
     - sudo apt-get build-dep -qq python3-numpy
@@ -18,7 +18,7 @@ before_install:
 install:
 #    - "pip3 -q install cython"
 #    - "pip3 -q install networkx"
-#    - "pip3  install numpy --upgrade"
+    - "pip3  install numpy --upgrade"
 #    - "pip3  install scipy --upgrade"
 #    - "pip3 -q install nose"
 #    - "pip3 -q install coveralls"

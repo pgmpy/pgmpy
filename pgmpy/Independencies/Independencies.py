@@ -4,24 +4,30 @@ from pgmpy import Exceptions
 class Independencies:
     """
     Base class for Independencies.
-    Independencies class represents a set of Conditional Independence assertions (eg: "X is independent of Y given Z" where X, Y and Z
-    are random variables) or Independence assertions (eg: "X is independent of Y" where X and Y
-    are random variables).
-    Initialize the Independencies Class with Conditional Independence assertions or Independence assertions.
+    Independencies class represents a set of Conditional Independence
+    assertions (eg: "X is independent of Y given Z" where X, Y and Z
+    are random variables) or Independence assertions (eg: "X is
+    independent of Y" where X and Y are random variables).
+    Initialize the Independencies Class with Conditional Independence
+    assertions or Independence assertions.
 
     Parameters
     ----------
     assertions: Lists or Tuples
-            Each assertion is a list or tuple of the form: [event1, event2 and event3]
-            eg: assertion ['X', 'Y', 'Z'] would be X is independent of Y given Z.
+            Each assertion is a list or tuple of the form: [event1,
+            event2 and event3]
+            eg: assertion ['X', 'Y', 'Z'] would be X is independent
+            of Y given Z.
 
     Examples
     --------
-    Creating an Independencies object with one independence assertion: Random Variable X is independent of Y
+    Creating an Independencies object with one independence assertion:
+    Random Variable X is independent of Y
 
     >>> independencies = Independencies(['X', 'Y'])
 
-    Creating an Independencies object with three conditional independence assertions:
+    Creating an Independencies object with three conditional
+    independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
     >>> independencies = Independencies(['X', 'Y', 'Z'],
@@ -41,6 +47,14 @@ class Independencies:
                 self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
             except IndexError:
                 self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
+
+    def __str__(self):
+        string = ""
+        for assertion in self.independencies:
+            string += assertion.__str__() + '\n'
+        return string
+
+    __repr__ = __str__
 
     def get_independencies(self):
         """
@@ -75,6 +89,7 @@ class Independencies:
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
+        #TODO: write reduce function.
     def reduce(self):
         """
         Add function to remove duplicate Independence Assertions
@@ -163,6 +178,11 @@ class IndependenceAssertion:
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
         self.event3 = set(self._return_list_if_str(event3))
+
+    def __str__(self):
+        return ', '.join(self.event1) + ' _|_ ' + ', '.join(self.event2) + ' | ' + ', '.join(self.event3)
+
+    __repr__ = __str__
 
     @staticmethod
     def _return_list_if_str(event):
