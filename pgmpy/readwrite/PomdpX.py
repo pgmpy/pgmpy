@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from collections import defaultdict
 
 try:
     from lxml import etree
@@ -10,13 +11,9 @@ except ImportError:
             import xml.etree.ElementTree as etree
         except ImportError:
             print("Failed to import ElementTree from any known place")
-import numpy as np
-from pgmpy.Factor import CPD,Factor
-
-__all__ = ['PomdpXReader']
 
 
-class PomdpXReader(object):
+class PomdpXReader:
     """
     Class for reading PomdpX file format from files or strings
     """
@@ -45,11 +42,6 @@ class PomdpXReader(object):
         self.description = self.network.find('Description').text
         self.discount = self.network.find('Discount').text
         self.variables = None
-        self.edge_list = None
-        self.variable_states = None
-        self.variable_parents = None
-        self.variable_CPD = None
-        self.variable_property = None
 
     def get_variables(self):
         """
@@ -62,7 +54,7 @@ class PomdpXReader(object):
         { 'StateVar': [ { 'vnamePrev' : 'rover_0'
                       'vnameCurr': 'rover_1'
                       'fullyObs': true
-                      'NumValues': 3
+                      'ValueEnum' : ['s0', 's1', 's2']
                       },
                       { 'vnamePrev': 'rock_0'
                         'vnameCurr': 'rock_1'
@@ -75,51 +67,47 @@ class PomdpXReader(object):
                            'ValueEnum' : 'amw ame ac as'} ]
           'RewardVar' : [ {'vname' : 'reward_rover'} ]
         }
-
-
         """
-        self.variables = {}
+        self.variables = defaultdict(list)
         for variable in self.network.findall('Variable'):
-            variables = {}
-            variables['StateVar'] = []
-            variables['ObsVar'] = []
-            variables['ActionVar'] = []
-            variables['RewardVar'] = []
+            _variables = defaultdict(list)
             for var in variable.findall('StateVar'):
-                state_variables = {}
+                state_variables = defaultdict(list)
                 state_variables['vnamePrev'] = var.get('vnamePrev')
                 state_variables['vnameCurr'] = var.get('vnameCurr')
                 if var.get('fullyObs'):
                     state_variables['fullyObs'] = True
                 else:
                     state_variables['fullyObs'] = False
+                state_variables['ValueEnum'] = []
                 if var.find('NumValues') is not None:
-                    state_variables['NumValues'] = var.find('NumValues').text
+                    for i in range(0, int(var.find('NumValues').text)):
+                        state_variables['ValueEnum'].append('s'+str(i))
                 if var.find('ValueEnum') is not None:
                     state_variables['ValueEnum'] = \
-                        var.find('ValueEnum').text.split(' ')
-                variables['StateVar'].append(state_variables)
+                        var.find('ValueEnum').text.split()
+                _variables['StateVar'].append(state_variables)
 
             for var in variable.findall('ObsVar'):
-                obs_variables = {}
+                obs_variables = defaultdict(list)
                 obs_variables['vname'] = var.get('vname')
                 obs_variables['ValueEnum'] = \
                     var.find('ValueEnum').text.split()
-                variables['ObsVar'].append(obs_variables)
+                _variables['ObsVar'].append(obs_variables)
 
             for var in variable.findall('ActionVar'):
-                action_variables = {}
+                action_variables = defaultdict(list)
                 action_variables['vname'] = var.get('vname')
                 action_variables['ValueEnum'] = \
                     var.find('ValueEnum').text.split()
-                variables['ActionVar'].append(action_variables)
+                _variables['ActionVar'].append(action_variables)
 
             for var in variable.findall('RewardVar'):
-                reward_variables = {}
+                reward_variables = defaultdict(list)
                 reward_variables['vname'] = var.get('vname')
-                variables['RewardVar'].append(reward_variables)
+                _variables['RewardVar'].append(reward_variables)
 
-            self.variables.update(variables)
+            self.variables.update(_variables)
 
         return self.variables
 
@@ -127,10 +115,10 @@ class PomdpXReader(object):
         initial_state_belief = []
         for variable in self.network.findall('InitialStateBelief'):
             for var in variable.findall('CondProb'):
-                cond_prob = {}
+                cond_prob = defaultdict(list)
                 cond_prob['Var'] = var.find('Var').text
                 cond_prob['Parent'] = var.find('Parent').text.split()
-                if var.find('Parameter').get('type') is None:
+                if not var.find('Parameter').get('type'):
                     cond_prob['Type'] = 'TBL'
                 else:
                     cond_prob['Type'] = var.find('Parameter').get('type')
@@ -143,10 +131,10 @@ class PomdpXReader(object):
         state_transition_function = []
         for variable in self.network.findall('StateTransitionFunction'):
             for var in variable.findall('CondProb'):
-                cond_prob = {}
+                cond_prob = defaultdict(list)
                 cond_prob['Var'] = var.find('Var').text
                 cond_prob['Parent'] = var.find('Parent').text.split()
-                if var.find('Parameter').get('type') is None:
+                if not var.find('Parameter').get('type'):
                     cond_prob['Type'] = 'TBL'
                 else:
                     cond_prob['Type'] = var.find('Parameter').get('type')
@@ -159,10 +147,10 @@ class PomdpXReader(object):
         obs_function = []
         for variable in self.network.findall('ObsFunction'):
             for var in variable.findall('CondProb'):
-                cond_prob = {}
+                cond_prob = defaultdict(list)
                 cond_prob['Var'] = var.find('Var').text
                 cond_prob['Parent'] = var.find('Parent').text.split()
-                if var.find('Parameter').get('type') is None:
+                if not var.find('Parameter').get('type'):
                     cond_prob['Type'] = 'TBL'
                 else:
                     cond_prob['Type'] = var.find('Parameter').get('type')
@@ -175,10 +163,10 @@ class PomdpXReader(object):
         reward_function = []
         for variable in self.network.findall('RewardFunction'):
             for var in variable.findall('Func'):
-                func = {}
+                func = defaultdict(list)
                 func['Var'] = var.find('Var').text
                 func['Parent'] = var.find('Parent').text.split()
-                if var.find('Parameter').get('type') is None:
+                if not var.find('Parameter').get('type'):
                     func['Type'] = 'TBL'
                 else:
                     func['Type'] = var.find('Parameter').get('type')
@@ -190,7 +178,7 @@ class PomdpXReader(object):
     def get_parameter(self, var):
         parameter = []
         for parameter_tag in var.findall('Parameter'):
-            if parameter_tag.get('type') is None or 'TBL':
+            if not parameter_tag.get('type') or 'TBL':
                 parameter = self.get_parameter_tbl(parameter_tag)
             else:
                 pass
@@ -200,7 +188,7 @@ class PomdpXReader(object):
     def get_parameter_tbl(self, parameter):
         par = []
         for entry in parameter.findall('Entry'):
-            instance = {}
+            instance = defaultdict(list)
             instance['Instance'] = entry.find('Instance').text.split()
             if entry.find('ProbTable') is None:
                 instance['ValueTable'] = entry.find('ValueTable').text.split()
