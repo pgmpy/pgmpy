@@ -397,9 +397,14 @@ class RuleCPD:
             scope.update([assignment.split('_')[0] for assignment in rule])
         return scope
 
-    def cardinality(self):
+    def cardinality(self, variable=None):
         """
         Returns a dict of variable: cardinality.
+
+        Parameters
+        ----------
+        variable: string, list
+            variable or list of variables whose cardinality will be returned.
 
         Examples
         --------
@@ -416,7 +421,11 @@ class RuleCPD:
         from itertools import chain
         from collections import Counter
         assignments = list(set(chain(*self.rules)))
-        return dict(Counter([element.split('_')[0] for element in assignments]))
+        cardinality = dict(Counter([element.split('_')[0] for element in assignments]))
+        if variable:
+            return cardinality[variable] if isinstance(variable, str) else {var: cardinality[var] for var in variable}
+        else:
+            return cardinality
 
     def to_tabular_cpd(self, parents_order=None):
         """
