@@ -11,6 +11,7 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 import numpy as np
+from pgmpy.Factor import CPD,Factor
 
 __all__ = ['PomdpXReader']
 
@@ -207,7 +208,3 @@ class PomdpXReader(object):
                 instance['ProbTable'] = entry.find('ProbTable').text.split()
             par.append(instance)
         return par
-
-    def get_parameter_dd(self, parameter):
-        #TODO support for decision diagram class
-        return parameter
