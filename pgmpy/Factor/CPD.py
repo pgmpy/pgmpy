@@ -471,9 +471,69 @@ class RuleCPD:
         return TabularCPD(self.variable, cardinality_dict[self.variable], tabular_cpd,
                           parents_order, [cardinality_dict[var] for var in parents_order])
 
+    def _merge(self):
+        """
+        Removes the variable from the rules and then merges the rules
+        having the same variables.
+        For example:
+        If we are given these rules:
+        ('A_0', 'B_0'): 0.8,
+        ('A_1', 'B_0'): 0.2,
+        ('A_0', 'B_1', 'C_1'): 0.9,
+        ('A_1', 'B_1', 'C_1'): 0.1,
+        ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
+        ('A_1', 'B_1', 'C_0', 'D_1'): 0.7
+
+        then after merging _merge will return this dict:
+        {('B_0',): array([ 0.8,  0.2]),
+         ('B_1', 'C_0', 'D_1'): array([ 0.3,  0.7]),
+         ('B_1', 'C_1'): array([ 0.9,  0.1]),
+         ('B_1', 'C_0', 'D_0'): array([ 0.4,  0.6])}
+        """
+        var_card = self.cardinality(self.variable)
+        dict_without_var = {}
+        for assignments in self.rules.keys():
+            dict_without_var[tuple(sorted([var for var in assignments if not var.startswith(self.variable)]))] = None
+        for key in dict_without_var:
+            value_list = []
+            for assign in range(var_card):
+                value_list.append(self.rules[tuple(sorted(list(key) + [(self.variable + '_' + str(assign))]))])
+            dict_without_var[key] = np.array(value_list)
+        return dict_without_var
+
     def to_tree_cpd(self):
-        #TODO:
-        pass
+        """
+        Return a TreeCPD object which represents the RuleCPD.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
+        >>> rule.to_tree_cpd()
+        <CPD.TreeCPD object at 0x7f6b6f952fd0>
+        """
+        from collections import OrderedDict
+        tree_cpd = TreeCPD()
+        merged_rules = OrderedDict(sorted(self._merge().items(), key=lambda t: len(t[0])))
+
+        for assignments, value in merged_rules.items():
+            for assignment_index in range(len(assignments) - 1):
+                tree_cpd.add_edge(assignments[assignment_index].split('_')[0],
+                                  assignments[assignment_index+1].split('_')[0],
+                                  assignments[assignment_index].split('_')[1])
+            tree_cpd.add_edge(assignments[-1].split('_')[0],
+                              Factor([self.variable], [len(value)], value),
+                              assignments[-1].split('_')[1])
+        return tree_cpd
 
     def __str__(self):
         from collections import OrderedDict
