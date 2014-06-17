@@ -293,7 +293,36 @@ class TreeCPD(nx.DiGraph):
             pass
 
     def to_rule_cpd(self):
-        pass
+        """
+        Returns a RuleCPD object which represents the TreeCPD
+
+        Examples
+        --------
+        >>> from pgmpy.Factor import CPD, Factor
+        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+        >>>                     ('B', 'C', '1'),
+        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+        >>>                     ('C', 'D', '1'),
+        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        >>> tree.to_rule_cpd()
+
+        """
+        #TODO: This method assumes that Factor class has a get_variable method. Check this after merging navin's PR.
+        root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
+        paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if isinstance(target, Factor)}
+        for node in self.nodes_iter():
+            if isinstance(node, Factor):
+                rule_cpd = RuleCPD(node.get_variables()[0])
+
+        for factor, path in paths_root_to_factors.items():
+            rule_key = []
+            for node_index in range(len(path) - 1):
+                rule_key.append(path[node_index] + '_' + self.edge[path[node_index]][path[node_index + 1]]['label'])
+            for value_index in range(len(factor.values)):
+                rule_key.append(factor.get_variables()[0] + '_' + str(value_index))
+                rule_cpd.add_rules({tuple(sorted(rule_key)): factor.values[value_index]})
+        return rule_cpd
 
 
 class RuleCPD:
