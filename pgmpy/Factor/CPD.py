@@ -208,8 +208,9 @@ class TreeCPD(nx.DiGraph):
         """
         nx.DiGraph.__init__(self)
         #TODO: Check cycles and self loops.
-        for edge in data:
-            self.add_edge(edge[0], edge[1], label=edge[2])
+        if data:
+            for edge in data:
+                self.add_edge(edge[0], edge[1], label=edge[2])
 
     def add_edge(self, u, v, label, attr_dict=None, **attr):
         """
@@ -332,7 +333,7 @@ class RuleCPD:
         if rules:
             self.rules = {}
             for rule, value in rules.items():
-                self.rules[sorted(rule)] = value
+                self.rules[tuple(sorted(rule))] = value
         else:
             self.rules = {}
         verify = self._verify()
