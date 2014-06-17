@@ -330,7 +330,9 @@ class RuleCPD:
         """
         self.variable = variable
         if rules:
-            self.rules = rules
+            self.rules = {}
+            for rule, value in rules.items():
+                self.rules[sorted(rule)] = value
         else:
             self.rules = {}
         verify = self._verify()
