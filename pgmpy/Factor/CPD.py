@@ -208,8 +208,9 @@ class TreeCPD(nx.DiGraph):
         """
         nx.DiGraph.__init__(self)
         #TODO: Check cycles and self loops.
-        for edge in data:
-            self.add_edge(edge[0], edge[1], label=edge[2])
+        if data:
+            for edge in data:
+                self.add_edge(edge[0], edge[1], label=edge[2])
 
     def add_edge(self, u, v, label, attr_dict=None, **attr):
         """
@@ -330,7 +331,9 @@ class RuleCPD:
         """
         self.variable = variable
         if rules:
-            self.rules = rules
+            self.rules = {}
+            for rule, value in rules.items():
+                self.rules[tuple(sorted(rule))] = value
         else:
             self.rules = {}
         verify = self._verify()
@@ -397,9 +400,14 @@ class RuleCPD:
             scope.update([assignment.split('_')[0] for assignment in rule])
         return scope
 
-    def cardinality(self):
+    def cardinality(self, variable=None):
         """
         Returns a dict of variable: cardinality.
+
+        Parameters
+        ----------
+        variable: string, list
+            variable or list of variables whose cardinality will be returned.
 
         Examples
         --------
@@ -416,7 +424,11 @@ class RuleCPD:
         from itertools import chain
         from collections import Counter
         assignments = list(set(chain(*self.rules)))
-        return dict(Counter([element.split('_')[0] for element in assignments]))
+        cardinality = dict(Counter([element.split('_')[0] for element in assignments]))
+        if variable:
+            return cardinality[variable] if isinstance(variable, str) else {var: cardinality[var] for var in variable}
+        else:
+            return cardinality
 
     def to_tabular_cpd(self, parents_order=None):
         """
@@ -435,8 +447,8 @@ class RuleCPD:
         >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
         >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
         >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
-        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_0', 'C_1'): 0.3,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
         >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
         >>> rule.to_tabular_cpd()
         """
@@ -459,11 +471,76 @@ class RuleCPD:
         return TabularCPD(self.variable, cardinality_dict[self.variable], tabular_cpd,
                           parents_order, [cardinality_dict[var] for var in parents_order])
 
+    def _merge(self):
+        """
+        Removes the variable from the rules and then merges the rules
+        having the same variables.
+        For example:
+        If we are given these rules:
+        ('A_0', 'B_0'): 0.8,
+        ('A_1', 'B_0'): 0.2,
+        ('A_0', 'B_1', 'C_1'): 0.9,
+        ('A_1', 'B_1', 'C_1'): 0.1,
+        ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
+        ('A_1', 'B_1', 'C_0', 'D_1'): 0.7
+
+        then after merging _merge will return this dict:
+        {('B_0',): array([ 0.8,  0.2]),
+         ('B_1', 'C_0', 'D_1'): array([ 0.3,  0.7]),
+         ('B_1', 'C_1'): array([ 0.9,  0.1]),
+         ('B_1', 'C_0', 'D_0'): array([ 0.4,  0.6])}
+        """
+        var_card = self.cardinality(self.variable)
+        dict_without_var = {}
+        for assignments in self.rules.keys():
+            dict_without_var[tuple(sorted([var for var in assignments if not var.startswith(self.variable)]))] = None
+        for key in dict_without_var:
+            value_list = []
+            for assign in range(var_card):
+                value_list.append(self.rules[tuple(sorted(list(key) + [(self.variable + '_' + str(assign))]))])
+            dict_without_var[key] = np.array(value_list)
+        return dict_without_var
+
     def to_tree_cpd(self):
-        #TODO:
-        pass
+        """
+        Return a TreeCPD object which represents the RuleCPD.
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
+        >>>                      ('A_1', 'B_0'): 0.2,
+        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
+        >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        >>>                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
+        >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
+        >>> rule.to_tree_cpd()
+        <CPD.TreeCPD object at 0x7f6b6f952fd0>
+        """
+        from collections import OrderedDict
+        tree_cpd = TreeCPD()
+        merged_rules = OrderedDict(sorted(self._merge().items(), key=lambda t: len(t[0])))
+
+        for assignments, value in merged_rules.items():
+            for assignment_index in range(len(assignments) - 1):
+                tree_cpd.add_edge(assignments[assignment_index].split('_')[0],
+                                  assignments[assignment_index+1].split('_')[0],
+                                  assignments[assignment_index].split('_')[1])
+            tree_cpd.add_edge(assignments[-1].split('_')[0],
+                              Factor([self.variable], [len(value)], value),
+                              assignments[-1].split('_')[1])
+        return tree_cpd
 
     def __str__(self):
-        for index, key in enumerate(self.rules):
+        from collections import OrderedDict
+        string = ""
+        for index, key in enumerate(OrderedDict(sorted(self.rules.items(), key=lambda t: len(t[0])))):
             key_string = ', '.join(key)
-            print('p' + index + ':<' + key_string + '; ' + str(self.rules[key]) + '>')
+            string += 'p' + str(index) + ': <' + key_string + '; ' + str(self.rules[key]) + '>' + '\n'
+        return string
+
+    __repr__ = __str__
