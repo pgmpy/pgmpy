@@ -178,10 +178,13 @@ class PomdpXReader:
     def get_parameter(self, var):
         parameter = []
         for parameter_tag in var.findall('Parameter'):
-            if not parameter_tag.get('type') or 'TBL':
+            parameter_type = 'TBL'
+            if parameter_tag.get('type') is not None:
+                parameter_type = parameter_tag.get('type')
+            if parameter_type == 'TBL':
                 parameter = self.get_parameter_tbl(parameter_tag)
-            else:
-                pass
+            elif parameter_type == 'DD':
+                parameter = defaultdict(list)
                 parameter = self.get_parameter_dd(parameter_tag)
         return parameter
 
@@ -196,3 +199,32 @@ class PomdpXReader:
                 instance['ProbTable'] = entry.find('ProbTable').text.split()
             par.append(instance)
         return par
+
+    def get_parameter_dd(self, parameter):
+        dag = defaultdict(list)
+        dag_elem = parameter.find('DAG')
+        node = dag_elem.find('Node')
+        root = node.get('var')
+
+        def get_param(node):
+            edges = defaultdict(list)
+            for edge in node.findall('Edge'):
+                if edge.find('Terminal') is not None:
+                    edges[edge.get('val')] = edge.find('Terminal').text
+                elif edge.find('Node') is not None:
+                    node_cpd = defaultdict(list)
+                    node_cpd[edge.find('Node').get('var')] = \
+                        get_param(edge.find('Node'))
+                    edges[edge.get('val')] = node_cpd
+                elif edge.find('SubDAG') is not None:
+                    subdag_attribute = defaultdict(list)
+                    subdag_attribute['type'] = edge.find('SubDAG').get('type')
+                    subdag_attribute['var'] = edge.find('SubDAG').get('var')
+                    if edge.find('SubDAG').get('val'):
+                        subdag_attribute['val'] = \
+                            edge.find('SubDAG').get('val')
+                    edges[edge.get('val')] = subdag_attribute
+
+            return edges
+        dag[root] = get_param(node)
+        return dag
