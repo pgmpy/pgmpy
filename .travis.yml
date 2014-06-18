@@ -10,17 +10,13 @@ before_install:
 #    - sudo apt-get build-dep -qq python3-scipy
     - curl http://python-distribute.org/distribute_setup.py | sudo python3
     - curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py | sudo python3
-#    - sudo apt-get install python3-pip
-#    - sudo apt-get install -y aptitude
-#    - sudo aptitude install -y python3-setuptools
-#    - sudo easy_install3 pip
-#    - pip3 -q install numpy --upgrade
+
 install:
 #    - "pip3 -q install cython"
-    - "pip3.4 -q install networkx"
-    - "pip3.4 -q install numpy"
+    - "pip3.4 install networkx"
+    - "pip3.4 install numpy"
 #    - "pip3  install scipy --upgrade"
-    - "pip3.4 -q install nose"
+    - "pip3.4 install nose"
 #    - "pip3 -q install coveralls"
     - "sudo python3 setup.py develop"
 script: nosetests3 --with-coverage --cover-package=pgmpy/pgmpy
