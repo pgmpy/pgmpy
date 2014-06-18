@@ -9,7 +9,7 @@ before_install:
     - df -h
     - ulimit -a
     - sudo apt-get update
-#    - sudo apt-get build-dep -qq python3-numpy
+    - sudo apt-get build-dep -qq python3-numpy
     - sudo apt-get install python3-numpy
 #    - sudo apt-get build-dep -qq python3-scipy
 #    - curl http://python-distribute.org/distribute_setup.py | sudo python3
@@ -18,7 +18,7 @@ before_install:
 install:
 #    - "pip -q install cython"
     - "pip -q install networkx"
-    - "pip install numpy"
+    - "pip install numpy --upgrade"
 #    - "pip  install scipy --upgrade"
     - "pip -q install nose"
 #    - "pip -q install coveralls"
