@@ -2,7 +2,7 @@ language: python
 python:
     - "3.4"
 virtualenv:
-    system_site_packages: true
+    system_site_packages: false
 before_install:
     - uname -a
     - free -m
@@ -16,12 +16,12 @@ before_install:
 #    - curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py | sudo python3
 
 install:
-#    - "pip3 -q install cython"
+#    - "pip -q install cython"
     - "pip -q install networkx"
     - "pip install numpy"
-#    - "pip3  install scipy --upgrade"
+#    - "pip  install scipy --upgrade"
     - "pip -q install nose"
-#    - "pip3 -q install coveralls"
+#    - "pip -q install coveralls"
     - "sudo python setup.py develop"
 script: nosetests3 --with-coverage --cover-package=pgmpy/pgmpy
 after_success:
