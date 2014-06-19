@@ -1,4 +1,4 @@
-PgmPy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
+pgmpy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
 =====
 
 Python Library for Probabilistic Graphical Models  
