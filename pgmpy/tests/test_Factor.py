@@ -77,7 +77,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
-        np_test.assert_array_equal(self.phi1.values, np.array([0, 6]))
+        np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
 
     def test_reduce_typeerror(self):
         self.assertRaises(TypeError, self.phi1.reduce, 'x10')
@@ -135,7 +135,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
         factor_product = phi.product(phi1)
         np_test.assert_array_equal(factor_product.values,
-                                   np.array([0, 1, 0, 3, 0, 5, 0, 3, 4, 9, 8, 15]))
+                                   np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
         self.assertEqual(factor_product.variables, OrderedDict(
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
