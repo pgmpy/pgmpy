@@ -10,6 +10,10 @@ class JunctionTree(UndirectedGraph):
     It will contain a lot of functionalities to work on junction trees and to run
     inference algorithms on JunctionTrees,
     """
+    def __init__(self):
+        self._pull_status = False
+        self._push_status = False
+
     def _add_jt_edges(self):
         """
         This adds appropriate edges to the junction tree graph. Given a junction tree
@@ -78,11 +82,23 @@ class JunctionTree(UndirectedGraph):
                                  + " doesn't correspond to any maxclique")
 
     def _unvisited_neighbors(self, curr_node):
-        ret = [node for node in self.neighbors(curr_node)
-               if not self.node[node]["visited"]]
-        return ret
+        try:
+            ret =  [node for node in self.neighbors(curr_node)
+                   if not self.node[node]["visited"]]
+        except KeyError:
+            raise KeyError("Visited not defined for the nodes")
 
-    def pull(self, node):
+    def _pull(self):
+        root_node = self.nodes()[0]
+        if self._pull_status:
+            return self.node[root_node]["pull_factor"]
+        for node in self.nodes():
+            self.node[node]["visited"]=False
+        factor = self._pull_h(root_node)
+        self._pull_status = True
+        return factor
+
+    def _pull_h(self, node):
         self.node[node]["visited"]=True
         factor = self.node[node]["factor"]
         #print(str(node)+ "self factor "+str(factor))
@@ -90,7 +106,7 @@ class JunctionTree(UndirectedGraph):
         nbrs_to_pull_from = self._unvisited_neighbors(node)
         for nbr in nbrs_to_pull_from:
             #print(nbr)
-            f = self.pull(nbr)
+            f = self._pull_h(nbr)
             assert isinstance(f, Factor)
             print("marginalize at "+str(node)+" using "+str(self_vars))
             #f = f.marginalize_except(self_vars)
@@ -98,7 +114,16 @@ class JunctionTree(UndirectedGraph):
         self.node[node]["pull_factor"] = factor
         return factor
 
-    def push(self, node, factor):
+    def _push(self):
+        for node in self.nodes():
+            self.node[node]["visited"]=False
+        empty_factor = Factor([],[],[])
+        assert isinstance(empty_factor, Factor)
+        root_node = self.nodes()[0]
+        self._push_h(root_node, empty_factor)
+        self._push_status = True
+
+    def _push_h(self, node, factor):
         self.node[node]["visited"]=True
         self_factor = self.node[node]["factor"]
         factor = factor.marginalize_except(self_factor.get_variables())
@@ -110,29 +135,10 @@ class JunctionTree(UndirectedGraph):
         rel_nbrs = self._unvisited_neighbors(node)
         for nbr in rel_nbrs:
             fact_push = full_prod.divide(self.node[nbr]["pull_factor"])
-            self.push(nbr, fact_push)
+            self._push_h(nbr, fact_push)
 
     def normalization_constant(self):
-        for node in self.nodes():
-            self.node[node]["visited"]=False
-        root_node = self.nodes()[0]
-        factor = self.pull(root_node)
-        print(factor)
+        factor = self._pull()
         assert isinstance(factor,Factor)
         norm = factor.sum_values()
         return norm
-        print("PULL PHASE OVER!")
-        print("norm const " + str(norm))
-        for node in self.nodes():
-            self.node[node]["visited"]=False
-        empty_factor = Factor([],[],[])
-        assert isinstance(empty_factor, Factor)
-        self.push(root_node, empty_factor)
-
-
-
-
-
-
-
-

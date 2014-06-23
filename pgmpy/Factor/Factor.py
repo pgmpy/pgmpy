@@ -67,6 +67,8 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
         self.variables = OrderedDict()
+        if len(variables) != len(cardinality):
+            raise ValueError("Number of vars diff than cardinality array size")
         for variable, card in zip(variables, cardinality):
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
@@ -85,6 +87,15 @@ class Factor:
                 raise Exceptions.SizeError("Incompetant value array")
 
     def is_pos_dist(self):
+        """
+        Returns true if the distribution is a positive distribution
+
+        Examples
+        --------
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
+        >>> phi.is_pos_dist()
+        True
+        """
         return self._pos_dist
 
     def scope(self):
@@ -213,7 +224,7 @@ class Factor:
         """
         Modifies the factor with marginalized values.
 
-        Paramters
+        Parameters
         ---------
         variables: string, list-type
             name of variable to be marginalized
@@ -241,6 +252,19 @@ class Factor:
         return ret
 
     def marginalize_except(self, vars):
+        """
+        Returns marginalized factor where it marginalises everything
+        except the variables in var
+
+        Parameters
+        ----------
+        vars : string, list-type
+            Name of variables not to be marginalised
+
+        Example
+        -------
+
+        """
         marginalize_variables = [var for var in self.variables if var not in vars]
         return self.marginalize(marginalize_variables)
 
@@ -334,12 +358,52 @@ class Factor:
         return factor_product(self, *factors)
 
     def divide(self, factor):
+        """
+        Returns factor division of two factors
+
+        Parameters
+        ----------
+        factor : Factor
+            The denominator
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor, factor_divide
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+        >>> phi = phi1.divide(phi2)
+        >>> phi
+        x1	x2	x3	phi(x1, x2, x3)
+        x1_0	x2_0	x3_0	0.0
+        x1_1	x2_0	x3_0	0.5
+        x1_0	x2_1	x3_0	0.666666666667
+        x1_1	x2_1	x3_0	0.75
+        x1_0	x2_2	x3_0	4.0
+        x1_1	x2_2	x3_0	2.5
+        x1_0	x2_0	x3_1	2.0
+        x1_1	x2_0	x3_1	1.75
+        x1_0	x2_1	x3_1	8.0
+        x1_1	x2_1	x3_1	4.5
+        x1_0	x2_2	x3_1	3.33333333333
+        x1_1	x2_2	x3_1	2.75
+        """
         if factor.is_pos_dist():
             return factor_divide(self, factor)
         else:
-            raise ValueError("Division not possible : The second distribution is not a positive distribution")
+            raise ValueError("Division not possible : The second distribution"+
+                             " is not a positive distribution")
 
     def sum_values(self):
+        """
+        Returns the sum of potentials
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor, factor_divide
+        >>> phi1 = Factor(['x1','x2',], [2,2],[1,2,2,4] )
+        >>> phi1.sum_values()
+        9.0
+        """
         return np.sum(self.values)
 
     def __str__(self):
@@ -399,6 +463,20 @@ class Factor:
 
 
 def _bivar_factor_divide(phi1, phi2):
+    """
+    Returns phi1 divided by phi2
+
+    Parameters
+    ----------
+    phi1: Factor
+        Numerator
+    phi2: Factor
+        Denominator
+
+    See Also
+    --------
+    factor_divide
+    """
     vars1 = list(phi1.variables.keys())
     vars2 = list(phi2.variables.keys())
     set_var1 = set(vars1)
@@ -514,13 +592,26 @@ def factor_divide(factor1, factor2):
 
     Examples
     --------
-    >>> from pgmpy.Factor import Factor, factor_product
+    >>> from pgmpy.Factor.Factor import Factor, factor_divide
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+    >>> assert isinstance(phi1, Factor)
+    >>> assert isinstance(phi2, Factor)
     >>> phi = factor_divide(phi1, phi2)
-    >>> phi.variables
-    OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
-                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+    >>> phi
+    x1	x2	x3	phi(x1, x2, x3)
+    x1_0	x2_0	x3_0	0.0
+    x1_1	x2_0	x3_0	0.5
+    x1_0	x2_1	x3_0	0.666666666667
+    x1_1	x2_1	x3_0	0.75
+    x1_0	x2_2	x3_0	4.0
+    x1_1	x2_2	x3_0	2.5
+    x1_0	x2_0	x3_1	2.0
+    x1_1	x2_0	x3_1	1.75
+    x1_0	x2_1	x3_1	8.0
+    x1_1	x2_1	x3_1	4.5
+    x1_0	x2_2	x3_1	3.33333333333
+    x1_1	x2_2	x3_1	2.75
     """
     if not (isinstance(factor1, Factor) and isinstance(factor2, Factor)):
         raise TypeError("Input parameters must be factors")
