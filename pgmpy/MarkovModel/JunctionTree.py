@@ -76,3 +76,63 @@ class JunctionTree(UndirectedGraph):
             if not flag:
                 raise ValueError("The factor " + str(factor)
                                  + " doesn't correspond to any maxclique")
+
+    def _unvisited_neighbors(self, curr_node):
+        ret = [node for node in self.neighbors(curr_node)
+               if not self.node[node]["visited"]]
+        return ret
+
+    def pull(self, node):
+        self.node[node]["visited"]=True
+        factor = self.node[node]["factor"]
+        #print(str(node)+ "self factor "+str(factor))
+        self_vars = factor.get_variables()
+        nbrs_to_pull_from = self._unvisited_neighbors(node)
+        for nbr in nbrs_to_pull_from:
+            #print(nbr)
+            f = self.pull(nbr)
+            assert isinstance(f, Factor)
+            print("marginalize at "+str(node)+" using "+str(self_vars))
+            #f = f.marginalize_except(self_vars)
+            factor = factor.product(f)
+        self.node[node]["pull_factor"] = factor
+        return factor
+
+    def push(self, node, factor):
+        self.node[node]["visited"]=True
+        self_factor = self.node[node]["factor"]
+        factor = factor.marginalize_except(self_factor.get_variables())
+        self.node[node]["push_factor"] = factor
+        assert isinstance(factor, Factor)
+        full_prod = factor.product(self.node[node]["pull_factor"])
+        assert isinstance(full_prod, Factor)
+        self.node[node]["prod_factor"] = full_prod
+        rel_nbrs = self._unvisited_neighbors(node)
+        for nbr in rel_nbrs:
+            fact_push = full_prod.divide(self.node[nbr]["pull_factor"])
+            self.push(nbr, fact_push)
+
+    def normalization_constant(self):
+        for node in self.nodes():
+            self.node[node]["visited"]=False
+        root_node = self.nodes()[0]
+        factor = self.pull(root_node)
+        print(factor)
+        assert isinstance(factor,Factor)
+        norm = factor.sum_values()
+        return norm
+        print("PULL PHASE OVER!")
+        print("norm const " + str(norm))
+        for node in self.nodes():
+            self.node[node]["visited"]=False
+        empty_factor = Factor([],[],[])
+        assert isinstance(empty_factor, Factor)
+        self.push(root_node, empty_factor)
+
+
+
+
+
+
+
+
