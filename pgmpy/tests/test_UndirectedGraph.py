@@ -1,5 +1,3 @@
-__author__ = 'navin'
-
 import unittest
 from pgmpy import MarkovModel as mm
 

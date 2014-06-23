@@ -101,20 +101,12 @@ def _factor_divide(np.ndarray[double, ndim=1] x,
         unsigned int i, j, left_y
         np.ndarray[DTYPE_t, ndim=1] x_iter, y_iter
 
-    cdef bint CHECK = 1
-    if common_index is None and x_card is None and y_card is None:
-        CHECK = 0
 
-    if CHECK:
-        y_iter, left_y = pattern_gen(x_card, y_card, common_index)
-        x_iter = np.tile(np.arange(np.prod(x_card)), left_y).astype(DTYPE)
-        for i, j in zip(x_iter, y_iter):
-            product_arr[count] = x[i]/y[j]
-            count += 1
-    else:
-        for i in range(ymax):
-            for j in range(xmax):
-                product_arr[count] = x[j]/y[i]
-                count += 1
+    y_iter, left_y = pattern_gen(x_card, y_card, common_index)
+    x_iter = np.tile(np.arange(np.prod(x_card)), left_y).astype(DTYPE)
+    for i, j in zip(x_iter, y_iter):
+        product_arr[count] = x[i]/y[j]
+        count += 1
+
 
     return product_arr

@@ -567,7 +567,10 @@ class MarkovModel(UndirectedGraph):
         >>> G.get_set_observation('diff')
         'easy'
         """
-        return self.node[node]['observed']
+        if self.is_observed(node):
+            return self.node[node]['observed']
+        else:
+            raise ValueError('Observation has not been set up for the node '+node)
 
     def _get_observed_list(self):
         """
@@ -705,6 +708,7 @@ class MarkovModel(UndirectedGraph):
                 assignment_dict[node_list[i]] = value_list[i]
             for factor in self._factors:
                 val *= factor.get_value_from_node_dict(assignment_dict)
+            print(str(assignment_dict) + str(val))
             return val
         else:
             val = 0
@@ -737,9 +741,7 @@ class MarkovModel(UndirectedGraph):
         >>> print(student.normalization_constant_brute_force())
         0.6000000000000001
         """
-        value_list = []
-        for i in range(0, self.number_of_nodes()):
-            value_list.append(0)
+        value_list = [0]*self.number_of_nodes()
         val = self._norm_h(0, self.nodes(), value_list)
         return val
 
@@ -791,6 +793,7 @@ class MarkovModel(UndirectedGraph):
         >>>
         """
         jt = UndirectedGraph.make_jt(self, triangulation_technique)
+        #jt.print_graph("print junction tree before adding factors ")
         #jt.print_graph("after making the junction tree")
         jt.insert_factors(self.get_factors())
         return jt

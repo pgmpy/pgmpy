@@ -5,6 +5,7 @@ from collections import OrderedDict
 import numpy as np
 from pgmpy import Exceptions
 from pgmpy.Factor._factor_product import _factor_product
+from pgmpy.Factor._factor_product import _factor_divide
 
 
 class Factor:
@@ -71,8 +72,20 @@ class Factor:
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
         self.values = np.array(value, dtype=np.double)
-        if not self.values.shape[0] == np.prod(self.cardinality):
-            raise Exceptions.SizeError("Incompetant value array")
+        self._pos_dist = True
+        for val in self.values:
+            if val == 0:
+                self._pos_dist = False
+                break
+        if len(self.cardinality) == 0:
+            if not self.values.shape[0] ==0:
+                raise Exceptions.SizeError("Incompetant value array")
+        else:
+            if not self.values.shape[0] == np.product(self.cardinality):
+                raise Exceptions.SizeError("Incompetant value array")
+
+    def is_pos_dist(self):
+        return self._pos_dist
 
     def scope(self):
         """
@@ -220,15 +233,16 @@ class Factor:
         for variable in variables:
             if variable not in self.variables:
                 raise Exceptions.ScopeError("%s not in scope" % variable)
+        ret = self
         for variable in variables:
-            self.values = self._marginalize_single_variable(variable)
             index = list(self.variables.keys()).index(variable)
-            del(self.variables[variable])
-            self.cardinality = np.delete(self.cardinality, index)
+            new_vars = [var for var in self.variables if not var == variable]
+            ret = Factor(new_vars, np.delete(self.cardinality, index),self._marginalize_single_variable(variable))
+        return ret
 
     def marginalize_except(self, vars):
         marginalize_variables = [var for var in self.variables if var not in vars]
-        self.marginalize(marginalize_variables)
+        return self.marginalize(marginalize_variables)
 
     def _marginalize_single_variable(self, variable):
         """
@@ -320,7 +334,13 @@ class Factor:
         return factor_product(self, *factors)
 
     def divide(self, factor):
-        return factor_divide(self, factor)
+        if factor.is_pos_dist():
+            return factor_divide(self, factor)
+        else:
+            raise ValueError("Division not possible : The second distribution is not a positive distribution")
+
+    def sum_values(self):
+        return np.sum(self.values)
 
     def __str__(self):
         return self._str('phi')
@@ -337,11 +357,11 @@ class Factor:
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
         #by 1.
-        def fun(b, index=len(self.cardinality)-1):
+        def fun(b, index=0): #len(self.cardinality)-1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
                 b[index] = 0
-                fun(b, index-1)
+                fun(b, index+1)#-1)
             return b
 
         def gen():
@@ -464,13 +484,17 @@ def factor_product(*args):
 
     Examples
     --------
-    >>> from pgmpy.Factor import Factor, factor_product
-    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
-    >>> phi = factor_product(phi1, phi2)
-    >>> phi.variables
-    OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
-                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+    >>> from pgmpy.Factor.Factor import Factor, factor_divide
+    >>> phi1 = Factor(['x1','x2',], [2,2],[1,2,2,4] )
+    >>> phi2 = Factor(['x1'], [2], [1,2])
+    >>> phi = factor_divide(phi1, phi2)
+    >>> phi
+    x1	x2	phi(x1, x2)
+    x1_0	x2_0	1.0
+    x1_1	x2_0	1.0
+    x1_0	x2_1	2.0
+    x1_1	x2_1	2.0
+    >>>
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
@@ -478,6 +502,26 @@ def factor_product(*args):
 
 
 def factor_divide(factor1, factor2):
+    """
+    Returns factor division of two factors
+
+    Parameters
+    ----------
+    factor1: Factor
+        The numerator
+    factor2 : Factor
+        The denominator
+
+    Examples
+    --------
+    >>> from pgmpy.Factor import Factor, factor_product
+    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> phi = factor_divide(phi1, phi2)
+    >>> phi.variables
+    OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
+                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+    """
     if not (isinstance(factor1, Factor) and isinstance(factor2, Factor)):
         raise TypeError("Input parameters must be factors")
     return _bivar_factor_divide(factor1, factor2)

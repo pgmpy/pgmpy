@@ -141,6 +141,21 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    def test_factor_divide(self):
+        from pgmpy import Factor
+        phi1 = Factor.Factor(['x1','x2',], [2,2],[1,2,2,4] )
+        phi2 = Factor.Factor(['x1'], [2], [1,2])
+        factor_divide = phi1.divide(phi2)
+        phi3 = Factor.Factor(['x1', 'x2'],[2,2], [1, 1, 2, 2])
+        self.assertEqual(phi3, factor_divide)
+        #print(factor_divide)
+
+    def test_factor_divide_invalid(self):
+        from pgmpy import Factor
+        phi1 = Factor.Factor(['x1','x2',], [2,2],[1,2,0,4] )
+        phi2 = Factor.Factor(['x1'], [2], [1,2])
+        self.assertRaises(ValueError, phi1.divide, phi2)
+
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)

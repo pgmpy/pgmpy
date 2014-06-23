@@ -435,7 +435,8 @@ class UndirectedGraph(nx.Graph):
         >>> jt
         """
 
-        return self.jt_techniques(triangulation_technique, True, False)
+        jt = self.jt_techniques(triangulation_technique, True, False)
+        return jt
 
     def read_simple_format(self, filename):
         """
