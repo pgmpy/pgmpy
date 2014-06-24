@@ -66,6 +66,8 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
         self.variables = OrderedDict()
+        if len(variables) != len(cardinality):
+            raise ValueError("The size of variables and cardinality should be same")
         for variable, card in zip(variables, cardinality):
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
