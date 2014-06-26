@@ -8,7 +8,7 @@ from pgmpy.Factor._factor_product import _factor_product
 from pgmpy.Factor._factor_product import _factor_divide
 
 
-class Factor:
+class Factor():
     """
     Base class for *Factor*.
 
@@ -79,12 +79,8 @@ class Factor:
             if val == 0:
                 self._pos_dist = False
                 break
-        if len(self.cardinality) == 0:
-            if not self.values.shape[0] ==0:
-                raise Exceptions.SizeError("Incompetant value array")
-        else:
-            if not self.values.shape[0] == np.product(self.cardinality):
-                raise Exceptions.SizeError("Incompetant value array")
+        if not self.values.shape[0] == np.product(self.cardinality):
+            raise Exceptions.SizeError("Incompetant value array")
 
     def is_pos_dist(self):
         """
@@ -136,7 +132,7 @@ class Factor:
                                (1, self.cardinality.shape[0])) /
                        np.tile(np.cumprod(
                            np.concatenate(([1], self.cardinality[:-1]))),
-                               (index.shape[0], 1)))\
+                               (index.shape[0], 1))) \
               % np.tile(self.cardinality, (index.shape[0], 1))
         mat = mat.astype('int')
         return [[self.variables[key][val] for key, val in
@@ -144,13 +140,13 @@ class Factor:
 
     def get_variables(self):
         """
-        Returns the variables associated with the node
+        Returns the variables associated with the Factor
 
         Examples
         --------
         >>> from pgmpy.Factor.Factor import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> print(phi.get_variables())
+        >>> phi.get_variables()
         ['x1', 'x2', 'x3']
         """
         return [var for var in self.variables.keys()]
@@ -163,7 +159,8 @@ class Factor:
 
         Parameters
         ----------
-        node_assignments : list
+        node_assignments : list or dictionary
+            list containing the indexes of variables in order OR
             dictionary containing the assignment of values to a number of variables
 
         Examples
@@ -172,34 +169,18 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_value([1,1,1])
         9.0
-
-        """
-        temp = np.cumprod(np.concatenate(([1], self.cardinality[:-1])))
-        x = np.sum(temp * node_assignments)
-        return self.values[x]
-
-    def get_value_from_node_dict(self, all_node_assignments):
-        """
-        Returns the potential value given the assignment to every node variable
-        in a dictionary. The values given are in terms of indexes (ith index
-        means the i+1 th observation)
-
-        Parameters
-        ----------
-        node_assignments : dictionary
-            dictionary containing the assignment of values to a number of variables
-
-        Examples
-        --------
-        >>> from pgmpy.Factor.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> print(phi.get_value_from_node_dict({'x1':1,'x2':2, 'x3':0, 'x4':2, 'x5':1}))
+        >>> phi.get_value({'x1':1,'x2':2, 'x3':0, 'x4':2, 'x5':1})
         5.0
         """
-        index_for_variables =[]
-        for var in self.variables.keys():
-            index_for_variables.append(all_node_assignments[var])
-        return self.get_value(index_for_variables)
+        index_for_variables = []
+        if isinstance(node_assignments, dict):
+            for var in self.variables.keys():
+                index_for_variables.append(node_assignments[var])
+        else:
+            index_for_variables = node_assignments
+        cum_cardinality = np.cumprod(np.concatenate(([1], self.cardinality[:-1])))
+        index = np.sum(cum_cardinality * index_for_variables)
+        return self.values[index]
 
     def get_cardinality(self, variable):
         """
@@ -220,7 +201,7 @@ class Factor:
             raise Exceptions.ScopeError("%s not in scope" % variable)
         return self.cardinality[list(self.variables.keys()).index(variable)]
 
-    def marginalize(self, variables):
+    def marginalize(self, variables, inplace=True):
         """
         Modifies the factor with marginalized values.
 
@@ -231,7 +212,7 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor import Factor
+        >>> from pgmpy.Factor.Factor import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
@@ -242,16 +223,27 @@ class Factor:
         if not isinstance(variables, list):
             variables = [variables]
         for variable in variables:
-            if variable not in self.variables:
+            if variable not in self.get_variables():
                 raise Exceptions.ScopeError("%s not in scope" % variable)
+        if not variables:
+            if inplace:
+                return
+            else:
+                import copy
+                return copy.deepcopy(self)
         ret = self
         for variable in variables:
             index = list(self.variables.keys()).index(variable)
             new_vars = [var for var in self.variables if not var == variable]
-            ret = Factor(new_vars, np.delete(self.cardinality, index),self._marginalize_single_variable(variable))
-        return ret
+            ret = Factor(new_vars, np.delete(self.cardinality, index), self._marginalize_single_variable(variable))
+        if inplace:
+            self.variables = ret.variables
+            self.values = ret.values
+            self.cardinality = ret.cardinality
+        else:
+            return ret
 
-    def marginalize_except(self, vars):
+    def marginalize_except(self, variables):
         """
         Returns marginalized factor where it marginalises everything
         except the variables in var
@@ -265,8 +257,7 @@ class Factor:
         -------
 
         """
-        marginalize_variables = [var for var in self.variables if var not in vars]
-        return self.marginalize(marginalize_variables)
+        return self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
 
     def _marginalize_single_variable(self, variable):
         """
@@ -282,19 +273,19 @@ class Factor:
         cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality)))
         num_elements = cum_cardinality[-1]
         sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index+1])
-                     for j in range(i, i+cum_cardinality[index])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
+                                      cum_cardinality[index + 1])
+                     for j in range(i, i + cum_cardinality[index])]
+        marg_factor = np.zeros(num_elements / self.cardinality[index])
         for i in range(self.cardinality[index]):
             marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index]]
+                                       i * cum_cardinality[index]]
         return marg_factor
 
     def normalize(self):
         """
         Normalizes the values of factor so that they sum to 1.
         """
-        self.values = self.values/np.sum(self.values)
+        self.values = self.values / np.sum(self.values)
 
     def reduce(self, values):
         """
@@ -330,10 +321,10 @@ class Factor:
                                               np.cumprod(self.cardinality)))
             num_elements = cum_cardinality[-1]
             index_arr = [j for i in range(0, num_elements,
-                                          cum_cardinality[index+1])
-                         for j in range(i, i+cum_cardinality[index])]
+                                          cum_cardinality[index + 1])
+                         for j in range(i, i + cum_cardinality[index])]
             self.values = self.values[np.array(index_arr)]
-            del(self.variables[var])
+            del (self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
 
     def product(self, *factors):
@@ -368,7 +359,7 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor.Factor import Factor, factor_divide
+        >>> from pgmpy.Factor.Factor import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
         >>> phi = phi1.divide(phi2)
@@ -390,7 +381,7 @@ class Factor:
         if factor.is_pos_dist():
             return factor_divide(self, factor)
         else:
-            raise ValueError("Division not possible : The second distribution"+
+            raise ValueError("Division not possible : The second distribution" +
                              " is not a positive distribution")
 
     def sum_values(self):
@@ -399,7 +390,7 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor.Factor import Factor, factor_divide
+        >>> from pgmpy.Factor.Factor import Factor
         >>> phi1 = Factor(['x1','x2',], [2,2],[1,2,2,4] )
         >>> phi1.sum_values()
         9.0
@@ -421,17 +412,17 @@ class Factor:
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
         #by 1.
-        def fun(b, index=0): #len(self.cardinality)-1):
+        def fun(b, index=0):  #len(self.cardinality)-1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
                 b[index] = 0
-                fun(b, index+1)#-1)
+                fun(b, index + 1)  #-1)
             return b
 
         def gen():
             b = [0] * len(self.variables)
             yield b
-            for i in range(np.prod(self.cardinality)-1):
+            for i in range(np.prod(self.cardinality) - 1):
                 yield fun(b)
 
         value_index = 0
@@ -477,25 +468,23 @@ def _bivar_factor_divide(phi1, phi2):
     --------
     factor_divide
     """
-    vars1 = list(phi1.variables.keys())
-    vars2 = list(phi2.variables.keys())
-    set_var1 = set(vars1)
-    set_var2 = set(vars2)
-    if len(set_var2 - set_var1) != 0:
+    phi1_vars = list(phi1.variables.keys())
+    phi2_vars = list(phi2.variables.keys())
+    if set(phi2_vars) - set(phi1_vars):
         raise ValueError("The vars in phi2 are not a subset of vars in phi1")
-    common_var_list = vars2
-    common_var_index_list = np.array([[vars1.index(var), vars2.index(var)]
+    common_var_list = phi2_vars
+    common_var_index_list = np.array([[phi1_vars.index(var), phi2_vars.index(var)]
                                       for var in common_var_list])
     common_card_product = np.prod([phi1.cardinality[index[0]] for index
                                    in common_var_index_list])
     size = np.prod(phi1.cardinality)
     product = _factor_divide(phi1.values,
-                              phi2.values,
-                              size,
-                              common_var_index_list,
-                              phi1.cardinality,
-                              phi2.cardinality)
-    variables = vars1
+                             phi2.values,
+                             size,
+                             common_var_index_list,
+                             phi1.cardinality,
+                             phi2.cardinality)
+    variables = phi1_vars
     cardinality = list(phi1.cardinality)
     phi = Factor(variables, cardinality, product)
     return phi

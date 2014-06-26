@@ -570,7 +570,7 @@ class MarkovModel(UndirectedGraph):
         if self.is_observed(node):
             return self.node[node]['observed']
         else:
-            raise ValueError('Observation has not been set up for the node '+node)
+            raise ValueError('Observation has not been set up for the node ' + node)
 
     def _get_observed_list(self):
         """
@@ -707,8 +707,8 @@ class MarkovModel(UndirectedGraph):
             for i in range(0, self.number_of_nodes()):
                 assignment_dict[node_list[i]] = value_list[i]
             for factor in self._factors:
-                val *= factor.get_value_from_node_dict(assignment_dict)
-            print(str(assignment_dict) + str(val))
+                val *= factor.get_value(assignment_dict)
+            #print(str(assignment_dict) + str(val))
             return val
         else:
             val = 0
@@ -741,7 +741,7 @@ class MarkovModel(UndirectedGraph):
         >>> print(student.normalization_constant_brute_force())
         0.6000000000000001
         """
-        value_list = [0]*self.number_of_nodes()
+        value_list = [0] * self.number_of_nodes()
         val = self._norm_h(0, self.nodes(), value_list)
         return val
 

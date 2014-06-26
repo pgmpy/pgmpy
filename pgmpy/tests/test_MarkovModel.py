@@ -178,7 +178,7 @@ class TestMarkovModelObservations(unittest.TestCase):
         self.assertTrue(self.graph.is_observed('d'))
         self.graph.unset_observation('d')
         self.assertFalse(self.graph.is_observed('d'))
-        self.assertEqual(self.graph.get_observation('d'), '')
+        self.assertRaises(ValueError, self.graph.get_observation,'d')
 
     def test_unset_observations_multiple_state(self):
         self.graph.set_observations({'d': 'easy', 'g': 'A', 'i': 'dumb'})
@@ -186,9 +186,9 @@ class TestMarkovModelObservations(unittest.TestCase):
         self.assertTrue(self.graph.is_observed('g'))
         self.assertEqual(self.graph.get_observation('g'), 'A')
         self.assertFalse(self.graph.is_observed('d'))
-        self.assertEqual(self.graph.get_observation('d'), '')
+        self.assertRaises(ValueError,self.graph.get_observation,'d')
         self.assertFalse(self.graph.is_observed('i'))
-        self.assertEqual(self.graph.get_observation('i'), '')
+        self.assertRaises(ValueError,self.graph.get_observation,'i')
 
     def test_reset_observations_node_error(self):
         self.assertRaises(KeyError, self.graph.unset_observation, 'j')

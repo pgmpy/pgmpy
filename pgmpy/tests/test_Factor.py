@@ -152,8 +152,8 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_factor_divide_invalid(self):
         from pgmpy import Factor
-        phi1 = Factor.Factor(['x1','x2',], [2,2],[1,2,0,4] )
-        phi2 = Factor.Factor(['x1'], [2], [1,2])
+        phi1 = Factor.Factor(['x1','x2',], [2,2],[1,2,3,4] )
+        phi2 = Factor.Factor(['x1'], [2], [0,2])
         self.assertRaises(ValueError, phi1.divide, phi2)
 
     def test_eq(self):
@@ -522,4 +522,3 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
-

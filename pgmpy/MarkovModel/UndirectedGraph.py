@@ -1,13 +1,6 @@
 from heapq import heappush, heappop, heapify
 import networkx as nx
 
-debug = False
-
-
-def p(x):
-    if debug:
-        print(x)
-
 
 class UndirectedGraph(nx.Graph):
     def equal_graphs(self, graph2):
@@ -26,7 +19,6 @@ class UndirectedGraph(nx.Graph):
         >>> g2 = mm.MarkovModel([('a','c'),('a','b'),('b','c')])
         >>> print(g1.equal_graphs(g2))
         True
-
         """
         assert isinstance(graph2, UndirectedGraph)
         node_set1 = set(self.nodes())
@@ -52,9 +44,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         --------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.jt_techniques(2,False,True)
         4
         >>> G.is_triangulated()
@@ -86,9 +80,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.print_graph("Test Printing")
         Printing the graph Test Printing<<<
         10	['8', '5', '7']
@@ -107,7 +103,7 @@ class UndirectedGraph(nx.Graph):
 
         print("Printing the graph " + s + "<<<")
         for node in self.nodes():
-            str_node = str(node)+"\t"
+            str_node = str(node) + "\t"
             if self.node[node]:
                 str_node += "( " + str(self.node[node]) + " ) : "
             str_node += str(self.neighbors(node))
@@ -129,9 +125,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.check_clique([1,2,3])
         False
 
@@ -143,18 +141,30 @@ class UndirectedGraph(nx.Graph):
         return True
 
     def make_clique(self, clique_nodes):
+        """
+        Connect all the nodes in clique_nodes to each other
+
+        Parameters
+        ----------
+        clique_nodes : List of nodes
+            The list of nodes which need to be connected to each other
+
+        Example
+        -------
+
+        """
         new_edges = []
         for i in range(len(clique_nodes)):
             a = clique_nodes[i]
             for j in range(i + 1, len(clique_nodes)):
                 b = clique_nodes[j]
                 if not self.has_edge(a, b):
-                    p("Edge added b/w " + a + " and " + b)
+                    #print("Edge added b/w " + a + " and " + b)
                     self.add_edge(a, b)
                     new_edges.append((a, b))
         return new_edges
 
-    def  _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
+    def _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
         """
         Applies the basic junction creation algorithms.
         Refer to Algorithm 9.4 in PGM (Koller)
@@ -192,19 +202,19 @@ class UndirectedGraph(nx.Graph):
             #p("Popped " + str(curr_node))
             if curr_node in triangulated_nodes:
                 continue
-            p("Working with " + str(curr_node))
+            #print("Working with " + str(curr_node))
             triangulated_nodes.add(curr_node)
             flag = False
             clique_nodes = [curr_node]
             clique_nodes += [node for node in self.neighbors(curr_node)
-                                    if node not in triangulated_nodes]
-            set2=set(clique_nodes)
+                             if node not in triangulated_nodes]
+            set2 = set(clique_nodes)
             #p(set2)
             for nbr in self.neighbors(curr_node):
                 if nbr in triangulated_nodes:
                     set1 = set(self.neighbors(nbr))
                     set1.add(nbr)
-                    if len(set2 - set1) == 0 :
+                    if len(set2 - set1) == 0:
                         flag = True
                         #p(set1)
                         break
@@ -228,7 +238,7 @@ class UndirectedGraph(nx.Graph):
                 self.remove_edge(edge[0], edge[1])
         if not return_junction_tree:
             return max_clique_size - 1
-        jt._add_jt_edges()
+        jt.add_jt_edges()
         return jt
 
     def _jt_from_chordal_graph(self, return_junction_tree):
@@ -251,7 +261,7 @@ class UndirectedGraph(nx.Graph):
                 jtnode += 1
                 jt.add_node(jtnode)
                 jt.node[jtnode]["clique_nodes"] = max_clique
-            jt._add_jt_edges()
+            jt.add_jt_edges()
             return jt
         else:
             return nx.chordal_graph_treewidth(self)
@@ -273,7 +283,7 @@ class UndirectedGraph(nx.Graph):
         to be done when this function is to be written
 
         """
-        return None
+        pass
 
     @staticmethod
     def _min_fill_heuristic(graph, node):
@@ -304,9 +314,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.best_triangulation_heuristic()
         2
         """
@@ -352,13 +364,14 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.jt_techniques(2, False, False)
         4
         """
-        ret=None
         if triangulation_technique == 0:
             ret = self._jt_from_chordal_graph(return_junction_tree)
             #print(ret)
@@ -374,9 +387,6 @@ class UndirectedGraph(nx.Graph):
             ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
         elif triangulation_technique == 4:
             f = (lambda graph, node: -len(graph.neighbors(node)))
-            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
-        elif triangulation_technique == 5:
-            f = (lambda graph, node: 5)
             ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
         else:
             ret = False
@@ -400,9 +410,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> G.jt_tree_width(2)
         4
         """
@@ -428,9 +440,11 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
+        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
+        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
+        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
+        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
         >>> jt=G.make_jt(2)
         >>> jt
         """
@@ -438,30 +452,30 @@ class UndirectedGraph(nx.Graph):
         jt = self.jt_techniques(triangulation_technique, True, False)
         return jt
 
-    def read_simple_format(self, filename):
-        """
-        Read the graph from a file assuming a very simple graph reading format
-
-        Parameters
-        ----------
-        filename  :  String
-                The file which has the graph data
-
-        Example
-        -------
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.UndirectedGraph()
-        >>> G.read_simple_format("graph")
-        """
-        file = open(filename, "r")
-        num_nodes = int(file.readline())
-        for i in range(num_nodes):
-            self.add_node(str(i))
-        #print("nodes"+str(num_nodes))
-        file.readline()
-        while True:
-            edge = file.readline()
-            if not edge:
-                break
-            nodes = edge.split()
-            self.add_edge(nodes[0], nodes[1])
+    # def read_simple_format(self, filename):
+    #     """
+    #     Read the graph from a file assuming a very simple graph reading format
+    #
+    #     Parameters
+    #     ----------
+    #     filename  :  String
+    #             The file which has the graph data
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy import MarkovModel
+    #     >>> G = MarkovModel.UndirectedGraph()
+    #     >>> G.read_simple_format("graph")
+    #     """
+    #     file = open(filename, "r")
+    #     num_nodes = int(file.readline())
+    #     for i in range(num_nodes):
+    #         self.add_node(str(i))
+    #     #print("nodes"+str(num_nodes))
+    #     file.readline()
+    #     while True:
+    #         edge = file.readline()
+    #         if not edge:
+    #             break
+    #         nodes = edge.split()
+    #         self.add_edge(nodes[0], nodes[1])
