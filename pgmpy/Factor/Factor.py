@@ -180,15 +180,15 @@ class Factor:
 
         """
         index = list(self.variables.keys()).index(variable)
-        cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality)))
-        num_elements = cum_cardinality[-1]
+        cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality[::-1])))[::-1]
+        num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index+1])
-                     for j in range(i, i+cum_cardinality[index])]
+                                      cum_cardinality[index])
+                     for j in range(i, i+cum_cardinality[index+1])]
         marg_factor = np.zeros(num_elements/self.cardinality[index])
         for i in range(self.cardinality[index]):
             marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index]]
+                                       i*cum_cardinality[index+1]]
         return marg_factor
 
     def normalize(self):
