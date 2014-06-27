@@ -30,6 +30,11 @@ class JunctionTree(UndirectedGraph):
         See Also
         --------
         _junction_tree1, _jt_from_chordal_graph in UndirectedGraph.py
+
+        Examples
+        --------
+        It is used in make_jt in UndirectedGraph and I don't expect
+        the user to use it directly. Does this need an example?
         """
         nodes = self.nodes()
         num_nodes = self.number_of_nodes()
@@ -53,6 +58,11 @@ class JunctionTree(UndirectedGraph):
         Parameters
         ----------
         jt : The completely made junction tree ready to be attached to factors
+
+        Examples
+        --------
+        It is used in make_jt in UndirectedGraph and I don't expect
+        the user to use it directly. Does this need an example?
         """
         for node in self.nodes():
             self.node[node]["factor"] = None
@@ -175,7 +185,15 @@ class JunctionTree(UndirectedGraph):
 
         Example
         -------
-
+        >>> from pgmpy import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
+        >>> graph.add_states(
+        ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> jt = graph.make_jt(2)
+        >>> jt.normalization_constant()
+        163.0
         """
         factor = self._pull()
         assert isinstance(factor, Factor)
@@ -183,6 +201,23 @@ class JunctionTree(UndirectedGraph):
         return norm
 
     def marginal_prob(self, var):
+        """
+        Uses junction tree to find the marginal probability of any variable
+
+        Example
+        -------
+        >>> from pgmpy import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
+        >>> graph.add_states(
+        ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> jt = graph.make_jt(2)
+        >>> jt.marginal_prob('d')
+        d	phi(d)
+        d_0	71.0
+        d_1	92.0
+        """
         self._pull()
         #print("pulled factor" + str(factor))
         self._push()
@@ -194,3 +229,6 @@ class JunctionTree(UndirectedGraph):
                 rel_fact = prod_factor.marginalize_except(var)
                 return rel_fact
         raise Exception("Should never reach here! If here, then trouble!")
+
+    def MAP(self):
+        pass
