@@ -103,22 +103,22 @@ class Factor:
         >>> import numpy as np
         >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
-        [['diff_1', 'intel_0'], ['diff_0', 'intel_1']]
+        [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
         if not isinstance(index, np.ndarray):
             index = np.atleast_1d(index)
         max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
-        mat = np.floor(np.tile(np.atleast_2d(index).T,
-                               (1, self.cardinality.shape[0])) /
-                       np.tile(np.cumprod(
-                           np.concatenate(([1], self.cardinality[:-1]))),
-                               (index.shape[0], 1)))\
-              % np.tile(self.cardinality, (index.shape[0], 1))
-        mat = mat.astype('int')
+        assignments = []
+        for ind in index:
+            assign = []
+            for card in self.cardinality[::-1]:
+                assign.insert(0, ind % card)
+                ind = ind/card
+            assignments.append(map(int, assign))
         return [[self.variables[key][val] for key, val in
-                 zip(self.variables.keys(), values)] for values in mat]
+                 zip(self.variables.keys(), values)] for values in assignments]
 
     def get_cardinality(self, variable):
         """
