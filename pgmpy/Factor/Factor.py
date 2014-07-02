@@ -33,17 +33,17 @@ class Factor:
         +-----+-----+-----+-------------------+
         | x1_0| x2_0| x3_0|     phi.value(0)  |
         +-----+-----+-----+-------------------+
-        | x1_1| x2_0| x3_0|     phi.value(1)  |
+        | x1_0| x2_0| x3_1|     phi.value(1)  |
         +-----+-----+-----+-------------------+
         | x1_0| x2_1| x3_0|     phi.value(2)  |
         +-----+-----+-----+-------------------+
-        | x1_1| x2_1| x3_0|     phi.value(3)  |
+        | x1_0| x2_1| x3_1|     phi.value(3)  |
         +-----+-----+-----+-------------------+
-        | x1_0| x2_0| x3_1|     phi.value(4)  |
+        | x1_1| x2_0| x3_0|     phi.value(4)  |
         +-----+-----+-----+-------------------+
         | x1_1| x2_0| x3_1|     phi.value(5)  |
         +-----+-----+-----+-------------------+
-        | x1_0| x2_1| x3_1|     phi.value(6)  |
+        | x1_1| x2_1| x3_0|     phi.value(6)  |
         +-----+-----+-----+-------------------+
         | x1_1| x2_1| x3_1|     phi.value(7)  |
         +-----+-----+-----+-------------------+
@@ -66,6 +66,8 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
         self.variables = OrderedDict()
+        if len(variables) != len(cardinality):
+            raise ValueError("The size of variables and cardinality should be same")
         for variable, card in zip(variables, cardinality):
             self.variables[variable] = [variable + '_' + str(index)
                                         for index in range(card)]
@@ -178,15 +180,15 @@ class Factor:
 
         """
         index = list(self.variables.keys()).index(variable)
-        cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality)))
-        num_elements = cum_cardinality[-1]
+        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+        num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index+1])
-                     for j in range(i, i+cum_cardinality[index])]
+                                      cum_cardinality[index])
+                     for j in range(i, i+cum_cardinality[index+1])]
         marg_factor = np.zeros(num_elements/self.cardinality[index])
         for i in range(self.cardinality[index]):
             marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index]]
+                                       i*cum_cardinality[index+1]]
         return marg_factor
 
     def normalize(self):
