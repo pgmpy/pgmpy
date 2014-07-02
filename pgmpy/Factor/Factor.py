@@ -180,7 +180,7 @@ class Factor:
 
         """
         index = list(self.variables.keys()).index(variable)
-        cum_cardinality = np.concatenate(([1], np.cumprod(self.cardinality[::-1])))[::-1]
+        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
         num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
                                       cum_cardinality[index])
