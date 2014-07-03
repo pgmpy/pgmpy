@@ -212,7 +212,7 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce(['x1_0', 'x2_0'])
         >>> phi.values
-        array([0., 6.])
+        array([0., 1.])
         """
         if not isinstance(values, list):
             values = [values]
@@ -227,13 +227,12 @@ class Factor:
             if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
-            cum_cardinality = np.concatenate(([1],
-                                              np.cumprod(self.cardinality)))
-            num_elements = cum_cardinality[-1]
+            cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+            num_elements = cum_cardinality[0]
             index_arr = [j for i in range(0, num_elements,
-                                          cum_cardinality[index+1])
-                         for j in range(i, i+cum_cardinality[index])]
-            self.values = self.values[np.array(index_arr)]
+                                          cum_cardinality[index])
+                         for j in range(i, i+cum_cardinality[index+1])]
+            self.values = self.values[np.array(index_arr) + int(value_index)*cum_cardinality[index+1]]
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
 
