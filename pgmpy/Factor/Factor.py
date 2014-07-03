@@ -103,22 +103,22 @@ class Factor:
         >>> import numpy as np
         >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
-        [['diff_1', 'intel_0'], ['diff_0', 'intel_1']]
+        [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
         if not isinstance(index, np.ndarray):
             index = np.atleast_1d(index)
         max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
-        mat = np.floor(np.tile(np.atleast_2d(index).T,
-                               (1, self.cardinality.shape[0])) /
-                       np.tile(np.cumprod(
-                           np.concatenate(([1], self.cardinality[:-1]))),
-                               (index.shape[0], 1)))\
-              % np.tile(self.cardinality, (index.shape[0], 1))
-        mat = mat.astype('int')
+        assignments = []
+        for ind in index:
+            assign = []
+            for card in self.cardinality[::-1]:
+                assign.insert(0, ind % card)
+                ind = ind/card
+            assignments.append(map(int, assign))
         return [[self.variables[key][val] for key, val in
-                 zip(self.variables.keys(), values)] for values in mat]
+                 zip(self.variables.keys(), values)] for values in assignments]
 
     def get_cardinality(self, variable):
         """
@@ -212,7 +212,7 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce(['x1_0', 'x2_0'])
         >>> phi.values
-        array([0., 6.])
+        array([0., 1.])
         """
         if not isinstance(values, list):
             values = [values]
@@ -227,13 +227,12 @@ class Factor:
             if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
-            cum_cardinality = np.concatenate(([1],
-                                              np.cumprod(self.cardinality)))
-            num_elements = cum_cardinality[-1]
+            cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+            num_elements = cum_cardinality[0]
             index_arr = [j for i in range(0, num_elements,
-                                          cum_cardinality[index+1])
-                         for j in range(i, i+cum_cardinality[index])]
-            self.values = self.values[np.array(index_arr)]
+                                          cum_cardinality[index])
+                         for j in range(i, i+cum_cardinality[index+1])]
+            self.values = self.values[np.array(index_arr) + int(value_index)*cum_cardinality[index+1]]
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
 

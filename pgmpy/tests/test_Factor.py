@@ -37,9 +37,9 @@ class TestFactorMethods(unittest.TestCase):
         self.assertListEqual(self.phi.assignment([4, 5, 6]), [['x1_1', 'x2_0', 'x3_0'],
                                                               ['x1_1', 'x2_0', 'x3_1'],
                                                               ['x1_1', 'x2_1', 'x3_0']])
-        self.assertListEqual(self.phi.assignment(np.array([4, 5, 6])), [['x1_1', 'x2_0', 'x3_0'],
-                                                                        ['x1_1', 'x2_0', 'x3_1'],
-                                                                        ['x1_1', 'x2_1', 'x3_0']])
+        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])), [['x1_0', 'x2_2', 'x3_0'],
+                                                                        ['x1_0', 'x2_2', 'x3_1'],
+                                                                        ['x1_1', 'x2_0', 'x3_0']])
 
     def test_assignment_indexerror(self):
         self.assertRaises(IndexError, self.phi.assignment, [10])
