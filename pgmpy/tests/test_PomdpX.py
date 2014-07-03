@@ -1,12 +1,12 @@
+#!/usr/bin/env python
 import unittest
+from io import StringIO
 from pgmpy.readwrite import PomdpXReader
-import os
 
 
 class TestPomdpXReaderString(unittest.TestCase):
     def setUp(self):
-        self.reader = PomdpXReader(string="""
-   <pomdpx version="1.0" id="rockSample"
+        string = """<pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
          <Description>RockSample problem for map size 1 x 3.
@@ -183,7 +183,9 @@ class TestPomdpXReaderString(unittest.TestCase):
         </Func>
     </RewardFunction>
  </pomdpx>
- """)
+ """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
 
     def test_get_variables(self):
         var_expected = {'StateVar': [
@@ -203,7 +205,8 @@ class TestPomdpXReaderString(unittest.TestCase):
                                                      'ac', 'as']}]
                         }
         self.maxDiff = None
-        self.assertEqual(self.reader.get_variables(), var_expected)
+        self.assertEqual(self.reader_string.get_variables(), var_expected)
+        self.assertEqual(self.reader_file.get_variables(), var_expected)
 
     def test_get_initial_belief_system(self):
         belief_expected = [{'Var': 'rover_0',
@@ -219,7 +222,8 @@ class TestPomdpXReaderString(unittest.TestCase):
                                            'ProbTable': ['uniform']}]
                             }]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_initial_beliefs(), belief_expected)
+        self.assertEqual(self.reader_string.get_initial_beliefs(), belief_expected)
+        self.assertEqual(self.reader_file.get_initial_beliefs(), belief_expected)
 
     def test_get_state_transition_function(self):
         state_transition_function_expected = \
@@ -259,7 +263,9 @@ class TestPomdpXReaderString(unittest.TestCase):
                              'ProbTable': ['0.0', '1.0']},
                             ]}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_state_transition_function(),
+        self.assertEqual(self.reader_string.get_state_transition_function(),
+                         state_transition_function_expected)
+        self.assertEqual(self.reader_file.get_state_transition_function(),
                          state_transition_function_expected)
 
     def test_obs_function(self):
@@ -280,7 +286,8 @@ class TestPomdpXReaderString(unittest.TestCase):
                             {'Instance': ['ac', 's2', '*', '-'],
                              'ProbTable': ['1.0', '0.0']}]}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_obs_function(), obs_function_expected)
+        self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
+        self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
     def test_reward_function(self):
         reward_function_expected = \
@@ -298,11 +305,13 @@ class TestPomdpXReaderString(unittest.TestCase):
                             {'Instance': ['as', 's0', 'bad'],
                              'ValueTable': ['-10']}]}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_reward_function(),
+        self.assertEqual(self.reader_string.get_reward_function(),
+                         reward_function_expected)
+        self.assertEqual(self.reader_file.get_reward_function(),
                          reward_function_expected)
 
     def test_get_parameter_dd(self):
-        self.reader = PomdpXReader(string="""
+        string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -336,7 +345,9 @@ class TestPomdpXReaderString(unittest.TestCase):
   </CondProb>
   </InitialStateBelief>
   </pomdpx>
- """)
+ """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
         expected_dd_parameter = [{
             'Var': 'rover_0',
             'Parent': ['null'],
@@ -347,10 +358,12 @@ class TestPomdpXReaderString(unittest.TestCase):
                                       's2': '0.0'}}}]
         self.maxDiff = None
         self.assertEqual(expected_dd_parameter,
-                         self.reader.get_initial_beliefs())
+                         self.reader_string.get_initial_beliefs())
+        self.assertEqual(expected_dd_parameter,
+                         self.reader_file.get_initial_beliefs())
 
     def test_initial_belief_dd(self):
-        self.reader = PomdpXReader(string="""
+        string = """
     <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -381,7 +394,9 @@ class TestPomdpXReaderString(unittest.TestCase):
         </CondProb>
     </InitialStateBelief>
     </pomdpx>
-    """)
+    """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
         expected_belief_dd = [{
             'Var': 'rover_0',
             'Parent': ['null'],
@@ -391,11 +406,13 @@ class TestPomdpXReaderString(unittest.TestCase):
                                              'var': 'rock_0'},
                                       's2': '0.0'}}}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_initial_beliefs(),
+        self.assertEqual(self.reader_string.get_initial_beliefs(),
+                         expected_belief_dd)
+        self.assertEqual(self.reader_file.get_initial_beliefs(),
                          expected_belief_dd)
 
     def test_reward_function(self):
-        self.reader = PomdpXReader(string="""
+        string = """
         <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -466,7 +483,9 @@ class TestPomdpXReaderString(unittest.TestCase):
         </Func>
     </RewardFunction>
     </pomdpx>
-        """)
+        """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
         expected_reward_function_dd =\
             [{'Var': 'reward_rover',
               'Parent': ['action_rover', 'rover_0', 'rock_0'],
@@ -483,11 +502,13 @@ class TestPomdpXReaderString(unittest.TestCase):
                                                                 's1': '-100',
                                                                 's2': '-100'}}}}}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_reward_function(),
+        self.assertEqual(self.reader_string.get_reward_function(),
+                         expected_reward_function_dd)
+        self.assertEqual(self.reader_file.get_reward_function(),
                          expected_reward_function_dd)
 
     def test_state_transition_function(self):
-        self.reader = PomdpXReader(string="""
+        string = """
          <pomdpx version="1.0" id="rockSample"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="pomdpx.xsd">
@@ -583,7 +604,9 @@ class TestPomdpXReaderString(unittest.TestCase):
         </CondProb>
     </StateTransitionFunction>
 </pomdpx>
-        """)
+        """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
         expected_state_transition_function = \
             [{'Var': 'rover_1',
               'Parent': ['action_rover', 'rover_0'],
@@ -635,8 +658,122 @@ class TestPomdpXReaderString(unittest.TestCase):
                                                                 's2': {'type': 'persistent',
                                                                        'var': 'rock_1'}}}}}}]
         self.maxDiff = None
-        self.assertEqual(self.reader.get_state_transition_function(),
+        self.assertEqual(self.reader_string.get_state_transition_function(),
+                         expected_state_transition_function)
+        self.assertEqual(self.reader_file.get_state_transition_function(),
                          expected_state_transition_function)
 
+    def test_obs_function_dd(self):
+        string = """
+        <pomdpx version="1.0" id="rockSample"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="pomdpx.xsd">
+         <Description>RockSample problem for map size 1 x 3.
+           Rock is at 0, Rover’s initial position is at 1.
+           Exit is at 2.
+         </Description>
+         <Discount>0.95</Discount>
+        <ObsFunction>
+        <CondProb>
+            <Var>obs_sensor</Var>
+            <Parent>action_rover rover_1 rock_1</Parent>
+            <Parameter type="DD">
+                <DAG>
+                    <Node var="action_rover">
+                        <Edge val="amw">
+                            <SubDAG type="deterministic" var="obs_sensor" val="ogood"/>
+                        </Edge>
+                        <Edge val="ame">
+                            <SubDAG type="deterministic" var="obs_sensor" val="ogood"/>
+                        </Edge>
+                        <Edge val="ac">
+                            <Node var="rover_1">
+                                <Edge val="s0">
+                                    <Node var="rock_1">
+                                        <Edge val="good">
+                                            <SubDAG type="deterministic" var="obs_sensor" val="ogood"/>
+                                        </Edge>
+                                        <Edge val="bad">
+                                            <SubDAG type="deterministic" var="obs_sensor" val="obad"/>
+                                        </Edge>
+                                    </Node>
+                                </Edge>
+                                <Edge val="s1">
+                                    <SubDAG type="template" idref="obs_rock"/>
+                                </Edge>
+                                <Edge val="s2">
+                                    <SubDAG type="template" idref="obs_rock"/>
+                                </Edge>
+                            </Node>
+                        </Edge>
+                        <Edge val="as">
+                            <SubDAG type="deterministic" var="obs_sensor" val="ogood"/>
+                        </Edge>
+                    </Node>
+                </DAG>
+                <SubDAGTemplate id="obs_rock">
+                    <Node var="rock_1">
+                        <Edge val="good">
+                            <Node var="obs_sensor">
+                                <Edge val="ogood">
+                                    <Terminal>0.8</Terminal>
+                                </Edge>
+                                <Edge val="obad">
+                                    <Terminal>0.2</Terminal>
+                                </Edge>
+                            </Node>
+                        </Edge>
+                        <Edge val="bad">
+                            <Node var="obs_sensor">
+                                <Edge val="ogood">
+                                    <Terminal>0.2</Terminal>
+                                </Edge>
+                                <Edge val="obad">
+                                    <Terminal>0.8</Terminal>
+                                </Edge>
+                            </Node>
+                        </Edge>
+                    </Node>
+                </SubDAGTemplate>
+            </Parameter>
+        </CondProb>
+    </ObsFunction>
+    </pomdpx>
+        """
+        self.reader_string = PomdpXReader(string=string)
+        self.reader_file = PomdpXReader(path=StringIO(string))
+        expected_obs_function = \
+            [{'Var': 'obs_sensor',
+              'Parent': ['action_rover', 'rover_1', 'rock_1'],
+              'Type': 'DD',
+              'Parameter': {'action_rover': {'amw': {'type': 'deterministic',
+                                                     'var': 'obs_sensor',
+                                                     'val': 'ogood'},
+                                             'ame': {'type': 'deterministic',
+                                                     'var': 'obs_sensor',
+                                                     'val': 'ogood'},
+                                             'ac': {'rover_1': {'s0': {'rock_1': {'good': {'type': 'deterministic',
+                                                                                           'var': 'obs_sensor',
+                                                                                           'val': 'ogood'},
+                                                                                  'bad': {'type': 'deterministic',
+                                                                                          'var': 'obs_sensor',
+                                                                                          'val': 'obad'}}},
+                                                                's1': {'type': 'template',
+                                                                       'idref': 'obs_rock'},
+                                                                's2': {'type': 'template',
+                                                                       'idref': 'obs_rock'}}},
+                                             'as': {'type': 'deterministic',
+                                                    'var': 'obs_sensor',
+                                                    'val': 'ogood'}},
+                            'SubDAGTemplate': {'rock_1': {'good': {'obs_sensor': {'ogood': '0.8',
+                                                                                  'obad': '0.2'}},
+                                                          'bad': {'obs_sensor': {'ogood': '0.2',
+                                                                                 'obad': '0.8'}}}},
+                            'id': 'obs_rock'}}]
+        self.maxDiff = None
+        self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
+        self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
+
     def tearDown(self):
-        del self.reader
+        del self.reader_file
+        del self.reader_string

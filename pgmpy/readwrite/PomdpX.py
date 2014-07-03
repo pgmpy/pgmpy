@@ -24,14 +24,19 @@ class PomdpXReader:
 
         Parameters
         ----------
-        path : file or string
-            File containing PomdpX information.
-        string : string
+        path : file or str
+            Path of the file containing PomdpX information.
+
+        string : str
             String containing PomdpX information.
 
         Example
         -------
-        >>> reader = PomdpXReader('TestPomdpX.xml')
+        reader = PomdpXReader('TestPomdpX.xml')
+
+        Reference
+        ---------
+        http://bigbird.comp.nus.edu.sg/pmwiki/farm/appl/index.php?n=Main.PomdpXDocumentation
         """
         if path:
             self.network = etree.ElementTree(file=path).getroot()
@@ -39,9 +44,37 @@ class PomdpXReader:
             self.network = etree.fromstring(string)
         else:
             raise ValueError("Must specify either path or string")
-        self.description = self.network.find('Description').text
-        self.discount = self.network.find('Discount').text
-        self.variables = None
+
+    def get_description(self):
+        """
+        Return the problem description
+
+        Example
+        >>> reader = PomdpXReader('Test_Pomdpx.xml')
+        >>> reader.get_description()
+        'RockSample problem for map size 1 x 3.
+        Rock is at 0, Rover’s initial position is at 1.
+        Exit is at 2.'
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_description()
+        'RockSample problem for map size 1 x 3.
+         Rock is at 0, Rover’s initial position is at 1.
+         Exit is at 2.'
+        """
+        return self.network.find('Description').text
+
+    def get_discount(self):
+        """
+        Returns the discount factor for the problem
+
+        Example
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_discount()
+        0.95
+        """
+        return float(self.network.find('Discount').text)
 
     def get_variables(self):
         """
@@ -51,22 +84,22 @@ class PomdpXReader:
         -------
         >>> reader = PomdpXReader("pomdpx.xml")
         >>> reader.get_variables()
-        { 'StateVar': [ { 'vnamePrev' : 'rover_0'
-                      'vnameCurr': 'rover_1'
-                      'fullyObs': true
-                      'ValueEnum' : ['s0', 's1', 's2']
-                      },
-                      { 'vnamePrev': 'rock_0'
-                        'vnameCurr': 'rock_1'
-                        'ValueEnum' : ['good', 'bad']
-                      } ]
-          'ObsVar': [ {'vname': 'obs_sensor'
-                        'ValueEnum':['ogood', 'obad']
-                      },]
-          'ActionVar' : [ {'vname' : 'action_rover'
-                           'ValueEnum' : 'amw ame ac as'} ]
-          'RewardVar' : [ {'vname' : 'reward_rover'} ]
-        }
+        {'StateVar': [
+                        {'vnamePrev': 'rover_0',
+                         'vnameCurr': 'rover_1',
+                         'ValueEnum': ['s0', 's1', 's2'],
+                         'fullyObs': True},
+                        {'vnamePrev': 'rock_0',
+                         'vnameCurr': 'rock_1',
+                         'fullyObs': False,
+                         'ValueEnum': ['good', 'bad']}],
+                        'ObsVar': [{'vname': 'obs_sensor',
+                                    'ValueEnum': ['ogood', 'obad']}],
+                        'RewardVar': [{'vname': 'reward_rover'}],
+                        'ActionVar': [{'vname': 'action_rover',
+                                       'ValueEnum': ['amw', 'ame',
+                                                     'ac', 'as']}]
+                        }
         """
         self.variables = defaultdict(list)
         for variable in self.network.findall('Variable'):
@@ -112,6 +145,26 @@ class PomdpXReader:
         return self.variables
 
     def get_initial_beliefs(self):
+        """
+        Returns the state, action and observation variables as a dictionary
+        in the case of table type parameter and a nested structure in case of
+        decision diagram parameter
+
+        Examples
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_initial_beliefs()
+        [{'Var': 'rover_0',
+          'Parent': ['null'],
+          'Type': 'TBL',
+          'Parameter': [{'Instance': ['-'],
+          'ProbTable': ['0.0', '1.0', '0.0']}]
+         },
+         {'Var': '',
+          '...': ...,'
+          '...': '...',
+          }]
+        """
         initial_state_belief = []
         for variable in self.network.findall('InitialStateBelief'):
             for var in variable.findall('CondProb'):
@@ -128,6 +181,26 @@ class PomdpXReader:
         return initial_state_belief
 
     def get_state_transition_function(self):
+        """
+        Returns the transition of the state variables as nested dict in the
+        case of table type parameter and a nested structure in case of
+        decision diagram parameter
+
+        Example
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_state_transition_function()
+        [{'Var': 'rover_1',
+          'Parent': ['action_rover', 'rover_0'],
+          'Type': 'TBL',
+          'Parameter': [{'Instance': ['amw', 's0', 's2'],
+                         'ProbTable': ['1.0']},
+                         {'Instance': ['amw', 's1', 's0'],
+                         'ProbTable': ['1.0']},
+                         ...
+                        ]
+        }]
+        """
         state_transition_function = []
         for variable in self.network.findall('StateTransitionFunction'):
             for var in variable.findall('CondProb'):
@@ -144,6 +217,24 @@ class PomdpXReader:
         return state_transition_function
 
     def get_obs_function(self):
+        """
+        Returns the observation function as nested dict in the case of table-
+        type parameter and a nested structure in case of
+        decision diagram parameter
+
+        Example
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_obs_function()
+        [{'Var': 'obs_sensor',
+              'Parent': ['action_rover', 'rover_1', 'rock_1'],
+              'Type': 'TBL',
+              'Parameter': [{'Instance': ['amw', '*', '*', '-'],
+                             'ProbTable': ['1.0', '0.0']},
+                         ...
+                        ]
+        }]
+        """
         obs_function = []
         for variable in self.network.findall('ObsFunction'):
             for var in variable.findall('CondProb'):
@@ -160,6 +251,24 @@ class PomdpXReader:
         return obs_function
 
     def get_reward_function(self):
+        """
+        Returns the reward function as nested dict in the case of table-
+        type parameter and a nested structure in case of
+        decision diagram parameter
+
+        Example
+        --------
+        >>> reader = PomdpXReader('Test_PomdpX.xml')
+        >>> reader.get_reward_function()
+        [{'Var': 'reward_rover',
+              'Parent': ['action_rover', 'rover_0', 'rock_0'],
+              'Type': 'TBL',
+              'Parameter': [{'Instance': ['ame', 's1', '*'],
+                             'ValueTable': ['10']},
+                         ...
+                        ]
+        }]
+        """
         reward_function = []
         for variable in self.network.findall('RewardFunction'):
             for var in variable.findall('Func'):
@@ -176,7 +285,13 @@ class PomdpXReader:
         return reward_function
 
     def get_parameter(self, var):
+        """
+        This method supports the functional tags by providing the actual
+        values in the function as list of dict in case of table type parameter or as
+        nested dict in case of decision diagram
+        """
         parameter = []
+
         for parameter_tag in var.findall('Parameter'):
             parameter_type = 'TBL'
             if parameter_tag.get('type') is not None:
@@ -186,9 +301,14 @@ class PomdpXReader:
             elif parameter_type == 'DD':
                 parameter = defaultdict(list)
                 parameter = self.get_parameter_dd(parameter_tag)
+
         return parameter
 
     def get_parameter_tbl(self, parameter):
+        """
+        This method returns parameters as list of dict in case of table type
+        parameter
+        """
         par = []
         for entry in parameter.findall('Entry'):
             instance = defaultdict(list)
@@ -201,6 +321,10 @@ class PomdpXReader:
         return par
 
     def get_parameter_dd(self, parameter):
+        """
+        This method returns parameters as nested dicts in case of decision
+        diagram parameter.
+        """
         dag = defaultdict(list)
         dag_elem = parameter.find('DAG')
         node = dag_elem.find('Node')
@@ -219,12 +343,25 @@ class PomdpXReader:
                 elif edge.find('SubDAG') is not None:
                     subdag_attribute = defaultdict(list)
                     subdag_attribute['type'] = edge.find('SubDAG').get('type')
-                    subdag_attribute['var'] = edge.find('SubDAG').get('var')
+                    if subdag_attribute['type'] == 'template':
+                        subdag_attribute['idref'] = \
+                            edge.find('SubDAG').get('idref')
+                    if edge.find('SubDAG').get('var'):
+                        subdag_attribute['var'] = \
+                            edge.find('SubDAG').get('var')
                     if edge.find('SubDAG').get('val'):
                         subdag_attribute['val'] = \
                             edge.find('SubDAG').get('val')
                     edges[edge.get('val')] = subdag_attribute
-
             return edges
+
+        if parameter.find('SubDAGTemplate'):
+            SubDAGTemplate = parameter.find('SubDAGTemplate')
+            subdag_root = SubDAGTemplate.find('Node')
+            subdag_node = subdag_root.get('var')
+            subdag_dict = defaultdict(list)
+            subdag_dict[subdag_node] = get_param(subdag_root)
+            dag['SubDAGTemplate'] = subdag_dict
+            dag['id'] = SubDAGTemplate.get('id')
         dag[root] = get_param(node)
         return dag
