@@ -47,14 +47,14 @@ class NoisyOrModel:
         Parameters
         ----------
         variables: list, tuple, dict (array like)
-            array containing names of the variables.
+            array containing names of the variables that are to be added.
 
         cardinality: list, tuple, dict (array like)
             array containing integers representing the cardinality
             of the variables.
 
         inhibitor_probability: list, tuple, dict (array_like)
-            array containing the inhibitor probabilities of each variable.
+            array containing the inhibitor probabilities corresponding to each variable.
 
         Examples
         --------
@@ -78,3 +78,27 @@ class NoisyOrModel:
         elif cardinality != [len(prob_array) for prob_array in inhibitor_probability] and \
                 len(cardinality) != len(inhibitor_probability):
             raise ValueError("Size of variables and inhibitor_probability should be same")
+
+    def del_variables(self, variables):
+        """
+        Deletes variables from the NoisyOrModel.
+
+        Parameters
+        ----------
+        variables: list, tuple, dict (array like)
+            list of variables to be deleted.
+
+        Examples
+        --------
+        >>> from pgmpy.BayesianModel import NoisyOrModel
+        >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
+        >>>                                                      [0.2, 0.4, 0.7],
+        >>>                                                      [0.1, 0. 4]])
+        >>> model.delete(['x1'])
+        """
+        for var in variables:
+            index = self.variables.index(var)
+            self.variables = self.variables.remove(var)
+            self.cardinality = np.delete(self.cardinality, index)
+            self.inhibitor_probability = np.delete(self.inhibitor_probability, index)
+
