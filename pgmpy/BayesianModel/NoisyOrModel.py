@@ -25,7 +25,7 @@ class NoisyOrModel:
             array containing integers representing the cardinality
             of the variables.
 
-        inhibitor_probability: 2-D list, tuple, dict (array_like)
+        inhibitor_probability: list, tuple, dict (array_like)
             array containing the inhibitor probabilities of each variable.
 
         Examples
@@ -33,7 +33,7 @@ class NoisyOrModel:
         >>> from pgmpy.BayesianModel import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
         >>>                                                      [0.2, 0.4, 0.7],
-        >>>                                                      [0.1, 0. 4]])
+        >>>                                                      [0.1, 0.4]])
         """
         self.variables = []
         self.cardinality = np.array([], dtype=np.int)
@@ -65,11 +65,12 @@ class NoisyOrModel:
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
         cardinality = np.array(cardinality)
-        inhibitor_probability = np.array(inhibitor_probability)
+        inhibitor_probability = np.atleast_2d(inhibitor_probability)
         if len(variables) == len(cardinality) == len(inhibitor_probability) and \
                 not inhibitor_probability[inhibitor_probability > 0]:
             self.variables.extend(variables)
-            self.cardinality = cardinality
+            self.cardinality = np.concatenate((self.cardinality, cardinality))
+            #TODO: correct this
             self.inhibitor_probability = inhibitor_probability
         elif inhibitor_probability[inhibitor_probability > 0]:
             raise ValueError("Probability values should be <=1 ")
@@ -96,9 +97,9 @@ class NoisyOrModel:
         >>>                                                      [0.1, 0. 4]])
         >>> model.delete(['x1'])
         """
+        variables = [variables] if isinstance(variables, str) else variables
         for var in variables:
             index = self.variables.index(var)
             self.variables = self.variables.remove(var)
             self.cardinality = np.delete(self.cardinality, index)
             self.inhibitor_probability = np.delete(self.inhibitor_probability, index)
-
