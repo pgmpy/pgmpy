@@ -66,19 +66,22 @@ class NoisyOrModel:
         """
         cardinality = np.array(cardinality)
         inhibitor_probability = np.atleast_2d(inhibitor_probability)
-        if len(variables) == len(cardinality) == len(inhibitor_probability) and \
-                not inhibitor_probability[inhibitor_probability > 0]:
-            self.variables.extend(variables)
-            self.cardinality = np.concatenate((self.cardinality, cardinality))
-            #TODO: correct this
-            self.inhibitor_probability = inhibitor_probability
-        elif inhibitor_probability[inhibitor_probability > 0]:
+
+        if inhibitor_probability[inhibitor_probability > 0]:
             raise ValueError("Probability values should be <=1 ")
         elif len(variables) != len(cardinality):
             raise ValueError("Size of variables and cardinality should be same")
         elif cardinality != [len(prob_array) for prob_array in inhibitor_probability] and \
                 len(cardinality) != len(inhibitor_probability):
             raise ValueError("Size of variables and inhibitor_probability should be same")
+        elif len(variables) == len(cardinality) == len(inhibitor_probability) and \
+                not inhibitor_probability[inhibitor_probability > 0]:
+            self.variables.extend(variables)
+            self.cardinality = np.concatenate((self.cardinality, cardinality))
+
+            inhibitor_probability_list = self.inhibitor_probability.tolist()
+            inhibitor_probability_list.extend(inhibitor_probability)
+            self.inhibitor_probability = np.array(inhibitor_probability_list)
 
     def del_variables(self, variables):
         """
