@@ -65,23 +65,29 @@ class NoisyOrModel:
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
         cardinality = np.array(cardinality)
-        inhibitor_probability = np.atleast_2d(inhibitor_probability)
 
-        if inhibitor_probability[inhibitor_probability > 0]:
+        # Converting the inhibitor_probability to a uniform 2D array
+        # because else numpy treats it as a 1D array with dtype object.
+        inhibitor_probability_list = []
+        for prob_array in inhibitor_probability:
+            if len(prob_array) < max(cardinality):
+                prob_array.extend([0]*(max(cardinality)-len(prob_array)))
+                inhibitor_probability_list.append(prob_array)
+            else:
+                inhibitor_probability_list.append(prob_array)
+        inhibitor_probability_uni = np.array(inhibitor_probability_list)
+
+        if inhibitor_probability_uni[inhibitor_probability_uni > 1]:
             raise ValueError("Probability values should be <=1 ")
         elif len(variables) != len(cardinality):
             raise ValueError("Size of variables and cardinality should be same")
-        elif cardinality != [len(prob_array) for prob_array in inhibitor_probability] and \
+        elif (cardinality != [len(prob_array) for prob_array in inhibitor_probability]).any and \
                 len(cardinality) != len(inhibitor_probability):
             raise ValueError("Size of variables and inhibitor_probability should be same")
-        elif len(variables) == len(cardinality) == len(inhibitor_probability) and \
-                not inhibitor_probability[inhibitor_probability > 0]:
+        else:
             self.variables.extend(variables)
             self.cardinality = np.concatenate((self.cardinality, cardinality))
-
-            inhibitor_probability_list = self.inhibitor_probability.tolist()
-            inhibitor_probability_list.extend(inhibitor_probability)
-            self.inhibitor_probability = np.array(inhibitor_probability_list)
+            self.inhibitor_probability = np.concatenate((self.inhibitor_probability, inhibitor_probability_uni))
 
     def del_variables(self, variables):
         """
