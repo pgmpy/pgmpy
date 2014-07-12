@@ -22,7 +22,7 @@ class Factor():
     reduce([variable_values_list])
     """
 
-    def __init__(self, variables, cardinality, value):
+    def __init__(self, variables, cardinality, value, data = None):
         """
         Initialize a Factor class.
 
@@ -75,6 +75,7 @@ class Factor():
         self.cardinality = np.array(cardinality)
         self.values = np.array(value, dtype=np.double)
         self._pos_dist = True
+        self.data = data
         for val in self.values:
             if val == 0:
                 self._pos_dist = False
@@ -201,7 +202,95 @@ class Factor():
             raise Exceptions.ScopeError("%s not in scope" % variable)
         return self.cardinality[list(self.variables.keys()).index(variable)]
 
+
+    def sum_func(self, values, data, variable):
+        return sum(values)
+
+    def reduce_function(self, values, data, variable):
+        pass
+
+    def max_func(self, values, data, variable):
+        max_val = values[0]
+        max_index = 0
+        for index in range(len(values)):
+            if values[index] > max_val:
+                max_val = values[index]
+                max_index = index
+        new_datum = data[max_index].copy()
+        new_datum[variable] = max_index
+        return max_val, new_datum
+
+
     def marginalize(self, variables, inplace=True):
+        f = self.operations_on_variables(variables, self.sum_func, inplace)
+        if not inplace:
+            return f
+
+    def marginalize_except(self, variables):
+        """
+        Returns marginalized factor where it marginalises everything
+        except the variables in var
+
+        Parameters
+        ----------
+        vars : string, list-type
+            Name of variables not to be marginalised
+
+        Example
+        -------
+
+        """
+        f =  self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
+        assert isinstance(f, Factor)
+        return f
+
+
+    def maximize_on_variables(self, variables, inplace=True):
+        if self.data is None:
+            self.data = []
+            for i in range(len(self.values)):
+                self.data.append( {})
+        self.operations_on_variables(variables, self.max_func, inplace, True)
+
+    def _operations_single_variable(self, variable, func, need_data):
+        """
+        Returns marginalised factor for a single variable
+
+        Parameters
+        ---------
+        variable_name: string
+            name of variable to be marginalized
+
+        """
+        index = list(self.variables.keys()).index(variable)
+        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1],
+                                np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+        #print(cum_cardinality)
+        num_elements = cum_cardinality[0]
+        sum_index = [j for i in range(0, num_elements,
+                                      cum_cardinality[index])
+                     for j in range(i, i+cum_cardinality[index+1])]
+        marg_factor = np.zeros(num_elements/self.cardinality[index])
+        new_data = None
+        if need_data:
+            new_data = [None] * (num_elements/self.cardinality[index])
+        for j in range(0, len(sum_index)):
+            temp = []
+            temp2 = []
+            for i in range(self.cardinality[index]):
+                temp.append(self.values[np.array(sum_index)[j] +
+                                           i*cum_cardinality[index+1]])
+            if not need_data:
+                marg_factor[j] = func(temp, temp2, variable)
+            else:
+                for i in range(self.cardinality[index]):
+                    temp2.append(self.data[np.array(sum_index)[j] +
+                                           i*cum_cardinality[index+1]])
+                marg_factor[j], new_data[j] = func(temp, temp2, variable)
+        return marg_factor, new_data
+
+
+    def operations_on_variables(self, variables,  func= sum, inplace = True, need_data = False):
         """
         Modifies the factor with marginalized values.
 
@@ -233,53 +322,18 @@ class Factor():
                 return copy.deepcopy(self)
         ret = self
         for variable in variables:
-            index = list(self.variables.keys()).index(variable)
-            new_vars = [var for var in self.variables if not var == variable]
-            ret = Factor(new_vars, np.delete(self.cardinality, index), self._marginalize_single_variable(variable))
+            index = list(ret.variables.keys()).index(variable)
+            new_vars = ret.variables.copy()
+            del(new_vars[variable])
+            values_data_tuple = ret._operations_single_variable(variable, func, need_data)
+            ret = Factor(new_vars, np.delete(ret.cardinality, index),values_data_tuple[0], values_data_tuple[1] )
         if inplace:
             self.variables = ret.variables
             self.values = ret.values
             self.cardinality = ret.cardinality
+            self.data = ret.data
         else:
             return ret
-
-    def marginalize_except(self, variables):
-        """
-        Returns marginalized factor where it marginalises everything
-        except the variables in var
-
-        Parameters
-        ----------
-        vars : string, list-type
-            Name of variables not to be marginalised
-
-        Example
-        -------
-
-        """
-        return self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
-
-    def _marginalize_single_variable(self, variable):
-        """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable_name: string
-            name of variable to be marginalized
-
-        """
-        index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
-        num_elements = cum_cardinality[0]
-        sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index])
-                     for j in range(i, i+cum_cardinality[index+1])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
-        for i in range(self.cardinality[index]):
-            marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index+1]]
-        return marg_factor
 
     def normalize(self):
         """
@@ -325,6 +379,8 @@ class Factor():
             self.values = self.values[np.array(index_arr) + int(value_index)*cum_cardinality[index+1]]
             del(self.variables[var])
             self.cardinality = np.delete(self.cardinality, index)
+
+
 
     def product(self, *factors):
         """
@@ -411,11 +467,11 @@ class Factor():
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
         #by 1.
-        def fun(b, index=0):  #len(self.cardinality)-1):
+        def fun(b, index=len(self.cardinality)-1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
                 b[index] = 0
-                fun(b, index + 1)  #-1)
+                fun(b, index -1)
             return b
 
         def gen():

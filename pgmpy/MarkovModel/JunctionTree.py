@@ -98,7 +98,7 @@ class JunctionTree(UndirectedGraph):
         except KeyError:
             raise KeyError("Visited not defined for the nodes")
 
-    def _pull(self):
+    def _pull(self, func):
         """
         Pull phase of the message passing
 
@@ -111,11 +111,11 @@ class JunctionTree(UndirectedGraph):
             return self.node[root_node]["pull_factor"]
         for node in self.nodes():
             self.node[node]["visited"] = False
-        factor = self._pull_h(root_node)
+        factor = self._pull_h(root_node, func)
         self._pull_status = True
         return factor
 
-    def _pull_h(self, node):
+    def _pull_h(self, node, func):
         """
         Helps in the recursion for _pull
 
@@ -130,15 +130,16 @@ class JunctionTree(UndirectedGraph):
         nbrs_to_pull_from = self._unvisited_neighbors(node)
         for nbr in nbrs_to_pull_from:
             #print(nbr)
-            f = self._pull_h(nbr)
+            f = self._pull_h(nbr, func)
             assert isinstance(f, Factor)
             #print("marginalize at " + str(node) + " using " + str(self_vars))
-            f = f.marginalize_except(self_vars)
+            f = func(f,self_vars)
+            assert isinstance(f, Factor)
             factor = factor.product(f)
         self.node[node]["pull_factor"] = factor
         return factor
 
-    def _push(self):
+    def _push(self, func):
         """
         Push phase of the message passing
 
@@ -150,10 +151,10 @@ class JunctionTree(UndirectedGraph):
             self.node[node]["visited"] = False
         empty_factor = None
         root_node = self.nodes()[0]
-        self._push_h(root_node, empty_factor)
+        self._push_h(root_node, empty_factor, func)
         self._push_status = True
 
-    def _push_h(self, node, factor):
+    def _push_h(self, node, factor, func):
         """
         Helps in the recursion for _push
 
@@ -166,7 +167,7 @@ class JunctionTree(UndirectedGraph):
         if factor is None:
             full_prod = self.node[node]["pull_factor"]
         else:
-            factor = factor.marginalize_except(self_factor.get_variables())
+            factor = func(factor,self_factor.get_variables())
             self.node[node]["push_factor"] = factor
             full_prod = factor.product(self.node[node]["pull_factor"])
         assert isinstance(full_prod, Factor)
@@ -175,9 +176,9 @@ class JunctionTree(UndirectedGraph):
         for nbr in rel_nbrs:
             nbr_factor = self.node[nbr]["pull_factor"]
             assert isinstance(nbr_factor, Factor)
-            nbr_factor = nbr_factor.marginalize_except(self_factor.get_variables())
+            nbr_factor = func(nbr_factor,(self_factor.get_variables()))
             fact_push = full_prod.divide(nbr_factor)
-            self._push_h(nbr, fact_push)
+            self._push_h(nbr, fact_push, func)
 
     def normalization_constant(self):
         """
@@ -218,9 +219,9 @@ class JunctionTree(UndirectedGraph):
         d_0	71.0
         d_1	92.0
         """
-        self._pull()
+        self._pull(Factor.marginalize_except)
         #print("pulled factor" + str(factor))
-        self._push()
+        self._push(Factor.marginalize_except)
         for node in self.nodes():
             prod_factor = self.node[node]["prod_factor"]
             assert isinstance(prod_factor, Factor)

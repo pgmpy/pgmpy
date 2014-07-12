@@ -19,6 +19,16 @@ class TestOperations(unittest.TestCase):
     #     print("f1 * f2")
     #     print(f1.product(f2))
 
+    def test_temp1(self):
+        from pgmpy.Factor.Factor import Factor
+        f1 = Factor(['d', 'g'], [2,3], [1,2,3,4,5,6])
+        f2 = Factor(['i', 'g'], [2,3],[1,2,3,4,5,6])
+        print("Multiplying the two factors ")
+        print(f1)
+        print(f2)
+        print("f1 * f2")
+        print(f1.product(f2))
+
     def test_normalization_pos_dist(self):
         self.graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
         self.graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
@@ -38,6 +48,21 @@ class TestOperations(unittest.TestCase):
         ex_factor = Factor.Factor(['d'], [2], [71.0, 92.0])
         self.assertEqual(res_factor, ex_factor)
         #print(factor)
+
+    def test_marginalize(self):
+        from pgmpy.Factor.Factor import Factor
+        fac = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        print(fac)
+        fac.marginalize("x1")
+        print(fac)
+
+    def test_maximize(self):
+        from pgmpy.Factor.Factor import Factor
+        from pgmpy.Factor.Factor import Factor
+        fac = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        print(fac)
+        fac.maximize_on_variables("x1")
+        print(fac)
 
     def tearDown(self):
         del self.graph
