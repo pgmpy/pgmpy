@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import numpy as np
+import networkx as nx
 
 
-class NoisyOrModel:
+class NoisyOrModel(nx.DiGraph):
     """
     Base class for Noisy-Or Models.
 
@@ -13,6 +14,8 @@ class NoisyOrModel:
     Reference: http://xenon.stanford.edu/~srinivas/research/6-UAI93-Srinivas-Generalization-of-Noisy-Or.pdf
     """
     def __init__(self, variables, cardinality, inhibitor_probability):
+        # TODO: Accept values of each state so that it could be
+        # put into F to compute the final state values of the output
         """
         Init method for NoisyOrModel.
 
@@ -104,7 +107,7 @@ class NoisyOrModel:
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
         >>>                                                      [0.2, 0.4, 0.7],
         >>>                                                      [0.1, 0. 4]])
-        >>> model.delete(['x1'])
+        >>> model.del_variables(['x1'])
         """
         variables = [variables] if isinstance(variables, str) else variables
         for var in variables:
@@ -112,3 +115,25 @@ class NoisyOrModel:
             self.variables = self.variables.remove(var)
             self.cardinality = np.delete(self.cardinality, index)
             self.inhibitor_probability = np.delete(self.inhibitor_probability, index)
+
+    def out_prob(self, func):
+        """
+        Compute the conditional probability of output variable
+        given all other variables [P(X|U)] where X is the output
+        variable and U is the set of input variables.
+
+        Parameters
+        ----------
+        func: function
+            The deterministic function which maps input to the
+            output.
+
+        Returns
+        -------
+        List of tuples. Each tuple is of the form (state, probability).
+        """
+        states = []
+        from itertools import product
+        for u in product([(values(var)) for var in self.variables]):
+            for state in product([(values(var) for var in self.variables)]):
+                
