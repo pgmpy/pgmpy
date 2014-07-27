@@ -136,4 +136,4 @@ class NoisyOrModel(nx.DiGraph):
         from itertools import product
         for u in product([(values(var)) for var in self.variables]):
             for state in product([(values(var) for var in self.variables)]):
-                
+
