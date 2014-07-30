@@ -139,6 +139,15 @@ class Factor:
             raise Exceptions.ScopeError("%s not in scope" % variable)
         return self.cardinality[list(self.variables.keys()).index(variable)]
 
+    def identity_factor(self):
+        """
+        Returns the identity factor.
+
+        When the identity factor of a factor is multiplied with the factor
+        it returns the factor itself.
+        """
+        return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
+
     def marginalize(self, variables):
         """
         Modifies the factor with marginalized values.
