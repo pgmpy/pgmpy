@@ -35,7 +35,7 @@ class TestOperations(unittest.TestCase):
         jt = self.graph.make_jt(2)
         #jt.print_graph("printing the junction tree")
         val = jt.normalization_constant()
-        self.assertAlmostEqual(val, 163.0)
+        self.assertAlmostEqual(val, 155.0)
         #print("Value using junction tree " + str(val))
         #print("value using basic brute force " + str(self.graph.normalization_constant_brute_force()))
 

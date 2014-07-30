@@ -112,6 +112,7 @@ class JunctionTree(UndirectedGraph):
         for node in self.nodes():
             self.node[node]["visited"] = False
         factor = self._pull_h(root_node, func)
+        assert isinstance(factor, Factor)
         self._pull_status = True
         return factor
 
@@ -196,7 +197,7 @@ class JunctionTree(UndirectedGraph):
         >>> jt.normalization_constant()
         163.0
         """
-        factor = self._pull()
+        factor = self._pull(Factor.marginalize_except)
         assert isinstance(factor, Factor)
         norm = factor.sum_values()
         return norm
@@ -216,8 +217,8 @@ class JunctionTree(UndirectedGraph):
         >>> jt = graph.make_jt(2)
         >>> jt.marginal_prob('d')
         d	phi(d)
-        d_0	71.0
-        d_1	92.0
+        d_0	46.0
+        d_1	109.0
         """
         self._pull(Factor.marginalize_except)
         #print("pulled factor" + str(factor))
@@ -232,4 +233,27 @@ class JunctionTree(UndirectedGraph):
         raise Exception("Should never reach here! If here, then trouble!")
 
     def MAP(self):
-        pass
+        """
+        Uses junction tree to find the marginal probability of any variable
+
+        Example
+        -------
+        >>> from pgmpy import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
+        >>> graph.add_states(
+        ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> jt = graph.make_jt(2)
+        >>> jt.MAP()
+        d	phi(d)
+        d_0	46.0
+        d_1	109.0
+        """
+        factor = self._pull(Factor.maximize_except)
+        print("--")
+        print(factor)
+        print("--")
+        assert isinstance(factor, Factor)
+        norm = factor.sum_values()
+        return norm

@@ -85,6 +85,14 @@ class TestFactorMethods(unittest.TestCase):
              0.07575758, 0.09090909, 0.10606061, 0.12121212,
              0.13636364, 0.15151515, 0.16666667]))
 
+    def test_maximize(self):
+        self.phi1.maximize(['x1'])
+        max_val_indices = {'x1':1}
+        data = [max_val_indices] * 6
+        #print(self.phi1)
+        np_test.assert_array_equal(self.phi1.values, np.array([6,7,8,9,10,11]))
+        self.assertEqual(self.phi1.data, sorted(data, key=lambda t: sorted(t.keys())))
+
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
