@@ -396,30 +396,33 @@ class MarkovModel(UndirectedGraph):
 
     def _in_clique(self, nodes):
         """
-        Check if the nodes belong to a singhle click in the graph
+        Check if the all the nodes belong to a single clique in the graph
         """
-        for n1 in range(0, len(nodes)):
-            for n2 in range(n1 + 1, len(nodes)):
-                if not self.has_edge(nodes[n1], nodes[n2]):
-                    return False
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_edge(node1, node2):
+                return False
         return True
 
-    def _set_is_observed(self, node, tf):
+    def _set_is_observed(self, node):
         """
         Updates '_observed' attribute of the node.
 
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        self.node[node]['_is_observed'] = tf
+        self.node[node]['_is_observed'] = True
 
-    def is_observed(self, node):
+    def is_observed(self, nodes):
         """
-        Check if node is observed. If observed returns True.
+        Check if nodes are observed. If observed returns True.
+
+        Returns single boolean value or a list of boolean values
+        for each node in nodes.
 
         Parameters
         ----------
-        node  :  Graph Node
+        nodes: single node or list of nodes.
+            Nodes whose observed status needs to be returned.
 
         See Also
         --------
@@ -431,23 +434,23 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy import MarkovModel as mm
         >>> student = mm.MarkovModel()
         >>> student.add_node('grades')
-        >>> student.set_states({'grades': ['A', 'B']})
         >>> student.set_observations({'grades': 'A'})
         >>> student.is_observed('grades')
         True
         """
-        return self.node[node]['_is_observed']
+        nodes = [nodes] if not isinstance(nodes, list) else nodes
+        return [self.node[node]['_is_observed'] for node in nodes]
 
-    def set_observation(self, node, observation):
+    def set_observation(self, node, state):
         """
         Sets state of node as observed.
 
         Parameters
         ----------
         node : str
-            The node for which the observation is set
-        observation:str
-            The state to which the node is set
+            The node for which the observation is set.
+        state: int
+            The index of the state which is to be set to observed.
 
         See Also
         --------
@@ -457,16 +460,17 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('grade', 'reco'))])
-        >>> G.set_state({'diff': ['easy', 'hard']})
-        >>> G.set_observation('diff', 'easy')
+        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>> G.set_observations('Alice', 0)
         """
         self._set_is_observed(node, True)
-        if observation in self.node[node]['_states']:
-            self.node[node]['observed'] = observation
-        else:
-            raise ValueError("Observation " + observation + " not found for " + node)
+        # TODO: Raise ValueError if the state is greater than the cardinality
+        # of the variable.
+        self.node[node]['observed'] = state
 
     def set_observations(self, observations):
         """
@@ -475,8 +479,9 @@ class MarkovModel(UndirectedGraph):
         Parameters
         ----------
         observations : dict
-            A dictionary of the form of {node : [states...]} or
-            {node: state} containing all the nodes to be observed.
+            A dictionary of the form of {node1: state1,
+            node2: state1, ..} or {node: state} containing all the
+            nodes to be observed.
 
         See Also
         --------
@@ -486,36 +491,42 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('grade', 'reco'))])
-        >>> G.set_states({'diff': ['easy', 'hard']})
-        >>> G.set_observations({'diff': 'easy'})
+        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>> G.set_observations({'Alice': 0, 'Charles': 1})
         """
         for node, state in observations.items():
             self.set_observation(node, state)
 
-    def get_observation(self, node):
+    def get_observations(self, nodes):
         """
-        Returns the observation of the given node
+        Returns the observation of the given nodes.
+
+        Returns a dict of {node: state_observed}.
 
         Parameters
         ----------
-        node: str
-            The node for which the observation is to returned
+        nodes: node, list of nodes
+            The nodes for which the observation is to returned
+
         Examples
         --------
         >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('grade', 'reco'))])
-        >>> G.set_state({'diff': ['easy', 'hard']})
-        >>> G.set_observation('diff', 'easy')
-        >>> G.get_set_observation('diff')
-        'easy'
+        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>> G.set_observations({'Alice': 0, 'Charles': 1})
+        >>> G.get_observations('Alice')
+        >>> {'Alice': 0}
+        >>> G.get_observations(['Alice', 'Charles'])
         """
-        if self.is_observed(node):
-            return self.node[node]['observed']
-        else:
-            raise ValueError('Observation has not been set up for the node ' + node)
+        nodes = [nodes] if not isinstance(nodes, list) else nodes
+        return {node: self.node[node]['observed'] for node in nodes}
 
     def _get_observed_list(self):
         """
@@ -524,51 +535,32 @@ class MarkovModel(UndirectedGraph):
         return [node for node in self.nodes()
                 if self.node[node]['_is_observed']]
 
-    def unset_observation(self, node):
+    def unset_observations(self, nodes):
         """
-        Unset the observation for the node
+        Unset the observation for the node.
 
         Parameters
         -----------
-        node: The node for which the observation has to be unset
+        nodes: node, list of nodes
+            The node for which the observation has to be unset
 
         Example
         -------
         >>> from pgmpy import MarkovModel as mm
         >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
         ...                            ('i', 's')])
-        >>> G.add_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'],
-        ...               'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
-        ...               'l': ['yes', 'no']})
-        >>> G.set_observations({'d': 'easy', 'g': 'A'})
-        >>> G.unset_observation('d')
+        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>> G.set_observations({'Alice': 0, 'Charles': 1})
+        >>> G.unset_observation('Alice')
         """
-        self._set_is_observed(node, False)
-        self.node[node]['observed'] = ''
+        nodes = [nodes] if not isinstance(nodes, list) else nodes
+        for node in nodes:
+            self._set_is_observed(node, False)
+            self.node[node]['observed'] = None
 
-    def unset_observations(self, node_list):
-        """
-        Unsets the observation for all the nodes in the node_list
-
-        Parameters
-        ----------
-        node_list : List of nodes
-
-        Examples
-        --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
-        ...                            ('i', 's')])
-        >>> G.add_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'],
-        ...               'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
-        ...               'l': ['yes', 'no']})
-        >>> G.set_observations({'d': 'easy', 'g': 'A'})
-        >>> G.unset_observation('d')
-        """
-        for node in node_list:
-            self.unset_observation(node)
-
-    def add_factor(self, *factors):
+    def add_factors(self, *factors):
         """
         Associate a factor to the graph.
         See Factor class for the order of potential values
@@ -594,7 +586,7 @@ class MarkovModel(UndirectedGraph):
         >>> student = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         >>>                           ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2], np.random.rand(6))
-        >>> student.add_factor(factor)
+        >>> student.add_factors(factor)
         """
         for factor in factors:
             if set(factor.variables) - set(factor.variables).intersection(set(self.nodes())):
@@ -611,7 +603,7 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy import MarkovModel as mm
         >>> student = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2], np.random.rand(6))
-        >>> student.add_factor(factor)
+        >>> student.add_factors(factor)
         >>> student.get_factors()
         """
         return self.factors
@@ -656,7 +648,7 @@ class MarkovModel(UndirectedGraph):
         >>> student.set_states({'diff': ['hard', 'easy']})
         >>> student.set_states({'intel': ['avg', 'dumb', 'smart']})
         >>> student.add_edge('diff','intel')
-        >>> factor = student.add_factor(['diff','intel'], [0.1,0.1,0.1,0.1,0.1,0.1])
+        >>> factor = student.add_factors(['diff','intel'], [0.1,0.1,0.1,0.1,0.1,0.1])
         >>> print(student.normalization_constant_brute_force())
         0.6000000000000001
         """
@@ -683,9 +675,9 @@ class MarkovModel(UndirectedGraph):
         >>> student.add_states({'diff': ['easy', 'hard'],
         ...             'intel': ['dumb', 'smart'],
         ...             'grade': ['A','B','C']})
-        >>> factor = student.add_factor(['diff','intel'], range(4))
-        >>> factor2 = student.add_factor(['intel','grade'], range(6))
-        >>> factor3 = student.add_factor(['diff','grade'], range(6))
+        >>> factor = student.add_factors(['diff','intel'], range(4))
+        >>> factor2 = student.add_factors(['intel','grade'], range(6))
+        >>> factor3 = student.add_factors(['diff','grade'], range(6))
         >>> jt = student.make_jt(2)
         >>> jt.print_graph("Printing the Junction Tree")
         Printing the graph Printing the Junction Tree<<<
