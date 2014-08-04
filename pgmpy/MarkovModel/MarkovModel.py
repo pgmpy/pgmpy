@@ -394,15 +394,6 @@ class MarkovModel(UndirectedGraph):
     #     """
     #     self.node[node]['_states'] = states
 
-    def _in_clique(self, nodes):
-        """
-        Check if the all the nodes belong to a single clique in the graph
-        """
-        for node1, node2 in itertools.combinations(nodes, 2):
-            if not self.has_edge(node1, node2):
-                return False
-        return True
-
     def _set_is_observed(self, node):
         """
         Updates '_observed' attribute of the node.
@@ -607,6 +598,85 @@ class MarkovModel(UndirectedGraph):
         >>> student.get_factors()
         """
         return self.factors
+
+    def check_clique(self, nodes):
+        """
+        Check if the given nodes form a clique.
+
+        Parameters
+        ----------
+        nodes: list of nodes.
+            Nodes to check if they are a part of any clique.
+        """
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_edge(node1, node2):
+                return False
+        return True
+
+    def triangulate(self, heuristic='H6', order=None, inplace=False):
+        """
+        Triangulate the graph.
+
+        If order of deletion is given heuristic algorithm will not be used.
+
+        Parameters
+        ----------
+        heuristic: H1 | H2 | H3 | H4 | H5 | H6
+            The heuristic algorithm to use to decide the deletion order of
+            the variables to compute the triangulated graph.
+
+            Let X be the set of variables and X(i) denotes the i-th variable.
+
+            S(i): The size of the clique created by deleting the variable.
+            E(i): Cardinality of variable X(i).
+            M(i): The maximum size of the cliques of the subgraph given by
+                    X(i) and its adjacent nodes.
+            C(i): The sum of the size of cliques of the subgraph given by X(i)
+                    and its adjacent nodes.
+
+            The heuristic algorithm decide the deletion order if this way:
+
+            H1: Delete the variable with minimal S(i).
+            H2: Delete the variable with minimal S(i)/E(i).
+            H3: Delete the variable with minimal S(i) - M(i).
+            H4: Delete the variable with minimal S(i) - C(i).
+            H5: Delete the variable with minimal S(i)/M(i).
+            H6: Delete the variable with minimal S(i)/C(i).
+
+        order: list, tuple (array-like)
+            The order of deletion of the variables to compute the triagulated
+            graph. If order is given heuristic algorithm will not be used.
+
+        inplace: True | False
+            if inplace is true then adds the edges to the object from
+            which it is called else returns a new object.
+
+        Reference
+        ---------
+        http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.56.3607
+        """
+        graph_copy = nx.Graph(self.edges())
+        if not order:
+            # TODO: will have to add another loop here
+            for node in self.nodes():
+                S = {}
+                graph_working_copy = nx.Graph(graph_copy.edges())
+                graph_working_copy.add_edges_from(itertools.combinations(graph_working_copy.neighbors(node), 2))
+                graph_working_copy.remove_node(node)
+                clique_dict = nx.cliques_containing_node(graph_working_copy, nodes=graph_copy.neighbours(node))
+
+                def _common_list(*lists):
+                    common = [sorted(list) for list in lists[0]]
+                    for index in range(1, len(lists)):
+                        list1 = [sorted(list) for list in lists[index]]
+                        for list2 in common:
+                            if list2 not in list1:
+                                common.remove(list2)
+                    return common
+
+                S[node] = _common_list(*list(clique_dict.values()))
+                node_min_S = min(S, key=S.get)
+                # TODO: add the conditions for heuristics here.
 
     def _norm_h(self, pos, node_list, value_list):
         """
