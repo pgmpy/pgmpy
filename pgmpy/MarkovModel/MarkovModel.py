@@ -456,8 +456,8 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations('Alice', 0)
         """
         self._set_is_observed(node, True)
@@ -487,8 +487,8 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         """
         for node, state in observations.items():
@@ -511,8 +511,8 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         >>> G.get_observations('Alice')
         >>> {'Alice': 0}
@@ -543,8 +543,8 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
         ...                            ('i', 's')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>              Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>              Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         >>> G.unset_observation('Alice')
         """
@@ -760,7 +760,6 @@ class MarkovModel(UndirectedGraph):
                 self.add_edge(edge[0], edge[1])
             return graph_copy
 
-
     def _norm_h(self, pos, node_list, value_list):
         """
         Helper function for get_normaliztion_constant_brute_force
@@ -861,5 +860,3 @@ class MarkovModel(UndirectedGraph):
         #jt.print_graph("after making the junction tree")
         jt.insert_factors(self.get_factors())
         return jt
-
-
