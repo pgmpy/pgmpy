@@ -2,6 +2,7 @@
 
 import itertools
 import networkx as nx
+import numpy as np
 from pgmpy.Factor.Factor import Factor
 from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
 
@@ -86,6 +87,7 @@ class MarkovModel(UndirectedGraph):
             for node in self.nodes():
                 self._set_is_observed(node, False)
         self.factors = []
+        self.cardinality = {}
 
     def add_node(self, node):
         """
@@ -658,27 +660,106 @@ class MarkovModel(UndirectedGraph):
         http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.56.3607
         """
         graph_copy = nx.Graph(self.edges())
+        edge_set = set()
         if not order:
-            # TODO: will have to add another loop here
-            for node in self.nodes():
-                S = {}
-                graph_working_copy = nx.Graph(graph_copy.edges())
-                graph_working_copy.add_edges_from(itertools.combinations(graph_working_copy.neighbors(node), 2))
-                graph_working_copy.remove_node(node)
-                clique_dict = nx.cliques_containing_node(graph_working_copy, nodes=graph_copy.neighbours(node))
+            order = []
+            for index in range(self.number_of_nodes()):
+                for node in graph_copy.nodes():
+                    S = {}
+                    graph_working_copy = nx.Graph(graph_copy.edges())
+                    graph_working_copy.add_edges_from(itertools.combinations(graph_working_copy.neighbors(node), 2))
+                    graph_working_copy.remove_node(node)
+                    clique_dict = nx.cliques_containing_node(graph_working_copy, nodes=graph_copy.neighbours(node))
 
-                def _common_list(*lists):
-                    common = [sorted(list) for list in lists[0]]
-                    for index in range(1, len(lists)):
-                        list1 = [sorted(list) for list in lists[index]]
-                        for list2 in common:
-                            if list2 not in list1:
-                                common.remove(list2)
-                    return common
+                    def _common_list(*lists):
+                        common = [sorted(li) for li in lists[0]]
+                        for i in range(1, len(lists)):
+                            list1 = [sorted(li) for li in lists[i]]
+                            for list2 in common:
+                                if list2 not in list1:
+                                    common.remove(list2)
+                        return common
 
-                S[node] = _common_list(*list(clique_dict.values()))
-                node_min_S = min(S, key=S.get)
-                # TODO: add the conditions for heuristics here.
+                    S[node] = _common_list(*list(clique_dict.values()))
+
+                if heuristic == 'H1':
+                    node_to_delete = min(S, key=S.get)
+
+                elif heuristic == 'H2':
+                    S_by_E = {S[key]/self.cardinality[key] for key in S}
+                    node_to_delete = min(S_by_E, key=S_by_E.get)
+
+                elif heuristic in ('H3', 'H5'):
+                    M = {}
+                    for node in graph_copy.nodes():
+                        graph_working_copy = nx.Graph(graph_copy.edges())
+                        neighbors = graph_working_copy.neighbors(node)
+                        graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
+                        graph_working_copy.remove_node(node)
+                        cliques = nx.cliques_containing_node(graph_working_copy, nodes=neighbors)
+
+                        common_clique = list(cliques.values())[0]
+                        for values in cliques.values():
+                            common_clique = [value for value in common_clique if value in values]
+
+                        M[node] = np.prod([self.cardinality[node] for node in common_clique[0]])
+
+                    if heuristic == 'H3':
+                        S_minus_M = {S[key] - M[key] for key in S}
+                        node_to_delete = min(S_minus_M, key=S_minus_M.get)
+
+                    else:
+                        S_by_M = {S[key]/M[key] for key in S}
+                        node_to_delete = min(S_by_M, key=S_by_M.get)
+
+                else:
+                    C = {}
+                    for node in graph_copy.nodes():
+                        graph_working_copy = nx.Graph(graph_copy.edges())
+                        neighbors = graph_working_copy.neighbors(node)
+                        graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
+                        graph_working_copy.remove_node(node)
+                        cliques = nx.cliques_containing_node(graph_working_copy, nodes=neighbors)
+
+                        common_clique = list(cliques.values())[0]
+                        for values in cliques.values():
+                            common_clique = [value for value in common_clique if value in values]
+
+                        clique_size_sum = 0
+                        for r in range(1, len(common_clique)+1):
+                            for clique in itertools.combinations(common_clique, r):
+                                clique_size_sum += np.prod([self.cardinality[node] for node in clique])
+
+                        C[node] = clique_size_sum
+
+                    if heuristic == 'H4':
+                        S_minus_C = {S[key] - C[key] for key in S}
+                        node_to_delete = min(S_minus_C, key=S_minus_C.get)
+
+                    else:
+                        S_by_C = {S[key]/C[key] for key in S}
+                        node_to_delete = min(S_by_C, key=S_by_C.get)
+
+                order.append(node_to_delete)
+
+        graph_copy = nx.Graph(self.edges())
+        for node in order:
+            for edge in itertools.combinations(graph_copy.neighbors(node), 2):
+                graph_copy.add_edge(edge[0], edge[1])
+                edge_set.add(edge)
+            graph_copy.remove_node(node)
+
+        if inplace:
+            for edge in edge_set:
+                self.add_edge(edge[0], edge[1])
+            return self
+
+        else:
+            graph_copy = nx.copy(self)
+            for edge in edge_set:
+                self.add_edge(edge[0], edge[1])
+            return graph_copy
+
 
     def _norm_h(self, pos, node_list, value_list):
         """
