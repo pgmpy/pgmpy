@@ -355,7 +355,7 @@ class PomdpXReader:
                     edges[edge.get('val')] = subdag_attribute
             return edges
 
-        if parameter.find('SubDAGTemplate') is not None:
+        if parameter.find('SubDAGTemplate'):
             SubDAGTemplate = parameter.find('SubDAGTemplate')
             subdag_root = SubDAGTemplate.find('Node')
             subdag_node = subdag_root.get('var')
@@ -376,7 +376,7 @@ class PomdpXWriter():
         Initialise a PomdpXWriter Object
 
         Parameters
-        --------
+        ---------------
         model: A Bayesian of Markov Model
             The model to write
         encoding: String(optional)
@@ -408,9 +408,15 @@ class PomdpXWriter():
     def _add_value_enum(self, var, tag):
         """
         supports adding variables to the xml
-        :param var: The SubElement variable
-        :param tag: The SubElement tag to which
-        :return: None
+
+        Parameters
+        ---------------
+        var: The SubElement variable
+        tag: The SubElement tag to which enum value is to be added
+
+        Return
+        ---------------
+        None
         """
         if var['ValueEnum'][0] == 's0':
                 numvalues_tag = etree.SubElement(tag, 'NumValues')
@@ -426,7 +432,9 @@ class PomdpXWriter():
         """
         Add variables to PomdpX
 
-        :return: xml containing variables tag
+        Return
+        ---------------
+        xml containing variables tag
         """
         state_variables = self.model['variables']['StateVar']
         for var in state_variables:
@@ -455,9 +463,17 @@ class PomdpXWriter():
     def add_parameter_dd(self, dag_tag, node_dict):
         """
         helper function for adding parameters in condition
-        :param dag_tag: the DAG tag is contained in this element tree subelement
-        :param node_dict: the decision diagram dictionary
-        :return: None
+
+        Parameters
+        ---------------
+        dag_tag: etree SubElement
+                 the DAG tag is contained in this subelement
+        node_dict: dictionary
+                   the decision diagram dictionary
+
+        Return
+        ---------------
+        None
         """
         if isinstance(node_dict, defaultdict) or isinstance(node_dict, dict):
             node_tag = etree.SubElement(dag_tag, 'Node', attrib={'var': next(iter(node_dict.keys()))})
@@ -481,10 +497,19 @@ class PomdpXWriter():
 
     def add_conditions(self, condition, condprob):
         """
-        helper function for adding probability conditions for model
-        :param condition: contains and element of conditions list
-        :param condprob: the tag to which condition is added
-        :return: None
+        helper function for adding probability conditions for model\
+
+        Parameters
+        ---------------
+
+        condition:  dictionary
+                    contains and element of conditions list
+        condprob:   etree SubElement
+                    the tag to which condition is added
+
+        Return
+        ---------------
+        None
         """
         var_tag = etree.SubElement(condprob, 'Var')
         var_tag.text = condition['Var']
@@ -535,7 +560,10 @@ class PomdpXWriter():
     def add_initial_belief(self):
         """
         add initial belief tag to pomdpx model
-        :return: string containing the xml
+
+        Return
+        ---------------
+        string containing the xml for initial belief tag
         """
         initial_belief = self.model['initial_state_belief']
         for condition in initial_belief:
@@ -546,7 +574,10 @@ class PomdpXWriter():
     def add_state_transition_function(self):
         """
         add state transition function tag to pomdpx model
-        :return: string containing the xml
+
+        Return
+        ---------------
+        string containing the xml for state transition tag
         """
         state_transition_function = self.model['state_transition_function']
         for condition in state_transition_function:
@@ -557,7 +588,10 @@ class PomdpXWriter():
     def add_obs_function(self):
         """
         add observation function tag to pomdpx model
-        :return: string containing the xml
+
+        Return
+        ---------------
+        string containing the xml for observation function tag
         """
         obs_function = self.model['obs_function']
         for condition in obs_function:
@@ -568,7 +602,10 @@ class PomdpXWriter():
     def add_reward_function(self):
         """
         add reward function tag to pomdpx model
-        :return: string containing the xml
+
+        Return
+        ---------------
+        string containing the xml for reward function tag
         """
         reward_function = self.model['reward_function']
         for condition in reward_function:
