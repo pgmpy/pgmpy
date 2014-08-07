@@ -2,13 +2,16 @@ language: python
 python:
     - "3.4"
 virtualenv:
-    system_site_packages: false
+    system_site_packages: true
 before_install:
+    - echo "before install"
+    - echo $VIRTUAL_ENV
     - uname -a
     - free -m
     - df -h
     - ulimit -a
-    - sudo apt-get update
+    - python -V
+    - sudo apt-get update   
     - sudo apt-get build-dep -qq python3-numpy
     - sudo apt-get install python3-numpy
 #    - sudo apt-get build-dep -qq python3-scipy
