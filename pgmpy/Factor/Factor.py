@@ -337,12 +337,11 @@ def _bivar_factor_product(phi1, phi2):
     --------
     factor_product
     """
-    vars1 = list(phi1.variables.keys())
-    vars2 = list(phi2.variables.keys())
-    common_var_list = [var1 for var1 in vars1 for var2 in vars2
-                       if var1 == var2]
+    phi1_vars = list(phi1.variables)
+    phi2_vars = list(phi2.variables)
+    common_var_list = set(phi1_vars).intersection(set(phi2_vars))
     if common_var_list:
-        common_var_index_list = np.array([[vars1.index(var), vars2.index(var)]
+        common_var_index_list = np.array([[phi1_vars.index(var), phi2_vars.index(var)]
                                           for var in common_var_list])
         common_card_product = np.prod([phi1.cardinality[index[0]] for index
                                        in common_var_index_list])
@@ -354,9 +353,7 @@ def _bivar_factor_product(phi1, phi2):
                                   common_var_index_list,
                                   phi1.cardinality,
                                   phi2.cardinality)
-        variables = vars1
-        variables.extend(var for var in phi2.variables
-                         if var not in common_var_list)
+        variables = list(set(phi1_vars).union(set(phi2_vars)))
         cardinality = list(phi1.cardinality)
         cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
                            if var not in common_var_list)
