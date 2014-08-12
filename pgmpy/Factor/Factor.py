@@ -297,7 +297,7 @@ class Factor:
         value_index = 0
         for prob in gen():
             prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) + '\n'
+            string += '\t\t'.join(prob_list) + '\t\t' + str(self.values[value_index]) + '\n'
             value_index += 1
 
         return string
@@ -347,16 +347,33 @@ def _bivar_factor_product(phi1, phi2):
                                        in common_var_index_list])
         size = np.prod(phi1.cardinality) * np.prod(
             phi2.cardinality) / common_card_product
-        product = _factor_product(phi1.values,
-                                  phi2.values,
-                                  size,
-                                  common_var_index_list,
-                                  phi1.cardinality,
-                                  phi2.cardinality)
-        variables = list(set(phi1_vars).union(set(phi2_vars)))
+        # product = _factor_product(phi1, phi2)
+        # product = _factor_product(phi1.values,
+        #                           phi2.values,
+        #                           size,
+        #                           common_var_index_list,
+        #                           phi1.cardinality,
+        #                           phi2.cardinality)
+
+        variables = phi1_vars
+        import pdb; pdb.set_trace()
+        variables.extend([var for var in phi2.variables
+                         if var not in common_var_list])
+        pdb.set_trace()
         cardinality = list(phi1.cardinality)
         cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
                            if var not in common_var_list)
+
+        phi1_indexes = [i for i in len(phi1.variables)]
+        phi2_indexes = [variables.index[var] for var in phi2.variables]
+        product = []
+        phi1_cumprod = np.delete(np.concatenate((np.array[1], np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
+        phi2_cumprod = np.delete(np.concatenate((np.array[1], np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
+        from itertools import product
+        for index in product(*[range(card) for card in cardinality]):
+            index = np.array(index)
+            product.append(phi1.values[np.sum(index[phi1_indexes]*phi1_cumprod)] * phi2.values[np.sum(index[phi2_indexes]*phi2_cumprod)])
+
         phi = Factor(variables, cardinality, product)
         return phi
     else:
