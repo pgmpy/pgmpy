@@ -275,8 +275,7 @@ class Factor:
             string += str(var) + "\t\t"
         string += phi_or_p + '(' + ', '.join(self.variables) + ')'
         string += "\n"
-        line = '-------------------------------------------------------------------------'
-        string += line[:len(string)] + '\n'
+        string += '-' * 2 * len(string) + '\n'
 
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
