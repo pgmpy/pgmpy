@@ -4,7 +4,7 @@ import functools
 from collections import OrderedDict
 import numpy as np
 from pgmpy.Exceptions import Exceptions
-from pgmpy.Factor._factor_product import _factor_product
+# from pgmpy.Factor._factor_product import _factor_product
 
 
 class Factor:
@@ -269,8 +269,6 @@ class Factor:
     def __str__(self):
         return self._str('phi')
 
-    __repr__ = __str__
-
     def _str(self, phi_or_p):
         string = ""
         for var in self.variables:
@@ -341,51 +339,41 @@ def _bivar_factor_product(phi1, phi2):
     """
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
-    common_var_list = set(phi1_vars).intersection(set(phi2_vars))
+    common_var_list = [var for var in phi1_vars if var in phi2_vars]
     if common_var_list:
         common_var_index_list = np.array([[phi1_vars.index(var), phi2_vars.index(var)]
                                           for var in common_var_list])
         common_card_product = np.prod([phi1.cardinality[index[0]] for index
                                        in common_var_index_list])
-        size = np.prod(phi1.cardinality) * np.prod(
-            phi2.cardinality) / common_card_product
-        # product = _factor_product(phi1, phi2)
-        # product = _factor_product(phi1.values,
-        #                           phi2.values,
-        #                           size,
-        #                           common_var_index_list,
-        #                           phi1.cardinality,
-        #                           phi2.cardinality)
 
         variables = phi1_vars
-        import pdb; pdb.set_trace()
         variables.extend([var for var in phi2.variables
                          if var not in common_var_list])
         cardinality = list(phi1.cardinality)
         cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
                            if var not in common_var_list)
 
-        phi1_indexes = [i for i in len(phi1.variables)]
-        phi2_indexes = [variables.index[var] for var in phi2.variables]
-        product = []
-        phi1_cumprod = np.delete(np.concatenate((np.array[1], np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate((np.array[1], np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
+        phi1_indexes = [i for i in range(len(phi1.variables))]
+        phi2_indexes = [variables.index(var) for var in phi2.variables]
+        values = []
+        phi1_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
+        phi2_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
         from itertools import product
         for index in product(*[range(card) for card in cardinality]):
             index = np.array(index)
-            product.append(phi1.values[np.sum(index[phi1_indexes]*phi1_cumprod)] * phi2.values[np.sum(index[phi2_indexes]*phi2_cumprod)])
+            values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] * phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
 
-        phi = Factor(variables, cardinality, product)
+        phi = Factor(variables, cardinality, values)
         return phi
-    else:
-        size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
-        product = _factor_product(phi1.values,
-                                  phi2.values,
-                                  size)
-        variables = vars1 + vars2
-        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-        phi = Factor(variables, cardinality, product)
-        return phi
+    # else:
+    #     size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
+    #     product = _factor_product(phi1.values,
+    #                               phi2.values,
+    #                               size)
+    #     variables = vars1 + vars2
+    #     cardinality = list(phi1.cardinality) + list(phi2.cardinality)
+    #     phi = Factor(variables, cardinality, product)
+    #     return phi
 
 
 def factor_product(*args):
