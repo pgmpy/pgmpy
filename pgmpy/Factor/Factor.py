@@ -3,7 +3,7 @@
 import functools
 from collections import OrderedDict
 import numpy as np
-from pgmpy import Exceptions
+from pgmpy.Exceptions import Exceptions
 from pgmpy.Factor._factor_product import _factor_product
 
 
@@ -274,9 +274,11 @@ class Factor:
     def _str(self, phi_or_p):
         string = ""
         for var in self.variables:
-            string += str(var) + "\t"
+            string += str(var) + "\t\t"
         string += phi_or_p + '(' + ', '.join(self.variables) + ')'
         string += "\n"
+        line = '-------------------------------------------------------------------------'
+        string += line[:len(string)] + '\n'
 
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
@@ -359,7 +361,6 @@ def _bivar_factor_product(phi1, phi2):
         import pdb; pdb.set_trace()
         variables.extend([var for var in phi2.variables
                          if var not in common_var_list])
-        pdb.set_trace()
         cardinality = list(phi1.cardinality)
         cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
                            if var not in common_var_list)
