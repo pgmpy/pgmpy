@@ -365,15 +365,14 @@ def _bivar_factor_product(phi1, phi2):
 
         phi = Factor(variables, cardinality, values)
         return phi
-    # else:
-    #     size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
-    #     product = _factor_product(phi1.values,
-    #                               phi2.values,
-    #                               size)
-    #     variables = vars1 + vars2
-    #     cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-    #     phi = Factor(variables, cardinality, product)
-    #     return phi
+    else:
+        values = np.array([])
+        for value in phi1.values:
+            values = np.concatenate((values, value*phi2.values), axis=1)
+        variables = phi1_vars + phi2_vars
+        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
+        phi = Factor(variables, cardinality, values)
+        return phi
 
 
 def factor_product(*args):
