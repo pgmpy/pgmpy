@@ -523,8 +523,6 @@ class PomdpXWriter():
                                                                         else 'TBL'})
         if condition['Type'] == 'DD':
             dag_tag = etree.SubElement(parameter_tag, 'DAG')
-            #node_tag = etree.SubElement(dag_tag, 'node', attrib=condition['Parent'][0])
-            #self.add_parameter_dd(node_tag, condition['Parameter'], 0, condition)
             parameter_dict = condition['Parameter']
             if 'SubDAGTemplate' in parameter_dict:
                 subdag_tag = etree.SubElement(parameter_tag, 'SubDAGTemplate', attrib={'id': parameter_dict['id']})
