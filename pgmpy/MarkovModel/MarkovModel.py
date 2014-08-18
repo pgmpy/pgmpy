@@ -860,3 +860,44 @@ class MarkovModel(UndirectedGraph):
         #jt.print_graph("after making the junction tree")
         jt.insert_factors(self.get_factors())
         return jt
+
+    def induced_graph(self, order=None):
+        """
+        Returns the induced graph resulting from the given variable
+        elimination order.
+
+        Parameters
+        ----------
+        order: list, tuple (array-like)
+            The order in which the variables are to be eliminated.
+            If order not specified removes variables in a random way.
+        Examples
+        --------
+        >>> from pgmpy.MarkovModel import MarkovModel
+        >>> mm = MarkovModel()
+        >>> mm.add_edges_from([('Coherence', 'Difficulty'),
+        ...                    ('Difficulty', 'Grade'),
+        ...                    ('Grade', 'Happy'),
+        ...                    ('Grade', 'Letter'),
+        ...                    ('Letter', 'Job'),
+        ...                    ('SAT', 'Job'),
+        ...                    ('Intelligence', 'SAT'),
+        ...                    ('Intelligence', 'Grade'),
+        ...                    ('Job', 'Happy')])
+        >>> mm.induced_graph(order=['Coherence', 'Difficulty', 'Intelligence', 'Happy', 'Grade',
+        ...                   'SAT', 'Letter'])
+        """
+        from itertools import chain, combinations
+        graph_copy = self.copy()
+        edges_to_add = set()
+        for variable in order:
+            var_factors = [factor for factor in graph_copy.factors if variable in factor.scope]
+            scope_set = {chain(*[factor.scope for factor in var_factors])}
+            other_variables = scope_set.remove(variable)
+            for neighbor in graph_copy.neighbors(variable):
+                graph_copy.remove_edge((variable, neighbor))
+            graph_copy.remove(variable)
+            for edge in combinations(other_variables, 2):
+                edges_to_add.add(edge)
+            graph_copy.add_edges_from(edges_to_add)
+        return self.copy().add_edges_from(edges_to_add)
