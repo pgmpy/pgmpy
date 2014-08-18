@@ -134,7 +134,7 @@ class JunctionTree(UndirectedGraph):
             f = self._pull_h(nbr, func)
             assert isinstance(f, Factor)
             #print("marginalize at " + str(node) + " using " + str(self_vars))
-            f = func(f,self_vars)
+            f = func(f, self_vars)
             assert isinstance(f, Factor)
             factor = factor.product(f)
         self.node[node]["pull_factor"] = factor
@@ -168,7 +168,7 @@ class JunctionTree(UndirectedGraph):
         if factor is None:
             full_prod = self.node[node]["pull_factor"]
         else:
-            factor = func(factor,self_factor.get_variables())
+            factor = func(factor, self_factor.get_variables())
             self.node[node]["push_factor"] = factor
             full_prod = factor.product(self.node[node]["pull_factor"])
         assert isinstance(full_prod, Factor)
@@ -177,7 +177,7 @@ class JunctionTree(UndirectedGraph):
         for nbr in rel_nbrs:
             nbr_factor = self.node[nbr]["pull_factor"]
             assert isinstance(nbr_factor, Factor)
-            nbr_factor = func(nbr_factor,(self_factor.get_variables()))
+            nbr_factor = func(nbr_factor, (self_factor.get_variables()))
             fact_push = full_prod.divide(nbr_factor)
             self._push_h(nbr, fact_push, func)
 

@@ -2,6 +2,7 @@
 
 import itertools
 import networkx as nx
+from pgmpy.MarkovModel.DirectedGraph import DirectedGraph
 from pgmpy.Factor.Factor import Factor
 from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
 
@@ -797,5 +798,77 @@ class MarkovModel(UndirectedGraph):
         #jt.print_graph("after making the junction tree")
         jt.insert_factors(self.get_factors())
         return jt
+
+    def MAP_graph_cut(self):
+        """
+        Finds the MAP assignment for pairwise binary MRFs
+
+        Parameter
+        ----------
+        None
+
+        Reference
+        -----------
+        Section 13.6 in Koller
+
+        Example
+        --------
+        >>> import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('a','b'),('b','c'), ('a','c')])
+        >>> graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0','1']})
+        >>> graph.add_factor(['a','b'],[5,1,1,2])
+        >>> graph.add_factor(['b','c'],[1,1,1,5])
+        >>> graph.add_factor(['a','c'],[1,1,1,5])
+        >>> graph.MAP_graph_cut()
+        {'a': '1', 'c': '1', 'b': '1'}
+        """
+        for factor in self.get_factors():
+            if not (factor.singleton_factor() or factor.pairwise_submodular_factor()):
+                raise ValueError("Factors are not compatible with algorithm")
+        g = DirectedGraph()
+        for node in self.nodes():
+            g.add_node(node)
+        source_node = g.get_node_name_with_suffix("source")
+        sink_node = g.get_node_name_with_suffix("sink")
+        g.add_node(source_node)
+        g.add_node(sink_node)
+        g.add_all_flow_edges()
+        for factor in self.get_factors():
+            if factor.singleton_factor():
+                var = factor.get_variables()[0]
+                g.add_to_flow_edge_capacity(source_node, var, -factor.get_log_value([1]))
+                g.add_to_flow_edge_capacity(var, sink_node, -factor.get_log_value([0]))
+            else:
+                vars = factor.get_variables()
+                var1, var2 = vars[0], vars[1]
+                A = -factor.get_log_value([0, 0])
+                B = -factor.get_log_value([0, 1])
+                C = -factor.get_log_value([1, 0])
+                D = -factor.get_log_value([1, 1])
+                g.add_to_flow_edge_capacity(var2, sink_node, C)
+                g.add_to_flow_edge_capacity(source_node, var2, D)
+                g.add_to_flow_edge_capacity(var1, sink_node, A - C)
+                g.add_to_flow_edge_capacity(var1, var2, B + C - A - D)
+        for node in self.nodes():
+            wsu = g.get_flow_capacity(source_node, node)
+            wut = g.get_flow_capacity(node, sink_node)
+            min_val = min(wsu, wut)
+            g.add_to_flow_edge_capacity(source_node, node, -min_val)
+            g.add_to_flow_edge_capacity(node, sink_node, -min_val)
+        g.max_flow_ford_fulkerson(source_node, sink_node)
+        dfs_set = set()
+        g.flow_dfs(source_node, dfs_set)
+        val1_set = set()
+        for node in g.neighbors(source_node):
+            if node not in dfs_set:
+                val1_set.add(node)
+        all_nodes = set(self.nodes())
+        val0_set = all_nodes - val1_set
+        ans_dict = {}
+        for node in val0_set:
+            ans_dict[node] = "0"
+        for node in val1_set:
+            ans_dict[node] = "1"
+        return ans_dict
 
 

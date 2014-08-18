@@ -59,6 +59,7 @@ def _factor_product(np.ndarray[DTYPE_t, ndim=1] card_prod,DTYPE_t size,
     cdef:
         np.ndarray[double, ndim=1] product_arr = np.zeros(size)
         np.ndarray[DTYPE_t, ndim=1] prod_indices = np.array([0] * card_prod.shape[0], dtype=DTYPE)
+        int i, x_index, y_index
 
     x_index = 0
     y_index = 0

@@ -95,6 +95,14 @@ class Factor():
         """
         return self._pos_dist
 
+    def singleton_factor(self):
+        return len(self.get_variables())==1
+
+    def pairwise_submodular_factor(self):
+        return len(self.get_variables())==2 and \
+                self.get_value([1,1]) * self.get_value([0,0]) >= \
+                self.get_value([1,0]) * self.get_value([0,1])
+
     def scope(self):
         """
         Returns the scope of the factor.
@@ -151,6 +159,10 @@ class Factor():
         ['x1', 'x2', 'x3']
         """
         return [var for var in self.variables.keys()]
+
+    def get_log_value(self, node_assignments):
+        import math
+        return math.log(self.get_value(node_assignments))
 
     def get_value(self, node_assignments):
         """
@@ -260,7 +272,7 @@ class Factor():
         if self.data is None:
             self.data = []
             for i in range(len(self.values)):
-                self.data.append({})
+                self.data.append([])
         return self.operations_on_variables(variables, 2, inplace)
 
     def maximize_except(self, variables):
@@ -307,7 +319,7 @@ class Factor():
                         max_index = j
                 marg_factor[i]=max_val
                 new_data[i] = self.data[max_index].copy()
-                new_data[i][variable] = max_index
+                new_data[i].append((variable, max_index))
         elif op_id == 3:
             index = list(self.variables.keys()).index(variable)
             value_index = self.data[variable]
@@ -562,33 +574,23 @@ def _bivar_factor_product(phi1, phi2):
     vars2 = list(phi2.variables.keys())
     common_var_list = [var1 for var1 in vars1 for var2 in vars2
                        if var1 == var2]
-    if common_var_list:
-        variables = [var for var in vars1]
-        variables.extend(var for var in phi2.variables
-                         if var not in common_var_list)
-        cardinality = list(phi1.cardinality)
-        cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
-                           if var not in common_var_list)
-        size = np.prod(cardinality)
-        cum_card_1 = cum_card(phi1)
-        cum_card_2 = cum_card(phi2)
-        ref_1 = ref(variables, vars1)
-        ref_2 = ref(variables, vars2)
-        product = _factor_product(np.array(cardinality), size,
-                                  phi1.values, cum_card_1, ref_1,
-                                  phi2.values, cum_card_2, ref_2)
-        phi = Factor(variables, cardinality, product)
-        return phi
-    else:
-        size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
-        product = _factor_product(phi1.values,
-                                  phi2.values,
-                                  size)
-        variables = vars1 + vars2
-        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-        phi = Factor(variables, cardinality, product)
-        return phi
 
+    variables = [var for var in vars1]
+    variables.extend(var for var in phi2.variables
+                     if var not in common_var_list)
+    cardinality = list(phi1.cardinality)
+    cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
+                       if var not in common_var_list)
+    size = np.prod(cardinality)
+    cum_card_1 = cum_card(phi1)
+    cum_card_2 = cum_card(phi2)
+    ref_1 = ref(variables, vars1)
+    ref_2 = ref(variables, vars2)
+    product = _factor_product(np.array(cardinality), size,
+                              phi1.values, cum_card_1, ref_1,
+                              phi2.values, cum_card_2, ref_2)
+    phi = Factor(variables, cardinality, product)
+    return phi
 
 
 def _bivar_factor_product_orig(phi1, phi2):
