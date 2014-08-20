@@ -87,11 +87,11 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_maximize(self):
         self.phi1.maximize(['x1'])
-        max_val_indices = {'x1': 1}
+        max_val_indices = [('x1', 1)]
         data = [max_val_indices] * 6
         #print(self.phi1)
         np_test.assert_array_equal(self.phi1.values, np.array([6, 7, 8, 9, 10, 11]))
-        self.assertEqual(self.phi1.data, sorted(data, key=lambda t: sorted(t.keys())))
+        self.assertEqual(self.phi1.data, data)
 
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
@@ -105,7 +105,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(Exceptions.ScopeError, self.phi1.reduce, 'x4_1')
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(Exceptions.SizeError, self.phi1.reduce, 'x3_5')
+        self.assertRaises(ValueError, self.phi1.reduce, 'x3_5')
 
     def test_factor_product(self):
         from pgmpy import Factor

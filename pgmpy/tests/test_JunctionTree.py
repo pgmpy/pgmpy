@@ -48,9 +48,8 @@ class TestOperations(unittest.TestCase):
         jt = self.graph.make_jt(2)
         #print("norm "+str(jt.normalization_constant()))
         res_factor = jt.marginal_prob('d')
-        ex_factor = Factor.Factor(['d'], [2], [71.0, 92.0])
+        ex_factor = Factor.Factor(['d'], [2], [46.0, 109.0])
         self.assertEqual(res_factor, ex_factor)
-        #print(factor)
 
     def test_map(self):
         self.graph2.add_factor(['a', 'b'], [5, 1, 1, 2])
@@ -66,20 +65,6 @@ class TestOperations(unittest.TestCase):
         jt = self.graph.make_jt(2)
         res_factor = jt.map()
         self.assertEqual(res_factor, [('i', 1), ('d', 1), ('g', 2)])
-
-    def test_marginalize(self):
-        from pgmpy.Factor.Factor import Factor
-        fac = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        print(fac)
-        fac.marginalize("x1")
-        print(fac)
-
-    def test_maximize(self):
-        from pgmpy.Factor.Factor import Factor
-        fac = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        print(fac)
-        fac.maximize_on_variables("x1")
-        print(fac)
 
     def tearDown(self):
         del self.graph

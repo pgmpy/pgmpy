@@ -242,7 +242,7 @@ class Factor():
                                 "variablename_index")
             var, value_index = value.split('_')
             variables.append(var)
-            self.data[var] = value_index
+            self.data[var] = int(value_index)
         f = self.operations_on_variables(variables, 3, inplace)
         self.data = None
         return f
@@ -323,6 +323,8 @@ class Factor():
         elif op_id == 3:
             index = list(self.variables.keys()).index(variable)
             value_index = self.data[variable]
+            if value_index < 0 or value_index >= self.get_cardinality(variable):
+                raise ValueError("The value for the variable " + variable + "is out of bound")
             marg_factor = self.values[np.array(sum_index) + int(value_index) * cum_cardinality[index + 1]]
             new_data = self.data
 
