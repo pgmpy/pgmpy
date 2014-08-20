@@ -241,22 +241,21 @@ class TestMarkovModelFactors(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
+
 class TestMMInferenceAlgorithms(unittest.TestCase):
     def setUp(self):
-        self.graph = mm.MarkovModel([('a','b'),('b','c'), ('a','c')])
-        self.graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0','1']})
-        self.graph.add_factor(['a','b'],[5,1,1,2])
-        self.graph.add_factor(['b','c'],[1,1,1,5])
-        self.graph.add_factor(['a','c'],[1,1,1,5])
-
+        self.graph = mm.MarkovModel([('a', 'b'), ('b', 'c'), ('a', 'c')])
+        self.graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0', '1']})
+        self.graph.add_factor(['a', 'b'], [5, 1, 1, 2])
+        self.graph.add_factor(['b', 'c'], [1, 1, 1, 5])
+        self.graph.add_factor(['a', 'c'], [1, 1, 1, 5])
 
     def tearDown(self):
         del self.graph
 
     def test_map_graph_cut(self):
         ans_dict = self.graph.MAP_graph_cut()
-        self.assertDictEqual(ans_dict, {'a':'1', 'b':'1','c':'1'})
-
+        self.assertDictEqual(ans_dict, {'a': '1', 'b': '1', 'c': '1'})
 
 
 if __name__ == '__main__':

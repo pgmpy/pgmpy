@@ -153,7 +153,7 @@ class DirectedGraph(nx.DiGraph):
             residual = edge_dict['capacity'] - edge_dict['flow']
             if residual > 0 and nbr not in dfs_set:
                 result = self._mf_ff_find_path(nbr, sink, dfs_set, path + [edge])
-                if result != None:
+                if result is not None:
                     return result
 
     def max_flow_ford_fulkerson(self, source, sink):
@@ -189,7 +189,7 @@ class DirectedGraph(nx.DiGraph):
         """
         dfs_set = set()
         path = self._mf_ff_find_path(source, sink, dfs_set, [])
-        while path != None:
+        while path is not None:
             residuals = [self[edge[0]][edge[1]]['capacity'] - self[edge[0]][edge[1]]['flow']
                          for edge in path]
             flow = min(residuals)
@@ -199,7 +199,6 @@ class DirectedGraph(nx.DiGraph):
             dfs_set = set()
             path = self._mf_ff_find_path(source, sink, dfs_set, [])
         return sum(self[source][nbr]['flow'] for nbr in self.neighbors(source))
-
 
     def flow_dfs(self, node, dfs_set):
         """
@@ -233,7 +232,6 @@ class DirectedGraph(nx.DiGraph):
         """
         dfs_set.add(node)
         for nbr in self.neighbors(node):
-            edge = (node, nbr)
             edge_dict = self[node][nbr]
             residual = edge_dict['capacity'] - edge_dict['flow']
             if residual > 0 and nbr not in dfs_set:

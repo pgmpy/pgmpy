@@ -40,8 +40,8 @@ class TestFactorMethods(unittest.TestCase):
                                                               ['x1_1', 'x2_0', 'x3_1'],
                                                               ['x1_1', 'x2_1', 'x3_0']])
         self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])), [['x1_0', 'x2_2', 'x3_0'],
-                                                                        ['x1_0', 'x2_2', 'x3_1'],
-                                                                        ['x1_1', 'x2_0', 'x3_0']])
+                                                                         ['x1_0', 'x2_2', 'x3_1'],
+                                                                         ['x1_1', 'x2_0', 'x3_0']])
 
     def test_assignment_indexerror(self):
         self.assertRaises(IndexError, self.phi.assignment, [10])
@@ -87,10 +87,10 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_maximize(self):
         self.phi1.maximize(['x1'])
-        max_val_indices = {'x1':1}
+        max_val_indices = {'x1': 1}
         data = [max_val_indices] * 6
         #print(self.phi1)
-        np_test.assert_array_equal(self.phi1.values, np.array([6,7,8,9,10,11]))
+        np_test.assert_array_equal(self.phi1.values, np.array([6, 7, 8, 9, 10, 11]))
         self.assertEqual(self.phi1.data, sorted(data, key=lambda t: sorted(t.keys())))
 
     def test_reduce(self):
@@ -109,6 +109,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_factor_product(self):
         from pgmpy import Factor
+
         phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
         factor_product = Factor.factor_product(phi, phi1)
@@ -127,7 +128,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
         factor_product = Factor.factor_product(phi, phi1)
         np_test.assert_array_equal(factor_product.values,
-                                   np.array([0, 1, 0, 3, 0, 5, 0, 3, 4, 9, 8, 15]))
+                                   np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
         self.assertEqual(factor_product.variables, OrderedDict(
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
@@ -135,6 +136,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_factor_product2(self):
         from pgmpy import Factor
+
         phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
         factor_product = phi.product(phi1)
@@ -159,8 +161,59 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    def test_factor_product_with_map_info_in_a_single_factor(self):
+        from pgmpy import Factor
+
+        phi = Factor.Factor(['x0', 'x1', 'x2'], [2, 2, 2], [-3, 0, 2, 3, 0, 1, 0, -3])
+        phi = phi.maximize('x0', False)
+        print(phi)
+        print(phi.data)
+        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        factor_product = Factor.factor_product(phi, phi1)
+        phi = factor_product
+        print(phi)
+        print(phi.data)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 0, 0, 0, 0, 1,
+                                             2, 3, 0, 2, 4, 6,
+                                             0, 3, 6, 9]))
+        self.assertEqual(factor_product.variables, OrderedDict([
+            ('x1', ['x1_0', 'x1_1']),
+            ('x2', ['x2_0', 'x2_1']),
+            ('x3', ['x3_0', 'x3_1']),
+            ('x4', ['x4_0', 'x4_1'])]
+        ))
+        self.assertEqual(factor_product.data,
+                         [[('x0', 1)], [('x0', 1)], [('x0', 1)],
+                          [('x0', 1)], [('x0', 1)], [('x0', 1)], [('x0', 1)],
+                          [('x0', 1)], [('x0', 0)], [('x0', 0)], [('x0', 0)],
+                          [('x0', 0)], [('x0', 0)], [('x0', 0)], [('x0', 0)],
+                          [('x0', 0)]])
+
+    def test_factor_product_with_map_info_in_both_factors(self):
+        from pgmpy import Factor
+
+        phi = Factor.Factor(['x0', 'x1', 'x2'], [2, 3, 2], [-5, 1, -4, 3, 0, 5, 0, 0, 2, -3, 4, -11])
+        phi = phi.maximize('x0', False)
+        phi1 = Factor.Factor(['x2', 'x3', 'x4'], [2, 2, 2], [-4, 0, 1, -3, 2, 0, 0, 3])
+        phi1 = phi1.maximize('x4', False)
+        factor_product = Factor.factor_product(phi, phi1)
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
+        self.assertEqual(factor_product.variables, OrderedDict(
+            [('x1', ['x1_0', 'x1_1', 'x1_2']),
+             ('x2', ['x2_0', 'x2_1']),
+             ('x3', ['x3_0', 'x3_1'])]))
+        self.assertEqual(factor_product.data, [[('x0', 1), ('x4', 1)], [('x0', 1), ('x4', 0)],
+                                               [('x0', 0), ('x4', 0)], [('x0', 0), ('x4', 1)], [('x0', 1), ('x4', 1)],
+                                               [('x0', 1), ('x4', 0)],
+                                               [('x0', 0), ('x4', 0)], [('x0', 0), ('x4', 1)], [('x0', 1), ('x4', 1)],
+                                               [('x0', 1), ('x4', 0)],
+                                               [('x0', 0), ('x4', 0)], [('x0', 0), ('x4', 1)]])
+
     def test_factor_divide(self):
         from pgmpy import Factor
+
         phi1 = Factor.Factor(['x1', 'x2', ], [2, 2], [1, 2, 2, 4])
         phi2 = Factor.Factor(['x1'], [2], [1, 2])
         factor_divide = phi1.divide(phi2)
@@ -170,6 +223,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_factor_divide_invalid(self):
         from pgmpy import Factor
+
         phi1 = Factor.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
         phi2 = Factor.Factor(['x1'], [2], [0, 2])
         self.assertRaises(ValueError, phi1.divide, phi2)

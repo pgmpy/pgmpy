@@ -22,7 +22,7 @@ class Factor():
     reduce([variable_values_list])
     """
 
-    def __init__(self, variables, cardinality, value, data = None):
+    def __init__(self, variables, cardinality, value, data=None):
         """
         Initialize a Factor class.
 
@@ -96,12 +96,12 @@ class Factor():
         return self._pos_dist
 
     def singleton_factor(self):
-        return len(self.get_variables())==1
+        return len(self.get_variables()) == 1
 
     def pairwise_submodular_factor(self):
-        return len(self.get_variables())==2 and \
-                self.get_value([1,1]) * self.get_value([0,0]) >= \
-                self.get_value([1,0]) * self.get_value([0,1])
+        return len(self.get_variables()) == 2 and \
+            self.get_value([1, 1]) * self.get_value([0, 0]) >= \
+            self.get_value([1, 0]) * self.get_value([0, 1])
 
     def scope(self):
         """
@@ -142,7 +142,7 @@ class Factor():
             assign = []
             for card in self.cardinality[::-1]:
                 assign.insert(0, ind % card)
-                ind = ind/card
+                ind = ind / card
             assignments.append(map(int, assign))
         return [[self.variables[key][val] for key, val in
                  zip(self.variables.keys(), values)] for values in assignments]
@@ -162,6 +162,7 @@ class Factor():
 
     def get_log_value(self, node_assignments):
         import math
+
         return math.log(self.get_value(node_assignments))
 
     def get_value(self, node_assignments):
@@ -214,7 +215,7 @@ class Factor():
             raise Exceptions.ScopeError("%s not in scope" % variable)
         return self.cardinality[list(self.variables.keys()).index(variable)]
 
-    def reduce(self, values, inplace = True):
+    def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
 
@@ -241,7 +242,7 @@ class Factor():
                                 "variablename_index")
             var, value_index = value.split('_')
             variables.append(var)
-            self.data[var]=value_index
+            self.data[var] = value_index
         f = self.operations_on_variables(variables, 3, inplace)
         self.data = None
         return f
@@ -263,10 +264,9 @@ class Factor():
         -------
 
         """
-        f =  self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
+        f = self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
         assert isinstance(f, Factor)
         return f
-
 
     def maximize(self, variables, inplace=True):
         if self.data is None:
@@ -276,9 +276,8 @@ class Factor():
         return self.operations_on_variables(variables, 2, inplace)
 
     def maximize_except(self, variables):
-        f =  self.maximize(list(set(self.get_variables()) - set(variables)), inplace=False)
+        f = self.maximize(list(set(self.get_variables()) - set(variables)), inplace=False)
         assert isinstance(f, Factor)
-        print(f.data)
         return f
 
     def _operations_single_variable(self, variable, op_id):
@@ -292,43 +291,44 @@ class Factor():
 
         """
         index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1],
-                                np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+        cum_cardinality = (np.product(self.cardinality) /
+                           np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
         #print(cum_cardinality)
         num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
                                       cum_cardinality[index])
-                     for j in range(i, i+cum_cardinality[index+1])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
+                     for j in range(i, i + cum_cardinality[index + 1])]
+        marg_factor = np.zeros(num_elements / self.cardinality[index])
         new_data = None
-        if op_id == 1 :
+        if op_id == 1:
             for i in range(self.cardinality[index]):
                 marg_factor += self.values[np.array(sum_index) +
-                               i*cum_cardinality[index+1]]
+                                           i * cum_cardinality[index + 1]]
         elif op_id == 2:
-            new_data = [None] * (num_elements/self.cardinality[index])
-            for i in range(int(num_elements/self.cardinality[index])):
+            new_data = [None] * (num_elements / self.cardinality[index])
+            for i in range(int(num_elements / self.cardinality[index])):
                 max_val = self.values[np.array(sum_index)[i] +
-                               0*cum_cardinality[index+1]]
+                                      0 * cum_cardinality[index + 1]]
                 max_index = 0
                 for j in range(self.cardinality[index]):
                     curr_val = self.values[np.array(sum_index)[i] +
-                               j*cum_cardinality[index+1]]
-                    if(curr_val > max_val):
+                                           j * cum_cardinality[index + 1]]
+                    if curr_val > max_val:
                         max_val = curr_val
                         max_index = j
-                marg_factor[i]=max_val
-                new_data[i] = self.data[max_index].copy()
+                marg_factor[i] = max_val
+                new_data[i] = [tup for tup in self.data[np.array(sum_index)[i] +
+                                                        max_index * cum_cardinality[index + 1]]]
                 new_data[i].append((variable, max_index))
         elif op_id == 3:
             index = list(self.variables.keys()).index(variable)
             value_index = self.data[variable]
-            marg_factor = self.values[np.array(sum_index) + int(value_index)*cum_cardinality[index+1]]
+            marg_factor = self.values[np.array(sum_index) + int(value_index) * cum_cardinality[index + 1]]
             new_data = self.data
 
-        return  marg_factor, new_data
+        return marg_factor, new_data
 
-    def operations_on_variables(self, variables,  op_id= 1, inplace = True):
+    def operations_on_variables(self, variables, op_id=1, inplace=True):
         """
         Modifies the factor with marginalized values.
 
@@ -357,14 +357,15 @@ class Factor():
                 return
             else:
                 import copy
+
                 return copy.deepcopy(self)
         ret = self
         for variable in variables:
             index = list(ret.variables.keys()).index(variable)
             new_vars = ret.variables.copy()
-            del(new_vars[variable])
+            del (new_vars[variable])
             values_data_tuple = ret._operations_single_variable(variable, op_id)
-            ret = Factor(new_vars, np.delete(ret.cardinality, index), values_data_tuple[0], values_data_tuple[1] )
+            ret = Factor(new_vars, np.delete(ret.cardinality, index), values_data_tuple[0], values_data_tuple[1])
         if inplace:
             self.variables = ret.variables
             self.values = ret.values
@@ -378,8 +379,6 @@ class Factor():
         Normalizes the values of factor so that they sum to 1.
         """
         self.values = self.values / np.sum(self.values)
-
-
 
     def product(self, *factors):
         """
@@ -466,11 +465,11 @@ class Factor():
         #fun and gen are functions to generate the different values of variables in the table.
         #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
         #by 1.
-        def fun(b, index=len(self.cardinality)-1):
+        def fun(b, index=len(self.cardinality) - 1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
                 b[index] = 0
-                fun(b, index -1)
+                fun(b, index - 1)
             return b
 
         def gen():
@@ -482,7 +481,10 @@ class Factor():
         value_index = 0
         for prob in gen():
             prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index]) + '\n'
+            string += '\t'.join(prob_list) + '\t' + str(self.values[value_index])
+            if self.data is not None:
+                string += '\t' + str(self.data[value_index])
+            string += '\n'
             value_index += 1
         return string[:-1]
 
@@ -529,8 +531,8 @@ def _bivar_factor_divide(phi1, phi2):
     common_var_list = phi2_vars
     common_var_index_list = np.array([[phi1_vars.index(var), phi2_vars.index(var)]
                                       for var in common_var_list])
-    common_card_product = np.prod([phi1.cardinality[index[0]] for index
-                                   in common_var_index_list])
+    #common_card_product = np.prod([phi1.cardinality[index[0]] for index
+    #                               in common_var_index_list])
     size = np.prod(phi1.cardinality)
     product = _factor_divide(phi1.values,
                              phi2.values,
@@ -543,11 +545,13 @@ def _bivar_factor_divide(phi1, phi2):
     phi = Factor(variables, cardinality, product)
     return phi
 
+
 def cum_card(phi1):
     return (np.product(phi1.cardinality) / np.cumprod(phi1.cardinality)).astype(np.int64, copy=False)
 
+
 def ref(variables, vars1):
-    l=[]
+    l = []
     for var in variables:
         if var in vars1:
             l.append(vars1.index(var))
@@ -586,11 +590,40 @@ def _bivar_factor_product(phi1, phi2):
     cum_card_2 = cum_card(phi2)
     ref_1 = ref(variables, vars1)
     ref_2 = ref(variables, vars2)
-    product = _factor_product(np.array(cardinality), size,
-                              phi1.values, cum_card_1, ref_1,
-                              phi2.values, cum_card_2, ref_2)
-    phi = Factor(variables, cardinality, product)
+    product, new_data = _factor_product(np.array(cardinality), size,
+                                        phi1.values, cum_card_1, ref_1,
+                                        phi2.values, cum_card_2, ref_2,
+                                        phi1.data, phi2.data)
+    phi = Factor(variables, cardinality, product, new_data)
     return phi
+
+
+def _factor_product_python_version(card_prod, size,
+                                   x, card_x, ref_x,
+                                   y, card_y, ref_y):
+    product_arr = np.zeros(size)
+    prod_indices = np.array([0] * card_prod.shape[0], dtype=np.int)
+    x_index = 0
+    y_index = 0
+    for i in range(size):
+        product_arr[i] = x[x_index] * y[y_index]
+        j = card_prod.shape[0] - 1
+        flag = 0
+        while True:
+            old_value = prod_indices[j]
+            prod_indices[j] += 1
+            if prod_indices[j] == card_prod[j]:
+                prod_indices[j] = 0
+            else:
+                flag = 1
+            if ref_x[j] != -1:
+                x_index += (prod_indices[j] - old_value) * card_x[ref_x[j]]
+            if ref_y[j] != -1:
+                y_index += (prod_indices[j] - old_value) * card_y[ref_y[j]]
+            j -= 1
+            if flag == 1:
+                break
+    return product_arr
 
 
 def _bivar_factor_product_orig(phi1, phi2):
@@ -619,11 +652,11 @@ def _bivar_factor_product_orig(phi1, phi2):
         size = np.prod(phi1.cardinality) * np.prod(
             phi2.cardinality) / common_card_product
         product = _factor_product_orig(phi1.values,
-                                  phi2.values,
-                                  size,
-                                  common_var_index_list,
-                                  phi1.cardinality,
-                                  phi2.cardinality)
+                                       phi2.values,
+                                       size,
+                                       common_var_index_list,
+                                       phi1.cardinality,
+                                       phi2.cardinality)
         variables = vars1
         variables.extend(var for var in phi2.variables
                          if var not in common_var_list)
@@ -635,8 +668,8 @@ def _bivar_factor_product_orig(phi1, phi2):
     else:
         size = np.prod(phi1.cardinality) * np.prod(phi2.cardinality)
         product = _factor_product_orig(phi1.values,
-                                  phi2.values,
-                                  size)
+                                       phi2.values,
+                                       size)
         variables = vars1 + vars2
         cardinality = list(phi1.cardinality) + list(phi2.cardinality)
         phi = Factor(variables, cardinality, product)

@@ -718,7 +718,6 @@ class MarkovModel(UndirectedGraph):
                 val += self._norm_h(pos + 1, node_list, value_list)
             return val
 
-
     def normalization_constant_brute_force(self):
         """
         Get the normalization constant using brute force technique
@@ -839,16 +838,16 @@ class MarkovModel(UndirectedGraph):
                 g.add_to_flow_edge_capacity(source_node, var, -factor.get_log_value([1]))
                 g.add_to_flow_edge_capacity(var, sink_node, -factor.get_log_value([0]))
             else:
-                vars = factor.get_variables()
-                var1, var2 = vars[0], vars[1]
-                A = -factor.get_log_value([0, 0])
-                B = -factor.get_log_value([0, 1])
-                C = -factor.get_log_value([1, 0])
-                D = -factor.get_log_value([1, 1])
-                g.add_to_flow_edge_capacity(var2, sink_node, C)
-                g.add_to_flow_edge_capacity(source_node, var2, D)
-                g.add_to_flow_edge_capacity(var1, sink_node, A - C)
-                g.add_to_flow_edge_capacity(var1, var2, B + C - A - D)
+                variables = factor.get_variables()
+                var1, var2 = variables[0], variables[1]
+                a = -factor.get_log_value([0, 0])
+                b = -factor.get_log_value([0, 1])
+                c = -factor.get_log_value([1, 0])
+                d = -factor.get_log_value([1, 1])
+                g.add_to_flow_edge_capacity(var2, sink_node, c)
+                g.add_to_flow_edge_capacity(source_node, var2, d)
+                g.add_to_flow_edge_capacity(var1, sink_node, a - c)
+                g.add_to_flow_edge_capacity(var1, var2, b + c - a - d)
         for node in self.nodes():
             wsu = g.get_flow_capacity(source_node, node)
             wut = g.get_flow_capacity(node, sink_node)
@@ -870,5 +869,3 @@ class MarkovModel(UndirectedGraph):
         for node in val1_set:
             ans_dict[node] = "1"
         return ans_dict
-
-
