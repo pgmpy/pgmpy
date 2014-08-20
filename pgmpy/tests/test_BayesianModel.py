@@ -5,7 +5,6 @@ import pgmpy.tests.help_functions as hf
 
 
 class TestBaseModelCreation(unittest.TestCase):
-
     def setUp(self):
         self.G = bm.BayesianModel()
 
@@ -143,7 +142,6 @@ class TestBaseModelCreation(unittest.TestCase):
 
 
 class TestBayesianModelMethods(unittest.TestCase):
-
     def setUp(self):
         self.G = bm.BayesianModel([('a', 'd'), ('b', 'd'),
                                    ('d', 'e'), ('b', 'c')])
@@ -288,11 +286,12 @@ class TestBayesianModelMethods(unittest.TestCase):
 
 
 class TestBayesianModelCPD(unittest.TestCase):
-
     def setUp(self):
         self.G = bm.BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
                                    ('i', 's')])
-        self.G.set_states({'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'], 'l': ['yes', 'no']})
+        self.G.set_states(
+            {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
+             'l': ['yes', 'no']})
 
     # def test_set_cpd(self):
     #     self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -404,11 +403,11 @@ class TestBayesianModelCPD(unittest.TestCase):
     def test_active_trail_nodes(self):
         self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l'])
         self.assertEqual(sorted(self.G.active_trail_nodes('i')), ['g', 'i', 'l', 's'])
-        
+
     def test_active_trail_nodes_args(self):
         self.assertEqual(sorted(self.G.active_trail_nodes('d', 'g')), ['d', 'i', 's'])
         self.assertEqual(sorted(self.G.active_trail_nodes('l', 'g')), ['l'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s' , ['i', 'l'])), ['s'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', ['i', 'l'])), ['s'])
         self.assertEqual(sorted(self.G.active_trail_nodes('s', ['d', 'l'])), ['g', 'i', 's'])
 
     def test_is_active_trail_triplets(self):
@@ -442,5 +441,6 @@ class TestBayesianModelCPD(unittest.TestCase):
     def tearDown(self):
         del self.G
 
+
 if __name__ == '__main__':
-        unittest.main()
+    unittest.main()

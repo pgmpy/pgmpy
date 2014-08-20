@@ -49,9 +49,54 @@ cdef pattern_gen(np.ndarray[DTYPE_t, ndim=1] x_card,
     pattern_3 = np.tile(pattern_0 + pattern_1, (left_x, 1)).astype(DTYPE)
     return pattern_3.flatten(order='F'), left_y
 
+
 @cython.boundscheck(False)
 @cython.nonecheck(False)
-def _factor_product(np.ndarray[double, ndim=1] x,
+def _factor_product(np.ndarray[DTYPE_t, ndim=1] card_prod,DTYPE_t size,
+                    np.ndarray[double, ndim=1] x, np.ndarray[DTYPE_t, ndim=1] card_x, np.ndarray[DTYPE_t,ndim=1] ref_x,
+                    np.ndarray[double, ndim=1] y, np.ndarray[DTYPE_t, ndim=1] card_y, np.ndarray[DTYPE_t,ndim=1] ref_y,
+                    data_x, data_y):
+
+    cdef:
+        np.ndarray[double, ndim=1] product_arr = np.zeros(size)
+        np.ndarray[DTYPE_t, ndim=1] prod_indices = np.array([0] * card_prod.shape[0], dtype=DTYPE)
+        int i, x_index, y_index
+    x_index = 0
+    y_index = 0
+    if data_x is None and data_y is None:
+        new_data = None
+    else:
+        new_data = [0] * size
+    for i in range(size):
+        product_arr[i] = x[x_index] * y[y_index]
+        if new_data is not None:
+            if data_x is None:
+                new_data[i] = data_y[y_index]
+            elif data_y is None:
+                new_data[i] = data_x[x_index]
+            else:
+                new_data[i] = data_x[x_index] + data_y[y_index]
+        j=card_prod.shape[0]-1
+        flag=0
+        while True:
+            old_value = prod_indices[j]
+            prod_indices[j]+=1
+            if prod_indices[j] == card_prod[j]:
+                prod_indices[j] =0
+            else:
+                flag=1
+            if ref_x[j] != -1:
+                x_index += (prod_indices[j]-old_value) * card_x[ref_x[j]]
+            if ref_y[j] != -1:
+                y_index += (prod_indices[j]-old_value) * card_y[ref_y[j]]
+            j-=1
+            if flag==1:
+                break
+    return product_arr, new_data
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+def _factor_product_orig(np.ndarray[double, ndim=1] x,
                     np.ndarray[double, ndim=1] y,
                     DTYPE_t size,
                     np.ndarray[DTYPE_t, ndim=2] common_index=None,
@@ -73,6 +118,8 @@ def _factor_product(np.ndarray[double, ndim=1] x,
     if CHECK:
         y_iter, left_y = pattern_gen(x_card, y_card, common_index)
         x_iter = np.tile(np.arange(np.prod(x_card)), left_y).astype(DTYPE)
+        for i in range(x_iter.shape[0]):
+            print(x_iter[i],y_iter[i])
         for i, j in zip(x_iter, y_iter):
             product_arr[count] = x[i]*y[j]
             count += 1
@@ -81,5 +128,32 @@ def _factor_product(np.ndarray[double, ndim=1] x,
             for j in range(xmax):
                 product_arr[count] = x[j]*y[i]
                 count += 1
+
+    return product_arr
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+def _factor_divide(np.ndarray[double, ndim=1] x,
+                    np.ndarray[double, ndim=1] y,
+                    DTYPE_t size,
+                    np.ndarray[DTYPE_t, ndim=2] common_index=None,
+                    np.ndarray[DTYPE_t, ndim=1] x_card=None,
+                    np.ndarray[DTYPE_t, ndim=1] y_card=None):
+
+    cdef:
+        np.ndarray[double, ndim=1] product_arr = np.zeros(size)
+        unsigned int count = 0
+        unsigned int xmax = x.shape[0]
+        unsigned int ymax = y.shape[0]
+        unsigned int i, j, left_y
+        np.ndarray[DTYPE_t, ndim=1] x_iter, y_iter
+
+
+    y_iter, left_y = pattern_gen(x_card, y_card, common_index)
+    x_iter = np.tile(np.arange(np.prod(x_card)), left_y).astype(DTYPE)
+    for i, j in zip(x_iter, y_iter):
+        product_arr[count] = x[i]/y[j]
+        count += 1
+
 
     return product_arr

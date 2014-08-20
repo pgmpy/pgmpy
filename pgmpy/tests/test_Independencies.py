@@ -4,7 +4,6 @@ from pgmpy import Exceptions
 
 
 class TestIndependenceAssertion(unittest.TestCase):
-
     def setUp(self):
         self.assertion = Independencies.IndependenceAssertion()
 
@@ -54,7 +53,6 @@ class TestIndependenceAssertion(unittest.TestCase):
 
 
 class IndependenciesTestCase:
-
     def assertIndependenceAssertionEqual(self, assertion1, assertion2):
         if not (assertion1.event1 == assertion2.event1):
             raise AssertionError(str(assertion1.event1) + "is not equal to" + str(assertion2.event1))
@@ -70,7 +68,6 @@ class IndependenciesTestCase:
 
 
 class TestIndependencies(unittest.TestCase, IndependenciesTestCase):
-
     def setUp(self):
         self.Independencies1 = Independencies.Independencies()
 
@@ -90,7 +87,8 @@ class TestIndependencies(unittest.TestCase, IndependenciesTestCase):
 
     def test_get_Independencies(self):
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
-        self.assertIndependenciesEqual(self.Independencies1.independencies, {Independencies.IndependenceAssertion('X', 'Y', 'Z')})
+        self.assertIndependenciesEqual(self.Independencies1.independencies,
+                                       {Independencies.IndependenceAssertion('X', 'Y', 'Z')})
         self.Independencies1.add_assertions([['A', 'B'], ['C', 'D'], ['E', 'F']])
         #self.assertIndependenciesEqual(self.Independencies1.independencies, {Independencies.IndependenceAssertion('X', 'Y', 'Z'),
         #                                       Independencies.IndependenceAssertion(['A', 'B'], ['C', 'D'], ['E', 'F'])})
@@ -100,4 +98,4 @@ class TestIndependencies(unittest.TestCase, IndependenciesTestCase):
 
 
 if __name__ == '__main__':
-        unittest.main()
+    unittest.main()

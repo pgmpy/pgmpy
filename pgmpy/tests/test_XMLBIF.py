@@ -124,10 +124,10 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                                              [0.9, 0.1, 0.3, 0.7]]),
                         'family-out': np.array([[0.15],
                                                 [0.85]]),
-                        'hear-bark':  np.array([[0.7,  0.3],
-                                                [0.01,  0.99]]),
-                        'light-on': np.array([[0.6,  0.4],
-                                              [0.05,  0.95]])}
+                        'hear-bark': np.array([[0.7, 0.3],
+                                               [0.01, 0.99]]),
+                        'light-on': np.array([[0.6, 0.4],
+                                              [0.05, 0.95]])}
         cpd = self.reader.get_cpd()
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
@@ -270,10 +270,10 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                                              [0.9, 0.1, 0.3, 0.7]]),
                         'family-out': np.array([[0.15],
                                                 [0.85]]),
-                        'hear-bark':  np.array([[0.7,  0.3],
-                                                [0.01,  0.99]]),
-                        'light-on': np.array([[0.6,  0.4],
-                                              [0.05,  0.95]])}
+                        'hear-bark': np.array([[0.7, 0.3],
+                                               [0.01, 0.99]]),
+                        'light-on': np.array([[0.6, 0.4],
+                                              [0.05, 0.95]])}
         cpd = self.reader.get_cpd()
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],

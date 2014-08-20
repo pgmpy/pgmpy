@@ -6,7 +6,6 @@ from pgmpy.readwrite import XMLBeliefNetwork
 
 
 class TestXBNReader(unittest.TestCase):
-
     def setUp(self):
         string = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan" ROOT="Cancer">
                        <BNMODEL NAME="Cancer">
@@ -146,7 +145,8 @@ class TestXBNReader(unittest.TestCase):
         self.assertListEqual(self.reader_file.get_variables()['a']['STATES'], ['Present', 'Absent'])
 
     def test_get_edges(self):
-        self.assertListEqual(self.reader_string.get_edges(), [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
+        self.assertListEqual(self.reader_string.get_edges(),
+                             [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
         self.assertListEqual(self.reader_file.get_edges(), [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
 
     def test_get_distribution(self):
@@ -156,7 +156,8 @@ class TestXBNReader(unittest.TestCase):
         np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
         np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
         np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
-        np_test.assert_array_equal(distribution['d']['DPIS'], np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
+        np_test.assert_array_equal(distribution['d']['DPIS'],
+                                   np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
         np_test.assert_array_equal(distribution['b']['DPIS'], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution['d']['CARDINALITY'], np.array([2, 2]))
         np_test.assert_array_equal(distribution['c']['DPIS'], np.array([[0.2, 0.8], [0.05, 0.95]]))
@@ -167,7 +168,8 @@ class TestXBNReader(unittest.TestCase):
         np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
         np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
         np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
-        np_test.assert_array_equal(distribution['d']['DPIS'], np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
+        np_test.assert_array_equal(distribution['d']['DPIS'],
+                                   np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
         np_test.assert_array_equal(distribution['d']['CARDINALITY'], np.array([2, 2]))
         np_test.assert_array_equal(distribution['b']['DPIS'], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution['c']['DPIS'], np.array([[0.2, 0.8], [0.05, 0.95]]))
