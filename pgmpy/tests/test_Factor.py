@@ -69,7 +69,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(self.phisubmodular.singleton_factor())
 
     def test_pairwise_submodular(self):
-        self.phisubmodular = Factor(['a', 'b'], [2,2], [5, 1, 1, 2])
+        self.phisubmodular = Factor(['a', 'b'], [2, 2], [5, 1, 1, 2])
         self.assertTrue(self.phisubmodular.pairwise_submodular_factor())
         self.phisubmodular = Factor(['a', 'b'], [2,2], [5, 10, 2, 2])
         self.assertFalse(self.phisubmodular.pairwise_submodular_factor())

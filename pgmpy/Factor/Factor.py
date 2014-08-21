@@ -131,8 +131,8 @@ class Factor():
         True
         """
         return len(self.get_variables()) == 2 and \
-            self.get_value([1, 1]) * self.get_value([0, 0]) >= \
-            self.get_value([1, 0]) * self.get_value([0, 1])
+               self.get_value([1, 1]) * self.get_value([0, 0]) >= \
+               self.get_value([1, 0]) * self.get_value([0, 1])
 
     def assignment(self, index):
         """
@@ -194,6 +194,7 @@ class Factor():
         1.6094379124341003
         """
         import math
+
         return math.log(self.get_value(node_assignments))
 
     def get_value(self, node_assignments):
@@ -305,9 +306,8 @@ class Factor():
         values = []
         for var in self.get_variables():
             if var != variable:
-                values.append(var+"_"+str(value_dict[var]))
+                values.append(var + "_" + str(value_dict[var]))
         return self.reduce(values, False)
-
 
 
     def marginalize(self, variables, inplace=True):
@@ -758,7 +758,7 @@ def _bivar_factor_product_orig(phi1, phi2):
 
         variables = phi1_vars
         variables.extend([var for var in phi2.variables
-                         if var not in common_var_list])
+                          if var not in common_var_list])
         cardinality = list(phi1.cardinality)
         cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
                            if var not in common_var_list)
@@ -769,20 +769,23 @@ def _bivar_factor_product_orig(phi1, phi2):
         phi1_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
         phi2_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
         from itertools import product
+
         for index in product(*[range(card) for card in cardinality]):
             index = np.array(index)
-            values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] * phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+            values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] * phi2.values[
+                np.sum(index[phi2_indexes] * phi2_cumprod)])
 
         phi = Factor(variables, cardinality, values)
         return phi
     else:
         values = np.array([])
         for value in phi1.values:
-            values = np.concatenate((values, value*phi2.values), axis=1)
+            values = np.concatenate((values, value * phi2.values), axis=1)
         variables = phi1_vars + phi2_vars
         cardinality = list(phi1.cardinality) + list(phi2.cardinality)
         phi = Factor(variables, cardinality, values)
         return phi
+
 
 def factor_product(*args):
     """
@@ -810,6 +813,7 @@ def factor_product(*args):
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
     return functools.reduce(_bivar_factor_product, args)
+
 
 def factor_divide(factor1, factor2):
     """
