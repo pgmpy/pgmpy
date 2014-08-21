@@ -97,11 +97,6 @@ class Factor():
     def singleton_factor(self):
         return len(self.get_variables()) == 1
 
-    def pairwise_submodular_factor(self):
-        return len(self.get_variables()) == 2 and \
-            self.get_value([1, 1]) * self.get_value([0, 0]) >= \
-            self.get_value([1, 0]) * self.get_value([0, 1])
-
     def scope(self):
         """
         Returns the scope of the factor.
@@ -113,6 +108,11 @@ class Factor():
         ['x1', 'x2', 'x3']
         """
         return list(self.variables)
+
+    def pairwise_submodular_factor(self):
+        return len(self.get_variables()) == 2 and \
+            self.get_value([1, 1]) * self.get_value([0, 0]) >= \
+            self.get_value([1, 0]) * self.get_value([0, 1])
 
     def assignment(self, index):
         """
@@ -161,7 +161,6 @@ class Factor():
 
     def get_log_value(self, node_assignments):
         import math
-
         return math.log(self.get_value(node_assignments))
 
     def get_value(self, node_assignments):
@@ -251,12 +250,49 @@ class Factor():
             var, value_index = value.split('_')
             variables.append(var)
             self.data[var] = int(value_index)
-        f = self.operations_on_variables(variables, 3, inplace)
+        f = self._operations_on_variables(variables, 3, inplace)
         self.data = None
+        if not inplace:
+            f.data = None
         return f
 
+    def reduce_except(self, variable, value_dict):
+        """
+        Reduces the factor on all variables except 'variable'. The values for the other
+        variables are taken from the value_dict which is assumed to give numeric values
+        of the variables (index of the value which it has been assigned)
+        """
+        values = []
+        for var in self.get_variables():
+            if var != variable:
+                values.append(var+"_"+str(value_dict[var]))
+        return self.reduce(values, False)
+
+
+
     def marginalize(self, variables, inplace=True):
-        return self.operations_on_variables(variables, 1, inplace)
+        """
+        Modifies the factor with marginalized values.
+
+        Parameters
+        ---------
+        variables: string, list-type
+            name of variable to be marginalized
+        inplace : boolean
+            if true then it changes the factor else returns a factor
+            with the marginalized values
+
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.marginalize(['x1', 'x3'])
+        >>> phi.values
+        array([ 14.,  22.,  30.])
+        >>> phi.variables
+        OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
+        """
+        return self._operations_on_variables(variables, 1, inplace)
 
     def marginalize_except(self, variables):
         """
@@ -277,11 +313,14 @@ class Factor():
         return f
 
     def maximize(self, variables, inplace=True):
+        """
+
+        """
         if self.data is None:
             self.data = []
             for i in range(len(self.values)):
                 self.data.append([])
-        return self.operations_on_variables(variables, 2, inplace)
+        return self._operations_on_variables(variables, 2, inplace)
 
     def maximize_except(self, variables):
         f = self.maximize(list(set(self.get_variables()) - set(variables)), inplace=False)
@@ -290,18 +329,10 @@ class Factor():
 
     def _operations_single_variable(self, variable, op_id):
         """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable_name: string
-            name of variable to be marginalized
-
         """
         index = list(self.variables.keys()).index(variable)
         cum_cardinality = (np.product(self.cardinality) /
                            np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
-        #print(cum_cardinality)
         num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
                                       cum_cardinality[index])
@@ -338,25 +369,7 @@ class Factor():
 
         return marg_factor, new_data
 
-    def operations_on_variables(self, variables, op_id=1, inplace=True):
-        """
-        Modifies the factor with marginalized values.
-
-        Parameters
-        ---------
-        variables: string, list-type
-            name of variable to be marginalized
-
-        Examples
-        --------
-        >>> from pgmpy.Factor.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.marginalize(['x1', 'x3'])
-        >>> phi.values
-        array([ 14.,  22.,  30.])
-        >>> phi.variables
-        OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
-        """
+    def _operations_on_variables(self, variables, op_id=1, inplace=True):
         if not isinstance(variables, list):
             variables = [variables]
         for variable in variables:

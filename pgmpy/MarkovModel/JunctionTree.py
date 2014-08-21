@@ -239,13 +239,11 @@ class JunctionTree(UndirectedGraph):
         >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
         >>> graph.add_states(
         ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
-        >>> graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
-        >>> graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
         >>> jt = graph.make_jt(2)
         >>> jt.map()
-        d	phi(d)
-        d_0	46.0
-        d_1	109.0
+        [('i', 1), ('d', 1), ('g', 2)]
         """
         factor = self._pull(Factor.maximize_except)
         factor = factor.maximize_except([])

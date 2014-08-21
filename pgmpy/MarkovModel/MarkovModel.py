@@ -356,7 +356,6 @@ class MarkovModel(UndirectedGraph):
         >>> G.get_states('diff')
         ['easy', 'hard']
         """
-
         return self.node[node]['_states']
 
     def number_of_states(self, node):
@@ -381,7 +380,6 @@ class MarkovModel(UndirectedGraph):
         >>> G.number_of_states('diff')
         2
         """
-
         return len(self.get_states(node))
 
     @staticmethod
@@ -815,9 +813,9 @@ class MarkovModel(UndirectedGraph):
         >>> import MarkovModel as mm
         >>> graph = mm.MarkovModel([('a','b'),('b','c'), ('a','c')])
         >>> graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0','1']})
-        >>> graph.add_factor(['a','b'],[5,1,1,2])
-        >>> graph.add_factor(['b','c'],[1,1,1,5])
-        >>> graph.add_factor(['a','c'],[1,1,1,5])
+        >>> f = graph.add_factor(['a','b'],[5,1,1,2])
+        >>> f = graph.add_factor(['b','c'],[1,1,1,5])
+        >>> f = graph.add_factor(['a','c'],[1,1,1,5])
         >>> graph.MAP_graph_cut()
         {'a': '1', 'c': '1', 'b': '1'}
         """
@@ -865,7 +863,92 @@ class MarkovModel(UndirectedGraph):
         val0_set = all_nodes - val1_set
         ans_dict = {}
         for node in val0_set:
-            ans_dict[node] = "0"
+            ans_dict[node] = self.get_rule_for_states(node)[0]
         for node in val1_set:
-            ans_dict[node] = "1"
+            ans_dict[node] = self.get_rule_for_states(node)[1]
         return ans_dict
+
+    def get_distribution_var(self, var, value_dict):
+        """
+        Gives the distibution of a single variable conditioned to the values of all other
+        variables in the pgm. The values of the other nodes is in the form of a dict
+
+        Parameters
+        ----------
+        var : String
+            The name of the node for which the distribution has to be returned
+
+        value_dict : Dictionary
+            The dictionary containing the value of all the other variables
+
+        Example
+        -------
+        >>> import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
+        ...                          ('i', 's')])
+        >>> graph.add_states(
+        ... {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
+        ...  'l': ['yes', 'no']})
+        >>> f = graph.add_factor(['d', 'g'], range(6))
+        >>> f = graph.add_factor(['i', 'g'], range(6))
+        >>> graph.get_distribution_var('g',{'d':0, 'i':0}).values
+        array([ 0.,  1.,  4.])
+        """
+        res_fact = None
+        for factor in self.get_factors():
+            if var in factor.get_variables():
+                if res_fact is None:
+                    res_fact = factor.reduce_except(var, value_dict)
+                else:
+                    assert isinstance(res_fact, Factor)
+                    res_fact = res_fact.product(factor.reduce_except(var, value_dict))
+        return res_fact
+
+    @staticmethod
+    def sample_from_array(array):
+        """
+        Sample one of the values from the array
+        """
+        from random import uniform
+        s = sum(array)
+        r = uniform(0, s)
+        v = 0
+        for i in range(0, len(array)):
+            v += array[i]
+            if v >= r:
+                return i
+        raise Exception("Shouldn't reach here")
+
+    def gibbs_sample(self, num_it):
+        """
+        Returns a sample of the MM taken via Gibbs Sampling
+
+        Parameter
+        --------
+        num_it : Number of gibbs sampling iterations after which the sample is to be taken
+
+        Example
+        -------
+        
+        """
+        from random import randrange
+        val_dict = {}
+        nodes_unobserved = []
+        for node in self.nodes():
+            if self.is_observed(node):
+                val_dict[node] = self.get_rule_for_states(node).index(self.get_observation(node))
+            else:
+                nodes_unobserved.append(node)
+        for node in nodes_unobserved:
+            val = randrange(self.number_of_states(node))
+            val_dict[node]=val
+        for i in range(num_it):
+            for node in nodes_unobserved:
+                dist = self._get_distribution_var(node, val_dict)
+                assert isinstance(dist, Factor)
+                obs = self.sample_from_array(dist.values)
+                val_dict[node]=obs
+        return val_dict
+
+
+

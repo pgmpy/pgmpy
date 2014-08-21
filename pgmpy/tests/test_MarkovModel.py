@@ -1,4 +1,6 @@
 import unittest
+import numpy as np
+import numpy.testing as np_test
 from pgmpy.tests import help_functions as hf
 from pgmpy import MarkovModel as mm
 
@@ -238,6 +240,12 @@ class TestMarkovModelFactors(unittest.TestCase):
         #be careful with other cases
         self.assertEqual(factors, jtfactors)
 
+    def test_get_distribution_var(self):
+        self.graph.add_factor(['d', 'g'], range(6))
+        self.graph.add_factor(['i', 'g'], range(6))
+        v = self.graph.get_distribution_var('g',{'d':0, 'i':0})
+        np_test.assert_array_equal(v.values, np.array([0, 1, 4]))
+
     def tearDown(self):
         del self.graph
 
@@ -257,6 +265,16 @@ class TestMMInferenceAlgorithms(unittest.TestCase):
         ans_dict = self.graph.MAP_graph_cut()
         self.assertDictEqual(ans_dict, {'a': '1', 'b': '1', 'c': '1'})
 
+class TestStaticMethods(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_sample_from_array(self):
+        test_arr = [2, 4, 1, 0]
+        import random
+        for i in range(5):
+            a = mm.MarkovModel.sample_from_array(test_arr)
+            self.assertTrue(a>=0 and a<4)
 
 if __name__ == '__main__':
     unittest.main()
