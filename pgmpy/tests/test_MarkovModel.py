@@ -265,6 +265,12 @@ class TestMMInferenceAlgorithms(unittest.TestCase):
         ans_dict = self.graph.MAP_graph_cut()
         self.assertDictEqual(ans_dict, {'a': '1', 'b': '1', 'c': '1'})
 
+    def test_gibbs_sampling(self):
+        import random
+        random.seed(0)
+        dict = self.graph.gibbs_sample(10)
+        self.assertDictEqual(dict, {'a': 1, 'c': 1, 'b': 1})
+
 class TestStaticMethods(unittest.TestCase):
     def setUp(self):
         pass

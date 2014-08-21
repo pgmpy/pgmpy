@@ -908,8 +908,22 @@ class MarkovModel(UndirectedGraph):
     def sample_from_array(array):
         """
         Sample one of the values from the array
+
+        Parameter
+        ---------
+        array : The distribution
+
+        Examples
+        --------
+        >>> import MarkovModel as mm
+        >>> import random
+        >>> random.seed(0)
+        >>> test_arr = [2, 4, 1, 0]
+        >>> mm.MarkovModel.sample_from_array(test_arr)
+        1
         """
         from random import uniform
+
         s = sum(array)
         r = uniform(0, s)
         v = 0
@@ -929,9 +943,17 @@ class MarkovModel(UndirectedGraph):
 
         Example
         -------
-        
+        >>> import MarkovModel as mm
+        >>> graph = mm.MarkovModel([('a', 'b'), ('b', 'c'), ('a', 'c')])
+        >>> graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0', '1']})
+        >>> f = graph.add_factor(['a', 'b'], [5, 1, 1, 2])
+        >>> f = graph.add_factor(['b', 'c'], [1, 1, 1, 5])
+        >>> f = graph.add_factor(['a', 'c'], [1, 1, 1, 5])
+        >>> graph.gibbs_sample(10)
+        {'a': 1, 'c': 1, 'b': 1}
         """
         from random import randrange
+
         val_dict = {}
         nodes_unobserved = []
         for node in self.nodes():
@@ -941,14 +963,11 @@ class MarkovModel(UndirectedGraph):
                 nodes_unobserved.append(node)
         for node in nodes_unobserved:
             val = randrange(self.number_of_states(node))
-            val_dict[node]=val
+            val_dict[node] = val
         for i in range(num_it):
             for node in nodes_unobserved:
-                dist = self._get_distribution_var(node, val_dict)
+                dist = self.get_distribution_var(node, val_dict)
                 assert isinstance(dist, Factor)
                 obs = self.sample_from_array(dist.values)
-                val_dict[node]=obs
+                val_dict[node] = obs
         return val_dict
-
-
-

@@ -95,6 +95,16 @@ class Factor():
         return self._pos_dist
 
     def singleton_factor(self):
+        """
+        Returns true if the factor is a singleton function
+
+        Example
+        -------
+        >>> from pgmpy.Factor import Factor
+        >>> phi = Factor(['a'], [2], [5, 1])
+        >>> phi.singleton_factor()
+        True
+        """
         return len(self.get_variables()) == 1
 
     def scope(self):
@@ -110,6 +120,16 @@ class Factor():
         return list(self.variables)
 
     def pairwise_submodular_factor(self):
+        """
+        Returns true if the factor is a pairwise submodular factor
+
+        Example
+        -------
+        >>> from Factor import Factor
+        >>> phisubmodular = Factor(['a', 'b'], [2,2], [5, 1, 1, 2])
+        >>> phisubmodular.pairwise_submodular_factor()
+        True
+        """
         return len(self.get_variables()) == 2 and \
             self.get_value([1, 1]) * self.get_value([0, 0]) >= \
             self.get_value([1, 0]) * self.get_value([0, 1])
@@ -160,6 +180,19 @@ class Factor():
         return [var for var in self.variables.keys()]
 
     def get_log_value(self, node_assignments):
+        """
+        See the documentation of get_value. This function just takes a log of that
+        value and returns it
+
+        Example
+        -------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.get_log_value([1,1,1])
+        2.1972245773362196
+        >>> phi.get_log_value({'x1':1,'x2':2, 'x3':0, 'x4':2, 'x5':1})
+        1.6094379124341003
+        """
         import math
         return math.log(self.get_value(node_assignments))
 
@@ -261,6 +294,13 @@ class Factor():
         Reduces the factor on all variables except 'variable'. The values for the other
         variables are taken from the value_dict which is assumed to give numeric values
         of the variables (index of the value which it has been assigned)
+        Examples
+        --------
+        >>> from pgmpy.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = phi.reduce_except('x1', {'x2' : 0, 'x3':0})
+        >>> phi.values
+        array([ 0.,  6.])
         """
         values = []
         for var in self.get_variables():
@@ -306,7 +346,13 @@ class Factor():
 
         Example
         -------
-
+        Examples
+        --------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = phi.marginalize_except(['x2'])
+        >>> phi.values
+        array([ 14.,  22.,  30.])
         """
         f = self.marginalize(list(set(self.get_variables()) - set(variables)), inplace=False)
         assert isinstance(f, Factor)
@@ -314,7 +360,22 @@ class Factor():
 
     def maximize(self, variables, inplace=True):
         """
+        Eliminates a list of variables by maximizing over the variable ( reducing the
+         variable to the value which maximizes the potential )
 
+        Parameter
+        ---------
+        variables : List of strings
+
+        inplace : changes the Factor, if true; returns another factor otherwise
+
+        Example
+        -------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = phi.maximize(['x2'], False)
+        >>> phi.values
+        array([  4.,   5.,  10.,  11.])
         """
         if self.data is None:
             self.data = []
@@ -323,12 +384,32 @@ class Factor():
         return self._operations_on_variables(variables, 2, inplace)
 
     def maximize_except(self, variables):
+        """
+        Eliminates all variables in the factor other than 'variables'(passed as paramter)
+         by maximizing over the variable ( reducing the variable to the value which
+         maximizes the potential )
+
+        Parameter
+        ---------
+        variables : List of strings
+
+        inplace : changes the Factor, if true; returns another factor otherwise
+
+        Example
+        -------
+        >>> from pgmpy.Factor.Factor import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi = phi.maximize_except(['x1','x3'])
+        >>> phi.values
+        array([  4.,   5.,  10.,  11.])
+        """
         f = self.maximize(list(set(self.get_variables()) - set(variables)), inplace=False)
         assert isinstance(f, Factor)
         return f
 
     def _operations_single_variable(self, variable, op_id):
         """
+        Performs operations such as maximize, marginalize and reduce over a single variable
         """
         index = list(self.variables.keys()).index(variable)
         cum_cardinality = (np.product(self.cardinality) /
@@ -370,6 +451,10 @@ class Factor():
         return marg_factor, new_data
 
     def _operations_on_variables(self, variables, op_id=1, inplace=True):
+        """
+        Performs operations such as maximize, marginalize and reduce over a set of
+        variables
+        """
         if not isinstance(variables, list):
             variables = [variables]
         for variable in variables:

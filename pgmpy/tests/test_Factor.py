@@ -64,6 +64,17 @@ class TestFactorMethods(unittest.TestCase):
     def test_get_cardinality_scopeerror(self):
         self.assertRaises(Exceptions.ScopeError, self.phi.get_cardinality, 'x4')
 
+    def test_singleton(self):
+        self.phisubmodular = Factor(['a'], [2], [5, 1])
+        self.assertTrue(self.phisubmodular.singleton_factor())
+
+    def test_pairwise_submodular(self):
+        self.phisubmodular = Factor(['a', 'b'], [2,2], [5, 1, 1, 2])
+        self.assertTrue(self.phisubmodular.pairwise_submodular_factor())
+        self.phisubmodular = Factor(['a', 'b'], [2,2], [5, 10, 2, 2])
+        self.assertFalse(self.phisubmodular.pairwise_submodular_factor())
+        self.assertFalse(self.phi.pairwise_submodular_factor())
+
     def test_marginalize(self):
         self.phi1.marginalize('x1')
         np_test.assert_array_equal(self.phi1.values, np.array([6, 8, 10, 12, 14, 16]))
