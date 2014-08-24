@@ -98,10 +98,7 @@ class BayesianModel(nx.DiGraph):
         marginal_probability('node1')
         """
     def __init__(self, ebunch=None):
-        if ebunch is not None:
-            self._check_node_string(set(itertools.chain(*ebunch)))
-
-        nx.DiGraph.__init__(self, ebunch)
+        super(BayesianModel, self).__init__(ebunch)
 
         if ebunch is not None:
             new_nodes = set(itertools.chain(*ebunch))
@@ -116,7 +113,7 @@ class BayesianModel(nx.DiGraph):
         Parameters
         ----------
         node: node
-              A node can only be a string.
+              A node can be any hashable python object.
 
         See Also
         --------
@@ -128,10 +125,7 @@ class BayesianModel(nx.DiGraph):
         >>> G = bm.BayesianModel()
         >>> G.add_node('difficulty')
         """
-        # if not isinstance(node, str):
-        #     raise TypeError("Name of nodes must be strings")
-        self._check_node_string([node])
-        nx.DiGraph.add_node(self, node)
+        super(BayesianModel, self).add_node(node)
 
         self._update_node_parents([node])
         self._update_node_rule_for_parents([node])
@@ -155,8 +149,7 @@ class BayesianModel(nx.DiGraph):
         >>> G = bm.BayesianModel()
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         """
-        self._check_node_string(nodes)
-        nx.DiGraph.add_nodes_from(self, nodes)
+        super(BayesianModel, self).add_nodes_from(nodes)
 
         self._update_node_parents(nodes)
         self._update_node_rule_for_parents(nodes)
@@ -171,7 +164,7 @@ class BayesianModel(nx.DiGraph):
         Parameters
         ----------
         u,v : nodes
-              Nodes must be strings.
+              Nodes can be any hashable python object.
 
         See Also
         --------
@@ -184,11 +177,8 @@ class BayesianModel(nx.DiGraph):
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')
         """
-        #string check required because if nodes not present networkx
-        #automatically adds those nodes
-        self._check_node_string([u, v])
         if self._check_graph([(u, v)], delete_graph=False):
-            nx.DiGraph.add_edge(self, u, v)
+            super(BayesianModel, self).add_edge(u, v)
 
         self._update_node_parents([u, v])
         self._update_node_rule_for_parents([u, v])
@@ -217,11 +207,8 @@ class BayesianModel(nx.DiGraph):
         >>> G.add_nodes_from(['diff', 'intel', 'grade'])
         >>> G.add_edges_from([('diff', 'intel'), ('grade', 'intel')])
         """
-        if ebunch is not None:
-            self._check_node_string(set(itertools.chain(*ebunch)))
-
         if self._check_graph(ebunch, delete_graph=False):
-            nx.DiGraph.add_edges_from(self, ebunch)
+            super(BayesianModel, self).add_edges_from(ebunch)
 
         new_nodes = set(itertools.chain(*ebunch))
         self._update_node_parents(new_nodes)
@@ -344,17 +331,6 @@ class BayesianModel(nx.DiGraph):
         #     self.node[head_node]['_rule_for_parents'] = [                  #
         #             index for index in range(len(tail))]                   #
         ######################################################################
-
-    @staticmethod
-    def _check_node_string(node_list):
-        """
-        Checks if all the newly added node are strings.
-        Called from __init__, add_node, add_nodes_from, add_edge and
-        add_edges_from
-        """
-        for node in node_list:
-            if not (isinstance(node, str)):
-                raise TypeError("Node names must be strings")
 
     def _check_graph(self, ebunch=None, delete_graph=False):
         """
