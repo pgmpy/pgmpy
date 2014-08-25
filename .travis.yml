@@ -10,7 +10,7 @@ before_install:
     - df -h
     - ulimit -a
 install: source continous_integration/install.sh
-script: nosetests3 --with-coverage --cover-package=pgmpy
+script: nosetests --with-coverage --cover-package=pgmpy
 after_success:
     coveralls
 notifications:
