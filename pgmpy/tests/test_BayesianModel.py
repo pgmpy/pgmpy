@@ -19,7 +19,7 @@ class TestBaseModelCreation(unittest.TestCase):
                              [['a', 'b'], ['b', 'c']])
 
     def test_class_init_with_data_nonstring(self):
-        self.assertRaises(TypeError, bm.BayesianModel, [(1, 2), (2, 3)])
+        bm.BayesianModel([(1, 2), (2, 3)])
 
     #TODO: Correct these tests
     # def test_class_init_with_data_selfloop(self):
@@ -35,14 +35,14 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertListEqual(self.G.nodes(), ['a'])
 
     def test_add_node_nonstring(self):
-        self.assertRaises(TypeError, self.G.add_node, 1)
+        self.G.add_node(1)
 
     def test_add_nodes_from_string(self):
         self.G.add_nodes_from(['a', 'b', 'c', 'd'])
         self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c', 'd'])
 
     def test_add_nodes_from_non_string(self):
-        self.assertRaises(TypeError, self.G.add_nodes_from, [1, 2, 3, 4])
+        self.G.add_nodes_from([1, 2, 3, 4])
 
     def test_add_edge_string(self):
         self.G.add_edge('d', 'e')
@@ -54,7 +54,7 @@ class TestBaseModelCreation(unittest.TestCase):
                              [['a', 'b'], ['d', 'e']])
 
     def test_add_edge_nonstring(self):
-        self.assertRaises(TypeError, self.G.add_edge, 1, 2)
+        self.G.add_edge(1, 2)
 
     def test_add_edge_selfloop(self):
         self.assertRaises(ValueError, self.G.add_edge, 'a', 'a')
@@ -77,7 +77,7 @@ class TestBaseModelCreation(unittest.TestCase):
                                                   ('d', 'e'), ('e', 'f')]))
 
     def test_add_edges_from_nonstring(self):
-        self.assertRaises(TypeError, self.G.add_edges_from, [(1, 2), (2, 3)])
+        self.G.add_edges_from([(1, 2), (2, 3)])
 
     def test_add_edges_from_self_loop(self):
         self.assertRaises(ValueError, self.G.add_edges_from,
