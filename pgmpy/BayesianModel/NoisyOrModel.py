@@ -115,25 +115,25 @@ class NoisyOrModel(nx.DiGraph):
             self.variables = self.variables.remove(var)
             self.cardinality = np.delete(self.cardinality, index)
             self.inhibitor_probability = np.delete(self.inhibitor_probability, index)
-
-    def out_prob(self, func):
-        """
-        Compute the conditional probability of output variable
-        given all other variables [P(X|U)] where X is the output
-        variable and U is the set of input variables.
-
-        Parameters
-        ----------
-        func: function
-            The deterministic function which maps input to the
-            output.
-
-        Returns
-        -------
-        List of tuples. Each tuple is of the form (state, probability).
-        """
-        states = []
-        from itertools import product
-        for u in product([(values(var)) for var in self.variables]):
-            for state in product([(values(var) for var in self.variables)]):
+    #
+    # def out_prob(self, func):
+    #     """
+    #     Compute the conditional probability of output variable
+    #     given all other variables [P(X|U)] where X is the output
+    #     variable and U is the set of input variables.
+    #
+    #     Parameters
+    #     ----------
+    #     func: function
+    #         The deterministic function which maps input to the
+    #         output.
+    #
+    #     Returns
+    #     -------
+    #     List of tuples. Each tuple is of the form (state, probability).
+    #     """
+    #     states = []
+    #     from itertools import product
+    #     for u in product([(values(var)) for var in self.variables]):
+    #         for state in product([(values(var) for var in self.variables)]):
 
