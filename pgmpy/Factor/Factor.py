@@ -4,8 +4,8 @@
 # from collections import OrderedDict
 # import numpy as np
 # from pgmpy import Exceptions
-# from pgmpy.Factor._factor_product import _factor_product, _factor_product_orig
-# from pgmpy.Factor._factor_product import _factor_divide
+# # from pgmpy.Factor._factor_product import _factor_product, _factor_product_orig
+# # from pgmpy.Factor._factor_product import _factor_divide
 #
 #
 # class Factor():
@@ -22,7 +22,7 @@
 #     reduce([variable_values_list])
 #     """
 #
-#     def __init__(self, variables, cardinality, value, data = None):
+#     def __init__(self, variables, cardinality, value, data=None):
 #         """
 #         Initialize a Factor class.
 #
@@ -202,7 +202,6 @@
 #             raise Exceptions.ScopeError("%s not in scope" % variable)
 #         return self.cardinality[list(self.variables.keys()).index(variable)]
 #
-# <<<<<<< HEAD
 #     def identity_factor(self):
 #         """
 #         Returns the identity factor.
@@ -212,10 +211,7 @@
 #         """
 #         return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
 #
-#     def marginalize(self, variables):
-# =======
 #     def reduce(self, values, inplace = True):
-# >>>>>>> f6a4dd8031515bb9d0fd5669f899e441f62fad7d
 #         """
 #         Reduces the factor to the context of given variable values.
 #
@@ -721,9 +717,8 @@
 #     if not (isinstance(factor1, Factor) and isinstance(factor2, Factor)):
 #         raise TypeError("Input parameters must be factors")
 #     return _bivar_factor_divide(factor1, factor2)
-# >>>>>>> f6a4dd8031515bb9d0fd5669f899e441f62fad7d
 
-#!/usr/bin/env python3
+
 
 import functools
 from collections import OrderedDict
@@ -1121,4 +1116,3 @@ def factor_product(*args):
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
     return functools.reduce(_bivar_factor_product, args)
-

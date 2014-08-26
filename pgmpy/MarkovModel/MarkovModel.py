@@ -7,7 +7,7 @@ from pgmpy.Factor.Factor import Factor
 from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
 
 
-class MarkovModel(UndirectedGraph):
+class MarkovModel(nx.Graph):
     """
         Base class for markov model.
 
@@ -82,10 +82,9 @@ class MarkovModel(UndirectedGraph):
         """
 
     def __init__(self, ebunch=None):
-        nx.Graph.__init__(self, ebunch)
-        if ebunch:
-            for node in self.nodes():
-                self._set_is_observed(node, False)
+        super(MarkovModel, self).__init__(ebunch)
+        for node in self.nodes():
+            self._set_is_observed(node, False)
         self.factors = []
         self.cardinality = {}
 
@@ -108,7 +107,7 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel()
         >>> G.add_node('A')
         """
-        nx.Graph.add_node(node)
+        super(MarkovModel, self).add_node(node)
         self._set_is_observed(node, False)
 
     def add_nodes_from(self, nodes):
@@ -158,7 +157,9 @@ class MarkovModel(UndirectedGraph):
         """
         # Need to check that there is no self loop.
         if u != v:
-            self.add_edge(self, u, v)
+            super(MarkovModel, self).add_edge(u, v)
+        else:
+            raise ValueError('Self loops are not allowed')
 
     def add_edges_from(self, ebunch):
         """
@@ -396,14 +397,14 @@ class MarkovModel(UndirectedGraph):
     #     """
     #     self.node[node]['_states'] = states
 
-    def _set_is_observed(self, node):
+    def _set_is_observed(self, node, bool):
         """
         Updates '_observed' attribute of the node.
 
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        self.node[node]['_is_observed'] = True
+        self.node[node]['_is_observed'] = bool
 
     def is_observed(self, nodes):
         """
