@@ -3,10 +3,9 @@ from collections import OrderedDict
 import numpy as np
 import numpy.testing as np_test
 from pgmpy.Factor import Factor
-from pgmpy.Factor.CPD import TabularCPD, TreeCPD
+from pgmpy.Factor.CPD import TabularCPD, TreeCPD, RuleCPD
 from pgmpy import Exceptions
 from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
-from pgmpy.Factor.CPD import RuleCPD
 
 
 class TestFactorInit(unittest.TestCase):
