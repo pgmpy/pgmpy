@@ -126,12 +126,15 @@ class JunctionTree(UndirectedGraph):
         """
         self.node[node]["visited"] = True
         factor = self.node[node]["factor"]
+        #print(str(node)+ "self factor "+str(factor))
         self_vars = factor.get_variables()
         nbrs_to_pull_from = self._unvisited_neighbors(node)
         for nbr in nbrs_to_pull_from:
+            #print(nbr)
             f = self._pull_h(nbr, func)
             assert isinstance(f, Factor)
-            f = func(f, self_vars)
+            #print("marginalize at " + str(node) + " using " + str(self_vars))
+            f = func(f,self_vars)
             assert isinstance(f, Factor)
             factor = factor.product(f)
         self.node[node]["pull_factor"] = factor
@@ -165,7 +168,7 @@ class JunctionTree(UndirectedGraph):
         if factor is None:
             full_prod = self.node[node]["pull_factor"]
         else:
-            factor = func(factor, self_factor.get_variables())
+            factor = func(factor,self_factor.get_variables())
             self.node[node]["push_factor"] = factor
             full_prod = factor.product(self.node[node]["pull_factor"])
         assert isinstance(full_prod, Factor)
@@ -174,7 +177,7 @@ class JunctionTree(UndirectedGraph):
         for nbr in rel_nbrs:
             nbr_factor = self.node[nbr]["pull_factor"]
             assert isinstance(nbr_factor, Factor)
-            nbr_factor = func(nbr_factor, (self_factor.get_variables()))
+            nbr_factor = func(nbr_factor,(self_factor.get_variables()))
             fact_push = full_prod.divide(nbr_factor)
             self._push_h(nbr, fact_push, func)
 
@@ -188,16 +191,16 @@ class JunctionTree(UndirectedGraph):
         >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
         >>> graph.add_states(
         ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
-        >>> graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
-        >>> graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
         >>> jt = graph.make_jt(2)
         >>> jt.normalization_constant()
         163.0
         """
         factor = self._pull(Factor.marginalize_except)
         assert isinstance(factor, Factor)
-        norm = factor.marginalize_except([])
-        return norm.values[0]
+        norm = factor.sum_values()
+        return norm
 
     def marginal_prob(self, var):
         """
@@ -209,8 +212,8 @@ class JunctionTree(UndirectedGraph):
         >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
         >>> graph.add_states(
         ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
-        >>> graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
-        >>> graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
         >>> jt = graph.make_jt(2)
         >>> jt.marginal_prob('d')
         d	phi(d)
@@ -229,7 +232,7 @@ class JunctionTree(UndirectedGraph):
                 return rel_fact
         raise Exception("Should never reach here! If here, then trouble!")
 
-    def map(self):
+    def MAP(self):
         """
         Uses junction tree to find the marginal probability of any variable
 
@@ -239,15 +242,18 @@ class JunctionTree(UndirectedGraph):
         >>> graph = mm.MarkovModel([('d', 'g'), ('i', 'g')])
         >>> graph.add_states(
         ...    {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart']})
-        >>> graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
-        >>> graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['d', 'g'], [1, 2, 3, 4, 5, 6])
+        >>> f = graph.add_factor(['i', 'g'], [1, 2, 3, 4, 5, 6])
         >>> jt = graph.make_jt(2)
-        >>> jt.map()
+        >>> jt.MAP()
         d	phi(d)
         d_0	46.0
         d_1	109.0
         """
         factor = self._pull(Factor.maximize_except)
-        factor = factor.maximize_except([])
+        print("--")
+        print(factor)
+        print("--")
         assert isinstance(factor, Factor)
-        return factor.data[0]
+        norm = factor.sum_values()
+        return norm

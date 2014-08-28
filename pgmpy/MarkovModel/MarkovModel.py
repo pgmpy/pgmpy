@@ -7,7 +7,7 @@ from pgmpy.Factor.Factor import Factor
 from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
 
 
-class MarkovModel(UndirectedGraph):
+class MarkovModel(nx.Graph):
     """
         Base class for markov model.
 
@@ -82,10 +82,9 @@ class MarkovModel(UndirectedGraph):
         """
 
     def __init__(self, ebunch=None):
-        nx.Graph.__init__(self, ebunch)
-        if ebunch:
-            for node in self.nodes():
-                self._set_is_observed(node, False)
+        super(MarkovModel, self).__init__(ebunch)
+        for node in self.nodes():
+            self._set_is_observed(node, False)
         self.factors = []
         self.cardinality = {}
 
@@ -108,7 +107,7 @@ class MarkovModel(UndirectedGraph):
         >>> G = mm.MarkovModel()
         >>> G.add_node('A')
         """
-        nx.Graph.add_node(node)
+        super(MarkovModel, self).add_node(node)
         self._set_is_observed(node, False)
 
     def add_nodes_from(self, nodes):
@@ -158,7 +157,9 @@ class MarkovModel(UndirectedGraph):
         """
         # Need to check that there is no self loop.
         if u != v:
-            self.add_edge(self, u, v)
+            super(MarkovModel, self).add_edge(u, v)
+        else:
+            raise ValueError('Self loops are not allowed')
 
     def add_edges_from(self, ebunch):
         """
@@ -396,14 +397,14 @@ class MarkovModel(UndirectedGraph):
     #     """
     #     self.node[node]['_states'] = states
 
-    def _set_is_observed(self, node):
+    def _set_is_observed(self, node, bool):
         """
         Updates '_observed' attribute of the node.
 
         If any of the states of a node are observed, node.['_observed']
         is made True. Otherwise, it is False.
         """
-        self.node[node]['_is_observed'] = True
+        self.node[node]['_is_observed'] = bool
 
     def is_observed(self, nodes):
         """
@@ -901,76 +902,3 @@ class MarkovModel(UndirectedGraph):
                 edges_to_add.add(edge)
             graph_copy.add_edges_from(edges_to_add)
         return self.copy().add_edges_from(edges_to_add)
-
-
-    def MAP_graph_cut(self):
-        """
-        Finds the MAP assignment for pairwise binary MRFs
-
-        Parameter
-        ----------
-        None
-
-        Reference
-        -----------
-        Section 13.6 in Koller
-
-        Example
-        --------
-        >>> import MarkovModel as mm
-        >>> graph = mm.MarkovModel([('a','b'),('b','c'), ('a','c')])
-        >>> graph.add_states({'a': ['0', '1'], 'b': ['0', '1'], 'c': ['0','1']})
-        >>> graph.add_factor(['a','b'],[5,1,1,2])
-        >>> graph.add_factor(['b','c'],[1,1,1,5])
-        >>> graph.add_factor(['a','c'],[1,1,1,5])
-        >>> graph.MAP_graph_cut()
-        {'a': '1', 'c': '1', 'b': '1'}
-        """
-        for factor in self.get_factors():
-            if not (factor.singleton_factor() or factor.pairwise_submodular_factor()):
-                raise ValueError("Factors are not compatible with algorithm")
-        g = DirectedGraph()
-        for node in self.nodes():
-            g.add_node(node)
-        source_node = g.get_node_name_with_suffix("source")
-        sink_node = g.get_node_name_with_suffix("sink")
-        g.add_node(source_node)
-        g.add_node(sink_node)
-        g.add_all_flow_edges()
-        for factor in self.get_factors():
-            if factor.singleton_factor():
-                var = factor.get_variables()[0]
-                g.add_to_flow_edge_capacity(source_node, var, -factor.get_log_value([1]))
-                g.add_to_flow_edge_capacity(var, sink_node, -factor.get_log_value([0]))
-            else:
-                variables = factor.get_variables()
-                var1, var2 = variables[0], variables[1]
-                a = -factor.get_log_value([0, 0])
-                b = -factor.get_log_value([0, 1])
-                c = -factor.get_log_value([1, 0])
-                d = -factor.get_log_value([1, 1])
-                g.add_to_flow_edge_capacity(var2, sink_node, c)
-                g.add_to_flow_edge_capacity(source_node, var2, d)
-                g.add_to_flow_edge_capacity(var1, sink_node, a - c)
-                g.add_to_flow_edge_capacity(var1, var2, b + c - a - d)
-        for node in self.nodes():
-            wsu = g.get_flow_capacity(source_node, node)
-            wut = g.get_flow_capacity(node, sink_node)
-            min_val = min(wsu, wut)
-            g.add_to_flow_edge_capacity(source_node, node, -min_val)
-            g.add_to_flow_edge_capacity(node, sink_node, -min_val)
-        g.max_flow_ford_fulkerson(source_node, sink_node)
-        dfs_set = set()
-        g.flow_dfs(source_node, dfs_set)
-        val1_set = set()
-        for node in g.neighbors(source_node):
-            if node not in dfs_set:
-                val1_set.add(node)
-        all_nodes = set(self.nodes())
-        val0_set = all_nodes - val1_set
-        ans_dict = {}
-        for node in val0_set:
-            ans_dict[node] = "0"
-        for node in val1_set:
-            ans_dict[node] = "1"
-        return ans_dict

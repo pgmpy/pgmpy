@@ -452,30 +452,30 @@ class UndirectedGraph(nx.Graph):
         jt = self.jt_techniques(triangulation_technique, True, False)
         return jt
 
-        # def read_simple_format(self, filename):
-        #     """
-        #     Read the graph from a file assuming a very simple graph reading format
-        #
-        #     Parameters
-        #     ----------
-        #     filename  :  String
-        #             The file which has the graph data
-        #
-        #     Example
-        #     -------
-        #     >>> from pgmpy import MarkovModel
-        #     >>> G = MarkovModel.UndirectedGraph()
-        #     >>> G.read_simple_format("graph")
-        #     """
-        #     file = open(filename, "r")
-        #     num_nodes = int(file.readline())
-        #     for i in range(num_nodes):
-        #         self.add_node(str(i))
-        #     #print("nodes"+str(num_nodes))
-        #     file.readline()
-        #     while True:
-        #         edge = file.readline()
-        #         if not edge:
-        #             break
-        #         nodes = edge.split()
-        #         self.add_edge(nodes[0], nodes[1])
+    # def read_simple_format(self, filename):
+    #     """
+    #     Read the graph from a file assuming a very simple graph reading format
+    #
+    #     Parameters
+    #     ----------
+    #     filename  :  String
+    #             The file which has the graph data
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy import MarkovModel
+    #     >>> G = MarkovModel.UndirectedGraph()
+    #     >>> G.read_simple_format("graph")
+    #     """
+    #     file = open(filename, "r")
+    #     num_nodes = int(file.readline())
+    #     for i in range(num_nodes):
+    #         self.add_node(str(i))
+    #     #print("nodes"+str(num_nodes))
+    #     file.readline()
+    #     while True:
+    #         edge = file.readline()
+    #         if not edge:
+    #             break
+    #         nodes = edge.split()
+    #         self.add_edge(nodes[0], nodes[1])

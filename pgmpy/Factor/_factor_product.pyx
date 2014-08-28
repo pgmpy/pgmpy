@@ -54,28 +54,16 @@ cdef pattern_gen(np.ndarray[DTYPE_t, ndim=1] x_card,
 @cython.nonecheck(False)
 def _factor_product(np.ndarray[DTYPE_t, ndim=1] card_prod,DTYPE_t size,
                     np.ndarray[double, ndim=1] x, np.ndarray[DTYPE_t, ndim=1] card_x, np.ndarray[DTYPE_t,ndim=1] ref_x,
-                    np.ndarray[double, ndim=1] y, np.ndarray[DTYPE_t, ndim=1] card_y, np.ndarray[DTYPE_t,ndim=1] ref_y,
-                    data_x, data_y):
+                    np.ndarray[double, ndim=1] y, np.ndarray[DTYPE_t, ndim=1] card_y, np.ndarray[DTYPE_t,ndim=1] ref_y):
 
     cdef:
         np.ndarray[double, ndim=1] product_arr = np.zeros(size)
         np.ndarray[DTYPE_t, ndim=1] prod_indices = np.array([0] * card_prod.shape[0], dtype=DTYPE)
-        int i, x_index, y_index
+
     x_index = 0
     y_index = 0
-    if data_x is None and data_y is None:
-        new_data = None
-    else:
-        new_data = [0] * size
     for i in range(size):
         product_arr[i] = x[x_index] * y[y_index]
-        if new_data is not None:
-            if data_x is None:
-                new_data[i] = data_y[y_index]
-            elif data_y is None:
-                new_data[i] = data_x[x_index]
-            else:
-                new_data[i] = data_x[x_index] + data_y[y_index]
         j=card_prod.shape[0]-1
         flag=0
         while True:
@@ -92,7 +80,7 @@ def _factor_product(np.ndarray[DTYPE_t, ndim=1] card_prod,DTYPE_t size,
             j-=1
             if flag==1:
                 break
-    return product_arr, new_data
+    return product_arr
 
 @cython.boundscheck(False)
 @cython.nonecheck(False)
