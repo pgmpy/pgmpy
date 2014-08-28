@@ -909,7 +909,8 @@ class Factor:
 
         """
         index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+        cum_cardinality = (np.product(self.cardinality) /
+                           np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
         num_elements = cum_cardinality[0]
         sum_index = [j for i in range(0, num_elements,
                                       cum_cardinality[index])
@@ -956,7 +957,8 @@ class Factor:
             if not (int(value_index) < self.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
-            cum_cardinality = (np.product(self.cardinality) / np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+            cum_cardinality = (np.product(self.cardinality) /
+                               np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
             num_elements = cum_cardinality[0]
             index_arr = [j for i in range(0, num_elements,
                                           cum_cardinality[index])
@@ -1080,7 +1082,8 @@ def _bivar_factor_product(phi1, phi2):
         from itertools import product
         for index in product(*[range(card) for card in cardinality]):
             index = np.array(index)
-            values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] * phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+            values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+                          phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
 
         phi = Factor(variables, cardinality, values)
         return phi
