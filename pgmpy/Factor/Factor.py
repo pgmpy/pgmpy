@@ -1062,11 +1062,6 @@ def _bivar_factor_product(phi1, phi2):
     phi2_vars = list(phi2.variables)
     common_var_list = [var for var in phi1_vars if var in phi2_vars]
     if common_var_list:
-        common_var_index_list = np.array([[phi1_vars.index(var), phi2_vars.index(var)]
-                                          for var in common_var_list])
-        common_card_product = np.prod([phi1.cardinality[index[0]] for index
-                                       in common_var_index_list])
-
         variables = phi1_vars
         variables.extend([var for var in phi2.variables
                          if var not in common_var_list])
