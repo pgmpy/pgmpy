@@ -872,8 +872,8 @@ class Factor:
         """
         Modifies the factor with marginalized values.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         variables: string, list-type
             name of variable to be marginalized
 
