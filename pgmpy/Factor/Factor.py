@@ -495,5 +495,5 @@ def factor_divide(phi1, phi2):
     factor_product
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
-        raise ValueError("phi1 and phi2 should be Factor instances")
+        raise TypeError("phi1 and phi2 should be Factor instances")
     return _bivar_factor_operation(phi1, phi2, operation='D')

@@ -19,6 +19,9 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init_sizeerror(self):
         self.assertRaises(Exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
+    def test_init_size_var_card_not_equal(self):
+        self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
+
 
 class TestFactorMethods(unittest.TestCase):
     def setUp(self):
@@ -106,6 +109,17 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce_sizeerror(self):
         self.assertRaises(Exceptions.SizeError, self.phi1.reduce, 'x3_5')
 
+    def test_identity_factor(self):
+        identity_factor = self.phi.identity_factor()
+        self.assertEquals(list(identity_factor.variables), ['x1', 'x2', 'x3'])
+        np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
+        np_test.assert_array_equal(identity_factor.values, np.ones(8))
+
+    def test__str(self):
+        from pgmpy import Factor
+        phi = Factor.Factor(['x1'], [2], np.ones(2))
+        self.assertEqual(repr(phi.__str__()), "'x1\\t\\tphi(x1)\\n------------------------\\nx1_0\\t\\t1.0\\nx1_1\\t\\t1.0\\n'")
+
     def test_factor_product(self):
         from pgmpy import Factor
         phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
@@ -158,6 +172,26 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    def test_factor_product_non_factor_arg(self):
+        from pgmpy import Factor
+        self.assertRaises(TypeError, Factor.factor_product, 1, 2)
+
+    def test_factor_mul(self):
+        from pgmpy import Factor
+        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        factor_product = phi * phi1
+        np_test.assert_array_equal(factor_product.values,
+                                   np.array([0, 0, 0, 0, 0, 1,
+                                             2, 3, 0, 2, 4, 6,
+                                             0, 3, 6, 9]))
+        self.assertEqual(factor_product.variables, OrderedDict([
+            ('x1', ['x1_0', 'x1_1']),
+            ('x2', ['x2_0', 'x2_1']),
+            ('x3', ['x3_0', 'x3_1']),
+            ('x4', ['x4_0', 'x4_1'])]
+        ))
+
     def test_factor_divide(self):
         from pgmpy import Factor
         phi1 = Factor.Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
@@ -172,6 +206,16 @@ class TestFactorMethods(unittest.TestCase):
         phi2 = Factor.Factor(['x1'], [2], [0, 2])
         factor_divide = phi1.divide(phi2)
         np_test.assert_array_equal(factor_divide.values, np.array([0, 0, 1.5, 2]))
+
+    def test_factor_divide_no_common_scope(self):
+        from pgmpy import Factor
+        phi1 = Factor.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
+        phi2 = Factor.Factor(['x3'], [2], [0, 2])
+        self.assertRaises(ValueError, Factor.factor_divide, phi1, phi2)
+
+    def test_factor_divide_non_factor_arg(self):
+        from pgmpy import Factor
+        self.assertRaises(TypeError, Factor.factor_divide, 1, 1)
 
     # def test_sum_values(self):
     #     self.assertEqual(self.phi1.sum_values(), 66)
