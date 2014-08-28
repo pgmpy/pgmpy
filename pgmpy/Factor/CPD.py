@@ -78,7 +78,7 @@ class TabularCPD(Factor):
         if len(np.array(values).shape) is not 2:
             raise TypeError("Values must be a 2d list/array")
         self.cpd = np.array(values)
-        Factor.__init__(self, variables, cardinality, self.cpd.flatten('F'))
+        Factor.__init__(self, variables, cardinality, self.cpd.flatten('C'))
 
     def marginalize(self, variables):
         """
@@ -105,7 +105,7 @@ class TabularCPD(Factor):
         Factor.marginalize(self, variables)
         self.cpd = self.values.reshape((self.event_card,
                                         np.product(self.cardinality)/self.event_card),
-                                       order='F')
+                                       order='C')
         self.evidence = [var for var in self.variables
                          if var is not self.event]
         self.evidence_card = [self.get_cardinality(variable)
@@ -155,7 +155,7 @@ class TabularCPD(Factor):
         Factor.reduce(self, values)
         self.cpd = self.values.reshape((self.event_card,
                                         np.product(self.cardinality)/self.event_card),
-                                       order='F')
+                                       order='C')
         self.evidence = [var for var in self.variables
                          if var is not self.event]
         self.evidence_card = [self.get_cardinality(variable)
