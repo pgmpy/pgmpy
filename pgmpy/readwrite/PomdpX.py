@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import warnings
 from collections import defaultdict
 
 try:
@@ -402,8 +403,27 @@ class PomdpXWriter():
         """
         Return the XML as string.
         """
-        return etree.tostring(xml, encoding=self.encoding,
-                              pretty_print=self.prettyprint)
+        if self.prettyprint:
+            self.indent(xml)
+        return etree.tostring(xml, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        """
+        Inplace prettyprint formatter.
+        """
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
     def _add_value_enum(self, var, tag):
         """
