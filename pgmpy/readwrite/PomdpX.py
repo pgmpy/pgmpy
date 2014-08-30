@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import warnings
 from collections import defaultdict
 
 try:
@@ -115,7 +116,7 @@ class PomdpXReader:
                 state_variables['ValueEnum'] = []
                 if var.find('NumValues') is not None:
                     for i in range(0, int(var.find('NumValues').text)):
-                        state_variables['ValueEnum'].append('s'+str(i))
+                        state_variables['ValueEnum'].append('s' + str(i))
                 if var.find('ValueEnum') is not None:
                     state_variables['ValueEnum'] = \
                         var.find('ValueEnum').text.split()
@@ -365,3 +366,267 @@ class PomdpXReader:
             dag['id'] = SubDAGTemplate.get('id')
         dag[root] = get_param(node)
         return dag
+
+
+class PomdpXWriter():
+    """
+    Class for writing models in PomdpX
+    """
+    def __init__(self, model_data, encoding='utf-8', prettyprint=True):
+        """
+        Initialise a PomdpXWriter Object
+
+        Parameters
+        ---------------
+        model: A Bayesian of Markov Model
+            The model to write
+        encoding: String(optional)
+            Encoding for text data
+        prettyprint: Bool(optional)
+            Indentation in output XML if true
+        """
+        self.model = model_data
+
+        self.encoding = encoding
+        self.prettyprint = prettyprint
+
+        self.xml = etree.Element("pomdpx", attrib={'version': '1.0'})
+        self.description = etree.SubElement(self.xml, 'Description')
+        self.discount = etree.SubElement(self.xml, 'Discount')
+        self.variable = etree.SubElement(self.xml, 'Variable')
+        self.initial_belief = etree.SubElement(self.xml, 'InitialStateBelief')
+        self.transition_function = etree.SubElement(self.xml, 'StateTransitionFunction')
+        self.observation_function = etree.SubElement(self.xml, 'ObsFunction')
+        self.reward_function = etree.SubElement(self.xml, 'RewardFunction')
+
+    def __str__(self, xml):
+        """
+        Return the XML as string.
+        """
+        if self.prettyprint:
+            self.indent(xml)
+        return etree.tostring(xml, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        """
+        Inplace prettyprint formatter.
+        """
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def _add_value_enum(self, var, tag):
+        """
+        supports adding variables to the xml
+
+        Parameters
+        ---------------
+        var: The SubElement variable
+        tag: The SubElement tag to which enum value is to be added
+
+        Return
+        ---------------
+        None
+        """
+        if var['ValueEnum'][0] == 's0':
+                numvalues_tag = etree.SubElement(tag, 'NumValues')
+                numvalues_tag.text = str(int(var['ValueEnum'][-1][-1]) + 1)
+        else:
+            valueenum_tag = etree.SubElement(tag, 'ValueEnum')
+            valueenum_tag.text = ''
+            for value in var['ValueEnum']:
+                valueenum_tag.text += value + ' '
+            valueenum_tag.text = valueenum_tag.text[:-1]
+
+    def get_variables(self):
+        """
+        Add variables to PomdpX
+
+        Return
+        ---------------
+        xml containing variables tag
+        """
+        state_variables = self.model['variables']['StateVar']
+        for var in state_variables:
+            state_var_tag = etree.SubElement(self.variable, 'StateVar', attrib={'vnamePrev': var['vnamePrev'],
+                                                                                'vnameCurr': var['vnameCurr'],
+                                                                                'fullyObs': 'true' if var['fullyObs']
+                                                                                else 'false'})
+            self._add_value_enum(var, state_var_tag)
+
+        obs_variables = self.model['variables']['ObsVar']
+        for var in obs_variables:
+            obs_var_tag = etree.SubElement(self.variable, 'ObsVar', attrib={'vname': var['vname']})
+            self._add_value_enum(var, obs_var_tag)
+
+        action_variables = self.model['variables']['ActionVar']
+        for var in action_variables:
+            action_var_tag = etree.SubElement(self.variable, 'ActionVar', attrib={'vname': var['vname']})
+            self._add_value_enum(var, action_var_tag)
+
+        reward_var = self.model['variables']['RewardVar']
+        for var in reward_var:
+            etree.SubElement(self.variable, 'RewardVar', attrib={'vname': var['vname']})
+
+        return self.__str__(self.variable)[:-1]
+
+    def add_parameter_dd(self, dag_tag, node_dict):
+        """
+        helper function for adding parameters in condition
+
+        Parameters
+        ---------------
+        dag_tag: etree SubElement
+                 the DAG tag is contained in this subelement
+        node_dict: dictionary
+                   the decision diagram dictionary
+
+        Return
+        ---------------
+        None
+        """
+        if isinstance(node_dict, defaultdict) or isinstance(node_dict, dict):
+            node_tag = etree.SubElement(dag_tag, 'Node', attrib={'var': next(iter(node_dict.keys()))})
+            edge_dict = next(iter(node_dict.values()))
+            for edge in sorted(edge_dict.keys(), key=tuple):
+                edge_tag = etree.SubElement(node_tag, 'Edge', attrib={'val': edge})
+                value = edge_dict.get(edge)
+                if isinstance(value, str):
+                    terminal_tag = etree.SubElement(edge_tag, 'Terminal')
+                    terminal_tag.text = value
+                elif 'type' in value:
+                    if 'val' in value:
+                        etree.SubElement(edge_tag, 'SubDAG',
+                                         attrib={'type': value['type'], 'var': value['var'], 'val': value['val']})
+                    elif 'idref' in value:
+                        etree.SubElement(edge_tag, 'SubDAG', attrib={'type': value['type'], 'idref': value['idref']})
+                    else:
+                        etree.SubElement(edge_tag, 'SubDAG', attrib={'type': value['type'], 'var': value['var']})
+                else:
+                    self.add_parameter_dd(edge_tag, value)
+
+    def add_conditions(self, condition, condprob):
+        """
+        helper function for adding probability conditions for model\
+
+        Parameters
+        ---------------
+
+        condition:  dictionary
+                    contains and element of conditions list
+        condprob:   etree SubElement
+                    the tag to which condition is added
+
+        Return
+        ---------------
+        None
+        """
+        var_tag = etree.SubElement(condprob, 'Var')
+        var_tag.text = condition['Var']
+        parent_tag = etree.SubElement(condprob, 'Parent')
+        parent_tag.text = ''
+        for parent in condition['Parent']:
+            parent_tag.text += parent + ' '
+        parent_tag.text = parent_tag.text[:-1]
+        parameter_tag = etree.SubElement(condprob, 'Parameter', attrib={'type': condition['Type']
+                                                                        if condition['Type'] is not None
+                                                                        else 'TBL'})
+        if condition['Type'] == 'DD':
+            dag_tag = etree.SubElement(parameter_tag, 'DAG')
+            parameter_dict = condition['Parameter']
+            if 'SubDAGTemplate' in parameter_dict:
+                subdag_tag = etree.SubElement(parameter_tag, 'SubDAGTemplate', attrib={'id': parameter_dict['id']})
+                self.add_parameter_dd(subdag_tag, parameter_dict['SubDAGTemplate'])
+                del parameter_dict['SubDAGTemplate']
+                del parameter_dict['id']
+                self.add_parameter_dd(dag_tag, parameter_dict)
+            else:
+                self.add_parameter_dd(dag_tag, parameter_dict)
+        else:
+            for parameter in condition['Parameter']:
+                entry = etree.SubElement(parameter_tag, 'Entry')
+                instance = etree.SubElement(entry, 'Instance')
+                instance.text = ''
+                for instance_var in parameter['Instance']:
+                    instance.text += instance_var + ' '
+                length_instance = len(parameter['Instance'])
+                if len(parameter['Instance'][length_instance - 1]) > 1:
+                        instance.text = instance.text[:-1]
+                if len(parameter['Instance']) == 1:
+                    instance.text = ' ' + instance.text
+                if condprob.tag == 'Func':
+                    table = 'ValueTable'
+                else:
+                    table = 'ProbTable'
+                prob_table = parameter[table]
+                prob_table_tag = etree.SubElement(entry, table)
+                prob_table_tag.text = ''
+                for probability in prob_table:
+                    prob_table_tag.text += probability + ' '
+                prob_table_tag.text = prob_table_tag.text[:-1]
+
+    def add_initial_belief(self):
+        """
+        add initial belief tag to pomdpx model
+
+        Return
+        ---------------
+        string containing the xml for initial belief tag
+        """
+        initial_belief = self.model['initial_state_belief']
+        for condition in initial_belief:
+            condprob = etree.SubElement(self.initial_belief, 'CondProb')
+            self.add_conditions(condition, condprob)
+        return self.__str__(self.initial_belief)[:-1]
+
+    def add_state_transition_function(self):
+        """
+        add state transition function tag to pomdpx model
+
+        Return
+        ---------------
+        string containing the xml for state transition tag
+        """
+        state_transition_function = self.model['state_transition_function']
+        for condition in state_transition_function:
+            condprob = etree.SubElement(self.transition_function, 'CondProb')
+            self.add_conditions(condition, condprob)
+        return self.__str__(self.transition_function)[:-1]
+
+    def add_obs_function(self):
+        """
+        add observation function tag to pomdpx model
+
+        Return
+        ---------------
+        string containing the xml for observation function tag
+        """
+        obs_function = self.model['obs_function']
+        for condition in obs_function:
+            condprob = etree.SubElement(self.observation_function, 'CondProb')
+            self.add_conditions(condition, condprob)
+        return self.__str__(self.observation_function)[:-1]
+
+    def add_reward_function(self):
+        """
+        add reward function tag to pomdpx model
+
+        Return
+        ---------------
+        string containing the xml for reward function tag
+        """
+        reward_function = self.model['reward_function']
+        for condition in reward_function:
+            condprob = etree.SubElement(self.reward_function, 'Func')
+            self.add_conditions(condition, condprob)
+        return self.__str__(self.reward_function)[:-1]
