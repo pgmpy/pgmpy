@@ -12,4 +12,5 @@ __all__ = ['ProbModelXMLReader',
            'XMLBIFReader',
            'XBNReader',
            'XBNWriter',
-           'PomdpXReader']
+           'PomdpXReader',
+           'PomdpXWriter']
