@@ -199,15 +199,16 @@ class TreeCPD(nx.DiGraph):
             P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
 
         >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
-        >>>                     ('B', 'C', '1'),
-        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
-        >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+        >>>                     ('B', 'C', 1),
+        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), 0),
+        >>>                     ('C', 'D', 1),
+        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
+        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), 1)])
         >>> tree
         <pgmpy.Factor.CPD.TreeCPD at 0x7fd44b61de48>
         """
+        # TODO: Add docs for multivariable nodes.
         super(TreeCPD, self).__init__()
         if data:
             for edge in data:
@@ -235,7 +236,10 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-
+        >>> from pgmpy.Factor import CPD, Factor
+        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+        >>>                     ('B', 'C', 1)])
+        >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
             super(TreeCPD, self).add_edge(u, v, label=label)
@@ -263,7 +267,7 @@ class TreeCPD(nx.DiGraph):
         --------
         >>> from pgmpy.Factor import CPD, Factor
         >>> tree = CPD.TreeCPD()
-        >>> tree.add_edges_from([('B', 'C', '1'), ('C', 'D', '1'),
+        >>> tree.add_edges_from([('B', 'C', 1), ('C', 'D', 1),
         >>>                     ('D', Factor(['A'], [2], [0.6, 0.4]))])
         """
         for edge in ebunch:
