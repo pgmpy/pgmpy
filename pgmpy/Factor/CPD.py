@@ -212,6 +212,8 @@ class TreeCPD(nx.DiGraph):
         super(TreeCPD, self).__init__()
         if data:
             for edge in data:
+                if len(edge) != 3:
+                    raise ValueError("Each edge tuple must have 3 values (u, v, label).")
                 self.add_edge(edge[0], edge[1], label=edge[2])
 
     def add_edge(self, u, v, label):
@@ -246,6 +248,8 @@ class TreeCPD(nx.DiGraph):
             if list(nx.simple_cycles(self)):
                 super(TreeCPD, self).remove_edge(u, v)
                 raise ValueError("Self Loops and Cycles are not allowed")
+        else:
+            raise ValueError("Self Loops and Cycles are not allowed")
 
     def add_edges_from(self, ebunch):
         """
@@ -272,7 +276,7 @@ class TreeCPD(nx.DiGraph):
         """
         for edge in ebunch:
             if len(edge) == 2:
-                raise ValueError("Each edge tuple must have 3 values (u,v,label).")
+                raise ValueError("Each edge tuple must have 3 values (u, v, label).")
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
 
     def to_tabular_cpd(self, variable, parents_order=None):

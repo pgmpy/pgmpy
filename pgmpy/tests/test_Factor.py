@@ -407,12 +407,12 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 
 class TestTreeCPDInit(unittest.TestCase):
     def test_init_single_variable_nodes(self):
-        tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
-                        ('B', 'C', '1'),
-                        ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
-                        ('C', 'D', '1'),
-                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+                        ('B', 'C', 1),
+                        ('C', Factor(['A'], [2], [0.1, 0.9]), 0),
+                        ('C', 'D', 1),
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), 1)])
 
         self.assertTrue('B' in tree.nodes())
         self.assertTrue('C' in tree.nodes())
@@ -429,25 +429,31 @@ class TestTreeCPDInit(unittest.TestCase):
         self.assertTrue(('C', 'D') in tree.edges())
         self.assertTrue(('B', 'C') in tree.edges())
 
-        self.assertEqual(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], '0')
-        self.assertEqual(tree['B']['C']['label'], '1')
-        self.assertEqual(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], '0')
-        self.assertEqual(tree['C']['D']['label'], '1')
-        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
-        self.assertEqual(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], '1')
+        self.assertEqual(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], 0)
+        self.assertEqual(tree['B']['C']['label'], 1)
+        self.assertEqual(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], 0)
+        self.assertEqual(tree['C']['D']['label'], 1)
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], 0)
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], 1)
 
         self.assertRaises(ValueError, tree.add_edges_from, [('F', 'G')])
+
+    def test_init_self_loop(self):
+        self.assertRaises(ValueError, TreeCPD, [('B', 'B', 0)])
+
+    def test_init_cycle(self):
+        self.assertRaises(ValueError, TreeCPD, [('A', 'B', 0), ('B', 'C', 1), ('C', 'A', 0)])
 
     def test_init_multi_variable_nodes(self):
         tree = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), (0, 0)),
                         (('B', 'C'), 'D', (0, 1)),
                         (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), (1, 0)),
                         (('B', 'C'), 'E', (1, 1)),
-                        ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-                        ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
-                        ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
-                        ('E', Factor(['A'], [2], [0.8, 0.2]), '1')
-        ])
+                        ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
+                        ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
+                        ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
+                        ('E', Factor(['A'], [2], [0.8, 0.2]), 1)
+                        ])
 
         self.assertTrue(('B', 'C') in tree.nodes())
         self.assertTrue('D' in tree.nodes())
@@ -462,8 +468,8 @@ class TestTreeCPDInit(unittest.TestCase):
 
         self.assertEqual(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], (0, 0))
         self.assertEqual(tree[('B', 'C')]['D']['label'], (0, 1))
-        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], '0')
-        self.assertEqual(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], '0')
+        self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], 0)
+        self.assertEqual(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], 0)
 
 
 class TestTreeCPD(unittest.TestCase):
