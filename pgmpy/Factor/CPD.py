@@ -205,10 +205,10 @@ class TreeCPD(nx.DiGraph):
         >>>                     ('C', 'D', '1'),
         >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
         >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
-
+        >>> tree
+        <pgmpy.Factor.CPD.TreeCPD at 0x7fd44b61de48>
         """
-        nx.DiGraph.__init__(self)
-        #TODO: Check cycles and self loops.
+        super(TreeCPD, self).__init__()
         if data:
             for edge in data:
                 self.add_edge(edge[0], edge[1], label=edge[2])
@@ -237,7 +237,11 @@ class TreeCPD(nx.DiGraph):
         --------
 
         """
-        nx.DiGraph.add_edge(self, u, v, label=label)
+        if u != v:
+            super(TreeCPD, self).add_edge(u, v, label=label)
+            if list(nx.simple_cycles(self)):
+                super(TreeCPD, self).remove_edge(u, v)
+                raise ValueError("Self Loops and Cycles are not allowed")
 
     def add_edges_from(self, ebunch):
         """
