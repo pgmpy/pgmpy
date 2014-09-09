@@ -506,6 +506,26 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(self.tree1['yolo']['yo']['label'], '0')
         self.assertEqual(self.tree1['hello']['world']['label'], '1')
 
+    @unittest.skip('Not implemented yet')
+    def test_to_tabular_cpd(self):
+        tabular_cpd = self.tree1.to_tabular_cpd('A')
+        self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D'])
+        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
+        self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D'])
+        np_test.assert_array_equal(tabular_cpd.values,
+                                   np.array([0.8, 0.8, 0.8, 0.8, 0.1, 0.1, 0.9, 0.4,
+                                             0.2, 0.2, 0.2, 0.2, 0.9, 0.9, 0.1, 0.6]))
+
+    @unittest.skip('Not implemented yet')
+    def test_to_tabular_cpd_parent_order(self):
+        tabular_cpd = self.tree1.to_tabular_cpd('A', parents_order=['D', 'C', 'B'])
+        self.assertEqual(tabular_cpd.evidence, ['D', 'C', 'B'])
+        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
+        self.assertEqual(list(tabular_cpd.variables), ['A', 'D', 'C', 'B'])
+        np_test.assert_array_equal(tabular_cpd.values,
+                                   np.array([0.8, 0.1, 0.8, 0.9, 0.8, 0.1, 0.8, 0.4,
+                                             0.2, 0.9, 0.2, 0.1, 0.2, 0.9, 0.2, 0.6]))
+
 
 class TestRuleCPDInit(unittest.TestCase):
     def test_init_without_errors_rules_none(self):
