@@ -289,10 +289,14 @@ class TreeCPD(nx.DiGraph):
             if isinstance(node, tuple):
                 evidence.extend(node)
                 labels = [value['label'] for value in self.edge[node].values()]
+                labels_zip = zip(*labels)
                 for i in range(len(node)):
-                    evidence_card.append(max([list(map(int, element.split('_'))) for element in labels], key=lambda t: t[i])[i] + 1)
+                    evidence_card.append(max(labels_zip[i]))
 
-            elif isinstance(node, str):
+            elif isinstance(node, Factor):
+                pass
+
+            else:
                 evidence.append(node)
                 evidence_card.append(self.out_degree(node))
 
@@ -323,7 +327,8 @@ class TreeCPD(nx.DiGraph):
         """
         #TODO: This method assumes that Factor class has a get_variable method. Check this after merging navin's PR.
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
-        paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if isinstance(target, Factor)}
+        paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if
+                                 isinstance(target, Factor)}
         for node in self.nodes_iter():
             if isinstance(node, Factor):
                 rule_cpd = RuleCPD(node.get_variables()[0])
