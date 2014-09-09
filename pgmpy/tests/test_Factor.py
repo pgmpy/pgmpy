@@ -526,6 +526,20 @@ class TestTreeCPD(unittest.TestCase):
                                    np.array([0.8, 0.1, 0.8, 0.9, 0.8, 0.1, 0.8, 0.4,
                                              0.2, 0.9, 0.2, 0.1, 0.2, 0.9, 0.2, 0.6]))
 
+    @unittest.skip('Not implemented yet')
+    def test_to_rule_cpd(self):
+        rule_cpd = self.tree1.to_rule_cpd()
+        self.assertEqual(rule_cpd.cardinality(), {'A': 2, 'B': 2, 'C': 2, 'D': 2})
+        self.assertEqual(rule_cpd.score(), {'A', 'B', 'C', 'D'})
+        self.assertEqual(rule_cpd.variable, 'A')
+        self.assertEqual(rule_cpd.rules, {('A_0', 'B_0'): 0.8,
+                                          ('A_1', 'B_0'): 0.2,
+                                          ('A_0', 'B_1', 'C_0'): 0.1,
+                                          ('A_0', 'B_1', 'C_1', 'D_0'): 0.9,
+                                          ('A_1', 'B_1', 'C_1', 'D_0'): 0.1,
+                                          ('A_0', 'B_1', 'C_1', 'D_1'): 0.4,
+                                          ('A_1', 'B_!', 'C_1', 'D_1'): 0.6})
+
 
 class TestRuleCPDInit(unittest.TestCase):
     def test_init_without_errors_rules_none(self):
