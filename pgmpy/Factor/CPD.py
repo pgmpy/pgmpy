@@ -279,13 +279,16 @@ class TreeCPD(nx.DiGraph):
                 raise ValueError("Each edge tuple must have 3 values (u, v, label).")
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
 
-    def to_tabular_cpd(self, variable, parents_order=None):
+    def to_tabular_cpd(self, parents_order=None):
+        from collections import OrderedDict
+
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         evidence = []
         evidence_card = []
+        paths = []
 
-        #dfs for finding the evidences and evidence cardinalities.
-        def dfs(node):
+        #dfs for finding the evidences and evidence cardinalities and paths to factors.
+        def dfs(node, path):
             if isinstance(node, tuple):
                 evidence.extend(node)
                 labels = [value['label'] for value in self.edge[node].values()]
@@ -294,20 +297,29 @@ class TreeCPD(nx.DiGraph):
                     evidence_card.append(max(labels_zip[i]))
 
             elif isinstance(node, Factor):
-                pass
+                variable = node.scope()
+                path.append((path, node))
 
             else:
                 evidence.append(node)
                 evidence_card.append(self.out_degree(node))
 
             for out_edge in self.out_edges_iter(node):
+                path.update({node: self.edge[node][out_edge[1]]['label']})
                 dfs(out_edge[1])
 
-        dfs(root)
+        dfs(root, path=OrderedDict())
 
         if parents_order:
-            #TODO: reorder the evidence and evidence_card list
-            pass
+            new_evidence = []
+            new_evidence_card = []
+            for var in parents_order:
+                new_evidence.append(var)
+                new_evidence_card.append(evidence_card[evidence.index(var)])
+            evidence = new_evidence
+            evidence_card = new_evidence_card
+
+    # TODO: Construct TabularCPD from the paths
 
     def to_rule_cpd(self):
         """
