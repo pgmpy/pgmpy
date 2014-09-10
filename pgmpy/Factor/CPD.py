@@ -331,7 +331,7 @@ class TreeCPD(nx.DiGraph):
                                  isinstance(target, Factor)}
         for node in self.nodes_iter():
             if isinstance(node, Factor):
-                rule_cpd = RuleCPD(node.get_variables()[0])
+                rule_cpd = RuleCPD(node.scope()[0])
 
         for factor, path in paths_root_to_factors.items():
             rule_key = []
