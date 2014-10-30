@@ -11,11 +11,11 @@ class Inference:
     """
     def __init__(self, model):
         if isinstance(model, BayesianModel):
-            factors = []
+            self.factors = []
             for node in model.nodes():
                 cpd = model.get_cpd(node)
                 factor = Factor(cpd.get_variables(), cpd.get_cardinality(), cpd.values)
-                factors.append(factor)
+                self.factors.append(factor)
         if isinstance(model, MarkovModel):
-            factors = model.get_factors()
+            self.factors = model.get_factors()
 
