@@ -174,7 +174,7 @@ class TreeCPD(nx.DiGraph):
     """
     def __init__(self, data=None):
         """
-        Creates an empty Tree CPD.
+        Base Class for Tree CPD.
 
         Parameters
         ----------
@@ -186,6 +186,7 @@ class TreeCPD(nx.DiGraph):
         Example
         -------
         For P(A|B, C, D), to construct a tree like:
+
                     B
              0 /         \1
               /          \
@@ -212,7 +213,7 @@ class TreeCPD(nx.DiGraph):
             for edge in data:
                 self.add_edge(edge[0], edge[1], label=edge[2])
 
-    def add_edge(self, u, v, label, attr_dict=None, **attr):
+    def add_edge(self, u, v, label):
         """
         Add an edge between u and v.
 
@@ -238,7 +239,7 @@ class TreeCPD(nx.DiGraph):
         """
         nx.DiGraph.add_edge(self, u, v, label=label)
 
-    def add_edges_from(self, ebunch, attr_dict=None, **attr):
+    def add_edges_from(self, ebunch):
         """
         Add all the edges in ebunch.
 
