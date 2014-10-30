@@ -1,5 +1,5 @@
-from . import base
+from .base import Inference
 from .ExactInference import VariableElimination
 
-__all__ = ['base',
+__all__ = ['Inference',
            'VariableElimination',]
