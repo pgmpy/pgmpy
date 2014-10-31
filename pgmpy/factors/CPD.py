@@ -3,8 +3,8 @@
 
 import numpy as np
 import networkx as nx
-from pgmpy.Factor import Factor
-from pgmpy import Exceptions
+from pgmpy.factors import Factor
+from pgmpy import exceptions
 
 
 class TabularCPD(Factor):
@@ -72,7 +72,7 @@ class TabularCPD(Factor):
                 evidence = [evidence]
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise Exceptions.CardinalityError("Cardinality of all "
+                raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
         self.evidence = evidence
         if len(np.array(values).shape) is not 2:
@@ -91,7 +91,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors.CPD import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -117,7 +117,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors.CPD import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -139,7 +139,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors.CPD import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -198,13 +198,13 @@ class TreeCPD(nx.DiGraph):
                           /         \
             P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
 
-        >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+        >>> from pgmpy.factors import CPD, factors
+        >>> tree = CPD.TreeCPD([('B', factors(['A'], [2], [0.8, 0.2]), '0'),
         >>>                     ('B', 'C', '1'),
-        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+        >>>                     ('C', factors(['A'], [2], [0.1, 0.9]), '0'),
         >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        >>>                     ('D', factors(['A'], [2], [0.9, 0.1]), '0'),
+        >>>                     ('D', factors(['A'], [2], [0.4, 0.6]), '1')])
 
         """
         nx.DiGraph.__init__(self)
@@ -257,10 +257,10 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.Factor import CPD, Factor
+        >>> from pgmpy.factors import CPD, factors
         >>> tree = CPD.TreeCPD()
         >>> tree.add_edges_from([('B', 'C', '1'), ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.6, 0.4]))])
+        >>>                     ('D', factors(['A'], [2], [0.6, 0.4]))])
         """
         for edge in ebunch:
             if len(edge) == 2:
@@ -299,17 +299,17 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+        >>> from pgmpy.factors import CPD, factors
+        >>> tree = CPD.TreeCPD([('B', factors(['A'], [2], [0.8, 0.2]), '0'),
         >>>                     ('B', 'C', '1'),
-        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+        >>>                     ('C', factors(['A'], [2], [0.1, 0.9]), '0'),
         >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        >>>                     ('D', factors(['A'], [2], [0.9, 0.1]), '0'),
+        >>>                     ('D', factors(['A'], [2], [0.4, 0.6]), '1')])
         >>> tree.to_rule_cpd()
 
         """
-        #TODO: This method assumes that Factor class has a get_variable method. Check this after merging navin's PR.
+        #TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if isinstance(target, Factor)}
         for node in self.nodes_iter():
@@ -351,7 +351,7 @@ class RuleCPD:
             p5: <A_0, B_1, C_1; 0.9>
             p6: <A_1, B_1, C_1; 0.1>
 
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
@@ -396,7 +396,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD(variable='A')
         >>> rule.add_rules({('A_0', 'B_0'): 0.8,
         >>>                 ('A_1', 'B_0'): 0.2})
@@ -415,7 +415,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
@@ -441,7 +441,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
@@ -471,7 +471,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
@@ -539,7 +539,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors.CPD import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
