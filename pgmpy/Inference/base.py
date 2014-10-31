@@ -10,12 +10,23 @@ class Inference:
     Base class for all Inference algorithms.
     """
     def __init__(self, model):
+        self.variables = model.nodes()
         if isinstance(model, BayesianModel):
-            self.factors = []
+            self.factors = {}
             for node in model.nodes():
                 cpd = model.get_cpd(node)
                 factor = Factor(cpd.get_variables(), cpd.get_cardinality(), cpd.values)
+                for var in cpd.get_variables():
+                    try:
+                        self.factors[var].append(factor)
+                    except KeyError:
+                        self.factors[var] = [factor]
                 self.factors.append(factor)
         if isinstance(model, MarkovModel):
-            self.factors = model.get_factors()
-
+            self.factors = {}
+            for factor in model.get_factors():
+                for var in factor.variables:
+                    try:
+                        self.factors[var].append(factor)
+                    except KeyError:
+                        self.factors[var] = [factor]
