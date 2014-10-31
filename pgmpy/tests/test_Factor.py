@@ -2,10 +2,10 @@ import unittest
 from collections import OrderedDict
 import numpy as np
 import numpy.testing as np_test
-from pgmpy.Factor import Factor
-from pgmpy.Factor.CPD import TabularCPD, TreeCPD, RuleCPD
-from pgmpy import Exceptions
-from pgmpy.Factor.JointProbabilityDistribution import JointProbabilityDistribution as JPD
+from pgmpy.factors import Factor
+from pgmpy.factors.CPD import TabularCPD, TreeCPD, RuleCPD
+from pgmpy import exceptions
+from pgmpy.factors.JointProbabilityDistribution import JointProbabilityDistribution as JPD
 
 
 class TestFactorInit(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestFactorInit(unittest.TestCase):
         np_test.assert_array_equal(phi.values, np.ones(8))
 
     def test_class_init_sizeerror(self):
-        self.assertRaises(Exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
+        self.assertRaises(exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
@@ -64,7 +64,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi.get_cardinality('x3'), 2)
 
     def test_get_cardinality_scopeerror(self):
-        self.assertRaises(Exceptions.ScopeError, self.phi.get_cardinality, 'x4')
+        self.assertRaises(exceptions.ScopeError, self.phi.get_cardinality, 'x4')
 
     def test_marginalize(self):
         self.phi1.marginalize('x1')
@@ -75,10 +75,10 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(self.phi1.values, np.array([66]))
 
     def test_marginalize_scopeerror(self):
-        self.assertRaises(Exceptions.ScopeError, self.phi.marginalize, 'x4')
-        self.assertRaises(Exceptions.ScopeError, self.phi.marginalize, ['x4'])
+        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x4')
+        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, ['x4'])
         self.phi.marginalize('x1')
-        self.assertRaises(Exceptions.ScopeError, self.phi.marginalize, 'x1')
+        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x1')
 
     def test_normalize(self):
         self.phi1.normalize()
@@ -104,10 +104,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.phi1.reduce, ['x10'])
 
     def test_reduce_scopeerror(self):
-        self.assertRaises(Exceptions.ScopeError, self.phi1.reduce, 'x4_1')
+        self.assertRaises(exceptions.ScopeError, self.phi1.reduce, 'x4_1')
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(Exceptions.SizeError, self.phi1.reduce, 'x3_5')
+        self.assertRaises(exceptions.SizeError, self.phi1.reduce, 'x3_5')
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
@@ -116,15 +116,15 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(identity_factor.values, np.ones(8))
 
     def test__str(self):
-        from pgmpy import Factor
-        phi = Factor.Factor(['x1'], [2], np.ones(2))
+        from pgmpy import factors
+        phi = factors.Factor(['x1'], [2], np.ones(2))
         self.assertEqual(repr(phi.__str__()), "'x1\\t\\tphi(x1)\\n------------------------\\nx1_0\\t\\t1.0\\nx1_1\\t\\t1.0\\n'")
 
     def test_factor_product(self):
-        from pgmpy import Factor
-        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
-        factor_product = Factor.factor_product(phi, phi1)
+        from pgmpy import factors
+        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
+        factor_product = factors.factor_product(phi, phi1)
         np_test.assert_array_equal(factor_product.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
@@ -136,9 +136,9 @@ class TestFactorMethods(unittest.TestCase):
             ('x4', ['x4_0', 'x4_1'])]
         ))
 
-        phi = Factor.Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
-        factor_product = Factor.factor_product(phi, phi1)
+        phi = factors.Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = factors.Factor(['x2', 'x3'], [2, 2], range(4))
+        factor_product = factors.factor_product(phi, phi1)
         np_test.assert_array_equal(factor_product.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
         self.assertEqual(factor_product.variables, OrderedDict(
@@ -147,9 +147,9 @@ class TestFactorMethods(unittest.TestCase):
              ('x3', ['x3_0', 'x3_1'])]))
 
     def test_factor_product2(self):
-        from pgmpy import Factor
-        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        from pgmpy import factors
+        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
         factor_product = phi.product(phi1)
         np_test.assert_array_equal(factor_product.values,
                                    np.array([0, 0, 0, 0, 0, 1,
@@ -162,8 +162,8 @@ class TestFactorMethods(unittest.TestCase):
             ('x4', ['x4_0', 'x4_1'])]
         ))
 
-        phi = Factor.Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = Factor.Factor(['x2', 'x3'], [2, 2], range(4))
+        phi = factors.Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = factors.Factor(['x2', 'x3'], [2, 2], range(4))
         factor_product = phi.product(phi1)
         np_test.assert_array_equal(factor_product.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
@@ -173,13 +173,13 @@ class TestFactorMethods(unittest.TestCase):
              ('x3', ['x3_0', 'x3_1'])]))
 
     def test_factor_product_non_factor_arg(self):
-        from pgmpy import Factor
-        self.assertRaises(TypeError, Factor.factor_product, 1, 2)
+        from pgmpy import factors
+        self.assertRaises(TypeError, factors.factor_product, 1, 2)
 
     def test_factor_mul(self):
-        from pgmpy import Factor
-        phi = Factor.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor.Factor(['x3', 'x4'], [2, 2], range(4))
+        from pgmpy import factors
+        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
         factor_product = phi * phi1
         np_test.assert_array_equal(factor_product.values,
                                    np.array([0, 0, 0, 0, 0, 1,
@@ -193,29 +193,29 @@ class TestFactorMethods(unittest.TestCase):
         ))
 
     def test_factor_divide(self):
-        from pgmpy import Factor
-        phi1 = Factor.Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
-        phi2 = Factor.Factor(['x1'], [2], [1, 2])
+        from pgmpy import factors
+        phi1 = factors.Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = factors.Factor(['x1'], [2], [1, 2])
         factor_divide = phi1.divide(phi2)
-        phi3 = Factor.Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        phi3 = factors.Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, factor_divide)
 
     def test_factor_divide_invalid(self):
-        from pgmpy import Factor
-        phi1 = Factor.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
-        phi2 = Factor.Factor(['x1'], [2], [0, 2])
+        from pgmpy import factors
+        phi1 = factors.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
+        phi2 = factors.Factor(['x1'], [2], [0, 2])
         factor_divide = phi1.divide(phi2)
         np_test.assert_array_equal(factor_divide.values, np.array([0, 0, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
-        from pgmpy import Factor
-        phi1 = Factor.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
-        phi2 = Factor.Factor(['x3'], [2], [0, 2])
-        self.assertRaises(ValueError, Factor.factor_divide, phi1, phi2)
+        from pgmpy import factors
+        phi1 = factors.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
+        phi2 = factors.Factor(['x3'], [2], [0, 2])
+        self.assertRaises(ValueError, factors.factor_divide, phi1, phi2)
 
     def test_factor_divide_non_factor_arg(self):
-        from pgmpy import Factor
-        self.assertRaises(TypeError, Factor.factor_divide, 1, 1)
+        from pgmpy import factors
+        self.assertRaises(TypeError, factors.factor_divide, 1, 1)
 
     # def test_sum_values(self):
     #     self.assertEqual(self.phi1.sum_values(), 66)
@@ -267,19 +267,19 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertRaises(TypeError, TabularCPD, 'event', '2', "something undefined as cardinality is a string")
 
     def test_cpd_init_cardinality_not_specified(self):
-        self.assertRaises(Exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1', 'evi2'], [5])
-        self.assertRaises(Exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1', 'evi2'], 5)
-        self.assertRaises(Exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1'], [5, 6])
-        self.assertRaises(Exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           'evi1', [5, 6])
