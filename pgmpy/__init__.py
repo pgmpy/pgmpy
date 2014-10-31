@@ -1,9 +1,13 @@
-from . import BayesianModel
-from . import Exceptions
-from . import Factor
+from . import models
+from . import exceptions
+from . import base
+from . import factors
 from . import readwrite
+from . import independencies
 
-__all__ = ['BayesianModel',
-           'Exceptions',
-           'Factor',
+__all__ = ['models',
+           'base',
+           'factors',
+           'independencies',
+           'exceptions',
            'readwrite']
