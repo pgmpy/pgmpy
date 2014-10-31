@@ -5,9 +5,9 @@ import networkx as nx
 
 class NoisyOrModel(nx.DiGraph):
     """
-    Base class for Noisy-Or Models.
+    Base class for Noisy-Or models.
 
-    This is an implementation of generalized Noisy-Or Models and
+    This is an implementation of generalized Noisy-Or models and
     is not limited to Boolean variables and also any arbitrary
     function can be used instead of the boolean OR function.
 
@@ -33,10 +33,10 @@ class NoisyOrModel(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.BayesianModel import NoisyOrModel
+        >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
-        >>>                                                      [0.2, 0.4, 0.7],
-        >>>                                                      [0.1, 0.4]])
+        ...                                                      [0.2, 0.4, 0.7],
+        ...                                                      [0.1, 0.4]])
         """
         self.variables = []
         self.cardinality = np.array([], dtype=np.int)
@@ -61,10 +61,10 @@ class NoisyOrModel(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.BayesianModel import NoisyOrModel
+        >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
-        >>>                                                      [0.2, 0.4, 0.7],
-        >>>                                                      [0.1, 0. 4]])
+        ...                                                      [0.2, 0.4, 0.7],
+        ...                                                      [0.1, 0. 4]])
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
         cardinality = np.array(cardinality)
@@ -103,10 +103,10 @@ class NoisyOrModel(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.BayesianModel import NoisyOrModel
+        >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
-        >>>                                                      [0.2, 0.4, 0.7],
-        >>>                                                      [0.1, 0. 4]])
+        ...                                                      [0.2, 0.4, 0.7],
+        ...                                                      [0.1, 0. 4]])
         >>> model.del_variables(['x1'])
         """
         variables = [variables] if isinstance(variables, str) else variables
@@ -136,4 +136,3 @@ class NoisyOrModel(nx.DiGraph):
     #     from itertools import product
     #     for u in product([(values(var)) for var in self.variables]):
     #         for state in product([(values(var) for var in self.variables)]):
-

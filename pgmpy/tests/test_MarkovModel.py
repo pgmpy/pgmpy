@@ -1,6 +1,6 @@
 import unittest
 from pgmpy.tests import help_functions as hf
-from pgmpy.MarkovModel import MarkovModel
+from pgmpy.models import MarkovModel
 
 
 class TestBaseModelCreation(unittest.TestCase):
