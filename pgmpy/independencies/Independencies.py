@@ -1,14 +1,14 @@
-from pgmpy import Exceptions
+from pgmpy import exceptions
 
 
 class Independencies:
     """
-    Base class for Independencies.
-    Independencies class represents a set of Conditional Independence
+    Base class for independencies.
+    independencies class represents a set of Conditional Independence
     assertions (eg: "X is independent of Y given Z" where X, Y and Z
     are random variables) or Independence assertions (eg: "X is
     independent of Y" where X and Y are random variables).
-    Initialize the Independencies Class with Conditional Independence
+    Initialize the independencies Class with Conditional Independence
     assertions or Independence assertions.
 
     Parameters
@@ -21,16 +21,16 @@ class Independencies:
 
     Examples
     --------
-    Creating an Independencies object with one independence assertion:
+    Creating an independencies object with one independence assertion:
     Random Variable X is independent of Y
 
-    >>> independencies = Independencies(['X', 'Y'])
+    >>> independencies = independencies(['X', 'Y'])
 
-    Creating an Independencies object with three conditional
+    Creating an independencies object with three conditional
     independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
-    >>> independencies = Independencies(['X', 'Y', 'Z'],
+    >>> independencies = independencies(['X', 'Y', 'Z'],
     ...             ['a', ['b', 'c'], 'd'],
     ...             ['l', ['m', 'n'], 'o'])
 
@@ -66,14 +66,14 @@ class Independencies:
 
         Examples
         --------
-        >>> independencies = Independencies(['X', 'Y', 'Z'])
+        >>> independencies = independencies(['X', 'Y', 'Z'])
         >>> independencies.get_independencies()
         """
         return self.independencies
 
     def add_assertions(self, *assertions):
         """
-        Adds assertions to Independencies.
+        Adds assertions to independencies.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class Independencies:
 
         Examples
         --------
-        >>> independencies = Independencies()
+        >>> independencies = independencies()
         >>> independencies.add_assertions(['X', 'Y', 'Z'])
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """
@@ -169,11 +169,11 @@ class IndependenceAssertion:
           ---
         """
         if event1 and not event2:
-            raise Exceptions.RequiredError('event2 needed')
+            raise exceptions.RequiredError('event2 needed')
         if any([event2, event3]) and not event1:
-            raise Exceptions.RequiredError('event1')
+            raise exceptions.RequiredError('event1')
         if event3 and not all([event1, event2]):
-            raise Exceptions.RequiredError('event1' if not event1 else 'event2')
+            raise exceptions.RequiredError('event1' if not event1 else 'event2')
 
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
