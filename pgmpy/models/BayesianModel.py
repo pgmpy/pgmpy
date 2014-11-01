@@ -214,123 +214,123 @@ class BayesianModel(nx.DiGraph):
         self._update_node_parents(new_nodes)
         self._update_node_rule_for_parents(new_nodes)
 
-    def set_states(self, states_dic):
-        """
-        Adds states to the node.
-
-        Parameters
-        ----------
-        states_dic :  Dictionary ({node : [state1, state2]})
-                Dictionary of nodes to their list of states
-
-        See Also
-        --------
-        get_states
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
-        ...                    ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
-        ...               'intel': ['dumb', 'smart']})
-        """
-        for node, states in states_dic.items():
-            if isinstance(states, str):
-                states = [states]
-
-            try:
-                self.node[node]['_states'].extend([{'name': state,
-                                                    'observed_status': False}
-                                                   for state in states])
-            except KeyError:
-                self.node[node]['_states'] = [
-                    {'name': state, 'observed_status': False}
-                    for state in states]
-
-            self._update_rule_for_states(node, len(self.node[node]['_states']))
-        ################# For Reference ########################
-        #   self.node[node]['_rule_for_states'] = [            #
-        #       n for n in range(len(states))]                 #
-        ########################################################
-            self._update_node_observed_status(node)
-
-    def get_states(self, node):
-        """
-        Returns a generator object with states in user-defined order
-
-        Parameters
-        ----------
-        node  :   node
-                Graph Node. Must be already present in the Model.
-
-        See Also
-        --------
-        set_states
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
-        ...                    ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
-        ...               'intel': ['dumb', 'smart']})
-        >>> states = G.get_states('diff')
-        >>> for state in states:
-        ...     print(state)
-        """
-        _list_states = (self.node[node]['_states'][index]['name']
-                        for index in self.node[node]['_rule_for_states'])
-        return _list_states
-
-    def number_of_states(self, node):
-        """
-        Returns the number of states of node.
-
-        Parameters
-        ----------
-        node  :  Graph Node
-
-        See Also
-        --------
-        set_states
-        get_states
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
-        ...                    ('intel', 'sat')])
-        >>> G.set_states({'diff': ['easy', 'hard']})
-        >>> G.number_of_states('diff')
-        3
-        """
-        return len(self.node[node]['_states'])
-
-    def _update_node_parents(self, node_list):
-        """
-        Function to update each node's _parent attribute.
-        This function is called when new node or new edge is added.
-        """
-        for node in node_list:
-            self.node[node]['_parents'] = sorted(self.predecessors(node))
-
-    def _update_node_rule_for_parents(self, node_list):
-        """
-        Function to update each node's _rule_for_parents attribute.
-        This function is called when new node or new edge is added.
-        """
-        for node in node_list:
-            self.node[node]['_rule_for_parents'] = \
-                [index for index in range(len(self.predecessors(node)))]
-        ################ Just for reference: Earlier Code ####################
-        # for head_node in head:                                             #
-        #     for tail_node in tail:                                         #
-        #         self.add_edge(tail_node, head_node)                        #
-        #     self.node[head_node]['_parents'] = self.predecessors(head_node)#
-        #     self.node[head_node]['_rule_for_parents'] = [                  #
-        #             index for index in range(len(tail))]                   #
-        ######################################################################
+    # def set_states(self, states_dic):
+    #     """
+    #     Adds states to the node.
+    #
+    #     Parameters
+    #     ----------
+    #     states_dic :  Dictionary ({node : [state1, state2]})
+    #             Dictionary of nodes to their list of states
+    #
+    #     See Also
+    #     --------
+    #     get_states
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+    #     ...                    ('intel', 'sat')])
+    #     >>> G.set_states({'diff': ['easy', 'hard'],
+    #     ...               'intel': ['dumb', 'smart']})
+    #     """
+    #     for node, states in states_dic.items():
+    #         if isinstance(states, str):
+    #             states = [states]
+    #
+    #         try:
+    #             self.node[node]['_states'].extend([{'name': state,
+    #                                                 'observed_status': False}
+    #                                                for state in states])
+    #         except KeyError:
+    #             self.node[node]['_states'] = [
+    #                 {'name': state, 'observed_status': False}
+    #                 for state in states]
+    #
+    #         self._update_rule_for_states(node, len(self.node[node]['_states']))
+    #     ################# For Reference ########################
+    #     #   self.node[node]['_rule_for_states'] = [            #
+    #     #       n for n in range(len(states))]                 #
+    #     ########################################################
+    #         self._update_node_observed_status(node)
+    #
+    # def get_states(self, node):
+    #     """
+    #     Returns a generator object with states in user-defined order
+    #
+    #     Parameters
+    #     ----------
+    #     node  :   node
+    #             Graph Node. Must be already present in the Model.
+    #
+    #     See Also
+    #     --------
+    #     set_states
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+    #     ...                    ('intel', 'sat')])
+    #     >>> G.set_states({'diff': ['easy', 'hard'],
+    #     ...               'intel': ['dumb', 'smart']})
+    #     >>> states = G.get_states('diff')
+    #     >>> for state in states:
+    #     ...     print(state)
+    #     """
+    #     _list_states = (self.node[node]['_states'][index]['name']
+    #                     for index in self.node[node]['_rule_for_states'])
+    #     return _list_states
+    #
+    # def number_of_states(self, node):
+    #     """
+    #     Returns the number of states of node.
+    #
+    #     Parameters
+    #     ----------
+    #     node  :  Graph Node
+    #
+    #     See Also
+    #     --------
+    #     set_states
+    #     get_states
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade'),
+    #     ...                    ('intel', 'sat')])
+    #     >>> G.set_states({'diff': ['easy', 'hard']})
+    #     >>> G.number_of_states('diff')
+    #     3
+    #     """
+    #     return len(self.node[node]['_states'])
+    #
+    # def _update_node_parents(self, node_list):
+    #     """
+    #     Function to update each node's _parent attribute.
+    #     This function is called when new node or new edge is added.
+    #     """
+    #     for node in node_list:
+    #         self.node[node]['_parents'] = sorted(self.predecessors(node))
+    #
+    # def _update_node_rule_for_parents(self, node_list):
+    #     """
+    #     Function to update each node's _rule_for_parents attribute.
+    #     This function is called when new node or new edge is added.
+    #     """
+    #     for node in node_list:
+    #         self.node[node]['_rule_for_parents'] = \
+    #             [index for index in range(len(self.predecessors(node)))]
+    #     ################ Just for reference: Earlier Code ####################
+    #     # for head_node in head:                                             #
+    #     #     for tail_node in tail:                                         #
+    #     #         self.add_edge(tail_node, head_node)                        #
+    #     #     self.node[head_node]['_parents'] = self.predecessors(head_node)#
+    #     #     self.node[head_node]['_rule_for_parents'] = [                  #
+    #     #             index for index in range(len(tail))]                   #
+    #     ######################################################################
 
     def _check_graph(self, ebunch=None, delete_graph=False):
         """
@@ -366,229 +366,229 @@ class BayesianModel(nx.DiGraph):
                 raise ValueError("Cycles are not allowed", simple_cycles)
             return True
 
-    def _update_rule_for_states(self, node, number_of_states):
-        """
-        Checks if rule_for_states is already present for the node.
-        If not present simply sets it to [0, 1, 2 ... ]
-        If present the just adds numbers for the new states in the previously
-        existing rule.
-        """
-        try:
-            present_rule = self.node[node]['_rule_for_states']
-        except KeyError:
-            present_rule = None
-
-        if not present_rule:
-            self.node[node]['_rule_for_states'] = \
-                [n for n in range(number_of_states)]
-        else:
-            self.node[node]['_rule_for_states'].extend([
-                index for index in range(len(present_rule), number_of_states)])
-
-    def _update_node_observed_status(self, node):
-        """
-        Updates '_observed' attribute of the node.
-
-        If any of the states of a node are observed, node.['_observed']
-        is made True. Otherwise, it is False.
-        """
-        if any(state['observed_status'] for state in
-               self.node[node]['_states']):
-            self.node[node]['_observed'] = True
-        else:
-            self.node[node]['_observed'] = False
-
-    def _all_states_present_in_list(self, node, states_list):
-        """
-        Checks if all the states of node are present in state_list.
-        If present returns True else returns False.
-        """
-        if sorted(states_list) == sorted([state['name'] for state
-                                          in self.node[node]['_states']]):
-            return True
-        else:
-            return False
-
-    def _no_missing_states(self, node, states):
-        """
-        Returns True if all the states of the node are present in the
-        argument states.
-        """
-        node_states = [state['name'] for state in self.node[node]['_states']]
-        if sorted(node_states) == sorted(states):
-            return True
-        else:
-            raise ValueError(set(node_states) - set(states))
-
-    def _no_extra_states(self, node, states):
-        """"
-        Returns True if the argument states contains only the states
-         present in Node.
-        """
-        node_states = [state['name'] for state in self.node[node]['_states']]
-        extra_states = set(states) - set(node_states)
-        if extra_states:
-            raise ValueError(extra_states)
-        else:
-            return True
-
-    def get_rule_for_states(self, node):
-        """
-        Check the order in which the CPD is expected
-
-        Parameters
-        ----------
-        node   : graph node
-                The node for which to check the rule.
-
-        See Also
-        --------
-        set_rule_for_states
-        get_rule_for_parents
-        set_rule_for_parents
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade')])
-        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
-        >>> G.get_rule_for_states('diff')
-        >>> G.get_rule_for_states('grade')
-        """
-        current_rule = self.node[node]['_rule_for_states']
-        return [self.node[node]['_states'][index]['name']
-                for index in current_rule]
-
-    def set_rule_for_states(self, node, states):
-        """
-        Change the order in which the CPD is expected
-
-        Parameters
-        ----------
-        node  :  Graph Node
-                Node for which the order needs to be changed
-
-        states : List
-                List of the states of node in the order in which
-                CPD will be entered
-
-        See Also
-        --------
-        get_rule_for_states
-        get_rule_for_parents
-        set_rule_for_parents
-
-        Example
-        -------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'grade'), ('diff', 'intel')])
-        >>> G.set_states({'diff': ['easy', 'hard'],
-        ...               'intel': ['dumb', 'smart']})
-        >>> G.get_rule_for_states('diff')
-        ['easy', 'hard']
-        >>> G.set_rule_for_states('diff', ['hard', 'easy'])
-        >>> G.get_rule_for_states('diff')
-        ['hard', 'easy']
-        """
-        if self._all_states_present_in_list(node, states):
-            new_rule = []
-            for user_given_state in states:
-                for state in self.node[node]['_states']:
-                    if state['name'] == user_given_state:
-                        new_rule.append(
-                            self.node[node]['_states'].index(state))
-                        break
-
-            self.node[node]['_rule_for_states'] = new_rule
-
-    def _is_node_parents_equal_parents_list(self, node, parents_list):
-        """
-        Returns true if parents_list has exactly those elements that are
-        node's parents.
-        """
-        if sorted(parents_list) == sorted(self.node[node]['_parents']):
-            return True
-        else:
-            return False
-
-    def _no_extra_parents(self, node, parents):
-        """"
-        Returns True if parents has no other element other than those
-        present in node's _parents' list.
-        """
-        extra_parents = set(parents) - set(self.node[node]['_parents'])
-        if extra_parents:
-            raise ValueError(extra_parents)
-        else:
-            return True
-
-    def _no_missing_parents(self, node, parents):
-        """"
-        Returns True if all parents of node are present in the
-        argument parents.
-        """
-        missing_parents = set(self.node[node]['_parents']) - set(parents)
-        if missing_parents:
-            raise ValueError(missing_parents)
-        else:
-            return True
-
-    def get_rule_for_parents(self, node):
-        """
-        Gets the order of the parents
-
-        Parameters
-        ----------
-        node  : Graph Node
-                Node whose rule is needed
-
-        See Also
-        --------
-        set_rule_for_parents
-        get_rule_for_states
-        set_rule_for_states
-
-        Example
-        -------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
-        >>> G.get_rule_for_parents('grades')
-        ['diff', 'intel']
-        >>> G.set_rule_for_states({'grades': ['intel', 'diff']})
-        >>> G.get_rule_for_parents('grades')
-        ['intel', 'diff']
-        """
-        current_rule = self.node[node]['_rule_for_parents']
-        return [self.node[node]['_parents'][index] for index in current_rule]
-
-    def set_rule_for_parents(self, node, parents):
-        """
-        Set a new rule for the parents of the node.
-
-        Parameters
-        ----------
-        node  :  Graph node
-                Node for which new rule is to be set.
-        parents: List
-               A list of names of the parents of the node in the order
-                in which the rule needs to be set.
-
-        See Also
-        --------
-        get_rule_for_parents
-        get_rule_for_states
-        set_rule_for_states
-        """
-        if self._is_node_parents_equal_parents_list(node, parents):
-            new_order = []
-            for user_given_parent in parents:
-                for index in range(len(self.node[node]['_parents'])):
-                    if self.node[node]['_parents'][index] == user_given_parent:
-                        new_order.append(index)
-                        break
-
-            self.node[node]['_rule_for_parents'] = new_order
-
+    # def _update_rule_for_states(self, node, number_of_states):
+    #     """
+    #     Checks if rule_for_states is already present for the node.
+    #     If not present simply sets it to [0, 1, 2 ... ]
+    #     If present the just adds numbers for the new states in the previously
+    #     existing rule.
+    #     """
+    #     try:
+    #         present_rule = self.node[node]['_rule_for_states']
+    #     except KeyError:
+    #         present_rule = None
+    #
+    #     if not present_rule:
+    #         self.node[node]['_rule_for_states'] = \
+    #             [n for n in range(number_of_states)]
+    #     else:
+    #         self.node[node]['_rule_for_states'].extend([
+    #             index for index in range(len(present_rule), number_of_states)])
+    #
+    # def _update_node_observed_status(self, node):
+    #     """
+    #     Updates '_observed' attribute of the node.
+    #
+    #     If any of the states of a node are observed, node.['_observed']
+    #     is made True. Otherwise, it is False.
+    #     """
+    #     if any(state['observed_status'] for state in
+    #            self.node[node]['_states']):
+    #         self.node[node]['_observed'] = True
+    #     else:
+    #         self.node[node]['_observed'] = False
+    #
+    # def _all_states_present_in_list(self, node, states_list):
+    #     """
+    #     Checks if all the states of node are present in state_list.
+    #     If present returns True else returns False.
+    #     """
+    #     if sorted(states_list) == sorted([state['name'] for state
+    #                                       in self.node[node]['_states']]):
+    #         return True
+    #     else:
+    #         return False
+    #
+    # def _no_missing_states(self, node, states):
+    #     """
+    #     Returns True if all the states of the node are present in the
+    #     argument states.
+    #     """
+    #     node_states = [state['name'] for state in self.node[node]['_states']]
+    #     if sorted(node_states) == sorted(states):
+    #         return True
+    #     else:
+    #         raise ValueError(set(node_states) - set(states))
+    #
+    # def _no_extra_states(self, node, states):
+    #     """"
+    #     Returns True if the argument states contains only the states
+    #      present in Node.
+    #     """
+    #     node_states = [state['name'] for state in self.node[node]['_states']]
+    #     extra_states = set(states) - set(node_states)
+    #     if extra_states:
+    #         raise ValueError(extra_states)
+    #     else:
+    #         return True
+    #
+    # def get_rule_for_states(self, node):
+    #     """
+    #     Check the order in which the CPD is expected
+    #
+    #     Parameters
+    #     ----------
+    #     node   : graph node
+    #             The node for which to check the rule.
+    #
+    #     See Also
+    #     --------
+    #     set_rule_for_states
+    #     get_rule_for_parents
+    #     set_rule_for_parents
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+    #     >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
+    #     >>> G.get_rule_for_states('diff')
+    #     >>> G.get_rule_for_states('grade')
+    #     """
+    #     current_rule = self.node[node]['_rule_for_states']
+    #     return [self.node[node]['_states'][index]['name']
+    #             for index in current_rule]
+    #
+    # def set_rule_for_states(self, node, states):
+    #     """
+    #     Change the order in which the CPD is expected
+    #
+    #     Parameters
+    #     ----------
+    #     node  :  Graph Node
+    #             Node for which the order needs to be changed
+    #
+    #     states : List
+    #             List of the states of node in the order in which
+    #             CPD will be entered
+    #
+    #     See Also
+    #     --------
+    #     get_rule_for_states
+    #     get_rule_for_parents
+    #     set_rule_for_parents
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'grade'), ('diff', 'intel')])
+    #     >>> G.set_states({'diff': ['easy', 'hard'],
+    #     ...               'intel': ['dumb', 'smart']})
+    #     >>> G.get_rule_for_states('diff')
+    #     ['easy', 'hard']
+    #     >>> G.set_rule_for_states('diff', ['hard', 'easy'])
+    #     >>> G.get_rule_for_states('diff')
+    #     ['hard', 'easy']
+    #     """
+    #     if self._all_states_present_in_list(node, states):
+    #         new_rule = []
+    #         for user_given_state in states:
+    #             for state in self.node[node]['_states']:
+    #                 if state['name'] == user_given_state:
+    #                     new_rule.append(
+    #                         self.node[node]['_states'].index(state))
+    #                     break
+    #
+    #         self.node[node]['_rule_for_states'] = new_rule
+    #
+    # def _is_node_parents_equal_parents_list(self, node, parents_list):
+    #     """
+    #     Returns true if parents_list has exactly those elements that are
+    #     node's parents.
+    #     """
+    #     if sorted(parents_list) == sorted(self.node[node]['_parents']):
+    #         return True
+    #     else:
+    #         return False
+    #
+    # def _no_extra_parents(self, node, parents):
+    #     """"
+    #     Returns True if parents has no other element other than those
+    #     present in node's _parents' list.
+    #     """
+    #     extra_parents = set(parents) - set(self.node[node]['_parents'])
+    #     if extra_parents:
+    #         raise ValueError(extra_parents)
+    #     else:
+    #         return True
+    #
+    # def _no_missing_parents(self, node, parents):
+    #     """"
+    #     Returns True if all parents of node are present in the
+    #     argument parents.
+    #     """
+    #     missing_parents = set(self.node[node]['_parents']) - set(parents)
+    #     if missing_parents:
+    #         raise ValueError(missing_parents)
+    #     else:
+    #         return True
+    #
+    # def get_rule_for_parents(self, node):
+    #     """
+    #     Gets the order of the parents
+    #
+    #     Parameters
+    #     ----------
+    #     node  : Graph Node
+    #             Node whose rule is needed
+    #
+    #     See Also
+    #     --------
+    #     set_rule_for_parents
+    #     get_rule_for_states
+    #     set_rule_for_states
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+    #     >>> G.get_rule_for_parents('grades')
+    #     ['diff', 'intel']
+    #     >>> G.set_rule_for_states({'grades': ['intel', 'diff']})
+    #     >>> G.get_rule_for_parents('grades')
+    #     ['intel', 'diff']
+    #     """
+    #     current_rule = self.node[node]['_rule_for_parents']
+    #     return [self.node[node]['_parents'][index] for index in current_rule]
+    #
+    # def set_rule_for_parents(self, node, parents):
+    #     """
+    #     Set a new rule for the parents of the node.
+    #
+    #     Parameters
+    #     ----------
+    #     node  :  Graph node
+    #             Node for which new rule is to be set.
+    #     parents: List
+    #            A list of names of the parents of the node in the order
+    #             in which the rule needs to be set.
+    #
+    #     See Also
+    #     --------
+    #     get_rule_for_parents
+    #     get_rule_for_states
+    #     set_rule_for_states
+    #     """
+    #     if self._is_node_parents_equal_parents_list(node, parents):
+    #         new_order = []
+    #         for user_given_parent in parents:
+    #             for index in range(len(self.node[node]['_parents'])):
+    #                 if self.node[node]['_parents'][index] == user_given_parent:
+    #                     new_order.append(index)
+    #                     break
+    #
+    #         self.node[node]['_rule_for_parents'] = new_order
+    #
     def get_parents(self, node):
         # TODO: Update docstrings
         """
@@ -710,163 +710,163 @@ class BayesianModel(nx.DiGraph):
             else:
                 return self.cpds
 
-    def _change_state_observed(self, node, state, reset):
-        """
-        Changes observed status of state of a node
-
-        Parameters
-        ----------
-        node: Graph node
-
-        state: string (node state)
-
-        reset: bool
-            changes observed_status to False if reset is True
-            changes observed_status to True if reset is False
-        """
-        found = 0
-        for _state in self.node[node]['_states']:
-            if _state['name'] == state:
-                _state['observed_status'] = not reset
-                found = 1
-        if found:
-            self._update_node_observed_status(node)
-        else:
-            raise ValueError("State: ", state, " not found for node: ", node)
-
-    def set_observations(self, observations):
-        """
-        Sets state of node as observed.
-
-        Parameters
-        ----------
-        observations : dict
-            A dictionary of the form of {node : [states...]} or
-            {node: state} containing all the nodes to be observed.
-
-        See Also
-        --------
-        reset_observations
-        is_observed
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
-        ...                       ('grade', 'reco'))])
-        >>> G.set_states({'diff': ['easy', 'hard']})
-        >>> G.set_observations({'diff': ['easy', 'hard']})
-        """
-        for node, states in observations.items():
-            if isinstance(states, (list, tuple, set)):
-                for state in states:
-                    self._change_state_observed(node, state, reset=False)
-            else:
-                self._change_state_observed(node, states, reset=False)
-
-    def reset_observations(self, nodes=None):
-        """
-        Resets observed-status of given nodes. Will not change a particular
-        state. For that use, add_observations with reset=True.
-
-        If no arguments are given, all states of all nodes are reset.
-
-        Parameters
-        ----------
-        node : Graph Node, dict
-            list of nodes or node whose observed_status is to be reset
-            dict of {node: [states...]} when observed_status of states
-            is to be reset.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade')])
-        >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
-        >>> G.get_rule_for_states('diff')
-        >>> G.get_rule_for_states('grade')
-        >>> G.set_observations({'grade': ['A']})
-        >>> G.reset_observations({'grade': 'A'})
-
-        See Also
-        --------
-        set_observations
-        is_observed
-        """
-        if isinstance(nodes, dict):
-            for node, states in nodes.items():
-                if isinstance(states, (list, tuple, set)):
-                    for state in states:
-                        self._change_state_observed(node, state, reset=True)
-                else:
-                    self._change_state_observed(node, states, reset=True)
-        else:
-            if nodes is None:
-                nodes = self.nodes()
-            if not isinstance(nodes, (list, tuple)):
-                nodes = [nodes]
-            try:
-                for node in nodes:
-                    for state in self.node[node]['_states']:
-                        state['observed_status'] = False
-                    self._update_node_observed_status(node)
-            except KeyError as err:
-                err.message = "Node not found" + str(node)
-                raise
-
-    def is_observed(self, node):
-        """
-        Check if node is observed. If observed returns True.
-
-        Parameters
-        ----------
-        node  :  Graph Node
-
-        See Also
-        --------
-        set_observations
-        reset_observations
-
-        Example
-        -------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_node('grades')
-        >>> student.set_states({'grades': ['A', 'B']})
-        >>> student.set_observations({'grades': 'A'})
-        >>> student.is_observed('grades')
-        True
-        """
-        return self.node[node]['_observed']
-
-    def _get_ancestors_of(self, obs_nodes_list):
-        """
-        Returns a list of all ancestors of all the observed nodes.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-        """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
-
-        ancestors_list = set()
-        nodes_list = set(obs_nodes_list)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
-        return ancestors_list
-
-    def _get_observed_list(self):
-        """
-        Returns a list of all observed nodes
-        """
-        return [node for node in self.nodes()
-                if self.node[node]['_observed']]
-
+    # def _change_state_observed(self, node, state, reset):
+    #     """
+    #     Changes observed status of state of a node
+    #
+    #     Parameters
+    #     ----------
+    #     node: Graph node
+    #
+    #     state: string (node state)
+    #
+    #     reset: bool
+    #         changes observed_status to False if reset is True
+    #         changes observed_status to True if reset is False
+    #     """
+    #     found = 0
+    #     for _state in self.node[node]['_states']:
+    #         if _state['name'] == state:
+    #             _state['observed_status'] = not reset
+    #             found = 1
+    #     if found:
+    #         self._update_node_observed_status(node)
+    #     else:
+    #         raise ValueError("State: ", state, " not found for node: ", node)
+    #
+    # def set_observations(self, observations):
+    #     """
+    #     Sets state of node as observed.
+    #
+    #     Parameters
+    #     ----------
+    #     observations : dict
+    #         A dictionary of the form of {node : [states...]} or
+    #         {node: state} containing all the nodes to be observed.
+    #
+    #     See Also
+    #     --------
+    #     reset_observations
+    #     is_observed
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+    #     ...                       ('grade', 'reco'))])
+    #     >>> G.set_states({'diff': ['easy', 'hard']})
+    #     >>> G.set_observations({'diff': ['easy', 'hard']})
+    #     """
+    #     for node, states in observations.items():
+    #         if isinstance(states, (list, tuple, set)):
+    #             for state in states:
+    #                 self._change_state_observed(node, state, reset=False)
+    #         else:
+    #             self._change_state_observed(node, states, reset=False)
+    #
+    # def reset_observations(self, nodes=None):
+    #     """
+    #     Resets observed-status of given nodes. Will not change a particular
+    #     state. For that use, add_observations with reset=True.
+    #
+    #     If no arguments are given, all states of all nodes are reset.
+    #
+    #     Parameters
+    #     ----------
+    #     node : Graph Node, dict
+    #         list of nodes or node whose observed_status is to be reset
+    #         dict of {node: [states...]} when observed_status of states
+    #         is to be reset.
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> G = BayesianModel([('diff', 'intel'), ('diff', 'grade')])
+    #     >>> G.set_states({'diff': ['easy', 'hard'], 'grade': ['C', 'A']})
+    #     >>> G.get_rule_for_states('diff')
+    #     >>> G.get_rule_for_states('grade')
+    #     >>> G.set_observations({'grade': ['A']})
+    #     >>> G.reset_observations({'grade': 'A'})
+    #
+    #     See Also
+    #     --------
+    #     set_observations
+    #     is_observed
+    #     """
+    #     if isinstance(nodes, dict):
+    #         for node, states in nodes.items():
+    #             if isinstance(states, (list, tuple, set)):
+    #                 for state in states:
+    #                     self._change_state_observed(node, state, reset=True)
+    #             else:
+    #                 self._change_state_observed(node, states, reset=True)
+    #     else:
+    #         if nodes is None:
+    #             nodes = self.nodes()
+    #         if not isinstance(nodes, (list, tuple)):
+    #             nodes = [nodes]
+    #         try:
+    #             for node in nodes:
+    #                 for state in self.node[node]['_states']:
+    #                     state['observed_status'] = False
+    #                 self._update_node_observed_status(node)
+    #         except KeyError as err:
+    #             err.message = "Node not found" + str(node)
+    #             raise
+    #
+    # def is_observed(self, node):
+    #     """
+    #     Check if node is observed. If observed returns True.
+    #
+    #     Parameters
+    #     ----------
+    #     node  :  Graph Node
+    #
+    #     See Also
+    #     --------
+    #     set_observations
+    #     reset_observations
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy.models import BayesianModel
+    #     >>> student = BayesianModel()
+    #     >>> student.add_node('grades')
+    #     >>> student.set_states({'grades': ['A', 'B']})
+    #     >>> student.set_observations({'grades': 'A'})
+    #     >>> student.is_observed('grades')
+    #     True
+    #     """
+    #     return self.node[node]['_observed']
+    #
+    # def _get_ancestors_of(self, obs_nodes_list):
+    #     """
+    #     Returns a list of all ancestors of all the observed nodes.
+    #
+    #     Parameters
+    #     ----------
+    #     obs_nodes_list: string, list-type
+    #         name of all the observed nodes
+    #     """
+    #     if not isinstance(obs_nodes_list, (list, tuple)):
+    #         obs_nodes_list = [obs_nodes_list]
+    #
+    #     ancestors_list = set()
+    #     nodes_list = set(obs_nodes_list)
+    #     while nodes_list:
+    #         node = nodes_list.pop()
+    #         if node not in ancestors_list:
+    #             nodes_list.update(self.predecessors(node))
+    #         ancestors_list.add(node)
+    #     return ancestors_list
+    #
+    # def _get_observed_list(self):
+    #     """
+    #     Returns a list of all observed nodes
+    #     """
+    #     return [node for node in self.nodes()
+    #             if self.node[node]['_observed']]
+    #
     def active_trail_nodes(self, start, observed=None, additional_observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
