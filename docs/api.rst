@@ -3,19 +3,24 @@ pgmpy API Reference
 
 .. automodule::pgmpy
 
-BayesianModel module
+models module
 --------------------
 
-.. module:: pgmpy.BayesianModel
-
+.. module:: pgmpy.models
 
 .. autoclass:: BayesianModel
    :members:
 
-Factor module
+.. autoclass:: NoisyOrModel
+   :members:
+
+.. autoclass:: MarkovModel
+   :members:
+
+factors module
 -------------
 
-.. module:: pgmpy.Factor
+.. module:: pgmpy.factors
 
 .. autoclass:: Factor
    :members:
@@ -26,13 +31,16 @@ Factor module
 .. autoclass:: TreeCPD
    :members:
 
+.. autoclass:: RuleCPD
+   :members:
+
 .. autoclass:: JointProbabilityDistribution
    :members:
 
-Independencies module
+independencies module
 ---------------------
 
-.. module:: pgmpy.Independencies
+.. module:: pgmpy.independencies
 
 .. autoclass:: Independencies
    :members:
