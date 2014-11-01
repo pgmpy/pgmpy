@@ -111,33 +111,8 @@ class TabularCPD(Factor):
         array([[ 1.3,  0.8],
                [ 0.7,  1.2]])
         """
-        if self.event in variables:
-            self.event_card = 1
-        Factor.marginalize(self, variables)
-        self.cpd = self.values.reshape((self.event_card,
-                                        np.product(self.cardinality)/self.event_card),
-                                       order='C')
-        self.evidence = [var for var in self.variables
-                         if var is not self.event]
-        self.evidence_card = [self.get_cardinality(variable)
-                              for variable in self.evidence]
-
-    def normalize(self):
-        """
-        Normalizes the cpd table
-
-        Examples
-        --------
-        >>> from pgmpy.factors import TabularCPD
-        >>> cpd_table = TabularCPD('grade', 2,
-        ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
-        ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.normalize()
-        >>> cpd_table.get_cpd()
-        array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
-               [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
-        """
-        self.cpd = self.cpd / self.cpd.sum(axis=0)
+        super(TabularCPD, self).marginalize(variables)
+        super(TabularCPD, self).normalize()
 
     def reduce(self, values):
         """
@@ -176,7 +151,7 @@ class TabularCPD(Factor):
         """
         Returns the cpd
         """
-        return self.cpd
+        return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
 
 
 class TreeCPD(nx.DiGraph):
