@@ -99,7 +99,7 @@ class BayesianModel(nx.DiGraph):
         """
     def __init__(self, ebunch=None):
         super(BayesianModel, self).__init__(ebunch)
-
+        self.cpds = []
         if ebunch is not None:
             new_nodes = set(itertools.chain(*ebunch))
             self._check_graph(delete_graph=True)
@@ -640,17 +640,15 @@ class BayesianModel(nx.DiGraph):
         """
         return (self.node[parent] for parent in self.get_parents(node))
 
-    def set_cpd(self, node, cpd):
+    def add_cpd(self, cpds):
         """
-        Add CPD (Conditional Probability Distribution) to the node.
+        Add CPD (Conditional Probability Distribution) to the Bayesian Model.
 
         Parameters
         ----------
-        node  :  Graph node
-                Node to which CPD will be added
-
-        cpd  :  2D list or tuple of the CPD. The 2D array should be
-                according to the rule specified for parents and states.
+        cpds  :  list, set, tuple (array-like)
+            List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
+            which will be associated with the model
 
         See Also
         --------
@@ -663,17 +661,13 @@ class BayesianModel(nx.DiGraph):
         EXAMPLE
         -------
         >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.CPD import TabularCPD
         >>> student = BayesianModel([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.set_states({'diff': ['easy', 'hard'],
-        ...                    'intel': ['dumb', 'avg', 'smart'],
-        ...                    'grades': ['A', 'B', 'C']})
-        >>> student.set_rule_for_parents('grades', ('diff', 'intel'))
-        >>> student.set_rule_for_states('grades', ('A', 'B', 'C'))
-        >>> student.set_cpd('grades',
-        ...             [[0.1,0.1,0.1,0.1,0.1,0.1],
-        ...             [0.1,0.1,0.1,0.1,0.1,0.1],
-        ...             [0.8,0.8,0.8,0.8,0.8,0.8]]
-        ...             )
+        >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                                       [0.8,0.8,0.8,0.8,0.8,0.8]],
+        ...                         evidence=['diff', 'intel'], evidence_card=[2, 3])
+        >>> student.add_cpd([grades_cpd])
 
         +------+-----------------------+---------------------+
         |diff: |          easy         |         hard        |
@@ -687,17 +681,15 @@ class BayesianModel(nx.DiGraph):
         |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
         +------+------+------+---------+------+------+-------+
         """
-        evidence = self.get_rule_for_parents(node)[::-1]
-        evidence_card = [self.number_of_states(parent) for parent in evidence]
-        self.node[node]['_cpd'] = CPD.TabularCPD(node,
-                                                 self.number_of_states(node),
-                                                 cpd, evidence, evidence_card)
+        self.cpds.extend(cpds)
 
-    def get_cpd(self, node, beautify=False):
+    def get_cpd(self, node=None, beautify=False):
         """
         Returns the CPD of the node.
 
-        node  :  Graph node
+        Parameters
+        ----------
+        node  :  Graph node (if None returns all CPDs)
 
         beautify : If set to True returns an ASCII art table of the CPD
                     with parents and states else if beautify=False, returns
@@ -711,7 +703,12 @@ class BayesianModel(nx.DiGraph):
             #TODO: ASCII art table
             pass
         else:
-            return self.node[node]['_cpd'].cpd
+            if node:
+                for cpd in self.cpds:
+                    if cpd.variable == node:
+                        return cpd
+            else:
+                return self.cpds
 
     def _change_state_observed(self, node, state, reset):
         """
