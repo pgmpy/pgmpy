@@ -87,7 +87,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pgmpy'
-copyright = '2014, Ankur Ankan, Abinash Panda, Shashank Garg, Shikhar Nigam, Pranjal Mittal, Anavil Tripathy, Soumya Kundu'
+copyright = '2014, Ankur, Abinash, Shashank, Shikhar'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

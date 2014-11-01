@@ -1,6 +1,7 @@
 import networkx as nx
-from pgmpy.MarkovModel.MarkovModel import UndirectedGraph
-from pgmpy.Factor.Factor import Factor
+
+from pgmpy.base import UndirectedGraph
+from pgmpy.factors import Factor
 
 
 class JunctionTree(UndirectedGraph):

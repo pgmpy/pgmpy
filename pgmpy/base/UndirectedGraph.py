@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from heapq import heappush, heappop, heapify
 import networkx as nx
 
@@ -14,9 +16,9 @@ class UndirectedGraph(nx.Graph):
 
         Example
         ------
-        >>> from pgmpy import MarkovModel as mm
-        >>> g1 = mm.MarkovModel([('a','b'),('b','c'),('c','a')])
-        >>> g2 = mm.MarkovModel([('a','c'),('a','b'),('b','c')])
+        >>> from pgmpy.models import MarkovModel
+        >>> g1 = MarkovModel([('a','b'),('b','c'),('c','a')])
+        >>> g2 = MarkovModel([('a','c'),('a','b'),('b','c')])
         >>> print(g1.equal_graphs(g2))
         True
         """
@@ -44,7 +46,7 @@ class UndirectedGraph(nx.Graph):
 
         Example
         --------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
         ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
         ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
@@ -80,7 +82,7 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
         ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
         ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
@@ -125,7 +127,7 @@ class UndirectedGraph(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
+        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
         ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
         ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
@@ -186,7 +188,7 @@ class UndirectedGraph(nx.Graph):
         -------
         private function
         """
-        from pgmpy.MarkovModel.JunctionTree import JunctionTree
+        from pgmpy.base import JunctionTree
 
         jt = JunctionTree()
         jtnode = 0
@@ -251,11 +253,11 @@ class UndirectedGraph(nx.Graph):
         return_junction_tree:
             return the junction tree, if true else return tree-width
         """
-        from pgmpy import MarkovModel
+        from pgmpy.base import JunctionTree
 
         if return_junction_tree:
             cliques = nx.chordal_graph_cliques(self)
-            jt = MarkovModel.JunctionTree()
+            jt = JunctionTree()
             jtnode = 0
             for max_clique in cliques:
                 jtnode += 1

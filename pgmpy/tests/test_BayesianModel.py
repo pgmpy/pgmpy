@@ -1,32 +1,32 @@
 import unittest
 import networkx as nx
-from pgmpy import BayesianModel as bm
+from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
 
 
 class TestBaseModelCreation(unittest.TestCase):
     def setUp(self):
-        self.G = bm.BayesianModel()
+        self.G = BayesianModel()
 
     def test_class_init_without_data(self):
         self.assertIsInstance(self.G, nx.DiGraph)
 
     def test_class_init_with_data_string(self):
-        self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
+        self.g = BayesianModel([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.g.nodes()), ['a', 'b', 'c'])
         self.assertListEqual(hf.recursive_sorted(self.g.edges()),
                              [['a', 'b'], ['b', 'c']])
 
     def test_class_init_with_data_nonstring(self):
-        bm.BayesianModel([(1, 2), (2, 3)])
+        BayesianModel([(1, 2), (2, 3)])
 
-    #TODO: Correct these tests
+    # TODO: Correct these tests
     # def test_class_init_with_data_selfloop(self):
-    #     self.assertRaises(Exceptions.SelfLoopError, bm.BayesianModel,
+    #     self.assertRaises(exceptions.SelfLoopError, bm.models,
     #                       [('a', 'a')])
     #
     # def test_class_init_with_data_cycle(self):
-    #     self.assertRaises(Exceptions.CycleError, bm.BayesianModel,
+    #     self.assertRaises(exceptions.CycleError, bm.models,
     #                       [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_add_node_string(self):
@@ -87,7 +87,7 @@ class TestBaseModelCreation(unittest.TestCase):
                           [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_update_node_parents_bm_constructor(self):
-        self.g = bm.BayesianModel([('a', 'b'), ('b', 'c')])
+        self.g = BayesianModel([('a', 'b'), ('b', 'c')])
         self.assertListEqual(self.g.predecessors('a'), [])
         self.assertListEqual(self.g.predecessors('b'), ['a'])
         self.assertListEqual(self.g.predecessors('c'), ['b'])
@@ -143,8 +143,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
 class TestBayesianModelMethods(unittest.TestCase):
     def setUp(self):
-        self.G = bm.BayesianModel([('a', 'd'), ('b', 'd'),
-                                   ('d', 'e'), ('b', 'c')])
+        self.G = BayesianModel([('a', 'd'), ('b', 'd'),
+                                ('d', 'e'), ('b', 'c')])
 
     def test_add_states(self):
         self.G.set_states({'a': [1, 2, 3], 'b': [4, 5], 'c': [6, 7]})
@@ -169,7 +169,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertFalse(self.G.node['a']['_observed'])
 
     def test_get_states(self):
-        self.G = bm.BayesianModel([('a', 'd')])
+        self.G = BayesianModel([('a', 'd')])
         self.G.set_states({'a': [1, 2, 3], 'd': [4, 5]})
         self.assertListEqual(list(self.G.get_states('a')), [1, 2, 3])
         self.assertListEqual(list(self.G.get_states('d')), [4, 5])
@@ -274,7 +274,7 @@ class TestBayesianModelMethods(unittest.TestCase):
                             (edge[1], edge[0]) in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')])
 
     def test_moral_graph_with_edge_present_over_parents(self):
-        G = bm.BayesianModel([('a', 'd'), ('d', 'e'), ('b', 'd'), ('b', 'c'), ('a', 'b')])
+        G = BayesianModel([('a', 'd'), ('d', 'e'), ('b', 'd'), ('b', 'c'), ('a', 'b')])
         moral_graph = G.moral_graph()
         self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
         for edge in moral_graph.edges():
@@ -287,8 +287,8 @@ class TestBayesianModelMethods(unittest.TestCase):
 
 class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
-        self.G = bm.BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
-                                   ('i', 's')])
+        self.G = BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
+                                ('i', 's')])
         self.G.set_states(
             {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
              'l': ['yes', 'no']})
@@ -338,7 +338,7 @@ class TestBayesianModelCPD(unittest.TestCase):
 
     def test_reset_observations_single_state(self):
         self.G.reset_observations({'d': 'easy'})
-        #TODO change this as the function has changed
+        # TODO change this as the function has changed
         self.G.reset_observations({'d': 'easy'})
         for state in self.G.node['d']['_states']:
             if state['name'] == 'easy':

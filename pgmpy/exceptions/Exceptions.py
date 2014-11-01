@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contains all the user-defined Exceptions created for PgmPy"""
+"""Contains all the user-defined exceptions created for PgmPy"""
 
 
 class MissingParentsError(Exception):

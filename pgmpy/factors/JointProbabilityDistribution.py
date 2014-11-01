@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from pgmpy.Factor import Factor
-from pgmpy.Independencies import Independencies
+from pgmpy.factors import Factor
+from pgmpy.independencies import Independencies
 
 
 class JointProbabilityDistribution(Factor):
@@ -60,7 +60,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         >>> print(prob)
             print(prob)
@@ -94,7 +94,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> values = np.random.rand(12)
         >>> prob = JointProbabilityDistribution(['x1, x2, x3'], [2, 3, 2], values/np.sum(values))
         >>> prob.marginal_distribution(['x1', 'x2'])
@@ -130,7 +130,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.check_independence('x1', 'x2')
         True
@@ -161,7 +161,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8)/8)
         >>> prob.get_independencies()
         """
@@ -188,7 +188,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         >>> prob.conditional_distribution('x1_1')
         >>> print(prob)
@@ -213,13 +213,13 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> bayesian_model = prob.minimal_imap(order=['x2', 'x1', 'x3'])
         >>> bayesian_model
-        <pgmpy.BayesianModel.BayesianModel.BayesianModel at 0x7fd7440a9320>
+        <pgmpy.models.models.models at 0x7fd7440a9320>
         """
-        from pgmpy import BayesianModel as bm
+        from pgmpy import models as bm
         import itertools
 
         def combinations(u):

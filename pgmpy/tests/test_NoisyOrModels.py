@@ -1,7 +1,7 @@
 # import unittest
 # import numpy as np
 # import numpy.testing as np_test
-# from pgmpy.BayesianModel.NoisyOrModel import NoisyOrModel
+# from pgmpy.models import NoisyOrModel
 #
 #
 # class TestNoisyOrModelInit(unittest.TestCase):

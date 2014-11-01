@@ -3,8 +3,8 @@
 
 import numpy as np
 import networkx as nx
-from pgmpy.Factor import Factor
-from pgmpy import Exceptions
+from pgmpy.factors import Factor
+from pgmpy import exceptions
 
 
 class TabularCPD(Factor):
@@ -72,7 +72,7 @@ class TabularCPD(Factor):
                 evidence = [evidence]
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise Exceptions.CardinalityError("Cardinality of all "
+                raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
         self.evidence = evidence
         if len(np.array(values).shape) is not 2:
@@ -91,7 +91,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -117,7 +117,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -139,7 +139,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import TabularCPD
+        >>> from pgmpy.factors import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -198,19 +198,20 @@ class TreeCPD(nx.DiGraph):
                           /         \
             P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
 
-        >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
-        >>>                     ('B', 'C', '1'),
-        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
-        >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
-
+        >>> from pgmpy.factors import TreeCPD, Factor
+        >>> tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+        ...                 ('B', 'C', '1'),
+        ...                 ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+        ...                 ('C', 'D', '1'),
+        ...                 ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+        ...                 ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
         """
         nx.DiGraph.__init__(self)
         #TODO: Check cycles and self loops.
         if data:
             for edge in data:
+                if len(edge) != 3:
+                    raise ValueError("Each edge tuple must have 3 values (u, v, label).")
                 self.add_edge(edge[0], edge[1], label=edge[2])
 
     def add_edge(self, u, v, label):
@@ -235,9 +236,18 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-
+        >>> from pgmpy.factors import TreeCPD, Factor
+        >>> tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+        ...                 ('B', 'C', 1)])
+        >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
-        nx.DiGraph.add_edge(self, u, v, label=label)
+        if u != v:
+            super(TreeCPD, self).add_edge(u, v, label=label)
+            if list(nx.simple_cycles(self)):
+                super(TreeCPD, self).remove_edge(u, v)
+                raise ValueError("Self Loops and Cycles are not allowed")
+        else:
+            raise ValueError("Self Loops and Cycles are not allowed")
 
     def add_edges_from(self, ebunch):
         """
@@ -257,41 +267,57 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD()
-        >>> tree.add_edges_from([('B', 'C', '1'), ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.6, 0.4]))])
+        >>> from pgmpy.factors import TreeCPD, Factor
+        >>> tree = TreeCPD()
+        >>> tree.add_edges_from([('B', 'C', 1), ('C', 'D', 1),
+        ...                      ('D', Factor(['A'], [2], [0.6, 0.4]))])
         """
         for edge in ebunch:
             if len(edge) == 2:
-                raise ValueError("Each edge tuple must have 3 values (u,v,label).")
+                raise ValueError("Each edge tuple must have 3 values (u, v, label).")
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
 
-    def to_tabular_cpd(self, variable, parents_order=None):
+    def to_tabular_cpd(self, parents_order=None):
+        from collections import OrderedDict
+
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         evidence = []
         evidence_card = []
+        paths = []
 
-        #dfs for finding the evidences and evidence cardinalities.
-        def dfs(node):
+        #dfs for finding the evidences and evidence cardinalities and paths to factors.
+        def dfs(node, path):
             if isinstance(node, tuple):
                 evidence.extend(node)
                 labels = [value['label'] for value in self.edge[node].values()]
+                labels_zip = zip(*labels)
                 for i in range(len(node)):
-                    evidence_card.append(max([list(map(int, element.split('_'))) for element in labels], key=lambda t: t[i])[i] + 1)
+                    evidence_card.append(max(labels_zip[i]))
 
-            elif isinstance(node, str):
+            elif isinstance(node, Factor):
+                variable = node.scope()
+                path.append((path, node))
+
+            else:
                 evidence.append(node)
                 evidence_card.append(self.out_degree(node))
 
             for out_edge in self.out_edges_iter(node):
+                path.update({node: self.edge[node][out_edge[1]]['label']})
                 dfs(out_edge[1])
 
-        dfs(root)
+        dfs(root, path=OrderedDict())
 
         if parents_order:
-            #TODO: reorder the evidence and evidence_card list
-            pass
+            new_evidence = []
+            new_evidence_card = []
+            for var in parents_order:
+                new_evidence.append(var)
+                new_evidence_card.append(evidence_card[evidence.index(var)])
+            evidence = new_evidence
+            evidence_card = new_evidence_card
+
+    # TODO: Construct TabularCPD from the paths
 
     def to_rule_cpd(self):
         """
@@ -299,22 +325,23 @@ class TreeCPD(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.Factor import CPD, Factor
-        >>> tree = CPD.TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
-        >>>                     ('B', 'C', '1'),
-        >>>                     ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
-        >>>                     ('C', 'D', '1'),
-        >>>                     ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-        >>>                     ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+        >>> from pgmpy.factors import TreeCPD, Factor
+        >>> tree = TreeCPD([('B', factors(['A'], [2], [0.8, 0.2]), '0'),
+        ...                 ('B', 'C', '1'),
+        ...                 ('C', factors(['A'], [2], [0.1, 0.9]), '0'),
+        ...                 ('C', 'D', '1'),
+        ...                 ('D', factors(['A'], [2], [0.9, 0.1]), '0'),
+        ...                 ('D', factors(['A'], [2], [0.4, 0.6]), '1')])
         >>> tree.to_rule_cpd()
 
         """
-        #TODO: This method assumes that Factor class has a get_variable method. Check this after merging navin's PR.
+        #TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
-        paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if isinstance(target, Factor)}
+        paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if
+                                 isinstance(target, Factor)}
         for node in self.nodes_iter():
             if isinstance(node, Factor):
-                rule_cpd = RuleCPD(node.get_variables()[0])
+                rule_cpd = RuleCPD(node.scope()[0])
 
         for factor, path in paths_root_to_factors.items():
             rule_key = []
@@ -351,13 +378,13 @@ class RuleCPD:
             p5: <A_0, B_1, C_1; 0.9>
             p6: <A_1, B_1, C_1; 0.1>
 
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
-        >>>                      ('A_1', 'B_0'): 0.2,
-        >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
-        >>>                      ('A_1', 'B_1', 'C_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
-        >>>                      ('A_1', 'B_1', 'C_1'): 0.1})
+        ...                      ('A_1', 'B_0'): 0.2,
+        ...                      ('A_0', 'B_1', 'C_0'): 0.4,
+        ...                      ('A_1', 'B_1', 'C_0'): 0.6,
+        ...                      ('A_0', 'B_1', 'C_1'): 0.9,
+        ...                      ('A_1', 'B_1', 'C_1'): 0.1})
         """
         self.variable = variable
         if rules:
@@ -396,10 +423,10 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD(variable='A')
         >>> rule.add_rules({('A_0', 'B_0'): 0.8,
-        >>>                 ('A_1', 'B_0'): 0.2})
+        ...                 ('A_1', 'B_0'): 0.2})
         """
         for rule in rules:
             self.rules[rule] = rules[rule]
@@ -415,7 +442,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
@@ -441,7 +468,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_0'): 0.4,
@@ -471,7 +498,7 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
         >>>                      ('A_1', 'B_0'): 0.2,
         >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
@@ -539,15 +566,15 @@ class RuleCPD:
 
         Examples
         --------
-        >>> from pgmpy.Factor.CPD import RuleCPD
+        >>> from pgmpy.factors import RuleCPD
         >>> rule = RuleCPD('A', {('A_0', 'B_0'): 0.8,
-        >>>                      ('A_1', 'B_0'): 0.2,
-        >>>                      ('A_0', 'B_1', 'C_1'): 0.9,
-        >>>                      ('A_1', 'B_1', 'C_1'): 0.1,
-        >>>                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
-        >>>                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
-        >>>                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
-        >>>                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
+        ...                      ('A_1', 'B_0'): 0.2,
+        ...                      ('A_0', 'B_1', 'C_1'): 0.9,
+        ...                      ('A_1', 'B_1', 'C_1'): 0.1,
+        ...                      ('A_0', 'B_1', 'C_0', 'D_0'): 0.4,
+        ...                      ('A_1', 'B_1', 'C_0', 'D_0'): 0.6,
+        ...                      ('A_0', 'B_1', 'C_0', 'D_1'): 0.3,
+        ...                      ('A_1', 'B_1', 'C_0', 'D_1'): 0.7})
         >>> rule.to_tree_cpd()
         <CPD.TreeCPD object at 0x7f6b6f952fd0>
         """

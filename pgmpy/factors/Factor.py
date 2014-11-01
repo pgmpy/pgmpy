@@ -5,15 +5,15 @@
 import functools
 from collections import OrderedDict
 import numpy as np
-from pgmpy.Exceptions import Exceptions
-# from pgmpy.Factor._factor_product import _factor_product
+from pgmpy.exceptions import Exceptions
+# from pgmpy.factors._factor_product import _factor_product
 
 np.seterr(divide='raise')
 
 
 class Factor:
     """
-    Base class for *Factor*.
+    Base class for *factors*.
 
     Public Methods
     --------------
@@ -27,7 +27,7 @@ class Factor:
 
     def __init__(self, variables, cardinality, value):
         """
-        Initialize a Factor class.
+        Initialize a factors class.
 
         Defined above, we have the following mapping from variable
         assignments to the index of the row vector in the value field:
@@ -60,14 +60,14 @@ class Factor:
             List of cardinality of each variable
         value: list, array_like
             List or array of values of factor.
-            A Factor's values are stored in a row vector in the value
+            A factors's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
             the variable field cycle through their values the fastest. More
             concretely, for factor
 
         Examples
         --------
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        >>> phi = factors(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
         self.variables = OrderedDict()
         if len(variables) != len(cardinality):
@@ -86,7 +86,7 @@ class Factor:
 
         Examples
         --------
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
+        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -103,9 +103,9 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor import Factor
+        >>> from pgmpy.factors import factors
         >>> import numpy as np
-        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
+        >>> phi = factors(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
@@ -134,8 +134,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import factors
+        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality('x1')
         2
         """
@@ -163,8 +163,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import factors
+        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
         array([ 14.,  22.,  30.])
@@ -222,8 +222,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.Factor import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import factors
+        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce(['x1_0', 'x2_0'])
         >>> phi.values
         array([0., 1.])
@@ -262,9 +262,9 @@ class Factor:
 
         Example
         -------
-        >>> from pgmpy.Factor import Factor
-        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> from pgmpy.factors import factors
+        >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = factors(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi = phi1.product(phi2)
         >>> phi.variables
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
@@ -274,18 +274,18 @@ class Factor:
 
     def divide(self, factor):
         """
-        Returns a new Factor instance after division by factor.
+        Returns a new factors instance after division by factor.
 
         Parameters
         ----------
-        factor : Factor
+        factor : factors
             The denominator
 
         Examples
         --------
-        >>> from pgmpy.Factor.Factor import Factor
-        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+        >>> from pgmpy.factors.factors import factors
+        >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = factors(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
         >>> phi = phi1.divide(phi2)
         >>> phi
         x1	x2	x3	phi(x1, x2, x3)
@@ -366,9 +366,9 @@ def _bivar_factor_operation(phi1, phi2, operation):
 
     Parameters
     ----------
-    phi1: Factor
+    phi1: factors
 
-    phi2: Factor
+    phi2: factors
 
     operation: M | D
             M: multiplies phi1 and phi2
@@ -418,7 +418,7 @@ def _bivar_factor_operation(phi1, phi2, operation):
                 values = np.concatenate((values, value*phi2.values), axis=1)
         elif operation == 'D':
             # reference: Koller Defination 10.7
-            raise ValueError("Factor Division not defined for factors with no common scope")
+            raise ValueError("factors Division not defined for factors with no common scope")
         variables = phi1_vars + phi2_vars
         cardinality = list(phi1.cardinality) + list(phi2.cardinality)
         phi = Factor(variables, cardinality, values)
@@ -431,14 +431,14 @@ def factor_product(*args):
 
     Parameters
     ----------
-    factor1, factor2, .....: Factor
+    factor1, factor2, .....: factors
         factors to be multiplied
 
     Examples
     --------
-    >>> from pgmpy.Factor import Factor, factor_product
-    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> from pgmpy.factors import factors, factor_product
+    >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = factors(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> phi = factor_product(phi1, phi2)
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
@@ -455,25 +455,25 @@ def factor_product(*args):
 
 def factor_divide(phi1, phi2):
     """
-    Returns new Factor instance equal to phi1/phi2.
+    Returns new factors instance equal to phi1/phi2.
 
     Parameters
     ----------
-    phi1: Factor
+    phi1: factors
         The Dividend.
 
-    phi2: Factor
+    phi2: factors
         The Divisor.
 
     Examples
     --------
     Examples
     --------
-    >>> from pgmpy.Factor.Factor import Factor, factor_divide
-    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
-    >>> assert isinstance(phi1, Factor)
-    >>> assert isinstance(phi2, Factor)
+    >>> from pgmpy.factors.factors import factors, factor_divide
+    >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = factors(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+    >>> assert isinstance(phi1, factors)
+    >>> assert isinstance(phi2, factors)
     >>> phi = factor_divide(phi1, phi2)
     >>> phi
     x1	x2	x3	phi(x1, x2, x3)
@@ -495,5 +495,5 @@ def factor_divide(phi1, phi2):
     factor_product
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
-        raise TypeError("phi1 and phi2 should be Factor instances")
+        raise TypeError("phi1 and phi2 should be factors instances")
     return _bivar_factor_operation(phi1, phi2, operation='D')

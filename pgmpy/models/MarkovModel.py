@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import itertools
-import networkx as nx
 import numpy as np
-from pgmpy.Factor.Factor import Factor
-from pgmpy.MarkovModel.UndirectedGraph import UndirectedGraph
+import networkx as nx
+
+from pgmpy.base import UndirectedGraph
 
 
 class MarkovModel(nx.Graph):
@@ -26,8 +26,8 @@ class MarkovModel(nx.Graph):
         --------
         Create an empty Markov Model with no nodes and no edges.
 
-        >>> from pgmpy import MarkovModel
-        >>> G = MarkovModel.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
 
         G can be grown in several ways.
 
@@ -103,8 +103,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
         >>> G.add_node('A')
         """
         super(MarkovModel, self).add_node(node)
@@ -125,8 +125,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
         >>> G.add_nodes_from(['A', 'B', 'C'])
         """
         for node in nodes:
@@ -150,8 +150,8 @@ class MarkovModel(nx.Graph):
 
         EXAMPLE
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
         """
@@ -180,8 +180,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
         """
@@ -203,8 +203,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
     #     >>>                       ('intel', 'sat')])
     #     >>> G.set_boolean_states(['diff','intel'])
     #
@@ -231,8 +231,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel
-    #     >>> G = MarkovModel.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
     #     >>>                       ('intel', 'sat')])
     #     >>> G.add_states({'diff': ['easy', 'hard'],
     #     ...               'intel': ['dumb', 'smart']})
@@ -255,8 +255,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
     #     >>>                       ('intel', 'sat')])
     #     >>> G.set_states({'diff': ['easy', 'hard'],
     #     ...               'intel': ['dumb', 'smart']})
@@ -278,8 +278,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
     #     ...            ('intel', 'sat')])
     #     >>> G.add_states({'diff': ['easy', 'hard'],
     #     ...    'intel': ['dumb', 'smart']})
@@ -306,8 +306,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
     #     ...            ('intel', 'sat')])
     #     >>> G.add_states({'diff': ['easy', 'hard'],
     #     ...    'intel': ['dumb', 'smart']})
@@ -332,8 +332,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'grade'), ('intel', 'grade'),
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'grade'), ('intel', 'grade'),
     #     ...                       ('intel', 'SAT')])
     #     >>> G.set_states({'diff': ['easy', 'hard']})
     #     >>> G.number_of_states('diff')
@@ -357,8 +357,8 @@ class MarkovModel(nx.Graph):
     #
     #     Examples
     #     --------
-    #     >>> from pgmpy import MarkovModel
-    #     >>> G = MarkovModel.MarkovModel([('diff', 'grade'), ('diff', 'intel')])
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'grade'), ('diff', 'intel')])
     #     >>> G.set_states({'diff': ['easy', 'hard'],
     #     ...               'intel': ['dumb', 'smart']})
     #     >>> G.get_rule_for_states('diff')
@@ -385,8 +385,8 @@ class MarkovModel(nx.Graph):
     #
     #     Example
     #     -------
-    #     >>> from pgmpy import MarkovModel as mm
-    #     >>> G = mm.MarkovModel([('diff', 'grade'), ('diff', 'intel')])
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> G = MarkovModel([('diff', 'grade'), ('diff', 'intel')])
     #     >>> G.set_states({'diff': ['easy', 'hard'],
     #     ...               'intel': ['dumb', 'smart']})
     #     >>> G.get_rule_for_states('diff')
@@ -425,8 +425,8 @@ class MarkovModel(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> student = MarkovModel()
         >>> student.add_node('grades')
         >>> student.set_observations({'grades': 'A'})
         >>> student.is_observed('grades')
@@ -453,12 +453,13 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations('Alice', 0)
         """
         self._set_is_observed(node, True)
@@ -484,12 +485,13 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         """
         for node, state in observations.items():
@@ -508,12 +510,13 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        >>>                     ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         >>> G.get_observations('Alice')
         >>> {'Alice': 0}
@@ -540,12 +543,13 @@ class MarkovModel(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> G = mm.MarkovModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
-        ...                            ('i', 's')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        >>>               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        >>>               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
         >>> G.set_observations({'Alice': 0, 'Charles': 1})
         >>> G.unset_observation('Alice')
         """
@@ -557,11 +561,11 @@ class MarkovModel(nx.Graph):
     def add_factors(self, *factors):
         """
         Associate a factor to the graph.
-        See Factor class for the order of potential values
+        See factors class for the order of potential values
 
         Parameters
         ----------
-        *factor: pgmpy.Factor.Factor object
+        *factor: pgmpy.factors.factors object
             A factor object on any subset of the variables of the model which
             is to be associated with the model.
 
@@ -575,16 +579,16 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> from pgmpy.Factor import Factor
-        >>> student = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        >>>                           ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2], np.random.rand(6))
         >>> student.add_factors(factor)
         """
         for factor in factors:
             if set(factor.variables) - set(factor.variables).intersection(set(self.nodes())):
-                raise ValueError("Factor defined on variable that is not in the model", factor)
+                raise ValueError("factors defined on variable that is not in the model", factor)
 
             self.factors.append(factor)
             for variable_index in factor.variables:
@@ -596,8 +600,9 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2], np.random.rand(6))
         >>> student.add_factors(factor)
         >>> student.get_factors()
@@ -795,8 +800,8 @@ class MarkovModel(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.MarkovModel()
+        >>> from pgmpy.models import MarkovModel
+        >>> student = MarkovModel()
         >>> student.add_nodes_from(['diff', 'intel'])
         >>> student.set_states({'diff': ['hard', 'easy']})
         >>> student.set_states({'intel': ['avg', 'dumb', 'smart']})
@@ -823,11 +828,12 @@ class MarkovModel(nx.Graph):
 
         Example
         -------
-        >>> from pgmpy import MarkovModel as mm
-        >>> student = mm.MarkovModel([('diff', 'intel'), ('diff', 'grade'),('intel','grade')])
+        >>> from pgmpy.models import MarkovModel
+        >>> student = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
+        ...                        ('intel', 'grade')])
         >>> student.add_states({'diff': ['easy', 'hard'],
-        ...             'intel': ['dumb', 'smart'],
-        ...             'grade': ['A','B','C']})
+        ...                     'intel': ['dumb', 'smart'],
+        ...                     'grade': ['A','B','C']})
         >>> factor = student.add_factors(['diff','intel'], range(4))
         >>> factor2 = student.add_factors(['intel','grade'], range(6))
         >>> factor3 = student.add_factors(['diff','grade'], range(6))
@@ -874,7 +880,7 @@ class MarkovModel(nx.Graph):
             If order not specified removes variables in a random way.
         Examples
         --------
-        >>> from pgmpy.MarkovModel import MarkovModel
+        >>> from pgmpy.models import MarkovModel
         >>> mm = MarkovModel()
         >>> mm.add_edges_from([('Coherence', 'Difficulty'),
         ...                    ('Difficulty', 'Grade'),
@@ -886,7 +892,7 @@ class MarkovModel(nx.Graph):
         ...                    ('Intelligence', 'Grade'),
         ...                    ('Job', 'Happy')])
         >>> mm.induced_graph(order=['Coherence', 'Difficulty', 'Intelligence', 'Happy', 'Grade',
-        ...                   'SAT', 'Letter'])
+        ...                         'SAT', 'Letter'])
         """
         from itertools import chain, combinations
         graph_copy = self.copy()
