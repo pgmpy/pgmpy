@@ -121,8 +121,8 @@ except ImportError:
 
 import networkx as nx
 
-warnings.warn("Not Complete. Please use only for "
-              "reading and writing Bayesian Models.")
+# warnings.warn("Not Complete. Please use only for "
+#               "reading and writing Bayesian Models.")
 
 
 def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
