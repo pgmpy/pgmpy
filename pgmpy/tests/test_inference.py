@@ -8,7 +8,7 @@ from pgmpy.Inference import Inference
 
 
 class TestInferenceBase(unittest.TestCase):
-    def setup(self):
+    def setUp(self):
         self.bayesian = BayesianModel([('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e')])
         self.bayesian.set_cpd('a', np.array([[0.4, 0.6]]))
         self.bayesian.set_cpd('b', np.array([[0.2, 0.4], [0.3, 0.4]]))

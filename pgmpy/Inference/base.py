@@ -22,7 +22,8 @@ class Inference:
                     except KeyError:
                         self.factors[var] = [factor]
                 self.factors.append(factor)
-        if isinstance(model, MarkovModel):
+
+        elif isinstance(model, MarkovModel):
             self.factors = {}
             for factor in model.get_factors():
                 for var in factor.variables:
