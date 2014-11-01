@@ -112,7 +112,24 @@ class TabularCPD(Factor):
                [ 0.7,  1.2]])
         """
         super(TabularCPD, self).marginalize(variables)
-        super(TabularCPD, self).normalize()
+        self.normalize()
+
+    def normalize(self):
+        """
+        Normalizes the cpd table
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> cpd_table = TabularCPD('grade', 2,
+        ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
+        ...                        ['intel', 'diff'], [2, 2])
+        >>> cpd_table.normalize()
+        >>> cpd_table.get_cpd()
+        array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
+               [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
+        """
+        cpd = self.get_cpd()
+        self.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
     def reduce(self, values):
         """
