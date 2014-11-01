@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import numpy as np
-from pgmpy.BayesianModel import BayesianModel
-from pgmpy.MarkovModel import MarkovModel
-from pgmpy.Factor import Factor
+from pgmpy.models import BayesianModel
+from pgmpy.models import MarkovModel
+from pgmpy.factors import Factor
 
 
 class Inference:

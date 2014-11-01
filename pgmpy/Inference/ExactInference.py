@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.Inference import Inference
-from pgmpy.Factor import factor_product
+from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
