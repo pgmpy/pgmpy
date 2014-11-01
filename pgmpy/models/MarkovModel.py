@@ -71,7 +71,7 @@ class MarkovModel(nx.Graph):
         --------------
         add_node('node1')
         add_nodes_from(['node1', 'node2', ...])
-        add_edge('node1')
+        add_edge('node1', 'node2')
         add_edges_from([('node1', 'node2'),('node3', 'node4')])
         add_states({node : [state1, state2]})
         get_states('node1')
