@@ -152,16 +152,9 @@ class TabularCPD(Factor):
         """
         if not isinstance(values, (list, set, tuple)):
             values = [values]
-        if any(self.event in value for value in values):
-            self.event_card = 1
-        Factor.reduce(self, values)
-        self.cpd = self.values.reshape((self.event_card,
-                                        np.product(self.cardinality)/self.event_card),
-                                       order='C')
-        self.evidence = [var for var in self.variables
-                         if var is not self.event]
-        self.evidence_card = [self.get_cardinality(variable)
-                              for variable in self.evidence]
+        variables = [var.split('_')[0] for var in values]
+        self.variable_card = variables.count(self.variable)
+        super(TabularCPD, self).reduce(values)
 
     def get_cpd(self):
         """
