@@ -5,4 +5,5 @@ from .JointProbabilityDistribution import *
 __all__ = ['Factor',
            'TabularCPD',
            'TreeCPD',
+           'RuleCPD'
            'JointProbabilityDistribution']
