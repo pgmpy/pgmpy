@@ -263,12 +263,8 @@ class TestTabularCPDInit(unittest.TestCase):
                                                          0.1, 0.1,
                                                          0.8, 0.8]))
 
-    def test_cpd_init_event_not_string(self):
-        self.assertRaises(TypeError, TabularCPD, 1, 2, [[0.1, 0.1]])
-        self.assertRaises(TypeError, TabularCPD, 1, 'event', "something undefined for this cardinality")
-
     def test_cpd_init_event_card_not_int(self):
-        self.assertRaises(TypeError, TabularCPD, 'event', '2', "something undefined as cardinality is a string")
+        self.assertRaises(TypeError, TabularCPD, 'event', '2', [[0.1, 0.9]])
 
     def test_cpd_init_cardinality_not_specified(self):
         self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
