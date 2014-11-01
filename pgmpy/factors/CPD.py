@@ -32,18 +32,29 @@ class TabularCPD(Factor):
     [0.1,0.1,0.1,0.1,0.1,0.1],
     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
+    >>> from pgmpy.factors.CPD import TabularCPD
+    >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+    ...                               [0.1, 0.1],
+    ...                               [0.8, 0.8]],
+    ...                  evidence='evi1', evidence_card=2)
+    >>> cpd.values
+    array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
+    >>> cpd.variables
+    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    >>> cpd.variable
+
     Parameters
     ----------
-    event: string
-        event whose cpd table is defined
-    event_card: integer
-        cardinality of event
+    variable: int, string (any hashable python object)
+        The variable whose CPD is defined.
+    variable_card: integer
+        cardinality of variable
     values: 2d array, 2d list
         values of the cpd table
-    evidence: string, list-type
+    evidence: string, array-like
         evidences(if any) w.r.t. which cpd is defined
-    evidence_card: integer, list-type
-        cardinality of evidences
+    evidence_card: integer, array-like
+        cardinality of evidences (if any)
 
     Public Methods
     --------------
