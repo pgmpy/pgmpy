@@ -112,7 +112,6 @@ class TabularCPD(Factor):
                [ 0.7,  1.2]])
         """
         super(TabularCPD, self).marginalize(variables)
-        self.normalize()
 
     def normalize(self):
         """
@@ -168,7 +167,10 @@ class TabularCPD(Factor):
         """
         Returns the cpd
         """
-        return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        if self.variable in self.variables:
+            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        else:
+            return self.values.reshape(1, np.prod(self.cardinality))
 
 
 class TreeCPD(nx.DiGraph):
