@@ -233,31 +233,35 @@ class TestFactorMethods(unittest.TestCase):
 class TestTabularCPDInit(unittest.TestCase):
     def test_cpd_init(self):
         cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1]])
-        self.assertEqual(cpd.event, 'grade')
-        self.assertEqual(cpd.event_card, 3)
-        np_test.assert_array_equal(cpd.cpd, np.array([[0.1, 0.1, 0.1]]))
-        self.assertEqual(cpd.evidence, None)
-        self.assertEqual(cpd.evidence_card, None)
+        self.assertEqual(cpd.variable, 'grade')
+        self.assertEqual(cpd.variable_card, 3)
+        self.assertEqual(list(cpd.variables), ['grade'])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
+        np_test.assert_array_almost_equal(cpd.values, np.array([0.1, 0.1, 0.1]))
 
         cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                       [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                       [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                          evidence=['intel', 'diff'], evidence_card=[3, 2])
-        self.assertListEqual(cpd.evidence_card, [3, 2])
-        self.assertListEqual(cpd.evidence, ['intel', 'diff'])
-        np_test.assert_array_equal(cpd.cpd, np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                      [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                      [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+        self.assertEqual(cpd.variable, 'grade')
+        self.assertEqual(cpd.variable_card, 3)
+        np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
+        self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
+        np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                                                         0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]))
 
         cpd = TabularCPD('grade', 3, [[0.1, 0.1],
                                       [0.1, 0.1],
                                       [0.8, 0.8]],
                          evidence='evi1', evidence_card=2)
-        self.assertListEqual(cpd.evidence_card, [2])
-        self.assertListEqual(cpd.evidence, ['evi1'])
-        np_test.assert_array_equal(cpd.cpd, np.array([[0.1, 0.1],
-                                                      [0.1, 0.1],
-                                                      [0.8, 0.8]]))
+        self.assertEqual(cpd.variable, 'grade')
+        self.assertEqual(cpd.variable_card, 3)
+        np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
+        self.assertListEqual(list(cpd.variables), ['grade', 'evi1'])
+        np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1,
+                                                         0.1, 0.1,
+                                                         0.8, 0.8]))
 
     def test_cpd_init_event_not_string(self):
         self.assertRaises(TypeError, TabularCPD, 1, 2, [[0.1, 0.1]])
