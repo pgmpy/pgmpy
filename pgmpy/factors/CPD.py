@@ -32,18 +32,29 @@ class TabularCPD(Factor):
     [0.1,0.1,0.1,0.1,0.1,0.1],
     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
+    >>> from pgmpy.factors.CPD import TabularCPD
+    >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+    ...                               [0.1, 0.1],
+    ...                               [0.8, 0.8]],
+    ...                  evidence='evi1', evidence_card=2)
+    >>> cpd.values
+    array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
+    >>> cpd.variables
+    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    >>> cpd.variable
+
     Parameters
     ----------
-    event: string
-        event whose cpd table is defined
-    event_card: integer
-        cardinality of event
+    variable: int, string (any hashable python object)
+        The variable whose CPD is defined.
+    variable_card: integer
+        cardinality of variable
     values: 2d array, 2d list
         values of the cpd table
-    evidence: string, list-type
+    evidence: string, array-like
         evidences(if any) w.r.t. which cpd is defined
-    evidence_card: integer, list-type
-        cardinality of evidences
+    evidence_card: integer, array-like
+        cardinality of evidences (if any)
 
     Public Methods
     --------------
@@ -52,21 +63,22 @@ class TabularCPD(Factor):
     normalize()
     reduce([values_list])
     """
-    def __init__(self, event, event_card, values,
+    def __init__(self, variable, variable_card, values,
                  evidence=None, evidence_card=None):
-        if not isinstance(event, str):
-            raise TypeError("Event must be a string")
-        self.event = event
-        variables = [event]
-        if not isinstance(event_card, int):
+
+        self.variable = variable
+        variables = [variable]
+
+        if not isinstance(variable_card, int):
             raise TypeError("Event cardinality must be an integer")
-        self.event_card = event_card
-        cardinality = [event_card]
+        self.variable_card = variable_card
+
+        cardinality = [variable_card]
         if evidence_card:
             if not isinstance(evidence_card, (list, set, tuple)):
                 evidence_card = [evidence_card]
             cardinality.extend(evidence_card)
-        self.evidence_card = evidence_card
+
         if evidence:
             if not isinstance(evidence, (list, set, tuple)):
                 evidence = [evidence]
@@ -74,11 +86,10 @@ class TabularCPD(Factor):
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
-        self.evidence = evidence
-        if len(np.array(values).shape) is not 2:
+        values = np.array(values)
+        if values.ndim != 2:
             raise TypeError("Values must be a 2d list/array")
-        self.cpd = np.array(values)
-        Factor.__init__(self, variables, cardinality, self.cpd.flatten('C'))
+        Factor.__init__(self, variables, cardinality, values.flatten('C'))
 
     def marginalize(self, variables):
         """
@@ -100,21 +111,11 @@ class TabularCPD(Factor):
         array([[ 1.3,  0.8],
                [ 0.7,  1.2]])
         """
-        if self.event in variables:
-            self.event_card = 1
-        Factor.marginalize(self, variables)
-        self.cpd = self.values.reshape((self.event_card,
-                                        np.product(self.cardinality)/self.event_card),
-                                       order='C')
-        self.evidence = [var for var in self.variables
-                         if var is not self.event]
-        self.evidence_card = [self.get_cardinality(variable)
-                              for variable in self.evidence]
+        super(TabularCPD, self).marginalize(variables)
 
     def normalize(self):
         """
         Normalizes the cpd table
-
         Examples
         --------
         >>> from pgmpy.factors import TabularCPD
@@ -126,7 +127,8 @@ class TabularCPD(Factor):
         array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
                [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
         """
-        self.cpd = self.cpd / self.cpd.sum(axis=0)
+        cpd = self.get_cpd()
+        self.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
     def reduce(self, values):
         """
@@ -150,22 +152,18 @@ class TabularCPD(Factor):
         """
         if not isinstance(values, (list, set, tuple)):
             values = [values]
-        if any(self.event in value for value in values):
-            self.event_card = 1
-        Factor.reduce(self, values)
-        self.cpd = self.values.reshape((self.event_card,
-                                        np.product(self.cardinality)/self.event_card),
-                                       order='C')
-        self.evidence = [var for var in self.variables
-                         if var is not self.event]
-        self.evidence_card = [self.get_cardinality(variable)
-                              for variable in self.evidence]
+        variables = [var.split('_')[0] for var in values]
+        self.variable_card = variables.count(self.variable)
+        super(TabularCPD, self).reduce(values)
 
     def get_cpd(self):
         """
         Returns the cpd
         """
-        return self.cpd
+        if self.variable in self.variables:
+            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        else:
+            return self.values.reshape(1, np.prod(self.cardinality))
 
 
 class TreeCPD(nx.DiGraph):

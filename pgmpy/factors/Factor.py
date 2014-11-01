@@ -13,15 +13,15 @@ np.seterr(divide='raise')
 
 class Factor:
     """
-    Base class for *factors*.
+    Base class for *Factor*.
 
     Public Methods
     --------------
     assignment(index)
     get_cardinality(variable)
     marginalize([variable_list])
-    normalise()
-    product(*factors)
+    normalize()
+    product(*Factor)
     reduce([variable_values_list])
     """
 
@@ -60,14 +60,15 @@ class Factor:
             List of cardinality of each variable
         value: list, array_like
             List or array of values of factor.
-            A factors's values are stored in a row vector in the value
+            A Factor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
             the variable field cycle through their values the fastest. More
             concretely, for factor
 
         Examples
         --------
-        >>> phi = factors(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
         self.variables = OrderedDict()
         if len(variables) != len(cardinality):
@@ -86,7 +87,8 @@ class Factor:
 
         Examples
         --------
-        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -103,9 +105,9 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.factors import factors
         >>> import numpy as np
-        >>> phi = factors(['diff', 'intel'], [2, 2], np.ones(4))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
@@ -134,8 +136,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.factors import factors
-        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality('x1')
         2
         """
@@ -149,6 +151,16 @@ class Factor:
 
         When the identity factor of a factor is multiplied with the factor
         it returns the factor itself.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi_identity = phi.identity_factor()
+        >>> phi_identity.variables
+        OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']), ('x3', ['x3_0', 'x3_1'])])
+        >>> phi_identity.values
+        array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
         """
         return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
 
@@ -163,8 +175,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.factors import factors
-        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
         array([ 14.,  22.,  30.])
@@ -208,6 +220,17 @@ class Factor:
     def normalize(self):
         """
         Normalizes the values of factor so that they sum to 1.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> norm_phi = phi.normalize()
+        >>> norm_phi.values
+        array([ 0.        ,  0.01515152,  0.03030303,  0.04545455,  0.06060606,
+                0.07575758,  0.09090909,  0.10606061,  0.12121212,  0.13636364,
+                0.15151515,  0.16666667])
+
         """
         self.values = self.values/np.sum(self.values)
 
@@ -222,8 +245,8 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.factors import factors
-        >>> phi = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce(['x1_0', 'x2_0'])
         >>> phi.values
         array([0., 1.])
@@ -262,9 +285,9 @@ class Factor:
 
         Example
         -------
-        >>> from pgmpy.factors import factors
-        >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = factors(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi = phi1.product(phi2)
         >>> phi.variables
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
@@ -283,9 +306,9 @@ class Factor:
 
         Examples
         --------
-        >>> from pgmpy.factors.factors import factors
-        >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = factors(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
         >>> phi = phi1.divide(phi2)
         >>> phi
         x1	x2	x3	phi(x1, x2, x3)
@@ -436,9 +459,9 @@ def factor_product(*args):
 
     Examples
     --------
-    >>> from pgmpy.factors import factors, factor_product
-    >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = factors(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> from pgmpy.factors import Factor, factor_product
+    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> phi = factor_product(phi1, phi2)
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
@@ -469,11 +492,11 @@ def factor_divide(phi1, phi2):
     --------
     Examples
     --------
-    >>> from pgmpy.factors.factors import factors, factor_divide
-    >>> phi1 = factors(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = factors(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
-    >>> assert isinstance(phi1, factors)
-    >>> assert isinstance(phi2, factors)
+    >>> from pgmpy.factors import Factor, factor_divide
+    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
+    >>> assert isinstance(phi1, Factor)
+    >>> assert isinstance(phi2, Factor)
     >>> phi = factor_divide(phi1, phi2)
     >>> phi
     x1	x2	x3	phi(x1, x2, x3)
