@@ -4,7 +4,7 @@ pgmpy API Reference
 .. automodule::pgmpy
 
 models module
---------------------
+-------------
 
 .. module:: pgmpy.models
 
@@ -18,7 +18,7 @@ models module
    :members:
 
 factors module
--------------
+--------------
 
 .. module:: pgmpy.factors
 
