@@ -832,27 +832,27 @@ class BayesianModel(nx.DiGraph):
     #     """
     #     return self.node[node]['_observed']
     #
-    # def _get_ancestors_of(self, obs_nodes_list):
-    #     """
-    #     Returns a list of all ancestors of all the observed nodes.
-    #
-    #     Parameters
-    #     ----------
-    #     obs_nodes_list: string, list-type
-    #         name of all the observed nodes
-    #     """
-    #     if not isinstance(obs_nodes_list, (list, tuple)):
-    #         obs_nodes_list = [obs_nodes_list]
-    #
-    #     ancestors_list = set()
-    #     nodes_list = set(obs_nodes_list)
-    #     while nodes_list:
-    #         node = nodes_list.pop()
-    #         if node not in ancestors_list:
-    #             nodes_list.update(self.predecessors(node))
-    #         ancestors_list.add(node)
-    #     return ancestors_list
-    #
+    def _get_ancestors_of(self, obs_nodes_list):
+        """
+        Returns a list of all ancestors of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+        """
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
+
+        ancestors_list = set()
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in ancestors_list:
+                nodes_list.update(self.predecessors(node))
+            ancestors_list.add(node)
+        return ancestors_list
+
     # def _get_observed_list(self):
     #     """
     #     Returns a list of all observed nodes
@@ -860,7 +860,7 @@ class BayesianModel(nx.DiGraph):
     #     return [node for node in self.nodes()
     #             if self.node[node]['_observed']]
     #
-    def active_trail_nodes(self, start, observed=None, additional_observed=None):
+    def active_trail_nodes(self, start, observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
 
@@ -872,10 +872,6 @@ class BayesianModel(nx.DiGraph):
         observed : List of nodes (optional)
             If given the active trail would be computed assuming these nodes to be observed.
 
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computer assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
-
         Examples
         --------
 
@@ -883,12 +879,10 @@ class BayesianModel(nx.DiGraph):
         >>> student = BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
         >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.set_states({'diff': ['easy', 'hard'],
-        ...                     'intel': ['dumb', 'smart'],
-        ...                     'grades': ['A', 'B', 'C']})
-        >>> student.set_observations({'grades': 'A'})
         >>> student.active_trail_nodes('diff')
-        ['diff', 'intel']
+        {'diff', 'grade'}
+        >>> student.active_trail_nodes('diff', observed='grades')
+        {'diff', 'intel'}
 
         See Also
         --------
@@ -902,10 +896,8 @@ class BayesianModel(nx.DiGraph):
         """
         if observed:
             observed_list = [observed] if isinstance(observed, str) else observed
-        elif additional_observed:
-            observed_list = list(set(self._get_observed_list() + [observed] if isinstance(observed, str) else observed))
         else:
-            observed_list = self._get_observed_list()
+            observed_list = []
         ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
@@ -1018,7 +1010,7 @@ class BayesianModel(nx.DiGraph):
         --------
         active_trail_nodes
         """
-        if end in self.active_trail_nodes(start, observed, additional_observed):
+        if end in self.active_trail_nodes(start, observed):
             return True
         else:
             return False
