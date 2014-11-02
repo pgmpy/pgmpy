@@ -37,21 +37,32 @@ class Inference:
         >>> model = Inference(student)
         """
         self.variables = model.nodes()
+        self.cardinality = model.cardinality
         if isinstance(model, BayesianModel):
             self.factors = {}
             for node in model.nodes():
                 cpd = model.get_cpd(node)
-                factor = Factor(cpd.get_variables(), cpd.get_cardinality(), cpd.values)
-                for var in cpd.get_variables():
+                cpd_as_factor = cpd.to_factor()
+                parents = model.predecessors(node)
+
+                if set(cpd_as_factor.variables) != set([node].extend(parents)):
+                    raise ValueError('The cpd has wrong variables associated with it.')
+                if cpd.marginalize(node) != np.ones(np.prod(cpd.cardinality[1:])):
+                    raise ValueError('The values of the cpd are not correct')
+
+                for var in cpd.variables:
                     try:
-                        self.factors[var].append(factor)
+                        self.factors[var].append(cpd_as_factor)
                     except KeyError:
-                        self.factors[var] = [factor]
-                self.factors.append(factor)
+                        self.factors[var] = [cpd_as_factor]
 
         elif isinstance(model, MarkovModel):
             self.factors = {}
             for factor in model.get_factors():
+
+                if factor.variables not in self.variables:
+                    raise ValueError('Factors are not consistent with the model')
+
                 for var in factor.variables:
                     try:
                         self.factors[var].append(factor)
