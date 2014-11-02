@@ -71,7 +71,7 @@ class MarkovModel(nx.Graph):
         --------------
         add_node('node1')
         add_nodes_from(['node1', 'node2', ...])
-        add_edge('node1')
+        add_edge('node1', 'node2')
         add_edges_from([('node1', 'node2'),('node3', 'node4')])
         add_states({node : [state1, state2]})
         get_states('node1')
@@ -634,18 +634,14 @@ class MarkovModel(nx.Graph):
         heuristic: H1 | H2 | H3 | H4 | H5 | H6
             The heuristic algorithm to use to decide the deletion order of
             the variables to compute the triangulated graph.
-
             Let X be the set of variables and X(i) denotes the i-th variable.
-
             S(i): The size of the clique created by deleting the variable.
             E(i): Cardinality of variable X(i).
             M(i): The maximum size of the cliques of the subgraph given by
                     X(i) and its adjacent nodes.
             C(i): The sum of the size of cliques of the subgraph given by X(i)
                     and its adjacent nodes.
-
             The heuristic algorithm decide the deletion order if this way:
-
             H1: Delete the variable with minimal S(i).
             H2: Delete the variable with minimal S(i)/E(i).
             H3: Delete the variable with minimal S(i) - M(i).
@@ -826,8 +822,8 @@ class MarkovModel(nx.Graph):
             the triangulation techniques and the technique_num for each
             technique
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovModel
         >>> student = MarkovModel([('diff', 'intel'), ('diff', 'grade'),
         ...                        ('intel', 'grade')])
@@ -878,6 +874,7 @@ class MarkovModel(nx.Graph):
         order: list, tuple (array-like)
             The order in which the variables are to be eliminated.
             If order not specified removes variables in a random way.
+
         Examples
         --------
         >>> from pgmpy.models import MarkovModel

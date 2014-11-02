@@ -197,7 +197,7 @@ class XBNWriter:
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
         >>> writer.set_analysisnotebook(NAME="Notebook.Cancer Example From Neapolitan",
-        >>>                             ROOT='Cancer')
+        ...                             ROOT='Cancer')
         """
         for key, value in data.items():
             self.network.set(str(key), str(value))
@@ -245,24 +245,18 @@ class XBNWriter:
         Parameters
         ----------
         data: dict
-            data is dict in the form:
-                {'a': {'TYPE': 'discrete', 'XPOS': '13495',
-                       'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-                       'STATES': ['Present', 'Absent']}
-                'b': {'TYPE': 'discrete', 'XPOS': '11290',
-                       'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
-                       'STATES': ['Present', 'Absent']}, ...
+            dict for variable in the form of example as shown.
 
         Examples
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer = XBNWriter()
         >>> writer.set_variables({'a': {'TYPE': 'discrete', 'XPOS': '13495',
-        >>>                             'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-        >>>                             'STATES': ['Present', 'Absent']}
-        >>>                       'b': {'TYPE': 'discrete', 'XPOS': '11290',
-        >>>                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
-        >>>                             'STATES': ['Present', 'Absent']}})
+        ...                             'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
+        ...                             'STATES': ['Present', 'Absent']}
+        ...                       'b': {'TYPE': 'discrete', 'XPOS': '11290',
+        ...                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
+        ...                             'STATES': ['Present', 'Absent']}})
         """
         variables = etree.SubElement(self.bnmodel)
         for var in data:
@@ -298,21 +292,16 @@ class XBNWriter:
         Parameters
         ----------
         data: dict
-            dict in the form of:
-                {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
-                 'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                                                          [ 0.6,  0.4]]),
-                       'CONDSET': ['c']}, ... }
+            dict in the form of {var: {'TYPE': , 'DPIS': , 'CONDSET': }
 
         Examples
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer =XBNWriter()
         >>> writer.set_distributions({'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
-        >>>                           'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-        >>>                                                                    [ 0.6,  0.4]]),
-        >>>                                 'CONDSET': ['c'], 'CARDINALITY': [2]},
-        >>>                                      ................    })
+        ...                           'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
+        ...                                                                    [ 0.6,  0.4]]),
+        ...                                 'CONDSET': ['c'], 'CARDINALITY': [2]})
         """
         distributions = etree.SubElement(self.bnmodel, 'DISTRIBUTIONS')
 
