@@ -976,7 +976,7 @@ class BayesianModel(nx.DiGraph):
                                            set(self.get_parents(variable))])
         return independencies
 
-    def is_active_trail(self, start, end, observed=None, additional_observed=None):
+    def is_active_trail(self, start, end, observed=None):
         """
         Returns True if there is any active trail between start and end node
 
