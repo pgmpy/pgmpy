@@ -101,10 +101,10 @@ class BayesianModel(nx.DiGraph):
         super(BayesianModel, self).__init__(ebunch)
         self.cpds = []
         if ebunch is not None:
-            new_nodes = set(itertools.chain(*ebunch))
+            # new_nodes = set(itertools.chain(*ebunch))
             self._check_graph(delete_graph=True)
-            self._update_node_parents(new_nodes)
-            self._update_node_rule_for_parents(new_nodes)
+            # self._update_node_parents(new_nodes)
+            # self._update_node_rule_for_parents(new_nodes)
 
     def add_node(self, node):
         """
@@ -127,8 +127,8 @@ class BayesianModel(nx.DiGraph):
         """
         super(BayesianModel, self).add_node(node)
 
-        self._update_node_parents([node])
-        self._update_node_rule_for_parents([node])
+        # self._update_node_parents([node])
+        # self._update_node_rule_for_parents([node])
 
     def add_nodes_from(self, nodes):
         """
@@ -151,8 +151,8 @@ class BayesianModel(nx.DiGraph):
         """
         super(BayesianModel, self).add_nodes_from(nodes)
 
-        self._update_node_parents(nodes)
-        self._update_node_rule_for_parents(nodes)
+        # self._update_node_parents(nodes)
+        # self._update_node_rule_for_parents(nodes)
 
     def add_edge(self, u, v):
         """
@@ -180,8 +180,8 @@ class BayesianModel(nx.DiGraph):
         if self._check_graph([(u, v)], delete_graph=False):
             super(BayesianModel, self).add_edge(u, v)
 
-        self._update_node_parents([u, v])
-        self._update_node_rule_for_parents([u, v])
+        # self._update_node_parents([u, v])
+        # self._update_node_rule_for_parents([u, v])
 
     def add_edges_from(self, ebunch):
         """
@@ -210,9 +210,9 @@ class BayesianModel(nx.DiGraph):
         if self._check_graph(ebunch, delete_graph=False):
             super(BayesianModel, self).add_edges_from(ebunch)
 
-        new_nodes = set(itertools.chain(*ebunch))
-        self._update_node_parents(new_nodes)
-        self._update_node_rule_for_parents(new_nodes)
+        # new_nodes = set(itertools.chain(*ebunch))
+        # self._update_node_parents(new_nodes)
+        # self._update_node_rule_for_parents(new_nodes)
 
     # def set_states(self, states_dic):
     #     """
