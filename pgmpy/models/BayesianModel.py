@@ -997,13 +997,12 @@ class BayesianModel(nx.DiGraph):
         --------
         >>> from pgmpy.models import BayesianModel
         >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.set_states({'diff': ['easy', 'hard'],
-        ...                     'intel': ['dumb', 'smart'],
-        ...                     'grades': ['A', 'B', 'C']})
-        >>> student.set_observations({'grades': 'A'})
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grade', 'letter'),
+        ...                         ('intel', 'sat')])
         >>> student.is_active_trail('diff', 'intel')
+        False
+        >>> student.is_active_trail('grade', 'sat')
         True
 
         See Also
