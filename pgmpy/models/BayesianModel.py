@@ -590,19 +590,13 @@ class BayesianModel(nx.DiGraph):
     #         self.node[node]['_rule_for_parents'] = new_order
     #
     def get_parents(self, node):
-        # TODO: Update docstrings
         """
-        Returns a list of parents of node in order according to the rule
-        set for parents.
+        Returns a list of parents of node.
 
         Parameters
         ----------
-        node  :  Graph Node
-
-        See Also
-        --------
-        get_rule_for_parents
-        set_rule_for_parents
+        node  :  string, int or any hashable python object.
+            The node whose parents would be returned.
 
         Example
         -------
@@ -611,11 +605,10 @@ class BayesianModel(nx.DiGraph):
         ...                    ('intel', 'SAT'), ('grade', 'reco')])
         >>> G.get_parents('grade')
         ['diff', 'intel']
-        >>> G.set_rule_for_parents('grade', ['intel', 'diff'])
-        >>> G.get_parents('grade')
-        ['intel', 'diff']
+        >>> G.get_parents('reco')
+        ['grade']
         """
-        return iter(self.get_rule_for_parents(node))
+        return self.predecessors(node)
 
     def number_of_parents(self, node):
         """
