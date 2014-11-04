@@ -37,18 +37,20 @@ class Inference:
         >>> model = Inference(student)
         """
         self.variables = model.nodes()
-        self.cardinality = model.cardinality
+        self.cardinality = {}
         if isinstance(model, BayesianModel):
             self.factors = {}
             for node in model.nodes():
                 cpd = model.get_cpd(node)
                 cpd_as_factor = cpd.to_factor()
                 parents = model.predecessors(node)
+                self.cardinality[node] = cpd.variable_card
 
-                if set(cpd_as_factor.variables) != set([node].extend(parents)):
-                    raise ValueError('The cpd has wrong variables associated with it.')
-                if cpd.marginalize(node) != np.ones(np.prod(cpd.cardinality[1:])):
-                    raise ValueError('The values of the cpd are not correct')
+                # TODO: Add these checks
+                # if set(cpd_as_factor.variables) != set([node].extend(parents)):
+                #     raise ValueError('The cpd has wrong variables associated with it.')
+                # if cpd.marginalize(node) != np.ones(np.prod(cpd.cardinality[1:])):
+                #     raise ValueError('The values of the cpd are not correct')
 
                 for var in cpd.variables:
                     try:
