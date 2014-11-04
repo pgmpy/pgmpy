@@ -64,3 +64,38 @@ class TestVariableElimination(unittest.TestCase):
         self.assertEqual(phi_c_given_d_1.variables, ['c', 'd'])
         np_test.assert_array_equal(phi_c_given_d_1.cardinality, [2, 1])
         np_test.assert_array_almost_equal(phi_c_given_d_1.values, np.array([0.258911, 0.741088]))
+
+    def test_markov_ve_1(self):
+        model = VariableElimination(self.markov)
+        phi_a = model.query(variables={'a': {}})
+        self.assertEqual(phi_a.variables, ['a'])
+        np_test.assert_array_equal(phi_a.cardinality, np.array([2]))
+        np_test.assert_array_almost_equal(phi_a.values, np.array([0.59868, 0.40131]))
+
+    def test_markov_ve_2(self):
+        model = VariableElimination(self.markov)
+        phi_a_1 = model.query(variables={'a': {1}})
+        self.assertEqual(phi_a_1.variables, ['a'])
+        np_test.assert_array_equal(phi_a_1.cardinality, np.array([1]))
+        np_test.assert_array_almost_equal(phi_a_1.values, np.array([0.40131]))
+
+    def test_markov_ve_3(self):
+        model = VariableElimination(self.markov)
+        phi_c_a = model.query(variables={'c': {}, 'a': {}})
+        self.assertEqual(phi_c_a.variables, ['a', 'c'])
+        np_test.assert_array_equal(phi_c_a.cardinality, np.array([2, 2]))
+        np_test.assert_array_almost_equal(phi_c_a.values, np.array([0.43016194, 0.16852227, 0.22823887, 0.17307692]))
+
+    def test_markov_ve_4(self):
+        model = VariableElimination(self.markov)
+        phi_c_given_a = model.query(variables={'c': {}}, conditions={'a': {}})
+        self.assertEqual(phi_c_given_a.variables, ['a', 'c'])
+        np_test.assert_array_equal(phi_c_given_a.cardinality, np.array([2, 2]))
+        np_test.assert_array_almost_equal(phi_c_given_a.values, np.array([0.68335, 0.49333, 0.34664, 0.50666]))
+
+    def test_markov_ve_5(self):
+        model = VariableElimination(self.markov)
+        phi_c_given_a_1 = model.query(variables={'c': {}}, conditions={'a': {1}})
+        self.assertEqual(phi_c_given_a_1.variables, ['a', 'c'])
+        np_test.assert_array_equal(phi_c_given_a_1.cardinality, np.array([2, 2]))
+        np_test.assert_array_almost_equal(phi_c_given_a_1.values, np.array([0.49333, 0.50666]))
