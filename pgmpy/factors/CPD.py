@@ -116,6 +116,7 @@ class TabularCPD(Factor):
     def normalize(self):
         """
         Normalizes the cpd table
+
         Examples
         --------
         >>> from pgmpy.factors import TabularCPD
@@ -184,8 +185,8 @@ class TreeCPD(nx.DiGraph):
             tree is created. The data can be an edge list with label for
             each edge. Label should be the observed value of the variable.
 
-        Example
-        -------
+        Examples
+        --------
         For P(A|B, C, D), to construct a tree like:
 
                     B
