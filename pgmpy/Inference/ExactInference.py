@@ -5,7 +5,7 @@ from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
-    def query(self, variables, conditions, elimination_order=None):
+    def query(self, variables, conditions=None, elimination_order=None):
         """
         Examples
         --------
