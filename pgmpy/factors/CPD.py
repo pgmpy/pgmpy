@@ -165,6 +165,9 @@ class TabularCPD(Factor):
         else:
             return self.values.reshape(1, np.prod(self.cardinality))
 
+    def to_factor(self):
+        return Factor(self.variables, self.cardinality, self.values)
+
 
 class TreeCPD(nx.DiGraph):
     """
