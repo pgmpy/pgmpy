@@ -32,7 +32,8 @@ class Inference:
         >>> intel_cpd = TabularCPD('intel', 2, [[0.3, 0.7]])
         >>> grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1],
         ...                                     [0.1, 0.1, 0.1, 0.1],
-        ...                                     [0.8, 0.8, 0.8, 0.8]])
+        ...                                     [0.8, 0.8, 0.8, 0.8]],
+        ...                        evidence=['diff', 'intel'], evidence_card=[2, 2])
         >>> student.add_cpd([diff_cpd, intel_cpd, grade_cpd])
         >>> model = Inference(student)
         """
