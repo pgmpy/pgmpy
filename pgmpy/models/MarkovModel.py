@@ -591,8 +591,8 @@ class MarkovModel(nx.Graph):
                 raise ValueError("factors defined on variable that is not in the model", factor)
 
             self.factors.append(factor)
-            for variable_index in factor.variables:
-                self.cardinality[factor.variables[variable_index]] = factor.cardinality[variable_index]
+            # for variable_index in factor.variables:
+            #     self.cardinality[factor.variables[variable_index]] = factor.cardinality[variable_index]
 
     def get_factors(self):
         """
