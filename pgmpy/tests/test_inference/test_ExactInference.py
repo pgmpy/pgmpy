@@ -7,6 +7,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.factors import TabularCPD
 from pgmpy.factors import Factor
+from pgmpy.Inference import VariableElimination
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -24,7 +25,42 @@ class TestVariableElimination(unittest.TestCase):
         factor_a_b = Factor(['a', 'b'], [2, 2], [100, 40, 40, 100])
         factor_b_c = Factor(['b', 'c'], [2, 2], [60, 20, 20, 40])
         factor_c_d = Factor(['c', 'd'], [2, 2], [80, 50, 50, 60])
-        factor_d_a = Factor(['d', 'a'], [2, 2], [10, 90, 40 ,20])
+        factor_d_a = Factor(['d', 'a'], [2, 2], [10, 90, 40, 20])
 
         self.markov.add_factors(factor_a_b, factor_b_c, factor_c_d, factor_d_a)
 
+    def test_bayesian_ve_1(self):
+        model = VariableElimination(self.bayesian)
+        phi_e = model.query(variables={'e': {}})
+        self.assertEqual(phi_e.variables, ['e'])
+        np_test.assert_array_equal(phi_e.cardinality, np.array([2]))
+        np_test.assert_array_almost_equal(phi_e.values, np.array([0.32944, 0.67056]))
+
+    def test_bayesian_ve_2(self):
+        model = VariableElimination(self.bayesian)
+        phi_e_1 = model.query(variables={'e': {1}})
+        self.assertEqual(phi_e_1.variables, ['e'])
+        np_test.assert_array_equal(phi_e_1.cardinality, [1])
+        np_test.assert_array_almost_equal(phi_e_1.values, np.array([0.67056]))
+
+    def test_bayesian_ve_3(self):
+        model = VariableElimination(self.bayesian)
+        phi_c_d = model.query(variables={'c': {}, 'd': {}})
+        self.assertEqual(phi_c_d.variables, ['c', 'd'])
+        np_test.assert_array_equal(phi_c_d.cardinality, np.array([2, 2]))
+        np_test.assert_array_almost_equal(phi_c_d.values, np.array([0.2576, 0.3160, 0.1104, 0.3160]))
+
+    def test_bayesian_ve_4(self):
+        model = VariableElimination(self.bayesian)
+        phi_c_given_d = model.query(variables={'c': {}}, conditions={'d': {}})
+        self.assertEqual(phi_c_given_d.variables, ['c', 'd'])
+        np_test.assert_array_equal(phi_c_given_d.cardinality, np.array([2, 2]))
+        np_test.assert_array_almost_equal(phi_c_given_d.values, np.array([0.2245474, 0.2754511,
+                                                                          0.12945602, 0.37054548]))
+
+    def test_bayesian_ve_5(self):
+        model = VariableElimination(self.bayesian)
+        phi_c_given_d_1 = model.query(variables={'c': {}}, conditions={'d': {1}})
+        self.assertEqual(phi_c_given_d_1.variables, ['c', 'd'])
+        np_test.assert_array_equal(phi_c_given_d_1.cardinality, [2, 1])
+        np_test.assert_array_almost_equal(phi_c_given_d_1.values, np.array([0.258911, 0.741088]))
