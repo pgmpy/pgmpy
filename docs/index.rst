@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: images/logo.jpeg
+.. image:: images/logo.png
    :height: 220 px
    :width: 220 px
-   :scale: 50 %
+   :scale: 70 %
    :align: center
 
 pgmpy
