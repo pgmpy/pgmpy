@@ -83,10 +83,10 @@ class MarkovModel(nx.Graph):
 
     def __init__(self, ebunch=None):
         super(MarkovModel, self).__init__(ebunch)
-        for node in self.nodes():
-            self._set_is_observed(node, False)
+        # for node in self.nodes():
+        #     self._set_is_observed(node, False)
         self.factors = []
-        self.cardinality = {}
+        # self.cardinality = {}
 
     def add_node(self, node):
         """
@@ -108,7 +108,7 @@ class MarkovModel(nx.Graph):
         >>> G.add_node('A')
         """
         super(MarkovModel, self).add_node(node)
-        self._set_is_observed(node, False)
+        # self._set_is_observed(node, False)
 
     def add_nodes_from(self, nodes):
         """
@@ -155,7 +155,7 @@ class MarkovModel(nx.Graph):
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
         """
-        # Need to check that there is no self loop.
+        # check that there is no self loop.
         if u != v:
             super(MarkovModel, self).add_edge(u, v)
         else:
@@ -397,166 +397,166 @@ class MarkovModel(nx.Graph):
     #     """
     #     self.node[node]['_states'] = states
 
-    def _set_is_observed(self, node, bool):
-        """
-        Updates '_observed' attribute of the node.
-
-        If any of the states of a node are observed, node.['_observed']
-        is made True. Otherwise, it is False.
-        """
-        self.node[node]['_is_observed'] = bool
-
-    def is_observed(self, nodes):
-        """
-        Check if nodes are observed. If observed returns True.
-
-        Returns single boolean value or a list of boolean values
-        for each node in nodes.
-
-        Parameters
-        ----------
-        nodes: single node or list of nodes.
-            Nodes whose observed status needs to be returned.
-
-        See Also
-        --------
-        set_observations
-        reset_observations
-
-        Example
-        -------
-        >>> from pgmpy.models import MarkovModel
-        >>> student = MarkovModel()
-        >>> student.add_node('grades')
-        >>> student.set_observations({'grades': 'A'})
-        >>> student.is_observed('grades')
-        True
-        """
-        nodes = [nodes] if not isinstance(nodes, list) else nodes
-        return [self.node[node]['_is_observed'] for node in nodes]
-
-    def set_observation(self, node, state):
-        """
-        Sets state of node as observed.
-
-        Parameters
-        ----------
-        node : str
-            The node for which the observation is set.
-        state: int
-            The index of the state which is to be set to observed.
-
-        See Also
-        --------
-        unset_observation
-        is_observed
-
-        Examples
-        --------
-        >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
-        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
-        >>> G.set_observations('Alice', 0)
-        """
-        self._set_is_observed(node, True)
-        # TODO: Raise ValueError if the state is greater than the cardinality
-        # of the variable.
-        self.node[node]['observed'] = state
-
-    def set_observations(self, observations):
-        """
-        Sets state of node as observed.
-
-        Parameters
-        ----------
-        observations : dict
-            A dictionary of the form of {node1: state1,
-            node2: state1, ..} or {node: state} containing all the
-            nodes to be observed.
-
-        See Also
-        --------
-        unset_observations
-        is_observed
-
-        Examples
-        --------
-        >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
-        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
-        >>> G.set_observations({'Alice': 0, 'Charles': 1})
-        """
-        for node, state in observations.items():
-            self.set_observation(node, state)
-
-    def get_observations(self, nodes):
-        """
-        Returns the observation of the given nodes.
-
-        Returns a dict of {node: state_observed}.
-
-        Parameters
-        ----------
-        nodes: node, list of nodes
-            The nodes for which the observation is to returned
-
-        Examples
-        --------
-        >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
-        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
-        >>> G.set_observations({'Alice': 0, 'Charles': 1})
-        >>> G.get_observations('Alice')
-        >>> {'Alice': 0}
-        >>> G.get_observations(['Alice', 'Charles'])
-        """
-        nodes = [nodes] if not isinstance(nodes, list) else nodes
-        return {node: self.node[node]['observed'] for node in nodes}
-
-    def _get_observed_list(self):
-        """
-        Returns a list of all observed nodes
-        """
-        return [node for node in self.nodes()
-                if self.node[node]['_is_observed']]
-
-    def unset_observations(self, nodes):
-        """
-        Unset the observation for the node.
-
-        Parameters
-        -----------
-        nodes: node, list of nodes
-            The node for which the observation has to be unset
-
-        Example
-        -------
-        >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
-        >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
-        ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
-        ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
-        >>> G.set_observations({'Alice': 0, 'Charles': 1})
-        >>> G.unset_observation('Alice')
-        """
-        nodes = [nodes] if not isinstance(nodes, list) else nodes
-        for node in nodes:
-            self._set_is_observed(node, False)
-            self.node[node]['observed'] = None
+    # def _set_is_observed(self, node, bool):
+    #     """
+    #     Updates '_observed' attribute of the node.
+    #
+    #     If any of the states of a node are observed, node.['_observed']
+    #     is made True. Otherwise, it is False.
+    #     """
+    #     self.node[node]['_is_observed'] = bool
+    #
+    # def is_observed(self, nodes):
+    #     """
+    #     Check if nodes are observed. If observed returns True.
+    #
+    #     Returns single boolean value or a list of boolean values
+    #     for each node in nodes.
+    #
+    #     Parameters
+    #     ----------
+    #     nodes: single node or list of nodes.
+    #         Nodes whose observed status needs to be returned.
+    #
+    #     See Also
+    #     --------
+    #     set_observations
+    #     reset_observations
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> student = MarkovModel()
+    #     >>> student.add_node('grades')
+    #     >>> student.set_observations({'grades': 'A'})
+    #     >>> student.is_observed('grades')
+    #     True
+    #     """
+    #     nodes = [nodes] if not isinstance(nodes, list) else nodes
+    #     return [self.node[node]['_is_observed'] for node in nodes]
+    #
+    # def set_observation(self, node, state):
+    #     """
+    #     Sets state of node as observed.
+    #
+    #     Parameters
+    #     ----------
+    #     node : str
+    #         The node for which the observation is set.
+    #     state: int
+    #         The index of the state which is to be set to observed.
+    #
+    #     See Also
+    #     --------
+    #     unset_observation
+    #     is_observed
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> from pgmpy.factors import Factor
+    #     >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+    #     ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+    #     >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+    #     ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+    #     ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+    #     >>> G.set_observations('Alice', 0)
+    #     """
+    #     self._set_is_observed(node, True)
+    #     # TODO: Raise ValueError if the state is greater than the cardinality
+    #     # of the variable.
+    #     self.node[node]['observed'] = state
+    #
+    # def set_observations(self, observations):
+    #     """
+    #     Sets state of node as observed.
+    #
+    #     Parameters
+    #     ----------
+    #     observations : dict
+    #         A dictionary of the form of {node1: state1,
+    #         node2: state1, ..} or {node: state} containing all the
+    #         nodes to be observed.
+    #
+    #     See Also
+    #     --------
+    #     unset_observations
+    #     is_observed
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> from pgmpy.factors import Factor
+    #     >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+    #     ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+    #     >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+    #     ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+    #     ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+    #     >>> G.set_observations({'Alice': 0, 'Charles': 1})
+    #     """
+    #     for node, state in observations.items():
+    #         self.set_observation(node, state)
+    #
+    # def get_observations(self, nodes):
+    #     """
+    #     Returns the observation of the given nodes.
+    #
+    #     Returns a dict of {node: state_observed}.
+    #
+    #     Parameters
+    #     ----------
+    #     nodes: node, list of nodes
+    #         The nodes for which the observation is to returned
+    #
+    #     Examples
+    #     --------
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> from pgmpy.factors import Factor
+    #     >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+    #     ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+    #     >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+    #     ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+    #     ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+    #     >>> G.set_observations({'Alice': 0, 'Charles': 1})
+    #     >>> G.get_observations('Alice')
+    #     >>> {'Alice': 0}
+    #     >>> G.get_observations(['Alice', 'Charles'])
+    #     """
+    #     nodes = [nodes] if not isinstance(nodes, list) else nodes
+    #     return {node: self.node[node]['observed'] for node in nodes}
+    #
+    # def _get_observed_list(self):
+    #     """
+    #     Returns a list of all observed nodes
+    #     """
+    #     return [node for node in self.nodes()
+    #             if self.node[node]['_is_observed']]
+    #
+    # def unset_observations(self, nodes):
+    #     """
+    #     Unset the observation for the node.
+    #
+    #     Parameters
+    #     -----------
+    #     nodes: node, list of nodes
+    #         The node for which the observation has to be unset
+    #
+    #     Example
+    #     -------
+    #     >>> from pgmpy.models import MarkovModel
+    #     >>> from pgmpy.factors import Factor
+    #     >>> G = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+    #     ...                  ('Charles', 'Debbie'), ('Debbie', 'Alice')])
+    #     >>> G.add_factors(Factor(['Alice', 'Bob'], [2, 2], [30, 5, 1, 10]),
+    #     ...               Factor(['Bob', 'Charles'], [2, 2], [100, 1, 1, 100]),
+    #     ...               Factor(['Charles', 'Debbie'], [2, 2], [1, 100, 100, 1]))
+    #     >>> G.set_observations({'Alice': 0, 'Charles': 1})
+    #     >>> G.unset_observation('Alice')
+    #     """
+    #     nodes = [nodes] if not isinstance(nodes, list) else nodes
+    #     for node in nodes:
+    #         self._set_is_observed(node, False)
+    #         self.node[node]['observed'] = None
 
     def add_factors(self, *factors):
         """
@@ -591,8 +591,8 @@ class MarkovModel(nx.Graph):
                 raise ValueError("factors defined on variable that is not in the model", factor)
 
             self.factors.append(factor)
-            for variable_index in factor.variables:
-                self.cardinality[factor.variables[variable_index]] = factor.cardinality[variable_index]
+            # for variable_index in factor.variables:
+            #     self.cardinality[factor.variables[variable_index]] = factor.cardinality[variable_index]
 
     def get_factors(self):
         """

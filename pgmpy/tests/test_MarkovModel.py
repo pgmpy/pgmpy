@@ -240,6 +240,6 @@ class TestMarkovModelMethods(unittest.TestCase):
 #
 #     def tearDown(self):
 #         del self.graph
-#
-# if __name__ == '__main__':
-#     unittest.main()
+
+if __name__ == '__main__':
+    unittest.main()
