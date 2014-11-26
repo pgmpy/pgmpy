@@ -1086,6 +1086,35 @@ class BayesianModel(nx.DiGraph):
             moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
         return moral_graph
 
+    def fit(self, data):
+        """
+        Computes the CPD for each node from the data.
+
+        """
+        from pgmpy.factors import TabularCPD
+        for node in self.nodes():
+            if not nx.ancestors(self, node):
+                state_counts = data.ix[:, node].value_counts()
+                self.add_cpd(TabularCPD(node, state_counts.shape[0],
+                             (state_counts / state_counts.sum()).values))
+            else:
+                values_series = data.groupby([node].extend(list(nx.ancestors(
+                    self,
+                                                             node)))).count(
+                                                        ).ix[:, node]
+                values = values_series / values.sum()
+                parent_card = np.array([])
+                for node in nx.ancestors(self, node):
+                    parent_card.append(data.ix[:, node].value_counts(
+                    ).shape[0])
+                self.add_cpd(TabularCPD(node, data.ix[:,
+                                              node].value_counts.shape[0],
+                                        values, parent_card,
+                             list(nx.ancestors(self,
+                                                                  node))))
+
+
+
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.
         pass
