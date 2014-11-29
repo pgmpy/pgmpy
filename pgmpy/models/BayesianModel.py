@@ -1096,14 +1096,15 @@ class BayesianModel(nx.DiGraph):
             if not nx.ancestors(self, node):
                 state_counts = data.ix[:, node].value_counts()
                 self.add_cpd(TabularCPD(node, state_counts.shape[0],
-                            (state_counts / state_counts.sum()).values[:, np.newaxis]))
+                                       (state_counts / state_counts.sum()).values[:, np.newaxis]))
             else:
-                values_series = data.groupby([node].extend(list(nx.ancestors(self, node)))).count().ix[:, node]
-                values = values_series / values_series.sum()
+                state_counts = data.groupby([node].extend(list(nx.ancestors(self, node)))).count().iloc[:, 0]
+                values = state_counts / state_counts.sum()
                 parent_card = np.array([])
-                for node in nx.ancestors(self, node):
-                    parent_card.append(data.ix[:, node].value_counts().shape[0])
-                self.add_cpd(TabularCPD(node, data.ix[:, node].value_counts.shape[0], values, parent_card,
+                for u in nx.ancestors(self, node):
+                    parent_card = np.append(parent_card, data.ix[:, u].value_counts().shape[0])
+                var_card = data.ix[:, node].value_counts.shape[0]
+                self.add_cpd(TabularCPD(node, var_card, values.reshape(var_card, values.size / var_card), parent_card,
                                         list(nx.ancestors(self, node))))
 
 
