@@ -1096,7 +1096,7 @@ class BayesianModel(nx.DiGraph):
             if not nx.ancestors(self, node):
                 state_counts = data.ix[:, node].value_counts()
                 self.add_cpd(TabularCPD(node, state_counts.shape[0],
-                             (state_counts / state_counts.sum()).values))
+                            (state_counts / state_counts.sum()).values[:, np.newaxis]))
             else:
                 values_series = data.groupby([node].extend(list(nx.ancestors(self, node)))).count().ix[:, node]
                 values = values_series / values_series.sum()
