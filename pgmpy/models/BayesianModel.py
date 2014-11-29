@@ -1108,6 +1108,12 @@ class BayesianModel(nx.DiGraph):
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> model.get_cpd('A')
+        [<pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e588>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173cb5e10>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e470>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e198>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
+
         """
         from pgmpy.factors import TabularCPD
         self.cpds = []
