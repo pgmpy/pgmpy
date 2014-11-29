@@ -1124,7 +1124,8 @@ class BayesianModel(nx.DiGraph):
                     parent_card = np.append(parent_card, data.ix[:, u].value_counts().shape[0])
                 var_card = data.ix[:, node].value_counts().shape[0]
                 self.add_cpd(TabularCPD(node, var_card, values.reshape(var_card, values.size / var_card),
-                                        parent_card.astype('int'), list(nx.ancestors(self, node))))
+                                        evidence=list(nx.ancestors(self, node)),
+                                        evidence_card=parent_card.astype('int')))
 
 
 
