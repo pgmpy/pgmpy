@@ -3,7 +3,9 @@
 import itertools
 import networkx as nx
 import numpy as np
-from pgmpy.factors import CPD
+from pgmpy.factors import TabularCPD
+from pgmpy.factors import TreeCPD
+from pgmpy.factors import RuleCPD
 
 
 class BayesianModel(nx.DiGraph):
@@ -674,6 +676,8 @@ class BayesianModel(nx.DiGraph):
         |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
         +------+------+------+---------+------+------+-------+
         """
+        if isinstance(cpds, (TabularCPD, TreeCPD, RuleCPD)):
+            cpds = [cpds]
         self.cpds.extend(cpds)
 
     def get_cpd(self, node=None, beautify=False):
@@ -1106,6 +1110,7 @@ class BayesianModel(nx.DiGraph):
         >>> model.get_cpd('A')
         """
         from pgmpy.factors import TabularCPD
+        self.cpds = []
         for node in self.nodes():
             if not nx.ancestors(self, node):
                 state_counts = data.ix[:, node].value_counts()
