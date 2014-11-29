@@ -1088,8 +1088,22 @@ class BayesianModel(nx.DiGraph):
 
     def fit(self, data):
         """
-        Computes the CPD for each node from the data.
+        Computes the CPD for each node from a given data in the form of a pandas dataframe.
 
+        Parameters
+        ----------
+        data : pandas dataframe object
+                A dataframe object with column names same as the variable names of network
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)))
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> model.get_cpd('A')
         """
         from pgmpy.factors import TabularCPD
         for node in self.nodes():
