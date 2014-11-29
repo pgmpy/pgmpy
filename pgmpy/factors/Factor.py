@@ -383,7 +383,7 @@ class Factor:
                     ' '.join(list(map(str, self.values))))
 
 
-def _bivar_factor_operation(phi1, phi2, operation):
+def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
 
@@ -400,6 +400,8 @@ def _bivar_factor_operation(phi1, phi2, operation):
     --------
     factor_product
     """
+    from joblib import Parallel, delayed
+
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
     common_var_list = [var for var in phi1_vars if var in phi2_vars]
@@ -417,20 +419,39 @@ def _bivar_factor_operation(phi1, phi2, operation):
         phi1_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
         phi2_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
         from itertools import product
+
         if operation == 'M':
-            for index in product(*[range(card) for card in cardinality]):
+            def _parallel_helper_m(index):
                 index = np.array(index)
-                values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-                              phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+                        phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+            import pdb; pdb.set_trace()
+            values = Parallel(n_jobs=n_jobs, backend='threading')(delayed(_parallel_helper_m)(index)
+                                                                  for index in product(*[range(card)
+                                                                                         for card in cardinality]))
+                # index = np.array(index)
+                # values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+                #               phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
         elif operation == 'D':
-            for index in product(*[range(card) for card in cardinality]):
+            def _parallel_helper_d(index):
                 index = np.array(index)
                 try:
-                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                    return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
                                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
                 except FloatingPointError:
                     # zero division error should return 0. ref Koller page 365, Fig 10.7
-                    values.append(0)
+                    return 0
+
+            values = Parallel(n_jobs, backend='threading')(delayed(_parallel_helper_d) (index)
+                                                           for index in product(*[range(card)
+                                                                                  for card in cardinality]))
+                # index = np.array(index)
+                # try:
+                #     values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                #                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                # except FloatingPointError:
+                #     # zero division error should return 0. ref Koller page 365, Fig 10.7
+                #     values.append(0)
 
         phi = Factor(variables, cardinality, values)
         return phi
