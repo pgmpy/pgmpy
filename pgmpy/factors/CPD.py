@@ -74,11 +74,14 @@ class TabularCPD(Factor):
         self.variable_card = variable_card
 
         cardinality = [variable_card]
+        if evidence_card != None:
+            evidence_card = list(evidence_card)
         if evidence_card:
             if not isinstance(evidence_card, (list, set, tuple)):
                 evidence_card = [evidence_card]
             cardinality.extend(evidence_card)
-
+        
+        import pdb; pdb.set_trace()
         if evidence:
             if not isinstance(evidence, (list, set, tuple)):
                 evidence = [evidence]
