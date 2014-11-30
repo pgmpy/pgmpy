@@ -1,12 +1,7 @@
-# Navin had added a few extra methods to Factor class. I don't get the point of having
-# them right (maybe I will realize later). I have created a gist of his version:
-# https://gist.github.com/ankurankan/048891540462f22bf252
-
-import functools
 from collections import OrderedDict
-import numpy as np
 from pgmpy.exceptions import Exceptions
-# from pgmpy.factors._factor_product import _factor_product
+import functools
+import numpy as np
 
 np.seterr(divide='raise')
 
@@ -164,7 +159,7 @@ class Factor:
         """
         return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
 
-    def marginalize(self, variables):
+    def marginalize(self, variables, inplace=True):
         """
         Modifies the factor with marginalized values.
 
@@ -172,6 +167,10 @@ class Factor:
         ----------
         variables: string, list-type
             name of variable to be marginalized
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -188,11 +187,20 @@ class Factor:
         for variable in variables:
             if variable not in self.variables:
                 raise Exceptions.ScopeError("%s not in scope" % variable)
+
+        if inplace:
+            factor = self
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+
         for variable in variables:
-            self.values = self._marginalize_single_variable(variable)
-            index = list(self.variables.keys()).index(variable)
-            del(self.variables[variable])
-            self.cardinality = np.delete(self.cardinality, index)
+            factor.values = factor._marginalize_single_variable(variable)
+            index = list(factor.variables.keys()).index(variable)
+            del(factor.variables[variable])
+            factor.cardinality = np.delete(factor.cardinality, index)
+
+        if not inplace:
+            return factor
 
     def _marginalize_single_variable(self, variable):
         """
@@ -217,9 +225,15 @@ class Factor:
                                        i*cum_cardinality[index+1]]
         return marg_factor
 
-    def normalize(self):
+    def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
+
+        Parameters
+        ----------
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -232,9 +246,14 @@ class Factor:
                 0.15151515,  0.16666667])
 
         """
-        self.values = self.values/np.sum(self.values)
+        if inplace:
+            self.values = self.values / np.sum(self.values)
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+            factor.values = factor.values / np.sum(factor.values)
+            return factor
 
-    def reduce(self, values):
+    def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
 
@@ -242,6 +261,10 @@ class Factor:
         ----------
         values: string, list-type
             name of the variable values
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -253,26 +276,35 @@ class Factor:
         """
         if not isinstance(values, list):
             values = [values]
+
+        if inplace:
+            factor = self
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+
         for value in values:
             if not '_' in value:
                 raise TypeError("Values should be in the form of "
                                 "variablename_index")
             var, value_index = value.split('_')
-            if not var in self.variables:
+            if not var in factor.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
-            index = list(self.variables.keys()).index(var)
-            if not (int(value_index) < self.cardinality[index]):
+            index = list(factor.variables.keys()).index(var)
+            if not (int(value_index) < factor.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
-            cum_cardinality = (np.product(self.cardinality) /
-                               np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+            cum_cardinality = (np.product(factor.cardinality) /
+                               np.concatenate(([1], np.cumprod(factor.cardinality)))).astype(np.int64, copy=False)
             num_elements = cum_cardinality[0]
             index_arr = [j for i in range(0, num_elements,
                                           cum_cardinality[index])
                          for j in range(i, i+cum_cardinality[index+1])]
-            self.values = self.values[np.array(index_arr) + int(value_index)*cum_cardinality[index+1]]
-            del(self.variables[var])
-            self.cardinality = np.delete(self.cardinality, index)
+            factor.values = factor.values[np.array(index_arr) + int(value_index) * cum_cardinality[index+1]]
+            del(factor.variables[var])
+            factor.cardinality = np.delete(factor.cardinality, index)
+
+        if not inplace:
+            return factor
 
     def product(self, *factors):
         """
