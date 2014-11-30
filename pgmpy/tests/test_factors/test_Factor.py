@@ -28,10 +28,6 @@ class TestFactorMethods(unittest.TestCase):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
 
-    # def test_pos_dist(self):
-    #     self.assertTrue(self.phi.is_pos_dist())
-    #     self.assertFalse(self.phi1.is_pos_dist())
-
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
@@ -49,14 +45,6 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(IndexError, self.phi.assignment, [10])
         self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
         self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
-
-    # def test_get_variables(self):
-    #     self.assertListEqual(sorted(self.phi.get_variables()), ['x1', 'x2', 'x3'])
-    #     self.assertListEqual(sorted(self.phi1.get_variables()), ['x1', 'x2', 'x3'])
-
-    # def test_get_value(self):
-    #     self.assertAlmostEqual(self.phi1.get_value({'x1': 1, 'x2': 2, 'x3': 0, 'x4': 2, 'x5': 1}), 5.0)
-    #     self.assertAlmostEqual(self.phi1.get_value([1, 1, 1]), 9.0)
 
     def test_get_cardinality(self):
         self.assertEqual(self.phi.get_cardinality('x1'), 2)
@@ -86,14 +74,6 @@ class TestFactorMethods(unittest.TestCase):
             [0, 0.01515152, 0.03030303, 0.04545455, 0.06060606,
              0.07575758, 0.09090909, 0.10606061, 0.12121212,
              0.13636364, 0.15151515, 0.16666667]))
-
-    # def test_maximize(self):
-    #     self.phi1.maximize(['x1'])
-    #     max_val_indices = {'x1':1}
-    #     data = [max_val_indices] * 6
-    #     #print(self.phi1)
-    #     np_test.assert_array_equal(self.phi1.values, np.array([6,7,8,9,10,11]))
-    #     self.assertEqual(self.phi1.data, sorted(data, key=lambda t: sorted(t.keys())))
 
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
@@ -216,9 +196,6 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_divide_non_factor_arg(self):
         from pgmpy import factors
         self.assertRaises(TypeError, factors.factor_divide, 1, 1)
-
-    # def test_sum_values(self):
-    #     self.assertEqual(self.phi1.sum_values(), 66)
 
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
