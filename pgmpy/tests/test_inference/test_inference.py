@@ -5,7 +5,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.factors import Factor
 from pgmpy.factors import TabularCPD
-from pgmpy.Inference import Inference
+from pgmpy.inference import Inference
 
 
 class TestInferenceBase(unittest.TestCase):
