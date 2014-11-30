@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pgmpy.Inference import Inference
+from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 
 

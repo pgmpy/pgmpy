@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
-from pgmpy.factors import Factor
 
 
 class Inference:
     """
-    Base class for all Inference algorithms.
+    Base class for all inference algorithms.
 
     Converts BayesianModel and MarkovModel to a uniform representation so that inference
     algorithms can be applied. Also it checks if all the associated CPDs / Factors are
@@ -15,16 +13,16 @@ class Inference:
     """
     def __init__(self, model):
         """
-        Initialize Inference for a model.
+        Initialize inference for a model.
 
         Parameters
         ----------
         model: pgmpy.models.BayesianModel or pgmpy.models.MarkovModel or pgmpy.models.NoisyOrModel
-            model for which to initialize the Inference object.
+            model for which to initialize the inference object.
 
         Examples
         --------
-        >>> from pgmpy.Inference import VariableElimination
+        >>> from pgmpy.inference import VariableElimination
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors import TabularCPD
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
@@ -35,7 +33,7 @@ class Inference:
         ...                                     [0.8, 0.8, 0.8, 0.8]],
         ...                        evidence=['diff', 'intel'], evidence_card=[2, 2])
         >>> student.add_cpd([diff_cpd, intel_cpd, grade_cpd])
-        >>> model = Inference(student)
+        >>> model = inference(student)
 
         >>> from pgmpy.models import MarkovModel
         >>> from pgmpy.factors import Factor
@@ -47,7 +45,7 @@ class Inference:
         >>> factor_c_d = Factor(['Charles', 'Debbie'], cardinality=[2, 2], value=np.random.rand(4))
         >>> factor_d_a = Factor(['Debbie', 'Alice'], cardinality=[2, 2], value=np.random.rand(4))
         >>> student.add_factors(factor_a_b, factor_b_c, factor_c_d, factor_d_a)
-        >>> model = Inference(student)
+        >>> model = inference(student)
         """
         self.variables = model.nodes()
         self.cardinality = {}
