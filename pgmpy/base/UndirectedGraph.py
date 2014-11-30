@@ -1,483 +1,461 @@
 #!/usr/bin/env python3
 
-from heapq import heappush, heappop, heapify
+from collections import defaultdict
+from pgmpy.exceptions import CardinalityError
+import abc
+import itertools
 import networkx as nx
+import numpy as np
 
 
 class UndirectedGraph(nx.Graph):
-    def equal_graphs(self, graph2):
+    """
+    Base class for all the Undirected Graphical models.
+
+    UndirectedGraph assumes that all the nodes in graph are either random
+    variables, factors or cliques of random variables and edges in the graphs
+    are interactions between these random variables, factors or clusters.
+
+    Parameters
+    ----------
+    data: input graph
+        Data to initialize graph. If data=None (default) an empty graph is
+        created. The data can be an edge list or any Networkx graph object.
+
+    Examples
+    --------
+    Create an empty UndirectedGraph with no nodes and no edges
+
+    >>> from pgmpy.base import UndirectedGraph
+    >>> G = UndirectedGraph()
+
+    G can be grown in several ways
+
+    **Nodes:**
+
+    Add one node at a time:
+
+    >>> G.add_node('a')
+
+    Add the nodes from any container (a list, set or tuple or the nodes
+    from another graph).
+
+    >>> G.add_nodes_from(['a', 'b'])
+
+    **Edges:**
+
+    G can also be grown by adding edges.
+
+    Add one edge,
+
+    >>> G.add_edge('a', 'b')
+
+    a list of edges,
+
+    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+
+    If some edges connect nodes not yet in the model, the nodes
+    are added automatically.  There are no errors when adding
+    nodes or edges that already exist.
+
+    **Shortcuts:**
+
+    Many common graph features allow python syntax to speed reporting.
+
+    >>> 'a' in G     # check if node in graph
+    True
+    >>> len(G)  # number of nodes in graph
+    3
+    """
+
+    def __init__(self, ebunch=None):
+        super(UndirectedGraph, self).__init__(ebunch)
+        self.factors = []
+        self.cardinalities = defaultdict(int)
+
+    def add_node(self, node, **kwargs):
         """
-        Just to check if the current graph is same as G2 in terms of nodes and edges
+        Add a single node to the Graph.
 
         Parameters
         ----------
-        graph2:
-            The other graph
-
-        Example
-        ------
-        >>> from pgmpy.models import MarkovModel
-        >>> g1 = MarkovModel([('a','b'),('b','c'),('c','a')])
-        >>> g2 = MarkovModel([('a','c'),('a','b'),('b','c')])
-        >>> print(g1.equal_graphs(g2))
-        True
-        """
-        assert isinstance(graph2, UndirectedGraph)
-        node_set1 = set(self.nodes())
-        node_set2 = set(graph2.nodes())
-        if node_set1 != node_set2:
-            return False
-        edge_set1 = set(self.edges())
-        edge_set2 = set(graph2.edges())
-        if edge_set1 != edge_set2:
-            return False
-        return True
-
-    def is_triangulated(self):
-        """
-        Just checks if the graph is triangulated
-
-        Parameters
-        ----------
+        node: node
+            A node can be any hashable Python object.
 
         See Also
         --------
-        maxCardinalitySearch
+        add_nodes_from : add a collection of nodes
 
-        Example
+        Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.jt_techniques(2,False,True)
-        4
-        >>> G.is_triangulated()
-        True
+        >>> G = UndirectedGraph()
+        >>> G.add_node('A')
         """
-        ret = nx.is_chordal(self)
-        return ret
+        super(UndirectedGraph, self).add_node(node, **kwargs)
 
-    def __str__(self):
+    def add_nodes_from(self, nodes, **kwargs):
         """
-        Prints all the nodes and edges for each node.
-        Also prints the node if any is present
-        """
-        self.print_graph("")
-
-    def print_graph(self, s):
-        """
-        Prints the graph in a particular fashion.
-        Useful for debugging
+        Add multiple nodes to the Graph.
 
         Parameters
         ----------
-        nodes  :  List of nodes
-                The list of nodes which are to be checked for clique property
+        nodes: iterable container
+            A container of nodes (list, dict, set, etc.).
 
         See Also
         --------
-        make_clique
+        add_node : add a single node
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.print_graph("Test Printing")
-        Printing the graph Test Printing<<<
-        10	['8', '5', '7']
-        1	['0', '2', '4', '8']
-        0	['1', '8', '3']
-        3	['9', '0', '8']
-        2	['1', '4', '7', '6']
-        5	['9', '8', '10']
-        4	['1', '8', '2', '7']
-        7	['10', '2', '4', '6']
-        6	['2', '7']
-        9	['3', '5']
-        8	['10', '1', '0', '3', '5', '4']
-        >>>
+        >>> G = UndirectedGraph()
+        >>> G.add_nodes_from(['A', 'B', 'C'])
         """
+        for node in nodes:
+            self.add_node(node, **kwargs)
 
-        print("Printing the graph " + s + "<<<")
-        for node in self.nodes():
-            str_node = str(node) + "\t"
-            if self.node[node]:
-                str_node += "( " + str(self.node[node]) + " ) : "
-            str_node += str(self.neighbors(node))
-            print(str_node)
-        print(">>>")
-
-    def check_clique(self, nodes):
+    def add_edge(self, u, v, **kwargs):
         """
-        Check if a given set of nodes form a clique
+        Add an edge between u and v.
+
+        The nodes u and v will be automatically added if they are
+        not already in the graph
 
         Parameters
         ----------
-        nodes  :  List of nodes
-                The list of nodes which are to be checked for clique property
+        u,v : nodes
+            Nodes can be any hashable Python object.
 
         See Also
         --------
-        make_clique
+        add_edges_from : add a collection of edges
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.base import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.check_clique([1,2,3])
-        False
-
+        >>> G = UndirectedGraph()
+        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
+        >>> G.add_edge('Alice', 'Bob')
         """
-        for i in range(len(nodes)):
-            for j in range(i + 1, len(nodes)):
-                if not self.has_edge(nodes[i], nodes[j]):
-                    return False
-        return True
+        super(UndirectedGraph, self).add_edge(u, v, **kwargs)
 
-    def make_clique(self, clique_nodes):
+    def add_edges_from(self, ebunch, **kwargs):
         """
-        Connect all the nodes in clique_nodes to each other
+        Add all the edges in ebunch.
+
+        If nodes referred in the ebunch are not already present, they
+        will be automatically added.
 
         Parameters
         ----------
-        clique_nodes : List of nodes
-            The list of nodes which need to be connected to each other
-
-        Example
-        -------
-
-        """
-        new_edges = []
-        for i in range(len(clique_nodes)):
-            a = clique_nodes[i]
-            for j in range(i + 1, len(clique_nodes)):
-                b = clique_nodes[j]
-                if not self.has_edge(a, b):
-                    #print("Edge added b/w " + a + " and " + b)
-                    self.add_edge(a, b)
-                    new_edges.append((a, b))
-        return new_edges
-
-    def _junction_tree1(self, return_junction_tree=True, triangulate_graph=False, f=None):
-        """
-        Applies the basic junction creation algorithms.
-        Refer to Algorithm 9.4 in PGM (Koller)
-
-        Parameters
-        ----------
-        return_junction_tree  :  boolean
-                returns the junction tree if yes, size of max clique if no
-
-        triangulateGraph :
-                Removes the edges added while triangulation if False
-        f:
-                The function that will be used to pick up the node at each stage
+        ebunch : container of edges
+            Each edge given in the container will be added to the graph.
+            The edges must be given as 2-tuples (u, v).
 
         See Also
         --------
+        add_edge : Add a single edge
 
-        Example
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> G = UndirectedGraph()
+        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
+        >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
+        """
+        for edge in ebunch:
+            self.add_edge(*edge, **kwargs)
+
+    def _update_cardinalities(self, factors):
+        """
+        Update the cardinalaties of all the random variables from factors.
+        If cardinality of variables doesn't match across all the factors, then
+        it will throw CardinalityError
+        """
+        for factor in factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                if ((self.cardinalities[variable]) and
+                        (self.cardinalities[variable] != cardinality)):
+                    raise CardinalityError(
+                        'Cardinality of variable %s not matching among factors' % variable)
+                else:
+                    self.cardinalities[variable] = cardinality
+
+    def add_factors(self, *factors):
+        """
+        Associate a factor to the graph.
+        See factors class for the order of potential values
+
+        Parameters
+        ----------
+        *factor: pgmpy.factors.Factor object
+            A factor object on any subset of the variables of the model which
+            is to be associated with the model.
+
+        Returns
         -------
-        private function
-        """
-        from pgmpy.base import JunctionTree
-
-        jt = JunctionTree()
-        jtnode = 0
-        nodes = [(f(self, node), node) for node in self.nodes()]
-        heapify(nodes)
-        #p(str(nodes))
-        max_clique_size = 0
-        triangulated_nodes = set()
-        new_edges = []
-        while len(nodes) != 0:
-            min_el = heappop(nodes)
-            curr_node = min_el[1]
-            #p("Popped " + str(curr_node))
-            if curr_node in triangulated_nodes:
-                continue
-            #print("Working with " + str(curr_node))
-            triangulated_nodes.add(curr_node)
-            flag = False
-            clique_nodes = [curr_node]
-            clique_nodes += [node for node in self.neighbors(curr_node)
-                             if node not in triangulated_nodes]
-            set2 = set(clique_nodes)
-            #p(set2)
-            for nbr in self.neighbors(curr_node):
-                if nbr in triangulated_nodes:
-                    set1 = set(self.neighbors(nbr))
-                    set1.add(nbr)
-                    if len(set2 - set1) == 0:
-                        flag = True
-                        #p(set1)
-                        break
-            if flag:
-                #p("break")
-                break
-            #actual triangulation begins here
-            #Take all the neighbours and connect them. Done
-            jtnode += 1
-            jt.add_node(jtnode)
-            jt.node[jtnode]["clique_nodes"] = clique_nodes
-            #p(str(clique_nodes))
-            max_clique_size = max(max_clique_size, len(clique_nodes))
-
-            new_edges_temp = self.make_clique(clique_nodes)
-            new_edges.extend(new_edges_temp)
-            for node in clique_nodes:
-                heappush(nodes, (f(self, node), node))
-        if not triangulate_graph:
-            for edge in new_edges:
-                self.remove_edge(edge[0], edge[1])
-        if not return_junction_tree:
-            return max_clique_size - 1
-        jt.add_jt_edges()
-        return jt
-
-    def _jt_from_chordal_graph(self, return_junction_tree):
-        """
-        Creates a Junction tree with appropriate edges from a graph
-        which is known to be chordal
-
-        Parameters
-        ----------
-        return_junction_tree:
-            return the junction tree, if true else return tree-width
-        """
-        from pgmpy.base import JunctionTree
-
-        if return_junction_tree:
-            cliques = nx.chordal_graph_cliques(self)
-            jt = JunctionTree()
-            jtnode = 0
-            for max_clique in cliques:
-                jtnode += 1
-                jt.add_node(jtnode)
-                jt.node[jtnode]["clique_nodes"] = max_clique
-            jt.add_jt_edges()
-            return jt
-        else:
-            return nx.chordal_graph_treewidth(self)
-
-    def _jt_optimal(self, return_junction_tree, triangulate_graph):
-        """
-        Exponential strategy to find the optimal junction tree creation strategy
-
-        Parameters
-        ----------
-        return_junction_tree  :  boolean
-                returns the junction tree if yes, size of max clique if no
-
-        triangulateGraph :
-                Removes the edges added while triangulation if False
-
-        Example
-        -------
-        to be done when this function is to be written
-
-        """
-        pass
-
-    @staticmethod
-    def _min_fill_heuristic(graph, node):
-        """
-        Minimum-fill heuristic
-        """
-        nbrs = graph.neighbors(node)
-        num_edges = 0
-        for i in range(len(nbrs)):
-            for j in range(i + 1, len(nbrs)):
-                if graph.has_edge(nbrs[i], nbrs[j]):
-                    num_edges += 1
-        val = ((len(nbrs) * (len(nbrs) - 1)) / 2) - num_edges
-        return val
-
-    def best_triangulation_heuristic(self):
-        """
-        Tries every triangulation heuristic defined in jt_techniques and finds
-        the best one
-
-        Parameters
-        ----------
         None
 
         See Also
         --------
-        jt_techniques
+        get_factors
 
-        Example
-        -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.best_triangulation_heuristic()
-        2
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> from pgmpy.factors import Factor
+        >>> student = UndirectedGraph([('Alice', 'Bob'), ('Bob', 'Charles'),
+        ...                            ('Charles', 'Debbie'),
+        ...                            ('Debbie', 'Alice')])
+        >>> factor = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
+        >>> student.add_factors(factor)
         """
-        i = 2
-        min_clique_size = int("inf")
-        min_clique_technique = -1
-        while True:
-            size = self.jt_tree_width(i)
-            if not size:
-                break
-            if size < min_clique_size:
-                min_clique_technique = i
-                min_clique_size = size
-        return min_clique_technique
+        self.factors.extend(factors)
 
-    def jt_techniques(self, triangulation_technique, return_junction_tree, triangulate_graph):
+    def get_factors(self):
         """
-        Returns the junction tree or the max clique size depending on a triangulation technique
-        Takes option about whether to retain the edges added during triangulation
+        Returns the factors that have been added till now to the graph
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> from pgmpy.factors import Factor
+        >>> student = UndirectedGraph([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        ...                 np.random.rand(6))
+        >>> student.add_factors(factor)
+        >>> student.get_factors()
+        """
+        return self.factors
+
+    def remove_factors(self, *factors):
+        """
+        Removes the given factors from the added factors.
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> from pgmpy.factors import Factor
+        >>> student = UndirectedGraph([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        ...                 np.random.rand(6))
+        >>> student.add_factors(factor)
+        >>> student.remove_factors(factor)
+        """
+        for factor in factors:
+            self.factors.remove(factor)
+
+    def check_clique(self, nodes):
+        """
+        Check if the given nodes form a clique.
 
         Parameters
         ----------
-        triangulation_technique  :  integer
-                The index of the triangulation technique to use
-                0 : THe graph is already triangulated. Just make the junction tree
-                1 : Optimal Triangulation. Exponential. Use if you have ample time
-                2 : Min-neighbour
-                3 : Min =fill
-                4 : Max-neighbour
-
-        return_junction_tree : boolean
-                Returns the junction tree if true, returns the triangulated graph otherwise
-
-        triangulate_graph : boolean
-                Retains the edges added during triangulation, if yes. Deletes the edges
-                otherwise
-
-        See Also
-        --------
-        junctionTree1
-        _jt_optimal
-        _jt_from_chordal_graph
-
-        Example
-        -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.jt_techniques(2, False, False)
-        4
+        nodes: list of nodes.
+            Nodes to check if they are a part of any clique.
         """
-        if triangulation_technique == 0:
-            ret = self._jt_from_chordal_graph(return_junction_tree)
-            #print(ret)
-            if not ret:
-                raise Exception(" Graph Is Not Triangulated ")
-        elif triangulation_technique == 1:
-            ret = self._jt_optimal(return_junction_tree, triangulate_graph)
-        elif triangulation_technique == 2:
-            f = (lambda graph, node: len(graph.neighbors(node)))
-            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
-        elif triangulation_technique == 3:
-            f = (lambda graph, node: UndirectedGraph._min_fill_heuristic(graph, node))
-            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
-        elif triangulation_technique == 4:
-            f = (lambda graph, node: -len(graph.neighbors(node)))
-            ret = self._junction_tree1(return_junction_tree, triangulate_graph, f)
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_edge(node1, node2):
+                return False
+        return True
+
+    def is_triangulated(self):
+        """
+        Checks whether the undirected graph is triangulated or not.
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> G = UndirectedGraph()
+        >>> G.add_edges_from([('x1', 'x2'), ('x1', 'x3'), ('x1', 'x4'),
+        ...                   ('x2', 'x4'), ('x3', 'x4')])
+        >>> G.is_triangulated()
+        True
+        """
+        return nx.is_chordal(self)
+
+    def triangulate(self, heuristic='H6', order=None, inplace=False):
+        """
+        Triangulate the graph.
+
+        If order of deletion is given heuristic algorithm will not be used.
+
+        Parameters
+        ----------
+        heuristic: H1 | H2 | H3 | H4 | H5 | H6
+            The heuristic algorithm to use to decide the deletion order of
+            the variables to compute the triangulated graph.
+            Let X be the set of variables and X(i) denotes the i-th variable.
+            S(i): The size of the clique created by deleting the variable.
+            E(i): Cardinality of variable X(i).
+            M(i): The maximum size of the cliques of the subgraph given by
+                    X(i) and its adjacent nodes.
+            C(i): The sum of the size of cliques of the subgraph given by X(i)
+                    and its adjacent nodes.
+            The heuristic algorithm decide the deletion order if this way:
+            H1: Delete the variable with minimal S(i).
+            H2: Delete the variable with minimal S(i)/E(i).
+            H3: Delete the variable with minimal S(i) - M(i).
+            H4: Delete the variable with minimal S(i) - C(i).
+            H5: Delete the variable with minimal S(i)/M(i).
+            H6: Delete the variable with minimal S(i)/C(i).
+
+        order: list, tuple (array-like)
+            The order of deletion of the variables to compute the triagulated
+            graph. If order is given heuristic algorithm will not be used.
+
+        inplace: True | False
+            if inplace is true then adds the edges to the object from
+            which it is called else returns a new object.
+
+        Reference
+        ---------
+        http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.56.3607
+
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = UndirectedGraph()
+        >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                   ('x4', 'x7'), ('x5', 'x7')])
+        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> G.add_factors(*phi)
+        >>> G_chordal = G.triangulate()
+        """
+        self._update_cardinalities(self.factors)
+
+        if self.is_triangulated():
+            if inplace:
+                return
+            else:
+                return self
+
+        graph_copy = nx.Graph(self.edges())
+        edge_set = set()
+
+        def _find_common_cliques(cliques_list):
+            """
+            Finds the common cliques among the given set of cliques for
+            corresponding node.
+            """
+            common = set([tuple(x) for x in cliques_list[0]])
+            for i in range(1, len(cliques_list)):
+                common = common & set([tuple(x) for x in cliques_list[i]])
+            return list(common)
+
+        def _find_size_of_clique(clique, cardinalities):
+            """
+            Computes the size of a clique.
+
+            Size of a clique is defined as product of cardinalities of all the
+            nodes present in the clique.
+            """
+            return list(map(lambda x: np.prod([cardinalities[node] for node in x]),
+                            clique))
+
+        def _get_cliques_dict(node):
+            """
+            Returns a dictionary in the form of {node: cliques_formed} of the
+            node along with its neighboring nodes.
+
+            clique_dict_removed would be containing the cliques created
+            after deletion of the node
+            clique_dict_node would be containing the cliques created before
+            deletion of the node
+            """
+            graph_working_copy = nx.Graph(graph_copy.edges())
+            neighbors = graph_working_copy.neighbors(node)
+            graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
+            clique_dict = nx.cliques_containing_node(graph_working_copy,
+                                                     nodes=([node] + neighbors))
+            graph_working_copy.remove_node(node)
+            clique_dict_removed = nx.cliques_containing_node(graph_working_copy,
+                                                             nodes=neighbors)
+            return clique_dict, clique_dict_removed
+
+        if not order:
+            order = []
+
+            for index in range(self.number_of_nodes()):
+                # S represents the size of clique created by deleting the
+                # node from the graph
+                S = {}
+                # M represents the size of maximum size of cliques given by
+                # the node and its adjacent node
+                M = {}
+                # C represents the sum of size of the cliques created by the
+                # node and its adjacent node
+                C = {}
+                for node in set(graph_copy.nodes()) - set(order):
+                    clique_dict, clique_dict_removed = _get_cliques_dict(node)
+                    S[node] = _find_size_of_clique(
+                        _find_common_cliques(list(clique_dict_removed.values())),
+                        self.cardinalities
+                    )[0]
+                    common_clique_size = _find_size_of_clique(
+                        _find_common_cliques(list(clique_dict.values())),
+                        self.cardinalities
+                    )
+                    M[node] = np.max(common_clique_size)
+                    C[node] = np.sum(common_clique_size)
+
+                if heuristic == 'H1':
+                    node_to_delete = min(S, key=S.get)
+
+                elif heuristic == 'H2':
+                    S_by_E = {key: S[key] / self.cardinalities[key] for key in S}
+                    node_to_delete = min(S_by_E, key=S_by_E.get)
+
+                elif heuristic == 'H3':
+                    S_minus_M = {key: S[key] - M[key] for key in S}
+                    node_to_delete = min(S_minus_M, key=S_minus_M.get)
+
+                elif heuristic == 'H4':
+                    S_minus_C = {key: S[key] - C[key] for key in S}
+                    node_to_delete = min(S_minus_C, key=S_minus_C.get)
+
+                elif heuristic == 'H5':
+                    S_by_M = {key: S[key]/M[key] for key in S}
+                    node_to_delete = min(S_by_M, key=S_by_M.get)
+
+                else:
+                    S_by_C = {key: S[key]/C[key] for key in S}
+                    node_to_delete = min(S_by_C, key=S_by_C.get)
+
+                order.append(node_to_delete)
+
+        graph_copy = nx.Graph(self.edges())
+        for node in order:
+            for edge in itertools.combinations(graph_copy.neighbors(node), 2):
+                graph_copy.add_edge(edge[0], edge[1])
+                edge_set.add(edge)
+            graph_copy.remove_node(node)
+
+        if inplace:
+            for edge in edge_set:
+                self.add_edge(edge[0], edge[1])
+            return self
+
         else:
-            ret = False
-        return ret
+            graph_copy = UndirectedGraph(self.edges())
+            for edge in edge_set:
+                graph_copy.add_edge(edge[0], edge[1])
+            return graph_copy
 
-    def jt_tree_width(self, triangulation_technique):
+    @abc.abstractmethod
+    def to_junction_tree(self):
         """
-        Returns the max-clique size that a triangulation technique will return
-        It removes all the edges it added while triangulating it and hence doesn't affect the graph
+        Creates a junction tree for a given undirected graph.
 
-        Parameters
-        ----------
-        triangulation_technique  :  integer
-                The index of the triangulation technique to use
-                See the documentation of jt_techniques function to see the
-                index corresponding to each heuristic
-
-        See Also
-        --------
-        jt_techniques
-
-        Example
-        -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> G.jt_tree_width(2)
-        4
+        For a given undirected graph (H) a junction tree (G) is a graph
+        1. where each node in G corresponds to a maximal clique in H
+        2. each sepset in G separates the variables strictly on one side of the
+        edge to other.
         """
-
-        val = self.jt_techniques(triangulation_technique, False, False)
-        return val
-
-    def make_jt(self, triangulation_technique):
-        """
-        Return the junction Tree after triangulating it using the triangulation_technique.
-        It removes all the edges it added while triangulating it and hence doesn't affect the graph
-
-        Parameters
-        ----------
-        triangulation_technique  :  integer
-                The index of the triangulation technique to use
-                See the documentation of jt_techniques function to see the
-                index corresponding to each heuristic
-
-        See Also
-        --------
-        jt_techniques
-
-        Example
-        -------
-        >>> from pgmpy.MarkovModel import UndirectedGraph
-        >>> G = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4),
-        ...                      (1,8), (2, 4), (2, 6), (2, 7), (3, 8),
-        ...                      (3, 9), (4, 7),(4, 8), (5, 8), (5, 9),
-        ...                      (5, 10), (6, 7), (7, 10),(8, 10)])
-        >>> jt=G.make_jt(2)
-        >>> jt
-        """
-
-        jt = self.jt_techniques(triangulation_technique, True, False)
-        return jt
-
-    # def read_simple_format(self, filename):
-    #     """
-    #     Read the graph from a file assuming a very simple graph reading format
-    #
-    #     Parameters
-    #     ----------
-    #     filename  :  String
-    #             The file which has the graph data
-    #
-    #     Example
-    #     -------
-    #     >>> from pgmpy import MarkovModel
-    #     >>> G = MarkovModel.UndirectedGraph()
-    #     >>> G.read_simple_format("graph")
-    #     """
-    #     file = open(filename, "r")
-    #     num_nodes = int(file.readline())
-    #     for i in range(num_nodes):
-    #         self.add_node(str(i))
-    #     #print("nodes"+str(num_nodes))
-    #     file.readline()
-    #     while True:
-    #         edge = file.readline()
-    #         if not edge:
-    #             break
-    #         nodes = edge.split()
-    #         self.add_edge(nodes[0], nodes[1])
+        pass
