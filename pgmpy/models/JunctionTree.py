@@ -122,30 +122,3 @@ class JunctionTree(UndirectedGraph):
             raise ValueError('No sepset found between these two edges.')
 
         super(JunctionTree, self).add_edge(u, v)
-
-    def add_edges_from(self, ebunch, **kwargs):
-        """
-        Add all the edges in ebunch.
-
-        If nodes referred in the ebunch are not already present, they will be
-        automatically added.
-
-        Parameters
-        ----------
-        ebunch: container of edges
-            Each edge given in the container will be added to the junction tree.
-            The edges must be given as 2-tuples (u, v).
-
-        See Also
-        --------
-        add_edge: Add a single edge
-
-        Examples
-        --------
-        >>> from pgmpy.models import JunctionTree
-        >>> G = JunctionTree()
-        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-        ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        """
-        for edge in ebunch:
-            self.add_edge(*edge, **kwargs)
