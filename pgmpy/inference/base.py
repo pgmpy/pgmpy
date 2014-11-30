@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 
@@ -22,7 +23,7 @@ class Inference:
 
         Examples
         --------
-        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.inference import Inference
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors import TabularCPD
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
@@ -32,8 +33,8 @@ class Inference:
         ...                                     [0.1, 0.1, 0.1, 0.1],
         ...                                     [0.8, 0.8, 0.8, 0.8]],
         ...                        evidence=['diff', 'intel'], evidence_card=[2, 2])
-        >>> student.add_cpd([diff_cpd, intel_cpd, grade_cpd])
-        >>> model = inference(student)
+        >>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+        >>> model = Inference(student)
 
         >>> from pgmpy.models import MarkovModel
         >>> from pgmpy.factors import Factor
@@ -45,14 +46,14 @@ class Inference:
         >>> factor_c_d = Factor(['Charles', 'Debbie'], cardinality=[2, 2], value=np.random.rand(4))
         >>> factor_d_a = Factor(['Debbie', 'Alice'], cardinality=[2, 2], value=np.random.rand(4))
         >>> student.add_factors(factor_a_b, factor_b_c, factor_c_d, factor_d_a)
-        >>> model = inference(student)
+        >>> model = Inference(student)
         """
         self.variables = model.nodes()
         self.cardinality = {}
         if isinstance(model, BayesianModel):
             self.factors = {}
             for node in model.nodes():
-                cpd = model.get_cpd(node)
+                cpd = model.get_cpds(node)
                 cpd_as_factor = cpd.to_factor()
                 parents = model.predecessors(node)
                 self.cardinality[node] = cpd.variable_card
