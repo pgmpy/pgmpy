@@ -3,7 +3,9 @@
 import itertools
 import networkx as nx
 import numpy as np
-from pgmpy.factors import CPD
+from pgmpy.factors import TabularCPD
+from pgmpy.factors import TreeCPD
+from pgmpy.factors import RuleCPD
 
 
 class BayesianModel(nx.DiGraph):
@@ -674,6 +676,8 @@ class BayesianModel(nx.DiGraph):
         |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
         +------+------+------+---------+------+------+-------+
         """
+        if isinstance(cpds, (TabularCPD, TreeCPD, RuleCPD)):
+            cpds = [cpds]
         self.cpds.extend(cpds)
 
     def get_cpd(self, node=None, beautify=False):
@@ -1085,6 +1089,51 @@ class BayesianModel(nx.DiGraph):
         for node, parents in parents_dict.items():
             moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
         return moral_graph
+
+    def fit(self, data):
+        """
+        Computes the CPD for each node from a given data in the form of a pandas dataframe.
+
+        Parameters
+        ----------
+        data : pandas dataframe object
+                A dataframe object with column names same as the variable names of network
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)))
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> model.get_cpd('A')
+        [<pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e588>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173cb5e10>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e470>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e198>,
+         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
+
+        """
+        from pgmpy.factors import TabularCPD
+        self.cpds = []
+        for node in self.nodes():
+            if not nx.ancestors(self, node):
+                state_counts = data.ix[:, node].value_counts()
+                self.add_cpd(TabularCPD(node, state_counts.shape[0],
+                                       (state_counts / state_counts.sum()).values[:, np.newaxis]))
+            else:
+                state_counts = data.groupby([node] + (list(nx.ancestors(self, node)))).count().iloc[:, 0]
+                values = (state_counts / state_counts.sum()).values
+                parent_card = np.array([])
+                for u in nx.ancestors(self, node):
+                    parent_card = np.append(parent_card, data.ix[:, u].value_counts().shape[0])
+                var_card = data.ix[:, node].value_counts().shape[0]
+                self.add_cpd(TabularCPD(node, var_card, values.reshape(var_card, values.size / var_card),
+                                        evidence=list(nx.ancestors(self, node)),
+                                        evidence_card=parent_card.astype('int')))
+
+
 
     def get_factorized_product(self, latex=False):
         #TODO: refer to IMap class for explanation why this is not implemented.

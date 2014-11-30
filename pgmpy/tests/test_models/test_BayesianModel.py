@@ -1,5 +1,8 @@
 import unittest
 import networkx as nx
+import pandas as pd
+import numpy as np
+import numpy.testing as np_test
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
 
@@ -435,6 +438,34 @@ class TestBayesianModelCPD(unittest.TestCase):
     def tearDown(self):
         del self.G
 
+
+class TestBayesianModelFit(unittest.TestCase):
+    def setUp(self):
+        self.model_disconnected = BayesianModel()
+        self.model_disconnected.add_nodes_from(['A', 'B', 'C', 'D', 'E'])
+
+        self.model_connected = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+
+    def test_disconnected(self):
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)), columns=['A', 'B', 'C', 'D', 'E'])
+        self.model_disconnected.fit(values)
+
+        for node in ['A', 'B', 'C', 'D', 'E']:
+            cpd = self.model_disconnected.get_cpd(node)
+            self.assertEqual(cpd.variable, node)
+            np_test.assert_array_equal(cpd.cardinality, np.array([2]))
+            value = (values.ix[:, node].value_counts() / values.ix[:, node].value_counts().sum()).values
+            np_test.assert_array_equal(cpd.values, value)
+    #
+    # def test_connected(self):
+    #     values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)), columns=['A', 'B', 'C', 'D', 'E'])
+    #     self.model_connected.fit(values)
+    #
+    #     for node in ['A', 'B', 'C', 'D', 'E']:
+    #         cpd = self.model_connected.get_cpd(node)
+    #         self.assertEqual(cpd.variable, node)
+    #         np_test.assert_array_equal(cpd.cardinality, np.array([2]))
+    #         
 
 if __name__ == '__main__':
     unittest.main()
