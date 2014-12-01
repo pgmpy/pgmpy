@@ -328,6 +328,24 @@ class BayesianModel(DirectedGraph):
             return False
 
     def get_independencies(self, latex=False):
+        """
+        Compute independencies in Bayesian Network.
+
+        Parameters
+        ----------
+        latex: boolean
+            If latex=True then latex string of the independence assertion
+            would be created.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> student = BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grade', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.get_independencies()
+        """
         from pgmpy.independencies import Independencies
 
         independencies = Independencies()
