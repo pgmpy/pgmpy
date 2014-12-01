@@ -121,6 +121,64 @@ class FactorGraph(UndirectedGraph):
                                  factor)
             super(FactorGraph, self).add_factors(factor)
 
+    def get_variable_nodes(self):
+        """
+        Returns variable nodes present in the graph.
+
+        Before calling this method make sure that all the factors are added
+        properly.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.get_variable_nodes()
+        ['a', 'b']
+        """
+        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
+        if not bipartite.is_bipartite_node_set(self, variable_nodes):
+            raise ValueError('Factors not associated for all the random variables.')
+
+        return list(variable_nodes)
+
+    def get_factor_nodes(self):
+        """
+        Returns variable nodes present in the graph.
+
+        Before calling this method make sure that all the factors are added
+        properly.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.get_factor_nodes()
+        ['phi1', 'phi2']
+        """
+        variable_nodes = self.get_variable_nodes()
+        factor_nodes = set(self.nodes()) - set(variable_nodes)
+
+        if len(factor_nodes) != len(self.factors):
+            raise ValueError('Factors not associated with all the factor nodes.')
+
+        return list(factor_nodes)
+
     def to_markov_model(self):
         """
         Converts the factor graph into markov model.
@@ -145,9 +203,10 @@ class FactorGraph(UndirectedGraph):
         from pgmpy.models import MarkovModel
         mm = MarkovModel()
 
-        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
-        if not bipartite.is_bipartite_node_set(self, variable_nodes):
-            raise ValueError('Factors not associated for all the random variables.')
+        variable_nodes = self.get_variable_nodes()
+
+        if len(set(self.nodes()) - set(variable_nodes)) != len(self.factors):
+            raise ValueError('Factors not associated with all the factor nodes.')
 
         mm.add_nodes_from(variable_nodes)
         for factor in self.factors:
