@@ -122,3 +122,33 @@ class JunctionTree(UndirectedGraph):
             raise ValueError('No sepset found between these two edges.')
 
         super(JunctionTree, self).add_edge(u, v)
+
+    def get_factors(self, node=None):
+        """
+        Return the factors that have been added till now to the graph.
+
+        If node is not None, it would return the factor corresponding to the
+        given node.
+
+        Examples
+        --------
+        >>> from pgmpy.models import JunctionTree
+        >>> from pgmpy.factors import Factor
+        >>> G = JunctionTree()
+        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
+        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
+        ...                   (('a', 'b', 'c'), ('a', 'c'))])
+        >>> phi1 = Factor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi3 = Factor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2, phi3)
+        >>> G.get_factors()
+        >>> G.get_factors(node=('a', 'b', 'c'))
+        """
+        if node is None:
+            return super(JunctionTree, self).get_factors()
+        else:
+            if node not in self.nodes():
+                raise ValueError('Node not present in Junction Tree')
+            factors = list(filter(lambda x: set(x.scope()) == set(node), self.factors))
+            return factors[0]
