@@ -328,16 +328,16 @@ class BayesianModel(DirectedGraph):
             return False
 
     def get_independencies(self, latex=False):
-        import pgmpy.models.Independencies as Independencies
+        from pgmpy.independencies import Independencies
 
-        independencies = Independencies.Independencies()
+        independencies = Independencies()
         for start in (self.nodes()):
             for r in (1, len(self.nodes())):
                 for observed in itertools.combinations(self.nodes(), r):
                     independent_variables = self.active_trail_nodes(start, observed=observed)
                     if independent_variables:
-                        independencies.add_assertions(start, independent_variables,
-                                                      observed)
+                        independencies.add_assertions([start, independent_variables,
+                                                       observed])
 
         independencies.reduce()
 
@@ -372,7 +372,7 @@ class BayesianModel(DirectedGraph):
         for node, parents in parents_dict.items():
             moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
 
-        moral_graph.add_factors(*self.cpds)
+        moral_graph.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
         return moral_graph
 
