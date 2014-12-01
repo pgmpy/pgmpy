@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
 from pgmpy.base import UndirectedGraph
-from pgmpy.independencies import IndependenceAssertion, Independencies
+from pgmpy.independencies import Independencies
 import itertools
 import networkx as nx
 import numpy as np
@@ -292,3 +293,60 @@ class MarkovModel(UndirectedGraph):
             return local_independencies.latex_string()
         else:
             return local_independencies
+
+    def to_bayesian_model(self):
+        """
+        Creates a Bayesian Model which is a minimum I-Map for this markov model.
+
+        The ordering of parents may not remain constant. It would depend on the
+        ordering of variable in the junction tree (which is not constant) all the
+        time.
+
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> mm = MarkovModel()
+        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_factors(*phi)
+        >>> bm = mm.to_bayesian_model()
+        """
+        from pgmpy.models import BayesianModel
+
+        bm = BayesianModel()
+        var_clique_dict = defaultdict(tuple)
+        var_order = []
+
+        # Create a junction tree from the markov model.
+        # Creation of clique tree involves triangulation, finding maximal cliques
+        # and creating a tree from these cliques
+        junction_tree = self.to_junction_tree()
+        assert(nx.is_tree(junction_tree))
+
+        # create an ordering of the nodes based on the ordering of the clique
+        # in which it appeared first
+        root_node = junction_tree.nodes()[0]
+        bfs_edges = nx.bfs_edges(junction_tree, root_node)
+        for node in root_node:
+            var_clique_dict[node] = root_node
+            var_order.append(node)
+        for edge in bfs_edges:
+            clique_node = edge[1]
+            for node in clique_node:
+                if not var_clique_dict[node]:
+                    var_clique_dict[node] = clique_node
+                    var_order.append(node)
+
+        # create a bayesian model by adding edges from parent of node to node as
+        # par(x_i) = (var(c_k) - x_i) \cap {x_1, ..., x_{i-1}}
+        for node_index in range(len(var_order)):
+            node = var_order[node_index]
+            node_parents = (set(var_clique_dict[node]) - set([node])).intersection(
+                set(var_order[:node_index]))
+            bm.add_edges_from([(parent, node) for parent in node_parents])
+            #TODO : Convert factor into CPDs
+        return bm
