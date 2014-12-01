@@ -253,13 +253,19 @@ class MarkovModel(UndirectedGraph):
         """
         return self.neighbors(node)
 
-    def get_local_independecies(self):
+    def get_local_independecies(self, latex):
         """
         Returns all the local independencies present in the markov model.
 
         Local independencies are the independence assertion in the form of
         .. math:: {X \perp W - {X} - MB(X) | MB(X)}
         where MB is the markov blanket of all the random variables in X
+
+        Parameters
+        ----------
+        latex: boolean
+            If latex=True then latex string of the indepedence assertion would
+            be created
 
         Examples
         --------
@@ -280,6 +286,9 @@ class MarkovModel(UndirectedGraph):
             print(list(markov_blanket), list(rest))
             local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
 
-        return local_independencies
+        local_independencies.reduce()
 
-
+        if latex:
+            return local_independencies.latex_string()
+        else:
+            return local_independencies
