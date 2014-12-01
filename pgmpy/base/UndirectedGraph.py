@@ -459,3 +459,35 @@ class UndirectedGraph(nx.Graph):
         edge to other.
         """
         pass
+
+    def get_partition_function(self):
+        """
+        Returns the partition function for a given undirected graph.
+
+        A partition function is defined as
+
+        .. math:: \sum_{X}(\prod_{i=1}^{m} \phi_i)
+
+        where m is the number of factors present in the graph
+        and X are all the random variables present.
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = UndirectedGraph()
+        >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                   ('x4', 'x7'), ('x5', 'x7')])
+        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> G.add_factors(*phi)
+        >>> G.get_partition_function()
+        """
+        factor = self.factors[0]
+        factor = factor.product(*[self.factors[i] for i in
+                                  range(1, len(self.factors))])
+        if set(factor.scope()) != set(self.nodes()):
+            raise ValueError('Factor for all the random variables not defined.')
+
+        return np.sum(factor.values)
