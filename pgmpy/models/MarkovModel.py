@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.independencies import IndependenceAssertion, Independencies
 import itertools
 import networkx as nx
 import numpy as np
@@ -233,3 +234,52 @@ class MarkovModel(UndirectedGraph):
             clique_trees.add_factors(factor_copy)
 
         return clique_trees
+
+    def markov_blanket(self, node):
+        """
+        Returns a markov blanket for a random variable.
+
+        Markov blanket is the neighboring nodes of the given node.
+
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> mm = MarkovModel()
+        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> mm.markov_blanket('x1')
+        """
+        return self.neighbors(node)
+
+    def get_local_independecies(self):
+        """
+        Returns all the local independencies present in the markov model.
+
+        Local independencies are the independence assertion in the form of
+        .. math:: {X \perp W - {X} - MB(X) | MB(X)}
+        where MB is the markov blanket of all the random variables in X
+
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> mm = MarkovModel()
+        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> mm.get_local_independecies()
+        """
+        local_independencies = Independencies()
+
+        all_vars = set(self.nodes())
+        for node in self.nodes():
+            markov_blanket = set(self.markov_blanket(node))
+            rest = all_vars - set([node]) - markov_blanket
+            print(list(markov_blanket), list(rest))
+            local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
+
+        return local_independencies
+
+
