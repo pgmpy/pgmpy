@@ -91,7 +91,7 @@ class TabularCPD(Factor):
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2d list/array")
-        Factor.__init__(self, variables, cardinality, values.flatten('C'))
+        super(TabularCPD, self).__init__(self, variables, cardinality, values.flatten('C'))
 
     def marginalize(self, variables):
         """
