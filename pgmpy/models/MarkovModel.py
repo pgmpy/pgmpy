@@ -254,7 +254,7 @@ class MarkovModel(UndirectedGraph):
         """
         return self.neighbors(node)
 
-    def get_local_independecies(self, latex):
+    def get_local_independecies(self, latex=False):
         """
         Returns all the local independencies present in the markov model.
 
@@ -278,14 +278,17 @@ class MarkovModel(UndirectedGraph):
         ...                    ('x4', 'x7'), ('x5', 'x7')])
         >>> mm.get_local_independecies()
         """
+        from pgmpy.exceptions import RequiredError
         local_independencies = Independencies()
 
         all_vars = set(self.nodes())
         for node in self.nodes():
             markov_blanket = set(self.markov_blanket(node))
             rest = all_vars - set([node]) - markov_blanket
-            print(list(markov_blanket), list(rest))
-            local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
+            try:
+                local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
+            except RequiredError:
+                pass
 
         local_independencies.reduce()
 
@@ -325,7 +328,6 @@ class MarkovModel(UndirectedGraph):
         # Creation of clique tree involves triangulation, finding maximal cliques
         # and creating a tree from these cliques
         junction_tree = self.to_junction_tree()
-        assert(nx.is_tree(junction_tree))
 
         # create an ordering of the nodes based on the ordering of the clique
         # in which it appeared first
