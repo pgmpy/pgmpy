@@ -168,13 +168,13 @@ class DirectedGraph(nx.DiGraph):
 
     def add_cpds(self, *cpds):
         """
-        Associate a factor to the graph.
-        See factors class for the order of potential values
+        Associate a cpd to the graph.
+        See CPDs class for the order of potential values
 
         Parameters
         ----------
-        *factor: pgmpy.factors.Factor object
-            A factor object on any subset of the variables of the model which
+        *cpds: TabularCPD, TreeCPD, RuleCPD object
+            A CPD object on any subset of the variables of the model which
             is to be associated with the model.
 
         Returns
@@ -183,17 +183,17 @@ class DirectedGraph(nx.DiGraph):
 
         See Also
         --------
-        get_factors
+        get_cpds
 
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
-        >>> from pgmpy.factors import Factor
-        >>> student = DirectedGraph([('Alice', 'Bob'), ('Bob', 'Charles'),
-        ...                          ('Charles', 'Debbie'),
-        ...                          ('Debbie', 'Alice')])
-        >>> factor = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
-        >>> student.add_factors(factor)
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
         """
         for cpd in cpds:
             if not isinstance(cpd, (TabularCPD, TreeCPD, RuleCPD)):
@@ -202,22 +202,49 @@ class DirectedGraph(nx.DiGraph):
 
     def get_cpds(self, node=None):
         """
-        Returns the factors that have been added till now to the graph
+        Returns the cpds that have been added till now to the graph
 
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
-        >>> from pgmpy.factors import Factor
-        >>> student = DirectedGraph([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 np.random.rand(6))
-        >>> student.add_factors(factor)
-        >>> student.get_factors()
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
+        >>> student.get_cpds()
         """
         if node:
+            if node not in self.nodes():
+                raise ValueError('Node not present in the Directed Graph')
             return list(filter(lambda x: node in x.variable, self.cpds))[0]
         else:
             return self.cpds
+
+    def remove_cpds(self, *cpds):
+        """
+        Removes the cpds that are provided in the argument.
+
+        Parameters
+        ----------
+        *cpds: TabularCPD, TreeCPD, RuleCPD object
+            A CPD object on any subset of the variables of the model which
+            is to be associated with the model.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
+        >>> student.remove_cpds(cpd)
+        """
+        for cpd in cpds:
+            self.cpds.remove(cpd)
 
     def get_parents(self, node):
         """
