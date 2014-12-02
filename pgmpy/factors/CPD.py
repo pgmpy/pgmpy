@@ -90,8 +90,8 @@ class TabularCPD(Factor):
                                                   "evidences not specified")
         values = np.array(values)
         if values.ndim != 2:
-            raise TypeError("Values must be a 2d list/array")
-        super(TabularCPD, self).__init__(self, variables, cardinality, values.flatten('C'))
+            raise TypeError("Values must be a 3d list/array")
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
     def marginalize(self, variables):
         """
