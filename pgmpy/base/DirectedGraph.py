@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import networkx as nx
 from collections import defaultdict
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
+import itertools
+import networkx as nx
 
 
 class DirectedGraph(nx.DiGraph):
@@ -235,3 +236,28 @@ class DirectedGraph(nx.DiGraph):
         ['diff', 'intel']
         """
         return self.predecessors(node)
+
+    def moralize(self):
+        """
+        Removes all the immoralities in the DirectedGraph and creates a moral
+        graph (UndirectedGraph).
+
+        A v-structure X->Z<-Y is an immorality if there is no directed edge
+        between X and Y.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> G = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
+        >>> moral_graph = G.moralize()
+        >>> moral_graph.edges()
+        [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
+        """
+        from pgmpy.base import UndirectedGraph
+        moral_graph = UndirectedGraph(self.to_undirected().edges())
+
+        for node in self.nodes():
+            moral_graph.add_edges_from(itertools.combinations(
+                self.get_parents(node), 2))
+
+        return moral_graph

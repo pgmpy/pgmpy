@@ -382,17 +382,11 @@ class BayesianModel(DirectedGraph):
         ('intel', 'SAT'), ('grade', 'letter')]
         """
         from pgmpy.models import MarkovModel
-        moral_graph = MarkovModel(self.to_undirected().edges())
+        moral_graph = self.moralize()
+        mm = MarkovModel(moral_graph.edges())
+        mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
-        parents_dict = {}
-        for node in self.nodes():
-            parents_dict[node] = self.get_parents(node)
-        for node, parents in parents_dict.items():
-            moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
-
-        moral_graph.add_factors(*[cpd.to_factor() for cpd in self.cpds])
-
-        return moral_graph
+        return mm
 
     def fit(self, data):
         """
