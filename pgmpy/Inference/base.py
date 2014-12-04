@@ -15,7 +15,7 @@ class Inference:
     """
     def __init__(self, model):
         """
-        Initialize Inference for a model.
+        Initialize Inference object for a model.
 
         Parameters
         ----------
