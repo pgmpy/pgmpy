@@ -1,7 +1,7 @@
-from collections import OrderedDict
-from pgmpy.exceptions import Exceptions
 import functools
 import numpy as np
+from collections import OrderedDict
+from pgmpy.exceptions import Exceptions
 
 np.seterr(divide='raise')
 
@@ -503,8 +503,8 @@ def factor_product(*args):
     --------
     factor_divide
     """
-    if not all(isinstance(phi, Factor) for phi in args):
-        raise TypeError("Input parameters must be factors")
+    # if not all(isinstance(phi, Factor) for phi in args):
+    #     raise TypeError("Input parameters must be factors")
     return functools.reduce(lambda phi1, phi2: _bivar_factor_operation(phi1, phi2, operation='M'), args)
 
 
