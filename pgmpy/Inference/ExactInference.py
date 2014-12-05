@@ -36,16 +36,16 @@ class VariableElimination(Inference):
         for node in elimination_order:
             import pdb; pdb.set_trace()
             if len(factors_dict[node]) == 1:
-                phi = factors_dict[node][0].marginalize(node)
+                factors_dict[node][0].marginalize(node)
             else:
-                phi = factor_product(*factors_dict[node]).marginalize(node)
+                factor_product(*factors_dict[node]).marginalize(node)
             del factors_dict[node]
             import pdb; pdb.set_trace()
-            for var in phi.variables:
-                try:
-                    factors_dict[var].append(phi)
-                except KeyError:
-                    factors_dict[var] = [phi]
+            # for var in phi.variables:
+            #     try:
+            #         factors_dict[var].append(phi)
+            #     except KeyError:
+            #         factors_dict[var] = [phi]
 
         remaining_factors = set()
         for factor_lists in factors_dict.values():
