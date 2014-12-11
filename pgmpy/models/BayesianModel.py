@@ -102,11 +102,13 @@ class BayesianModel(DirectedGraph):
         """
         if u == v:
             raise ValueError('Self loops are not allowed.')
-        if (v, u) in self.edges():
-            raise ValueError(
-                'Loops are not allowed. (%s->%s) is already present.' % (v, u))
 
         super(BayesianModel, self).add_edge(u, v, **kwargs)
+
+        if list(nx.simple_cycles(self)):
+            self.remove_edge(u, v)
+            raise ValueError(
+                'Loops are not allowed. (%s->%s) is already present.' % (v, u))
 
     def add_cpds(self, *cpds):
         """
@@ -382,17 +384,11 @@ class BayesianModel(DirectedGraph):
         ('intel', 'SAT'), ('grade', 'letter')]
         """
         from pgmpy.models import MarkovModel
-        moral_graph = MarkovModel(self.to_undirected().edges())
+        moral_graph = self.moralize()
+        mm = MarkovModel(moral_graph.edges())
+        mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
-        parents_dict = {}
-        for node in self.nodes():
-            parents_dict[node] = self.get_parents(node)
-        for node, parents in parents_dict.items():
-            moral_graph.add_edges_from(list(itertools.combinations(parents, 2)))
-
-        moral_graph.add_factors(*[cpd.to_factor() for cpd in self.cpds])
-
-        return moral_graph
+        return mm
 
     def fit(self, data):
         """

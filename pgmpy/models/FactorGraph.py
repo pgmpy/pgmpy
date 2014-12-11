@@ -241,3 +241,35 @@ class FactorGraph(UndirectedGraph):
         """
         mm = self.to_markov_model()
         return mm.to_junction_tree()
+
+    def get_factors(self, node=None):
+        """
+        Returns the factors that have been added till now to the graph.
+
+        If node is not None, it would return the factor corresponding to the
+        given node.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.get_factors()
+        >>> G.get_factors(node='phi1')
+        """
+        if node is None:
+            return super(FactorGraph, self).get_factors()
+        else:
+            factor_nodes = self.get_factor_nodes()
+            if node not in factor_nodes:
+                raise ValueError('Factors are not associated with the corresponding node.')
+            factors = list(filter(lambda x: set(x.scope()) == set(self.neighbors(node)),
+                                  self.factors))
+            return factors[0]
