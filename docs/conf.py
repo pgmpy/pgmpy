@@ -16,8 +16,6 @@
 import sys
 import os
 
-
-import os
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
     html_theme = 'default'
@@ -256,7 +254,7 @@ latex_documents = [
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-latex_logo = "images/logo.jpeg"
+latex_logo = "images/logo.png"
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
