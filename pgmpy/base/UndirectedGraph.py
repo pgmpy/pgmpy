@@ -288,19 +288,19 @@ class UndirectedGraph(nx.Graph):
             The heuristic algorithm to use to decide the deletion order of
             the variables to compute the triangulated graph.
             Let X be the set of variables and X(i) denotes the i-th variable.
-            S(i): The size of the clique created by deleting the variable.
-            E(i): Cardinality of variable X(i).
-            M(i): The maximum size of the cliques of the subgraph given by
+            S(i) - The size of the clique created by deleting the variable.
+            E(i) - Cardinality of variable X(i).
+            M(i) - The maximum size of the cliques of the subgraph given by
                     X(i) and its adjacent nodes.
-            C(i): The sum of the size of cliques of the subgraph given by X(i)
+            C(i) - The sum of the size of cliques of the subgraph given by X(i)
                     and its adjacent nodes.
             The heuristic algorithm decide the deletion order if this way:
-            H1: Delete the variable with minimal S(i).
-            H2: Delete the variable with minimal S(i)/E(i).
-            H3: Delete the variable with minimal S(i) - M(i).
-            H4: Delete the variable with minimal S(i) - C(i).
-            H5: Delete the variable with minimal S(i)/M(i).
-            H6: Delete the variable with minimal S(i)/C(i).
+            H1 - Delete the variable with minimal S(i).
+            H2 - Delete the variable with minimal S(i)/E(i).
+            H3 - Delete the variable with minimal S(i) - M(i).
+            H4 - Delete the variable with minimal S(i) - C(i).
+            H5 - Delete the variable with minimal S(i)/M(i).
+            H6 - Delete the variable with minimal S(i)/C(i).
 
         order: list, tuple (array-like)
             The order of deletion of the variables to compute the triagulated
@@ -421,11 +421,11 @@ class UndirectedGraph(nx.Graph):
                     node_to_delete = min(S_minus_C, key=S_minus_C.get)
 
                 elif heuristic == 'H5':
-                    S_by_M = {key: S[key]/M[key] for key in S}
+                    S_by_M = {key: S[key] / M[key] for key in S}
                     node_to_delete = min(S_by_M, key=S_by_M.get)
 
                 else:
-                    S_by_C = {key: S[key]/C[key] for key in S}
+                    S_by_C = {key: S[key] / C[key] for key in S}
                     node_to_delete = min(S_by_C, key=S_by_C.get)
 
                 order.append(node_to_delete)
