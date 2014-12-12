@@ -69,7 +69,8 @@ extensions = [
     'sphinx.ext.pngmath',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'numpy_ext.numpydoc',
+    'gen_rst'
 ]
 numpydoc_show_class_members = False
 
