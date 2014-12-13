@@ -32,7 +32,7 @@ Documentation and Examples
    :maxdepth: 3
 
    api
-   auto_examples/index
+   examples/index
 
 Wiki
 ----
