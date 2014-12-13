@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
 from pgmpy.base import DirectedGraph
+from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
 import itertools
 import networkx as nx
 import numpy as np
@@ -76,6 +78,8 @@ class BayesianModel(DirectedGraph):
         super(BayesianModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
+        self.cpds = []
+        self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -148,11 +152,61 @@ class BayesianModel(DirectedGraph):
         +------+------+------+---------+------+------+-------+
         """
         for cpd in cpds:
+            if not isinstance(cpd, (TabularCPD, TreeCPD, RuleCPD)):
+                raise ValueError('Only TabularCPD, TreeCPD or RuleCPD can be'
+                                 ' added.')
+
             if set(cpd.variables) - set(cpd.variables).intersection(
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            super(BayesianModel, self).add_cpds(cpd)
+            self.cpds.append(cpd)
+
+    def get_cpds(self, node=None):
+        """
+        Returns the cpds that have been added till now to the graph
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
+        >>> student.get_cpds()
+        """
+        if node:
+            if node not in self.nodes():
+                raise ValueError('Node not present in the Directed Graph')
+            return list(filter(lambda x: node in x.variable, self.cpds))[0]
+        else:
+            return self.cpds
+
+    def remove_cpds(self, *cpds):
+        """
+        Removes the cpds that are provided in the argument.
+
+        Parameters
+        ----------
+        *cpds: TabularCPD, TreeCPD, RuleCPD object
+            A CPD object on any subset of the variables of the model which
+            is to be associated with the model.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
+        >>> student.remove_cpds(cpd)
+        """
+        for cpd in cpds:
+            self.cpds.remove(cpd)
 
     def _get_ancestors_of(self, obs_nodes_list):
         """
