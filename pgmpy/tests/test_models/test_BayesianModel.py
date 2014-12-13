@@ -5,6 +5,7 @@ import numpy as np
 import numpy.testing as np_test
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
+from pgmpy.factors import TabularCPD
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -204,3 +205,69 @@ class TestBayesianModelFit(unittest.TestCase):
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
+
+
+class TestDirectedGraphCPDOperations(unittest.TestCase):
+    def setUp(self):
+        self.graph = BayesianModel()
+
+    def test_add_single_cpd(self):
+        cpd = TabularCPD('grade', 2, np.random.rand(2, 4),
+                         ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd)
+        self.assertListEqual(self.graph.get_cpds(), [cpd])
+
+    def test_add_multiple_cpds(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertListEqual(self.graph.get_cpds(), [cpd1, cpd2, cpd3])
+
+    def test_remove_single_cpd(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds(cpd1)
+        self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
+
+    def test_remove_multiple_cpds(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds(cpd1, cpd3)
+        self.assertListEqual(self.graph.get_cpds(), [cpd2])
+
+    def test_get_cpd_for_node(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertEqual(self.graph.get_cpds('diff'), cpd1)
+        self.assertEqual(self.graph.get_cpds('intel'), cpd2)
+        self.assertEqual(self.graph.get_cpds('grade'), cpd3)
+
+    def test_get_cpd_raises_error(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertRaises(ValueError, self.graph.get_cpds, 'sat')
+
+    def tearDown(self):
+        del self.graph
+
+
