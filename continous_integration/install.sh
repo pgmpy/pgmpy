@@ -25,7 +25,7 @@ if [[ "$DISTRIB" == "conda" ]]; then
 
 	conda create -n testenv --yes python=$PYTHON_VERSION pip nose \
 		numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION networkx=$NETWORKX_VERSION \
-		cython
+		pandas cython
     source activate testenv
 fi
 

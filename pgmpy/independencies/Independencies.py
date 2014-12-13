@@ -66,7 +66,7 @@ class Independencies:
 
         Examples
         --------
-        >>> independencies = independencies(['X', 'Y', 'Z'])
+        >>> independencies = Independencies(['X', 'Y', 'Z'])
         >>> independencies.get_independencies()
         """
         return self.independencies
@@ -82,7 +82,7 @@ class Independencies:
 
         Examples
         --------
-        >>> independencies = independencies()
+        >>> independencies = Independencies()
         >>> independencies.add_assertions(['X', 'Y', 'Z'])
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """

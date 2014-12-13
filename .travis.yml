@@ -3,7 +3,9 @@ virtualenv:
     system_site_packages: false
 env:
     - DISTRIB="conda" PYTHON_VERSION="3.4" NUMPY_VERSION="1.8.1"
-      SCIPY_VERSION="0.14.0" NETWORKX_VERSION="1.8.1" PANDAS_VERSION="0.15.1" COVERAGE="true"
+      SCIPY_VERSION="0.14.0" NETWORKX_VERSION="1.8.1" COVERAGE="true"
+      PANDAS_VERSION="0.15.1"
+
 before_install:
     - uname -a
     - free -m

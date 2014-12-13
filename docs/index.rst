@@ -15,9 +15,8 @@ pgmpy
 ``pgmpy`` is a Python library for creation, manipulation and implementation of 
 Probablistic Graphical Models (PGM).
 
-    * Uses SciPy stack and NetworkX for mathematical and graph operations
-      respectively.
-    * Provides interface to existing PGM algorithms.
+* Uses SciPy stack and NetworkX for mathematical and graph operations respectively.
+* Provides interface to existing PGM algorithms.
 
 Getting Started
 ---------------
@@ -26,7 +25,20 @@ Getting Started
    :maxdepth: 2
 
    install
+
+Documentation and Examples
+--------------------------
+.. toctree::
+   :maxdepth: 3
+
    api
+   auto_examples/index
+
+Wiki
+----
+.. toctree::
+   :maxdepth: 2
+
    wiki
 
 Community
