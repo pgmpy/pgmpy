@@ -26,7 +26,20 @@ Getting Started
    :maxdepth: 2
 
    install
+
+Documentation and Examples
+--------------------------
+.. toctree::
+   :maxdepth: 3
+
    api
+   auto_examples/index
+
+Wiki
+----
+.. toctree::
+   :maxdepth: 2
+
    wiki
 
 Community
