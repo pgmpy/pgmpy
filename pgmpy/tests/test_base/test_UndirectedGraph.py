@@ -69,5 +69,3 @@ class TestUndirectedGraphCreation(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
-
-

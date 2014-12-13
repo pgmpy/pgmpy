@@ -3,6 +3,8 @@
 from pgmpy.base import UndirectedGraph
 from networkx.algorithms import bipartite
 import itertools
+from collections import defaultdict
+import numpy as np
 
 
 class FactorGraph(UndirectedGraph):
@@ -56,6 +58,8 @@ class FactorGraph(UndirectedGraph):
         super(FactorGraph, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
+        self.factors = []
+        self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -119,7 +123,28 @@ class FactorGraph(UndirectedGraph):
                     set(self.nodes())):
                 raise ValueError("Factors defined on variable not in the model",
                                  factor)
-            super(FactorGraph, self).add_factors(factor)
+
+            self.factors.append(factor)
+
+    def remove_factors(self, *factors):
+        """
+        Removes the given factors from the added factors.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1)
+        >>> G.remove_factors(phi1)
+        """
+        for factor in factors:
+            self.factors.remove(factor)
 
     def get_variable_nodes(self):
         """
@@ -145,7 +170,8 @@ class FactorGraph(UndirectedGraph):
         """
         variable_nodes = set([x for factor in self.factors for x in factor.scope()])
         if not bipartite.is_bipartite_node_set(self, variable_nodes):
-            raise ValueError('Factors not associated for all the random variables.')
+            raise ValueError('Factors not associated for all the random'
+                             'variables.')
 
         return list(variable_nodes)
 
@@ -265,11 +291,45 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_factors(node='phi1')
         """
         if node is None:
-            return super(FactorGraph, self).get_factors()
+            return self.factors
         else:
             factor_nodes = self.get_factor_nodes()
             if node not in factor_nodes:
-                raise ValueError('Factors are not associated with the corresponding node.')
+                raise ValueError('Factors are not associated with the '
+                                 'corresponding node.')
             factors = list(filter(lambda x: set(x.scope()) == set(self.neighbors(node)),
                                   self.factors))
             return factors[0]
+
+    def get_partition_function(self):
+        """
+        Returns the partition function for a given undirected graph.
+
+        A partition function is defined as
+
+        .. math:: \sum_{X}(\prod_{i=1}^{m} \phi_i)
+
+        where m is the number of factors present in the graph
+        and X are all the random variables present.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.get_partition_function()
+        """
+        factor = self.factors[0]
+        factor = factor.product(*[self.factors[i] for i in
+                                  range(1, len(self.factors))])
+        if set(factor.scope()) != set(self.get_variable_nodes()):
+            raise ValueError('Factor for all the random variables not defined.')
+
+        return np.sum(factor.values)
