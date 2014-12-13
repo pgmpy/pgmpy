@@ -1,6 +1,3 @@
-Wiki
-====
-
 GSoC 2014 Ideas
 ---------------
 
@@ -127,7 +124,7 @@ Ideas
 ~~~~~
 
 **1. Parsing from and writing to standard PGM file formats**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+************************************************************
 
 There are various standard file formats for representing the PGM data.
 PGM data basically consists of a Graph, a table corresponding to each node and a few other attributes of the Graph.
@@ -145,7 +142,7 @@ Currently only ProbModelXML is supported. pgmpy uses lxml for XML formats and we
 **Potential Mentor(s)**: Shikhar Nigam
 
 **2. Adding features to pgmpy_viz**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+***********************************
 
 pgmpy_viz is a web application for creating and visualizing graphical models that runs pgmpy in the back-end.
 It uses cytoscape.js in the front-end for manipulation of the networks. For reference to a similar application you can look at SamIam.
@@ -167,7 +164,7 @@ This project needs you to add:
 **Potential Mentor(s)**: Soumya Kundu
 
 **3. Implementing Markov Networks**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+***********************************
 
 There are two common branches of graphical representation of distributions.
 They are Bayesian networks(Directed Acyclic Graphs) and Markov networks(Undirected graphs which may be cyclic).
@@ -189,7 +186,7 @@ The following features for Markov Networks need to be implemented:
 **Potential Mentor(s)**: Anavil Tripathi
 
 **4. Implementing Algorithms:**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*******************************
 
 PGM involves many theorems and algorithms such as Belief-Propagation, Variable Elimination etc.
 The library will eventually implement every PGM algorithm. Here is the proposed set of algorithms to be implemented.
@@ -205,20 +202,14 @@ The library will eventually implement every PGM algorithm. Here is the proposed 
 **Potential Mentor(s)**: Shikhar Nigam
 
 **5. Blue Sky Project**
-~~~~~~~~~~~~~~~~~~~~~~~
+***********************
 
 If you have any interesting ideas please discuss it over the mailing list.
 
 Interested Students
 ~~~~~~~~~~~~~~~~~~~
 
-If you are interested in participating in GSoC with pgmpy, please introduce yourself on the mailing list and add your name to this list below.
-
-+---------+---------------+
-| Name    | Project       |
-+=========+===============+
-| MyName  | ProjectName   |
-+---------+---------------+
+If you are interested in participating in GSoC with pgmpy, please introduce yourself on the mailing list.
 
 Writing Tests
 -------------

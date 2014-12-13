@@ -74,11 +74,13 @@ class TabularCPD(Factor):
         self.variable_card = variable_card
 
         cardinality = [variable_card]
+        if isinstance(evidence_card, np.ndarray):
+            evidence_card = list(evidence_card)
         if evidence_card:
             if not isinstance(evidence_card, (list, set, tuple)):
                 evidence_card = [evidence_card]
             cardinality.extend(evidence_card)
-
+        
         if evidence:
             if not isinstance(evidence, (list, set, tuple)):
                 evidence = [evidence]
@@ -88,8 +90,8 @@ class TabularCPD(Factor):
                                                   "evidences not specified")
         values = np.array(values)
         if values.ndim != 2:
-            raise TypeError("Values must be a 2d list/array")
-        Factor.__init__(self, variables, cardinality, values.flatten('C'))
+            raise TypeError("Values must be a 3d list/array")
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
     def marginalize(self, variables):
         """

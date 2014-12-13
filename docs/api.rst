@@ -8,13 +8,25 @@ models module
 
 .. module:: pgmpy.models
 
+Directed Graphical Models
+*************************
+
 .. autoclass:: BayesianModel
    :members:
 
 .. autoclass:: NoisyOrModel
    :members:
 
+Undirected Graphical Models
+***************************
+
 .. autoclass:: MarkovModel
+   :members:
+
+.. autoclass:: FactorGraph
+   :members:
+
+.. autoclass:: JunctionTree
    :members:
 
 factors module
@@ -66,4 +78,15 @@ readwrite module
    :members:
 
 .. autoclass:: ProbModelXMLWriter
+   :members:
+
+base module
+-----------
+
+.. module:: pgmpy.base
+
+.. autoclass:: DirectedGraph
+   :members:
+
+.. autoclass:: UndirectedGraph
    :members:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pgmpy.Inference import Inference
+from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 
 
@@ -9,7 +9,7 @@ class VariableElimination(Inference):
         """
         Examples
         --------
-        >>> from pgmpy.BayesianModel import BayesianModel
+        >>> from pgmpy.models import BayesianModel
         >>> bm = BayesianModel([('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e')])
         >>> # add cpds
         >>> VariableElimination(bm).query(variables={'c':{}})

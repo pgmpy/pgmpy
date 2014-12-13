@@ -5,7 +5,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.factors import Factor
 from pgmpy.factors import TabularCPD
-from pgmpy.Inference import Inference
+from pgmpy.inference import Inference
 
 
 class TestInferenceBase(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestInferenceBase(unittest.TestCase):
         c_cpd = TabularCPD('c', 2, [[0.1, 0.2], [0.3, 0.4]], evidence='b', evidence_card=[2])
         d_cpd = TabularCPD('d', 2, [[0.4, 0.3], [0.2, 0.1]], evidence='c', evidence_card=[2])
         e_cpd = TabularCPD('e', 2, [[0.3, 0.2], [0.4, 0.1]], evidence='d', evidence_card=[2])
-        self.bayesian.add_cpd([a_cpd, b_cpd, c_cpd, d_cpd, e_cpd])
+        self.bayesian.add_cpds(a_cpd, b_cpd, c_cpd, d_cpd, e_cpd)
 
         self.markov = MarkovModel([('a', 'b'), ('b', 'd'), ('a', 'c'), ('c', 'd')])
         factor_1 = Factor(['a', 'b'], [2, 2], np.array([100, 1, 1, 100]))
