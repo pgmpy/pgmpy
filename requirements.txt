@@ -4,6 +4,4 @@ scipy==0.14.0
 cython==0.19
 sphinx==1.2.2
 pandas==0.15.1
-sphinx-bootstrap-theme
-scikit-learn
-matplotlib
+setuptools>=3.5.1

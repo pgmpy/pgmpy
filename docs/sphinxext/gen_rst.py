@@ -21,6 +21,11 @@ import re
 from urllib.request import urlopen
 import gzip
 import posixpath
+import mock
+
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 
 try:
     from PIL import Image
