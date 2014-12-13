@@ -1,7 +1,5 @@
-from .DirectedGraph import *
 from .UndirectedGraph import *
-from .JunctionTree import *
+from .DirectedGraph import *
 
-__all__ = ['DirectedGraph',
-           'UndirectedGraph',
-           'JunctionTree']
+__all__ = ['UndirectedGraph',
+           'DirectedGraph']

@@ -1,5 +1,9 @@
 networkx==1.8.1
-numpy==1.8.2
+numpy==1.9.1
 scipy==0.14.0
 cython==0.19
 sphinx==1.2.2
+pandas==0.15.1
+sphinx_bootstrap_theme
+scikit-learn
+matplotlib

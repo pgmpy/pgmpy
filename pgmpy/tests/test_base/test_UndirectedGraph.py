@@ -1,75 +1,71 @@
-import unittest
+#!/usr/bin/env python3
+
 from pgmpy.base import UndirectedGraph
+from pgmpy.tests import help_functions as hf
+import unittest
 
 
-class TestBaseModelCreation(unittest.TestCase):
+class TestUndirectedGraphCreation(unittest.TestCase):
     def setUp(self):
-        pass
+        self.graph = UndirectedGraph()
 
-    def test_is_triangulated(self):
-        #triangulated graph
-        graph = UndirectedGraph([(0, 1), (1, 2), (0, 2), (2, 3), (3, 4), (4, 5),
-                                    (3, 5), (3, 7), (6, 7), (6, 9), (9, 8), (7, 8), (6, 8)])
-        self.assertTrue(graph.is_triangulated())
-        #graph_not_triangulated
-        graph = UndirectedGraph([(0, 1), (1, 2), (0, 2), (2, 3), (3, 4), (4, 5),
-                                    (3, 5), (3, 7), (6, 7), (6, 9), (9, 8), (7, 8),
-                                    (6, 8), (1, 6)])
-        self.assertFalse(graph.is_triangulated())
+    def test_class_init_without_data(self):
+        self.assertIsInstance(self.graph, UndirectedGraph)
 
-    def test_triangulation_all_heuristics(self):
-        i = 2
-        while True:
-            graph = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4), (1, 8),
-                                        (2, 4), (2, 6), (2, 7), (3, 8), (3, 9), (4, 7),
-                                        (4, 8), (5, 8), (5, 9), (5, 10), (6, 7), (7, 10),
-                                        (8, 10)])
-            #graph.read_simple_format("test_graphs/graph")
-            #print(i)
-            ret = graph.jt_techniques(i, False, True)
-            if not ret:
-                break
-            self.assertTrue(graph.is_triangulated())
-            i += 1
+    def test_class_init_with_data_string(self):
+        self.G = UndirectedGraph([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(sorted(self.G.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(hf.recursive_sorted(self.G.edges()),
+                             [['a', 'b'], ['b', 'c']])
 
-    def test_jt_from_chordal_graph(self):
-        #small triangulated graph
-        graph = UndirectedGraph([(0, 1), (1, 2), (2, 0), (3, 4),
-                                    (4, 5), (5, 3), (0, 3)])
-        ret = graph.jt_techniques(0, True, True)
-        self.assertTrue(ret.is_triangulated())
+    def test_add_node_string(self):
+        self.graph.add_node('a')
+        self.assertListEqual(self.graph.nodes(), ['a'])
 
-    def test_jt_tree_width(self):
-        #small triangulated graph
-        graph = UndirectedGraph([(0, 1), (1, 2), (2, 0), (3, 4),
-                                    (4, 5), (5, 3), (0, 3)])
-        ret = graph.jt_tree_width(0)
-        self.assertEqual(ret, 2)
-        res = [4, 4, 7, 5]
-        i = 2
-        while True:
-            graph = UndirectedGraph([(0, 1), (0, 3), (0, 8), (1, 2), (1, 4), (1, 8),
-                                        (2, 4), (2, 6), (2, 7), (3, 8), (3, 9), (4, 7),
-                                        (4, 8), (5, 8), (5, 9), (5, 10), (6, 7), (7, 10),
-                                        (8, 10)])
-            #graph.read_simple_format("test_graphs/graph")
-            ret = graph.jt_tree_width(i)
-            if not ret:
-                break
-            #print("heu num "+str(i))
-            #print(ret)
-            self.assertEqual(ret, res[i - 2])
-            i += 1
+    def test_add_node_nonstring(self):
+        self.graph.add_node(1)
+        self.assertListEqual(self.graph.nodes(), [1])
 
-    def test_check_clique(self):
-        #clique graph
-        graph = UndirectedGraph([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)])
-        ret = graph.check_clique(graph.nodes())
-        self.assertTrue(ret)
+    def test_add_nodes_from_string(self):
+        self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
+        self.assertListEqual(sorted(self.graph.nodes()),
+                             ['a', 'b', 'c', 'd'])
+
+    def test_add_nodes_from_non_string(self):
+        self.graph.add_nodes_from([1, 2, 3, 4])
+
+    def test_add_edge_string(self):
+        self.graph.add_edge('d', 'e')
+        self.assertListEqual(sorted(self.graph.nodes()), ['d', 'e'])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
+                             [['d', 'e']])
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        self.graph.add_edge('a', 'b')
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
+                             [['a', 'b'], ['d', 'e']])
+
+    def test_add_edge_nonstring(self):
+        self.graph.add_edge(1, 2)
+
+    def test_add_edges_from_string(self):
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
+        self.assertListEqual(sorted(self.graph.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
+                             [['a', 'b'], ['b', 'c']])
+        self.graph.add_nodes_from(['d', 'e', 'f'])
+        self.graph.add_edges_from([('d', 'e'), ('e', 'f')])
+        self.assertListEqual(sorted(self.graph.nodes()),
+                             ['a', 'b', 'c', 'd', 'e', 'f'])
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
+                             hf.recursive_sorted([('a', 'b'), ('b', 'c'),
+                                                  ('d', 'e'), ('e', 'f')]))
+
+    def test_add_edges_from_nonstring(self):
+        self.graph.add_edges_from([(1, 2), (2, 3)])
+
+    def test_number_of_neighbors(self):
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
+        self.assertEqual(len(self.graph.neighbors('b')), 2)
 
     def tearDown(self):
-        pass
-
-
-if __name__ == '__main__':
-    unittest.main()
+        del self.graph
