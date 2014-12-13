@@ -15,6 +15,8 @@
 
 import sys
 import os
+
+sys.path.append(os.path.abspath('sphinxext'))
 import sphinx_bootstrap_theme
 
 html_theme='bootstrap'
@@ -23,7 +25,6 @@ html_theme='bootstrap'
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath('../'))
-sys.path.append(os.path.abspath('sphinxext'))
 
 
 class Mock(object):
