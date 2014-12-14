@@ -3,8 +3,6 @@ import numpy as np
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
 
-np.seterr(divide='raise')
-
 
 class Factor:
     """
@@ -432,6 +430,8 @@ def _bivar_factor_operation(phi1, phi2, operation):
     --------
     factor_product
     """
+    np.seterr(divide='raise')
+
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
     common_var_list = [var for var in phi1_vars if var in phi2_vars]
