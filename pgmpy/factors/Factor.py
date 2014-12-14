@@ -395,6 +395,9 @@ class Factor:
     def __mul__(self, other):
         return self.product(other)
 
+    def __truediv__(self, other):
+        return self.divide(other)
+
     def __eq__(self, other):
         if type(self) != type(other):
             return False
