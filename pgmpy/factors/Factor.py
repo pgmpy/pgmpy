@@ -3,8 +3,6 @@ import numpy as np
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
 
-np.seterr(divide='raise')
-
 
 class Factor:
     """
@@ -397,6 +395,9 @@ class Factor:
     def __mul__(self, other):
         return self.product(other)
 
+    def __truediv__(self, other):
+        return self.divide(other)
+
     def __eq__(self, other):
         if type(self) != type(other):
             return False
@@ -433,6 +434,8 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     factor_product
     """
     from joblib import Parallel, delayed
+
+    np.seterr(divide='raise')
 
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
@@ -524,8 +527,8 @@ def factor_product(*args):
     --------
     factor_divide
     """
-    # if not all(isinstance(phi, Factor) for phi in args):
-    #     raise TypeError("Input parameters must be factors")
+    if not all(isinstance(phi, Factor) for phi in args):
+        raise TypeError("Input parameters must be factors")
     return functools.reduce(lambda phi1, phi2: _bivar_factor_operation(phi1, phi2, operation='M'), args)
 
 
