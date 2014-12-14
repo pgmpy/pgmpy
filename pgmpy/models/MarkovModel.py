@@ -15,7 +15,7 @@ class MarkovModel(UndirectedGraph):
 
     A MarkovModel stores nodes and edges with potentials
 
-    MarkovModel hold undirected edges.
+    MarkovModel holds undirected edges.
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ class MarkovModel(UndirectedGraph):
 
     **Shortcuts:**
 
-    Many common graph features allow python syntax to speed reporting.
+    Many common graph features allow python syntax for speed reporting.
 
     >>> 'a' in G     # check if node in graph
     True

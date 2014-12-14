@@ -56,7 +56,7 @@ class UndirectedGraph(nx.Graph):
 
     **Shortcuts:**
 
-    Many common graph features allow python syntax to speed reporting.
+    Many common graph features allow python syntax for speed reporting.
 
     >>> 'a' in G     # check if node in graph
     True

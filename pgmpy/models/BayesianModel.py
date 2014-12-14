@@ -67,7 +67,7 @@ class BayesianModel(DirectedGraph):
 
     **Shortcuts:**
 
-    Many common graph features allow python syntax to speed reporting.
+    Many common graph features allow python syntax for speed reporting.
 
     >>> 'a' in G     # check if node in graph
     True
@@ -259,7 +259,7 @@ class BayesianModel(DirectedGraph):
 
         References
         ----------
-        Details of algorithm can be found in 'Probabilistic Graphical Model
+        Details of the algorithm can be found in 'Probabilistic Graphical Model
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
         """

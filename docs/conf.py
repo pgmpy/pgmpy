@@ -214,7 +214,7 @@ html_theme_options = {
     # * superhero
     # * united
     # * yeti (v3 only)
-    'bootswatch_theme': "flatly",
+    'bootswatch_theme': "sandstone",
 
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
