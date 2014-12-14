@@ -178,6 +178,13 @@ class TestFactorMethods(unittest.TestCase):
         phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, div)
 
+    def test_factor_divide_truediv(self):
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = Factor(['x1'], [2], [1, 2])
+        div = phi1 / phi2
+        phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        self.assertEqual(phi3, div)
+
     def test_factor_divide_invalid(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = Factor(['x1'], [2], [0, 2])
