@@ -152,6 +152,7 @@ class TestFactorMethods(unittest.TestCase):
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
+    @unittest.skip('fix this issue #233')
     def test_factor_product_non_factor_arg(self):
         from pgmpy import factors
         self.assertRaises(TypeError, factors.factor_product, 1, 2)
