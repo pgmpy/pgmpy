@@ -477,10 +477,10 @@ class BayesianModel(DirectedGraph):
                 self.add_cpds(TabularCPD(node, state_counts.shape[0],
                                         (state_counts / state_counts.sum()).values[:, np.newaxis]))
             else:
-                state_counts = data.groupby([node] + (list(nx.ancestors(self, node)))).count().iloc[:, 0]
+                state_counts = data.groupby([node] + self.predecessors(node)).count().iloc[:, 0]
                 values = (state_counts / state_counts.sum()).values
                 parent_card = np.array([])
-                for u in nx.ancestors(self, node):
+                for u in self.predecessors(node):
                     parent_card = np.append(parent_card, data.ix[:, u].value_counts().shape[0])
                 var_card = data.ix[:, node].value_counts().shape[0]
                 self.add_cpds(TabularCPD(node, var_card, values.reshape(var_card, values.size / var_card),
