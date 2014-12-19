@@ -68,7 +68,7 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'numpy_ext.numpydoc',
-    'gen_rst'
+    'plot_generator'
 ]
 numpydoc_show_class_members = False
 
@@ -214,7 +214,7 @@ html_theme_options = {
     # * superhero
     # * united
     # * yeti (v3 only)
-    'bootswatch_theme': "sandstone",
+    'bootswatch_theme': "flatly",
 
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
