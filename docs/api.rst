@@ -49,6 +49,14 @@ factors module
 .. autoclass:: JointProbabilityDistribution
    :members:
 
+inference module
+----------------
+
+.. module:: pgmpy.inference
+
+.. autoclass:: VariableElimination
+   :members:
+
 independencies module
 ---------------------
 
