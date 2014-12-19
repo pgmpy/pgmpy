@@ -17,15 +17,13 @@ if [[ "$DISTRIB" == "conda" ]]; then
 
 	# Use the miniconda installer for faster download / install of conda
 	# itself
-    wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh \
+    wget http://repo.continuum.io/miniconda/Miniconda4-3.7.0-Linux-x86_64.sh \
         -O miniconda.sh
     chmod +x miniconda.sh && ./miniconda.sh -b
-    export PATH=/home/travis/anaconda/bin:$PATH
+    export PATH=/home/travis/miniconda3/bin:$PATH
     conda update --yes conda
 
-	conda create -n testenv --yes python=$PYTHON_VERSION pip nose \
-		numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION networkx=$NETWORKX_VERSION \
-		pandas cython
+	conda create -n testenv --yes python=$PYTHON_VERSION --file ../requirements.txt
     source activate testenv
 fi
 
