@@ -19,11 +19,13 @@ if [[ "$DISTRIB" == "conda" ]]; then
 	# itself
 	wget http://repo.continuum.io/miniconda/Miniconda3-3.4.2-Linux-x86_64.sh \
 		-O miniconda.sh
-    chmod +x miniconda.sh && ./miniconda.sh -b
-    export PATH=/home/travis/miniconda3/bin:$PATH
-    conda update --yes conda
+    chmod +x miniconda.sh && ./miniconda.sh -b -p $HOME/miniconda
+    export PATH=$HOME/miniconda/bin:$PATH
+	conda config --set always_yes yes --set changeps1 no
+	conda update conda
+	conda info -a
 
-	conda create -n testenv --yes python=$PYTHON_VERSION --file ../requirements.txt
+	conda create -n testenv python=$PYTHON_VERSION --file ../requirements.txt
     source activate testenv
 fi
 
