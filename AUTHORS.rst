@@ -1,14 +1,25 @@
 People
 ------
-
-.. hlist::
    
-   * Ankur Ankan
+Core Contributors
+=================
 
-   * Shashank Garg
+* Ankur Ankan
 
-   * Shikhar Nigam
+* Abinash Panda
 
-   * Pranjal Mittal
+Other Contributors
+==================
 
-   * Abinash Panda
+* Shashank Garg
+
+* Shikhar Nigam
+
+* Pranjal Mittal
+
+GSoC 2014 Students
+==================
+
+* Navin Chandak
+
+* Jaspreet
