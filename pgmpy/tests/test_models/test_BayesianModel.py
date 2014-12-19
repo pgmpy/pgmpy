@@ -247,6 +247,26 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.graph.remove_cpds(cpd1, cpd3)
         self.assertListEqual(self.graph.get_cpds(), [cpd2])
 
+    def test_remove_single_cpd_string(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds('diff')
+        self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
+
+    def test_remove_multiple_cpds_string(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds('diff', 'grade')
+        self.assertListEqual(self.graph.get_cpds(), [cpd2])
+
     def test_get_cpd_for_node(self):
         cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
         cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))

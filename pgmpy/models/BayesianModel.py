@@ -206,6 +206,8 @@ class BayesianModel(DirectedGraph):
         >>> student.remove_cpds(cpd)
         """
         for cpd in cpds:
+            if isinstance(cpd, str):
+                cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
     def _get_ancestors_of(self, obs_nodes_list):
