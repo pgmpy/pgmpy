@@ -76,10 +76,6 @@ class UndirectedGraph(nx.Graph):
         node: node
             A node can be any hashable Python object.
 
-        See Also
-        --------
-        add_nodes_from : add a collection of nodes
-
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
@@ -96,10 +92,6 @@ class UndirectedGraph(nx.Graph):
         ----------
         nodes: iterable container
             A container of nodes (list, dict, set, etc.).
-
-        See Also
-        --------
-        add_node : add a single node
 
         Examples
         --------
@@ -122,10 +114,6 @@ class UndirectedGraph(nx.Graph):
         u,v : nodes
             Nodes can be any hashable Python object.
 
-        See Also
-        --------
-        add_edges_from : add a collection of edges
-
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
@@ -147,10 +135,6 @@ class UndirectedGraph(nx.Graph):
         ebunch : container of edges
             Each edge given in the container will be added to the graph.
             The edges must be given as 2-tuples (u, v).
-
-        See Also
-        --------
-        add_edge : Add a single edge
 
         Examples
         --------

@@ -96,10 +96,6 @@ class MarkovModel(UndirectedGraph):
         u,v : nodes
             Nodes can be any hashable Python object.
 
-        See Also
-        --------
-        add_edges_from : add a collection of edges
-
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
@@ -127,10 +123,6 @@ class MarkovModel(UndirectedGraph):
         Returns
         -------
         None
-
-        See Also
-        --------
-        get_factors
 
         Examples
         --------

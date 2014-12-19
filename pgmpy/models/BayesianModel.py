@@ -93,10 +93,6 @@ class BayesianModel(DirectedGraph):
         u,v : nodes
               Nodes can be any hashable python object.
 
-        See Also
-        --------
-        add_edges_from : add a collection of edges
-
         EXAMPLE
         -------
         >>> from pgmpy.models import BayesianModel/home/abinash/software_packages/numpy-1.7.1
@@ -123,10 +119,6 @@ class BayesianModel(DirectedGraph):
         cpds  :  list, set, tuple (array-like)
             List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
             which will be associated with the model
-
-        See Also
-        --------
-        get_cpds
 
         EXAMPLE
         -------
@@ -255,10 +247,6 @@ class BayesianModel(DirectedGraph):
         >>> student.active_trail_nodes('diff', observed='grades')
         {'diff', 'intel'}
 
-        See Also
-        --------
-        is_active_trail
-
         References
         ----------
         Details of the algorithm can be found in 'Probabilistic Graphical Model
@@ -375,10 +363,6 @@ class BayesianModel(DirectedGraph):
         False
         >>> student.is_active_trail('grade', 'sat')
         True
-
-        See Also
-        --------
-        active_trail_nodes
         """
         if end in self.active_trail_nodes(start, observed):
             return True

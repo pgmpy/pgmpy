@@ -78,10 +78,6 @@ class DirectedGraph(nx.DiGraph):
         node: node
             A node can be any hashable Python object.
 
-        See Also
-        --------
-        add_nodes_from : add a collection of nodes
-
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
@@ -98,10 +94,6 @@ class DirectedGraph(nx.DiGraph):
         ----------
         nodes: iterable container
             A container of nodes (list, dict, set, etc.).
-
-        See Also
-        --------
-        add_node : add a single node
 
         Examples
         --------
@@ -124,10 +116,6 @@ class DirectedGraph(nx.DiGraph):
         u,v : nodes
             Nodes can be any hashable Python object.
 
-        See Also
-        --------
-        add_edges_from : add a collection of edges
-
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
@@ -149,10 +137,6 @@ class DirectedGraph(nx.DiGraph):
         ebunch : container of edges
             Each edge given in the container will be added to the graph.
             The edges must be given as 2-tuples (u, v).
-
-        See Also
-        --------
-        add_edge : Add a single edge
 
         Examples
         --------

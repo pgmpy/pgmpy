@@ -429,9 +429,6 @@ def _bivar_factor_operation(phi1, phi2, operation):
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
-    See Also
-    --------
-    factor_product
     """
     np.seterr(divide='raise')
 
@@ -502,9 +499,6 @@ def factor_product(*args):
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
 
-    See Also
-    --------
-    factor_divide
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
@@ -523,8 +517,6 @@ def factor_divide(phi1, phi2):
     phi2: factors
         The Divisor.
 
-    Examples
-    --------
     Examples
     --------
     >>> from pgmpy.factors import Factor, factor_divide
@@ -548,9 +540,6 @@ def factor_divide(phi1, phi2):
     x1_0	x2_2	x3_1	3.33333333333
     x1_1	x2_2	x3_1	2.75
 
-    See Also
-    --------
-    factor_product
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")

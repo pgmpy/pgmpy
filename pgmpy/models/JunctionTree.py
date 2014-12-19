@@ -65,10 +65,6 @@ class JunctionTree(UndirectedGraph):
             A node should be a collection of nodes forming a clique. It can be
             a list, set or tuple of nodes
 
-        See Also
-        --------
-        add_nodes_from: add a collection of nodes
-
         Examples
         --------
         >>> from pgmpy.models import JunctionTree
@@ -90,10 +86,6 @@ class JunctionTree(UndirectedGraph):
         ----------
         nodes: iterable container
             A container of nodes (list, dict, set, etc.).
-
-        See Also
-        --------
-        add_node: add a single node
 
         Examples
         --------
@@ -142,10 +134,6 @@ class JunctionTree(UndirectedGraph):
         Returns
         -------
         None
-
-        See Also
-        --------
-        get_factors
 
         Examples
         --------

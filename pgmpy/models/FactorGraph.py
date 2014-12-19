@@ -70,10 +70,6 @@ class FactorGraph(UndirectedGraph):
         u, v: nodes
             Nodes can be any hashable Python object.
 
-        See Also
-        --------
-        add_edges_from: add a collection of edges
-
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
@@ -101,10 +97,6 @@ class FactorGraph(UndirectedGraph):
         *factor: pgmpy.factors.Factor object
             A factor object on any subset of the variables of the model which
             is to be associated with the model.
-
-        See Also
-        --------
-        get_factors
 
         Examples
         --------

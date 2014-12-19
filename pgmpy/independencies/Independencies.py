@@ -60,10 +60,6 @@ class Independencies:
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
 
-        See Also
-        --------
-        add_assertions
-
         Examples
         --------
         >>> independencies = Independencies(['X', 'Y', 'Z'])
@@ -199,10 +195,6 @@ class IndependenceAssertion:
         """
         Returns a tuple of the attributes: variable, independent_of, given.
 
-        See Also
-        --------
-        set_assertion
-
         Examples
         --------
         >>> asser = IndependenceAssertion('X', 'Y', 'Z')
@@ -232,10 +224,6 @@ class IndependenceAssertion:
 
         event3: String or list of strings.
                 Random Variables given which event1 is independent of event2.
-
-        See Also
-        --------
-        get_assertion
 
         Example
         -------
