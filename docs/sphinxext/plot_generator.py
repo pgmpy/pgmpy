@@ -13,13 +13,24 @@ import token
 import tokenize
 import shutil
 import json
+import sys
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib import image
+except ImportError:
+    import mock
 
-from matplotlib import image
+    MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
+    for mod_name in MOCK_MODULES:
+        sys.modules[mod_name] = mock.Mock()
 
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib import image
 
 RST_TEMPLATE = """
 .. _{sphinx_tag}:
