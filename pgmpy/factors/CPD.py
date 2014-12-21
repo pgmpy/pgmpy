@@ -67,6 +67,10 @@ class TabularCPD(Factor):
                  evidence=None, evidence_card=None):
 
         self.variable = variable
+        self.variable_card = None
+        self.evidence = None
+        self.evidence_card = None
+
         variables = [variable]
 
         if not isinstance(variable_card, int):
@@ -74,50 +78,62 @@ class TabularCPD(Factor):
         self.variable_card = variable_card
 
         cardinality = [variable_card]
-        if isinstance(evidence_card, np.ndarray):
-            evidence_card = list(evidence_card)
-        if evidence_card:
+        if evidence_card is not None:
             if not isinstance(evidence_card, (list, set, tuple)):
-                evidence_card = [evidence_card]
+                # Dirty hack to work with numpy arrays
+                # TODO: fix this in a cleaner way
+                # Explicit is better than implicit.
+                if isinstance(evidence_card, np.ndarray):
+                    evidence_card = list(evidence_card)
+                elif isinstance(evidence_card, (int, float)):
+                    evidence_card = [evidence_card]
+                else:
+                    raise TypeError("Evidence cardinality must be list, set, "
+                                    "tuple, numpy ndarray or simply a number.")
+            self.evidence_card = evidence_card
             cardinality.extend(evidence_card)
         
-        if evidence:
+        if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
-                evidence = [evidence]
+                # Dirty hack to work with numpy arrays
+                # TODO: fix this in a cleaner way
+                # Explicit is better than implicit.
+                if isinstance(evidence_card, np.ndarray):
+                    evidence_card = list(evidence_card)
+                elif isinstance(evidence, str):
+                    evidence = [evidence]
+                else:
+                    raise TypeError("Evidence must be list, set, tuple or array"
+                                    " of strings.")
+            self.evidence = evidence
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
         values = np.array(values)
         if values.ndim != 2:
-            raise TypeError("Values must be a 3d list/array")
+            raise TypeError("Values must be a 2D list/array")
+
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
-    def marginalize(self, variables):
+    def get_cpd(self):
         """
-        Modifies the cpd table with marginalized values.
-
-        Paramters
-        ---------
-        variables: string, list-type
-            name of variable to be marginalized
-
-        Examples
-        --------
-        >>> from pgmpy.factors import TabularCPD
-        >>> cpd_table = TabularCPD('grade', 2,
-        ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-        ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.marginalize('diff')
-        >>> cpd_table.get_cpd()
-        array([[ 1.3,  0.8],
-               [ 0.7,  1.2]])
+        Returns the cpd
         """
-        super(TabularCPD, self).marginalize(variables)
+        if self.variable in self.variables:
+            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        else:
+            return self.values.reshape(1, np.prod(self.cardinality))
 
-    def normalize(self):
+    def normalize(self, inplace=True):
         """
-        Normalizes the cpd table
+        Normalizes the cpd table.
+
+        Parameters
+        ----------
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
 
         Examples
         --------
@@ -130,10 +146,54 @@ class TabularCPD(Factor):
         array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
                [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
         """
-        cpd = self.get_cpd()
-        self.values = (cpd / cpd.sum(axis=0)).flatten('C')
+        if inplace:
+            tabular_cpd = self
+        else:
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+        cpd = tabular_cpd.get_cpd()
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
-    def reduce(self, values):
+        if not inplace:
+            return tabular_cpd
+
+    def marginalize(self, variables, inplace=True):
+        """
+        Modifies the cpd table with marginalized values.
+        Paramters
+        ---------
+        variables: string, list-type
+            name of variable to be marginalized
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
+
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> cpd_table = TabularCPD('grade', 2,
+        ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
+        ...                        ['intel', 'diff'], [2, 2])
+        >>> cpd_table.marginalize('diff')
+        >>> cpd_table.get_cpd()
+        array([[ 0.48484848,  0.4       ],
+               [ 0.51515152,  0.6       ]])
+        """
+        if inplace:
+            tabular_cpd = self
+        else:
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+
+        super(TabularCPD, tabular_cpd).marginalize(variables)
+        tabular_cpd.normalize()
+
+        if not inplace:
+            return tabular_cpd
+
+    def reduce(self, values, inplace=True):
         """
         Reduces the cpd table to the context of given variable values.
 
@@ -141,6 +201,9 @@ class TabularCPD(Factor):
         ----------
         values: string, list-type
             name of the variable values
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
 
         Examples
         --------
@@ -153,20 +216,18 @@ class TabularCPD(Factor):
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
         """
-        if not isinstance(values, (list, set, tuple)):
-            values = [values]
-        variables = [var.split('_')[0] for var in values]
-        self.variable_card = variables.count(self.variable)
-        super(TabularCPD, self).reduce(values)
-
-    def get_cpd(self):
-        """
-        Returns the cpd
-        """
-        if self.variable in self.variables:
-            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        if inplace:
+            tabular_cpd = self
         else:
-            return self.values.reshape(1, np.prod(self.cardinality))
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+
+        super(TabularCPD, tabular_cpd).reduce(values)
+        tabular_cpd.normalize()
+
+        if not inplace:
+            return tabular_cpd
 
     def to_factor(self):
         return Factor(self.variables, self.cardinality, self.values)

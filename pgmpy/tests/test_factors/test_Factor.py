@@ -283,9 +283,9 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(self.cpd.variable_card, 3)
         self.assertListEqual(list(self.cpd.variables), ['grade', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
-        np_test.assert_array_equal(self.cpd.values, np.array([0.2, 0.2, 0.2,
-                                                              0.2, 0.2, 0.2,
-                                                              1.6, 1.6, 1.6]))
+        np_test.assert_array_equal(self.cpd.values, np.array([0.1, 0.1, 0.1,
+                                                              0.1, 0.1, 0.1,
+                                                              0.8, 0.8, 0.8]))
 
     def test_marginalize_2(self):
         self.cpd.marginalize('grade')
@@ -321,7 +321,7 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_reduce_4(self):
         self.cpd.reduce('grade_0')
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]]))
+        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[1, 1, 1, 1, 1, 1]]))
 
     def test_get_cpd(self):
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
