@@ -208,6 +208,7 @@ class BayesianModel(DirectedGraph):
         errors.
 
         * Checks if the sum of the probabilities for each state is equal to 1 (tol=0.01).
+        * Checks if the CPDs associated with nodes are consistent with their parents.
 
         Returns
         -------
@@ -217,8 +218,13 @@ class BayesianModel(DirectedGraph):
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
             if isinstance(cpd, TabularCPD):
-                if not np.allclose(np.sum(cpd.get_cpd(), axis=0),
-                                   np.ones(cpd.get_cpd().shape[1]),
+                evidence = cpd.evidence
+                parents = self.get_parents(node)
+                if set(evidence if evidence else []) != set(parents if parents else []):
+                    raise ValueError("CPD associated with %s doesn't have "
+                                     "proper parents associated with it." % node)
+                if not np.allclose(cpd.marginalize(node, inplace=False).values,
+                                   np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilites of states for node %s'
                                      ' is not equal to 1.' % node)

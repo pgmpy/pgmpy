@@ -2,6 +2,7 @@
 
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
+from collections import defaultdict
 
 
 class Inference:
@@ -50,38 +51,22 @@ class Inference:
     def __init__(self, model):
         self.variables = model.nodes()
         self.cardinality = {}
+        self.factors = defaultdict(list)
+
+        model.check_model()
+
         if isinstance(model, BayesianModel):
-            self.factors = {}
             for node in model.nodes():
                 cpd = model.get_cpds(node)
                 cpd_as_factor = cpd.to_factor()
-                parents = model.predecessors(node)
                 self.cardinality[node] = cpd.variable_card
 
-                # TODO: Add these checks
-                # if set(cpd_as_factor.variables) != set([node].extend(parents)):
-                #     raise ValueError('The cpd has wrong variables associated with it.')
-                # if cpd.marginalize(node) != np.ones(np.prod(cpd.cardinality[1:])):
-                #     raise ValueError('The values of the cpd are not correct')
-
                 for var in cpd.variables:
-                    try:
-                        self.factors[var].append(cpd_as_factor)
-                    except KeyError:
-                        self.factors[var] = [cpd_as_factor]
+                    self.factors[var].append(cpd_as_factor)
 
         elif isinstance(model, MarkovModel):
-            self.factors = {}
             for factor in model.get_factors():
-
-                if not set(factor.variables.keys()).issubset(set(self.variables)):
-                    raise ValueError('Factors are not consistent with the model')
-
-                for index in range(len(factor.variables)):
-                    self.cardinality[list(factor.variables.keys())[index]] = factor.cardinality[index]
+                self.cardinality = model.cardinalities
 
                 for var in factor.variables:
-                    try:
-                        self.factors[var].append(factor)
-                    except KeyError:
-                        self.factors[var] = [factor]
+                    self.factors[var].append(factor)

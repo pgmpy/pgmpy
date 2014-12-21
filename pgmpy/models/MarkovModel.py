@@ -174,13 +174,21 @@ class MarkovModel(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def _update_cardinalities(self, factors):
+    def check_model(self):
         """
-        Update the cardinalaties of all the random variables from factors.
-        If cardinality of variables doesn't match across all the factors, then
-        it will throw CardinalityError
+        Check the model for various errors. This method checks for the following
+        errors. In the same time also updates the cardinalities of all the random
+        variables.
+
+        * Checks if the cardinalities of all the variables are consistent across all the factors.
+        * Factors are defined for all the random variables.
+
+        Returns
+        -------
+        check: boolean
+            True if all the checks are passed
         """
-        for factor in factors:
+        for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if ((self.cardinalities[variable]) and
                         (self.cardinalities[variable] != cardinality)):
@@ -188,6 +196,11 @@ class MarkovModel(UndirectedGraph):
                         'Cardinality of variable %s not matching among factors' % variable)
                 else:
                     self.cardinalities[variable] = cardinality
+            for var1, var2 in itertools.combinations(factor.variables, 2):
+                if var2 not in self.neighbors(var1):
+                    raise ValueError("Factor inconsistent with the model.")
+
+        return True
 
     def to_factor_graph(self):
         """
@@ -276,7 +289,7 @@ class MarkovModel(UndirectedGraph):
         >>> G.add_factors(*phi)
         >>> G_chordal = G.triangulate()
         """
-        self._update_cardinalities(self.factors)
+        self.check_model()
 
         if self.is_triangulated():
             if inplace:
@@ -594,6 +607,8 @@ class MarkovModel(UndirectedGraph):
         >>> G.add_factors(*phi)
         >>> G.get_partition_function()
         """
+        self.check_model()
+
         factor = self.factors[0]
         factor = factor.product(*[self.factors[i] for i in
                                   range(1, len(self.factors))])
