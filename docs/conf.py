@@ -68,7 +68,8 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'numpy_ext.numpydoc',
-    'plot_generator'
+    'plot_generator',
+    'github_link'
 ]
 numpydoc_show_class_members = False
 
