@@ -161,6 +161,7 @@ class TabularCPD(Factor):
     def marginalize(self, variables, inplace=True):
         """
         Modifies the cpd table with marginalized values.
+
         Paramters
         ---------
         variables: string, list-type
