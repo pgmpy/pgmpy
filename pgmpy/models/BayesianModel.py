@@ -202,6 +202,28 @@ class BayesianModel(DirectedGraph):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
+    def check_model(self):
+        """
+        Check the model for various errors. This method checks for the following
+        errors.
+
+        * Checks if the sum of the probabilities for each state is equal to 1 (tol=0.01).
+
+        Returns
+        -------
+        check: boolean
+            True if all the checks are passed
+        """
+        for node in self.nodes():
+            cpd = self.get_cpds(node=node)
+            if isinstance(cpd, TabularCPD):
+                if not np.allclose(np.sum(cpd.get_cpd(), axis=0),
+                                   np.ones(cpd.get_cpd().shape[1]),
+                                   atol=0.01):
+                    raise ValueError('Sum of probabilites of states for node %s'
+                                     ' is not equal to 1.' % node)
+        return True
+
     def _get_ancestors_of(self, obs_nodes_list):
         """
         Returns a list of all ancestors of all the observed nodes.
@@ -456,25 +478,36 @@ class BayesianModel(DirectedGraph):
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
         """
         from pgmpy.factors import TabularCPD
-        self.cpds = []
+
+        cpds_list = []
+
+        get_node_card = lambda _node, _data: _data.ix[:, _node].value_counts().shape[0]
+        node_card = {_node: get_node_card(_node, data) for _node in self.nodes()}
+
         for node in self.nodes():
-            if not nx.ancestors(self, node):
+            parents = self.get_parents(node)
+            if not parents:
                 state_counts = data.ix[:, node].value_counts()
-                self.add_cpds(TabularCPD(node, state_counts.shape[0],
-                                        (state_counts / state_counts.sum()).values[:, np.newaxis]))
+                cpd = TabularCPD(node, node_card[node],
+                                 state_counts.values[:, np.newaxis])
+                cpd.normalize()
+                cpds_list.append(cpd)
             else:
-                state_counts = data.groupby([node] + self.predecessors(node)).count().iloc[:, 0]
-                values = (state_counts / state_counts.sum()).values
-                parent_card = np.array([])
-                for u in self.predecessors(node):
-                    parent_card = np.append(parent_card, data.ix[:, u].value_counts().shape[0])
-                var_card = data.ix[:, node].value_counts().shape[0]
-                self.add_cpds(TabularCPD(node, var_card, values.reshape(var_card, values.size / var_card),
-                                         evidence=list(nx.ancestors(self, node)),
-                                         evidence_card=parent_card.astype('int')))
+                parent_card = np.array([node_card[parent] for parent in parents])
+                var_card = node_card[node]
+                state_counts = data.groupby([node] + self.predecessors(node)).count()
+                values = state_counts.iloc[:, 0].reshape(var_card,
+                                                         np.product(parent_card))
+                cpd = TabularCPD(node, var_card, values,
+                                 evidence=parents,
+                                 evidence_card=parent_card.astype('int'))
+                cpd.normalize()
+                cpds_list.append(cpd)
+
+        self.add_cpds(*cpds_list)
 
     def get_factorized_product(self, latex=False):
-        #TODO: refer to IMap class for explanation why this is not implemented.
+        # TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
     def is_iequivalent(self, model):
