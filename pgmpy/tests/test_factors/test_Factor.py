@@ -470,8 +470,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
                               ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
-                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)
-        ])
+                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)])
 
     def test_add_edge(self):
         self.tree1.add_edge('yolo', 'yo', 0)

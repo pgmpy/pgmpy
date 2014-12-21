@@ -192,14 +192,16 @@ class TestBayesianModelFit(unittest.TestCase):
         self.model_connected = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
 
     def test_disconnected(self):
-        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)), columns=['A', 'B', 'C', 'D', 'E'])
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
         self.model_disconnected.fit(values)
 
         for node in ['A', 'B', 'C', 'D', 'E']:
             cpd = self.model_disconnected.get_cpds(node)
             self.assertEqual(cpd.variable, node)
             np_test.assert_array_equal(cpd.cardinality, np.array([2]))
-            value = (values.ix[:, node].value_counts() / values.ix[:, node].value_counts().sum()).values
+            value = (values.ix[:, node].value_counts() /
+                     values.ix[:, node].value_counts().sum()).values
             np_test.assert_array_equal(cpd.values, value)
 
     def tearDown(self):
