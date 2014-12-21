@@ -236,18 +236,20 @@ class MarkovModel(UndirectedGraph):
             The heuristic algorithm to use to decide the deletion order of
             the variables to compute the triangulated graph.
             Let X be the set of variables and X(i) denotes the i-th variable.
-                * S(i) - The size of the clique created by deleting the variable.
-                * E(i) - Cardinality of variable X(i).
-                * M(i) - The maximum size of the cliques of the subgraph given by X(i) and its adjacent nodes.
-                * C(i) - The sum of the size of cliques of the subgraph given by X(i)
-            and its adjacent nodes.
+
+            * S(i) - The size of the clique created by deleting the variable.
+            * E(i) - Cardinality of variable X(i).
+            * M(i) - Maximum size of cliques given by X(i) and its adjacent nodes.
+            * C(i) - Sum of size of cliques given by X(i) and its adjacent nodes.
+
             The heuristic algorithm decide the deletion order if this way:
-                * H1 - Delete the variable with minimal S(i).
-                * H2 - Delete the variable with minimal S(i)/E(i).
-                * H3 - Delete the variable with minimal S(i) - M(i).
-                * H4 - Delete the variable with minimal S(i) - C(i).
-                * H5 - Delete the variable with minimal S(i)/M(i).
-                * H6 - Delete the variable with minimal S(i)/C(i).
+
+            * H1 - Delete the variable with minimal S(i).
+            * H2 - Delete the variable with minimal S(i)/E(i).
+            * H3 - Delete the variable with minimal S(i) - M(i).
+            * H4 - Delete the variable with minimal S(i) - C(i).
+            * H5 - Delete the variable with minimal S(i)/M(i).
+            * H6 - Delete the variable with minimal S(i)/C(i).
 
         order: list, tuple (array-like)
             The order of deletion of the variables to compute the triagulated
