@@ -97,11 +97,6 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
         np_test.assert_array_equal(identity_factor.values, np.ones(8))
 
-    def test__str(self):
-
-        phi = Factor(['x1'], [2], np.ones(2))
-        self.assertEqual(repr(phi.__str__()), "'x1\\t\\tphi(x1)\\n------------------------\\nx1_0\\t\\t1.0\\nx1_1\\t\\t1.0\\n'")
-
     def test_factor_product(self):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
