@@ -358,19 +358,30 @@ class Factor:
         return factor_divide(self, factor)
 
     def __str__(self):
-        return self._str('phi')
+        return self._str(html=False)
 
-    def _str(self, phi_or_p):
-        string = ""
-        for var in self.variables:
-            string += str(var) + "\t\t"
-        string += phi_or_p + '(' + ', '.join(self.variables) + ')'
-        string += "\n"
-        string += '-' * 2 * len(string) + '\n'
+    def _str(self, html=False):
+        string_list = []
+        if html:
+            html_string_header = """<table><caption>Factor</caption>"""
+            string_list.append(html_string_header)
 
-        #fun and gen are functions to generate the different values of variables in the table.
-        #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
-        #by 1.
+        if html:
+            html_string_header = "%s%s%s" % ("""<tr>""",
+            ''.join(["""<td><b>%s</b></td>""" % var for var in self.variables]),
+            """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
+            string_list.append(html_string_header)
+        else:
+            string_header = "%s\t\t%s" % ("\t\t".join(self.variables),
+                                          "phi(%s)" % ', '.join(self.variables))
+            string_list.append(string_header)
+            string_list.append('-' * (2 * len(string_header)))
+
+        # fun and gen are functions to generate the different values of
+        # variables in the table.
+        # gen starts with giving fun initial value of b=[0, 0, 0] then fun tries
+        # to increment it
+        # by 1.
         def fun(b, index=len(self.cardinality)-1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
@@ -386,11 +397,24 @@ class Factor:
 
         value_index = 0
         for prob in gen():
-            prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t\t'.join(prob_list) + '\t\t' + str(self.values[value_index]) + '\n'
+            prob_list = ["%s_%d" % (list(self.variables)[i], prob[i])
+                         for i in range(len(self.variables))]
+            if html:
+                html_string = """<tr>%s<td>%4.4f</td></tr>""" % (
+                    ''.join(["""<td>%s</td>""" % assignment
+                             for assignment in prob_list]),
+                    self.values[value_index])
+                string_list.append(html_string)
+            else:
+                string = "%s\t\t%4.4f" % ("\t\t".join(prob_list),
+                                          self.values[value_index])
+                string_list.append(string)
             value_index += 1
 
-        return string
+        return "\n".join(string_list)
+
+    def _repr_html_(self):
+        return self._str(html=True)
 
     def __mul__(self, other):
         return self.product(other)

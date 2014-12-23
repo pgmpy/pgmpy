@@ -91,7 +91,7 @@ class TabularCPD(Factor):
                     raise TypeError("Evidence cardinality must be list, set, "
                                     "tuple, numpy ndarray or simply a number.")
             self.evidence_card = evidence_card
-            cardinality.extend(evidence_card)
+            cardinality.extend(evidence_card[::-1])
         
         if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
@@ -106,7 +106,7 @@ class TabularCPD(Factor):
                     raise TypeError("Evidence must be list, set, tuple or array"
                                     " of strings.")
             self.evidence = evidence
-            variables.extend(evidence)
+            variables.extend(evidence[::-1])
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
@@ -124,6 +124,57 @@ class TabularCPD(Factor):
             return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
         else:
             return self.values.reshape(1, np.prod(self.cardinality))
+
+    def _repr_html_(self):
+        """
+        Print TabularCPD in form of a table in IPython Notebook
+        """
+        string_list = []
+
+        cpd_value = self.get_cpd()
+
+        html_string_header = (
+            """<table><caption>TabularCPD for <b>%s</b></caption>""" % self.variable)
+        string_list.append(html_string_header)
+
+        if self.evidence:
+            cpd_evidence_card = [card for card in self.evidence_card]
+            cpd_evidence_card = cpd_evidence_card[::-1]
+            cpd_evidence_card.insert(0, 1)
+            cum_card = np.cumprod(cpd_evidence_card)
+            max_card = cum_card[-1]
+
+            evidence = [var for var in self.evidence]
+            evidence = evidence[::-1]
+
+            for i in range(len(evidence)):
+                var = evidence[i]
+                card = cpd_evidence_card[i + 1]
+                num_repeat = cum_card[i]
+                col_span = max_card / (num_repeat * card)
+
+                html_substring_header = """<tr><td><b>%s</b></td>""" % var
+                string_list.append(html_substring_header)
+
+                for j in range(num_repeat):
+                    for k in range(card):
+                        html_substring = ("<td colspan=%d>%s_%d</td>" %
+                                          (col_span, var, k))
+                        string_list.append(html_substring)
+                string_list.append("</tr>")
+
+        m, n = cpd_value.shape
+        for i in range(m):
+            html_substring = """<tr><td><b>%s_%d</b></td>""" % (self.variable, i)
+            string_list.append(html_substring)
+            for j in range(n):
+                html_substring = """<td>%4.4f</td>""" % cpd_value[i, j]
+                string_list.append(html_substring)
+            string_list.append("</tr>")
+
+        string_list.append("</table>")
+
+        return ''.join(string_list)
 
     def normalize(self, inplace=True):
         """
