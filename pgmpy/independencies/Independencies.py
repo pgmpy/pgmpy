@@ -49,9 +49,7 @@ class Independencies:
                 self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
     def __str__(self):
-        string = ""
-        for assertion in self.independencies:
-            string += assertion.__str__() + '\n'
+        string = '\n'.join([str(assertion) for assertion in self.independencies])
         return string
 
     __repr__ = __str__
@@ -62,6 +60,7 @@ class Independencies:
 
         Examples
         --------
+        >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies(['X', 'Y', 'Z'])
         >>> independencies.get_independencies()
         """
@@ -78,6 +77,7 @@ class Independencies:
 
         Examples
         --------
+        >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies()
         >>> independencies.add_assertions(['X', 'Y', 'Z'])
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
@@ -141,6 +141,7 @@ class IndependenceAssertion:
 
     Examples
     --------
+    >>> from pgmpy.independencies import IndependenceAssertion
     >>> assertion = IndependenceAssertion('U', 'X')
     >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
     >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
@@ -176,7 +177,8 @@ class IndependenceAssertion:
         self.event3 = set(self._return_list_if_str(event3))
 
     def __str__(self):
-        return ', '.join(self.event1) + ' _|_ ' + ', '.join(self.event2) + ' | ' + ', '.join(self.event3)
+        return ('%s _|_ %s | %s' % (', '.join(self.event1), ', '.join(self.event2),
+                                    ', '.join(self.event3)))
 
     __repr__ = __str__
 
@@ -197,6 +199,7 @@ class IndependenceAssertion:
 
         Examples
         --------
+        >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion('X', 'Y', 'Z')
         >>> asser.get_assertion()
         """
@@ -228,6 +231,7 @@ class IndependenceAssertion:
         Example
         -------
         For a random variable U independent of X and Y given Z, the function should be called as
+        >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion()
         >>> asser.set_assertion('U', ['X', 'Y'], 'Z')
         >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
@@ -235,4 +239,5 @@ class IndependenceAssertion:
         self.__init__(event1, event2, event3)
 
     def latex_string(self):
-        return ', '.join(self.event1) + ' \perp ' + ', '.join(self.event2) + ' \mid ' + ', '.join(self.event3)
+        return ('%s \perp %s \mid %s' % (', '.join(self.event1), ', '.join(self.event2),
+                                         ', '.join(self.event3)))
