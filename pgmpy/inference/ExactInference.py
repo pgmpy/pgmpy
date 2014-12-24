@@ -41,8 +41,10 @@ class VariableElimination(Inference):
                                      set(variables) -
                                      set(evidence.keys() if evidence else []))
 
-        elif any(var in elimination_order for var in set(variables).union(set(evidence.keys() if evidence else []))):
-            raise ValueError("elimination_order contains variables which are in variables or evidence args")
+        elif any(var in elimination_order for var in
+                 set(variables).union(set(evidence.keys() if evidence else []))):
+            raise ValueError("Elimination order contains variables which are in"
+                             " variables or evidence args")
 
         for var in elimination_order:
             # Removing all the factors containing the variables which are
@@ -65,11 +67,12 @@ class VariableElimination(Inference):
 
         query_var_factor = {}
         for query_var in variables:
-            phi = factor_product(*final_distribution).marginalize(
-                list(set(variables) - set([query_var])), inplace=False)
+            phi = factor_product(*final_distribution)
+            phi.marginalize(list(set(variables) - set([query_var])))
             if evidence:
                 phi.reduce(['{evidence_var}_{evidence}'.format(
-                    evidence_var=evidence_var, evidence=evidence[evidence_var]) for evidence_var in evidence])
+                    evidence_var=evidence_var, evidence=evidence[evidence_var])
+                    for evidence_var in evidence])
                 phi.normalize()
 
             query_var_factor[query_var] = phi
