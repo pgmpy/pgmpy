@@ -5,24 +5,77 @@ from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
-    def query(self, variables, conditions, elimination_order=None):
+    def query(self, variables, evidence=None, elimination_order=None):
         """
+        Parameters
+        ----------
+        variables: list
+            list of variables for which you want to compute the probability
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+
         Examples
         --------
+        >>> from pgmpy.inference import VariableElimination
         >>> from pgmpy.models import BayesianModel
-        >>> bm = BayesianModel([('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e')])
-        >>> # add cpds
-        >>> VariableElimination(bm).query(variables={'c':{}})
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.query(['A', 'B'])
         """
-        if not elimination_order:
-            elimination_order = list(set(self.variables) - set(variables.keys()) - set(conditions.keys()))
+        eliminated_variables = set()
+        working_factors = {node: [factor for factor in self.factors[node]]
+                           for node in self.factors}
 
-        for node in elimination_order:
-            working_factors = self.factors
-            phi = factor_product(*working_factors[node]).marginalize(node)
-            del working_factors[node]
-            for var in phi.variables:
-                try:
-                    working_factors[var].append(phi)
-                except KeyError:
-                    working_factors[var] = [phi]
+        # TODO: Modify it to find the optimal elimination order
+        if not elimination_order:
+            elimination_order = list(set(self.variables) -
+                                     set(variables) -
+                                     set(evidence.keys() if evidence else []))
+
+        elif any(var in elimination_order for var in
+                 set(variables).union(set(evidence.keys() if evidence else []))):
+            raise ValueError("Elimination order contains variables which are in"
+                             " variables or evidence args")
+
+        for var in elimination_order:
+            # Removing all the factors containing the variables which are
+            # eliminated (as all the factors should be considered only once)
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor.variables).intersection(eliminated_variables)]
+            phi = factor_product(*factors)
+            phi.marginalize(var)
+            del working_factors[var]
+            for variable in phi.variables:
+                working_factors[variable].append(phi)
+            eliminated_variables.add(var)
+
+        final_distribution = set()
+        for node in working_factors:
+            factors = working_factors[node]
+            for factor in factors:
+                if not set(factor.variables).intersection(eliminated_variables):
+                    final_distribution.add(factor)
+
+        query_var_factor = {}
+        for query_var in variables:
+            phi = factor_product(*final_distribution)
+            phi.marginalize(list(set(variables) - set([query_var])))
+            if evidence:
+                phi.reduce(['{evidence_var}_{evidence}'.format(
+                    evidence_var=evidence_var, evidence=evidence[evidence_var])
+                    for evidence_var in evidence])
+                phi.normalize()
+
+            query_var_factor[query_var] = phi
+
+        return query_var_factor
+
