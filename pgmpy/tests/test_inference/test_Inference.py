@@ -37,19 +37,19 @@ class TestInferenceBase(unittest.TestCase):
                                                       'd': 2, 'e': 2})
         self.assertIsInstance(infer_bayesian.factors, defaultdict)
         self.assertEqual(set(infer_bayesian.factors['a']),
-                         {[self.bayesian.get_cpds('a').to_factor(),
-                           self.bayesian.get_cpds('b').to_factor()]})
+                         set([self.bayesian.get_cpds('a').to_factor(),
+                              self.bayesian.get_cpds('b').to_factor()]))
         self.assertEqual(set(infer_bayesian.factors['b']),
-                         {[self.bayesian.get_cpds('b').to_factor(),
-                           self.bayesian.get_cpds('c').to_factor()]})
+                         set([self.bayesian.get_cpds('b').to_factor(),
+                              self.bayesian.get_cpds('c').to_factor()]))
         self.assertEqual(set(infer_bayesian.factors['c']),
-                         {[self.bayesian.get_cpds('c').to_factor(),
-                           self.bayesian.get_cpds('d').to_factor()]})
+                         set([self.bayesian.get_cpds('c').to_factor(),
+                              self.bayesian.get_cpds('d').to_factor()]))
         self.assertEqual(set(infer_bayesian.factors['d']),
-                         {[self.bayesian.get_cpds('d').to_factor(),
-                           self.bayesian.get_cpds('e').to_factor()]})
+                         set([self.bayesian.get_cpds('d').to_factor(),
+                              self.bayesian.get_cpds('e').to_factor()]))
         self.assertEqual(set(infer_bayesian.factors['e']),
-                         {[self.bayesian.get_cpds('e').to_factor()]})
+                         set([self.bayesian.get_cpds('e').to_factor()]))
 
     def test_markov_inference_init(self):
         infer_markov = Inference(self.markov)
