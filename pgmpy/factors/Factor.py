@@ -414,7 +414,17 @@ class Factor:
         return "\n".join(string_list)
 
     def _repr_html_(self):
-        return self._str(html=True)
+        # Checks for IPython Notebook, not required in IPython 3
+        try:
+            ip = get_ipython()
+            front_end = (
+                ip.config.get('KernelApp', {}).get('parent_appname', "") or
+                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
+            )
+            if 'notebook' in front_end.lower():
+                return self._str(html=True)
+        except NameError:
+            return self._str(html=False)
 
     def __mul__(self, other):
         return self.product(other)
