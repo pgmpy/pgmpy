@@ -464,8 +464,8 @@ class BayesianModel(DirectedGraph):
 
         Parameters
         ----------
-        data : pandas dataframe object
-                A dataframe object with column names same as the variable names of network
+        data : pandas DataFrame object
+                A DataFrame object with column names same as the variable names of network
 
         Examples
         --------
