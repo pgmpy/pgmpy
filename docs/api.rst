@@ -57,6 +57,9 @@ inference module
 .. autoclass:: VariableElimination
    :members:
 
+.. autoclass:: BeliefPropagation
+   :members:
+
 independencies module
 ---------------------
 

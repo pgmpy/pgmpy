@@ -46,7 +46,7 @@ Probablistic Graphical Models (PGM).
    <div class="col-md-4">
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    api
    examples/index
