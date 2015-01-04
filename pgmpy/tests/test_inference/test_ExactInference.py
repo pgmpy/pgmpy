@@ -1,6 +1,9 @@
 from pgmpy.inference import VariableElimination
+from pgmpy.inference import BeliefPropagation
 from pgmpy.models import BayesianModel
+from pgmpy.models import JunctionTree
 from pgmpy.factors import TabularCPD
+from pgmpy.factors import Factor
 import unittest
 import numpy as np
 from numpy import testing
@@ -59,3 +62,56 @@ class TestVariableElimination(unittest.TestCase):
         testing.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.772727, 0.227273]))
 
+
+class TestBeliefPropagation(unittest.TestCase):
+    def setUp(self):
+        self.junction_tree = JunctionTree([(('A', 'B'), ('B', 'C')),
+                                           (('B', 'C'), ('C', 'D'))])
+        phi1 = Factor(['A', 'B'], [2, 3], range(6))
+        phi2 = Factor(['B', 'C'], [3, 2], range(6))
+        phi3 = Factor(['C', 'D'], [2, 2], range(4))
+        self.junction_tree.add_factors(phi1, phi2, phi3)
+        self.belief_propagation = BeliefPropagation(self.junction_tree)
+
+    def test_calibrate_clique_belief(self):
+        self.belief_propagation.calibrate()
+        clique_belief = self.belief_propagation.get_clique_beliefs()
+
+        phi1 = Factor(['A', 'B'], [2, 3], range(6))
+        phi2 = Factor(['B', 'C'], [3, 2], range(6))
+        phi3 = Factor(['C', 'D'], [2, 2], range(4))
+
+        b_A_B = phi1 * (phi3.marginalize('D', inplace=False) *
+                        phi2).marginalize('C', inplace=False)
+        b_B_C = phi2 * (phi1.marginalize('A', inplace=False) *
+                        phi3.marginalize('D', inplace=False))
+        b_C_D = phi3 * (phi1.marginalize('A', inplace=False) *
+                        phi2).marginalize('B', inplace=False)
+
+        testing.assert_array_almost_equal(clique_belief[('A', 'B')].values,
+                                          b_A_B.values)
+        testing.assert_array_almost_equal(clique_belief[('B', 'C')].values,
+                                          b_B_C.values)
+        testing.assert_array_almost_equal(clique_belief[('C', 'D')].values,
+                                          b_C_D.values)
+
+    def test_calibrate_sepset_belief(self):
+        self.belief_propagation.calibrate()
+        sepset_belief = self.belief_propagation.get_sepset_beliefs()
+
+        phi1 = Factor(['A', 'B'], [2, 3], range(6))
+        phi2 = Factor(['B', 'C'], [3, 2], range(6))
+        phi3 = Factor(['C', 'D'], [2, 2], range(4))
+
+        b_B = (phi1 * (phi3.marginalize('D', inplace=False) *
+                       phi2).marginalize('C', inplace=False)).marginalize(
+            'A', inplace=False)
+
+        b_C = (phi2 * (phi1.marginalize('A', inplace=False) *
+                       phi3.marginalize('D', inplace=False))).marginalize(
+            'B', inplace=False)
+
+        testing.assert_array_almost_equal(sepset_belief[frozenset('B')].values,
+                                          b_B.values)
+        testing.assert_array_almost_equal(sepset_belief[frozenset('C')].values,
+                                          b_C.values)

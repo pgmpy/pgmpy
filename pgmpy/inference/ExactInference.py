@@ -2,6 +2,7 @@
 
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
+import numpy as np
 
 
 class VariableElimination(Inference):
@@ -79,3 +80,158 @@ class VariableElimination(Inference):
 
         return query_var_factor
 
+
+class BeliefPropagation(Inference):
+    """
+    Class for performing inference using Belief Propagation method.
+
+    Creates a Junction Tree or Clique Tree (JunctionTree class) for the input
+    probabilistic graphical model and performs calibration of the junction tree
+    so formed using belief propagation.
+
+    Parameters
+    ----------
+    model: BayesianModel, MarkovModel, FactorGraph, JunctionTree
+        model for which inference is to performed
+    """
+    def __init__(self, model):
+        from pgmpy.models import JunctionTree
+
+        super(BeliefPropagation, self).__init__(model)
+
+        if not isinstance(model, JunctionTree):
+            self.junction_tree = model.to_junction_tree()
+        else:
+            self.junction_tree = model
+
+        self.clique_beliefs = {}
+        self.sepset_beliefs = {}
+
+    def get_cliques(self):
+        """
+        Returns cliques used for belief propagation.
+        """
+        return self.junction_tree.nodes()
+
+    def get_clique_beliefs(self):
+        """
+        Returns clique beliefs. Should be called after the clique tree (or
+        junction tree) is calibrated.
+        """
+        return self.clique_beliefs
+
+    def get_sepset_beliefs(self):
+        """
+        Returns sepset beliefs. Should be called after clique tree (or junction
+        tree) is calibrated.
+        """
+        return self.sepset_beliefs
+
+    def calibrate(self):
+        """
+        Calibration using belief propagation in junction tree or clique tree.
+
+        Uses Lauritzen-Spiegelhalter algorithm or belief-update message passing.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.inference import BeliefPropagation
+        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                    ('intel', 'SAT'), ('grade', 'letter')])
+        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD('grade', 3,
+        ...                        [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...                         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ...                         [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        ...                        evidence=['diff', 'intel'],
+        ...                        evidence_card=[2, 3])
+        >>> sat_cpd = TabularCPD('SAT', 2,
+        ...                      [[0.1, 0.2, 0.7],
+        ...                       [0.9, 0.8, 0.3]],
+        ...                      evidence=['intel'], evidence_card=[3])
+        >>> letter_cpd = TabularCPD('letter', 2,
+        ...                         [[0.1, 0.4, 0.8],
+        ...                          [0.9, 0.6, 0.2]],
+        ...                         evidence=['grade'], evidence_card=[3])
+        >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
+        >>> bp = BeliefPropagation(G)
+        >>> bp.calibrate()
+
+        Reference
+        ---------
+        Algorithm 10.3 Calibration using belief propagation in clique tree
+        Probabilistic Graphical Models: Principles and Techniques
+        Daphne Koller and Nir Friedman.
+        """
+        import networkx as nx
+
+        # Initialize clique beliefs as well as sepset beliefs
+        self.clique_beliefs = {clique: self.junction_tree.get_factors(clique)
+                               for clique in self.junction_tree.nodes()}
+        self.sepset_beliefs = {frozenset(x[0]).intersection(frozenset(x[1])): None
+                               for x in self.junction_tree.edges()}
+
+        def _update_beliefs(sending_clique, recieving_clique):
+            """
+            This is belief-update method.
+
+            Takes belief of one clique and uses it to update the belief of the
+            neighboring ones.
+            """
+            sepset = frozenset(sending_clique).intersection(frozenset(recieving_clique))
+            print(sending_clique, sepset, recieving_clique)
+
+            # \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
+            # marginalize the clique over the sepset
+            sigma = self.clique_beliefs[sending_clique].marginalize(
+                list(frozenset(sending_clique) - sepset), inplace=False)
+            print(sigma)
+
+            # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
+            self.clique_beliefs[recieving_clique] *= (sigma / self.sepset_beliefs[sepset]
+                                                      if self.sepset_beliefs[sepset] else sigma)
+            print(self.clique_beliefs[recieving_clique])
+
+            # \mu_{i, j} = \sigma_{i \rightarrow j}
+            self.sepset_beliefs[sepset] = sigma
+            print(self.sepset_beliefs[sepset])
+
+        def _converged():
+            """
+            Checks whether the calibration has converged or not. At convergence
+            the sepset belief would be precisely the sepset marginal.
+
+            Formally, at convergence this condition would be satisified
+
+            \sum_{C_i - S_{i, j}} \beta_i = \sum_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
+            """
+            for edge in self.junction_tree.edges():
+                sepset = frozenset(edge[0]).intersection(frozenset(edge[1]))
+                marginal_1 = self.clique_beliefs[edge[0]].marginalize(
+                    list(frozenset(edge[0]) - sepset), inplace=False)
+                marginal_2 = self.clique_beliefs[edge[1]].marginalize(
+                    list(frozenset(edge[1]) - sepset), inplace=False)
+                if not np.allclose(marginal_1.values, marginal_2.values, rtol=1e-4):
+                    return False
+
+            return True
+
+        for clique in self.junction_tree.nodes():
+            if not _converged():
+                neighbors = self.junction_tree.neighbors(clique)
+                # update root's belief using nieighbor clique's beliefs
+                # upward pass
+                for neighbor_clique in neighbors:
+                    _update_beliefs(neighbor_clique, clique)
+                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(
+                    self.junction_tree, clique)
+                # update the beliefs of all the nodes starting from the root to
+                # leaves using root's belief
+                # downward pass
+                for edge in bfs_edges:
+                    _update_beliefs(edge[0], edge[1])
+            else:
+                break
