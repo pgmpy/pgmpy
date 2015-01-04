@@ -443,7 +443,8 @@ class MarkovModel(UndirectedGraph):
         # weight of the edges being the length of sepset between two cliques
         complete_graph = UndirectedGraph()
         edges = list(itertools.combinations(cliques, 2))
-        weights = list(map(lambda x: len(set(x[0]) - set(x[1])), edges))
+        weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))),
+                           edges))
         for edge, weight in zip(edges, weights):
             complete_graph.add_edge(*edge, weight=-weight)
 
