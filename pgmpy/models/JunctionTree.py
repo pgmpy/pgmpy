@@ -227,11 +227,35 @@ class JunctionTree(UndirectedGraph):
         >>> G.add_factors(phi1, phi2, phi3)
         >>> G.get_partition_function()
         """
-        factor = self.factors[0]
-        factor = factor.product(*[self.factors[i] for i in
-                                  range(1, len(self.factors))])
-        vars = set([var for cluster in self.nodes() for var in cluster])
-        if set(factor.scope()) != vars:
-            raise ValueError('Factor for all the random variables not defined.')
+        if self.check_model():
+            factor = self.factors[0]
+            factor = factor.product(*[self.factors[i] for i in
+                                      range(1, len(self.factors))])
+            return np.sum(factor.values)
 
-        return np.sum(factor.values)
+    def check_model(self):
+        """
+        Check the model for various errors. This method checks for the following
+        errors.
+
+        * Checks if clique potentials are defined for all the cliques or not.
+        * Check for running intersection property is not done explicitly over
+        here as it done in the add_edges method.
+
+        Returns
+        -------
+        check: boolean
+            True if all the checks are passed
+        """
+        for clique in self.nodes():
+            if self.get_factors(clique):
+                pass
+            else:
+                raise ValueError('Factors for all the cliques or clusters not'
+                                 'defined.')
+
+        if len(self.factors) != len(self.nodes()):
+            raise ValueError('One to one mapping of factor to clique or cluster'
+                             'is not there.')
+
+        return True
