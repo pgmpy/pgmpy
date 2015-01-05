@@ -281,11 +281,11 @@ class Factor:
             factor = Factor(self.scope(), self.cardinality, self.values)
 
         for value in values:
-            if not '_' in value:
+            if '_' not in value:
                 raise TypeError("Values should be in the form of "
                                 "variablename_index")
             var, value_index = value.split('_')
-            if not var in factor.variables:
+            if var not in factor.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
             index = list(factor.variables.keys()).index(var)
             if not (int(value_index) < factor.cardinality[index]):
@@ -367,9 +367,9 @@ class Factor:
             string_list.append(html_string_header)
 
         if html:
-            html_string_header = "%s%s%s" % ("""<tr>""",
-            ''.join(["""<td><b>%s</b></td>""" % var for var in self.variables]),
-            """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
+            html_string_header = "%s%s%s" % ("""<tr>""", ''.join(
+                ["""<td><b>%s</b></td>""" % var for var in self.variables]),
+                """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
             string_list.append(html_string_header)
         else:
             string_header = "%s\t\t%s" % ("\t\t".join(self.variables),
