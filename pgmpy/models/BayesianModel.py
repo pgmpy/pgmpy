@@ -8,7 +8,7 @@ import pandas as pd
 
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
-from pgmpy.inference import VariableElimination
+
 
 class BayesianModel(DirectedGraph):
     """
@@ -583,6 +583,8 @@ class BayesianModel(DirectedGraph):
                1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1,
                1, 1, 1, 0, 0, 0, 1, 0])
         """
+        from pgmpy.inference import VariableElimination
+
         if set(data.columns) == set(self.nodes()):
             raise ValueError("No variable missing in data. Nothing to predict")
 
