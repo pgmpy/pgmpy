@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.exceptions import CardinalityError
 from networkx.algorithms import bipartite
 import itertools
 from collections import defaultdict
@@ -138,6 +139,37 @@ class FactorGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
+    def check_model(self):
+        """
+        Check the model for various errors. This method checks for the following
+        errors. In the same time it also updates the cardinalities of all the
+        random variables.
+
+        * Check whether bipartite property of factor graph is still maintained
+        or not. (This check is not done explicitly here as it done in add_edges() method)
+        * Check whether factors are associated for all the random variables or not.
+        * Check if factors are defined for each factor node of not.
+        * Check if cardinality of random variable remains same across all the
+        factors.
+        """
+        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
+        if not bipartite.is_bipartite_node_set(self, variable_nodes):
+            raise ValueError('Factors not associated for all the random'
+                             'variables.')
+
+        factor_nodes = set(self.nodes()) - set(variable_nodes)
+        if len(factor_nodes) != len(self.factors):
+            raise ValueError('Factors not associated with all the factor nodes.')
+
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                if ((self.cardinalities[variable]) and
+                        (self.cardinalities[variable] != cardinality)):
+                    raise CardinalityError(
+                        'Cardinality of variable %s not matching among factors' % variable)
+                else:
+                    self.cardinalities[variable] = cardinality
+
     def get_variable_nodes(self):
         """
         Returns variable nodes present in the graph.
@@ -160,16 +192,14 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_variable_nodes()
         ['a', 'b']
         """
-        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
-        if not bipartite.is_bipartite_node_set(self, variable_nodes):
-            raise ValueError('Factors not associated for all the random'
-                             'variables.')
+        self.check_model()
 
+        variable_nodes = set([x for factor in self.factors for x in factor.scope()])
         return list(variable_nodes)
 
     def get_factor_nodes(self):
         """
-        Returns variable nodes present in the graph.
+        Returns factors nodes present in the graph.
 
         Before calling this method make sure that all the factors are added
         properly.
@@ -189,12 +219,10 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_factor_nodes()
         ['phi1', 'phi2']
         """
+        self.check_model()
+
         variable_nodes = self.get_variable_nodes()
         factor_nodes = set(self.nodes()) - set(variable_nodes)
-
-        if len(factor_nodes) != len(self.factors):
-            raise ValueError('Factors not associated with all the factor nodes.')
-
         return list(factor_nodes)
 
     def to_markov_model(self):
