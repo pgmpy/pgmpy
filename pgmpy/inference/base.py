@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
-
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.exceptions import ModelError
+
 
 class Inference:
     """

@@ -460,6 +460,46 @@ class BayesianModel(DirectedGraph):
 
         return mm
 
+    def to_junction_tree(self):
+        """
+        Creates a junction tree (or clique tree) for a given bayesian model.
+
+        For converting a Bayesian Model into a Clique tree, first it is converted
+        into a Markov one.
+
+        For a given markov model (H) a junction tree (G) is a graph
+        1. where each node in G corresponds to a maximal clique in H
+        2. each sepset in G separates the variables strictly on one side of the
+        edge to other.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        ...                    ('intel', 'SAT'), ('grade', 'letter')])
+        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD('grade', 3,
+        ...                        [[0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.8,0.8,0.8,0.8,0.8,0.8]],
+        ...                        evidence=['diff', 'intel'],
+        ...                        evidence_card=[2, 3])
+        >>> sat_cpd = TabularCPD('SAT', 2,
+        ...                      [[0.1, 0.2, 0.7],
+        ...                       [0.9, 0.8, 0.3]],
+        ...                      evidence=['intel'], evidence_card=[3])
+        >>> letter_cpd = TabularCPD('letter', 2,
+        ...                         [[0.1, 0.4, 0.8],
+        ...                          [0.9, 0.6, 0.2]],
+        ...                         evidence=['grade'], evidence_card=[3])
+        >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
+        >>> jt = G.to_junction_tree()
+        """
+        mm = self.to_markov_model()
+        return mm.to_junction_tree()
+
     def fit(self, data):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.

@@ -18,28 +18,54 @@ Probablistic Graphical Models (PGM).
 * Uses SciPy stack and NetworkX for mathematical and graph operations respectively.
 * Provides interface to existing PGM algorithms.
 
-Getting Started
----------------
+.. raw:: html
+
+   <div class="container-fluid">
+   <div class="row">
+   <div class="col-md-4">
+   <h2>Getting Started</h2>
+   </div>
+   <div class="col-md-4">
+   <h2>Documentation</h2>
+   </div>
+   <div class="col-md-4">
+   <h2>Wiki</h2>
+   </div>
+   </div>
+   <div class="row">
+   <div class="col-md-4">
 
 .. toctree::
    :maxdepth: 2
 
    install
 
-Documentation and Examples
---------------------------
+.. raw:: html
+
+   </div>
+   <div class="col-md-4">
+
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    api
    examples/index
 
-Wiki
-----
+.. raw:: html
+
+   </div>
+   <div class="col-md-4">
+
 .. toctree::
    :maxdepth: 2
 
    wiki
+
+.. raw:: html
+
+   </div>
+   </div>
+   </div>
 
 Community
 =========

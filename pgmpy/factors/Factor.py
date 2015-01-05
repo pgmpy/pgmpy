@@ -281,11 +281,11 @@ class Factor:
             factor = Factor(self.scope(), self.cardinality, self.values)
 
         for value in values:
-            if not '_' in value:
+            if '_' not in value:
                 raise TypeError("Values should be in the form of "
                                 "variablename_index")
             var, value_index = value.split('_')
-            if not var in factor.variables:
+            if var not in factor.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
             index = list(factor.variables.keys()).index(var)
             if not (int(value_index) < factor.cardinality[index]):
@@ -367,9 +367,9 @@ class Factor:
             string_list.append(html_string_header)
 
         if html:
-            html_string_header = "%s%s%s" % ("""<tr>""",
-            ''.join(["""<td><b>%s</b></td>""" % var for var in self.variables]),
-            """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
+            html_string_header = "%s%s%s" % ("""<tr>""", ''.join(
+                ["""<td><b>%s</b></td>""" % var for var in self.variables]),
+                """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
             string_list.append(html_string_header)
         else:
             string_header = "%s\t\t%s" % ("\t\t".join(self.variables),
@@ -414,7 +414,17 @@ class Factor:
         return "\n".join(string_list)
 
     def _repr_html_(self):
-        return self._str(html=True)
+        # Checks for IPython Notebook, not required in IPython 3
+        try:
+            ip = get_ipython()
+            front_end = (
+                ip.config.get('KernelApp', {}).get('parent_appname', "") or
+                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
+            )
+            if 'notebook' in front_end.lower():
+                return self._str(html=True)
+        except NameError:
+            return self._str(html=False)
 
     def __mul__(self, other):
         return self.product(other)
@@ -440,7 +450,7 @@ class Factor:
                     ' '.join(list(map(str, self.values))))
 
 
-def _bivar_factor_operation(phi1, phi2, operation):
+def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
 
@@ -454,6 +464,12 @@ def _bivar_factor_operation(phi1, phi2, operation):
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
     """
+    try:
+        from joblib import Parallel, delayed
+        use_joblib = True
+    except ImportError:
+        use_joblib = False
+
     np.seterr(divide='raise')
 
     phi1_vars = list(phi1.variables)
@@ -470,23 +486,41 @@ def _bivar_factor_operation(phi1, phi2, operation):
         phi1_indexes = [i for i in range(len(phi1.variables))]
         phi2_indexes = [variables.index(var) for var in phi2.variables]
         values = []
-        phi1_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
+        phi1_cumprod = np.delete(np.concatenate(
+            (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
+        phi2_cumprod = np.delete(np.concatenate(
+            (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
         from itertools import product
+
         if operation == 'M':
-            for index in product(*[range(card) for card in cardinality]):
-                index = np.array(index)
-                values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-                              phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-        elif operation == 'D':
-            for index in product(*[range(card) for card in cardinality]):
-                index = np.array(index)
-                try:
-                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+            if use_joblib:
+                values = Parallel(n_jobs=n_jobs, backend='threading')(
+                    delayed(_parallel_helper_m)(index, phi1, phi2,
+                                                phi1_indexes, phi2_indexes,
+                                                phi1_cumprod, phi2_cumprod)
+                    for index in product(*[range(card) for card in cardinality]))
+            else:
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
                                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                except FloatingPointError:
-                    # zero division error should return 0. ref Koller page 365, Fig 10.7
-                    values.append(0)
+        elif operation == 'D':
+            if use_joblib:
+                values = Parallel(n_jobs, backend='threading')(
+                    delayed(_parallel_helper_d)(index, phi1, phi2,
+                                                phi1_indexes, phi2_indexes,
+                                                phi1_cumprod, phi2_cumprod)
+                    for index in product(*[range(card) for card in cardinality]))
+            else:
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    try:
+                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                    except FloatingPointError:
+                        # zero division error should return 0.
+                        # Ref Koller page 365, Fig 10.7
+                        values.append(0)
 
         phi = Factor(variables, cardinality, values)
         return phi
@@ -497,11 +531,38 @@ def _bivar_factor_operation(phi1, phi2, operation):
                 values = np.concatenate((values, value*phi2.values), axis=1)
         elif operation == 'D':
             # reference: Koller Defination 10.7
-            raise ValueError("factors Division not defined for factors with no common scope")
+            raise ValueError("Factors Division not defined for factors with no"
+                             " common scope")
         variables = phi1_vars + phi2_vars
         cardinality = list(phi1.cardinality) + list(phi2.cardinality)
         phi = Factor(variables, cardinality, values)
         return phi
+
+
+def _parallel_helper_m(index, phi1, phi2,
+                       phi1_indexes, phi2_indexes,
+                       phi1_cumprod, phi2_cumprod):
+    """
+    Helper function for parallelizing loops in factor product operations.
+    """
+    index = np.array(index)
+    return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+            phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+
+
+def _parallel_helper_d(index, phi1, phi2,
+                       phi1_indexes, phi2_indexes,
+                       phi1_cumprod, phi2_cumprod):
+    """
+    Helper function for parallelizing loops in factor division operations.
+    """
+    index = np.array(index)
+    try:
+        return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+    except FloatingPointError:
+        # zero division error should return 0. ref Koller page 365, Fig 10.7
+        return 0
 
 
 def factor_product(*args):

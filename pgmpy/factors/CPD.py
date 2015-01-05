@@ -92,7 +92,7 @@ class TabularCPD(Factor):
                                     "tuple, numpy ndarray or simply a number.")
             self.evidence_card = evidence_card
             cardinality.extend(evidence_card[::-1])
-        
+
         if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
                 # Dirty hack to work with numpy arrays
@@ -129,6 +129,20 @@ class TabularCPD(Factor):
         """
         Print TabularCPD in form of a table in IPython Notebook
         """
+        # Checks for IPython Notebook, not required in IPython 3
+        try:
+            ip = get_ipython()
+            front_end = (
+                ip.config.get('KernelApp', {}).get('parent_appname', "") or
+                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
+            )
+            if 'notebook' in front_end.lower():
+                pass
+            else:
+                return str(self)
+        except NameError:
+            return str(self)
+
         string_list = []
 
         cpd_value = self.get_cpd()
@@ -324,7 +338,7 @@ class TreeCPD(nx.DiGraph):
         ...                 ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
         """
         nx.DiGraph.__init__(self)
-        #TODO: Check cycles and self loops.
+        # TODO: Check cycles and self loops.
         if data:
             for edge in data:
                 if len(edge) != 3:
@@ -402,7 +416,7 @@ class TreeCPD(nx.DiGraph):
         evidence_card = []
         paths = []
 
-        #dfs for finding the evidences and evidence cardinalities and paths to factors.
+        # DFS for finding the evidences and evidence cardinalities and paths to factors.
         def dfs(node, path):
             if isinstance(node, tuple):
                 evidence.extend(node)
@@ -452,7 +466,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.to_rule_cpd()
 
         """
-        #TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
+        # TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if
                                  isinstance(target, Factor)}
@@ -635,8 +649,8 @@ class RuleCPD:
             start, end = 0, np.product(list(cardinality_dict.values()))
             for var in sorted(rule):
                 if var.split('_')[0] != self.variable:
-                    start, end = start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]), \
-                                 start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1)
+                    start, end = (start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]),
+                                  start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1))
                 else:
                     var_assignment = int(var.split('_')[1])
             for index in range(start, end):

@@ -85,7 +85,7 @@ class Independencies:
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
-        #TODO: write reduce function.
+        # TODO: write reduce function.
     def reduce(self):
         """
         Add function to remove duplicate Independence Assertions
@@ -100,13 +100,13 @@ class Independencies:
         return [assertion.latex_string() for assertion in self.get_independencies()]
 
     def get_factorized_product(self, random_variables=None, latex=False):
-        #TODO: Write this whole function
+        # TODO: Write this whole function
         #
-        #The problem right now is that the factorized product for all
-        #P(A, B, C), P(B, A, C) etc should be same but on solving normally
-        #we get different results which have to be simplified to a simpler
-        #form. How to do that ??? and also how to decide which is the most
-        #simplified form???
+        # The problem right now is that the factorized product for all
+        # P(A, B, C), P(B, A, C) etc should be same but on solving normally
+        # we get different results which have to be simplified to a simpler
+        # form. How to do that ??? and also how to decide which is the most
+        # simplified form???
         #
         pass
 
@@ -216,7 +216,7 @@ class IndependenceAssertion:
         event2 = {X, Y}
 
         event3 = {Z}
-        
+
         Parameters
         ----------
         event1: String or List
