@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import numpy as np
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
-import numpy as np
 
 
 class VariableElimination(Inference):
