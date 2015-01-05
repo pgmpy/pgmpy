@@ -170,6 +170,8 @@ class FactorGraph(UndirectedGraph):
                 else:
                     self.cardinalities[variable] = cardinality
 
+        return True
+
     def get_variable_nodes(self):
         """
         Returns variable nodes present in the graph.
