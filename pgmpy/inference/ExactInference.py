@@ -80,6 +80,11 @@ class VariableElimination(Inference):
 
         return query_var_factor
 
+    def map_query(self, variables, evidence=None, elimination_order=None):
+        result = self.query(variables, evidence, elimination_order)
+        joint_factor = np.product(list(result.values()))
+        return joint_factor.assignment(np.argmax(joint_factor.values))
+
 
 class BeliefPropagation(Inference):
     """
