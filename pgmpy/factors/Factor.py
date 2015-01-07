@@ -206,7 +206,7 @@ class Factor:
 
         Parameters
         ---------
-        variable_name: string
+        variable: string
             name of variable to be marginalized
 
         """
@@ -356,6 +356,33 @@ class Factor:
         x1_1	x2_2	x3_1	2.75
         """
         return factor_divide(self, factor)
+
+    def maximize(self, variable, inplace=True):
+        """
+        Maximizes the factor with respect to the variable.
+
+        Parameters
+        ----------
+        variable: int, string, any hashable python object or list
+            A variable or a list of variables with respect to which factor is to be maximized
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.maximize('x2')
+        >>> print(phi)
+        x1      x3      phi(x1, x3)
+        -----------------------------
+        x1_0    x3_0    0.25
+        x1_0    x3_1    0.35
+        x1_1    x3_0    0.05
+        x1_1    x3_1    0.07
+        x1_2    x3_0    0.15
+        x1_2    x3_1    0.21
+        """
+        
 
     def __str__(self):
         return self._str(html=False)
