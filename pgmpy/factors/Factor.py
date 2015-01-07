@@ -395,9 +395,7 @@ class Factor:
         new_card = self.cardinality[assign != -1]
 
         if inplace:
-            self.variables = new_variables
-            self.cardinality = new_card
-            self.values = new_values
+            return self.__init__(new_variables, new_card, new_values)
         else:
             return Factor(new_variables, new_card, new_values)
 

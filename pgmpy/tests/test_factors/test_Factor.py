@@ -204,6 +204,16 @@ class TestFactorMethods(unittest.TestCase):
         for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
             self.assertEqual(self.phi1._index_for_assignment(j), i)
 
+    def test_maximize1(self):
+        self.phi1.maximize('x1')
+        self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
+        self.phi1.maximize('x2')
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
+    def test_maximize2(self):
+        self.phi1.maximize(['x1', 'x2'])
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
     def tearDown(self):
         del self.phi
         del self.phi1
