@@ -1,6 +1,7 @@
 import unittest
 from collections import OrderedDict
 import numpy as np
+import itertools
 import numpy.testing as np_test
 from pgmpy.factors import Factor
 from pgmpy.factors import factor_product
@@ -198,6 +199,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)
         self.assertTrue(self.phi1 == self.phi1)
+
+    def test_index_for_assignment(self):
+        for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
+            self.assertEqual(self.phi1._index_for_assignment(j), i)
 
     def tearDown(self):
         del self.phi
