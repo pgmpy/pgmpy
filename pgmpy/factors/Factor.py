@@ -383,6 +383,22 @@ class Factor:
         x1_2    x3_0    0.15
         x1_2    x3_1    0.21
         """
+        indexes = np.where(np.in1d(variable, self.scope()))[0]
+        assign = np.array(self.cardinality)
+        assign[indexes] = -1
+        new_values = np.array([])
+        for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+            assign[assign != -1] = i
+            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
+        new_variables = self.scope()[np.in1d(self.scope(), variable)]
+        new_card = assign[assign != -1]
+
+        if inplace:
+            self.variables = new_variables
+            self.cardinality = new_card
+            self.values = new_values
+        else:
+            return Factor(new_variables, new_card, new_values)
 
     def _index_for_assignment(self, assignment):
         """
