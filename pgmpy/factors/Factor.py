@@ -1,5 +1,6 @@
 import functools
 import numpy as np
+import itertools
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
 
@@ -382,7 +383,43 @@ class Factor:
         x1_2    x3_0    0.15
         x1_2    x3_1    0.21
         """
-        
+
+    def _index_for_assignment(self, assignment):
+        """
+        Returns the index of values for a given assignment.
+        If -1 passed for any variable, returns all the indexes ignoring variables corresponding to -1.
+
+        Parameters
+        ----------
+        assignment: array-like
+            An array for the states of each variable whose index is to be calculated.
+            If any element is -1, that variable is ignored and all indexes for other variables
+            are returned ignoring the variables corresponding to -1.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> phi._index_for_assignment([1, 1, 1])
+        array([13])
+        >>> phi._index_for_assignment([1, -1, 1])
+        array([ 10,  13,  16])
+        >>> phi._index_for_assignment([1, -1, -1])
+        array([  9,  10,  11,  12,  13,  14,  15,  16,  17])
+        """
+        assignment = np.array(assignment)
+        card_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(self.cardinality[::-1])), axis=1)[::-1], 0)
+        if -1 in assignment:
+            indexes = np.where(assignment == -1)[0]
+            cardinalities = self.cardinality[indexes]
+            array_to_return = np.array([])
+            for i in itertools.product(*[range(card) for card in cardinalities]):
+                temp_assignment = np.array(assignment)
+                temp_assignment[temp_assignment == -1] = i
+                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
+            return array_to_return.astype('int')
+        else:
+            return np.array([np.sum(assignment * card_cumprod)])
 
     def __str__(self):
         return self._str(html=False)
