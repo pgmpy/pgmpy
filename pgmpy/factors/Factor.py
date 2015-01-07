@@ -390,8 +390,9 @@ class Factor:
         for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
             assign[assign != -1] = i
             new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
-        new_variables = self.scope()[np.in1d(self.scope(), variable)]
-        new_card = assign[assign != -1]
+        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
+                                                        [variable] if isinstance(variable, str) else variable)]
+        new_card = self.cardinality[assign != -1]
 
         if inplace:
             self.variables = new_variables
