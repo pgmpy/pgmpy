@@ -80,6 +80,69 @@ class VariableElimination(Inference):
 
         return query_var_factor
 
+    def max_marginal(self, variables, evidence=None, elimination_order=None):
+        """
+        Computes the max-marginal over the variables given the evidence.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables over which we want to compute the max-marginal.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+ma
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.max_marginal(['A', 'B'])
+        """
+        eliminated_variables = set()
+        working_factors = {node: [factor for factor in self.factors[node]]
+                           for node in self.factors}
+
+        # TODO: Modify it to find the optimal elimination order
+        if not elimination_order:
+            elimination_order = list(set(self.variables) -
+                                     set(variables) -
+                                     set(evidence.keys() if evidence else []))
+
+        elif any(var in elimination_order for var in
+                 set(variables).union(set(evidence.keys() if evidence else []))):
+            raise ValueError("Elimination order contains variables which are in"
+                             " variables or evidence args")
+
+        for var in elimination_order:
+            # Removing all the factors containing the variables which are
+            # eliminated (as all the factors should be considered only once)
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor.variables).intersection(eliminated_variables)]
+            phi = factor_product(*factors)
+            phi.maximize(var)
+            del working_factors[var]
+            for variable in phi.variables:
+                working_factors[variable].append(phi)
+            eliminated_variables.add(var)
+
+        final_distribution = set()
+        for node in working_factors:
+            factors = working_factors[node]
+            for factor in factors:
+                if not set(factor.variables).intersection(eliminated_variables):
+                    final_distribution.add(factor)
+        return np.max(factor_product(*final_distribution).values)
+
 
 class BeliefPropagation(Inference):
     """
