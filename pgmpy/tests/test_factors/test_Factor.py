@@ -214,6 +214,13 @@ class TestFactorMethods(unittest.TestCase):
         self.phi1.maximize(['x1', 'x2'])
         self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
 
+    def test_maximize3(self):
+        self.phi2 = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+                                                           0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
+        self.phi2.maximize('x2')
+        self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
+                                                                  0.07, 0.15, 0.21]))
+
     def tearDown(self):
         del self.phi
         del self.phi1

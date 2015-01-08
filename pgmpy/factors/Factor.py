@@ -383,7 +383,7 @@ class Factor:
         x1_2    x3_0    0.15
         x1_2    x3_1    0.21
         """
-        indexes = np.where(np.in1d(variable, self.scope()))[0]
+        indexes = np.where(np.in1d(self.scope(), variable))[0]
         assign = np.array(self.cardinality)
         assign[indexes] = -1
         new_values = np.array([])
