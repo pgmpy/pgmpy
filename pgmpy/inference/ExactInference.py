@@ -6,6 +6,70 @@ from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
+    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+        """
+        Implementation of a generalized variable elimination.
+
+        Parameters
+        ----------
+        variables: list, array-like
+            variables that are not to be eliminated.
+        operation: str ('marginalize' | 'maximize')
+            The operation to do for eliminating the variable.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list, array-like
+            list of variables representing the order in which they
+            are to be eliminated. If None order is computed automatically.
+        """
+        eliminated_variables = set()
+        working_factors = {node: [factor for factor in self.factors[node]]
+                           for node in self.factors}
+
+        # TODO: Modify it to find the optimal elimination order
+        if not elimination_order:
+            elimination_order = list(set(self.variables) -
+                                     set(variables) -
+                                     set(evidence.keys() if evidence else []))
+
+        elif any(var in elimination_order for var in
+                 set(variables).union(set(evidence.keys() if evidence else []))):
+            raise ValueError("Elimination order contains variables which are in"
+                             " variables or evidence args")
+
+        for var in elimination_order:
+            # Removing all the factors containing the variables which are
+            # eliminated (as all the factors should be considered only once)
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor.variables).intersection(eliminated_variables)]
+            phi = factor_product(*factors)
+            getattr(phi, operation)(var)
+            del working_factors[var]
+            for variable in phi.variables:
+                working_factors[variable].append(phi)
+            eliminated_variables.add(var)
+
+        final_distribution = set()
+        for node in working_factors:
+            factors = working_factors[node]
+            for factor in factors:
+                if not set(factor.variables).intersection(eliminated_variables):
+                    final_distribution.add(factor)
+
+        query_var_factor = {}
+        for query_var in variables:
+            phi = factor_product(*final_distribution)
+            phi.marginalize(list(set(variables) - set([query_var])))
+            if evidence:
+                phi.reduce(['{evidence_var}_{evidence}'.format(
+                    evidence_var=evidence_var, evidence=evidence[evidence_var])
+                    for evidence_var in evidence])
+                phi.normalize()
+
+            query_var_factor[query_var] = phi
+        return query_var_factor
+
     def query(self, variables, evidence=None, elimination_order=None):
         """
         Parameters
@@ -32,53 +96,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-        eliminated_variables = set()
-        working_factors = {node: [factor for factor in self.factors[node]]
-                           for node in self.factors}
-
-        # TODO: Modify it to find the optimal elimination order
-        if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
-
-        elif any(var in elimination_order for var in
-                 set(variables).union(set(evidence.keys() if evidence else []))):
-            raise ValueError("Elimination order contains variables which are in"
-                             " variables or evidence args")
-
-        for var in elimination_order:
-            # Removing all the factors containing the variables which are
-            # eliminated (as all the factors should be considered only once)
-            factors = [factor for factor in working_factors[var]
-                       if not set(factor.variables).intersection(eliminated_variables)]
-            phi = factor_product(*factors)
-            phi.marginalize(var)
-            del working_factors[var]
-            for variable in phi.variables:
-                working_factors[variable].append(phi)
-            eliminated_variables.add(var)
-
-        final_distribution = set()
-        for node in working_factors:
-            factors = working_factors[node]
-            for factor in factors:
-                if not set(factor.variables).intersection(eliminated_variables):
-                    final_distribution.add(factor)
-
-        query_var_factor = {}
-        for query_var in variables:
-            phi = factor_product(*final_distribution)
-            phi.marginalize(list(set(variables) - set([query_var])))
-            if evidence:
-                phi.reduce(['{evidence_var}_{evidence}'.format(
-                    evidence_var=evidence_var, evidence=evidence[evidence_var])
-                    for evidence_var in evidence])
-                phi.normalize()
-
-            query_var_factor[query_var] = phi
-
-        return query_var_factor
+        return self._variable_elimination(variables, 'marginalize',
+                                          evidence=evidence, elimination_order=elimination_order)
 
     def max_marginal(self, variables, evidence=None, elimination_order=None):
         """
@@ -94,7 +113,7 @@ class VariableElimination(Inference):
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
-ma
+
         Examples
         --------
         >>> from pgmpy.inference import VariableElimination
@@ -108,40 +127,10 @@ ma
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(['A', 'B'])
         """
-        eliminated_variables = set()
-        working_factors = {node: [factor for factor in self.factors[node]]
-                           for node in self.factors}
-
-        # TODO: Modify it to find the optimal elimination order
-        if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
-
-        elif any(var in elimination_order for var in
-                 set(variables).union(set(evidence.keys() if evidence else []))):
-            raise ValueError("Elimination order contains variables which are in"
-                             " variables or evidence args")
-
-        for var in elimination_order:
-            # Removing all the factors containing the variables which are
-            # eliminated (as all the factors should be considered only once)
-            factors = [factor for factor in working_factors[var]
-                       if not set(factor.variables).intersection(eliminated_variables)]
-            phi = factor_product(*factors)
-            phi.maximize(var)
-            del working_factors[var]
-            for variable in phi.variables:
-                working_factors[variable].append(phi)
-            eliminated_variables.add(var)
-
-        final_distribution = set()
-        for node in working_factors:
-            factors = working_factors[node]
-            for factor in factors:
-                if not set(factor.variables).intersection(eliminated_variables):
-                    final_distribution.add(factor)
-        return np.max(factor_product(*final_distribution).values)
+        final_distribution = list(self._variable_elimination(variables, 'maximize',
+                                                             evidence=evidence,
+                                                             elimination_order=elimination_order).values())
+        return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
 
 
 class BeliefPropagation(Inference):
