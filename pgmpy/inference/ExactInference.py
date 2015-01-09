@@ -99,7 +99,7 @@ class VariableElimination(Inference):
         return self._variable_elimination(variables, 'marginalize',
                                           evidence=evidence, elimination_order=elimination_order)
 
-    def max_marginal(self, variables, evidence=None, elimination_order=None):
+    def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
         Computes the max-marginal over the variables given the evidence.
 
@@ -127,6 +127,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(['A', 'B'])
         """
+        if not variables:
+            variables = []
         final_distribution = list(self._variable_elimination(variables, 'maximize',
                                                              evidence=evidence,
                                                              elimination_order=elimination_order).values())
