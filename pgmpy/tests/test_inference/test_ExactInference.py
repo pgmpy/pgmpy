@@ -1,12 +1,12 @@
+import unittest
+import numpy as np
+import numpy.testing as np_test
 from pgmpy.inference import VariableElimination
 from pgmpy.inference import BeliefPropagation
 from pgmpy.models import BayesianModel
 from pgmpy.models import JunctionTree
 from pgmpy.factors import TabularCPD
 from pgmpy.factors import Factor
-import unittest
-import numpy as np
-from numpy import testing
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -37,29 +37,29 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_query_single_variable(self):
         query_result = self.bayesian_inference.query(['J'])
-        testing.assert_array_almost_equal(query_result['J'].values,
+        np_test.assert_array_almost_equal(query_result['J'].values,
                                           np.array([0.416, 0.584]))
 
     def test_query_multiple_variable(self):
         query_result = self.bayesian_inference.query(['Q', 'J'])
-        testing.assert_array_almost_equal(query_result['J'].values,
+        np_test.assert_array_almost_equal(query_result['J'].values,
                                           np.array([0.416, 0.584]))
-        testing.assert_array_almost_equal(query_result['Q'].values,
+        np_test.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.4912, 0.5088]))
 
     def test_query_single_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(variables=['J'],
                                                      evidence={'A': 0, 'R': 1})
-        testing.assert_array_almost_equal(query_result['J'].values,
+        np_test.assert_array_almost_equal(query_result['J'].values,
                                           np.array([0.60, 0.40]))
 
     def test_query_multiple_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(variables=['J', 'Q'],
                                                      evidence={'A': 0, 'R': 0,
                                                                'G': 0, 'L': 1})
-        testing.assert_array_almost_equal(query_result['J'].values,
+        np_test.assert_array_almost_equal(query_result['J'].values,
                                           np.array([0.818182, 0.181818]))
-        testing.assert_array_almost_equal(query_result['Q'].values,
+        np_test.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.772727, 0.227273]))
 
 
@@ -88,11 +88,11 @@ class TestBeliefPropagation(unittest.TestCase):
         b_C_D = phi3 * (phi1.marginalize('A', inplace=False) *
                         phi2).marginalize('B', inplace=False)
 
-        testing.assert_array_almost_equal(clique_belief[('A', 'B')].values,
+        np_test.assert_array_almost_equal(clique_belief[('A', 'B')].values,
                                           b_A_B.values)
-        testing.assert_array_almost_equal(clique_belief[('B', 'C')].values,
+        np_test.assert_array_almost_equal(clique_belief[('B', 'C')].values,
                                           b_B_C.values)
-        testing.assert_array_almost_equal(clique_belief[('C', 'D')].values,
+        np_test.assert_array_almost_equal(clique_belief[('C', 'D')].values,
                                           b_C_D.values)
 
     def test_calibrate_sepset_belief(self):
@@ -111,7 +111,7 @@ class TestBeliefPropagation(unittest.TestCase):
                        phi3.marginalize('D', inplace=False))).marginalize(
             'B', inplace=False)
 
-        testing.assert_array_almost_equal(sepset_belief[frozenset('B')].values,
+        np_test.assert_array_almost_equal(sepset_belief[frozenset('B')].values,
                                           b_B.values)
-        testing.assert_array_almost_equal(sepset_belief[frozenset('C')].values,
+        np_test.assert_array_almost_equal(sepset_belief[frozenset('C')].values,
                                           b_C.values)

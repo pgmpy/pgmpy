@@ -1,6 +1,7 @@
 import unittest
 from collections import OrderedDict
 import numpy as np
+import itertools
 import numpy.testing as np_test
 from pgmpy.factors import Factor
 from pgmpy.factors import factor_product
@@ -198,6 +199,27 @@ class TestFactorMethods(unittest.TestCase):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)
         self.assertTrue(self.phi1 == self.phi1)
+
+    def test_index_for_assignment(self):
+        for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
+            self.assertEqual(self.phi1._index_for_assignment(j), i)
+
+    def test_maximize1(self):
+        self.phi1.maximize('x1')
+        self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
+        self.phi1.maximize('x2')
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
+    def test_maximize2(self):
+        self.phi1.maximize(['x1', 'x2'])
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
+    def test_maximize3(self):
+        self.phi2 = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+                                                           0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
+        self.phi2.maximize('x2')
+        self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
+                                                                  0.07, 0.15, 0.21]))
 
     def tearDown(self):
         del self.phi

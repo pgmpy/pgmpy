@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import numpy as np
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
-import numpy as np
 
 
 class VariableElimination(Inference):
@@ -210,10 +210,8 @@ class BeliefPropagation(Inference):
             """
             for edge in self.junction_tree.edges():
                 sepset = frozenset(edge[0]).intersection(frozenset(edge[1]))
-                marginal_1 = self.clique_beliefs[edge[0]].marginalize(
-                    list(frozenset(edge[0]) - sepset), inplace=False)
-                marginal_2 = self.clique_beliefs[edge[1]].marginalize(
-                    list(frozenset(edge[1]) - sepset), inplace=False)
+                marginal_1 = self.clique_beliefs[edge[0]].marginalize(list(frozenset(edge[0]) - sepset), inplace=False)
+                marginal_2 = self.clique_beliefs[edge[1]].marginalize(list(frozenset(edge[1]) - sepset), inplace=False)
                 if not np.allclose(marginal_1.values, marginal_2.values, rtol=1e-4):
                     return False
 
@@ -226,10 +224,8 @@ class BeliefPropagation(Inference):
                 # upward pass
                 for neighbor_clique in neighbors:
                     _update_beliefs(neighbor_clique, clique)
-                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(
-                    self.junction_tree, clique)
-                # update the beliefs of all the nodes starting from the root to
-                # leaves using root's belief
+                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(self.junction_tree, clique)
+                # update the beliefs of all the nodes starting from the root to leaves using root's belief
                 # downward pass
                 for edge in bfs_edges:
                     _update_beliefs(edge[0], edge[1])
