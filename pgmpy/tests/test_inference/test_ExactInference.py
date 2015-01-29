@@ -64,7 +64,7 @@ class TestVariableElimination(unittest.TestCase):
 
     # @unittest.skip('issue #264')
     def test_max_marginal(self):
-        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.5714)
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G']), 0.5714, decimal=4)
