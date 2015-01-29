@@ -23,6 +23,12 @@ class VariableElimination(Inference):
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
         """
+        if not variables:
+            all_factors = []
+            for factor_li in self.factors.values():
+                all_factors.extend(factor_li)
+            return set(all_factors)
+
         eliminated_variables = set()
         working_factors = {node: [factor for factor in self.factors[node]]
                            for node in self.factors}
@@ -129,9 +135,13 @@ class VariableElimination(Inference):
         """
         if not variables:
             variables = []
-        final_distribution = list(self._variable_elimination(variables, 'maximize',
-                                                             evidence=evidence,
-                                                             elimination_order=elimination_order).values())
+        final_distribution = self._variable_elimination(variables, 'maximize',
+                                                        evidence=evidence,
+                                                        elimination_order=elimination_order)
+
+        # To handle the case when no argument is passed then _variable_elimination returns a set.
+        if isinstance(final_distribution, dict):
+            final_distribution = final_distribution.values()
         return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
 
 

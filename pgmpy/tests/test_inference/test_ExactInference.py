@@ -62,7 +62,7 @@ class TestVariableElimination(unittest.TestCase):
         np_test.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.772727, 0.227273]))
 
-    @unittest.skip('issue #264')
+    # @unittest.skip('issue #264')
     def test_max_marginal(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.5714)
 
