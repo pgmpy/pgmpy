@@ -122,10 +122,10 @@ class VariableElimination(Inference):
 
         Examples
         --------
-        >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
         >>> import numpy as np
         >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
@@ -145,6 +145,38 @@ class VariableElimination(Inference):
         return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
 
     def map_query(self, variables, evidence=None, elimination_order=None):
+        """
+        Computes the MAP assignments for variables given the evidence.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables over which we want to compute the MAP.
+        evidence: dict | None
+            Dictionary of the evidence in the form of {var: state_of_var_observed}
+            None if no evidence.
+        elimination_order: list
+            order of the variables in which they are to be eliminated by the algorithm.
+            If None order is computed automatically.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> inference.map_query(['A', 'B'])
+        {'A': 0, 'B': 1}
+        >>> inference.map_query(['A', 'B'], evidence={'C': 0})
+        {'A': 1, 'B': 1}
+        >>> inference.map_query(['A'], elimination_order=['C', 'B', 'D', 'E'])
+        {'A': 0}
+        """
         result = self.query(variables, evidence, elimination_order)
         joint_factor = np.product(list(result.values()))
         return joint_factor.assignment(np.argmax(joint_factor.values))
