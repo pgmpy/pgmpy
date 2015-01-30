@@ -144,6 +144,30 @@ class VariableElimination(Inference):
             final_distribution = final_distribution.values()
         return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
 
+    def induced_graph(self, elimination_order):
+        """
+        Returns the induced graph formed by running Variable Elimination on the network.
+
+        Parameters
+        ----------
+        elimination_order: list, array like
+            List of variables in the order in which they are to be eliminated.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+        <networkx.classes.graph.Graph at 0x7f34ac8c5160>
+        """
+        
 
 class BeliefPropagation(Inference):
     """
