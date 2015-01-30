@@ -1,5 +1,6 @@
 import functools
 import numpy as np
+import itertools
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
 
@@ -184,7 +185,7 @@ class Factor:
             variables = [variables]
         for variable in variables:
             if variable not in self.variables:
-                raise Exceptions.ScopeError("%s not in scope" % variable)
+                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
 
         if inplace:
             factor = self
@@ -206,7 +207,7 @@ class Factor:
 
         Parameters
         ---------
-        variable_name: string
+        variable: string
             name of variable to be marginalized
 
         """
@@ -356,6 +357,84 @@ class Factor:
         x1_1	x2_2	x3_1	2.75
         """
         return factor_divide(self, factor)
+
+    def maximize(self, variable, inplace=True):
+        """
+        Maximizes the factor with respect to the variable.
+
+        Parameters
+        ----------
+        variable: int, string, any hashable python object or list
+            A variable or a list of variables with respect to which factor is to be maximized
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.maximize('x2')
+        >>> print(phi)
+        x1      x3      phi(x1, x3)
+        -----------------------------
+        x1_0    x3_0    0.25
+        x1_0    x3_1    0.35
+        x1_1    x3_0    0.05
+        x1_1    x3_1    0.07
+        x1_2    x3_0    0.15
+        x1_2    x3_1    0.21
+        """
+        indexes = np.where(np.in1d(self.scope(), variable))[0]
+        assign = np.array(self.cardinality)
+        assign[indexes] = -1
+        new_values = np.array([])
+        for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+            assign[assign != -1] = i
+            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
+        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
+                                                        [variable] if isinstance(variable, str) else variable)]
+        new_card = self.cardinality[assign != -1]
+
+        if inplace:
+            return self.__init__(new_variables, new_card, new_values)
+        else:
+            return Factor(new_variables, new_card, new_values)
+
+    def _index_for_assignment(self, assignment):
+        """
+        Returns the index of values for a given assignment.
+        If -1 passed for any variable, returns all the indexes ignoring variables corresponding to -1.
+
+        Parameters
+        ----------
+        assignment: array-like
+            An array for the states of each variable whose index is to be calculated.
+            If any element is -1, that variable is ignored and all indexes for other variables
+            are returned ignoring the variables corresponding to -1.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> phi._index_for_assignment([1, 1, 1])
+        array([13])
+        >>> phi._index_for_assignment([1, -1, 1])
+        array([ 10,  13,  16])
+        >>> phi._index_for_assignment([1, -1, -1])
+        array([  9,  10,  11,  12,  13,  14,  15,  16,  17])
+        """
+        assignment = np.array(assignment)
+        card_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(self.cardinality[::-1])), axis=1)[::-1], 0)
+        if -1 in assignment:
+            indexes = np.where(assignment == -1)[0]
+            cardinalities = self.cardinality[indexes]
+            array_to_return = np.array([])
+            for i in itertools.product(*[range(card) for card in cardinalities]):
+                temp_assignment = np.array(assignment)
+                temp_assignment[temp_assignment == -1] = i
+                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
+            return array_to_return.astype('int')
+        else:
+            return np.array([np.sum(assignment * card_cumprod)])
 
     def __str__(self):
         return self._str(html=False)
