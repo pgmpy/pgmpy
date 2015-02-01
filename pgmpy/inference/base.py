@@ -3,6 +3,8 @@
 from collections import defaultdict
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
+from pgmpy.models import FactorGraph
+from pgmpy.models import JunctionTree
 from pgmpy.exceptions import ModelError
 
 
@@ -66,9 +68,9 @@ class Inference:
                 for var in cpd.variables:
                     self.factors[var].append(cpd_as_factor)
 
-        elif isinstance(model, MarkovModel):
-            for factor in model.get_factors():
-                self.cardinality = model.cardinalities
+        elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
+            self.cardinality = model.cardinalities
 
+            for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)

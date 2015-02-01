@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.exceptions import CardinalityError
 from collections import defaultdict
 import numpy as np
 
@@ -236,7 +237,8 @@ class JunctionTree(UndirectedGraph):
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
-        errors.
+        errors. In the same time also updates the cardinalities of all the random
+        variables.
 
         * Checks if clique potentials are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
@@ -257,5 +259,14 @@ class JunctionTree(UndirectedGraph):
         if len(self.factors) != len(self.nodes()):
             raise ValueError('One to one mapping of factor to clique or cluster'
                              'is not there.')
+
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                if ((self.cardinalities[variable]) and
+                        (self.cardinalities[variable] != cardinality)):
+                    raise CardinalityError(
+                        'Cardinality of variable %s not matching among factors' % variable)
+                else:
+                    self.cardinalities[variable] = cardinality
 
         return True

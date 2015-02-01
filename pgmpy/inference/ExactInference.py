@@ -6,32 +6,29 @@ from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
-    def query(self, variables, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
+        Implementation of a generalized variable elimination.
+
         Parameters
         ----------
-        variables: list
-            list of variables for which you want to compute the probability
+        variables: list, array-like
+            variables that are not to be eliminated.
+        operation: str ('marginalize' | 'maximize')
+            The operation to do for eliminating the variable.
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
-        elimination_order: list
-            order of variable eliminations (if nothing is provided) order is
-            computed automatically
-
-        Examples
-        --------
-        >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
-        >>> model.fit(values)
-        >>> inference = VariableElimination(model)
-        >>> phi_query = inference.query(['A', 'B'])
+        elimination_order: list, array-like
+            list of variables representing the order in which they
+            are to be eliminated. If None order is computed automatically.
         """
+        if not variables:
+            all_factors = []
+            for factor_li in self.factors.values():
+                all_factors.extend(factor_li)
+            return set(all_factors)
+
         eliminated_variables = set()
         working_factors = {node: [factor for factor in self.factors[node]]
                            for node in self.factors}
@@ -77,9 +74,100 @@ class VariableElimination(Inference):
                 phi.normalize()
 
             query_var_factor[query_var] = phi
-
         return query_var_factor
 
+    def query(self, variables, evidence=None, elimination_order=None):
+        """
+        Parameters
+        ----------
+        variables: list
+            list of variables for which you want to compute the probability
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.query(['A', 'B'])
+        """
+        return self._variable_elimination(variables, 'marginalize',
+                                          evidence=evidence, elimination_order=elimination_order)
+
+    def max_marginal(self, variables=None, evidence=None, elimination_order=None):
+        """
+        Computes the max-marginal over the variables given the evidence.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables over which we want to compute the max-marginal.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.max_marginal(['A', 'B'])
+        """
+        if not variables:
+            variables = []
+        final_distribution = self._variable_elimination(variables, 'maximize',
+                                                        evidence=evidence,
+                                                        elimination_order=elimination_order)
+
+        # To handle the case when no argument is passed then _variable_elimination returns a set.
+        if isinstance(final_distribution, dict):
+            final_distribution = final_distribution.values()
+        return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
+
+    def induced_graph(self, elimination_order):
+        """
+        Returns the induced graph formed by running Variable Elimination on the network.
+
+        Parameters
+        ----------
+        elimination_order: list, array like
+            List of variables in the order in which they are to be eliminated.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+        <networkx.classes.graph.Graph at 0x7f34ac8c5160>
+        """
+        
 
 class BeliefPropagation(Inference):
     """

@@ -185,7 +185,7 @@ class Factor:
             variables = [variables]
         for variable in variables:
             if variable not in self.variables:
-                raise Exceptions.ScopeError("%s not in scope" % variable)
+                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
 
         if inplace:
             factor = self
