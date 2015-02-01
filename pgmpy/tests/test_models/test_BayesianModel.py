@@ -291,5 +291,3 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
-
-
