@@ -35,12 +35,16 @@ class VariableElimination(Inference):
                            for node in self.factors}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
-        for evidence_var in evidence:
-            for factor in working_factors[evidence_var]:
-                factor_reduced = factor.reduce('{evidence_var}_{state}'.format(
-                    evidence_var=evidence_var, state=evidence[evidence_var]), inplace=False).normalize()
-                for var in factor_reduced.scope():
-                    working_factors[var].remove(factor).add(factor_reduced)
+        if evidence:
+            for evidence_var in evidence:
+                for factor in working_factors[evidence_var]:
+                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
+                                                                                   state=evidence[evidence_var]),
+                                                   inplace=False).normalize(inplace=False)
+                    for var in factor_reduced.scope():
+                        working_factors[var].remove(factor)
+                        working_factors[var].add(factor_reduced)
+                del working_factors[evidence_var]
 
         # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
@@ -62,7 +66,7 @@ class VariableElimination(Inference):
             phi = getattr(phi, operation)(var, inplace=False)
             del working_factors[var]
             for variable in phi.variables:
-                working_factors[variable].append(phi)
+                working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
         final_distribution = set()
