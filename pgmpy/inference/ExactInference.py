@@ -40,7 +40,7 @@ class VariableElimination(Inference):
                 for factor in working_factors[evidence_var]:
                     factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
                                                                                    state=evidence[evidence_var]),
-                                                   inplace=False).normalize(inplace=False)
+                                                   inplace=False)
                     for var in factor_reduced.scope():
                         working_factors[var].remove(factor)
                         working_factors[var].add(factor_reduced)
@@ -80,7 +80,7 @@ class VariableElimination(Inference):
         for query_var in variables:
             phi = factor_product(*final_distribution)
             phi.marginalize(list(set(variables) - set([query_var])))
-            query_var_factor[query_var] = phi
+            query_var_factor[query_var] = phi.normalize(inplace=False)
         return query_var_factor
 
     def query(self, variables, evidence=None, elimination_order=None):
