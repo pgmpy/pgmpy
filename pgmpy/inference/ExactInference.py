@@ -146,10 +146,61 @@ class VariableElimination(Inference):
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
 
-        # To handle the case when no argument is passed then _variable_elimination returns a set.
+        # To handle the case when no argument is passed then
+        # _variable_elimination returns a dict.
         if isinstance(final_distribution, dict):
             final_distribution = final_distribution.values()
         return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
+
+    def map_query(self, variables=None, evidence=None, elimination_order=None):
+        """
+        Computes the MAP Query over the variables given the evidence.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables over which we want to compute the max-marginal.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+        elimination_order: list
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.map_query(['A', 'B'])
+        """
+        if not variables:
+            variables = []
+        final_distribution = self._variable_elimination(variables, 'maximize',
+                                                        evidence=evidence,
+                                                        elimination_order=elimination_order)
+
+        # To handle the case when no argument is passed then
+        # _variable_elimination returns a dict.
+        if isinstance(final_distribution, dict):
+            final_distribution = final_distribution.values()
+
+        distribution = factor_product(*final_distribution)
+        argmax = np.argmax(distribution.values)
+        assignment = distribution.assignment(argmax)[0]
+
+        map_query_results = {}
+        for var_assignment in assignment:
+            var, value = var_assignment.split('_')
+            map_query_results[var] = int(value)
+
+        return map_query_results
 
     def induced_graph(self, elimination_order):
         """
