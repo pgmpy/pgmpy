@@ -23,6 +23,7 @@ class VariableElimination(Inference):
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
         """
+        # Dealing with the case when variables is not provided.
         if not variables:
             all_factors = []
             for factor_li in self.factors.values():
@@ -30,8 +31,20 @@ class VariableElimination(Inference):
             return set(all_factors)
 
         eliminated_variables = set()
-        working_factors = {node: [factor for factor in self.factors[node]]
+        working_factors = {node: {factor for factor in self.factors[node]}
                            for node in self.factors}
+
+        # Dealing with evidence. Reducing factors over it before VE is run.
+        if evidence:
+            for evidence_var in evidence:
+                for factor in working_factors[evidence_var]:
+                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
+                                                                                   state=evidence[evidence_var]),
+                                                   inplace=False)
+                    for var in factor_reduced.scope():
+                        working_factors[var].remove(factor)
+                        working_factors[var].add(factor_reduced)
+                del working_factors[evidence_var]
 
         # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
@@ -53,7 +66,7 @@ class VariableElimination(Inference):
             phi = getattr(phi, operation)(var, inplace=False)
             del working_factors[var]
             for variable in phi.variables:
-                working_factors[variable].append(phi)
+                working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
         final_distribution = set()
@@ -67,13 +80,7 @@ class VariableElimination(Inference):
         for query_var in variables:
             phi = factor_product(*final_distribution)
             phi.marginalize(list(set(variables) - set([query_var])))
-            if evidence:
-                phi.reduce(['{evidence_var}_{evidence}'.format(
-                    evidence_var=evidence_var, evidence=evidence[evidence_var])
-                    for evidence_var in evidence])
-                phi.normalize()
-
-            query_var_factor[query_var] = phi
+            query_var_factor[query_var] = phi.normalize(inplace=False)
         return query_var_factor
 
     def query(self, variables, evidence=None, elimination_order=None):
