@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
+from itertools import chain
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
@@ -52,7 +53,11 @@ class Inference:
     """
 
     def __init__(self, model):
-        self.variables = model.nodes()
+        if isinstance(model, JunctionTree):
+            self.variables = set(chain(*model.nodes()))
+        else:
+            self.variables = model.nodes()
+
         self.cardinality = {}
         self.factors = defaultdict(list)
 
