@@ -150,7 +150,7 @@ class VariableElimination(Inference):
         # _variable_elimination returns a dict.
         if isinstance(final_distribution, dict):
             final_distribution = final_distribution.values()
-        return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
+        return np.max(factor_product(*final_distribution).values)
 
     def map_query(self, variables=None, evidence=None, elimination_order=None):
         """
