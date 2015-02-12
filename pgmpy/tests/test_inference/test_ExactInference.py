@@ -62,7 +62,6 @@ class TestVariableElimination(unittest.TestCase):
         np_test.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.772727, 0.227273]))
 
-    # @unittest.skip('issue #264')
     def test_max_marginal(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
 
@@ -76,6 +75,16 @@ class TestVariableElimination(unittest.TestCase):
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G', 'R', 'A']),
                                     0.3260, decimal=4)
+
+    def test_map_query(self):
+        map_query = self.bayesian_inference.map_query()
+        self.assertDictEqual(map_query, {'A': 1, 'R': 1, 'J': 1, 'Q': 1, 'G': 0,
+                                         'L': 0})
+
+    def test_map_query_with_evidence(self):
+        map_query = self.bayesian_inference.map_query(['A', 'R', 'L'],
+                                                      {'J': 0, 'Q': 1, 'G': 0})
+        self.assertDictEqual(map_query, {'A': 1, 'R': 0, 'L': 0})
 
 
 class TestBeliefPropagation(unittest.TestCase):
