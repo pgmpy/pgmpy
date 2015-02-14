@@ -95,8 +95,8 @@ grade_cpd = TabularCPD('grade', 3,
 					   [[0.1,0.1,0.1,0.1,0.1,0.1],
                         [0.1,0.1,0.1,0.1,0.1,0.1], 
                         [0.8,0.8,0.8,0.8,0.8,0.8]],
-					   evidence=['diff', 'intel'],
-					   evidence_card=[2, 3])
+					   evidence=['intel', 'diff'],
+					   evidence_card=[3, 2])
 
 student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
