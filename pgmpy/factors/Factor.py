@@ -211,18 +211,17 @@ class Factor:
             name of variable to be marginalized
 
         """
-        index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) /
-                           np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
-        num_elements = cum_cardinality[0]
-        sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index])
-                     for j in range(i, i+cum_cardinality[index+1])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
-        for i in range(self.cardinality[index]):
-            marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index+1]]
-        return marg_factor
+        marginalize_index = np.where(np.in1d(self.scope(),variable))
+        assign = np.array(self.cardinality)
+        assign[marginalize_index] = -1
+        marg_factor = []
+        for i in itertools.product(*[range(index) for index in self.cardinality[np.where(assign!=-1)[0]]]):
+            sum_variable = list(i)
+            sum_variable.insert(np.int(marginalize_index[0]),-1)
+            sum_value = sum(self.values[[index for index in self._index_for_assignment(sum_variable)]])
+            if sum_value not in marg_factor:
+                marg_factor.append(sum_value)
+        return np.array(marg_factor)
 
     def normalize(self, inplace=True):
         """
