@@ -216,11 +216,12 @@ class Factor:
         assign[marginalize_index] = -1
         marg_factor = []
         for i in itertools.product(*[range(index) for index in self.cardinality[np.where(assign!=-1)[0]]]):
-            sum_variable = list(i)
-            sum_variable.insert(np.int(marginalize_index[0]),-1)
-            sum_value = sum(self.values[[index for index in self._index_for_assignment(sum_variable)]])
-            if sum_value not in marg_factor:
-                marg_factor.append(sum_value)
+            temp_sum = 0
+            sum_variable = np.array(i)
+            sum_variable = np.insert(sum_variable,np.int(marginalize_index[0]),-1)
+            for index in self._index_for_assignment(sum_variable):
+                temp_sum += Factor.values[index]
+            marg_factor.append(temp_sum)
         return np.array(marg_factor)
 
     def normalize(self, inplace=True):
