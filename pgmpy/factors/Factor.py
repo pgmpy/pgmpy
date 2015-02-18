@@ -220,7 +220,7 @@ class Factor:
             sum_variable = np.array(i)
             sum_variable = np.insert(sum_variable,np.int(marginalize_index[0]),-1)
             for index in self._index_for_assignment(sum_variable):
-                temp_sum += Factor.values[index]
+                temp_sum += self.values[index]
             marg_factor.append(temp_sum)
         return np.array(marg_factor)
 
