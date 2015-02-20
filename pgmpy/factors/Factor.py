@@ -18,7 +18,7 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-
+    
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
