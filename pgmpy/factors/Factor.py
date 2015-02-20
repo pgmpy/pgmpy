@@ -208,33 +208,9 @@ class Factor:
             index = list(factor.variables.keys()).index(variable)
             del(factor.variables[variable])
             factor.cardinality = np.delete(factor.cardinality, index)
-
         if not inplace:
             return factor
-
-    def _marginalize_single_variable(self, variable):
-        """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable: string
-            name of variable to be marginalized
-
-        """
-        marginalize_index = np.where(np.in1d(self.scope(),variable))
-        assign = np.array(self.cardinality)
-        assign[marginalize_index] = -1
-        marg_factor = []
-        for i in itertools.product(*[range(index) for index in self.cardinality[np.where(assign!=-1)[0]]]):
-            temp_sum = 0
-            sum_variable = np.array(i)
-            sum_variable = np.insert(sum_variable,np.int(marginalize_index[0]),-1)
-            for index in self._index_for_assignment(sum_variable):
-                temp_sum += self.values[index]
-            marg_factor.append(temp_sum)
-        return np.array(marg_factor)
-
+            
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
