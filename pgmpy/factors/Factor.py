@@ -18,7 +18,7 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-
+    
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
@@ -191,39 +191,26 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-
+        marginalize_index = np.array(np.where(np.in1d(factor.scope(),variables)))
+        assign = np.array(factor.cardinality)
+        assign[marginalize_index] = -1
+        sum_variable = np.zeros(len(factor.cardinality))
+        sum_variable[marginalize_index] = -1
+        marg_factor = []
+        for i in itertools.product(*[range(index) for index in factor.cardinality[np.where(assign!=-1)[0]]]):
+            temp_sum = 0
+            sum_variable[sum_variable!=-1] = i
+            for index in factor._index_for_assignment(sum_variable):
+                temp_sum += factor.values[index]
+            marg_factor.append(temp_sum)
+        factor.values = np.array(marg_factor)
         for variable in variables:
-            factor.values = factor._marginalize_single_variable(variable)
             index = list(factor.variables.keys()).index(variable)
             del(factor.variables[variable])
             factor.cardinality = np.delete(factor.cardinality, index)
-
         if not inplace:
             return factor
-
-    def _marginalize_single_variable(self, variable):
-        """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable: string
-            name of variable to be marginalized
-
-        """
-        marginalize_index = np.where(np.in1d(self.scope(),variable))
-        assign = np.array(self.cardinality)
-        assign[marginalize_index] = -1
-        marg_factor = []
-        for i in itertools.product(*[range(index) for index in self.cardinality[np.where(assign!=-1)[0]]]):
-            temp_sum = 0
-            sum_variable = np.array(i)
-            sum_variable = np.insert(sum_variable,np.int(marginalize_index[0]),-1)
-            for index in self._index_for_assignment(sum_variable):
-                temp_sum += self.values[index]
-            marg_factor.append(temp_sum)
-        return np.array(marg_factor)
-
+            
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
