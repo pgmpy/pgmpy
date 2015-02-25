@@ -196,11 +196,9 @@ class Factor:
         sum_variable = np.zeros(len(factor.cardinality))
         sum_variable[marginalize_index] = -1
         marg_factor = []
-        for i in itertools.product(*[range(index) for index in factor.cardinality[np.where(assign != -1)[0]]]):
-            temp_sum = 0
+        for i in itertools.product(*[range(index) for index in assign[assign != -1]):
             sum_variable[sum_variable != -1] = i
-            for index in factor._index_for_assignment(sum_variable):
-                temp_sum += factor.values[index]
+            temp_sum = np.sum(factor.values[factor._index_for_assignment(sum_variable)])
             marg_factor.append(temp_sum)
         factor.values = np.array(marg_factor)
         for variable in variables:
