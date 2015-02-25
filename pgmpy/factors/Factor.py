@@ -18,7 +18,6 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-    
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
@@ -191,17 +190,13 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-        marginalize_index = np.array(np.where(np.in1d(factor.scope(),variables)))
+        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
         assign = np.array(factor.cardinality)
         assign[marginalize_index] = -1
-        sum_variable = np.zeros(len(factor.cardinality))
-        sum_variable[marginalize_index] = -1
         marg_factor = []
-        for i in itertools.product(*[range(index) for index in factor.cardinality[np.where(assign!=-1)[0]]]):
-            temp_sum = 0
-            sum_variable[sum_variable!=-1] = i
-            for index in factor._index_for_assignment(sum_variable):
-                temp_sum += factor.values[index]
+        for i in itertools.product(*[range(index) for index in assign[assign != -1]]):
+            assign[assign != -1] = i
+            temp_sum = np.sum(factor.values[factor._index_for_assignment(assign)])
             marg_factor.append(temp_sum)
         factor.values = np.array(marg_factor)
         for variable in variables:
