@@ -193,12 +193,10 @@ class Factor:
         marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
         assign = np.array(factor.cardinality)
         assign[marginalize_index] = -1
-        sum_variable = np.zeros(len(factor.cardinality))
-        sum_variable[marginalize_index] = -1
         marg_factor = []
-        for i in itertools.product(*[range(index) for index in assign[assign != -1]):
-            sum_variable[sum_variable != -1] = i
-            temp_sum = np.sum(factor.values[factor._index_for_assignment(sum_variable)])
+        for i in itertools.product(*[range(index) for index in assign[assign != -1]]):
+            assign[assign != -1] = i
+            temp_sum = np.sum(factor.values[factor._index_for_assignment(assign)])
             marg_factor.append(temp_sum)
         factor.values = np.array(marg_factor)
         for variable in variables:
