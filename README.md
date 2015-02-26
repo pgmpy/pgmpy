@@ -1,6 +1,8 @@
 pgmpy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
 =====
 
+[![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Python Library for Probabilistic Graphical Models  
 Documentation: [pgmpy](http://pgmpy.org/)  
 Mailing List: pgmpy@googlegroups.com  
