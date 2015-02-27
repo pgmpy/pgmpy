@@ -266,7 +266,7 @@ class Factor:
         reduced_variables = list(value_row[0]) 
         value_indices = map(int, value_row[1])
         reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))[0]
-        if not all(itertools.starmap(lt, itertools.izip(reduced_indices, factor.cardinality))):
+        if not all(itertools.starmap(lt, zip(reduced_indices, factor.cardinality))):
             raise Exceptions.SizeError("Value is greater than max possible value")
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
