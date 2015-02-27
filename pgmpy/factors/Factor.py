@@ -264,7 +264,7 @@ class Factor:
         if not all('_' in value for value in values):
             raise TypeError("Values should be in the form of variablename_index")
         value_row = list(zip(*[value.split('_') for value in values]))
-        reduced_variables, value_indices = list(value_row[0]), np.array(map(int, value_row[1]))
+        reduced_variables, value_indices = list(value_row[0]), list(map(int, value_row[1]))
         if not set(reduced_variables).issubset(set(factor.scope())):
             raise Exceptions.ScopeError("%s not in scope" % str(list(set(reduced_variables)-set(factor.scope()))))
         reduced_indices = list(np.where(np.in1d(factor.scope(), reduced_variables))[0])
