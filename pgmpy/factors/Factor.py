@@ -271,7 +271,7 @@ class Factor:
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
         factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
-        for var in variables:
+        for var in reduced_variables:
             del factor.variables[var]
         np.delete(factor.cardinality, reduced_indices)
         if not inplace:
