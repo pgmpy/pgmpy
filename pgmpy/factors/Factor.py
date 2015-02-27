@@ -505,10 +505,11 @@ class Factor:
             if any(self.cardinality[[order_dict[i] for i in range(len(self.cardinality))]] != other.cardinality):
                 return False
             indexes = np.array(list(itertools.product(*[range(i) for i in self.cardinality])))
-            new_array = np.zeros(indexes.shape, dtype=np.int)
+            transformed_assign = np.zeros(indexes.shape, dtype=np.int)
             for k, v in order_dict.items():
-                new_array[:, v] = indexes[:, k]
-            transformed_indexes = np.array(list(map(other._index_for_assignment, new_array))).ravel()
+                transformed_assign[:, v] = indexes[:, k]
+            transformed_indexes = np.array(list(map(
+                    other._index_for_assignment, transformed_assign))).ravel()
             if all(other.values[transformed_indexes] == self.values):
                 return True
             else:
