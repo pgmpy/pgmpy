@@ -263,7 +263,8 @@ class Factor:
             factor = Factor(self.scope(), self.cardinality, self.values)
             
         value_row = zip(*[value.split('_') for value in values])
-        reduced_variables, value_indices = list(value_row[0]), map(int, value_row[1])
+        reduced_variables = list(value_row[0]) 
+        value_indices = map(int, value_row[1])
         reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))[0]
         if not all(itertools.starmap(lt, itertools.izip(reduced_indices, factor.cardinality))):
             raise Exceptions.SizeError("Value is greater than max possible value")
