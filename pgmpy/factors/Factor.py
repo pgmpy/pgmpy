@@ -496,11 +496,23 @@ class Factor:
         if type(self) != type(other):
             return False
 
-        if self.variables == other.variables and all(self.cardinality == other.cardinality) \
-                and all(self.values == other.values):
-            return True
-        else:
+        if set(self.scope()) != set(other.scope()):
             return False
+        else:
+            order_dict = {}
+            for var_index in range(len(self.scope())):
+                order_dict[var_index] = other.scope().index(self.scope()[var_index])
+            if any(self.cardinality[[order_dict[i] for i in range(len(self.cardinality))]] != other.cardinality):
+                return False
+            indexes = np.array(list(itertools.product(*[range(i) for i in self.cardinality])))
+            new_array = np.zeros(indexes.shape, dtype=np.int)
+            for k, v in order_dict.items():
+                new_array[:, v] = indexes[:, k]
+            transformed_indexes = np.array(list(map(other._index_for_assignment, new_array))).ravel()
+            if all(other.values[transformed_indexes] == self.values):
+                return True
+            else:
+                return False
 
     def __hash__(self):
         """
