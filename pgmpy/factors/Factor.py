@@ -3,7 +3,7 @@ import numpy as np
 import itertools
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
-
+from operator import lt
 
 class Factor:
     """
@@ -261,28 +261,19 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-
-        for value in values:
-            if '_' not in value:
-                raise TypeError("Values should be in the form of "
-                                "variablename_index")
-            var, value_index = value.split('_')
-            if var not in factor.variables:
-                raise Exceptions.ScopeError("%s not in scope" % var)
-            index = list(factor.variables.keys()).index(var)
-            if not (int(value_index) < factor.cardinality[index]):
-                raise Exceptions.SizeError("Value is "
-                                           "greater than max possible value")
-            cum_cardinality = (np.product(factor.cardinality) /
-                               np.concatenate(([1], np.cumprod(factor.cardinality)))).astype(np.int64, copy=False)
-            num_elements = cum_cardinality[0]
-            index_arr = [j for i in range(0, num_elements,
-                                          cum_cardinality[index])
-                         for j in range(i, i+cum_cardinality[index+1])]
-            factor.values = factor.values[np.array(index_arr) + int(value_index) * cum_cardinality[index+1]]
-            del(factor.variables[var])
-            factor.cardinality = np.delete(factor.cardinality, index)
-
+            
+        value_row = list(zip(*[value.split('_') for value in values]))
+        reduced_variables = list(value_row[0]) 
+        value_indices = list(map(int, value_row[1]))
+        reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))[0]
+        if not all(itertools.starmap(lt, zip(reduced_indices, factor.cardinality))):
+            raise Exceptions.SizeError("Value is greater than max possible value")
+        reduce_assign = np.full(len(factor.cardinality), -1)
+        reduce_assign[reduced_indices] = value_indices
+        factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
+        for var in reduced_variables:
+            del factor.variables[var]
+        np.delete(factor.cardinality, reduced_indices)
         if not inplace:
             return factor
 
