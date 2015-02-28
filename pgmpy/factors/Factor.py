@@ -1,14 +1,8 @@
-# Navin had added a few extra methods to Factor class. I don't get the point of having
-# them right (maybe I will realize later). I have created a gist of his version:
-# https://gist.github.com/ankurankan/048891540462f22bf252
-
 import functools
-from collections import OrderedDict
 import numpy as np
+import itertools
+from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
-# from pgmpy.factors._factor_product import _factor_product
-
-np.seterr(divide='raise')
 
 
 class Factor:
@@ -24,7 +18,6 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
@@ -164,7 +157,7 @@ class Factor:
         """
         return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
 
-    def marginalize(self, variables):
+    def marginalize(self, variables, inplace=True):
         """
         Modifies the factor with marginalized values.
 
@@ -172,6 +165,10 @@ class Factor:
         ----------
         variables: string, list-type
             name of variable to be marginalized
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -187,39 +184,36 @@ class Factor:
             variables = [variables]
         for variable in variables:
             if variable not in self.variables:
-                raise Exceptions.ScopeError("%s not in scope" % variable)
+                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
+
+        if inplace:
+            factor = self
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
+        assign = np.array(factor.cardinality)
+        assign[marginalize_index] = -1
+        marginalized_values = []
+        for i in itertools.product(*[range(index) for index in assign[assign != -1]]):
+            assign[assign != -1] = i
+            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
+        factor.values = np.array(marginalized_values)
         for variable in variables:
-            self.values = self._marginalize_single_variable(variable)
-            index = list(self.variables.keys()).index(variable)
-            del(self.variables[variable])
-            self.cardinality = np.delete(self.cardinality, index)
-
-    def _marginalize_single_variable(self, variable):
-        """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable_name: string
-            name of variable to be marginalized
-
-        """
-        index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) /
-                           np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
-        num_elements = cum_cardinality[0]
-        sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index])
-                     for j in range(i, i+cum_cardinality[index+1])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
-        for i in range(self.cardinality[index]):
-            marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index+1]]
-        return marg_factor
-
-    def normalize(self):
+            index = list(factor.variables.keys()).index(variable)
+            del(factor.variables[variable])
+            factor.cardinality = np.delete(factor.cardinality, index)
+        if not inplace:
+            return factor
+            
+    def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
+
+        Parameters
+        ----------
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -232,9 +226,14 @@ class Factor:
                 0.15151515,  0.16666667])
 
         """
-        self.values = self.values/np.sum(self.values)
+        if inplace:
+            self.values = self.values / np.sum(self.values)
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+            factor.values = factor.values / np.sum(factor.values)
+            return factor
 
-    def reduce(self, values):
+    def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
 
@@ -242,6 +241,10 @@ class Factor:
         ----------
         values: string, list-type
             name of the variable values
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor
 
         Examples
         --------
@@ -253,26 +256,35 @@ class Factor:
         """
         if not isinstance(values, list):
             values = [values]
+
+        if inplace:
+            factor = self
+        else:
+            factor = Factor(self.scope(), self.cardinality, self.values)
+
         for value in values:
-            if not '_' in value:
+            if '_' not in value:
                 raise TypeError("Values should be in the form of "
                                 "variablename_index")
             var, value_index = value.split('_')
-            if not var in self.variables:
+            if var not in factor.variables:
                 raise Exceptions.ScopeError("%s not in scope" % var)
-            index = list(self.variables.keys()).index(var)
-            if not (int(value_index) < self.cardinality[index]):
+            index = list(factor.variables.keys()).index(var)
+            if not (int(value_index) < factor.cardinality[index]):
                 raise Exceptions.SizeError("Value is "
                                            "greater than max possible value")
-            cum_cardinality = (np.product(self.cardinality) /
-                               np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
+            cum_cardinality = (np.product(factor.cardinality) /
+                               np.concatenate(([1], np.cumprod(factor.cardinality)))).astype(np.int64, copy=False)
             num_elements = cum_cardinality[0]
             index_arr = [j for i in range(0, num_elements,
                                           cum_cardinality[index])
                          for j in range(i, i+cum_cardinality[index+1])]
-            self.values = self.values[np.array(index_arr) + int(value_index)*cum_cardinality[index+1]]
-            del(self.variables[var])
-            self.cardinality = np.delete(self.cardinality, index)
+            factor.values = factor.values[np.array(index_arr) + int(value_index) * cum_cardinality[index+1]]
+            del(factor.variables[var])
+            factor.cardinality = np.delete(factor.cardinality, index)
+
+        if not inplace:
+            return factor
 
     def product(self, *factors):
         """
@@ -327,20 +339,109 @@ class Factor:
         """
         return factor_divide(self, factor)
 
+    def maximize(self, variable, inplace=True):
+        """
+        Maximizes the factor with respect to the variable.
+
+        Parameters
+        ----------
+        variable: int, string, any hashable python object or list
+            A variable or a list of variables with respect to which factor is to be maximized
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.maximize('x2')
+        >>> print(phi)
+        x1      x3      phi(x1, x3)
+        -----------------------------
+        x1_0    x3_0    0.25
+        x1_0    x3_1    0.35
+        x1_1    x3_0    0.05
+        x1_1    x3_1    0.07
+        x1_2    x3_0    0.15
+        x1_2    x3_1    0.21
+        """
+        indexes = np.where(np.in1d(self.scope(), variable))[0]
+        assign = np.array(self.cardinality)
+        assign[indexes] = -1
+        new_values = np.array([])
+        for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+            assign[assign != -1] = i
+            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
+        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
+                                                        [variable] if isinstance(variable, str) else variable)]
+        new_card = self.cardinality[assign != -1]
+
+        if inplace:
+            return self.__init__(new_variables, new_card, new_values)
+        else:
+            return Factor(new_variables, new_card, new_values)
+
+    def _index_for_assignment(self, assignment):
+        """
+        Returns the index of values for a given assignment.
+        If -1 passed for any variable, returns all the indexes ignoring variables corresponding to -1.
+
+        Parameters
+        ----------
+        assignment: array-like
+            An array for the states of each variable whose index is to be calculated.
+            If any element is -1, that variable is ignored and all indexes for other variables
+            are returned ignoring the variables corresponding to -1.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> phi._index_for_assignment([1, 1, 1])
+        array([13])
+        >>> phi._index_for_assignment([1, -1, 1])
+        array([ 10,  13,  16])
+        >>> phi._index_for_assignment([1, -1, -1])
+        array([  9,  10,  11,  12,  13,  14,  15,  16,  17])
+        """
+        assignment = np.array(assignment)
+        card_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(self.cardinality[::-1])), axis=1)[::-1], 0)
+        if -1 in assignment:
+            indexes = np.where(assignment == -1)[0]
+            cardinalities = self.cardinality[indexes]
+            array_to_return = np.array([])
+            for i in itertools.product(*[range(card) for card in cardinalities]):
+                temp_assignment = np.array(assignment)
+                temp_assignment[temp_assignment == -1] = i
+                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
+            return array_to_return.astype('int')
+        else:
+            return np.array([np.sum(assignment * card_cumprod)])
+
     def __str__(self):
-        return self._str('phi')
+        return self._str(html=False)
 
-    def _str(self, phi_or_p):
-        string = ""
-        for var in self.variables:
-            string += str(var) + "\t\t"
-        string += phi_or_p + '(' + ', '.join(self.variables) + ')'
-        string += "\n"
-        string += '-' * 2 * len(string) + '\n'
+    def _str(self, html=False):
+        string_list = []
+        if html:
+            html_string_header = """<table><caption>Factor</caption>"""
+            string_list.append(html_string_header)
 
-        #fun and gen are functions to generate the different values of variables in the table.
-        #gen starts with giving fun initial value of b=[0, 0, 0] then fun tries to increment it
-        #by 1.
+        if html:
+            html_string_header = "%s%s%s" % ("""<tr>""", ''.join(
+                ["""<td><b>%s</b></td>""" % var for var in self.variables]),
+                """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
+            string_list.append(html_string_header)
+        else:
+            string_header = "%s\t\t%s" % ("\t\t".join(self.variables),
+                                          "phi(%s)" % ', '.join(self.variables))
+            string_list.append(string_header)
+            string_list.append('-' * (2 * len(string_header)))
+
+        # fun and gen are functions to generate the different values of
+        # variables in the table.
+        # gen starts with giving fun initial value of b=[0, 0, 0] then fun tries
+        # to increment it
+        # by 1.
         def fun(b, index=len(self.cardinality)-1):
             b[index] += 1
             if b[index] == self.cardinality[index]:
@@ -356,14 +457,40 @@ class Factor:
 
         value_index = 0
         for prob in gen():
-            prob_list = [list(self.variables)[i] + '_' + str(prob[i]) for i in range(len(self.variables))]
-            string += '\t\t'.join(prob_list) + '\t\t' + str(self.values[value_index]) + '\n'
+            prob_list = ["%s_%d" % (list(self.variables)[i], prob[i])
+                         for i in range(len(self.variables))]
+            if html:
+                html_string = """<tr>%s<td>%4.4f</td></tr>""" % (
+                    ''.join(["""<td>%s</td>""" % assignment
+                             for assignment in prob_list]),
+                    self.values[value_index])
+                string_list.append(html_string)
+            else:
+                string = "%s\t\t%4.4f" % ("\t\t".join(prob_list),
+                                          self.values[value_index])
+                string_list.append(string)
             value_index += 1
 
-        return string
+        return "\n".join(string_list)
+
+    def _repr_html_(self):
+        # Checks for IPython Notebook, not required in IPython 3
+        try:
+            ip = get_ipython()
+            front_end = (
+                ip.config.get('KernelApp', {}).get('parent_appname', "") or
+                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
+            )
+            if 'notebook' in front_end.lower():
+                return self._str(html=True)
+        except NameError:
+            return self._str(html=False)
 
     def __mul__(self, other):
         return self.product(other)
+
+    def __truediv__(self, other):
+        return self.divide(other)
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -383,7 +510,7 @@ class Factor:
                     ' '.join(list(map(str, self.values))))
 
 
-def _bivar_factor_operation(phi1, phi2, operation):
+def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
 
@@ -396,10 +523,15 @@ def _bivar_factor_operation(phi1, phi2, operation):
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
-    See Also
-    --------
-    factor_product
     """
+    try:
+        from joblib import Parallel, delayed
+        use_joblib = True
+    except ImportError:
+        use_joblib = False
+
+    np.seterr(divide='raise')
+
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
     common_var_list = [var for var in phi1_vars if var in phi2_vars]
@@ -414,23 +546,41 @@ def _bivar_factor_operation(phi1, phi2, operation):
         phi1_indexes = [i for i in range(len(phi1.variables))]
         phi2_indexes = [variables.index(var) for var in phi2.variables]
         values = []
-        phi1_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
+        phi1_cumprod = np.delete(np.concatenate(
+            (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
+        phi2_cumprod = np.delete(np.concatenate(
+            (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
         from itertools import product
+
         if operation == 'M':
-            for index in product(*[range(card) for card in cardinality]):
-                index = np.array(index)
-                values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-                              phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-        elif operation == 'D':
-            for index in product(*[range(card) for card in cardinality]):
-                index = np.array(index)
-                try:
-                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+            if use_joblib:
+                values = Parallel(n_jobs=n_jobs, backend='threading')(
+                    delayed(_parallel_helper_m)(index, phi1, phi2,
+                                                phi1_indexes, phi2_indexes,
+                                                phi1_cumprod, phi2_cumprod)
+                    for index in product(*[range(card) for card in cardinality]))
+            else:
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
                                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                except FloatingPointError:
-                    # zero division error should return 0. ref Koller page 365, Fig 10.7
-                    values.append(0)
+        elif operation == 'D':
+            if use_joblib:
+                values = Parallel(n_jobs, backend='threading')(
+                    delayed(_parallel_helper_d)(index, phi1, phi2,
+                                                phi1_indexes, phi2_indexes,
+                                                phi1_cumprod, phi2_cumprod)
+                    for index in product(*[range(card) for card in cardinality]))
+            else:
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    try:
+                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                    except FloatingPointError:
+                        # zero division error should return 0.
+                        # Ref Koller page 365, Fig 10.7
+                        values.append(0)
 
         phi = Factor(variables, cardinality, values)
         return phi
@@ -441,11 +591,38 @@ def _bivar_factor_operation(phi1, phi2, operation):
                 values = np.concatenate((values, value*phi2.values), axis=1)
         elif operation == 'D':
             # reference: Koller Defination 10.7
-            raise ValueError("factors Division not defined for factors with no common scope")
+            raise ValueError("Factors Division not defined for factors with no"
+                             " common scope")
         variables = phi1_vars + phi2_vars
         cardinality = list(phi1.cardinality) + list(phi2.cardinality)
         phi = Factor(variables, cardinality, values)
         return phi
+
+
+def _parallel_helper_m(index, phi1, phi2,
+                       phi1_indexes, phi2_indexes,
+                       phi1_cumprod, phi2_cumprod):
+    """
+    Helper function for parallelizing loops in factor product operations.
+    """
+    index = np.array(index)
+    return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+            phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+
+
+def _parallel_helper_d(index, phi1, phi2,
+                       phi1_indexes, phi2_indexes,
+                       phi1_cumprod, phi2_cumprod):
+    """
+    Helper function for parallelizing loops in factor division operations.
+    """
+    index = np.array(index)
+    try:
+        return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+    except FloatingPointError:
+        # zero division error should return 0. ref Koller page 365, Fig 10.7
+        return 0
 
 
 def factor_product(*args):
@@ -467,9 +644,6 @@ def factor_product(*args):
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
 
-    See Also
-    --------
-    factor_divide
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
@@ -488,8 +662,6 @@ def factor_divide(phi1, phi2):
     phi2: factors
         The Divisor.
 
-    Examples
-    --------
     Examples
     --------
     >>> from pgmpy.factors import Factor, factor_divide
@@ -513,9 +685,6 @@ def factor_divide(phi1, phi2):
     x1_0	x2_2	x3_1	3.33333333333
     x1_1	x2_2	x3_1	2.75
 
-    See Also
-    --------
-    factor_product
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")

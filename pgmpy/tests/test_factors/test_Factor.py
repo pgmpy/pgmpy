@@ -1,8 +1,11 @@
 import unittest
 from collections import OrderedDict
 import numpy as np
+import itertools
 import numpy.testing as np_test
 from pgmpy.factors import Factor
+from pgmpy.factors import factor_product
+from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD, TreeCPD, RuleCPD
 from pgmpy import exceptions
 from pgmpy.factors import JointProbabilityDistribution as JPD
@@ -28,10 +31,6 @@ class TestFactorMethods(unittest.TestCase):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
 
-    # def test_pos_dist(self):
-    #     self.assertTrue(self.phi.is_pos_dist())
-    #     self.assertFalse(self.phi1.is_pos_dist())
-
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
@@ -49,14 +48,6 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(IndexError, self.phi.assignment, [10])
         self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
         self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
-
-    # def test_get_variables(self):
-    #     self.assertListEqual(sorted(self.phi.get_variables()), ['x1', 'x2', 'x3'])
-    #     self.assertListEqual(sorted(self.phi1.get_variables()), ['x1', 'x2', 'x3'])
-
-    # def test_get_value(self):
-    #     self.assertAlmostEqual(self.phi1.get_value({'x1': 1, 'x2': 2, 'x3': 0, 'x4': 2, 'x5': 1}), 5.0)
-    #     self.assertAlmostEqual(self.phi1.get_value([1, 1, 1]), 9.0)
 
     def test_get_cardinality(self):
         self.assertEqual(self.phi.get_cardinality('x1'), 2)
@@ -87,14 +78,6 @@ class TestFactorMethods(unittest.TestCase):
              0.07575758, 0.09090909, 0.10606061, 0.12121212,
              0.13636364, 0.15151515, 0.16666667]))
 
-    # def test_maximize(self):
-    #     self.phi1.maximize(['x1'])
-    #     max_val_indices = {'x1':1}
-    #     data = [max_val_indices] * 6
-    #     #print(self.phi1)
-    #     np_test.assert_array_equal(self.phi1.values, np.array([6,7,8,9,10,11]))
-    #     self.assertEqual(self.phi1.data, sorted(data, key=lambda t: sorted(t.keys())))
-
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
@@ -115,33 +98,27 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
         np_test.assert_array_equal(identity_factor.values, np.ones(8))
 
-    def test__str(self):
-        from pgmpy import factors
-        phi = factors.Factor(['x1'], [2], np.ones(2))
-        self.assertEqual(repr(phi.__str__()), "'x1\\t\\tphi(x1)\\n------------------------\\nx1_0\\t\\t1.0\\nx1_1\\t\\t1.0\\n'")
-
     def test_factor_product(self):
-        from pgmpy import factors
-        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
-        factor_product = factors.factor_product(phi, phi1)
-        np_test.assert_array_equal(factor_product.values,
+        phi = Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
+        prod = factor_product(phi, phi1)
+        np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
-        self.assertEqual(factor_product.variables, OrderedDict([
+        self.assertEqual(prod.variables, OrderedDict([
             ('x1', ['x1_0', 'x1_1']),
             ('x2', ['x2_0', 'x2_1']),
             ('x3', ['x3_0', 'x3_1']),
             ('x4', ['x4_0', 'x4_1'])]
         ))
 
-        phi = factors.Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = factors.Factor(['x2', 'x3'], [2, 2], range(4))
-        factor_product = factors.factor_product(phi, phi1)
-        np_test.assert_array_equal(factor_product.values,
+        phi = Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
+        prod = factor_product(phi, phi1)
+        np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
-        self.assertEqual(factor_product.variables, OrderedDict(
+        self.assertEqual(prod.variables, OrderedDict(
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
@@ -150,42 +127,40 @@ class TestFactorMethods(unittest.TestCase):
         from pgmpy import factors
         phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
-        factor_product = phi.product(phi1)
-        np_test.assert_array_equal(factor_product.values,
+        prod = phi.product(phi1)
+        np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
-        self.assertEqual(factor_product.variables, OrderedDict([
+        self.assertEqual(prod.variables, OrderedDict([
             ('x1', ['x1_0', 'x1_1']),
             ('x2', ['x2_0', 'x2_1']),
             ('x3', ['x3_0', 'x3_1']),
             ('x4', ['x4_0', 'x4_1'])]
         ))
 
-        phi = factors.Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = factors.Factor(['x2', 'x3'], [2, 2], range(4))
-        factor_product = phi.product(phi1)
-        np_test.assert_array_equal(factor_product.values,
+        phi = Factor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
+        prod = phi.product(phi1)
+        np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
-        self.assertEqual(factor_product.variables, OrderedDict(
+        self.assertEqual(prod.variables, OrderedDict(
             [('x1', ['x1_0', 'x1_1', 'x1_2']),
              ('x2', ['x2_0', 'x2_1']),
              ('x3', ['x3_0', 'x3_1'])]))
 
     def test_factor_product_non_factor_arg(self):
-        from pgmpy import factors
-        self.assertRaises(TypeError, factors.factor_product, 1, 2)
+        self.assertRaises(TypeError, factor_product, 1, 2)
 
     def test_factor_mul(self):
-        from pgmpy import factors
-        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
-        factor_product = phi * phi1
-        np_test.assert_array_equal(factor_product.values,
+        phi = Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
+        prod = phi * phi1
+        np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
-        self.assertEqual(factor_product.variables, OrderedDict([
+        self.assertEqual(prod.variables, OrderedDict([
             ('x1', ['x1_0', 'x1_1']),
             ('x2', ['x2_0', 'x2_1']),
             ('x3', ['x3_0', 'x3_1']),
@@ -193,37 +168,58 @@ class TestFactorMethods(unittest.TestCase):
         ))
 
     def test_factor_divide(self):
-        from pgmpy import factors
-        phi1 = factors.Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
-        phi2 = factors.Factor(['x1'], [2], [1, 2])
-        factor_divide = phi1.divide(phi2)
-        phi3 = factors.Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
-        self.assertEqual(phi3, factor_divide)
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = Factor(['x1'], [2], [1, 2])
+        div = phi1.divide(phi2)
+        phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        self.assertEqual(phi3, div)
+
+    def test_factor_divide_truediv(self):
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = Factor(['x1'], [2], [1, 2])
+        div = phi1 / phi2
+        phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        self.assertEqual(phi3, div)
 
     def test_factor_divide_invalid(self):
-        from pgmpy import factors
-        phi1 = factors.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
-        phi2 = factors.Factor(['x1'], [2], [0, 2])
-        factor_divide = phi1.divide(phi2)
-        np_test.assert_array_equal(factor_divide.values, np.array([0, 0, 1.5, 2]))
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = Factor(['x1'], [2], [0, 2])
+        div = phi1.divide(phi2)
+        np_test.assert_array_equal(div.values, np.array([0, 0, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
-        from pgmpy import factors
-        phi1 = factors.Factor(['x1', 'x2', ], [2, 2], [1, 2, 3, 4])
-        phi2 = factors.Factor(['x3'], [2], [0, 2])
-        self.assertRaises(ValueError, factors.factor_divide, phi1, phi2)
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = Factor(['x3'], [2], [0, 2])
+        self.assertRaises(ValueError, factor_divide, phi1, phi2)
 
     def test_factor_divide_non_factor_arg(self):
-        from pgmpy import factors
-        self.assertRaises(TypeError, factors.factor_divide, 1, 1)
-
-    # def test_sum_values(self):
-    #     self.assertEqual(self.phi1.sum_values(), 66)
+        self.assertRaises(TypeError, factor_divide, 1, 1)
 
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)
         self.assertTrue(self.phi1 == self.phi1)
+
+    def test_index_for_assignment(self):
+        for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
+            self.assertEqual(self.phi1._index_for_assignment(j), i)
+
+    def test_maximize1(self):
+        self.phi1.maximize('x1')
+        self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
+        self.phi1.maximize('x2')
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
+    def test_maximize2(self):
+        self.phi1.maximize(['x1', 'x2'])
+        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+
+    def test_maximize3(self):
+        self.phi2 = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+                                                           0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
+        self.phi2.maximize('x2')
+        self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
+                                                                  0.07, 0.15, 0.21]))
 
     def tearDown(self):
         del self.phi
@@ -245,8 +241,8 @@ class TestTabularCPDInit(unittest.TestCase):
                          evidence=['intel', 'diff'], evidence_card=[3, 2])
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variable_card, 3)
-        np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
-        self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3, 2, 3]))
+        self.assertListEqual(list(cpd.variables), ['grade', 'diff', 'intel'])
         np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                                                          0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                                                          0.8, 0.8, 0.8, 0.8, 0.8, 0.8]))
@@ -304,15 +300,15 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(self.cpd.variable_card, 3)
         self.assertListEqual(list(self.cpd.variables), ['grade', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
-        np_test.assert_array_equal(self.cpd.values, np.array([0.2, 0.2, 0.2,
-                                                              0.2, 0.2, 0.2,
-                                                              1.6, 1.6, 1.6]))
+        np_test.assert_array_equal(self.cpd.values, np.array([0.1, 0.1, 0.1,
+                                                              0.1, 0.1, 0.1,
+                                                              0.8, 0.8, 0.8]))
 
     def test_marginalize_2(self):
         self.cpd.marginalize('grade')
         self.assertEqual(self.cpd.variable, 'grade')
-        self.assertListEqual(list(self.cpd.variables), ['intel', 'diff'])
-        np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 2]))
+        self.assertListEqual(list(self.cpd.variables), ['diff', 'intel'])
+        np_test.assert_array_equal(self.cpd.cardinality, np.array([2, 3]))
         np_test.assert_array_equal(self.cpd.values, np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
     def test_normalize(self):
@@ -342,7 +338,7 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_reduce_4(self):
         self.cpd.reduce('grade_0')
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]]))
+        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[1, 1, 1, 1, 1, 1]]))
 
     def test_get_cpd(self):
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -491,8 +487,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
                               ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
-                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)
-        ])
+                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)])
 
     def test_add_edge(self):
         self.tree1.add_edge('yolo', 'yo', 0)

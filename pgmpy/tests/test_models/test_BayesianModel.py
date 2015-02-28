@@ -1,7 +1,11 @@
 import unittest
 import networkx as nx
+import pandas as pd
+import numpy as np
+import numpy.testing as np_test
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
+from pgmpy.factors import TabularCPD
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -19,15 +23,6 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_class_init_with_data_nonstring(self):
         BayesianModel([(1, 2), (2, 3)])
-
-    # TODO: Correct these tests
-    # def test_class_init_with_data_selfloop(self):
-    #     self.assertRaises(exceptions.SelfLoopError, bm.models,
-    #                       [('a', 'a')])
-    #
-    # def test_class_init_with_data_cycle(self):
-    #     self.assertRaises(exceptions.CycleError, bm.models,
-    #                       [('a', 'b'), ('b', 'c'), ('c', 'a')])
 
     def test_add_node_string(self):
         self.G.add_node('a')
@@ -99,44 +94,6 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertListEqual(self.G.predecessors('b'), ['a'])
         self.assertListEqual(self.G.predecessors('c'), ['b'])
 
-    # def test_update_rule_for_parents(self):
-    #     self.G.add_edges_from([('a', 'c'), ('b', 'c'), ('a', 'd')])
-    #     self.assertListEqual(self.G.node['a']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [0])
-    #     self.G.add_edge('c', 'e')
-    #     self.assertListEqual(self.G.node['a']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['e']['_rule_for_parents'], [0])
-    #     self.G.add_edges_from([('b', 'f'), ('c', 'f')])
-    #     self.assertListEqual(self.G.node['a']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['e']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['f']['_rule_for_parents'], [0, 1])
-    #     self.G.add_node('g')
-    #     self.assertListEqual(self.G.node['a']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['e']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['f']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['g']['_rule_for_parents'], [])
-    #     self.G.add_nodes_from(['h', 'i'])
-    #     self.assertListEqual(self.G.node['a']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['e']['_rule_for_parents'], [0])
-    #     self.assertListEqual(self.G.node['f']['_rule_for_parents'], [0, 1])
-    #     self.assertListEqual(self.G.node['g']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['h']['_rule_for_parents'], [])
-    #     self.assertListEqual(self.G.node['i']['_rule_for_parents'], [])
-
     def tearDown(self):
         del self.G
 
@@ -146,128 +103,8 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G = BayesianModel([('a', 'd'), ('b', 'd'),
                                 ('d', 'e'), ('b', 'c')])
 
-    # def test_add_states(self):
-    #     self.G.set_states({'a': [1, 2, 3], 'b': [4, 5], 'c': [6, 7]})
-    #     self.assertListEqual(sorted([node['name'] for node in
-    #                                  self.G.node['a']['_states']]), [1, 2, 3])
-    #     self.assertListEqual(self.G.node['a']['_rule_for_states'], [0, 1, 2])
-    #     self.assertFalse(self.G.node['a']['_observed'])
-    #     self.assertListEqual(sorted([node['name'] for node in
-    #                                  self.G.node['b']['_states']]), [4, 5])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_states'], [0, 1])
-    #     self.assertFalse(self.G.node['b']['_observed'])
-    #     self.assertListEqual(sorted([node['name'] for node in
-    #                                  self.G.node['c']['_states']]), [6, 7])
-    #     self.assertListEqual(self.G.node['c']['_rule_for_states'], [0, 1])
-    #     self.assertFalse(self.G.node['c']['_observed'])
-    #     self.G.set_states({'a': [8, 9]})
-    #     self.assertListEqual(sorted([node['name'] for node in
-    #                                  self.G.node['a']['_states']]),
-    #                          [1, 2, 3, 8, 9])
-    #     self.assertListEqual(self.G.node['a']['_rule_for_states'],
-    #                          [0, 1, 2, 3, 4])
-    #     self.assertFalse(self.G.node['a']['_observed'])
-    #
-    # def test_get_states(self):
-    #     self.G = BayesianModel([('a', 'd')])
-    #     self.G.set_states({'a': [1, 2, 3], 'd': [4, 5]})
-    #     self.assertListEqual(list(self.G.get_states('a')), [1, 2, 3])
-    #     self.assertListEqual(list(self.G.get_states('d')), [4, 5])
-    #     self.G.node['a']['_rule_for_states'] = [1, 0, 2]
-    #     self.assertListEqual(list(self.G.get_states('a')), [2, 1, 3])
-    #     self.G.node['d']['_rule_for_states'] = [0, 1]
-    #     self.assertListEqual(list(self.G.get_states('d')), [4, 5])
-    #
-    # def test_update_rule_for_states(self):
-    #     self.G._update_rule_for_states('a', 4)
-    #     self.G._update_rule_for_states('b', 1)
-    #     self.assertListEqual(self.G.node['a']['_rule_for_states'],
-    #                          [0, 1, 2, 3])
-    #     self.assertListEqual(self.G.node['b']['_rule_for_states'], [0])
-    #     self.G._update_rule_for_states('a', 5)
-    #     self.assertListEqual(self.G.node['a']['_rule_for_states'],
-    #                          [0, 1, 2, 3, 4])
-    #     self.G.node['a']['_rule_for_states'] = [1, 0, 2]
-    #     self.G._update_rule_for_states('a', 5)
-    #     self.assertListEqual(self.G.node['a']['_rule_for_states'],
-    #                          [1, 0, 2, 3, 4])
-    #
-    # def test_update_node_observed_status(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.assertFalse(self.G.node['a']['_observed'])
-    #     self.G.node['a']['_states'][0]['observed_status'] = True
-    #     self.G._update_node_observed_status('a')
-    #     self.assertTrue(self.G.node['a']['_observed'])
-    #
-    # def test_no_missing_states(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.assertTrue(self.G._no_missing_states('a', [1, 2, 3]))
-    #     self.assertRaises(ValueError,
-    #                       self.G._no_missing_states, 'a', [1, 2])
-    #
-    # def test_no_extra_states(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.assertTrue(self.G._no_extra_states('a', [1, 2]))
-    #     self.assertTrue(self.G._no_extra_states('a', [1, 2, 3]))
-    #     self.assertRaises(ValueError,
-    #                       self.G._no_extra_states, 'a', [1, 2, 3, 4])
-    #
-    # def test_no_extra_parents(self):
-    #     self.assertTrue(self.G._no_extra_parents('d', ['a', 'b']))
-    #     self.assertRaises(ValueError,
-    #                       self.G._no_extra_parents, 'd', ['a', 'b', 'c'])
-    #     self.assertTrue(self.G._no_extra_parents('d', ['a']))
-    #
-    # def test_no_missing_parents(self):
-    #     self.assertTrue(self.G._no_missing_parents('d', ['a', 'b']))
-    #     self.assertTrue(self.G._no_missing_parents('d', ['a', 'b', 'c']))
-    #     self.assertRaises(ValueError,
-    #                       self.G._no_missing_parents, 'd', ['a'])
-    #
-    # def test_get_rule_for_states(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.assertListEqual(self.G.get_rule_for_states('a'), [1, 2, 3])
-    #
-    # def test_set_rule_for_states(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.G.set_rule_for_states('a', [3, 1, 2])
-    #     self.assertListEqual(self.G.get_rule_for_states('a'), [3, 1, 2])
-    #
-    # def test_all_states_present_in_list(self):
-    #     self.G.set_states({'a': [1, 2, 3]})
-    #     self.assertTrue(self.G._all_states_present_in_list('a', [1, 2, 3]))
-    #     self.assertTrue(self.G._all_states_present_in_list('a', [2, 1, 3]))
-    #     self.assertFalse(self.G._all_states_present_in_list('a', [1, 2]))
-    #
-    # def test_is_node_parents_equal_parents_list(self):
-    #     self.assertTrue(self.G._is_node_parents_equal_parents_list(
-    #         'd', ['a', 'b']))
-    #     self.assertTrue(self.G._is_node_parents_equal_parents_list(
-    #         'd', ['b', 'a']))
-    #     self.assertFalse(self.G._is_node_parents_equal_parents_list(
-    #         'd', ['a']))
-    #
-    # def test_get_rule_for_parents(self):
-    #     self.assertListEqual(self.G.get_rule_for_parents('d'), ['a', 'b'])
-    #     self.assertListEqual(self.G.get_rule_for_parents('a'), [])
-    #
-    # def test_set_rule_for_parents(self):
-    #     self.G.set_rule_for_parents('d', ['b', 'a'])
-    #     self.assertListEqual(self.G.node['d']['_rule_for_parents'], [1, 0])
-    #     self.assertListEqual(self.G.get_rule_for_parents('d'), ['b', 'a'])
-    #
-    # def test_get_parents(self):
-    #     self.assertListEqual(list(self.G.get_parents('d')), ['a', 'b'])
-    #     self.G.set_rule_for_parents('d', ['b', 'a'])
-    #     self.assertListEqual(list(self.G.get_parents('d')), ['b', 'a'])
-    #
-    # def test_get_parent_objects(self):
-    #     self.assertListEqual(list(self.G._get_parent_objects('d')),
-    #                          [self.G.node['a'], self.G.node['b']])
-    #     self.assertListEqual(list(self.G._get_parent_objects('a')), [])
-
     def test_moral_graph(self):
-        moral_graph = self.G.moral_graph()
+        moral_graph = self.G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
         for edge in moral_graph.edges():
             self.assertTrue(edge in [('a', 'b'), ('a', 'd'), ('b', 'c'), ('d', 'b'), ('e', 'd')] or
@@ -275,7 +112,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_moral_graph_with_edge_present_over_parents(self):
         G = BayesianModel([('a', 'd'), ('d', 'e'), ('b', 'd'), ('b', 'c'), ('a', 'b')])
-        moral_graph = G.moral_graph()
+        moral_graph = G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
         for edge in moral_graph.edges():
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
@@ -289,116 +126,6 @@ class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
                                 ('i', 's')])
-        # self.G.set_states(
-        #     {'d': ['easy', 'hard'], 'g': ['A', 'B', 'C'], 'i': ['dumb', 'smart'], 's': ['bad', 'avg', 'good'],
-        #      'l': ['yes', 'no']})
-
-    # def test_set_cpd(self):
-    #     self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #                          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #                          [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])
-    #     self.assertIsInstance(self.G.node['g']['_cpd'], bm.CPD.TabularCPD)
-    #     np.testing.assert_array_equal(self.G.node['g']['_cpd'].cpd, np.array((
-    #         [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #          [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
-    #
-    # def test_get_cpd(self):
-    #     self.G.set_cpd('g', [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #                          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #                          [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])
-    #     np.testing.assert_array_equal(self.G.get_cpd('g'), np.array((
-    #         [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    #          [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]])))
-
-    # def test_set_observations_single_state_reset_false(self):
-    #     self.G.set_observations({'d': 'easy'})
-    #     for state in self.G.node['d']['_states']:
-    #         if state['name'] == 'easy':
-    #             break
-    #     self.assertTrue(state['observed_status'])
-    #     self.assertTrue(self.G.node['d']['_observed'])
-    #
-    # def test_set_observation_multiple_state_reset_false(self):
-    #     self.G.set_observations({'d': 'easy', 'g': 'A'})
-    #     for state in self.G.node['d']['_states']:
-    #         if state['name'] == 'easy':
-    #             break
-    #     self.assertTrue(state['observed_status'])
-    #     self.assertTrue(self.G.node['d']['_observed'])
-    #     for state in self.G.node['g']['_states']:
-    #         if state['name'] == 'A':
-    #             break
-    #     self.assertTrue(state['observed_status'])
-    #     self.assertTrue(self.G.node['g']['_observed'])
-    #
-    # def test_set_observation_multiple_state_reset_false_not_found(self):
-    #     self.assertRaises(ValueError, self.G.set_observations, {'d': 'unknow_state'})
-    #
-    # def test_reset_observations_single_state(self):
-    #     self.G.reset_observations({'d': 'easy'})
-    #     # TODO change this as the function has changed
-    #     self.G.reset_observations({'d': 'easy'})
-    #     for state in self.G.node['d']['_states']:
-    #         if state['name'] == 'easy':
-    #             break
-    #     self.assertFalse(state['observed_status'])
-    #     self.assertFalse(self.G.node['g']['_observed'])
-    #
-    # def test_reset_observations_multiple_state(self):
-    #     self.G.set_observations({'d': 'easy', 'g': 'A', 'i': 'dumb'})
-    #     self.G.reset_observations({'d': 'easy', 'i': 'dumb'})
-    #     for state in self.G.node['d']['_states']:
-    #         if state['name'] == 'easy':
-    #             break
-    #     self.assertFalse(state['observed_status'])
-    #     self.assertFalse(self.G.node['d']['_observed'])
-    #     for state in self.G.node['g']['_states']:
-    #         if state['name'] == 'A':
-    #             break
-    #     self.assertTrue(state['observed_status'])
-    #     self.assertTrue(self.G.node['g']['_observed'])
-    #
-    # def test_reset_observation_node_none(self):
-    #     self.G.set_observations({'d': 'easy', 'g': 'A'})
-    #     self.G.reset_observations()
-    #     self.assertFalse(self.G.node['d']['_observed'])
-    #     for state in self.G.node['d']['_states']:
-    #         self.assertFalse(state['observed_status'])
-    #     self.assertFalse(self.G.node['g']['_observed'])
-    #     for state in self.G.node['g']['_states']:
-    #         self.assertFalse(state['observed_status'])
-    #
-    # def test_reset_observations_node_not_none(self):
-    #     self.G.set_observations({'d': 'easy', 'g': 'A'})
-    #     self.G.reset_observations('d')
-    #     self.assertFalse(self.G.node['d']['_observed'])
-    #     for state in self.G.node['d']['_states']:
-    #         self.assertFalse(state['observed_status'])
-    #     self.assertTrue(self.G.node['g']['_observed'])
-    #     for state in self.G.node['g']['_states']:
-    #         if state['name'] == 'A':
-    #             self.assertTrue(state['observed_status'])
-    #         else:
-    #             self.assertFalse(state['observed_status'])
-    #
-    # def test_reset_observations_node_error(self):
-    #     self.assertRaises(KeyError, self.G.reset_observations, 'j')
-    #
-    # def test_is_observed(self):
-    #     self.G.set_observations({'d': 'easy'})
-    #     self.assertTrue(self.G.is_observed('d'))
-    #     self.assertFalse(self.G.is_observed('i'))
-    #
-    # # def test_get_ancestros_observation(self):
-    # #     self.G.set_observations({'d': 'easy', 'g': 'A'})
-    # #     self.assertListEqual(list(self.G._get_ancestors_observation(['d'])), [])
-    # #     self.assertListEqual(list(sorted(self.G._get_ancestors_observation(['d', 'g']))), ['d', 'i'])
-    #
-    # def test_get_observed_list(self):
-    #     self.G.set_observations({'d': 'hard', 'i': 'smart'})
-    #     self.assertListEqual(sorted(self.G._get_observed_list()), ['d', 'i'])
 
     def test_active_trail_nodes(self):
         self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l'])
@@ -432,9 +159,135 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertTrue(self.G.is_active_trail('d', 's', 'l'))
         self.assertFalse(self.G.is_active_trail('d', 's', ['i', 'l']))
 
+    def test_add_single_cpd(self):
+        from pgmpy.factors import TabularCPD
+        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        self.G.add_cpds(cpd_s)
+        self.assertListEqual(self.G.get_cpds(), [cpd_s])
+
+    def test_add_multiple_cpds(self):
+        from pgmpy.factors import TabularCPD
+        cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
+        cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
+        cpd_g = TabularCPD('g', 2, np.random.rand(2, 4), ['d', 'i'], [2, 2])
+        cpd_l = TabularCPD('l', 2, np.random.rand(2, 2), ['g'], 2)
+        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+
+        self.G.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l, cpd_s)
+        self.assertEqual(self.G.get_cpds('d'), cpd_d)
+        self.assertEqual(self.G.get_cpds('i'), cpd_i)
+        self.assertEqual(self.G.get_cpds('g'), cpd_g)
+        self.assertEqual(self.G.get_cpds('l'), cpd_l)
+        self.assertEqual(self.G.get_cpds('s'), cpd_s)
+
     def tearDown(self):
         del self.G
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestBayesianModelFit(unittest.TestCase):
+    def setUp(self):
+        self.model_disconnected = BayesianModel()
+        self.model_disconnected.add_nodes_from(['A', 'B', 'C', 'D', 'E'])
+
+        self.model_connected = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+
+    def test_disconnected(self):
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
+        self.model_disconnected.fit(values)
+
+        for node in ['A', 'B', 'C', 'D', 'E']:
+            cpd = self.model_disconnected.get_cpds(node)
+            self.assertEqual(cpd.variable, node)
+            np_test.assert_array_equal(cpd.cardinality, np.array([2]))
+            value = (values.ix[:, node].value_counts() /
+                     values.ix[:, node].value_counts().sum()).values
+            np_test.assert_array_equal(cpd.values, value)
+
+    def tearDown(self):
+        del self.model_connected
+        del self.model_disconnected
+
+
+class TestDirectedGraphCPDOperations(unittest.TestCase):
+    def setUp(self):
+        self.graph = BayesianModel()
+
+    def test_add_single_cpd(self):
+        cpd = TabularCPD('grade', 2, np.random.rand(2, 4),
+                         ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd)
+        self.assertListEqual(self.graph.get_cpds(), [cpd])
+
+    def test_add_multiple_cpds(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertListEqual(self.graph.get_cpds(), [cpd1, cpd2, cpd3])
+
+    def test_remove_single_cpd(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds(cpd1)
+        self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
+
+    def test_remove_multiple_cpds(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds(cpd1, cpd3)
+        self.assertListEqual(self.graph.get_cpds(), [cpd2])
+
+    def test_remove_single_cpd_string(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds('diff')
+        self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
+
+    def test_remove_multiple_cpds_string(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.graph.remove_cpds('diff', 'grade')
+        self.assertListEqual(self.graph.get_cpds(), [cpd2])
+
+    def test_get_cpd_for_node(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertEqual(self.graph.get_cpds('diff'), cpd1)
+        self.assertEqual(self.graph.get_cpds('intel'), cpd2)
+        self.assertEqual(self.graph.get_cpds('grade'), cpd3)
+
+    def test_get_cpd_raises_error(self):
+        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
+                          ['diff', 'intel'], [2, 2])
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.graph.add_cpds(cpd1, cpd2, cpd3)
+        self.assertRaises(ValueError, self.graph.get_cpds, 'sat')
+
+    def tearDown(self):
+        del self.graph

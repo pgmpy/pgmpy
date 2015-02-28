@@ -67,6 +67,10 @@ class TabularCPD(Factor):
                  evidence=None, evidence_card=None):
 
         self.variable = variable
+        self.variable_card = None
+        self.evidence = None
+        self.evidence_card = None
+
         variables = [variable]
 
         if not isinstance(variable_card, int):
@@ -74,48 +78,127 @@ class TabularCPD(Factor):
         self.variable_card = variable_card
 
         cardinality = [variable_card]
-        if evidence_card:
+        if evidence_card is not None:
             if not isinstance(evidence_card, (list, set, tuple)):
-                evidence_card = [evidence_card]
-            cardinality.extend(evidence_card)
+                # Dirty hack to work with numpy arrays
+                # TODO: fix this in a cleaner way
+                # Explicit is better than implicit.
+                if isinstance(evidence_card, np.ndarray):
+                    evidence_card = list(evidence_card)
+                elif isinstance(evidence_card, (int, float)):
+                    evidence_card = [evidence_card]
+                else:
+                    raise TypeError("Evidence cardinality must be list, set, "
+                                    "tuple, numpy ndarray or simply a number.")
+            self.evidence_card = evidence_card
+            cardinality.extend(evidence_card[::-1])
 
-        if evidence:
+        if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
-                evidence = [evidence]
-            variables.extend(evidence)
+                # Dirty hack to work with numpy arrays
+                # TODO: fix this in a cleaner way
+                # Explicit is better than implicit.
+                if isinstance(evidence_card, np.ndarray):
+                    evidence_card = list(evidence_card)
+                elif isinstance(evidence, str):
+                    evidence = [evidence]
+                else:
+                    raise TypeError("Evidence must be list, set, tuple or array"
+                                    " of strings.")
+            self.evidence = evidence
+            variables.extend(evidence[::-1])
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
         values = np.array(values)
         if values.ndim != 2:
-            raise TypeError("Values must be a 2d list/array")
-        Factor.__init__(self, variables, cardinality, values.flatten('C'))
+            raise TypeError("Values must be a 2D list/array")
 
-    def marginalize(self, variables):
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
+
+    def get_cpd(self):
         """
-        Modifies the cpd table with marginalized values.
-
-        Paramters
-        ---------
-        variables: string, list-type
-            name of variable to be marginalized
-
-        Examples
-        --------
-        >>> from pgmpy.factors import TabularCPD
-        >>> cpd_table = TabularCPD('grade', 2,
-        ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-        ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.marginalize('diff')
-        >>> cpd_table.get_cpd()
-        array([[ 1.3,  0.8],
-               [ 0.7,  1.2]])
+        Returns the cpd
         """
-        super(TabularCPD, self).marginalize(variables)
+        if self.variable in self.variables:
+            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        else:
+            return self.values.reshape(1, np.prod(self.cardinality))
 
-    def normalize(self):
+    def _repr_html_(self):
         """
-        Normalizes the cpd table
+        Print TabularCPD in form of a table in IPython Notebook
+        """
+        # Checks for IPython Notebook, not required in IPython 3
+        try:
+            ip = get_ipython()
+            front_end = (
+                ip.config.get('KernelApp', {}).get('parent_appname', "") or
+                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
+            )
+            if 'notebook' in front_end.lower():
+                pass
+            else:
+                return str(self)
+        except NameError:
+            return str(self)
+
+        string_list = []
+
+        cpd_value = self.get_cpd()
+
+        html_string_header = (
+            """<table><caption>TabularCPD for <b>%s</b></caption>""" % self.variable)
+        string_list.append(html_string_header)
+
+        if self.evidence:
+            cpd_evidence_card = [card for card in self.evidence_card]
+            cpd_evidence_card = cpd_evidence_card[::-1]
+            cpd_evidence_card.insert(0, 1)
+            cum_card = np.cumprod(cpd_evidence_card)
+            max_card = cum_card[-1]
+
+            evidence = [var for var in self.evidence]
+            evidence = evidence[::-1]
+
+            for i in range(len(evidence)):
+                var = evidence[i]
+                card = cpd_evidence_card[i + 1]
+                num_repeat = cum_card[i]
+                col_span = max_card / (num_repeat * card)
+
+                html_substring_header = """<tr><td><b>%s</b></td>""" % var
+                string_list.append(html_substring_header)
+
+                for j in range(num_repeat):
+                    for k in range(card):
+                        html_substring = ("<td colspan=%d>%s_%d</td>" %
+                                          (col_span, var, k))
+                        string_list.append(html_substring)
+                string_list.append("</tr>")
+
+        m, n = cpd_value.shape
+        for i in range(m):
+            html_substring = """<tr><td><b>%s_%d</b></td>""" % (self.variable, i)
+            string_list.append(html_substring)
+            for j in range(n):
+                html_substring = """<td>%4.4f</td>""" % cpd_value[i, j]
+                string_list.append(html_substring)
+            string_list.append("</tr>")
+
+        string_list.append("</table>")
+
+        return ''.join(string_list)
+
+    def normalize(self, inplace=True):
+        """
+        Normalizes the cpd table.
+
+        Parameters
+        ----------
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
 
         Examples
         --------
@@ -128,10 +211,55 @@ class TabularCPD(Factor):
         array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
                [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
         """
-        cpd = self.get_cpd()
-        self.values = (cpd / cpd.sum(axis=0)).flatten('C')
+        if inplace:
+            tabular_cpd = self
+        else:
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+        cpd = tabular_cpd.get_cpd()
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
-    def reduce(self, values):
+        if not inplace:
+            return tabular_cpd
+
+    def marginalize(self, variables, inplace=True):
+        """
+        Modifies the cpd table with marginalized values.
+
+        Paramters
+        ---------
+        variables: string, list-type
+            name of variable to be marginalized
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
+
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> cpd_table = TabularCPD('grade', 2,
+        ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
+        ...                        ['intel', 'diff'], [2, 2])
+        >>> cpd_table.marginalize('diff')
+        >>> cpd_table.get_cpd()
+        array([[ 0.48484848,  0.4       ],
+               [ 0.51515152,  0.6       ]])
+        """
+        if inplace:
+            tabular_cpd = self
+        else:
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+
+        super(TabularCPD, tabular_cpd).marginalize(variables)
+        tabular_cpd.normalize()
+
+        if not inplace:
+            return tabular_cpd
+
+    def reduce(self, values, inplace=True):
         """
         Reduces the cpd table to the context of given variable values.
 
@@ -139,6 +267,9 @@ class TabularCPD(Factor):
         ----------
         values: string, list-type
             name of the variable values
+        inplace: boolean
+            If inplace=True it will modify the CPD itself, else would return
+            a new CPD
 
         Examples
         --------
@@ -151,20 +282,18 @@ class TabularCPD(Factor):
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
         """
-        if not isinstance(values, (list, set, tuple)):
-            values = [values]
-        variables = [var.split('_')[0] for var in values]
-        self.variable_card = variables.count(self.variable)
-        super(TabularCPD, self).reduce(values)
-
-    def get_cpd(self):
-        """
-        Returns the cpd
-        """
-        if self.variable in self.variables:
-            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+        if inplace:
+            tabular_cpd = self
         else:
-            return self.values.reshape(1, np.prod(self.cardinality))
+            tabular_cpd = TabularCPD(self.variable, self.variable_card,
+                                     self.get_cpd(), self.evidence,
+                                     self.evidence_card)
+
+        super(TabularCPD, tabular_cpd).reduce(values)
+        tabular_cpd.normalize()
+
+        if not inplace:
+            return tabular_cpd
 
     def to_factor(self):
         return Factor(self.variables, self.cardinality, self.values)
@@ -209,7 +338,7 @@ class TreeCPD(nx.DiGraph):
         ...                 ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
         """
         nx.DiGraph.__init__(self)
-        #TODO: Check cycles and self loops.
+        # TODO: Check cycles and self loops.
         if data:
             for edge in data:
                 if len(edge) != 3:
@@ -287,7 +416,7 @@ class TreeCPD(nx.DiGraph):
         evidence_card = []
         paths = []
 
-        #dfs for finding the evidences and evidence cardinalities and paths to factors.
+        # DFS for finding the evidences and evidence cardinalities and paths to factors.
         def dfs(node, path):
             if isinstance(node, tuple):
                 evidence.extend(node)
@@ -337,7 +466,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.to_rule_cpd()
 
         """
-        #TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
+        # TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if
                                  isinstance(target, Factor)}
@@ -520,8 +649,8 @@ class RuleCPD:
             start, end = 0, np.product(list(cardinality_dict.values()))
             for var in sorted(rule):
                 if var.split('_')[0] != self.variable:
-                    start, end = start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]), \
-                                 start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1)
+                    start, end = (start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]),
+                                  start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1))
                 else:
                     var_assignment = int(var.split('_')[1])
             for index in range(start, end):

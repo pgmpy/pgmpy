@@ -49,9 +49,7 @@ class Independencies:
                 self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
     def __str__(self):
-        string = ""
-        for assertion in self.independencies:
-            string += assertion.__str__() + '\n'
+        string = '\n'.join([str(assertion) for assertion in self.independencies])
         return string
 
     __repr__ = __str__
@@ -60,13 +58,10 @@ class Independencies:
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
 
-        See Also
-        --------
-        add_assertions
-
         Examples
         --------
-        >>> independencies = independencies(['X', 'Y', 'Z'])
+        >>> from pgmpy.independencies import Independencies
+        >>> independencies = Independencies(['X', 'Y', 'Z'])
         >>> independencies.get_independencies()
         """
         return self.independencies
@@ -82,14 +77,15 @@ class Independencies:
 
         Examples
         --------
-        >>> independencies = independencies()
+        >>> from pgmpy.independencies import Independencies
+        >>> independencies = Independencies()
         >>> independencies.add_assertions(['X', 'Y', 'Z'])
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """
         for assertion in assertions:
             self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
 
-        #TODO: write reduce function.
+        # TODO: write reduce function.
     def reduce(self):
         """
         Add function to remove duplicate Independence Assertions
@@ -104,13 +100,13 @@ class Independencies:
         return [assertion.latex_string() for assertion in self.get_independencies()]
 
     def get_factorized_product(self, random_variables=None, latex=False):
-        #TODO: Write this whole function
+        # TODO: Write this whole function
         #
-        #The problem right now is that the factorized product for all
-        #P(A, B, C), P(B, A, C) etc should be same but on solving normally
-        #we get different results which have to be simplified to a simpler
-        #form. How to do that ??? and also how to decide which is the most
-        #simplified form???
+        # The problem right now is that the factorized product for all
+        # P(A, B, C), P(B, A, C) etc should be same but on solving normally
+        # we get different results which have to be simplified to a simpler
+        # form. How to do that ??? and also how to decide which is the most
+        # simplified form???
         #
         pass
 
@@ -145,6 +141,7 @@ class IndependenceAssertion:
 
     Examples
     --------
+    >>> from pgmpy.independencies import IndependenceAssertion
     >>> assertion = IndependenceAssertion('U', 'X')
     >>> assertion = IndependenceAssertion('U', ['X', 'Y'])
     >>> assertion = IndependenceAssertion('U', ['X', 'Y'], 'Z')
@@ -180,7 +177,8 @@ class IndependenceAssertion:
         self.event3 = set(self._return_list_if_str(event3))
 
     def __str__(self):
-        return ', '.join(self.event1) + ' _|_ ' + ', '.join(self.event2) + ' | ' + ', '.join(self.event3)
+        return ('%s _|_ %s | %s' % (', '.join(self.event1), ', '.join(self.event2),
+                                    ', '.join(self.event3)))
 
     __repr__ = __str__
 
@@ -199,12 +197,9 @@ class IndependenceAssertion:
         """
         Returns a tuple of the attributes: variable, independent_of, given.
 
-        See Also
-        --------
-        set_assertion
-
         Examples
         --------
+        >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion('X', 'Y', 'Z')
         >>> asser.get_assertion()
         """
@@ -221,7 +216,7 @@ class IndependenceAssertion:
         event2 = {X, Y}
 
         event3 = {Z}
-        
+
         Parameters
         ----------
         event1: String or List
@@ -233,13 +228,10 @@ class IndependenceAssertion:
         event3: String or list of strings.
                 Random Variables given which event1 is independent of event2.
 
-        See Also
-        --------
-        get_assertion
-
         Example
         -------
         For a random variable U independent of X and Y given Z, the function should be called as
+        >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion()
         >>> asser.set_assertion('U', ['X', 'Y'], 'Z')
         >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
@@ -247,4 +239,5 @@ class IndependenceAssertion:
         self.__init__(event1, event2, event3)
 
     def latex_string(self):
-        return ', '.join(self.event1) + ' \perp ' + ', '.join(self.event2) + ' \mid ' + ', '.join(self.event3)
+        return ('%s \perp %s \mid %s' % (', '.join(self.event1), ', '.join(self.event2),
+                                         ', '.join(self.event3)))

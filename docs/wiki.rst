@@ -1,6 +1,3 @@
-Wiki
-====
-
 GSoC 2014 Ideas
 ---------------
 
@@ -75,7 +72,8 @@ Example
 ~~~~~~~
 ::
 
-    from pgmpy import BayesianModel as bm
+    from pgmpy.models import BayesianModel
+    from pgmpy.factors import TabularCPD
     student = bm.BayesianModel()
     # instantiates a new Bayesian Model called 'student'
 
@@ -85,49 +83,69 @@ Example
     student.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
     # adds directed edges from 'diff' to 'grade' and 'intel' to 'grade'
 
-    student.set_states({'diff': ['hard', 'easy']})
-    student.set_rule_for_states('diff', ['easy', 'hard'])
-    student.set_cpd('diff', [[0.2],[0.8]])
-    #easy=0.2
-    #hard=0.8
+    """
+    diff cpd:
 
-    student.set_states({'intel': ['avg', 'dumb', 'smart']})
-    student.set_rule_for_states('intel', ['dumb', 'avg', 'smart'])
-    student.set_cpd('intel', [[0.5], [0.3], [0.2]])
-    #dumb=0.5
-    #avg=0.3
-    #smart=0.2
+    +-------+--------+
+    |diff:  |        |
+    +-------+--------+
+    |easy   |   0.2  |
+    +-------+--------+
+    |hard   |   0.8  |
+    +-------+--------+
+    """
+    diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
 
-    student.set_states({'grade': ['A','C','B']})
-    student.set_rule_for_parents('grade', ['diff', 'intel'])
-    student.set_rule_for_states('grade', ['A', 'B', 'C'])
-    student.set_cpd('grade',
-                    [[0.1,0.1,0.1,0.1,0.1,0.1],
-                    [0.1,0.1,0.1,0.1,0.1,0.1],
-                    [0.8,0.8,0.8,0.8,0.8,0.8]]
-                    )
+    """
+    intel cpd:
 
-    #diff:       easy                 hard
-    #intel: dumb   avg   smart    dumb  avg   smart
-    #gradeA: 0.1    0.1    0.1     0.1  0.1    0.1
-    #gradeB: 0.1    0.1    0.1     0.1  0.1    0.1
-    #gradeC: 0.8    0.8    0.8     0.8  0.8    0.8
+    +-------+--------+
+    |intel: |        |
+    +-------+--------+
+    |dumb   |   0.5  |
+    +-------+--------+
+    |avg    |   0.3  |
+    +-------+--------+
+    |smart  |   0.2  |
+    +-------+--------+
+    """
+    intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
 
-    student.set_observations({'intel': 'smart', 'diff': 'easy'})
-    # observed parameters are that intel of student is smart and
-    # difficulty is easy
+    """
+    grade cpd:
 
-    student.reset_observations('intel')
-    # reset observations for intel
+    +------+-----------------------+---------------------+
+    |diff: |          easy         |         hard        |
+    +------+------+------+---------+------+------+-------+
+    |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
+    +------+------+------+---------+------+------+-------+
+    |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+    +------+------+------+---------+------+------+-------+
+    |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+    +------+------+------+---------+------+------+-------+
+    |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
+    +------+------+------+---------+------+------+-------+
+    """
+    grade_cpd = TabularCPD('grade', 3,
+                        [[0.1,0.1,0.1,0.1,0.1,0.1],
+                            [0.1,0.1,0.1,0.1,0.1,0.1], 
+                            [0.8,0.8,0.8,0.8,0.8,0.8]],
+                        evidence=['diff', 'intel'],
+                        evidence_card=[2, 3])
 
-    active_trail = student.is_active_trail('grade', 'intel')
-    # returns True if active trail exists between grade and intel
+    student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+
+    # Finding active trail
+    student.active_trail_nodes('diff')
+
+    # Finding active trail with observation
+    student.active_trail_nodes('diff', observed='grades')
 
 Ideas
 ~~~~~
 
 **1. Parsing from and writing to standard PGM file formats**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+************************************************************
 
 There are various standard file formats for representing the PGM data.
 PGM data basically consists of a Graph, a table corresponding to each node and a few other attributes of the Graph.
@@ -145,7 +163,7 @@ Currently only ProbModelXML is supported. pgmpy uses lxml for XML formats and we
 **Potential Mentor(s)**: Shikhar Nigam
 
 **2. Adding features to pgmpy_viz**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+***********************************
 
 pgmpy_viz is a web application for creating and visualizing graphical models that runs pgmpy in the back-end.
 It uses cytoscape.js in the front-end for manipulation of the networks. For reference to a similar application you can look at SamIam.
@@ -167,7 +185,7 @@ This project needs you to add:
 **Potential Mentor(s)**: Soumya Kundu
 
 **3. Implementing Markov Networks**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+***********************************
 
 There are two common branches of graphical representation of distributions.
 They are Bayesian networks(Directed Acyclic Graphs) and Markov networks(Undirected graphs which may be cyclic).
@@ -189,7 +207,7 @@ The following features for Markov Networks need to be implemented:
 **Potential Mentor(s)**: Anavil Tripathi
 
 **4. Implementing Algorithms:**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*******************************
 
 PGM involves many theorems and algorithms such as Belief-Propagation, Variable Elimination etc.
 The library will eventually implement every PGM algorithm. Here is the proposed set of algorithms to be implemented.
@@ -205,62 +223,11 @@ The library will eventually implement every PGM algorithm. Here is the proposed 
 **Potential Mentor(s)**: Shikhar Nigam
 
 **5. Blue Sky Project**
-~~~~~~~~~~~~~~~~~~~~~~~
+***********************
 
 If you have any interesting ideas please discuss it over the mailing list.
 
 Interested Students
 ~~~~~~~~~~~~~~~~~~~
 
-If you are interested in participating in GSoC with pgmpy, please introduce yourself on the mailing list and add your name to this list below.
-
-+---------+---------------+
-| Name    | Project       |
-+=========+===============+
-| MyName  | ProjectName   |
-+---------+---------------+
-
-Writing Tests
--------------
-
-Running Tests
-~~~~~~~~~~~~~
-We are using :code:`nosetests3` in pgmpy.
-For running the test you can go to the top directory of the project and run :code:`nosetests3`.
-For a more detailed output you could run with verbose option: :code:`nosetests3 -v`.
-
-Writing Tests
-~~~~~~~~~~~~~
-
-Each test class should be inherited from :code:`unittest.TestCase`.
-The test methods are inside these test classes and each test method's name should start with test otherwise nose won't recognize it as a test case.
-
-In each class you can define :code:`setUp` and :code:`tearDown` methods. :code:`setUp` is called before executing each test and
-:code:`tearDown` is called after the execution is complete. So normally :code:`setUp` contains all the code that common in all the tests.
-For example in our case of testing the models created by :code:`BayesianModel` we have to initialize the :code:`BayesianModel`
-every time for each test to run. So, we can put the initialization of the class in the :code:`setUp` method. Similarly, in our case we need to
-delete the :code:`BayesianModel` object after the test is run so we put the deletion code in :code:`tearDown` method.
-
-Some commonly used methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:code:`assertEqual(a, b)`: Checks a == b
-
-:code:`assertNotEqual(a,b)`: Check a!= b
-
-:code:`assertTrue(a)`: Checks bool(a) is True
-
-:code:`assertFalse(a)`: Checks bool(a) is False
-
-:code:`assertListEqual(a, b)`: Checks if list a == b. Since :code:`assertListEqual` matches lists by their order,
-if we want to just match the elements without considering their order we use either sorted() or set()
-depending on whether there are multiple occurrences of some elements or not.
-
-:code:`assertRaises(exception, callable, *args, **kwds)`: Checks if :code:`exception` is raised on calling :code:`callable` with *args* and *kwds.
-
-Links
-~~~~~
-
-Unittest: http://docs.python.org/2/library/unittest.html
-
-Nose: https://nose.readthedocs.org/en/latest/
+If you are interested in participating in GSoC with pgmpy, please introduce yourself on the mailing list.
