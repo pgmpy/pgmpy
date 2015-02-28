@@ -272,7 +272,7 @@ class Factor:
             raise Exceptions.SizeError("Value is greater than max possible value")
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
-        factor.values = factor.values[_index_for_assignment(factor, reduce_assign)]
+        factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
         factor.cardinality = np.delete(factor.cardinality, reduced_indices)
         for var in reduced_variables:
             del factor.variables[var]
