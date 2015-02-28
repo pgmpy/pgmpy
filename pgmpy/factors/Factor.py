@@ -3,12 +3,12 @@ import numpy as np
 import itertools
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
+from operator import lt
 
 
 class Factor:
     """
     Base class for *Factor*.
-
     Public Methods
     --------------
     assignment(index)
@@ -21,10 +21,8 @@ class Factor:
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
-
         Defined above, we have the following mapping from variable
         assignments to the index of the row vector in the value field:
-
         +-----+-----+-----+-------------------+
         |  x1 |  x2 |  x3 |    phi(x1, x2, x2)|
         +-----+-----+-----+-------------------+
@@ -44,7 +42,6 @@ class Factor:
         +-----+-----+-----+-------------------+
         | x1_1| x2_1| x3_1|     phi.value(7)  |
         +-----+-----+-----+-------------------+
-
         Parameters
         ----------
         variables: list
@@ -57,7 +54,6 @@ class Factor:
             using an ordering such that the left-most variables as defined in
             the variable field cycle through their values the fastest. More
             concretely, for factor
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -77,7 +73,6 @@ class Factor:
     def scope(self):
         """
         Returns the scope of the factor.
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -90,12 +85,10 @@ class Factor:
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
-
         Parameters
         ----------
         index: integer, list-type, ndarray
             index or indices whose assignment is to be computed
-
         Examples
         --------
         >>> import numpy as np
@@ -122,11 +115,9 @@ class Factor:
     def get_cardinality(self, variable):
         """
         Returns cardinality of a given variable
-
         Parameters
         ----------
         variable: string
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -141,10 +132,8 @@ class Factor:
     def identity_factor(self):
         """
         Returns the identity factor.
-
         When the identity factor of a factor is multiplied with the factor
         it returns the factor itself.
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -160,16 +149,13 @@ class Factor:
     def marginalize(self, variables, inplace=True):
         """
         Modifies the factor with marginalized values.
-
         Parameters
         ----------
         variables: string, list-type
             name of variable to be marginalized
-
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
             a new factor
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -204,17 +190,15 @@ class Factor:
             factor.cardinality = np.delete(factor.cardinality, index)
         if not inplace:
             return factor
-            
+
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
-
         Parameters
         ----------
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
             a new factor
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -224,7 +208,6 @@ class Factor:
         array([ 0.        ,  0.01515152,  0.03030303,  0.04545455,  0.06060606,
                 0.07575758,  0.09090909,  0.10606061,  0.12121212,  0.13636364,
                 0.15151515,  0.16666667])
-
         """
         if inplace:
             self.values = self.values / np.sum(self.values)
@@ -236,16 +219,13 @@ class Factor:
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
-
         Parameters
         ----------
         values: string, list-type
             name of the variable values
-
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
             a new factor
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -261,40 +241,34 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-
-        for value in values:
-            if '_' not in value:
-                raise TypeError("Values should be in the form of "
-                                "variablename_index")
-            var, value_index = value.split('_')
-            if var not in factor.variables:
-                raise Exceptions.ScopeError("%s not in scope" % var)
-            index = list(factor.variables.keys()).index(var)
-            if not (int(value_index) < factor.cardinality[index]):
-                raise Exceptions.SizeError("Value is "
-                                           "greater than max possible value")
-            cum_cardinality = (np.product(factor.cardinality) /
-                               np.concatenate(([1], np.cumprod(factor.cardinality)))).astype(np.int64, copy=False)
-            num_elements = cum_cardinality[0]
-            index_arr = [j for i in range(0, num_elements,
-                                          cum_cardinality[index])
-                         for j in range(i, i+cum_cardinality[index+1])]
-            factor.values = factor.values[np.array(index_arr) + int(value_index) * cum_cardinality[index+1]]
-            del(factor.variables[var])
-            factor.cardinality = np.delete(factor.cardinality, index)
-
+        if not all('_' in value for value in values):
+            raise TypeError("Values should be in the form of variablename_index")
+        value_row = list(zip(*[value.split('_') for value in values]))
+        reduced_variables = list(value_row[0])
+        value_indices = list(map(int, value_row[1]))
+        if not set(reduced_variables).issubset(set(factor.scope())):
+            raise Exceptions.ScopeError("%s not in scope" % list(set(reduced_variables)-set(factor.scope())))
+        reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
+        if not all(itertools.starmap(lt, zip(value_indices, (factor.cardinality)[reduced_indices]))):
+            raise Exceptions.SizeError("Value is greater than max possible value")
+        reduce_assign = np.full(len(factor.cardinality), -1)
+        reduce_assign[reduced_indices] = value_indices
+        factor.values = factor.values[list(map(int, factor._index_for_assignment(reduce_assign).tolist()))]
+        if len(factor.values) == 1:
+            factor.values = np.array([], dtype = np.int32)
+        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
+        for var in reduced_variables:
+            del factor.variables[var]
         if not inplace:
             return factor
 
     def product(self, *factors):
         """
         Returns the factor product with factors.
-
         Parameters
         ----------
         *factors: Factor1, Factor2, ...
             Factors to be multiplied
-
         Example
         -------
         >>> from pgmpy.factors import Factor
@@ -310,12 +284,10 @@ class Factor:
     def divide(self, factor):
         """
         Returns a new factors instance after division by factor.
-
         Parameters
         ----------
         factor : factors
             The denominator
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -342,12 +314,10 @@ class Factor:
     def maximize(self, variable, inplace=True):
         """
         Maximizes the factor with respect to the variable.
-
         Parameters
         ----------
         variable: int, string, any hashable python object or list
             A variable or a list of variables with respect to which factor is to be maximized
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -384,14 +354,12 @@ class Factor:
         """
         Returns the index of values for a given assignment.
         If -1 passed for any variable, returns all the indexes ignoring variables corresponding to -1.
-
         Parameters
         ----------
         assignment: array-like
             An array for the states of each variable whose index is to be calculated.
             If any element is -1, that variable is ignored and all indexes for other variables
             are returned ignoring the variables corresponding to -1.
-
         Examples
         --------
         >>> from pgmpy.factors import Factor
@@ -513,13 +481,10 @@ class Factor:
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
-
     Parameters
     ----------
     phi1: factors
-
     phi2: factors
-
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
@@ -628,12 +593,10 @@ def _parallel_helper_d(index, phi1, phi2,
 def factor_product(*args):
     """
     Returns factor product of multiple factors.
-
     Parameters
     ----------
     factor1, factor2, .....: factors
         factors to be multiplied
-
     Examples
     --------
     >>> from pgmpy.factors import Factor, factor_product
@@ -643,7 +606,6 @@ def factor_product(*args):
     >>> phi.variables
     OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
-
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
@@ -653,15 +615,12 @@ def factor_product(*args):
 def factor_divide(phi1, phi2):
     """
     Returns new factors instance equal to phi1/phi2.
-
     Parameters
     ----------
     phi1: factors
         The Dividend.
-
     phi2: factors
         The Divisor.
-
     Examples
     --------
     >>> from pgmpy.factors import Factor, factor_divide
@@ -684,7 +643,6 @@ def factor_divide(phi1, phi2):
     x1_1	x2_1	x3_1	4.5
     x1_0	x2_2	x3_1	3.33333333333
     x1_1	x2_2	x3_1	2.75
-
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")
