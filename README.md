@@ -1,6 +1,8 @@
 pgmpy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
 =====
 
+[![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Python Library for Probabilistic Graphical Models  
 Documentation: [pgmpy](http://pgmpy.org/)  
 Mailing List: pgmpy@googlegroups.com  
@@ -18,21 +20,23 @@ Dependencies:
 To install all the depedencies 
 
 - Either using <code>pip</code>, use
-<code><pre>
+```bash
 pip install -r requirements.txt
-</pre></code>
+```
 
-- Else using <code>conda</code>, use
-<code><pre>
+- Else using `conda`, use
+```bash
 conda install --file requirements.txt
-</pre></code>
+```
 
 Installation:
 =============
-pgmpy is installed using <code>distutils</code>. If you have the tools installed
+pgmpy is installed using `distutils`. If you have the tools installed
 to build a python extension module:
 
-<code>sudo python3 setup.py install</code>
+```bash
+sudo python3 setup.py install
+```
 
 Example:
 ========
