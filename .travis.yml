@@ -15,3 +15,9 @@ after_success:
     coveralls
 notifications:
     email: false
+    webhooks:
+        urls:
+            - https://webhooks.gitter.im/e/e2ce04225e5e5d1ab64c
+        on_success: always  # options: [always|never|change] default: always
+        on_failure: always  # options: [always|never|change] default: always
+        on_start: false     # default: false
