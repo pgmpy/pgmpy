@@ -20,21 +20,23 @@ Dependencies:
 To install all the depedencies 
 
 - Either using <code>pip</code>, use
-<code><pre>
+```bash
 pip install -r requirements.txt
-</pre></code>
+```
 
-- Else using <code>conda</code>, use
-<code><pre>
+- Else using `conda`, use
+```bash
 conda install --file requirements.txt
-</pre></code>
+```
 
 Installation:
 =============
-pgmpy is installed using <code>distutils</code>. If you have the tools installed
+pgmpy is installed using `distutils`. If you have the tools installed
 to build a python extension module:
 
-<code>sudo python3 setup.py install</code>
+```bash
+sudo python3 setup.py install
+```
 
 Example:
 ========
