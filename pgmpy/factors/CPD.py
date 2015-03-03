@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 from pgmpy.factors import Factor
 from pgmpy import exceptions
-from itertools import repeat
+from itertools import repeat, product
 from pgmpy.extern import tabulate
 
 
@@ -65,7 +65,6 @@ class TabularCPD(Factor):
     normalize()
     reduce([values_list])
     """
-
     def __init__(self, variable, variable_card, values,
                  evidence=None, evidence_card=None):
 
@@ -119,32 +118,27 @@ class TabularCPD(Factor):
 
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
-    def get_cpd(self, pretty=True):
+    def get_cpd(self):
         """
         Returns the cpd
         """
         if self.variable in self.variables:
-            if pretty:
-                table_list = []
-                for i in range(len(self.cardinality))[1:]:
-                    var_rep = np.prod(self.evidence_card[i:])
-                    row = [self.scope()[-i]]
-                    row.extend(self.variables[row[0]] * var_rep)
-                    if i > 1:
-                        row[1:] = [x for item in row[1:] for x in
-                                   repeat(item, int(np.prod(self.evidence_card[0:i - 1])))]
-                    table_list.insert(0, row)
-
-                value_list = self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:])).tolist()
-                for item, grade in zip(value_list, self.variables[self.variable]):
-                    item.insert(0, grade)
-                table_list = table_list + value_list
-
-                print(tabulate(table_list, tablefmt="grid"))
             return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
         else:
             return self.values.reshape(1, np.prod(self.cardinality))
 
+    def __str__(self):
+        return self._str(html=False)
+
+    def _str(self, html=False):
+        table_list = []
+        indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
+        for i in range(1, len(self.cardinality)):
+            row = self.scope()[i]
+            row = [row]+np.array(self.variables[row])[indexes[:, i-1]].tolist()
+            table_list.append(row)
+        table_list.extend(np.column_stack((np.array(self.variables[self.variable]), self.get_cpd())))
+        return tabulate(table_list, tablefmt="grid")
 
     def _repr_html_(self):
         """
@@ -324,7 +318,6 @@ class TreeCPD(nx.DiGraph):
     """
     Base Class for Tree CPD.
     """
-
     def __init__(self, data=None):
         """
         Base Class for Tree CPD.
@@ -557,7 +550,6 @@ class RuleCPD:
         assignment.
         """
         from itertools import combinations
-
         for rule, another_rule in combinations(self.rules, 2):
             rule, another_rule = (rule, another_rule) if len(rule) < len(another_rule) else (another_rule, rule)
             if not set(rule) - set(another_rule):
@@ -587,7 +579,7 @@ class RuleCPD:
         verify = self._verify()
         if not verify[0]:
             for rule in rules:
-                del (self.rules[rule])
+                del(self.rules[rule])
             raise ValueError(str(verify[1]) + " and " + str(verify[2]) + " point to the same assignment")
 
     def scope(self):
@@ -634,7 +626,6 @@ class RuleCPD:
         """
         from itertools import chain
         from collections import Counter
-
         assignments = list(set(chain(*self.rules)))
         cardinality = dict(Counter([element.split('_')[0] for element in assignments]))
         if variable:
@@ -673,8 +664,8 @@ class RuleCPD:
             start, end = 0, np.product(list(cardinality_dict.values()))
             for var in sorted(rule):
                 if var.split('_')[0] != self.variable:
-                    start, end = (start + (end - start) / cardinality_dict[var] * int(var.split('_')[1]),
-                                  start + (end - start) / cardinality_dict[var] * (int(var.split('_')[1]) + 1))
+                    start, end = (start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]),
+                                  start + (end-start)/cardinality_dict[var] * (int(var.split('_')[1]) + 1))
                 else:
                     var_assignment = int(var.split('_')[1])
             for index in range(start, end):
@@ -734,14 +725,13 @@ class RuleCPD:
         <CPD.TreeCPD object at 0x7f6b6f952fd0>
         """
         from collections import OrderedDict
-
         tree_cpd = TreeCPD()
         merged_rules = OrderedDict(sorted(self._merge().items(), key=lambda t: len(t[0])))
 
         for assignments, value in merged_rules.items():
             for assignment_index in range(len(assignments) - 1):
                 tree_cpd.add_edge(assignments[assignment_index].split('_')[0],
-                                  assignments[assignment_index + 1].split('_')[0],
+                                  assignments[assignment_index+1].split('_')[0],
                                   assignments[assignment_index].split('_')[1])
             tree_cpd.add_edge(assignments[-1].split('_')[0],
                               Factor([self.variable], [len(value)], value),
@@ -750,7 +740,6 @@ class RuleCPD:
 
     def __str__(self):
         from collections import OrderedDict
-
         string = ""
         for index, key in enumerate(OrderedDict(sorted(self.rules.items(), key=lambda t: len(t[0])))):
             key_string = ', '.join(key)
