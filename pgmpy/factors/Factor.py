@@ -270,18 +270,23 @@ class Factor:
         value_indices = list(map(int, value_row[1]))
         if not set(reduced_variables).issubset(set(factor.scope())):
             raise Exceptions.ScopeError("%s not in scope" % list(set(reduced_variables)-set(factor.scope())))
+
         reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
         if not all(itertools.starmap(lt, zip(value_indices, (factor.cardinality)[reduced_indices]))):
             raise Exceptions.SizeError("Value is greater than max possible value")
+
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
-        if len(reduce_assign) == 1:
-            factor.values = np.array([], dtype=np.int32)
+        factor.values = factor.values[list(map(int,factor._index_for_assignment(reduce_assign)))]
+        if len(factor.values) == 1:
+            factor.cardinality = np.ones(len(factor.cardinality), dtype=factor.cardinality.dtype)
+            values = np.reshape(values, [len(values), 1]).tolist()
+            factor.variables = OrderedDict(zip(reduced_variables, values))
         else:
-            factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
-        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
-        for var in reduced_variables:
-            del factor.variables[var]
+            factor.cardinality = np.delete(factor.cardinality, reduced_indices)
+            for var in reduced_variables:
+                del factor.variables[var]
+
         if not inplace:
             return factor
 
