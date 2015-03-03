@@ -264,18 +264,17 @@ class Factor:
             factor = Factor(self.scope(), self.cardinality, self.values)
             
         if not all('_' in value for value in values):
-            raise TypeError("Values should be in the form of "
-                            "variablename_index")
+            raise TypeError('Values should be in the form of variablename_index')
+            
         value_row = list(zip(*[value.split('_') for value in values]))
         reduced_variables = list(value_row[0])
         value_indices = list(map(int, value_row[1]))
         if not set(reduced_variables).issubset(set(factor.scope())):
-            raise Exceptions.ScopeError("%s not in scope" % list(set(reduced_variables)-set(factor.scope())))
+            raise Exceptions.ScopeError('%s not in scope' % list(set(reduced_variables)-set(factor.scope())))
 
         reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
         if not all(itertools.starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
-            raise Exceptions.SizeError("Value is "
-                                       "greater than max possible value")
+            raise Exceptions.SizeError('Value is greater than max possible value')
 
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
