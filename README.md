@@ -110,3 +110,5 @@ student.active_trail_nodes('diff')
 # Finding active trail with observation
 student.active_trail_nodes('diff', observed='grades')
 ```
+
+

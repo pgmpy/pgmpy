@@ -4,6 +4,7 @@ from collections import defaultdict
 from pgmpy.exceptions import CardinalityError
 from pgmpy.base import UndirectedGraph
 from pgmpy.independencies import Independencies
+from pgmpy.factors import factor_product
 import itertools
 import networkx as nx
 import numpy as np
@@ -451,19 +452,26 @@ class MarkovModel(UndirectedGraph):
         # Create clique trees by minimum (or maximum) spanning tree method
         clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
 
-        factor = self.factors[0]
-        factor = factor.product(*[self.factors[i] for i in
-                                  range(1, len(self.factors))])
-        if set(factor.scope()) != set(self.nodes()):
+        # Check whether the factors are defined for all the random variables or not
+        all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
+        if set(all_vars) != set(self.nodes()):
             ValueError('Factor for all the random variables not specified')
 
-        all_vars = set(self.nodes())
+        is_used = {factor: False for factor in self.factors}
 
         for node in clique_trees.nodes():
-            marginalised_nodes = all_vars - set(node)
-            factor_copy = factor.marginalize(list(marginalised_nodes),
-                                             inplace=False)
-            clique_trees.add_factors(factor_copy)
+            clique_factors = []
+            for factor in self.factors:
+                if not is_used[factor] and set(factor.scope()).issubset(node):
+                    clique_factors.append(factor)
+                    is_used[factor] = True
+
+            clique_potential = factor_product(*clique_factors)
+            clique_trees.add_factors(clique_potential)
+
+        if not all(is_used.values()):
+            raise ValueError('All the factors were not used to create Junction Tree.'
+                             'Extra factors are defined.')
 
         return clique_trees
 
