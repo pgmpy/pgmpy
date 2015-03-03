@@ -81,6 +81,11 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce(self):
         self.phi1.reduce(['x1_0', 'x2_0'])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+        
+    def test_complete_reduce(self):
+        self.phi1.reduce(['x1_0', 'x2_1', 'x3_1'])
+        np_test.assert_array_equal(self.phi1.values, np.array([3]))
+        np_test.assert_array_equal(self.phi1.cardinality, np.array([1, 1, 1]))
 
     def test_reduce_typeerror(self):
         self.assertRaises(TypeError, self.phi1.reduce, 'x10')
