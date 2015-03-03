@@ -59,7 +59,6 @@ class VariableElimination(Inference):
 
         for var in elimination_order:
             # Removing all the factors containing the variables which are
-            # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in working_factors[var]
                        if not set(factor.variables).intersection(eliminated_variables)]
