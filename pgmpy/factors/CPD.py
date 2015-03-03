@@ -133,9 +133,10 @@ class TabularCPD(Factor):
     def _str(self, html=False):
         table_list = []
         indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
+        scope = self.scope()
         for i in range(1, len(self.cardinality)):
-            row = self.scope()[i]
-            row = [row]+np.array(self.variables[row])[indexes[:, i-1]].tolist()
+            row = [scope[i]]
+            row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
             table_list.append(row)
         table_list.extend(np.column_stack((np.array(self.variables[self.variable]), self.get_cpd())))
         return tabulate(table_list, tablefmt="grid")
