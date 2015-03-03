@@ -58,7 +58,7 @@ class VariableElimination(Inference):
                              " variables or evidence args")
 
         for var in elimination_order:
-            import pdb; pdb.set_trace()
+            # Removing all the factors containing the variables which are
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in working_factors[var]
@@ -181,7 +181,7 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
-        elimination_variables = set(self.variables) - set(evidence.keys())
+        elimination_variables = set(self.variables) - set(evidence.keys()) if evidence else set()
         final_distribution = self._variable_elimination(elimination_variables, 'maximize',
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
@@ -199,10 +199,13 @@ class VariableElimination(Inference):
             var, value = var_assignment.split('_')
             map_query_results[var] = int(value)
 
-        return_dict = {}
-        for var in variables:
-            return_dict[var] = map_query_results[var]
-        return return_dict
+        if not variables:
+            return map_query_results
+        else:
+            return_dict = {}
+            for var in variables:
+                return_dict[var] = map_query_results[var]
+            return return_dict
 
     def induced_graph(self, elimination_order):
         """
