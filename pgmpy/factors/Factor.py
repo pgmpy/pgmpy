@@ -278,7 +278,7 @@ class Factor:
 
         reduce_assign = np.full(len(factor.cardinality), -1)
         reduce_assign[reduced_indices] = value_indices
-        factor.values = factor.values[list(map(int,factor._index_for_assignment(reduce_assign)))]
+        factor.values = factor.values[list(map(int, factor._index_for_assignment(reduce_assign)))]
         if len(factor.values) == 1:
             factor.cardinality = np.ones(len(factor.cardinality), dtype=factor.cardinality.dtype)
             values = np.reshape(values, [len(values), 1]).tolist()
