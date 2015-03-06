@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
+from itertools import chain
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
+from pgmpy.models import FactorGraph
+from pgmpy.models import JunctionTree
 from pgmpy.exceptions import ModelError
 
 
@@ -50,7 +53,11 @@ class Inference:
     """
 
     def __init__(self, model):
-        self.variables = model.nodes()
+        if isinstance(model, JunctionTree):
+            self.variables = set(chain(*model.nodes()))
+        else:
+            self.variables = model.nodes()
+
         self.cardinality = {}
         self.factors = defaultdict(list)
 
@@ -66,9 +73,9 @@ class Inference:
                 for var in cpd.variables:
                     self.factors[var].append(cpd_as_factor)
 
-        elif isinstance(model, MarkovModel):
-            for factor in model.get_factors():
-                self.cardinality = model.cardinalities
+        elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
+            self.cardinality = model.cardinalities
 
+            for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)

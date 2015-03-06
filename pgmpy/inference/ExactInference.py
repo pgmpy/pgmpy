@@ -23,6 +23,7 @@ class VariableElimination(Inference):
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
         """
+        # Dealing with the case when variables is not provided.
         if not variables:
             all_factors = []
             for factor_li in self.factors.values():
@@ -30,8 +31,20 @@ class VariableElimination(Inference):
             return set(all_factors)
 
         eliminated_variables = set()
-        working_factors = {node: [factor for factor in self.factors[node]]
+        working_factors = {node: {factor for factor in self.factors[node]}
                            for node in self.factors}
+
+        # Dealing with evidence. Reducing factors over it before VE is run.
+        if evidence:
+            for evidence_var in evidence:
+                for factor in working_factors[evidence_var]:
+                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
+                                                                                   state=evidence[evidence_var]),
+                                                   inplace=False)
+                    for var in factor_reduced.scope():
+                        working_factors[var].remove(factor)
+                        working_factors[var].add(factor_reduced)
+                del working_factors[evidence_var]
 
         # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
@@ -53,7 +66,7 @@ class VariableElimination(Inference):
             phi = getattr(phi, operation)(var, inplace=False)
             del working_factors[var]
             for variable in phi.variables:
-                working_factors[variable].append(phi)
+                working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
         final_distribution = set()
@@ -67,13 +80,7 @@ class VariableElimination(Inference):
         for query_var in variables:
             phi = factor_product(*final_distribution)
             phi.marginalize(list(set(variables) - set([query_var])))
-            if evidence:
-                phi.reduce(['{evidence_var}_{evidence}'.format(
-                    evidence_var=evidence_var, evidence=evidence[evidence_var])
-                    for evidence_var in evidence])
-                phi.normalize()
-
-            query_var_factor[query_var] = phi
+            query_var_factor[query_var] = phi.normalize(inplace=False)
         return query_var_factor
 
     def query(self, variables, evidence=None, elimination_order=None):
@@ -139,25 +146,73 @@ class VariableElimination(Inference):
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
 
-        # To handle the case when no argument is passed then _variable_elimination returns a set.
+        # To handle the case when no argument is passed then
+        # _variable_elimination returns a dict.
         if isinstance(final_distribution, dict):
             final_distribution = final_distribution.values()
-        return np.max(factor_product(*final_distribution).normalize(inplace=False).values)
+        return np.max(factor_product(*final_distribution).values)
 
-    def map_query(self, variables, evidence=None, elimination_order=None):
+    def map_query(self, variables=None, evidence=None, elimination_order=None):
         """
-        Computes the MAP assignments for variables given the evidence.
+        Computes the MAP Query over the variables given the evidence.
 
         Parameters
         ----------
         variables: list
-            list of variables over which we want to compute the MAP.
-        evidence: dict | None
-            Dictionary of the evidence in the form of {var: state_of_var_observed}
-            None if no evidence.
+            list of variables over which we want to compute the max-marginal.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
         elimination_order: list
-            order of the variables in which they are to be eliminated by the algorithm.
-            If None order is computed automatically.
+            order of variable eliminations (if nothing is provided) order is
+            computed automatically
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> phi_query = inference.map_query(['A', 'B'])
+        """
+        elimination_variables = set(self.variables) - set(evidence.keys()) if evidence else set()
+        final_distribution = self._variable_elimination(elimination_variables, 'maximize',
+                                                        evidence=evidence,
+                                                        elimination_order=elimination_order)
+        # To handle the case when no argument is passed then
+        # _variable_elimination returns a dict.
+        if isinstance(final_distribution, dict):
+            final_distribution = final_distribution.values()
+        distribution = factor_product(*final_distribution)
+        argmax = np.argmax(distribution.values)
+        assignment = distribution.assignment(argmax)[0]
+
+        map_query_results = {}
+        for var_assignment in assignment:
+            var, value = var_assignment.split('_')
+            map_query_results[var] = int(value)
+
+        if not variables:
+            return map_query_results
+        else:
+            return_dict = {}
+            for var in variables:
+                return_dict[var] = map_query_results[var]
+            return return_dict
+
+    def induced_graph(self, elimination_order):
+        """
+        Returns the induced graph formed by running Variable Elimination on the network.
+
+        Parameters
+        ----------
+        elimination_order: list, array like
+            List of variables in the order in which they are to be eliminated.
 
         Examples
         --------
@@ -170,17 +225,9 @@ class VariableElimination(Inference):
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> inference.map_query(['A', 'B'])
-        {'A': 0, 'B': 1}
-        >>> inference.map_query(['A', 'B'], evidence={'C': 0})
-        {'A': 1, 'B': 1}
-        >>> inference.map_query(['A'], elimination_order=['C', 'B', 'D', 'E'])
-        {'A': 0}
+        >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+        <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
-        result = self.query(variables, evidence, elimination_order)
-        joint_factor = np.product(list(result.values()))
-        return joint_factor.assignment(np.argmax(joint_factor.values))
-
 
 class BeliefPropagation(Inference):
     """

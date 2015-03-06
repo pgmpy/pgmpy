@@ -18,7 +18,6 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-
     def __init__(self, variables, cardinality, value):
         """
         Initialize a factors class.
@@ -191,39 +190,21 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-
+        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
+        assign = np.array(factor.cardinality)
+        assign[marginalize_index] = -1
+        marginalized_values = []
+        for i in itertools.product(*[range(index) for index in assign[assign != -1]]):
+            assign[assign != -1] = i
+            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
+        factor.values = np.array(marginalized_values)
         for variable in variables:
-            factor.values = factor._marginalize_single_variable(variable)
             index = list(factor.variables.keys()).index(variable)
             del(factor.variables[variable])
             factor.cardinality = np.delete(factor.cardinality, index)
-
         if not inplace:
             return factor
-
-    def _marginalize_single_variable(self, variable):
-        """
-        Returns marginalised factor for a single variable
-
-        Parameters
-        ---------
-        variable: string
-            name of variable to be marginalized
-
-        """
-        index = list(self.variables.keys()).index(variable)
-        cum_cardinality = (np.product(self.cardinality) /
-                           np.concatenate(([1], np.cumprod(self.cardinality)))).astype(np.int64, copy=False)
-        num_elements = cum_cardinality[0]
-        sum_index = [j for i in range(0, num_elements,
-                                      cum_cardinality[index])
-                     for j in range(i, i+cum_cardinality[index+1])]
-        marg_factor = np.zeros(num_elements/self.cardinality[index])
-        for i in range(self.cardinality[index]):
-            marg_factor += self.values[np.array(sum_index) +
-                                       i*cum_cardinality[index+1]]
-        return marg_factor
-
+            
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.

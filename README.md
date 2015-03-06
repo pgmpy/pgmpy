@@ -1,8 +1,12 @@
-pgmpy [![Build Status](https://travis-ci.org/pgmpy/pgmpy.png)](https://travis-ci.org/pgmpy/pgmpy) [![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.png?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
+pgmpy
 =====
+[![Build Status](https://travis-ci.org/pgmpy/pgmpy.svg?style=flat)](https://travis-ci.org/pgmpy/pgmpy)
+[![Coverage Status](https://coveralls.io/repos/pgmpy/pgmpy/badge.svg?branch=dev)](https://coveralls.io/r/pgmpy/pgmpy?branch=dev)
+[![Code Health](https://landscape.io/github/pgmpy/pgmpy/dev/landscape.svg?style=flat)](https://landscape.io/github/pgmpy/pgmpy/dev)
+[![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Python Library for Probabilistic Graphical Models  
-Documentation: [pgmpy](http://pgmpy.readthedocs.org/en/latest/)  
+Documentation: [pgmpy](http://pgmpy.org/)  
 Mailing List: pgmpy@googlegroups.com  
 irc: #pgmpy on freenode.net
 
@@ -18,21 +22,23 @@ Dependencies:
 To install all the depedencies 
 
 - Either using <code>pip</code>, use
-<code><pre>
+```bash
 pip install -r requirements.txt
-</pre></code>
+```
 
-- Else using <code>conda</code>, use
-<code><pre>
+- Else using `conda`, use
+```bash
 conda install --file requirements.txt
-</pre></code>
+```
 
 Installation:
 =============
-pgmpy is installed using <code>distutils</code>. If you have the tools installed
+pgmpy is installed using `distutils`. If you have the tools installed
 to build a python extension module:
 
-<code>sudo python3 setup.py install</code>
+```bash
+sudo python3 setup.py install
+```
 
 Example:
 ========
@@ -95,8 +101,8 @@ grade_cpd = TabularCPD('grade', 3,
 					   [[0.1,0.1,0.1,0.1,0.1,0.1],
                         [0.1,0.1,0.1,0.1,0.1,0.1], 
                         [0.8,0.8,0.8,0.8,0.8,0.8]],
-					   evidence=['diff', 'intel'],
-					   evidence_card=[2, 3])
+					   evidence=['intel', 'diff'],
+					   evidence_card=[3, 2])
 
 student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
@@ -106,3 +112,5 @@ student.active_trail_nodes('diff')
 # Finding active trail with observation
 student.active_trail_nodes('diff', observed='grades')
 ```
+
+
