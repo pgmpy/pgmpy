@@ -129,10 +129,10 @@ class VariableElimination(Inference):
 
         Examples
         --------
-        >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
         >>> import numpy as np
         >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
@@ -188,7 +188,6 @@ class VariableElimination(Inference):
         # _variable_elimination returns a dict.
         if isinstance(final_distribution, dict):
             final_distribution = final_distribution.values()
-
         distribution = factor_product(*final_distribution)
         argmax = np.argmax(distribution.values)
         assignment = distribution.assignment(argmax)[0]
@@ -229,7 +228,6 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
-        
 
 class BeliefPropagation(Inference):
     """
