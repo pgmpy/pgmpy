@@ -574,7 +574,8 @@ class BayesianModel(DirectedGraph):
         >>> predict_data = values[800:]
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
-        >>> predict_data.drop('E', axis=1)
+        >>> predict_data = predict_data.copy()
+        >>> predict_data.drop('E', axis=1, inplace=True)
         >>> y_pred = model.predict(predict_data)
         >>> y_pred
         array([0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1,
