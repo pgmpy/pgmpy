@@ -129,10 +129,10 @@ class VariableElimination(Inference):
 
         Examples
         --------
-        >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
         >>> import numpy as np
         >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
@@ -180,17 +180,14 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
-        if not variables:
-            variables = []
-        final_distribution = self._variable_elimination(variables, 'maximize',
+        elimination_variables = set(self.variables) - set(evidence.keys()) if evidence else set()
+        final_distribution = self._variable_elimination(elimination_variables, 'maximize',
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
-
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.
         if isinstance(final_distribution, dict):
             final_distribution = final_distribution.values()
-
         distribution = factor_product(*final_distribution)
         argmax = np.argmax(distribution.values)
         assignment = distribution.assignment(argmax)[0]
@@ -200,7 +197,13 @@ class VariableElimination(Inference):
             var, value = var_assignment.split('_')
             map_query_results[var] = int(value)
 
-        return map_query_results
+        if not variables:
+            return map_query_results
+        else:
+            return_dict = {}
+            for var in variables:
+                return_dict[var] = map_query_results[var]
+            return return_dict
 
     def induced_graph(self, elimination_order):
         """
@@ -225,7 +228,6 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
-        
 
 class BeliefPropagation(Inference):
     """
