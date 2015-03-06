@@ -598,7 +598,7 @@ class BayesianModel(DirectedGraph):
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
             states_dict = model_inference.map_query(variables=missing_variables, evidence=data_point.to_dict())
-            for k, v in states_dict:
+            for k, v in states_dict.items():
                 pred_values[k].append(v)
         return pd.DataFrame(pred_values, index=data.index)
 
