@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+from joblib import Parallel,delayed
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 
@@ -35,17 +36,17 @@ class VariableElimination(Inference):
                            for node in self.factors}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
+    
         if evidence:
-            for evidence_var in evidence:
+            Parallel(n_jobs=4,backend="threading")(delayed(
                 for factor in working_factors[evidence_var]:
                     factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
-                                                                                   state=evidence[evidence_var]),
-                                                   inplace=False)
-                    for var in factor_reduced.scope():
-                        working_factors[var].remove(factor)
-                        working_factors[var].add(factor_reduced)
-                del working_factors[evidence_var]
-
+                                    state=evidence[evidence_var]),inplace=False)
+                for var in factor_reduced.scope():
+                    working_factors[var].remove(factor)
+                    working_factors[var].add(factor_reduced)
+            del working_factors[evidence_var]
+)(evidence_var)for evidence_var in evidence) 
         # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
             elimination_order = list(set(self.variables) -
