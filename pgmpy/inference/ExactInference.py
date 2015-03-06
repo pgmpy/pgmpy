@@ -7,7 +7,7 @@ from pgmpy.factors.Factor import factor_product
 
 
 class VariableElimination(Inference):
-    def parallelFor(evidence_var):
+    def parallelFor(self, evidence_var,working_factors,evidence):
 
         for factor in working_factors[evidence_var]:
             factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,state=evidence[evidence_var]),inplace=False)
@@ -47,7 +47,7 @@ class VariableElimination(Inference):
         # Dealing with evidence. Reducing factors over it before VE is run.
     
         if evidence: #Implementation of a parallel looping construct
-            Parallel(n_jobs=-1, backend="threading") (delayed(self. parallelFor)(evidence_var)for evidence_var in evidence) 
+            Parallel(n_jobs=-1, backend="threading") (delayed(self. parallelFor)(evidence_var,working_factors,evidence)for evidence_var in evidence) 
         # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
             elimination_order = list(set(self.variables) -
