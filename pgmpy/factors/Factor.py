@@ -500,8 +500,9 @@ class Factor:
             return False
         else:
             order_dict = {}
+            other_scope = other.scope()
             for var_index in range(len(self.scope())):
-                order_dict[var_index] = other.scope().index(self.scope()[var_index])
+                order_dict[var_index] = other_scope.index(self.scope()[var_index])
 
             order_change = [order_dict[i] for i in range(len(self.cardinality))]
             if any(self.cardinality[order_change] != other.cardinality):
