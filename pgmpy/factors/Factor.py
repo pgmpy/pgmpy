@@ -502,14 +502,23 @@ class Factor:
             order_dict = {}
             for var_index in range(len(self.scope())):
                 order_dict[var_index] = other.scope().index(self.scope()[var_index])
-            if any(self.cardinality[[order_dict[i] for i in range(len(self.cardinality))]] != other.cardinality):
+
+            order_change = [order_dict[i] for i in range(len(self.cardinality))]
+            if any(self.cardinality[order_change] != other.cardinality):
                 return False
-            indexes = np.array(list(itertools.product(*[range(i) for i in self.cardinality])))
+
+            indexes = np.zeros((np.prod(self.cardinality), self.cardinality.shape[0]), dtype=int)
+            for k, i in enumerate(itertools.product(*[range(i) for i in self.cardinality])):
+                indexes[k] = i
+
             transformed_assign = np.zeros(indexes.shape, dtype=np.int)
             for k, v in order_dict.items():
                 transformed_assign[:, v] = indexes[:, k]
-            transformed_indexes = np.array(list(map(
-                    other._index_for_assignment, transformed_assign))).ravel()
+
+            transformed_indexes = np.zeros(np.prod(self.cardinality), dtype=int)
+            for k, index in enumerate(map(other._index_for_assignment, transformed_assign)):
+                transformed_indexes[k] = index
+
             if all(other.values[transformed_indexes] == self.values):
                 return True
             else:
