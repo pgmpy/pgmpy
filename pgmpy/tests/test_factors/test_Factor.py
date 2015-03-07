@@ -200,6 +200,14 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(self.phi == self.phi)
         self.assertTrue(self.phi1 == self.phi1)
 
+    def test_eq1(self):
+        phi1 = Factor(['x1', 'x2', 'x3'], [2, 4, 3], range(24))
+        phi2 = Factor(['x2', 'x1', 'x3'], [4, 2, 3], [0, 1, 2, 12, 13, 14, 3,
+                                                      4, 5, 15, 16, 17, 6, 7,
+                                                      8, 18, 19, 20, 9, 10, 11,
+                                                      21, 22, 23])
+        self.assertTrue(phi1, phi2)
+
     def test_index_for_assignment(self):
         for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
             self.assertEqual(self.phi1._index_for_assignment(j), i)
