@@ -1,5 +1,5 @@
-networkx==1.9.1
-numpy==1.9.1
+networkx==1.8.1
+numpy==1.9.2
 scipy==0.14.0
 cython==0.21
 sphinx==1.2.2
