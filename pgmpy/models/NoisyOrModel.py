@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import numpy as np
-import networkx as nx
+from pgmpy.base import DirectedGraph
 
-
-class NoisyOrModel(nx.DiGraph):
+class NoisyOrModel(DirectedGraph):
     """
     Base class for Noisy-Or models.
 
