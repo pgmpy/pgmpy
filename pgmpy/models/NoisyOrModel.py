@@ -73,12 +73,11 @@ class NoisyOrModel(DirectedGraph):
         # Converting the inhibitor_probability to a uniform 2D array
         # because else numpy treats it as a 1D array with dtype object.
         inhibitor_probability_list = []
+        max_cardinality = max(cardinality)
         for prob_array in inhibitor_probability:
-            if len(prob_array) < max(cardinality):
-                prob_array.extend([0]*(max(cardinality)-len(prob_array)))
+                prob_array.extend([0]*(max_cardinality-len(prob_array)))  #If len(prob_array) == max_cardinality, prob_array is untouched
                 inhibitor_probability_list.append(prob_array)
-            else:
-                inhibitor_probability_list.append(prob_array)
+
         inhibitor_probability_uni = np.array(inhibitor_probability_list)
 
         if inhibitor_probability_uni[inhibitor_probability_uni > 1]:
