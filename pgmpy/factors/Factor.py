@@ -276,17 +276,12 @@ class Factor:
         if not all(itertools.starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
             raise Exceptions.SizeError('Value is greater than max possible value')
 
-        reduce_assign = np.full(len(factor.cardinality), -1)
+        reduce_assign = np.full(len(factor.cardinality), -1, dtype=int)
         reduce_assign[reduced_indices] = value_indices
-        factor.values = factor.values[list(map(int, factor._index_for_assignment(reduce_assign)))]
-        if len(factor.values) == 1:
-            factor.cardinality = np.ones(len(factor.cardinality), dtype=factor.cardinality.dtype)
-            values = np.reshape(values, [len(values), 1]).tolist()
-            factor.variables = OrderedDict(zip(reduced_variables, values))
-        else:
-            factor.cardinality = np.delete(factor.cardinality, reduced_indices)
-            for var in reduced_variables:
-                del factor.variables[var]
+        factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
+        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
+        for var in reduced_variables:
+            del factor.variables[var]
 
         if not inplace:
             return factor
