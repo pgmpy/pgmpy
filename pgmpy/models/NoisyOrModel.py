@@ -2,7 +2,9 @@
 import numpy as np
 from pgmpy.base import DirectedGraph
 
+
 class NoisyOrModel(DirectedGraph):
+
     """
     Base class for Noisy-Or models.
 
