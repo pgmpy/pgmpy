@@ -443,16 +443,19 @@ class ProbModelXMLReader:
         Returns a BayesianModel or MarkovModel object depending on the
         type of ProbModelXML passed to ProbModelXMLReader class.
         """
+        self.probnet = {}
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
         #TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
-        for prop in probnet_elem.find('AdditionalProperty').iterchildren():
-            self.add_additional_property(self.probnet['AdditionalProperties'], prop)
+        if probnet_elem.find('AdditionalProperty'):
+            for prop in probnet_elem.find('AdditionalProperty').iterchildren():
+                self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
         # Add nodes
+        self.probnet['Variables'] = {}
         for variable in probnet_elem.find('Variables').iterchildren():
             self.add_node(variable)
 
@@ -483,7 +486,7 @@ class ProbModelXMLReader:
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
-        self.probnet['Variables'][variable_name]['roles'] = variable.attrib['roles']
+        self.probnet['Variables'][variable_name]['role'] = variable.attrib['role']
         if variable.find('Comment'):
             self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
         if variable.find('Coordinates'):
@@ -500,15 +503,16 @@ class ProbModelXMLReader:
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
+        self.probnet['edges'] = {}
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         if edge.xpath('Comment'):
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
-            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
+            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment')[0].text
         if edge.xpath('Label'):
-            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label').text
+            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label')[0].text
         if edge.xpath('AdditionalProperties'):
-            for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
+            for prop in edge.xpath('AdditionalProperties')[0].iterchildren():
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
     def add_potential(self, potential):
