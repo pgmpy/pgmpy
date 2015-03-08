@@ -184,14 +184,14 @@ class TestBayesianModelCPD(unittest.TestCase):
         del self.G
 
 
-class TestBayesianModelFit(unittest.TestCase):
+class TestBayesianModelFitPredict(unittest.TestCase):
     def setUp(self):
         self.model_disconnected = BayesianModel()
         self.model_disconnected.add_nodes_from(['A', 'B', 'C', 'D', 'E'])
 
         self.model_connected = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
 
-    def test_disconnected(self):
+    def test_disconnected_fit(self):
         values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
                               columns=['A', 'B', 'C', 'D', 'E'])
         self.model_disconnected.fit(values)
@@ -203,6 +203,33 @@ class TestBayesianModelFit(unittest.TestCase):
             value = (values.ix[:, node].value_counts() /
                      values.ix[:, node].value_counts().sum()).values
             np_test.assert_array_equal(cpd.values, value)
+
+    def test_connected_predict(self):
+        np.random.seed(42)
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
+        fit_data = values[:800]
+        predict_data = values[800:].copy()
+        self.model_connected.fit(fit_data)
+        self.assertRaises(ValueError, self.model_connected.predict, predict_data)
+        predict_data.drop('E', axis=1, inplace=True)
+        e_predict = self.model_connected.predict(predict_data)
+        np_test.assert_array_equal(e_predict.values.ravel(),
+                                   np.array([1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1,
+                                             1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0,
+                                             0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0,
+                                             0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1,
+                                             0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1,
+                                             1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1,
+                                             1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0,
+                                             1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1,
+                                             0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1,
+                                             1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+                                             1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1,
+                                             0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0,
+                                             1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1,
+                                             1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1,
+                                             1, 1, 1, 0]))
 
     def tearDown(self):
         del self.model_connected
