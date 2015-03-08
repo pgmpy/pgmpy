@@ -451,20 +451,20 @@ class ProbModelXMLReader:
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
         if probnet_elem.find('AdditionalProperty'):
-            for prop in probnet_elem.find('AdditionalProperty').iterchildren():
+            for prop in probnet_elem.find('AdditionalProperty'):
                 self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
         # Add nodes
         self.probnet['Variables'] = {}
-        for variable in probnet_elem.find('Variables').iterchildren():
+        for variable in probnet_elem.find('Variables'):
             self.add_node(variable)
 
         # Add edges
-        for edge in self.xml.xpath('//Links')[0].iterchildren():
+        for edge in self.xml.xpath('//Links')[0]:
             self.add_edge(edge)
 
         # Add CPD
-        for potential in self.xml.xpath('//Potential')[0].iterchildren():
+        for potential in self.xml.xpath('//Potential')[0]:
             self.add_potential(potential)
 
     #TODO: No specification on additionalconstraints present in the research paper
@@ -492,13 +492,13 @@ class ProbModelXMLReader:
         if variable.find('Coordinates'):
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
         if variable.xpath('AdditionalProperties'):
-            for prop in variable.find('AdditionalProperties').iterchildren():
+            for prop in variable.find('AdditionalProperties'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
         if not variable.xpath('States'):
             warnings.warn("States not available for node: " + variable_name)
         else:
-            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States').iterchildren()}
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States')}
 
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
@@ -512,7 +512,7 @@ class ProbModelXMLReader:
         if edge.xpath('Label'):
             self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label')[0].text
         if edge.xpath('AdditionalProperties'):
-            for prop in edge.xpath('AdditionalProperties')[0].iterchildren():
+            for prop in edge.xpath('AdditionalProperties')[0]:
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
     def add_potential(self, potential):
