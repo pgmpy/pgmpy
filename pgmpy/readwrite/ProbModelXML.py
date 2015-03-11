@@ -443,25 +443,28 @@ class ProbModelXMLReader:
         Returns a BayesianModel or MarkovModel object depending on the
         type of ProbModelXML passed to ProbModelXMLReader class.
         """
+        self.probnet = {}
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
         #TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
-        for prop in probnet_elem.find('AdditionalProperty').iterchildren():
-            self.add_additional_property(self.probnet['AdditionalProperties'], prop)
+        if probnet_elem.find('AdditionalProperty'):
+            for prop in probnet_elem.find('AdditionalProperty'):
+                self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
         # Add nodes
-        for variable in probnet_elem.find('Variables').iterchildren():
+        self.probnet['Variables'] = {}
+        for variable in probnet_elem.find('Variables'):
             self.add_node(variable)
 
         # Add edges
-        for edge in self.xml.xpath('//Links')[0].iterchildren():
+        for edge in self.xml.findall('.//Links')[0]:
             self.add_edge(edge)
 
         # Add CPD
-        for potential in self.xml.xpath('//Potential')[0].iterchildren():
+        for potential in self.xml.findall('.//Potential')[0]:
             self.add_potential(potential)
 
     #TODO: No specification on additionalconstraints present in the research paper
@@ -483,32 +486,33 @@ class ProbModelXMLReader:
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
-        self.probnet['Variables'][variable_name]['roles'] = variable.attrib['roles']
-        if variable.find('Comment'):
+        self.probnet['Variables'][variable_name]['role'] = variable.attrib['role']
+        if variable.find('Comment') is not None:
             self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
-        if variable.find('Coordinates'):
+        if variable.find('Coordinates') is not None:
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
-        if variable.xpath('AdditionalProperties'):
-            for prop in variable.find('AdditionalProperties').iterchildren():
+        if variable.find('AdditionalProperties/Property') is not None:
+            for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
-        if not variable.xpath('States'):
+        if variable.find('States/State') is None:
             warnings.warn("States not available for node: " + variable_name)
         else:
-            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States').iterchildren()}
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
 
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
+        self.probnet['edges'] = {}
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
-        if edge.xpath('Comment'):
+        if edge.find('Comment') is not None:
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
-            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
-        if edge.xpath('Label'):
-            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label').text
-        if edge.xpath('AdditionalProperties'):
-            for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
+            self.probnet['edges'][(var1, var2)]['Comment'] = edge.find('Comment').text
+        if edge.find('Label') is not None:
+            self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
+        if edge.find('AdditionalProperties/Property') is not None:
+            for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
     def add_potential(self, potential):
