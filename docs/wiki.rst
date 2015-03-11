@@ -1,3 +1,125 @@
+GSoC 2015 Ideas
+---------------
+Introduction
+~~~~~~~~~~~~
+A graphical model or probabilistic graphical model (PGM) is a probabilistic model for which a graph expresses the conditional dependence structure between random variables. They are most commonly used in probability theory, statistics (particularly Bayesian statistics) and machine learning.  
+
+pgmpy is a Python library to implement Probabilistic Graphical Models and related inference and learning algorithms. Our main focus is on providing a consistent API and flexible approach to its implementation. This is the second year pgmpy is participating in GSoC.  
+
+Want to get involved?
+~~~~~~~~~~~~~~~~~~~~~
+If you're interested in participating in GSoC 2015 as a student, mentor, or community member, you should join the pgmpy's [mailing list] (https://groups.google.com/forum/#!forum/pgmpy) and post any questions, comments, etc. to pgmpy@googlegroups.com
+
+Additionally, you can find us on IRC at #pgmpy on irc.freenode.org.  If no one is available to answer your question, please be patient and post it to the mailing list as well.  
+
+Getting Started
+~~~~~~~~~~~~~~~
+
+1. Install dependencies::
+
+   $ sudo pip3 install -r requirements.txt
+
+2. Clone the repo:: 
+
+   $ git clone https://github.com/pgmpy/pgmpy
+
+3. Install pgmpy:: 
+
+    $ cd pgmpy/
+    $ sudo python3 setup.py install
+
+References for PGM:
+******************
+* Notebooks for basic introduction of PGM and pgmpy: https://github.com/pgmpy/pgmpy_notebook  
+* Quick intro to Bayesian Networks: http://people.cs.ubc.ca/~murphyk/Bayes/bnintro.html  
+* Reference book for PGM: [Probabilistic Graphical Models - Principles and Techniques](http://www.amazon.in/Probabilistic-Graphical-Models-Principles-Computation/dp/0262013193)
+
+Ideas
+~~~~~
+
+1. Add feature to accept and output state names for models.
+***********************************************************
+At present pgmpy internally assigns a numerical value to each state of a random variable.
+For example, for a variable ``grade`` having states ``A``, ``B`` and ``C``, the internal representation in
+pgmpy would be ``grade_0``, ``grade_1`` and ``grade_2``. Also if some method needs to output a state name,
+it gives the state name in this form only. 
+We want improve this and allow the user to work with the state names rather than the internal representations.  
+
+
+**Expected Outcome:** The user should be able to completely work with the state names (never need to use internal representation) that he has provided.
+
+**Difficulty Level:** Moderate  
+
+**PGM knowledge required:** Basic  
+
+**Skills Required:** Intermediate Python  
+
+**Potential Mentor(s):** Ankur Ankan, Shashank Garg
+
+2. Approximate Algorithms
+*************************
+At present in ``pgmpy``, we have implementation of exact inference algorithms for various graphical models. Although inference algorithms run in polynomial time for simple graphs (such as graphs with low tree-width), they become computationally intractable for larger graphs that arise from real life problem. However there a class of algorithms that can be used to perform approximate inference on the graphical models. This project aims towards implementation of two famous approximate inference algorithms
+
+* Linear Programming Relaxation
+* Cutting Plane Algorithms
+
+**Expected Outcome:** We should be able to run approximate inference algorithms on complex graphical models (used in stereo vision).
+
+**Difficulty Level:** Difficult
+
+**PGM knowledge required:** Very good understanding of Graphical Models and Inference Algorithms
+
+**Skills Required:** Intermediate Python, Cython
+
+**Potential Mentor(s):**  Abinash Panda, Ankur Ankan
+
+3. Adding support for different types of CPDs
+*********************************************
+Right now pgmpy has the feature for creating ``Rule CPDs`` and ``Tree CPDs`` but the current implementation of variable elimination or clique tree don't accept the models if a ``Rule CPD`` or ``Tree CPD`` is associated with it. There are algorithms that are able to do inference much efficiently in the case of Rule and Tree CPDs as compared to normal Tabular CPD. Implement those algorithms.
+
+**Expected Outcome:** We should be able to run inference algorithms over models having associated Rule CPD or Tree CPD.
+
+**Difficulty Level:** Difficult
+
+**PGM knowledge required:** Good understanding of Bayesian Models and inference algorithms.
+
+**Skills Required:** Intermediate Python, Cython
+
+**Potential Mentor(s):**  Jaidev Deshpande, Shashank Garg
+
+4. Adding support for Dynamic Bayesian Networks (DBNs)
+******************************************************
+Dynamic Bayesian Networks are used to represent models which have repeating pattern. It is mostly used when we are trying to create a model with time as a variable, so for each instant of time we have the same model and hence a repeating model. Currently pgmpy doesn't have support for DBNs.
+
+**Expected Outcome:** Should be able to create DBNs and do inference over it.
+
+**Difficulty Level:** Difficult
+
+**PGM knowledge required:** Very good understanding of PGM.  
+
+**Skills Required:** Intermediate Python, Cython
+
+**Potential Mentor(s):**  Ankur Ankan, Abinash Panda
+
+5. Parsing from and writing to standard PGM file formats
+********************************************************
+There are various standard file formats for representing the PGM data. PGM data basically consists of a Graph, a table corresponding to each node and a few other attributes of the Graph. Here_ is a list of some of these formats. pgmpy needs functionality to read networks from and write networks to these standard file formats. 
+Currently only **ProbModelXML** is supported. pgmpy uses lxml_ for XML formats and we plan to use pyparsing_ for non XML formats.  
+
+.. _lxml: http://lxml.de
+.. _pyparsing: http://pyparsing.wikispaces.com/
+.. _Here: https://github.com/pgmpy/pgmpy/issues/65
+
+**Expected Outcome:** You are expected to choose at least one file format from the above list and write a sub-module which enables pgmpy to read from and write to the same format.
+
+**Difficulty level:** Easy
+
+**PGM knowledge required:** Basic knowledge about representation of PGM models.
+
+**Skills Required:** Intermediate python 
+
+**Potential Mentor(s):** Pranjal Mittal, Shashank Garg
+
 GSoC 2014 Ideas
 ---------------
 
