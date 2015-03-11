@@ -8,9 +8,11 @@ pgmpy is a Python library to implement Probabilistic Graphical Models and relate
 
 Want to get involved?
 ~~~~~~~~~~~~~~~~~~~~~
-If you're interested in participating in GSoC 2015 as a student, mentor, or community member, you should join the pgmpy's [mailing list] (https://groups.google.com/forum/#!forum/pgmpy) and post any questions, comments, etc. to pgmpy@googlegroups.com
+If you're interested in participating in GSoC 2015 as a student, mentor, or community member, you should join the pgmpy's `mailing list`_  and post any questions, comments, etc. to pgmpy@googlegroups.com
 
 Additionally, you can find us on IRC at #pgmpy on irc.freenode.org.  If no one is available to answer your question, please be patient and post it to the mailing list as well.  
+
+.. _mailing list: https://groups.google.com/forum/#!forum/pgmpy
 
 Getting Started
 ~~~~~~~~~~~~~~~
@@ -29,10 +31,12 @@ Getting Started
     $ sudo python3 setup.py install
 
 References for PGM:
-******************
+*******************
 * Notebooks for basic introduction of PGM and pgmpy: https://github.com/pgmpy/pgmpy_notebook  
 * Quick intro to Bayesian Networks: http://people.cs.ubc.ca/~murphyk/Bayes/bnintro.html  
-* Reference book for PGM: [Probabilistic Graphical Models - Principles and Techniques](http://www.amazon.in/Probabilistic-Graphical-Models-Principles-Computation/dp/0262013193)
+* Reference book for PGM: `Probabilistic Graphical Models - Principles and Techniques`_
+
+.. _Probabilistic Graphical Models - Principles and Techniques: http://www.amazon.in/Probabilistic-Graphical-Models-Principles-Computation/dp/0262013193
 
 Ideas
 ~~~~~
