@@ -7,6 +7,7 @@ omit =
     */dist-packages/numpy/*
     */dist-packages/nose/*
     */dist-packages/lxml/*
+    */pgmpy/extern/*
 
 exclude_lines =
     # Have to re-enable the standard pragma
