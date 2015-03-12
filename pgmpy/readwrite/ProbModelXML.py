@@ -460,6 +460,7 @@ class ProbModelXMLReader:
             self.add_node(variable)
 
         # Add edges
+        self.probnet['edges'] = {}
         for edge in self.xml.findall('.//Links')[0]:
             self.add_edge(edge)
 
@@ -487,15 +488,15 @@ class ProbModelXMLReader:
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
         self.probnet['Variables'][variable_name]['role'] = variable.attrib['role']
-        if variable.find('Comment') is not None:
+        if variable.find('Comment'):
             self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
-        if variable.find('Coordinates') is not None:
+        if variable.find('Coordinates'):
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
-        if variable.find('AdditionalProperties/Property') is not None:
+        if variable.find('AdditionalProperties/Property'):
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
-        if variable.find('States/State') is None:
+        if not variable.find('States/State'):
             warnings.warn("States not available for node: " + variable_name)
         else:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
@@ -503,15 +504,14 @@ class ProbModelXMLReader:
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
-        self.probnet['edges'] = {}
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
-        if edge.find('Comment') is not None:
+        if edge.find('Comment'):
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
             self.probnet['edges'][(var1, var2)]['Comment'] = edge.find('Comment').text
-        if edge.find('Label') is not None:
+        if edge.find('Label'):
             self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
-        if edge.find('AdditionalProperties/Property') is not None:
+        if edge.find('AdditionalProperties/Property'):
             for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
