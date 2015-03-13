@@ -525,8 +525,6 @@ class BayesianModel(DirectedGraph):
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e198>,
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
         """
-        from pgmpy.factors import TabularCPD
-
         cpds_list = []
 
         get_node_card = lambda _node, _data: _data.ix[:, _node].value_counts().shape[0]
