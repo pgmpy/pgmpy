@@ -2,7 +2,7 @@
 import unittest
 from io import StringIO
 import networkx as nx
-from pgmpy.readwrite import ProbModelXMLWriter, ProbModelXMLReader, parse_probmodelxml, generate_probmodelxml
+from pgmpy.readwrite import ProbModelXMLReader
 import warnings
 try:
     from lxml import etree
@@ -68,7 +68,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                 <AdditionalProperties />
             </Link>
         </Links>
-	<Potential type="Table" role="ConditionalProbability" label="string">
+        <Potential type="Table" role="ConditionalProbability" label="string">
             <Comment>CPDs in the form of table</Comment>
             <AdditionalProperties />
         </Potential>
@@ -88,45 +88,38 @@ class TestProbModelXMLReaderString(unittest.TestCase):
 
     def test_variables(self):
         variables = {'difficulty':
-		       {'Comment': None,
-		        'Coordinates': {},
-			'role': 'Chance',
-			'type': 'FiniteState',
-			'States': {'difficult': {}, 'easy': {}}
-		       },
-		     'intelligence':
-		       {'Comment': None,
-			'Coordinates': {},
-			'role': 'Chance',
-			'type': 'FiniteState',
-			'States': {'smart': {}, 'dumb': {}}
-		       }
-		    }
+                     {'Comment': None,
+                      'Coordinates': {},
+                      'role': 'Chance',
+                      'type': 'FiniteState',
+                      'States': {'difficult': {}, 'easy': {}}},
+                     'intelligence':
+                     {'Comment': None,
+                      'Coordinates': {},
+                      'role': 'Chance',
+                      'type': 'FiniteState',
+                      'States': {'smart': {}, 'dumb': {}}}}
         self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['Variables'], variables)
         self.assertDictEqual(self.reader_file.probnet['Variables'], variables)
 
     def test_edges(self):
         edge = {('grade', 'recommendation_letter'):
-		  {'directed': '1',
-		   'Comment': 'Directed Edge from grade to recommendation_letter',
-		   'Label': 'grad_to_reco'
-		  },
-		('intelligence', 'grade'):
-		  {'directed': '1',
-		   'Comment': 'Directed Edge from intelligence to grade',
-		   'Label': 'intel_to_grad'
-		  },
-		('difficulty', 'grade'):
-		  {'directed': '1',
-		   'Comment': 'Directed Edge from difficulty to grade',
-		   'Label': 'diff_to_grad'
-		  },
-		('intelligence', 'SAT'):
-		  {'directed': '1',
-		   'Comment': 'Directed Edge from intelligence to SAT',
-		   'Label': 'intel_to_sat'}
-	       }
+                {'directed': '1',
+                 'Comment': 'Directed Edge from grade to recommendation_letter',
+                 'Label': 'grad_to_reco'},
+                ('intelligence', 'grade'):
+                {'directed': '1',
+                 'Comment': 'Directed Edge from intelligence to grade',
+                 'Label': 'intel_to_grad'},
+                ('difficulty', 'grade'):
+                {'directed': '1',
+                 'Comment': 'Directed Edge from difficulty to grade',
+                 'Label': 'diff_to_grad'},
+                ('intelligence', 'SAT'):
+                {'directed': '1',
+                 'Comment': 'Directed Edge from intelligence to SAT',
+                 'Label': 'intel_to_sat'}}
         self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['edges'], edge)
         self.assertDictEqual(self.reader_file.probnet['edges'], edge)

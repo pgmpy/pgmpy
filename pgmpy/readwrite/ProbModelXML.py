@@ -150,7 +150,7 @@ def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
         yield line
 
 
-#@open_file(1, mode='wb')
+# @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     """
     Write model in ProbModelXML format to path.
@@ -177,7 +177,7 @@ def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     writer.dump(path)
 
 
-#@open_file(0, mode='rb')
+# @open_file(0, mode='rb')
 def read_probmodelxml(path):
     """
     Read model in ProbModelXML format from path.
@@ -247,20 +247,20 @@ class ProbModelXMLWriter:
         Examples
         --------
         """
-        #TODO: add policies, InferenceOptions, Evidence
-        #TODO: add parsing of language and comments and additional properties
+        # TODO: add policies, InferenceOptions, Evidence
+        # TODO: add parsing of language and comments and additional properties
         self.data = model_data
         self.encoding = encoding
         self.prettyprint = prettyprint
 
-        #Creating initial tags
+        # Creating initial tags
         self.xml = etree.Element("ProbModelXML", attrib={'formatVersion': '1.0'})
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
 
-        #adding information for probnet
+        # adding information for probnet
         self.probnet.attrib['type'] = self.data['probnet']['type']
         try:
             etree.SubElement(self.probnet, 'Language').text = self.data['probnet']['Language']
@@ -272,11 +272,11 @@ class ProbModelXMLWriter:
             pass
         self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperty'])
 
-        #Add variables
+        # Add variables
         for variable in self.data['probnet']['Variables']:
             self._add_variable(variable)
 
-        #Add edges
+        # Add edges
         for edge in self.data['probnet']['edges']:
             self._add_link(edge)
 
@@ -300,7 +300,7 @@ class ProbModelXMLWriter:
         """
         Adds a node to the ProbModelXML.
         """
-        #TODO: Add feature for accepting additional properties of states.
+        # TODO: Add feature for accepting additional properties of states.
         variable_data = self.data['probnet']['Variables'][variable]
         variable_element = etree.SubElement(self.variables, 'Variable', attrib={'name': variable,
                                                                                 'type': variable_data['type'],
@@ -363,8 +363,8 @@ class ProbModelXMLReader:
     """
     Class for reading ProbModelXML format from files or strings.
     """
-    #TODO: add methods to parse policies, inferenceoption, evidence etc.
-    #TODO: add reading formatVersion
+    # TODO: add methods to parse policies, inferenceoption, evidence etc.
+    # TODO: add reading formatVersion
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of ProbModelXMLReader class.
@@ -447,7 +447,7 @@ class ProbModelXMLReader:
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
-        #TODO: AdditionalConstraints
+        # TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
         if probnet_elem.find('AdditionalProperty'):
@@ -468,7 +468,7 @@ class ProbModelXMLReader:
         for potential in self.xml.findall('.//Potential')[0]:
             self.add_potential(potential)
 
-    #TODO: No specification on additionalconstraints present in the research paper
+    # TODO: No specification on additionalconstraints present in the research paper
     def add_probnet_additionalconstraints(self):
         pass
 
@@ -483,7 +483,7 @@ class ProbModelXMLReader:
         place[prop.attrib['name']] = prop.attrib['value']
 
     def add_node(self, variable):
-        #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
+        # TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
@@ -506,8 +506,8 @@ class ProbModelXMLReader:
         var2 = edge.attrib['var2']
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
+        # TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
         if edge.find('Comment') is not None:
-        #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
             self.probnet['edges'][(var1, var2)]['Comment'] = edge.find('Comment').text
         if edge.find('Label') is not None:
             self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
@@ -516,6 +516,5 @@ class ProbModelXMLReader:
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
     def add_potential(self, potential):
-        #TODO: Add code to read potential
+        # TODO: Add code to read potential
         pass
-
