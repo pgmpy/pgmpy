@@ -3,30 +3,17 @@ import unittest
 from io import StringIO
 import networkx as nx
 from pgmpy.readwrite import ProbModelXMLWriter, ProbModelXMLReader, parse_probmodelxml, generate_probmodelxml
+import warnings
 try:
     from lxml import etree
 except ImportError:
     try:
-        # Python 2.5
         import xml.etree.cElementTree as etree
-        print("running with cElementTree on Python 2.5+")
     except ImportError:
         try:
-            # Python 2.5
             import xml.etree.ElementTree as etree
-            print("running with ElementTree on Python 2.5+")
         except ImportError:
-            try:
-                # normal cElementTree install
-                import cElementTree as etree
-                print("running with cElementTree")
-            except ImportError:
-                try:
-                    # normal ElementTree install
-                    import elementtree.ElementTree as etree
-                    print("running with ElementTree")
-                except ImportError:
-                    print("Failed to import ElementTree from any known place")
+            warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestProbModelXMLReaderString(unittest.TestCase):
@@ -76,8 +63,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                 <AdditionalProperties />
             </Link>
             <Link var1="grade" var2="recommendation_letter" directed="1">
-                <Comment>Directed Edge from grade to
-                    recommendation_letter</Comment>
+                <Comment>Directed Edge from grade to recommendation_letter</Comment>
                 <Label>grad_to_reco</Label>
                 <AdditionalProperties />
             </Link>
@@ -98,4 +84,49 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         comment_expected = "Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller"
         self.maxDiff = None
         self.assertEqual(self.reader_string.probnet['comment'], comment_expected)
+        self.assertEqual(self.reader_file.probnet['comment'], comment_expected)
 
+    def test_variables(self):
+        variables = {'difficulty':
+		       {'Comment': None,
+		        'Coordinates': {},
+			'role': 'Chance',
+			'type': 'FiniteState',
+			'States': {'difficult': {}, 'easy': {}}
+		       },
+		     'intelligence':
+		       {'Comment': None,
+			'Coordinates': {},
+			'role': 'Chance',
+			'type': 'FiniteState',
+			'States': {'smart': {}, 'dumb': {}}
+		       }
+		    }
+        self.maxDiff = None
+        self.assertDictEqual(self.reader_string.probnet['Variables'], variables)
+        self.assertDictEqual(self.reader_file.probnet['Variables'], variables)
+
+    def test_edges(self):
+        edge = {('grade', 'recommendation_letter'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from grade to recommendation_letter',
+		   'Label': 'grad_to_reco'
+		  },
+		('intelligence', 'grade'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from intelligence to grade',
+		   'Label': 'intel_to_grad'
+		  },
+		('difficulty', 'grade'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from difficulty to grade',
+		   'Label': 'diff_to_grad'
+		  },
+		('intelligence', 'SAT'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from intelligence to SAT',
+		   'Label': 'intel_to_sat'}
+	       }
+        self.maxDiff = None
+        self.assertDictEqual(self.reader_string.probnet['edges'], edge)
+        self.assertDictEqual(self.reader_file.probnet['edges'], edge)

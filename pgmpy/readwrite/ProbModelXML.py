@@ -460,6 +460,7 @@ class ProbModelXMLReader:
             self.add_node(variable)
 
         # Add edges
+        self.probnet['edges'] = {}
         for edge in self.xml.findall('.//Links')[0]:
             self.add_edge(edge)
 
@@ -495,7 +496,7 @@ class ProbModelXMLReader:
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
-        if variable.find('States/State') is None:
+        if not variable.find('States/State'):
             warnings.warn("States not available for node: " + variable_name)
         else:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
@@ -503,7 +504,6 @@ class ProbModelXMLReader:
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
-        self.probnet['edges'] = {}
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         if edge.find('Comment') is not None:
