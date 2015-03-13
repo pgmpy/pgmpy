@@ -5,9 +5,9 @@ pgmpy
 [![Code Health](https://landscape.io/github/pgmpy/pgmpy/dev/landscape.svg?style=flat)](https://landscape.io/github/pgmpy/pgmpy/dev)
 [![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Python Library for Probabilistic Graphical Models  
-Documentation: [pgmpy](http://pgmpy.org/)  
-Mailing List: pgmpy@googlegroups.com  
+Python Library for Probabilistic Graphical Models
+Documentation: [pgmpy](http://pgmpy.org/)
+Mailing List: pgmpy@googlegroups.com
 irc: #pgmpy on freenode.net
 
 Dependencies:
@@ -19,17 +19,13 @@ Dependencies:
 - Cython 0.21
 - Pandas 0.15.1
 
-To install all the depedencies 
+Installing all the depedencies with your favourite package manager:
 
-- Either using <code>pip</code>, use
-```bash
-pip install -r requirements.txt
-```
+Using `pip`                       | Using `conda`
+----------------------------------|-------------
+`pip install -r requirements.txt` | `conda install --file requirements.txt`
 
-- Else using `conda`, use
-```bash
-conda install --file requirements.txt
-```
+Please note that you should use NetworkX 1.8.1, consult issue #322 for details.
 
 Installation:
 =============
