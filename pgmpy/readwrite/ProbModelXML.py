@@ -488,11 +488,11 @@ class ProbModelXMLReader:
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
         self.probnet['Variables'][variable_name]['role'] = variable.attrib['role']
-        if variable.find('Comment'):
+        if variable.find('Comment') is not None:
             self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
-        if variable.find('Coordinates'):
+        if variable.find('Coordinates') is not None:
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
-        if variable.find('AdditionalProperties/Property'):
+        if variable.find('AdditionalProperties/Property') is not None:
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
@@ -506,12 +506,12 @@ class ProbModelXMLReader:
         var2 = edge.attrib['var2']
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
-        if edge.find('Comment'):
+        if edge.find('Comment') is not None:
         #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
             self.probnet['edges'][(var1, var2)]['Comment'] = edge.find('Comment').text
-        if edge.find('Label'):
+        if edge.find('Label') is not None:
             self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
-        if edge.find('AdditionalProperties/Property'):
+        if edge.find('AdditionalProperties/Property') is not None:
             for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 

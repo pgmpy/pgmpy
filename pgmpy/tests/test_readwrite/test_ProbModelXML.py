@@ -87,46 +87,46 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertEqual(self.reader_file.probnet['comment'], comment_expected)
 
     def test_variables(self):
-        variables_expected = {'difficulty':
-				{'type': 'FiniteState',
-				 'States': {'easy': {}, 'difficult': {}},
-				 'Comment': None,
-				 'role': 'Chance',
-				 'Coordinates': {}
-				},
-			      'intelligence':
-				{'type': 'FiniteState',
-				 'States': {'dumb': {}, 'smart': {}},
-				 'Comment': None,
-				 'role': 'Chance',
-				 'Coordinates': {}}
-			     }
+        variables = {'difficulty':
+		       {'Comment': None,
+		        'Coordinates': {},
+			'role': 'Chance',
+			'type': 'FiniteState',
+			'States': {'difficult': {}, 'easy': {}}
+		       },
+		     'intelligence':
+		       {'Comment': None,
+			'Coordinates': {},
+			'role': 'Chance',
+			'type': 'FiniteState',
+			'States': {'smart': {}, 'dumb': {}}
+		       }
+		    }
         self.maxDiff = None
-        self.assertEqual(self.reader_string.probnet['Variables'], variables_expected)
-        self.assertEqual(self.reader_file.probnet['Variables'], variables_expected)
+        self.assertDictEqual(self.reader_string.probnet['Variables'], variables)
+        self.assertDictEqual(self.reader_file.probnet['Variables'], variables)
 
     def test_edges(self):
-        edges_expected = {('difficulty', 'grade'):
-			    {'Label': 'diff_to_grad',
-			     'directed': '1',
-			     'Comment': 'Directed Edge from difficulty to grade'
-			    },
-			  ('intelligence', 'SAT'):
-			    {'Label': 'intel_to_sat',
-			     'directed': '1',
-			     'Comment': 'Directed Edge from intelligence to SAT'
-			    },
-			  ('grade', 'recommendation_letter'):
-			    {'Label': 'grad_to_reco',
-			     'directed': '1',
-			     'Comment': 'Directed Edge from grade to recommendation_letter'
-			    },
-			  ('intelligence', 'grade'):
-			    {'Label': 'intel_to_grad',
-			     'directed': '1',
-			     'Comment': 'Directed Edge from intelligence to grade'
-			    }
-			 }
+        edge = {('grade', 'recommendation_letter'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from grade to recommendation_letter',
+		   'Label': 'grad_to_reco'
+		  },
+		('intelligence', 'grade'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from intelligence to grade',
+		   'Label': 'intel_to_grad'
+		  },
+		('difficulty', 'grade'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from difficulty to grade',
+		   'Label': 'diff_to_grad'
+		  },
+		('intelligence', 'SAT'):
+		  {'directed': '1',
+		   'Comment': 'Directed Edge from intelligence to SAT',
+		   'Label': 'intel_to_sat'}
+	       }
         self.maxDiff = None
-        self.assertEqual(self.reader_string.probnet['edges'], edges_expected)
-        self.assertEqual(self.reader_file.probnet['edges'], edges_expected)
+        self.assertDictEqual(self.reader_string.probnet['edges'], edge)
+        self.assertDictEqual(self.reader_file.probnet['edges'], edge)
