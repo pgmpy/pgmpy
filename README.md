@@ -25,7 +25,7 @@ Using `pip`                       | Using `conda`
 ----------------------------------|-------------
 `pip install -r requirements.txt` | `conda install --file requirements.txt`
 
-Please note that you should use NetworkX 1.8.1, consult #322 for details.
+Please note that you should use NetworkX 1.8.1, consult issue #322 for details.
 
 Installation:
 =============
