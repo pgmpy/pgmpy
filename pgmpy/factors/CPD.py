@@ -426,7 +426,7 @@ class TreeCPD(nx.DiGraph):
 
     def to_tabular_cpd(self, parents_order=None):
         edge_attributes = nx.get_edge_attributes(self, 'label')
-        d = {}
+        edge_values = {}
         edge_dict = {}
         adjlist = {}
         node_list = []
@@ -439,9 +439,9 @@ class TreeCPD(nx.DiGraph):
             if isinstance(edge[1], Factor):
                 variable = edge[1].scope()
                 variable_card = edge[1].cardinality
-                d[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1].values.tolist()
+                edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1].values.tolist()
             else:
-                d[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1]
+                edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1]
 
         #adjlist
         for source in self.nodes():
@@ -462,15 +462,15 @@ class TreeCPD(nx.DiGraph):
         for node in node_list:
             cardinality.append(len(edge_dict[node]))
 
-        for i in itertools.product(*[range(index) for index in cardinality]):
+        for i in product(*[range(index) for index in cardinality]):
             edge_list = [a + str(b) for a, b in zip(node_list, i)]
             current_node = root
             for edge in edge_list:
-                if (current_node, edge) in d.keys():
-                    if not isinstance(d[(current_node, edge)], list):
-                        current_node = d[(current_node, edge)]
+                if (current_node, edge) in edge_values.keys():
+                    if not isinstance(edge_values[(current_node, edge)], list):
+                        current_node = edge_values[(current_node, edge)]
                     else:
-                        values.append(d[(current_node, edge)])
+                        values.append(edge_values[(current_node, edge)])
                         break
 
         values = np.array(values).flatten('F').reshape((len(values[0]), len(values)))
