@@ -53,10 +53,6 @@ class Inference:
     """
 
     def __init__(self, model):
-
-        self.cardinality = {}
-        self.factors = defaultdict(list)
-
         if not model.check_model():
             raise ModelError("Model is not a valid " + type(model))
 
@@ -64,6 +60,9 @@ class Inference:
             self.variables = set(chain(*model.nodes()))
         else:
             self.variables = model.nodes()
+
+        self.cardinality = {}
+        self.factors = defaultdict(list)
 
         if isinstance(model, BayesianModel):
             for node in model.nodes():
