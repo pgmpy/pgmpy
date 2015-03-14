@@ -45,7 +45,7 @@ Example:
 ```python3
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
-student = bm.BayesianModel()
+student = BayesianModel()
 # instantiates a new Bayesian Model called 'student'
 
 student.add_nodes_from(['diff', 'intel', 'grade'])
