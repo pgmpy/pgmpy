@@ -82,9 +82,6 @@ class TabularCPD(Factor):
         cardinality = [variable_card]
         if evidence_card is not None:
             if not isinstance(evidence_card, (list, set, tuple)):
-                # Dirty hack to work with numpy arrays
-                # TODO: fix this in a cleaner way
-                # Explicit is better than implicit.
                 if isinstance(evidence_card, np.ndarray):
                     evidence_card = list(evidence_card)
                 elif isinstance(evidence_card, (int, float)):
@@ -97,11 +94,8 @@ class TabularCPD(Factor):
 
         if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
-                # Dirty hack to work with numpy arrays
-                # TODO: fix this in a cleaner way
-                # Explicit is better than implicit.
-                if isinstance(evidence_card, np.ndarray):
-                    evidence_card = list(evidence_card)
+                if isinstance(evidence, np.ndarray):
+                    evidence = list(evidence)
                 elif isinstance(evidence, str):
                     evidence = [evidence]
                 else:
