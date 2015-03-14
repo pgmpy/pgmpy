@@ -107,10 +107,10 @@ class BayesianModel(DirectedGraph):
 
         super(BayesianModel, self).add_edge(u, v, **kwargs)
 
-        if list(nx.simple_cycles(self)):
-            self.remove_edge(u, v)
-            raise ValueError(
-                'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (v, u))
+        # if list(nx.simple_cycles(self)):
+        #     self.remove_edge(u, v)
+        #     raise ValueError(
+        #         'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (v, u))
 
     def add_cpds(self, *cpds):
         """
