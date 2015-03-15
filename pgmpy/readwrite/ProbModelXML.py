@@ -273,14 +273,14 @@ class ProbModelXMLWriter:
         try:
             self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
         except KeyError:
-            etree.SubElement(self.probnet, 'AdditionalProperties') 
+            etree.SubElement(self.probnet, 'AdditionalProperties')
 
         # Add variables
-        for variable in self.data['probnet']['Variables']:
+        for variable in sorted(self.data['probnet']['Variables']):
             self._add_variable(variable)
 
         # Add edges
-        for edge in self.data['probnet']['edges']:
+        for edge in sorted(self.data['probnet']['edges']):
             self._add_link(edge)
 
     def __str__(self):
@@ -315,9 +315,9 @@ class ProbModelXMLWriter:
             for key, value in variable_data['AdditionalProperties'].items():
                 etree.SubElement(variable_element, 'Property', attrib={'name': key, 'value': value})
         except KeyError:
-            etree.SubElement(variable_element, 'AdditionalProperties') 
+            etree.SubElement(variable_element, 'AdditionalProperties')
         states = etree.SubElement(variable_element, 'States')
-        for s in variable_data['States']:
+        for s in sorted(variable_data['States']):
             state = etree.SubElement(states, 'State', attrib={'name': s})
             try:
                 self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperties'])
