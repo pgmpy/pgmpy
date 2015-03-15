@@ -270,7 +270,10 @@ class ProbModelXMLWriter:
             etree.SubElement(self.probnet, 'Comment').text = self.data['probnet']['Comment']
         except KeyError:
             pass
-        self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperty'])
+        try:
+            self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
+        except KeyError:
+            etree.SubElement(self.probnet, 'AdditionalProperties') 
 
         # Add variables
         for variable in self.data['probnet']['Variables']:
@@ -284,8 +287,9 @@ class ProbModelXMLWriter:
         """
         Return the XML as string.
         """
-        return etree.tostring(self.xml, encoding=self.encoding,
-                              prettyprint=self.prettyprint)
+        if self.prettyprint:
+            self.indent(self.xml)
+        return etree.tostring(self.xml, encoding=self.encoding)
 
     @staticmethod
     def _add_additional_properties(position, properties_dict):
@@ -306,14 +310,19 @@ class ProbModelXMLWriter:
                                                                                 'type': variable_data['type'],
                                                                                 'role': variable_data['role']})
         etree.SubElement(variable_element, 'Comment').text = variable_data['Comment']
-        etree.SubElement(variable_element, 'Coordinates').text = variable_data['Coordinates']
-        add_prop = etree.SubElement(variable_element, 'AdditionalProperties')
-        for key, value in variable_data['AdditionalProperties'].items():
-            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
-        states = variable.SubElement(variable_element, 'States')
+        etree.SubElement(variable_element, 'Coordinates', variable_data['Coordinates'])
+        try:
+            for key, value in variable_data['AdditionalProperties'].items():
+                etree.SubElement(variable_element, 'Property', attrib={'name': key, 'value': value})
+        except KeyError:
+            etree.SubElement(variable_element, 'AdditionalProperties') 
+        states = etree.SubElement(variable_element, 'States')
         for s in variable_data['States']:
             state = etree.SubElement(states, 'State', attrib={'name': s})
-            self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperty'])
+            try:
+                self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperties'])
+            except KeyError:
+                etree.SubElement(state, 'AdditionalProperties')
 
     def _add_link(self, edge):
         """
@@ -324,7 +333,10 @@ class ProbModelXMLWriter:
                                                             'directed': edge_data['directed']})
         etree.SubElement(link, 'Comment').text = edge_data['Comment']
         etree.SubElement(link, 'Label').text = edge_data['Label']
-        self._add_additional_properties(link, edge_data['AdditionalProperty'])
+        try:
+            self._add_additional_properties(link, edge_data['AdditionalProperties'])
+        except KeyError:
+            etree.SubElement(link, 'AdditionalProperties')
 
     def _add_potential(self):
         pass
@@ -473,10 +485,10 @@ class ProbModelXMLReader:
         pass
 
     def add_comment(self, comment):
-        self.probnet['comment'] = comment
+        self.probnet['Comment'] = comment
 
     def add_language(self, language):
-        self.probnet['language'] = language
+        self.probnet['Language'] = language
 
     @staticmethod
     def add_additional_property(place, prop):
