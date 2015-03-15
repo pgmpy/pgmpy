@@ -150,7 +150,7 @@ def generate_probmodelxml(model, encoding='utf-8', prettyprint=True):
         yield line
 
 
-#@open_file(1, mode='wb')
+# @open_file(1, mode='wb')
 def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     """
     Write model in ProbModelXML format to path.
@@ -177,7 +177,7 @@ def write_probmodelxml(model, path, encoding='utf-8', prettyprint=True):
     writer.dump(path)
 
 
-#@open_file(0, mode='rb')
+# @open_file(0, mode='rb')
 def read_probmodelxml(path):
     """
     Read model in ProbModelXML format from path.
@@ -247,20 +247,20 @@ class ProbModelXMLWriter:
         Examples
         --------
         """
-        #TODO: add policies, InferenceOptions, Evidence
-        #TODO: add parsing of language and comments and additional properties
+        # TODO: add policies, InferenceOptions, Evidence
+        # TODO: add parsing of language and comments and additional properties
         self.data = model_data
         self.encoding = encoding
         self.prettyprint = prettyprint
 
-        #Creating initial tags
+        # Creating initial tags
         self.xml = etree.Element("ProbModelXML", attrib={'formatVersion': '1.0'})
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
 
-        #adding information for probnet
+        # adding information for probnet
         self.probnet.attrib['type'] = self.data['probnet']['type']
         try:
             etree.SubElement(self.probnet, 'Language').text = self.data['probnet']['Language']
@@ -270,13 +270,16 @@ class ProbModelXMLWriter:
             etree.SubElement(self.probnet, 'Comment').text = self.data['probnet']['Comment']
         except KeyError:
             pass
-        self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperty'])
+        try:
+            self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
+        except KeyError:
+            etree.SubElement(self.probnet, 'AdditionalProperties') 
 
-        #Add variables
+        # Add variables
         for variable in self.data['probnet']['Variables']:
             self._add_variable(variable)
 
-        #Add edges
+        # Add edges
         for edge in self.data['probnet']['edges']:
             self._add_link(edge)
 
@@ -284,8 +287,9 @@ class ProbModelXMLWriter:
         """
         Return the XML as string.
         """
-        return etree.tostring(self.xml, encoding=self.encoding,
-                              prettyprint=self.prettyprint)
+        if self.prettyprint:
+            self.indent(self.xml)
+        return etree.tostring(self.xml, encoding=self.encoding)
 
     @staticmethod
     def _add_additional_properties(position, properties_dict):
@@ -300,20 +304,25 @@ class ProbModelXMLWriter:
         """
         Adds a node to the ProbModelXML.
         """
-        #TODO: Add feature for accepting additional properties of states.
+        # TODO: Add feature for accepting additional properties of states.
         variable_data = self.data['probnet']['Variables'][variable]
         variable_element = etree.SubElement(self.variables, 'Variable', attrib={'name': variable,
                                                                                 'type': variable_data['type'],
                                                                                 'role': variable_data['role']})
         etree.SubElement(variable_element, 'Comment').text = variable_data['Comment']
-        etree.SubElement(variable_element, 'Coordinates').text = variable_data['Coordinates']
-        add_prop = etree.SubElement(variable_element, 'AdditionalProperties')
-        for key, value in variable_data['AdditionalProperties'].items():
-            etree.SubElement(add_prop, 'Property', attrib={'name': key, 'value': value})
-        states = variable.SubElement(variable_element, 'States')
+        etree.SubElement(variable_element, 'Coordinates', variable_data['Coordinates'])
+        try:
+            for key, value in variable_data['AdditionalProperties'].items():
+                etree.SubElement(variable_element, 'Property', attrib={'name': key, 'value': value})
+        except KeyError:
+            etree.SubElement(variable_element, 'AdditionalProperties') 
+        states = etree.SubElement(variable_element, 'States')
         for s in variable_data['States']:
             state = etree.SubElement(states, 'State', attrib={'name': s})
-            self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperty'])
+            try:
+                self._add_additional_properties(state, variable_data['States'][s]['AdditionalProperties'])
+            except KeyError:
+                etree.SubElement(state, 'AdditionalProperties')
 
     def _add_link(self, edge):
         """
@@ -324,7 +333,10 @@ class ProbModelXMLWriter:
                                                             'directed': edge_data['directed']})
         etree.SubElement(link, 'Comment').text = edge_data['Comment']
         etree.SubElement(link, 'Label').text = edge_data['Label']
-        self._add_additional_properties(link, edge_data['AdditionalProperty'])
+        try:
+            self._add_additional_properties(link, edge_data['AdditionalProperties'])
+        except KeyError:
+            etree.SubElement(link, 'AdditionalProperties')
 
     def _add_potential(self):
         pass
@@ -363,8 +375,8 @@ class ProbModelXMLReader:
     """
     Class for reading ProbModelXML format from files or strings.
     """
-    #TODO: add methods to parse policies, inferenceoption, evidence etc.
-    #TODO: add reading formatVersion
+    # TODO: add methods to parse policies, inferenceoption, evidence etc.
+    # TODO: add reading formatVersion
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of ProbModelXMLReader class.
@@ -443,75 +455,78 @@ class ProbModelXMLReader:
         Returns a BayesianModel or MarkovModel object depending on the
         type of ProbModelXML passed to ProbModelXMLReader class.
         """
+        self.probnet = {}
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
-        #TODO: AdditionalConstraints
+        # TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
-        for prop in probnet_elem.find('AdditionalProperty').iterchildren():
-            self.add_additional_property(self.probnet['AdditionalProperties'], prop)
+        if probnet_elem.find('AdditionalProperty'):
+            for prop in probnet_elem.find('AdditionalProperty'):
+                self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
         # Add nodes
-        for variable in probnet_elem.find('Variables').iterchildren():
+        self.probnet['Variables'] = {}
+        for variable in probnet_elem.find('Variables'):
             self.add_node(variable)
 
         # Add edges
-        for edge in self.xml.xpath('//Links')[0].iterchildren():
+        self.probnet['edges'] = {}
+        for edge in self.xml.findall('.//Links')[0]:
             self.add_edge(edge)
 
         # Add CPD
-        for potential in self.xml.xpath('//Potential')[0].iterchildren():
+        for potential in self.xml.findall('.//Potential')[0]:
             self.add_potential(potential)
 
-    #TODO: No specification on additionalconstraints present in the research paper
+    # TODO: No specification on additionalconstraints present in the research paper
     def add_probnet_additionalconstraints(self):
         pass
 
     def add_comment(self, comment):
-        self.probnet['comment'] = comment
+        self.probnet['Comment'] = comment
 
     def add_language(self, language):
-        self.probnet['language'] = language
+        self.probnet['Language'] = language
 
     @staticmethod
     def add_additional_property(place, prop):
         place[prop.attrib['name']] = prop.attrib['value']
 
     def add_node(self, variable):
-        #TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
+        # TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
         self.probnet['Variables'][variable_name]['type'] = variable.attrib['type']
-        self.probnet['Variables'][variable_name]['roles'] = variable.attrib['roles']
-        if variable.find('Comment'):
+        self.probnet['Variables'][variable_name]['role'] = variable.attrib['role']
+        if variable.find('Comment') is not None:
             self.probnet['Variables'][variable_name]['Comment'] = variable.find('Comment').text
-        if variable.find('Coordinates'):
+        if variable.find('Coordinates') is not None:
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
-        if variable.xpath('AdditionalProperties'):
-            for prop in variable.find('AdditionalProperties').iterchildren():
+        if variable.find('AdditionalProperties/Property') is not None:
+            for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
-        if not variable.xpath('States'):
+        if not variable.find('States/State'):
             warnings.warn("States not available for node: " + variable_name)
         else:
-            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.find('AdditionalProperties')} for state in variable.find('States').iterchildren()}
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
 
     def add_edge(self, edge):
         var1 = edge.attrib['var1']
         var2 = edge.attrib['var2']
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
-        if edge.xpath('Comment'):
-        #TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
-            self.probnet['edges'][(var1, var2)]['Comment'] = edge.xpath('Comment').text
-        if edge.xpath('Label'):
-            self.probnet['edges'][(var1, var2)]['Label'] = edge.xpath('Label').text
-        if edge.xpath('AdditionalProperties'):
-            for prop in edge.xpath('AdditioanlProperties')[0].iterchildren():
+        # TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
+        if edge.find('Comment') is not None:
+            self.probnet['edges'][(var1, var2)]['Comment'] = edge.find('Comment').text
+        if edge.find('Label') is not None:
+            self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
+        if edge.find('AdditionalProperties/Property') is not None:
+            for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
     def add_potential(self, potential):
-        #TODO: Add code to read potential
+        # TODO: Add code to read potential
         pass
-
