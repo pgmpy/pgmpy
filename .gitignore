@@ -1,5 +1,6 @@
 *.py[cod]
-
+*.swp
+.idea/*
 # C extensions
 *.so
 
@@ -8,6 +9,7 @@
 *.egg-info
 dist
 build
+_build
 eggs
 parts
 bin
@@ -33,3 +35,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Auto examples generated
+docs/auto_examples/*
+docs/examples/*

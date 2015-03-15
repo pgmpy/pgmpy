@@ -1,0 +1,23 @@
+language: python
+virtualenv:
+    system_site_packages: false
+env:
+    - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
+
+before_install:
+    - uname -a
+    - free -m
+    - df -h
+    - ulimit -a
+install: source continous_integration/install.sh
+script: nosetests --with-coverage --cover-package=pgmpy
+after_success:
+    coveralls
+notifications:
+    email: false
+    webhooks:
+        urls:
+            - https://webhooks.gitter.im/e/e2ce04225e5e5d1ab64c
+        on_success: always  # options: [always|never|change] default: always
+        on_failure: always  # options: [always|never|change] default: always
+        on_start: false     # default: false
