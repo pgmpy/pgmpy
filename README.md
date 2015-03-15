@@ -110,7 +110,7 @@ student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 student.active_trail_nodes('diff')
 
 # Finding active trail with observation
-student.active_trail_nodes('diff', observed='grades')
+student.active_trail_nodes('diff', observed='grade')
 ```
 
 
