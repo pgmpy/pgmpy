@@ -380,6 +380,47 @@ class Factor:
         else:
             return Factor(new_variables, new_card, new_values)
 
+    def eliminate(self, variable, inplace=True):
+        """
+        Eliminates the variable from scope of the factor
+
+        Parameters
+        ----------
+        variable: int, string, any hashable python object or list
+            A variable or a list of variables which need to be eliminated
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.eliminate('x2')
+        >>> print(phi)
+        x1      x3      phi(x1, x3)
+        -----------------------------
+        x1_0    x3_0     0 
+        x1_0    x3_1     0 
+        x1_1    x3_0     0 
+        x1_1    x3_1     0 
+        x1_2    x3_0     0 
+        x1_2    x3_1     0
+        """
+        indexes = np.where(np.in1d(self.scope(), variable))[0]
+        assign = np.array(self.cardinality)
+        assign[indexes] = -1
+        new_values = np.array([])
+        for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+            assign[assign != -1] = i
+            new_values = np.append(new_values, 0)
+        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
+                                                        [variable] if isinstance(variable, str) else variable)]
+        new_card = self.cardinality[assign != -1]
+
+        if inplace:
+            return self.__init__(new_variables, new_card, new_values)
+        else:
+            return Factor(new_variables, new_card, new_values)            
+
     def _index_for_assignment(self, assignment):
         """
         Returns the index of values for a given assignment.

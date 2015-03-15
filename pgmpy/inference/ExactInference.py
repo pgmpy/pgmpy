@@ -228,6 +228,48 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
+        # Dealing with the case when variables is not provided.
+        # if not variables:
+        #     all_factors = []
+        #     for factor_li in self.factors.values():
+        #         all_factors.extend(factor_li)
+        #     return set(all_factors)
+
+        eliminated_variables = set()
+        working_factors = {node: {factor for factor in self.factors[node]}
+                           for node in self.factors}
+
+        print(working_factors)
+        # TODO: Modify it to find the optimal elimination order
+        if len(elimination_order) < len(self.variables):
+            raise ValueError("Elimination order empty")
+
+        for var in elimination_order:
+            # Removing all the factors containing the variables which are
+            # eliminated (as all the factors should be considered only once)
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor.variables).intersection(eliminated_variables)]
+            phi = factor_product(*factors)
+            phi = getattr(phi, operation)(var, inplace=False)
+            del working_factors[var]
+            for variable in phi.variables:
+                working_factors[variable].add(phi)
+            eliminated_variables.add(var)
+
+        final_distribution = set()
+        for node in working_factors:
+            factors = working_factors[node]
+            for factor in factors:
+                if not set(factor.variables).intersection(eliminated_variables):
+                    final_distribution.add(factor)
+
+        query_var_factor = {}
+        for query_var in variables:
+            phi = factor_product(*final_distribution)
+            phi.marginalize(list(set(variables) - set([query_var])))
+            query_var_factor[query_var] = phi.normalize(inplace=False)
+        return query_var_factor
+
 
 class BeliefPropagation(Inference):
     """
