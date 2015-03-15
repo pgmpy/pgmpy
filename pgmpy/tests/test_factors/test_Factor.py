@@ -487,21 +487,21 @@ class TestTreeCPDInit(unittest.TestCase):
 
 class TestTreeCPD(unittest.TestCase):
     def setUp(self):
-        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
-                              ('B', 'C', 1),
-                              ('C', Factor(['A'], [2], [0.1, 0.9]), 0),
-                              ('C', 'D', 1),
-                              ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-                              ('D', Factor(['A'], [2], [0.4, 0.6]), 1)])
+        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                              ('B', 'C', '1'),
+                              ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                              ('C', 'D', '1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), (0, 0)),
-                              (('B', 'C'), 'D', (0, 1)),
-                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), (1, 0)),
-                              (('B', 'C'), 'E', (1, 1)),
-                              ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-                              ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
-                              ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
-                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)])
+        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), ('0', '0')),
+                              (('B', 'C'), 'D', ('0', '1')),
+                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), ('1', '0')),
+                              (('B', 'C'), 'E', ('1', '1')),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
+                              ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
+                              ('E', Factor(['A'], [2], [0.8, 0.2]), '1')])
 
     def test_add_edge(self):
         self.tree1.add_edge('yolo', 'yo', 0)
@@ -518,9 +518,8 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(self.tree1['yolo']['yo']['label'], 0)
         self.assertEqual(self.tree1['hello']['world']['label'], 1)
 
-    @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd(self):
-        tabular_cpd = self.tree1.to_tabular_cpd('A')
+        tabular_cpd = self.tree1.to_tabular_cpd()
         self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D'])
@@ -528,7 +527,7 @@ class TestTreeCPD(unittest.TestCase):
                                    np.array([0.8, 0.8, 0.8, 0.8, 0.1, 0.1, 0.9, 0.4,
                                              0.2, 0.2, 0.2, 0.2, 0.9, 0.9, 0.1, 0.6]))
 
-        tabular_cpd = self.tree2.to_tabular_cpd('A')
+        tabular_cpd = self.tree2.to_tabular_cpd()
         self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D', 'E'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D', 'E'])
