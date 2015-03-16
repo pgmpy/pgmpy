@@ -383,10 +383,11 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            super(TreeCPD, self).add_edge(u, v, label=label)
-            if list(nx.simple_cycles(self)):
-                super(TreeCPD, self).remove_edge(u, v)
+            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+                # check if adding edge (u, v) forms a cycle
                 raise ValueError("Self Loops and Cycles are not allowed")
+            else:
+                super(TreeCPD, self).add_edge(u, v, label=label)
         else:
             raise ValueError("Self Loops and Cycles are not allowed")
 
