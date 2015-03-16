@@ -105,12 +105,12 @@ class BayesianModel(DirectedGraph):
         if u == v:
             raise ValueError('Self loops are not allowed.')
 
-        super(BayesianModel, self).add_edge(u, v, **kwargs)
-
-        if list(nx.simple_cycles(nx.DiGraph(self.edges()))):
-            self.remove_edge(u, v)
+        if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+            # check if adding edge (u, v) forms a cycle
             raise ValueError(
                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (v, u))
+        else:
+            super(BayesianModel, self).add_edge(u, v, **kwargs)
 
     def add_cpds(self, *cpds):
         """
