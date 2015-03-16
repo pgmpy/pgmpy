@@ -107,7 +107,7 @@ class BayesianModel(DirectedGraph):
 
         super(BayesianModel, self).add_edge(u, v, **kwargs)
 
-        if list(nx.simple_cycles(self)):
+        if list(nx.simple_cycles(nx.DiGraph(self.edges()))):
             self.remove_edge(u, v)
             raise ValueError(
                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (v, u))

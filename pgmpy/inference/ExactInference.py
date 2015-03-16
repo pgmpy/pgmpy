@@ -3,9 +3,9 @@
 import numpy as np
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
-import networkx as nx
 
 class VariableElimination(Inference):
+
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
@@ -243,14 +243,13 @@ class VariableElimination(Inference):
         if len(elimination_order) < len(self.variables):
             raise ValueError("Elimination order incomplete")
 
-
+        # Removing all the factors containing the variables which are
+        # eliminated (as all the factors should be considered only once)
         for var in elimination_order:
-            # Removing all the factors containing the variables which are
-            # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in working_factors[var]
                        if not set(factor.variables).intersection(eliminated_variables)]
             phi = factor_product(*factors)
-            phi.reduce(var+'_0')
+            phi.reduce(var + '_0')
             cliques.add(tuple(phi.scope()))
             del working_factors[var]
             for variable in phi.variables:
@@ -262,9 +261,10 @@ class VariableElimination(Inference):
         for clique in cliques:
             if len(clique) > 1:
                 for i in range(len(clique)):
-                    for j in range(i+1, len(clique)):
+                    for j in range(i + 1, len(clique)):
                         edges.append((clique[i], clique[j]))
 
+        import networkx as nx
         # Final induced graph
         graph = nx.Graph()
         graph.add_nodes_from(elimination_order)

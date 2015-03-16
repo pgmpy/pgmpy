@@ -384,7 +384,7 @@ class TreeCPD(nx.DiGraph):
         """
         if u != v:
             super(TreeCPD, self).add_edge(u, v, label=label)
-            if list(nx.simple_cycles(self)):
+            if list(nx.simple_cycles(nx.DiGraph(self.edges()))):
                 super(TreeCPD, self).remove_edge(u, v)
                 raise ValueError("Self Loops and Cycles are not allowed")
         else:
