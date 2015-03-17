@@ -508,7 +508,7 @@ class ProbModelXMLReader:
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
-        if not variable.find('States/State'):
+        if variable.find('States/State') is None:
             warnings.warn("States not available for node: " + variable_name)
         else:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
