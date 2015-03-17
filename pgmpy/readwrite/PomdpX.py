@@ -356,7 +356,7 @@ class PomdpXReader:
                     edges[edge.get('val')] = subdag_attribute
             return edges
 
-        if parameter.find('SubDAGTemplate'):
+        if parameter.find('SubDAGTemplate') is not None:
             SubDAGTemplate = parameter.find('SubDAGTemplate')
             subdag_root = SubDAGTemplate.find('Node')
             subdag_node = subdag_root.get('var')
