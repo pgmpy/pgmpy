@@ -56,7 +56,7 @@ class FactorGraph(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(FactorGraph, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -80,7 +80,7 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_edge('a', 'phi1')
         """
         if u != v:
-            super(FactorGraph, self).add_edge(u, v, **kwargs)
+            super().add_edge(u, v, **kwargs)
         else:
             raise ValueError('Self loops are not allowed')
 

@@ -245,7 +245,7 @@ class BeliefPropagation(Inference):
     def __init__(self, model):
         from pgmpy.models import JunctionTree
 
-        super(BeliefPropagation, self).__init__(model)
+        super().__init__(model)
 
         if not isinstance(model, JunctionTree):
             self.junction_tree = model.to_junction_tree()

@@ -110,7 +110,7 @@ class TabularCPD(Factor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
+        super().__init__(variables, cardinality, values.flatten('C'))
 
     def get_cpd(self):
         """
@@ -383,9 +383,9 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            super(TreeCPD, self).add_edge(u, v, label=label)
+            super().add_edge(u, v, label=label)
             if list(nx.simple_cycles(self)):
-                super(TreeCPD, self).remove_edge(u, v)
+                super().remove_edge(u, v)
                 raise ValueError("Self Loops and Cycles are not allowed")
         else:
             raise ValueError("Self Loops and Cycles are not allowed")

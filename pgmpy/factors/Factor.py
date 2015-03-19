@@ -444,10 +444,9 @@ class Factor:
         # by 1.
         def fun(b, index=len(self.cardinality)-1):
             b[index] += 1
-            while b[index] == self.cardinality[index]:
+            if b[index] == self.cardinality[index]:
                 b[index] = 0
-                index -= 1
-                b[index] += 1
+                fun(b, index-1)
             return b
 
         def gen():
