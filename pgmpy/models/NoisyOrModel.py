@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import numpy as np
-import networkx as nx
+from pgmpy.base import DirectedGraph
 
 
-class NoisyOrModel(nx.DiGraph):
+class NoisyOrModel(DirectedGraph):
+
     """
     Base class for Noisy-Or models.
 
@@ -64,7 +65,7 @@ class NoisyOrModel(nx.DiGraph):
         >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
         ...                                                      [0.2, 0.4, 0.7],
-        ...                                                      [0.1, 0. 4]])
+        ...                                                      [0.1, 0.4]])
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
         cardinality = np.array(cardinality)
@@ -72,12 +73,12 @@ class NoisyOrModel(nx.DiGraph):
         # Converting the inhibitor_probability to a uniform 2D array
         # because else numpy treats it as a 1D array with dtype object.
         inhibitor_probability_list = []
+        max_cardinality = max(cardinality)
         for prob_array in inhibitor_probability:
-            if len(prob_array) < max(cardinality):
-                prob_array.extend([0]*(max(cardinality)-len(prob_array)))
-                inhibitor_probability_list.append(prob_array)
-            else:
-                inhibitor_probability_list.append(prob_array)
+            # If len(prob_array) == max_cardinality, prob_array is untouched
+            prob_array.extend([0] * (max_cardinality - len(prob_array)))
+            inhibitor_probability_list.append(prob_array)
+
         inhibitor_probability_uni = np.array(inhibitor_probability_list)
 
         if inhibitor_probability_uni[inhibitor_probability_uni > 1]:
