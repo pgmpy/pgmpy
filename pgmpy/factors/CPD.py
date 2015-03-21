@@ -621,7 +621,7 @@ class RuleCPD:
         """
         from itertools import chain
         from collections import Counter
-        assignments = list(set(chain(*self.rules)))
+        assignments = set(chain.from_iterable(self.rules))
         cardinality = dict(Counter([element.split('_')[0] for element in assignments]))
         if variable:
             return cardinality[variable] if isinstance(variable, str) else {var: cardinality[var] for var in variable}
@@ -651,7 +651,7 @@ class RuleCPD:
         >>> rule.to_tabular_cpd()
         """
         if not parents_order:
-            parents_order = sorted(list(self.scope() - {self.variable}))
+            parents_order = sorted(self.scope() - {self.variable})
         cardinality_dict = self.cardinality()
         tabular_cpd = [[0 for i in range(np.product(list(cardinality_dict.values())))]
                        for j in range(cardinality_dict[self.variable])]
