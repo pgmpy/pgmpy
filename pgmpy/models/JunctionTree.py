@@ -116,7 +116,7 @@ class JunctionTree(UndirectedGraph):
         """
         set_u = set(u)
         set_v = set(v)
-        if not set_u.intersection(set_v):
+        if set_u.isdisjoint(set_v):
             raise ValueError('No sepset found between these two edges.')
 
         super().add_edge(u, v)
