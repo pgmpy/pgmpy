@@ -83,7 +83,7 @@ class TabularCPD(Factor):
         if evidence_card is not None:
             if not isinstance(evidence_card, (list, set, tuple)):
                 if isinstance(evidence_card, np.ndarray):
-                    evidence_card = list(evidence_card)
+                    evidence_card = evidence_card.tolist()
                 elif isinstance(evidence_card, (int, float)):
                     evidence_card = [evidence_card]
                 else:
@@ -95,7 +95,7 @@ class TabularCPD(Factor):
         if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
                 if isinstance(evidence, np.ndarray):
-                    evidence = list(evidence)
+                    evidence = evidence.tolist()
                 elif isinstance(evidence, str):
                     evidence = [evidence]
                 else:
