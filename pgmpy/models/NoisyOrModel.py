@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from itertools import chain
+
 import numpy as np
 import networkx as nx
 
@@ -38,9 +40,9 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.2, 0.4, 0.7],
         ...                                                      [0.1, 0.4]])
         """
-        self.variables = []
+        self.variables = np.array([])
         self.cardinality = np.array([], dtype=np.int)
-        self.inhibitor_probability = np.array([])
+        self.inhibitor_probability = []
         self.add_variables(variables, cardinality, inhibitor_probability)
 
     def add_variables(self, variables, cardinality, inhibitor_probability):
@@ -67,30 +69,21 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0. 4]])
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
-        cardinality = np.array(cardinality)
+        if len(variables) == 1:
+            if not isinstance(inhibitor_probability[0], (list, tuple)):
+                inhibitor_probability = [inhibitor_probability]
 
-        # Converting the inhibitor_probability to a uniform 2D array
-        # because else numpy treats it as a 1D array with dtype object.
-        inhibitor_probability_list = []
-        for prob_array in inhibitor_probability:
-            if len(prob_array) < max(cardinality):
-                prob_array.extend([0]*(max(cardinality)-len(prob_array)))
-                inhibitor_probability_list.append(prob_array)
-            else:
-                inhibitor_probability_list.append(prob_array)
-        inhibitor_probability_uni = np.array(inhibitor_probability_list)
-
-        if inhibitor_probability_uni[inhibitor_probability_uni > 1]:
-            raise ValueError("Probability values should be <=1 ")
-        elif len(variables) != len(cardinality):
+        if len(variables) != len(cardinality):
             raise ValueError("Size of variables and cardinality should be same")
-        elif (cardinality != [len(prob_array) for prob_array in inhibitor_probability]).any and \
+        elif any(cardinal != len(prob_array) for prob_array, cardinal in zip(inhibitor_probability, cardinality)) or \
                 len(cardinality) != len(inhibitor_probability):
             raise ValueError("Size of variables and inhibitor_probability should be same")
+        elif not all(0 <= item <= 1 for item in chain.from_iterable(inhibitor_probability)):
+            raise ValueError("Probability values should be between 0 and 1(both inclusive).")
         else:
-            self.variables.extend(variables)
+            self.variables = np.concatenate((self.variables, variables))
             self.cardinality = np.concatenate((self.cardinality, cardinality))
-            self.inhibitor_probability = np.concatenate((self.inhibitor_probability, inhibitor_probability_uni))
+            self.inhibitor_probability.extend(inhibitor_probability)
 
     def del_variables(self, variables):
         """
@@ -109,12 +102,13 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0. 4]])
         >>> model.del_variables(['x1'])
         """
-        variables = [variables] if isinstance(variables, str) else variables
-        for var in variables:
-            index = self.variables.index(var)
-            self.variables = self.variables.remove(var)
-            self.cardinality = np.delete(self.cardinality, index)
-            self.inhibitor_probability = np.delete(self.inhibitor_probability, index)
+        variables = [variables] if isinstance(variables, str) else set(variables)
+        indices = [index for index, variable in enumerate(self.variables) if variable in variables]
+        self.variables = np.delete(self.variables, indices, 0)
+        self.cardinality = np.delete(self.cardinality, indices, 0)
+        self.inhibitor_probability = [prob_array for index, prob_array in enumerate(self.inhibitor_probability)
+                                      if index not in indices]
+
     #
     # def out_prob(self, func):
     #     """
