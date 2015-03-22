@@ -653,10 +653,11 @@ class RuleCPD:
         if not parents_order:
             parents_order = sorted(self.scope() - {self.variable})
         cardinality_dict = self.cardinality()
-        tabular_cpd = [[0 for i in range(np.product(list(cardinality_dict.values())))]
+        cardinality_product = np.product(list(cardinality_dict.values()))
+        tabular_cpd = [[0 for i in range(cardinality_product)]
                        for j in range(cardinality_dict[self.variable])]
         for rule, value in self.rules:
-            start, end = 0, np.product(list(cardinality_dict.values()))
+            start, end = 0, cardinality_product
             for var in sorted(rule):
                 if var.split('_')[0] != self.variable:
                     start, end = (start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]),
