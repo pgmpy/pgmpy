@@ -654,8 +654,8 @@ class RuleCPD:
             parents_order = sorted(self.scope() - {self.variable})
         cardinality_dict = self.cardinality()
         cardinality_product = np.product(list(cardinality_dict.values()))
-        tabular_cpd = [[0 for i in range(cardinality_product)]
-                       for j in range(cardinality_dict[self.variable])]
+        tabular_cpd = [[0] * cardinality_product
+                       for _ in range(cardinality_dict[self.variable])]
         for rule, value in self.rules:
             start, end = 0, cardinality_product
             for var in sorted(rule):
