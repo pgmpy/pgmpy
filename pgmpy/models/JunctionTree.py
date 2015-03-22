@@ -142,7 +142,8 @@ class JunctionTree(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = JunctionTree()
         >>> student.add_node(('Alice', 'Bob'))
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2], np.random.rand(6))
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2],
+        ...                 value=np.random.rand(6))
         >>> student.add_factors(factor)
         """
         for factor in factors:
@@ -196,7 +197,7 @@ class JunctionTree(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = JunctionTree()
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 np.random.rand(6))
+        ...                 value=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """

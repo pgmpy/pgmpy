@@ -131,7 +131,8 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2], np.random.rand(6))
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2],
+        ...                 value=np.random.rand(6))
         >>> student.add_factors(factor)
         """
         for factor in factors:
@@ -152,7 +153,7 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 np.random.rand(6))
+        ...                 value=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.get_factors()
         """
@@ -168,7 +169,7 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 np.random.rand(6))
+        ...                 value=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
