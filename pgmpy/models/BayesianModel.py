@@ -77,7 +77,7 @@ class BayesianModel(DirectedGraph):
     3
     """
     def __init__(self, ebunch=None):
-        super(BayesianModel, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.cpds = []
@@ -105,7 +105,7 @@ class BayesianModel(DirectedGraph):
         if u == v:
             raise ValueError('Self loops are not allowed.')
 
-        super(BayesianModel, self).add_edge(u, v, **kwargs)
+        super().add_edge(u, v, **kwargs)
 
         if list(nx.simple_cycles(self)):
             self.remove_edge(u, v)

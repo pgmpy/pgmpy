@@ -83,7 +83,7 @@ class TabularCPD(Factor):
         if evidence_card is not None:
             if not isinstance(evidence_card, (list, set, tuple)):
                 if isinstance(evidence_card, np.ndarray):
-                    evidence_card = list(evidence_card)
+                    evidence_card = evidence_card.tolist()
                 elif isinstance(evidence_card, (int, float)):
                     evidence_card = [evidence_card]
                 else:
@@ -95,7 +95,7 @@ class TabularCPD(Factor):
         if evidence is not None:
             if not isinstance(evidence, (list, set, tuple)):
                 if isinstance(evidence, np.ndarray):
-                    evidence = list(evidence)
+                    evidence = evidence.tolist()
                 elif isinstance(evidence, str):
                     evidence = [evidence]
                 else:
@@ -110,7 +110,7 @@ class TabularCPD(Factor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
+        super().__init__(variables, cardinality, values.flatten('C'))
 
     def get_cpd(self):
         """
@@ -383,9 +383,9 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            super(TreeCPD, self).add_edge(u, v, label=label)
+            super().add_edge(u, v, label=label)
             if list(nx.simple_cycles(self)):
-                super(TreeCPD, self).remove_edge(u, v)
+                super().remove_edge(u, v)
                 raise ValueError("Self Loops and Cycles are not allowed")
         else:
             raise ValueError("Self Loops and Cycles are not allowed")
@@ -621,7 +621,7 @@ class RuleCPD:
         """
         from itertools import chain
         from collections import Counter
-        assignments = list(set(chain(*self.rules)))
+        assignments = set(chain.from_iterable(self.rules))
         cardinality = dict(Counter([element.split('_')[0] for element in assignments]))
         if variable:
             return cardinality[variable] if isinstance(variable, str) else {var: cardinality[var] for var in variable}
@@ -651,12 +651,13 @@ class RuleCPD:
         >>> rule.to_tabular_cpd()
         """
         if not parents_order:
-            parents_order = sorted(list(self.scope() - {self.variable}))
+            parents_order = sorted(self.scope() - {self.variable})
         cardinality_dict = self.cardinality()
-        tabular_cpd = [[0 for i in range(np.product(list(cardinality_dict.values())))]
-                       for j in range(cardinality_dict[self.variable])]
+        cardinality_product = np.product(list(cardinality_dict.values()))
+        tabular_cpd = [[0] * cardinality_product
+                       for _ in range(cardinality_dict[self.variable])]
         for rule, value in self.rules:
-            start, end = 0, np.product(list(cardinality_dict.values()))
+            start, end = 0, cardinality_product
             for var in sorted(rule):
                 if var.split('_')[0] != self.variable:
                     start, end = (start + (end-start)/cardinality_dict[var] * int(var.split('_')[1]),

@@ -50,7 +50,7 @@ class JunctionTree(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(JunctionTree, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -77,7 +77,7 @@ class JunctionTree(UndirectedGraph):
                             'forming a clique')
 
         node = tuple(node)
-        super(JunctionTree, self).add_node(node, **kwargs)
+        super().add_node(node, **kwargs)
 
     def add_nodes_from(self, nodes, **kwargs):
         """
@@ -116,10 +116,10 @@ class JunctionTree(UndirectedGraph):
         """
         set_u = set(u)
         set_v = set(v)
-        if not set_u.intersection(set_v):
+        if set_u.isdisjoint(set_v):
             raise ValueError('No sepset found between these two edges.')
 
-        super(JunctionTree, self).add_edge(u, v)
+        super().add_edge(u, v)
 
     def add_factors(self, *factors):
         """

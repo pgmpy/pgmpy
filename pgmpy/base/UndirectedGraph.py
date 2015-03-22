@@ -65,7 +65,7 @@ class UndirectedGraph(nx.Graph):
     """
 
     def __init__(self, ebunch=None):
-        super(UndirectedGraph, self).__init__(ebunch)
+        super().__init__(ebunch)
 
     def add_node(self, node, **kwargs):
         """
@@ -82,7 +82,7 @@ class UndirectedGraph(nx.Graph):
         >>> G = UndirectedGraph()
         >>> G.add_node('A')
         """
-        super(UndirectedGraph, self).add_node(node, **kwargs)
+        super().add_node(node, **kwargs)
 
     def add_nodes_from(self, nodes, **kwargs):
         """
@@ -121,7 +121,7 @@ class UndirectedGraph(nx.Graph):
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
         """
-        super(UndirectedGraph, self).add_edge(u, v, **kwargs)
+        super().add_edge(u, v, **kwargs)
 
     def add_edges_from(self, ebunch, **kwargs):
         """
