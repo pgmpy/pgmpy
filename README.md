@@ -45,7 +45,7 @@ Example:
 ```python3
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
-student = bm.BayesianModel()
+student = BayesianModel()
 # instantiates a new Bayesian Model called 'student'
 
 student.add_nodes_from(['diff', 'intel', 'grade'])
@@ -110,7 +110,7 @@ student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 student.active_trail_nodes('diff')
 
 # Finding active trail with observation
-student.active_trail_nodes('diff', observed='grades')
+student.active_trail_nodes('diff', observed='grade')
 ```
 
 
