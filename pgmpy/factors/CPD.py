@@ -117,6 +117,21 @@ class TabularCPD(Factor):
             raise TypeError("Values must be a 2D list/array")
 
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
+        
+    def __repr__(self):
+        if not self.evidence:
+            str_1 = ""
+            str_1 += '<TabularCPD representing P(' + str(self.variable) + ':' + str(self.variable_card) + ')>'
+            return str_1
+
+        else:
+            str_1 = ""
+            str_1 += '<TabularCPD representing P(' + str(self.variable) + ':' + str(self.variable_card) + ' |'
+            str_2 = ""
+            for i in range(len(self.evidence)):
+                str_2 += str(self.evidence[i]) + ':' + str(self.evidence_card[i]) + ','
+            str_2 = str_2[:-1]
+            return str_1 + str_2 + ')>'
 
     def get_cpd(self):
         """
