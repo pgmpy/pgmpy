@@ -434,7 +434,7 @@ class Factor:
             string_list.append(html_string_header)
         else:
             string_header = self.scope()
-            string_header.append("phi(%s)" % ','.join(self.variables))
+            string_header.append("phi({variables})".format(variables=",".join(string_header)))
             string_list.append(string_header)
 
         # fun and gen are functions to generate the different values of
