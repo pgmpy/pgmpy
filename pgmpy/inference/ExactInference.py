@@ -235,8 +235,8 @@ class VariableElimination(Inference):
             raise ValueError("Elimination order incomplete")
         # If the elimination_order list is incomplete, raise an error
         if set(elimination_order) != set(self.variables):
-            raise ValueError("Set of variables in elimination "
-            	"order different from variables in model")
+            raise ValueError("Set of variables in elimination order"
+                             " different from variables in model")
 
         eliminated_variables = set()
         working_factors = {node: [factor.scope() for factor in self.factors[node]]
@@ -252,7 +252,7 @@ class VariableElimination(Inference):
         # eliminated (as all the factors should be considered only once)
         for var in elimination_order:
             factors = [factor for factor in working_factors[var]
-                if not set(factor).intersection(eliminated_variables)]
+                       if not set(factor).intersection(eliminated_variables)]
             phi = set(itertools.chain(*factors)).difference({var})
             cliques.add(tuple(phi))
             del working_factors[var]
