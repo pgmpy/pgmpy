@@ -261,8 +261,8 @@ class VariableElimination(Inference):
         # add edges corresponding to each clique
         for clique in cliques:
             if len(clique) > 1:
-            	for i, j in combinations(clique, 2):
-            		edges.append((i, j))
+                for i, j in combinations(clique, 2):
+                    edges.append((i, j))
 
         # Final induced graph
         graph = nx.Graph()
@@ -355,8 +355,6 @@ class BeliefPropagation(Inference):
         Probabilistic Graphical Models: Principles and Techniques
         Daphne Koller and Nir Friedman.
         """
-        import networkx as nx
-
         # Initialize clique beliefs as well as sepset beliefs
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique)
                                for clique in self.junction_tree.nodes()}
