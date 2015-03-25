@@ -1,7 +1,4 @@
 """
-ProbModelXML: http://leo.ugr.es/pgm2012/submissions/pgm2012_submission_43.pdf
-ProbModelXML: http://www.cisiad.uned.es/techreports/ProbModelXML.pdf
-
 For the student example the ProbModelXML file should be:
 
 <?xml version=“1.0” encoding=“UTF-8”?>
@@ -247,6 +244,11 @@ class ProbModelXMLWriter:
 
         Examples
         --------
+
+        Refernces
+        ---------
+        [1] http://leo.ugr.es/pgm2012/submissions/pgm2012_submission_43.pdf
+        [2] http://www.cisiad.uned.es/techreports/ProbModelXML.pdf
         """
         # TODO: add policies, InferenceOptions, Evidence
         # TODO: add parsing of language and comments and additional properties
@@ -441,6 +443,11 @@ class ProbModelXMLReader:
                             }
                     }
         }
+
+        References
+        ----------
+        [1] http://leo.ugr.es/pgm2012/submissions/pgm2012_submission_43.pdf
+        [2] http://www.cisiad.uned.es/techreports/ProbModelXML.pdf
         """
         if path is not None:
             self.xml = etree.ElementTree(file=path)
