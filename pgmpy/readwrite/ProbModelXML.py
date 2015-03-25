@@ -7,7 +7,7 @@ For the student example the ProbModelXML file should be:
 <?xml version=“1.0” encoding=“UTF-8”?>
 <ProbModelXML formatVersion=“1.0”>
     <ProbNet type="BayesianNetwork">
-        <AdditionalConstraints>
+        <AdditionalConstraints />
         <Comment>
             Student example model from Probabilistic Graphical Models:
             Principles and Techniques by Daphne Koller
