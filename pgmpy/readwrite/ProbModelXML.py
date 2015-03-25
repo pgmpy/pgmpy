@@ -6,7 +6,7 @@ For the student example the ProbModelXML file should be:
 <?xml version=“1.0” encoding=“UTF-8”?>
 <ProbModelXML formatVersion=“1.0”>
     <ProbNet type="BayesianNetwork">
-        <AdditionalConstraints />
+        <AdditionalConstraints>
         <Comment>
             Student example model from Probabilistic Graphical Models:
             Principles and Techniques by Daphne Koller
@@ -459,12 +459,16 @@ class ProbModelXMLReader:
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
-        # TODO: AdditionalConstraints
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
         if probnet_elem.find('AdditionalProperty'):
             for prop in probnet_elem.find('AdditionalProperty'):
                 self.add_additional_property(self.probnet['AdditionalProperties'], prop)
+
+        # Add additional Constraints
+        self.probnet['AdditionalConstraints'] = {}
+        for constraint in probnet_elem.findall('AdditionalConstraints/Constraint'):
+            self.add_probnet_additionalconstraints(constraint)
 
         # Add nodes
         self.probnet['Variables'] = {}
@@ -480,9 +484,13 @@ class ProbModelXMLReader:
         for potential in self.xml.findall('.//Potential')[0]:
             self.add_potential(potential)
 
-    # TODO: No specification on additionalconstraints present in the research paper
-    def add_probnet_additionalconstraints(self):
-        pass
+    def add_probnet_additionalconstraints(self, constraint):
+        constraint_name = constraint.attrib['name']
+        self.probnet['AdditionalConstraints'][constraint_name] = {}
+        for argument in constraint.findall('Argument'):
+            argument_name = argument.attrib['name']
+            argument_value = argument.attrib['value']
+            self.probnet['AdditionalConstraints'][constraint_name][argument_name] = argument_value
 
     def add_comment(self, comment):
         self.probnet['Comment'] = comment
