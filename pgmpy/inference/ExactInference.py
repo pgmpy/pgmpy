@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+from itertools import combinations
 import numpy as np
+import networkx as nx
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 
@@ -228,6 +230,45 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
+        eliminated_variables = set()
+        working_factors = {node: {factor for factor in self.factors[node]}
+                           for node in self.factors}
+
+        # The set of cliques should be in the induced graph
+        cliques = set()
+        for factors in working_factors.values():
+            for factor in factors:
+                cliques.add(tuple(factor.scope()))
+
+        # If the elimination_order list is incomplete, raise an error
+        if len(elimination_order) < len(self.variables):
+            raise ValueError("Elimination order incomplete")
+
+        # Removing all the factors containing the variables which are
+        # eliminated (as all the factors should be considered only once)
+        for var in elimination_order:
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor.variables).intersection(eliminated_variables)]
+            phi = factor_product(*factors)
+            phi.reduce('{variable}_0'.format(variable=var))
+            cliques.add(tuple(phi.scope()))
+            del working_factors[var]
+            for variable in phi.variables:
+                working_factors[variable].add(phi)
+            eliminated_variables.add(var)
+
+        edges = []
+        # add edges corresponding to each clique
+        for clique in cliques:
+            if len(clique) > 1:
+            	for i, j in combinations(clique, 2):
+            		edges.append((i, j))
+
+        # Final induced graph
+        graph = nx.Graph()
+        graph.add_edges_from(edges)
+        return graph
+
 
 class BeliefPropagation(Inference):
     """
