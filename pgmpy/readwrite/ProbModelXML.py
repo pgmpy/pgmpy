@@ -1,5 +1,6 @@
 """
 ProbModelXML: http://leo.ugr.es/pgm2012/submissions/pgm2012_submission_43.pdf
+ProbModelXML: http://www.cisiad.uned.es/techreports/ProbModelXML.pdf
 
 For the student example the ProbModelXML file should be:
 
