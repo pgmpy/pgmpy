@@ -44,6 +44,7 @@ class TabularCPD(Factor):
     >>> cpd.variables
     OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
     >>> cpd.variable
+    'grade'
 
     Parameters
     ----------
@@ -329,9 +330,9 @@ class TreeCPD(nx.DiGraph):
         For P(A|B, C, D), to construct a tree like:
 
                     B
-             0 /         \1
+             0 /        \1
               /          \
-        P(A|b_0)         C
+        P(A|b_0)          C
                    0/         \1
                    /           \
             P(A|b_1, c_0)      D
@@ -383,12 +384,14 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            super().add_edge(u, v, label=label)
-            if list(nx.simple_cycles(self)):
-                super().remove_edge(u, v)
-                raise ValueError("Self Loops and Cycles are not allowed")
+            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+                # check if adding edge (u, v) forms a cycle
+                raise ValueError(
+                    'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
+            else:
+                super(TreeCPD, self).add_edge(u, v, label=label)
         else:
-            raise ValueError("Self Loops and Cycles are not allowed")
+            raise ValueError('Self loops are not allowed. Edge (%s->%s) forms a self loop.' % (u, v))
 
     def add_edges_from(self, ebunch):
         """
