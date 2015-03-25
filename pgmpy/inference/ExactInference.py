@@ -262,10 +262,9 @@ class VariableElimination(Inference):
 
         edges = []
         # add edges corresponding to each clique
-        for clique in cliques:
-            if len(clique) > 1:
-                for i, j in itertools.combinations(clique, 2):
-                    edges.append((i, j))
+        for clique in filter(lambda x: len(x) > 1, cliques):
+            for i, j in itertools.combinations(clique, 2):
+                edges.append((i, j))
 
         # Final induced graph
         graph = nx.Graph()
