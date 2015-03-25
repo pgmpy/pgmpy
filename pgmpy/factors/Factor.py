@@ -4,6 +4,7 @@ import itertools
 from collections import OrderedDict
 from pgmpy.exceptions import Exceptions
 from operator import lt
+from pgmpy.extern import tabulate
 
 
 class Factor:
@@ -432,10 +433,9 @@ class Factor:
                 """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
             string_list.append(html_string_header)
         else:
-            string_header = "%s\t\t%s" % ("\t\t".join(self.variables),
-                                          "phi(%s)" % ', '.join(self.variables))
+            string_header = self.scope()
+            string_header.append("phi({variables})".format(variables=",".join(string_header)))
             string_list.append(string_header)
-            string_list.append('-' * (2 * len(string_header)))
 
         # fun and gen are functions to generate the different values of
         # variables in the table.
@@ -466,12 +466,14 @@ class Factor:
                     self.values[value_index])
                 string_list.append(html_string)
             else:
-                string = "%s\t\t%4.4f" % ("\t\t".join(prob_list),
-                                          self.values[value_index])
-                string_list.append(string)
+                prob_list.append(self.values[value_index])
+                string_list.append(prob_list)
             value_index += 1
 
-        return "\n".join(string_list)
+        if html:
+            return "\n".join(string_list)
+        else:
+            return tabulate(string_list, tablefmt="grid")
 
     def _repr_html_(self):
         # Checks for IPython Notebook, not required in IPython 3
