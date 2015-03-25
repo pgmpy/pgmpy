@@ -20,7 +20,11 @@ class TestProbModelXMLReaderString(unittest.TestCase):
     def setUp(self):
         string = """<ProbModelXML formatVersion="1.0">
       <ProbNet type="BayesianNetwork">
-        <AdditionalConstraints />
+        <AdditionalConstraints>
+            <Constraint name="MaxNumParents">
+                <Argument name="numParents" value="5" />
+            </Constraint>
+        </AdditionalConstraints>
         <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
         <Language>English</Language>
         <AdditionalProperties />
@@ -121,6 +125,15 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['edges'], edge)
         self.assertDictEqual(self.reader_file.probnet['edges'], edge)
+
+    def test_additionalconstraints(self):
+        additionalconstraints_expected = {'MaxNumParents':
+                                          {'numParents': '5'}}
+        self.maxDiff = None
+        self.assertDictEqual(self.reader_string.probnet['AdditionalConstraints'],
+                             additionalconstraints_expected)
+        self.assertDictEqual(self.reader_file.probnet['AdditionalConstraints'],
+                             additionalconstraints_expected)
 
 
 class TestProbModelXMLWriter(unittest.TestCase):
