@@ -104,14 +104,12 @@ class BayesianModel(DirectedGraph):
         """
         if u == v:
             raise ValueError('Self loops are not allowed.')
-
-        super().add_edge(u, v, **kwargs)
-
-        if list(nx.simple_cycles(self)):
-            self.remove_edge(u, v)
+        if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
             raise ValueError(
-                'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (v, u))
-
+                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
+        else:
+            super(BayesianModel, self).add_edge(u, v, **kwargs)
+        
     def add_cpds(self, *cpds):
         """
         Add CPD (Conditional Probability Distribution) to the Bayesian Model.
