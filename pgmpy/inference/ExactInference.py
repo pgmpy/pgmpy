@@ -230,10 +230,7 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
-        # If the elimination_order list is incomplete, raise an error
-        if len(elimination_order) < len(self.variables):
-            raise ValueError("Elimination order incomplete")
-        # If the elimination_order list is incomplete, raise an error
+        # If the elimination order does not contain the same variables as the model
         if set(elimination_order) != set(self.variables):
             raise ValueError("Set of variables in elimination order"
                              " different from variables in model")
@@ -242,7 +239,7 @@ class VariableElimination(Inference):
         working_factors = {node: [factor.scope() for factor in self.factors[node]]
                            for node in self.factors}
 
-        # The set of cliques should be in the induced graph
+        # The set of cliques that should be in the induced graph
         cliques = set()
         for factors in working_factors.values():
             for factor in factors:
@@ -260,16 +257,9 @@ class VariableElimination(Inference):
                 working_factors[variable].append(list(phi))
             eliminated_variables.add(var)
 
-        edges = []
-        # add edges corresponding to each clique
-        for clique in filter(lambda x: len(x) > 1, cliques):
-            for i, j in itertools.combinations(clique, 2):
-                edges.append((i, j))
-
-        # Final induced graph
-        graph = nx.Graph()
-        graph.add_edges_from(edges)
-        return graph
+        edges_comb = [itertools.combinations(c, 2) 
+                      for c in filter(lambda x: len(x) > 1, cliques)]
+        return nx.Graph(itertools.chain(*edges_comb))
 
 
 class BeliefPropagation(Inference):
