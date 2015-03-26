@@ -86,6 +86,14 @@ class TestVariableElimination(unittest.TestCase):
                                                       {'J': 0, 'Q': 1, 'G': 0})
         self.assertDictEqual(map_query, {'A': 1, 'R': 0, 'L': 0})
 
+    def test_induced_graph(self):
+        induced_graph = self.bayesian_inference.induced_graph(['G', 'Q', 'A', 'J', 'L', 'R'])
+        result_edges = sorted([sorted(x) for x in induced_graph.edges()])
+        self.assertEqual(
+          [['A', 'J'], ['A', 'R'], ['G', 'J'], ['G', 'L'], ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
+           result_edges)
+
+
 
 class TestBeliefPropagation(unittest.TestCase):
     def setUp(self):

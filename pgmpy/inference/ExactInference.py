@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import itertools
 import numpy as np
+import networkx as nx
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 
@@ -228,6 +230,37 @@ class VariableElimination(Inference):
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
+        # If the elimination order does not contain the same variables as the model
+        if set(elimination_order) != set(self.variables):
+            raise ValueError("Set of variables in elimination order"
+                             " different from variables in model")
+
+        eliminated_variables = set()
+        working_factors = {node: [factor.scope() for factor in self.factors[node]]
+                           for node in self.factors}
+
+        # The set of cliques that should be in the induced graph
+        cliques = set()
+        for factors in working_factors.values():
+            for factor in factors:
+                cliques.add(tuple(factor))
+
+        # Removing all the factors containing the variables which are
+        # eliminated (as all the factors should be considered only once)
+        for var in elimination_order:
+            factors = [factor for factor in working_factors[var]
+                       if not set(factor).intersection(eliminated_variables)]
+            phi = set(itertools.chain(*factors)).difference({var})
+            cliques.add(tuple(phi))
+            del working_factors[var]
+            for variable in phi:
+                working_factors[variable].append(list(phi))
+            eliminated_variables.add(var)
+
+        edges_comb = [itertools.combinations(c, 2) 
+                      for c in filter(lambda x: len(x) > 1, cliques)]
+        return nx.Graph(itertools.chain(*edges_comb))
+
 
 class BeliefPropagation(Inference):
     """
@@ -314,8 +347,6 @@ class BeliefPropagation(Inference):
         Probabilistic Graphical Models: Principles and Techniques
         Daphne Koller and Nir Friedman.
         """
-        import networkx as nx
-
         # Initialize clique beliefs as well as sepset beliefs
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique)
                                for clique in self.junction_tree.nodes()}
