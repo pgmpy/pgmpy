@@ -172,7 +172,7 @@ class BayesianModel(DirectedGraph):
         if node:
             if node not in self.nodes():
                 raise ValueError('Node not present in the Directed Graph')
-            return list(filter(lambda x: node in x.variable, self.cpds))[0]
+            return list(filter(lambda x: node == x.variable, self.cpds))[0]
         else:
             return self.cpds
 
@@ -230,7 +230,7 @@ class BayesianModel(DirectedGraph):
                                      ' is not equal to 1.' % node)
         return True
 
-    def _get_ancestors_of(self, obs_nodes_list):
+    def get_ancestors_of(self, obs_nodes_list):
         """
         Returns a list of all ancestors of all the observed nodes.
 
@@ -250,6 +250,39 @@ class BayesianModel(DirectedGraph):
                 nodes_list.update(self.predecessors(node))
             ancestors_list.add(node)
         return ancestors_list
+
+    def get_descendants_of(self, obs_nodes_list):
+        """
+        Returns a list of all descendants of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+        """
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
+
+        descendants_list = set()
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in descendants_list:
+                nodes_list.update(self.successors(node))
+            descendants_list.add(node)
+        return descendants_list
+
+    def all_inaugurals(self, variables):
+        all_vstructures = [v for v in self if len(self.get_parents(v)) > 1]
+        ancestors = self.get_ancestors_of(variables)
+        possible_inaugurals = set(all_vstructures) - set(ancestors)
+        top_inaugurals = []
+        for variable in possible_inaugurals:
+            ancestors_of_variable = set(self.get_ancestors_of(variable))
+            ancestors_of_variable.remove(variable)
+            if len(ancestors_of_variable.intersection(set(possible_inaugurals))) == 0:
+                top_inaugurals.append(variable)
+        print(self.get_descendants_of("ksort"))
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -285,7 +318,7 @@ class BayesianModel(DirectedGraph):
             observed_list = [observed] if isinstance(observed, str) else observed
         else:
             observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
+        ancestors_list = self.get_ancestors_of(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
