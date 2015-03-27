@@ -273,6 +273,35 @@ class BayesianModel(DirectedGraph):
         return descendants_list
 
     def all_inaugurals(self, variables):
+        """
+        Returnd all inaugurals in the graph, given disconsidered variables.
+        Inaugural variables can be ignored during the test of independence I(X,Y,Z).
+        The disconsidered variables are XYZ.
+
+        Parameters
+        ----------
+        variables: a list, list-type
+            name of all variables to me desconsidered
+
+        Examples
+        --------
+
+        >>> from pgmpy.models.BayesianModel import BayesianModel
+        >>> bifReader = BIFReader("barley.bif")
+        >>> bn = bifReader.get_bayesian_model()
+        >>> bn.all_inaugurals(["nedbarea", "markgrm", "dgv5980"])
+        {'nmin', 'ksort', 'ngtilg', 'slt22', 'spndx', 'jordn',
+        'bgbyg', 'nprot', 'saakern', 'mod_nmin', 'protein', 'aks_vgt',
+        'ntilg', 's2225', 'dgv1059', 's2528', 'potnmin', 'ngodnt',
+        'ngodn', 'aar_mod', 'aks_m2', 'antplnt', 'nopt', 'udb',
+        'tkv', 'ngodnn', 'keraks', 'exptgens'}
+
+        References
+        ----------
+        Details of the algorithm can be found in 'Simplifying d-Separation and m-Separation
+        in Bayesian Networks' - UAI 2015 - Cory Butz, Jhonatan Oliveira, André dos Santos.
+        Page 7 Algorithm 2
+        """
         all_vstructures = [v for v in self if len(self.get_parents(v)) > 1]
         ancestors = self.get_ancestors_of(variables)
         possible_inaugurals = set(all_vstructures) - set(ancestors)
@@ -282,7 +311,7 @@ class BayesianModel(DirectedGraph):
             ancestors_of_variable.remove(variable)
             if len(ancestors_of_variable.intersection(set(possible_inaugurals))) == 0:
                 top_inaugurals.append(variable)
-        print(self.get_descendants_of("ksort"))
+        return self.get_descendants_of(top_inaugurals)
 
     def active_trail_nodes(self, start, observed=None):
         """
