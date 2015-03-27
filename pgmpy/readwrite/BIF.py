@@ -132,16 +132,19 @@ class BIFReader:
         BN = BayesianModel()
         all_nodes = [v for v in tempVars]
         BN.add_nodes_from(all_nodes)
-        for key in tempCpts:
-            all_edges = [(t, key) for t in tempCpts[key]["tail"]]
-            BN.add_edges_from(all_edges)
-        for key in tempCpts:
-            head_card = len(tempVars[key]["domain"])
-            evidence_card = [len(tempVars[v]["domain"]) for v in tempCpts[key]["tail"]]
-            newCPD = TabularCPD(key,
+        for head_var in tempCpts:
+            # Adding edges
+            all_edges = [(t, head_var) for t in tempCpts[head_var]["tail"]]
+            for edge in all_edges:
+                BN.add_edge(edge[0], edge[1])
+            # Adding CPDs
+            head_card = len(tempVars[head_var]["domain"])
+            evidence_card = [len(tempVars[v]["domain"]) for v in tempCpts[head_var]["tail"]]
+            newCPD = TabularCPD(head_var,
                                 head_card,
-                                tempCpts[key]["values"],
-                                evidence=tempCpts[key]["tail"],
+                                tempCpts[head_var]["values"],
+                                evidence=tempCpts[head_var]["tail"],
                                 evidence_card=evidence_card)
             BN.add_cpds(newCPD)
+        self.bifFile.close()
         return BN
