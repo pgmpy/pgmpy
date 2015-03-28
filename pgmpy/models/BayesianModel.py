@@ -158,6 +158,12 @@ class BayesianModel(DirectedGraph):
         """
         Returns the cpds that have been added till now to the graph
 
+        Parameter
+        ---------
+        node: any hashable python object (optional)
+            The node whose CPD we want. If node not specified returns all the
+            CPDs added to the model.
+
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
@@ -172,7 +178,9 @@ class BayesianModel(DirectedGraph):
         if node:
             if node not in self.nodes():
                 raise ValueError('Node not present in the Directed Graph')
-            return list(filter(lambda x: node in x.variable, self.cpds))[0]
+            for cpd in self.cpds:
+                if cpd.variable == node:
+                    return cpd
         else:
             return self.cpds
 

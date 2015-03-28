@@ -159,6 +159,26 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertTrue(self.G.is_active_trail('d', 's', 'l'))
         self.assertFalse(self.G.is_active_trail('d', 's', ['i', 'l']))
 
+    def test_get_cpds(self):
+        cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
+        cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
+        cpd_g = TabularCPD('g', 2, np.random.rand(2, 4), ['d', 'i'], [2, 2])
+        cpd_l = TabularCPD('l', 2, np.random.rand(2, 2), ['g'], 2)
+        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        self.G.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l, cpd_s)
+
+        self.assertEqual(self.G.get_cpds('d').variable, 'd')
+
+    def test_get_cpds1(self):
+        self.model = BayesianModel([('A', 'AB')])
+        cpd_a = TabularCPD('A', 2, np.random.rand(2, 1))
+        cpd_ab = TabularCPD('AB', 2, np.random.rand(2, 2), evidence=['A'],
+                            evidence_card=[2])
+
+        self.model.add_cpds(cpd_a, cpd_ab)
+        self.assertEqual(self.model.get_cpds('A').variable, 'A')
+        self.assertEqual(self.model.get_cpds('AB').variable, 'AB')
+
     def test_add_single_cpd(self):
         from pgmpy.factors import TabularCPD
         cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
