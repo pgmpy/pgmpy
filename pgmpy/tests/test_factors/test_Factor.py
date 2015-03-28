@@ -494,14 +494,11 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), ('0', '0')),
-                              (('B', 'C'), 'D', ('0', '1')),
-                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), ('1', '0')),
-                              (('B', 'C'), 'E', ('1', '1')),
-                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1'),
-                              ('E', Factor(['A'], [2], [0.3, 0.7]), '0'),
-                              ('E', Factor(['A'], [2], [0.8, 0.2]), '1')])
+        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
+                              ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
+                              ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
+                              ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
+                              ('B', Factor(['J'], [2], [0.4, 0.6]), '1')])
 
     def test_add_edge(self):
         self.tree1.add_edge('yolo', 'yo', 0)
@@ -528,14 +525,12 @@ class TestTreeCPD(unittest.TestCase):
                                              0.2, 0.2, 0.2, 0.2, 0.9, 0.9, 0.1, 0.6]))
 
         tabular_cpd = self.tree2.to_tabular_cpd()
-        self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D', 'E'])
-        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2, 2])
-        self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D', 'E'])
-        np_test.assert_array_equal(tabular_cpd.values,
-                                   np.array([0.8, 0.8, 0.8, 0.8, 0.9, 0.9, 0.4, 0.4,
-                                             0.1, 0.1, 0.1, 0.1, 0.3, 0.8, 0.3, 0.8,
-                                             0.2, 0.2, 0.2, 0.2, 0.1, 0.1, 0.6, 0.6,
-                                             0.9, 0.9, 0.9, 0.9, 0.7, 0.2, 0.7, 0.2]))
+        self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
+        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
+        self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
+        np_test.assert_array_equal(tabular_cpd.values, 
+                                  np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
+                                             0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 
     @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd_parent_order(self):
