@@ -231,48 +231,6 @@ class BayesianModel(DirectedGraph):
                                      ' is not equal to 1.' % node)
         return True
 
-    def get_ancestors_of(self, obs_nodes_list):
-        """
-        Returns a list of all ancestors of all the observed nodes.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-        """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
-
-        ancestors_list = set()
-        nodes_list = set(obs_nodes_list)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
-        return ancestors_list
-
-    def get_descendants_of(self, obs_nodes_list):
-        """
-        Returns a list of all descendants of all the observed nodes.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-        """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
-
-        descendants_list = set()
-        nodes_list = set(obs_nodes_list)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in descendants_list:
-                nodes_list.update(self.successors(node))
-            descendants_list.add(node)
-        return descendants_list
-
     def all_inaugurals(self, variables):
         """
         Returnd all inaugurals in the graph, given disconsidered variables.
@@ -313,6 +271,27 @@ class BayesianModel(DirectedGraph):
             if len(ancestors_of_variable.intersection(set(possible_inaugurals))) == 0:
                 top_inaugurals.append(variable)
         return self.get_descendants_of(top_inaugurals)
+
+    def barren_variables(self, variables):
+        """
+        Return all barren variables, given the nodes to ignore (query and/or evidence nodes).
+        Barren variables ["A Simple Approach to Bayesian Network Computations", Zhang and Pool, CAI-94] are leaf variables
+        not in query of evidence.
+
+        Parameters
+        ----------
+        variables: a list, list-type
+            name of all variables to me desconsidered
+        """
+        model_copy = self.copy()
+        barren_vars = []
+        while True:
+            barren = [v for v in (n for n, d in model_copy.out_degree_iter() if d == 0) if v not in variables]
+            barren_vars.extend(barren)
+            model_copy.remove_nodes_from(barren)
+            if len(barren) == 0:
+                break
+        return barren_vars
 
     def active_trail_nodes(self, start, observed=None):
         """
