@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 import networkx as nx
 from pgmpy.inference import Inference
+from pgmpy.inference.EliminationOrdering import EliminationOrdering
 from pgmpy.factors.Factor import factor_product
 
 
@@ -48,11 +49,10 @@ class VariableElimination(Inference):
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
 
-        # TODO: Modify it to find the optimal elimination order
+        # If no elimination order is give, find one using Weighted Min Fill
         if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
+            elimOrd = EliminationOrdering(self.model)
+            elimination_order = elimOrd.find_elimination_ordering(variables, elimOrd.weighted_min_fill)
 
         elif any(var in elimination_order for var in
                  set(variables).union(set(evidence.keys() if evidence else []))):
