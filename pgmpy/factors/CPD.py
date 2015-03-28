@@ -456,7 +456,7 @@ class TreeCPD(nx.DiGraph):
         for node in node_list:
             cardinality.append(len(edge_dict[node]))
 
-        for i in itertools.product(*[range(index) for index in cardinality]):
+        for i in product(*[range(index) for index in cardinality]):
             edge_list = [a + str(b) for a, b in zip(node_list, i)]
             current_node = root
             for edge in edge_list:
