@@ -443,6 +443,7 @@ class TreeCPD(nx.DiGraph):
         for source in self.nodes():
             if not isinstance(source, Factor):
                 adjlist[source] = [i[1] for i in edge_attributes if not isinstance(i[1], Factor) and i[0] == source]
+                adjlist[source] = sorted(adjlist[source], key=lambda x: (len(nx.descendants(self, x)), x))
 
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
         stack.append(root)
@@ -458,7 +459,7 @@ class TreeCPD(nx.DiGraph):
         for node in node_list:
             cardinality.append(len(edge_dict[node]))
 
-        for i in itertools.product(*[range(index) for index in cardinality]):
+        for i in product(*[range(index) for index in cardinality]):
             edge_list = [a + str(b) for a, b in zip(node_list, i)]
             current_node = root
             for edge in edge_list:
