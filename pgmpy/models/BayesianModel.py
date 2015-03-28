@@ -5,6 +5,7 @@ from collections import defaultdict
 import networkx as nx
 import numpy as np
 import pandas as pd
+from pgmpy.exceptions import Exceptions
 
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
@@ -669,3 +670,17 @@ class BayesianModel(DirectedGraph):
 
     def is_imap(self, independence):
         pass
+
+    def get_cardinality(self, variable):
+        """
+        Returns cardinality of a given variable
+
+        Parameters
+        ----------
+        variable: string
+
+        """
+        if variable not in self.nodes():
+            raise Exceptions.ScopeError("%s not in scope" % variable)
+        cpds = [cpd.get_cardinality(variable) for cpd in self.get_cpds() if variable in cpd.variables]
+        return cpds[0]
