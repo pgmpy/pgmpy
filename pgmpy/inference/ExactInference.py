@@ -58,11 +58,10 @@ class VariableElimination(Inference):
                  set(variables).union(set(evidence.keys() if evidence else []))):
             raise ValueError("Elimination order contains variables which are in"
                              " variables or evidence args")
-
         for var in elimination_order:
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
-            factors = [factor for factor in working_factors[var]
+            factors = [factor for factor in working_factors[var] 
                        if not set(factor.variables).intersection(eliminated_variables)]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)(var, inplace=False)
@@ -111,7 +110,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-        return self._variable_elimination(variables, 'marginalize',
+        variables_to_be_eliminated = set(self.model.nodes()) - set(variables)
+        return self._variable_elimination(variables_to_be_eliminated, 'marginalize',
                                           evidence=evidence, elimination_order=elimination_order)
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
