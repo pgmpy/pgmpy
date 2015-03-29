@@ -397,7 +397,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
                 # check if adding edge (u, v) forms a cycle
                 raise ValueError(
                     'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
