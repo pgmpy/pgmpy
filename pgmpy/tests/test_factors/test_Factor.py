@@ -517,7 +517,7 @@ class TestTreeCPD(unittest.TestCase):
 
     def test_to_tabular_cpd(self):
         tabular_cpd = self.tree1.to_tabular_cpd()
-        self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D'])
+        self.assertEqual(tabular_cpd.evidence, ['D', 'C', 'B'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D'])
         np_test.assert_array_equal(tabular_cpd.values,
