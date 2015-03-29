@@ -33,9 +33,25 @@ class VariableElimination(Inference):
                 all_factors.extend(factor_li)
             return set(all_factors)
 
-        eliminated_variables = set()
-        working_factors = {node: {factor for factor in self.factors[node]}
-                           for node in self.factors}
+        # Separate the query variables and evidence from the ones to be eliminated
+        query_variables = variables
+        variables = set(self.model.nodes()) - set(variables) - set(evidence or [])
+
+        # Removing barren and independent variables generate sub-models.
+        # Then, a copy is used to do not disturb the original model.
+        model_copy = self.model.copy()
+        # Get all barren nodes.
+        barren_vars = self.model.barren_nodes(set(query_variables).union(set(evidence or [])), model_copy)
+        # Get all independent by evidence nodes
+        independent_vars = self.model.independent_by_evidence_nodes(query_variables, evidence, model_copy)
+
+        # Union of irrelevant variables (barren and independent by evidence)
+        irrelevant_vars = barren_vars + independent_vars
+        variables = set(variables) - set(irrelevant_vars)
+
+        # Load all factors used in this session of Variable Elimination
+        working_factors = {node: {factor for factor in self.factors[node] if not set(factor.variables).intersection(set(irrelevant_vars))}
+                           for node in self.factors if node not in irrelevant_vars}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
@@ -58,10 +74,13 @@ class VariableElimination(Inference):
                  set(variables).union(set(evidence.keys() if evidence else []))):
             raise ValueError("Elimination order contains variables which are in"
                              " variables or evidence args")
+
+        # Perform elimination ordering
+        eliminated_variables = set()
         for var in elimination_order:
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
-            factors = [factor for factor in working_factors[var] 
+            factors = [factor for factor in working_factors[var]
                        if not set(factor.variables).intersection(eliminated_variables)]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)(var, inplace=False)
@@ -78,7 +97,7 @@ class VariableElimination(Inference):
                     final_distribution.add(factor)
 
         query_var_factor = {}
-        for query_var in variables:
+        for query_var in query_variables:
             phi = factor_product(*final_distribution)
             phi.marginalize(list(set(variables) - set([query_var])))
             query_var_factor[query_var] = phi.normalize(inplace=False)
@@ -110,8 +129,7 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-        variables_to_be_eliminated = set(self.model.nodes()) - set(variables)
-        return self._variable_elimination(variables_to_be_eliminated, 'marginalize',
+        return self._variable_elimination(variables, 'marginalize',
                                           evidence=evidence, elimination_order=elimination_order)
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):

@@ -231,48 +231,8 @@ class BayesianModel(DirectedGraph):
                                      ' is not equal to 1.' % node)
         return True
 
-    def all_inaugurals(self, variables):
-        """
-        Returnd all inaugurals in the graph, given disconsidered variables.
-        Inaugural variables can be ignored during the test of independence I(X,Y,Z).
-        The disconsidered variables are XYZ.
-
-        Parameters
-        ----------
-        variables: a list, list-type
-            name of all variables to me desconsidered
-
-        Examples
-        --------
-
-        >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> bifReader = BIFReader("barley.bif")
-        >>> bn = bifReader.get_bayesian_model()
-        >>> bn.all_inaugurals(["nedbarea", "markgrm", "dgv5980"])
-        {'nmin', 'ksort', 'ngtilg', 'slt22', 'spndx', 'jordn',
-        'bgbyg', 'nprot', 'saakern', 'mod_nmin', 'protein', 'aks_vgt',
-        'ntilg', 's2225', 'dgv1059', 's2528', 'potnmin', 'ngodnt',
-        'ngodn', 'aar_mod', 'aks_m2', 'antplnt', 'nopt', 'udb',
-        'tkv', 'ngodnn', 'keraks', 'exptgens'}
-
-        References
-        ----------
-        Details of the algorithm can be found in 'Simplifying d-Separation and m-Separation
-        in Bayesian Networks' - UAI 2015 - Cory Butz, Jhonatan Oliveira, André dos Santos.
-        Page 7 Algorithm 2
-        """
-        all_vstructures = [v for v in self if len(self.get_parents(v)) > 1]
-        ancestors = self.get_ancestors_of(variables)
-        possible_inaugurals = set(all_vstructures) - set(ancestors)
-        top_inaugurals = []
-        for variable in possible_inaugurals:
-            ancestors_of_variable = set(self.get_ancestors_of(variable))
-            ancestors_of_variable.remove(variable)
-            if len(ancestors_of_variable.intersection(set(possible_inaugurals))) == 0:
-                top_inaugurals.append(variable)
-        return self.get_descendants_of(top_inaugurals)
-
-    def barren_variables(self, variables):
+    @staticmethod
+    def barren_nodes(variables, bayesian_model):
         """
         Return all barren variables, given the nodes to ignore (query and/or evidence nodes).
         Barren variables ["A Simple Approach to Bayesian Network Computations", Zhang and Pool, CAI-94] are leaf variables
@@ -281,17 +241,21 @@ class BayesianModel(DirectedGraph):
         Parameters
         ----------
         variables: a list, list-type
-            name of all variables to me desconsidered
+            name of all variables to me desconsidered (query and evidence variables)
         """
-        model_copy = self.copy()
         barren_vars = []
         while True:
-            barren = [v for v in (n for n, d in model_copy.out_degree_iter() if d == 0) if v not in variables]
+            barren = [v for v in (n for n, d in bayesian_model.out_degree_iter() if d == 0) if v not in variables]
             barren_vars.extend(barren)
-            model_copy.remove_nodes_from(barren)
+            bayesian_model.remove_nodes_from(barren)
             if len(barren) == 0:
                 break
         return barren_vars
+
+    @staticmethod
+    def independent_by_evidence_nodes(query_variables, evidence, bayesian_model):
+        evidence_vars = evidence.keys() if evidence is not None else []
+        return [v for v in bayesian_model.nodes() if not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -434,7 +398,8 @@ class BayesianModel(DirectedGraph):
         >>> student.is_active_trail('grade', 'sat')
         True
         """
-        if end in self.active_trail_nodes(start, observed):
+        active_trails = self.active_trail_nodes(start, observed)
+        if all(v in active_trails for v in end):
             return True
         else:
             return False
