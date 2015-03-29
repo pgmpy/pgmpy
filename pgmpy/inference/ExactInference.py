@@ -45,7 +45,7 @@ class VariableElimination(Inference):
         # Get all independent by evidence nodes
         independent_vars = self.model.independent_by_evidence_nodes(query_variables, evidence, modified_model)
         modified_model.remove_nodes_from(independent_vars)
-        # Get all noded that weren't root but now are
+        # Get all nodes that weren't root but now are
         new_root_vars = self.model.new_root_variables(self.model, modified_model)
 
         # Union of irrelevant variables (barren and independent by evidence)
