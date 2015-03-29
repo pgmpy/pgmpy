@@ -71,8 +71,8 @@ class VariableElimination(Inference):
 
         # If no elimination order is give, find one using Weighted Min Fill
         if not elimination_order:
-            elimOrd = EliminationOrdering(self.model)
-            elimination_order = elimOrd.find_elimination_ordering(variables, elimOrd.weighted_min_fill)
+            elim_ord = EliminationOrdering(self.model)
+            elimination_order = elim_ord.find_elimination_ordering(variables, elim_ord.weighted_min_fill)
 
         elif any(var in elimination_order for var in
                  set(variables).union(set(evidence.keys() if evidence else []))):

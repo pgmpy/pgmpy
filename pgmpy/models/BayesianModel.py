@@ -234,18 +234,22 @@ class BayesianModel(DirectedGraph):
     @staticmethod
     def barren_nodes(variables, bayesian_model):
         """
-        Return all barren variables, given the nodes to ignore (query and/or evidence nodes).
-        Barren variables ["A Simple Approach to Bayesian Network Computations", Zhang and Pool, CAI-94] are leaf variables
-        not in query of evidence.
+        Return all barren variables, given the nodes to ignore
+        (query and/or evidence nodes). Barren variables ["A Simple Approach
+        to Bayesian Network Computations", Zhang and Pool, CAI-94]
+        are leaf variables not in query of evidence.
 
         Parameters
         ----------
         variables: a list, list-type
-            name of all variables to me desconsidered (query and evidence variables)
+            name of all variables to me desconsidered
+            (query and evidence variables)
         """
         barren_vars = []
         while True:
-            barren = [v for v in (n for n, d in bayesian_model.out_degree_iter() if d == 0) if v not in variables]
+            barren = [v for v in (n for n, d
+                      in bayesian_model.out_degree_iter()
+                      if d == 0) if v not in variables]
             barren_vars.extend(barren)
             bayesian_model.remove_nodes_from(barren)
             if len(barren) == 0:
@@ -254,11 +258,25 @@ class BayesianModel(DirectedGraph):
 
     @staticmethod
     def independent_by_evidence_nodes(query_variables, evidence, bayesian_model):
+        """
+        Return all independent by evidence variables.
+        They are variables that does not have an
+        active trail to any of the query variables,
+        given the evidence.
+        """
         evidence_vars = evidence.keys() if evidence is not None else []
-        return [v for v in bayesian_model.nodes() if (v not in evidence_vars) and not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
+        return [v for v in bayesian_model.nodes()
+                if (v not in evidence_vars)
+                and not bayesian_model
+                .is_active_trail(v, query_variables, list(evidence_vars))]
 
     @staticmethod
     def new_root_variables(old_model, new_model):
+        """
+        Return all nodes that were roots in
+        an older model, but are not root in
+        a newer version of the same mode.
+        """
         old_roots = old_model.roots()
         new_roots = new_model.roots()
         return [v for v in new_roots if v not in old_roots]

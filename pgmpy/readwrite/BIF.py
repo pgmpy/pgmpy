@@ -2,149 +2,150 @@ from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 
 
-class BIFReader:
+class BIFReader(object):
 
     def __init__(self, path):
         self.path = path
-        self.bifFile = open(path)
+        self.bif_file = open(path)
 
     def get_bayesian_model(self):
         # Control flags
-        getVarFlag = False
-        getCptFlag = False
+        get_var_flag = False
+        get_cpt_flag = False
 
         # Temp vars
-        tempVar = {"name": "", "domain": []}    # Ex: {"name": "var1", "domain": ["true","false"]}
-        tempVars = {}   # Ex: {"var1": {"name": "var1", "domain": ["true","false"]}}
-        tempCpt = {"head": [], "tail": [], "values": []}    # Ex: {"head": ["var1"], "tail": ["var3","var4"], "values": [0.1 0.9 0.2 0.8]}
-        tempCpts = {}   # Ex: {"var1": {"head": ["var1"], "tail": ["var3","var4"]}}
+        # Ex: {"name": "var1", "domain": ["true","false"]}
+        temp_var = {"name": "", "domain": []}
+        # Ex: {"var1": {"name": "var1", "domain": ["true","false"]}}
+        temp_vars = {}
+        # Ex: {"head": ["var1"], "tail": ["var3","var4"], "values": [0.1 0.9
+        # 0.2 0.8]}
+        temp_cpt = {"head": [], "tail": [], "values": []}
+        # Ex: {"var1": {"head": ["var1"], "tail": ["var3","var4"]}}
+        temp_cpts = {}
 
-        for line in self.bifFile:
+        for line in self.bif_file:
 
             # Construct the DAG
-            if getCptFlag or line.find("probability") == 0:
-                if not getCptFlag:
-                    splitLine = line.replace(",", "").split()
+            if get_cpt_flag or line.find("probability") == 0:
+                if not get_cpt_flag:
+                    split_line = line.replace(",", "").split()
                     head = []
                     tail = []
-                    headFlag = False
-                    tailFlag = False
-                    for term in splitLine:
-                        if headFlag:
+                    head_flag = False
+                    tail_flag = False
+                    for term in split_line:
+                        if head_flag:
                             head.append(term)
-                        elif tailFlag:
+                        elif tail_flag:
                             tail.append(term)
 
                         if term == "(":
-                            headFlag = True
+                            head_flag = True
                         elif term == "|":
                             head.pop()
-                            headFlag = False
-                            tailFlag = True
+                            head_flag = False
+                            tail_flag = True
                         elif term == ")":
                             if len(tail) != 0:
                                 tail.pop()
                             else:
                                 head.pop()
-                            headFlag = False
-                            tailFlag = False
-
-                    # add edge in BN
-                    # if len(tail) != 0:
-                    #     for parent in tail:
-                    #         for child in head:
-                    #             self.bn.add_edge(tempVars[parent]["name"], tempVars[child]["name"])
+                            head_flag = False
+                            tail_flag = False
 
                     # Save head and tail to temporary CPT
                     for headVar in head:
-                        tempCpt["head"].append(tempVars[headVar]["name"])
+                        temp_cpt["head"].append(temp_vars[headVar]["name"])
                     for tailVar in tail:
-                        tempCpt["tail"].append(tempVars[tailVar]["name"])
+                        temp_cpt["tail"].append(temp_vars[tailVar]["name"])
 
-                    getCptFlag = True
+                    get_cpt_flag = True
 
                 else:
                     # Construct the table while } is not found
                     if line.find("}") == -1:
-                        splitLine = line.strip()
-                        domainSplit = []
-                        probabilitiesSplit = []
+                        split_line = line.strip()
+                        domain_split = []
+                        probabilities_split = []
 
-                        if splitLine.find("table") == 0:
-                            probabilitiesSplit = splitLine.replace(
+                        if split_line.find("table") == 0:
+                            probabilities_split = split_line.replace(
                                 "table ", "").replace(";", "").split(",")
                         else:
-                            domainSplit = splitLine.split(")")[0].replace(
+                            domain_split = split_line.split(")")[0].replace(
                                 "(", "").split(",")
-                            domainSplit = [s.strip() for s in domainSplit]
-                            probabilitiesSplit = splitLine.split(")")[1].replace(
+                            domain_split = [s.strip() for s in domain_split]
+                            probabilities_split = split_line.split(")")[1].replace(
                                 "(", "").replace(";", "").split(",")
 
-                        probabilitiesSplit = [
-                            float(s.strip()) for s in probabilitiesSplit]
+                        probabilities_split = [
+                            float(s.strip()) for s in probabilities_split]
 
-                        for headVar in tempCpt["head"]:
-                            if len(tempCpt["values"]) == 0:
-                                tempCpt["values"] = [[] for _ in range(0, len(tempVars[headVar]["domain"]))]
-                            for counter, domainValue in enumerate(tempVars[headVar]["domain"]):
-                                # tableKey = [domainValue] + domainSplit
-                                tableValue = probabilitiesSplit[counter]
-                                tempCpt["values"][counter].append(tableValue)
+                        for headVar in temp_cpt["head"]:
+                            if len(temp_cpt["values"]) == 0:
+                                temp_cpt["values"] = [
+                                    [] for _ in range(0, len(temp_vars[headVar]["domain"]))]
+                            for counter, _ in enumerate(temp_vars[headVar]["domain"]):
+                                tableValue = probabilities_split[counter]
+                                temp_cpt["values"][counter].append(tableValue)
                     else:
-                        tempCpts[tempCpt["head"][0]] = tempCpt.copy()
-                        tempCpt = {"head": [], "tail": [], "values": []}
-                        getCptFlag = False
+                        temp_cpts[temp_cpt["head"][0]] = temp_cpt.copy()
+                        temp_cpt = {"head": [], "tail": [], "values": []}
+                        get_cpt_flag = False
 
             # Construct domain of Variables
-            elif getVarFlag or line.find("variable") == 0:
-                splitLine = line.split()
-                if not getVarFlag:
+            elif get_var_flag or line.find("variable") == 0:
+                split_line = line.split()
+                if not get_var_flag:
                     varName = ""
-                    controlFlag = False
-                    for term in splitLine:
-                        if controlFlag:
+                    control_flag = False
+                    for term in split_line:
+                        if control_flag:
                             varName = varName + term
 
                         if term == "variable":
-                            controlFlag = True
+                            control_flag = True
                         elif term == "{":
                             varName = varName.replace("{", "")
-                            controlFlag = False
-                    tempVar["name"] = varName
-                    getVarFlag = True
+                            control_flag = False
+                    temp_var["name"] = varName
+                    get_var_flag = True
                 else:
                     if line.find("  type discrete") == 0:
-                        controlFlag = False
-                        for term in splitLine:
-                            if controlFlag:
-                                tempVar["domain"].append(term.replace(",", ""))
+                        control_flag = False
+                        for term in split_line:
+                            if control_flag:
+                                temp_var["domain"].append(
+                                    term.replace(",", ""))
                             if term == "{":
-                                controlFlag = True
+                                control_flag = True
                             elif term == "};":
-                                tempVar["domain"].remove("};")
-                                controlFlag = False
-                        tempVars[tempVar["name"]] = tempVar.copy()
-                        tempVar = {"name": "", "domain": []}
-                        getVarFlag = False
+                                temp_var["domain"].remove("};")
+                                control_flag = False
+                        temp_vars[temp_var["name"]] = temp_var.copy()
+                        temp_var = {"name": "", "domain": []}
+                        get_var_flag = False
                     else:
                         print("ERROR! Not discrete variable!")
         # Construct the Bayesian Model
-        BN = BayesianModel()
-        all_nodes = [v for v in tempVars]
-        BN.add_nodes_from(all_nodes)
-        for head_var in tempCpts:
+        bayesian_model = BayesianModel()
+        all_nodes = [v for v in temp_vars]
+        bayesian_model.add_nodes_from(all_nodes)
+        for head_var in temp_cpts:
             # Adding edges
-            all_edges = [(t, head_var) for t in tempCpts[head_var]["tail"]]
+            all_edges = [(t, head_var) for t in temp_cpts[head_var]["tail"]]
             for edge in all_edges:
-                BN.add_edge(edge[0], edge[1])
+                bayesian_model.add_edge(edge[0], edge[1])
             # Adding CPDs
-            head_card = len(tempVars[head_var]["domain"])
-            evidence_card = [len(tempVars[v]["domain"]) for v in tempCpts[head_var]["tail"]]
+            head_card = len(temp_vars[head_var]["domain"])
+            evidence_card = [len(temp_vars[v]["domain"])
+                             for v in temp_cpts[head_var]["tail"]]
             newCPD = TabularCPD(head_var,
                                 head_card,
-                                tempCpts[head_var]["values"],
-                                evidence=tempCpts[head_var]["tail"],
+                                temp_cpts[head_var]["values"],
+                                evidence=temp_cpts[head_var]["tail"],
                                 evidence_card=evidence_card)
-            BN.add_cpds(newCPD)
-        self.bifFile.close()
-        return BN
+            bayesian_model.add_cpds(newCPD)
+        self.bif_file.close()
+        return bayesian_model
