@@ -113,6 +113,19 @@ class TabularCPD(Factor):
 
         super().__init__(variables, cardinality, values.flatten('C'))
 
+    def __repr__(self):
+        if not self.evidence:
+            str_1 = '<TabularCPD representing P({variable}:{cardinality}) at {address}>'\
+                .format(variable=self.variable, cardinality=self.variable_card, address=str(repr(hex(id(self)))))
+            return str_1
+        else:
+            str_2 = ', '.join(['{variable}:{cardinality}'.format(variable=variable, cardinality=cardinality)
+                               for variable, cardinality in zip(self.evidence, self.evidence_card)])
+            str_1 = '<TabularCPD representing P({variable}:{cardinality} |{string2}) at {address}>'\
+                .format(variable=self.variable, cardinality=self.variable_card, string2=str_2,
+                        address=str(repr(hex(id(self)))))
+            return str_1
+
     def get_cpd(self):
         """
         Returns the cpd
@@ -384,7 +397,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
                 # check if adding edge (u, v) forms a cycle
                 raise ValueError(
                     'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
