@@ -266,9 +266,8 @@ class BayesianModel(DirectedGraph):
         """
         evidence_vars = evidence.keys() if evidence is not None else []
         return [v for v in bayesian_model.nodes()
-                if (v not in evidence_vars)
-                and not bayesian_model
-                .is_active_trail(v, query_variables, list(evidence_vars))]
+                if (v not in evidence_vars) and
+                not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
 
     @staticmethod
     def new_root_variables(old_model, new_model):

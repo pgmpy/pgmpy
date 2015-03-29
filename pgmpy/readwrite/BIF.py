@@ -55,10 +55,10 @@ class BIFReader(object):
                             tail_flag = False
 
                     # Save head and tail to temporary CPT
-                    for headVar in head:
-                        temp_cpt["head"].append(temp_vars[headVar]["name"])
-                    for tailVar in tail:
-                        temp_cpt["tail"].append(temp_vars[tailVar]["name"])
+                    for head_var in head:
+                        temp_cpt["head"].append(temp_vars[head_var]["name"])
+                    for tail_var in tail:
+                        temp_cpt["tail"].append(temp_vars[tail_var]["name"])
 
                     get_cpt_flag = True
 
@@ -82,13 +82,13 @@ class BIFReader(object):
                         probabilities_split = [
                             float(s.strip()) for s in probabilities_split]
 
-                        for headVar in temp_cpt["head"]:
+                        for head_var in temp_cpt["head"]:
                             if len(temp_cpt["values"]) == 0:
                                 temp_cpt["values"] = [
-                                    [] for _ in range(0, len(temp_vars[headVar]["domain"]))]
-                            for counter, _ in enumerate(temp_vars[headVar]["domain"]):
-                                tableValue = probabilities_split[counter]
-                                temp_cpt["values"][counter].append(tableValue)
+                                    [] for _ in range(0, len(temp_vars[head_var]["domain"]))]
+                            for counter, _ in enumerate(temp_vars[head_var]["domain"]):
+                                table_value = probabilities_split[counter]
+                                temp_cpt["values"][counter].append(table_value)
                     else:
                         temp_cpts[temp_cpt["head"][0]] = temp_cpt.copy()
                         temp_cpt = {"head": [], "tail": [], "values": []}
@@ -98,18 +98,18 @@ class BIFReader(object):
             elif get_var_flag or line.find("variable") == 0:
                 split_line = line.split()
                 if not get_var_flag:
-                    varName = ""
+                    var_name = ""
                     control_flag = False
                     for term in split_line:
                         if control_flag:
-                            varName = varName + term
+                            var_name = var_name + term
 
                         if term == "variable":
                             control_flag = True
                         elif term == "{":
-                            varName = varName.replace("{", "")
+                            var_name = var_name.replace("{", "")
                             control_flag = False
-                    temp_var["name"] = varName
+                    temp_var["name"] = var_name
                     get_var_flag = True
                 else:
                     if line.find("  type discrete") == 0:
@@ -141,11 +141,11 @@ class BIFReader(object):
             head_card = len(temp_vars[head_var]["domain"])
             evidence_card = [len(temp_vars[v]["domain"])
                              for v in temp_cpts[head_var]["tail"]]
-            newCPD = TabularCPD(head_var,
-                                head_card,
-                                temp_cpts[head_var]["values"],
-                                evidence=temp_cpts[head_var]["tail"],
-                                evidence_card=evidence_card)
-            bayesian_model.add_cpds(newCPD)
+            new_cpd = TabularCPD(head_var,
+                                 head_card,
+                                 temp_cpts[head_var]["values"],
+                                 evidence=temp_cpts[head_var]["tail"],
+                                 evidence_card=evidence_card)
+            bayesian_model.add_cpds(new_cpd)
         self.bif_file.close()
         return bayesian_model
