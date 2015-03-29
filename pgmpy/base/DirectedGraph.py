@@ -167,7 +167,16 @@ class DirectedGraph(nx.DiGraph):
         return self.predecessors(node)
 
     def leaves(self):
-        return (n for n, d in self.out_degree_iter() if d == 0)
+        """
+        Returns a list of leaves of the graph.
+        """
+        return [n for n, d in self.out_degree_iter() if d == 0]
+
+    def roots(self):
+        """
+        Returns a list of roots of the graph.
+        """
+        return [n for n, d in self.in_degree().items() if d == 0]
 
     def get_ancestors_of(self, obs_nodes_list):
         """

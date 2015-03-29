@@ -37,21 +37,25 @@ class VariableElimination(Inference):
         query_variables = variables
         variables = set(self.model.nodes()) - set(variables) - set(evidence or [])
 
-        # Removing barren and independent variables generate sub-models.
+        # Removing barren and independent variables generate sub-models (a modified version, hopefuly smaller).
         # Then, a copy is used to do not disturb the original model.
-        model_copy = self.model.copy()
+        modified_model = self.model.copy()
         # Get all barren nodes.
-        barren_vars = self.model.barren_nodes(set(query_variables).union(set(evidence or [])), model_copy)
+        barren_vars = self.model.barren_nodes(set(query_variables).union(set(evidence or [])), modified_model)
         # Get all independent by evidence nodes
-        independent_vars = self.model.independent_by_evidence_nodes(query_variables, evidence, model_copy)
+        independent_vars = self.model.independent_by_evidence_nodes(query_variables, evidence, modified_model)
+        modified_model.remove_nodes_from(independent_vars)
+        # Get all noded that weren't root but now are
+        new_root_vars = self.model.new_root_variables(self.model, modified_model)
 
         # Union of irrelevant variables (barren and independent by evidence)
-        irrelevant_vars = barren_vars + independent_vars
+        irrelevant_vars = barren_vars + independent_vars + new_root_vars
         variables = set(variables) - set(irrelevant_vars)
 
         # Load all factors used in this session of Variable Elimination
-        working_factors = {node: {factor for factor in self.factors[node] if not set(factor.variables).intersection(set(irrelevant_vars))}
-                           for node in self.factors if node not in irrelevant_vars}
+        working_factors = {node: {factor for factor in self.factors[node]
+                           if all(factor != self.model.get_cpds(v).to_factor() for v in irrelevant_vars)}
+                           for node in self.factors}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:

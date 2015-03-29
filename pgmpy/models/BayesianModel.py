@@ -255,7 +255,13 @@ class BayesianModel(DirectedGraph):
     @staticmethod
     def independent_by_evidence_nodes(query_variables, evidence, bayesian_model):
         evidence_vars = evidence.keys() if evidence is not None else []
-        return [v for v in bayesian_model.nodes() if not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
+        return [v for v in bayesian_model.nodes() if (v not in evidence_vars) and not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
+
+    @staticmethod
+    def new_root_variables(old_model, new_model):
+        old_roots = old_model.roots()
+        new_roots = new_model.roots()
+        return [v for v in new_roots if v not in old_roots]
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -399,7 +405,7 @@ class BayesianModel(DirectedGraph):
         True
         """
         active_trails = self.active_trail_nodes(start, observed)
-        if all(v in active_trails for v in end):
+        if len(set(active_trails).intersection(set(end))) != 0:
             return True
         else:
             return False
