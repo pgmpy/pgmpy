@@ -332,6 +332,20 @@ class TestTabularCPDMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([0.63636364, 0.33333333, 0.6, 0.2,
                                                                               0.36363636, 0.66666667, 0.4, 0.8]))
 
+    def test__repr__(self):
+        grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+                               evidence=['intel', 'diff'], evidence_card=[3, 2])
+        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        diff_cpd = TabularCPD('grade', 3, [[0.1, 0.1], [0.1, 0.1],  [0.8, 0.8]], evidence=['diff'], evidence_card=[2])
+        self.assertEqual(repr(grade_cpd), '<TabularCPD representing P(grade:3 |intel:3, diff:2) at {address}>'
+                         .format(address=hex(id(grade_cpd))))
+        self.assertEqual(repr(intel_cpd), '<TabularCPD representing P(intel:3) at {address}>'
+                         .format(address=hex(id(intel_cpd))))
+        self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 |diff:2) at {address}>'
+                         .format(address=hex(id(diff_cpd))))
+
     def test_reduce_1(self):
         self.cpd.reduce('diff_0')
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
@@ -347,8 +361,8 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_reduce_3(self):
         self.cpd.reduce(['intel_0', 'diff_0'])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1],
-                                                           [0.1],
-                                                           [0.8]]))
+                                                                 [0.1],
+                                                                 [0.8]]))
 
     def test_reduce_4(self):
         self.cpd.reduce('grade_0')
@@ -655,3 +669,4 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
+
