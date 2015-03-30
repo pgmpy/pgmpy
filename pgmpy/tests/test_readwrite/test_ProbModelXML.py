@@ -141,6 +141,8 @@ class TestProbModelXMLWriter(unittest.TestCase):
         self.model_data = {'probnet':
                            {'type': 'BayesianNetwork',
                             'Language': 'English',
+                            'AdditionalConstraints': {'MaxNumParents':
+                                                      {'numParents': '5'}},
                             'Variables': {'difficulty':
                                           {'type': 'FiniteState',
                                            'role': 'Chance',
@@ -226,6 +228,11 @@ class TestProbModelXMLWriter(unittest.TestCase):
       </Link>
     </Links>
     <Potential/>
+    <AdditionalConstraints>
+      <Constraint name="MaxNumParents">
+        <Argument name="numParents" value="5"/>
+      </Constraint>
+    </AdditionalConstraints>
     <Language>English</Language>
     <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
     <AdditionalProperties/>
