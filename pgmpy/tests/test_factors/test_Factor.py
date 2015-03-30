@@ -332,6 +332,20 @@ class TestTabularCPDMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([0.63636364, 0.33333333, 0.6, 0.2,
                                                                               0.36363636, 0.66666667, 0.4, 0.8]))
 
+    def test__repr__(self):
+        grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+                               evidence=['intel', 'diff'], evidence_card=[3, 2])
+        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        diff_cpd = TabularCPD('grade', 3, [[0.1, 0.1], [0.1, 0.1],  [0.8, 0.8]], evidence=['diff'], evidence_card=[2])
+        self.assertEqual(repr(grade_cpd), '<TabularCPD representing P(grade:3 |intel:3, diff:2) at {address}>'
+                         .format(address=hex(id(grade_cpd))))
+        self.assertEqual(repr(intel_cpd), '<TabularCPD representing P(intel:3) at {address}>'
+                         .format(address=hex(id(intel_cpd))))
+        self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 |diff:2) at {address}>'
+                         .format(address=hex(id(diff_cpd))))
+
     def test_reduce_1(self):
         self.cpd.reduce('diff_0')
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
@@ -347,8 +361,8 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_reduce_3(self):
         self.cpd.reduce(['intel_0', 'diff_0'])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1],
-                                                           [0.1],
-                                                           [0.8]]))
+                                                                 [0.1],
+                                                                 [0.8]]))
 
     def test_reduce_4(self):
         self.cpd.reduce('grade_0')
@@ -487,21 +501,18 @@ class TestTreeCPDInit(unittest.TestCase):
 
 class TestTreeCPD(unittest.TestCase):
     def setUp(self):
-        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
-                              ('B', 'C', 1),
-                              ('C', Factor(['A'], [2], [0.1, 0.9]), 0),
-                              ('C', 'D', 1),
-                              ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-                              ('D', Factor(['A'], [2], [0.4, 0.6]), 1)])
+        self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+                              ('B', 'C', '1'),
+                              ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+                              ('C', 'D', '1'),
+                              ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
+                              ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), (0, 0)),
-                              (('B', 'C'), 'D', (0, 1)),
-                              (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), (1, 0)),
-                              (('B', 'C'), 'E', (1, 1)),
-                              ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-                              ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
-                              ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
-                              ('E', Factor(['A'], [2], [0.8, 0.2]), 1)])
+        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
+                              ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
+                              ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
+                              ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
+                              ('B', Factor(['J'], [2], [0.4, 0.6]), '1')])
 
     def test_add_edge(self):
         self.tree1.add_edge('yolo', 'yo', 0)
@@ -518,25 +529,22 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(self.tree1['yolo']['yo']['label'], 0)
         self.assertEqual(self.tree1['hello']['world']['label'], 1)
 
-    @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd(self):
-        tabular_cpd = self.tree1.to_tabular_cpd('A')
-        self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D'])
+        tabular_cpd = self.tree1.to_tabular_cpd()
+        self.assertEqual(tabular_cpd.evidence, ['D', 'C', 'B'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D'])
         np_test.assert_array_equal(tabular_cpd.values,
                                    np.array([0.8, 0.8, 0.8, 0.8, 0.1, 0.1, 0.9, 0.4,
                                              0.2, 0.2, 0.2, 0.2, 0.9, 0.9, 0.1, 0.6]))
 
-        tabular_cpd = self.tree2.to_tabular_cpd('A')
-        self.assertEqual(tabular_cpd.evidence, ['B', 'C', 'D', 'E'])
-        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2, 2])
-        self.assertEqual(list(tabular_cpd.variables), ['A', 'B', 'C', 'D', 'E'])
-        np_test.assert_array_equal(tabular_cpd.values,
-                                   np.array([0.8, 0.8, 0.8, 0.8, 0.9, 0.9, 0.4, 0.4,
-                                             0.1, 0.1, 0.1, 0.1, 0.3, 0.8, 0.3, 0.8,
-                                             0.2, 0.2, 0.2, 0.2, 0.1, 0.1, 0.6, 0.6,
-                                             0.9, 0.9, 0.9, 0.9, 0.7, 0.2, 0.7, 0.2]))
+        tabular_cpd = self.tree2.to_tabular_cpd()
+        self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
+        self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
+        self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
+        np_test.assert_array_equal(tabular_cpd.values, 
+                                  np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
+                                             0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 
     @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd_parent_order(self):
@@ -661,3 +669,4 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
+
