@@ -125,6 +125,27 @@ class TabularCPD(Factor):
 
         return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
 
+    def replace_variables(self, var1, var2):
+        new_scope = self.scope()
+        new_scope.reverse()
+        new_cardinality = self.cardinality[::-1].copy()
+        index_1 = new_scope.index(var1)
+        index_2 = new_scope.index(var2)
+        index_11 = self.scope().index(var1)
+        index_22 = self.scope().index(var2)
+        new_scope[index_1], new_scope[index_2] = new_scope[index_2], new_scope[index_1]
+        new_cardinality[index_1], new_cardinality[index_2] = new_cardinality[index_2], new_cardinality[index_1]
+        values = self.values.reshape([self.cardinality[0], self.cardinality[1:].prod()])
+        old_heading = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
+        new_heading = np.array(list(product(*[range(i) for i in new_cardinality[-2::-1]])))
+        new_heading[:, [index_11-1, index_22-1]] = new_heading[:, [index_22-1, index_11-1]]
+        new_value_list = []
+        for i in new_heading:
+            temp = (i == old_heading)
+            [new_value_list.append(k) for k in range(len(temp)) if np.all(temp[k])]
+        new_values = (values[:, np.array(new_value_list)])
+        self.__init__(self.variable, int(self.cardinality[0]), new_values, new_scope[:-1], new_cardinality[:-1])
+
     def get_cpd(self):
         """
         Returns the cpd
@@ -137,7 +158,7 @@ class TabularCPD(Factor):
     def __str__(self):
         table_list = []
         indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
-        scope = self.scope()
+        scope = self.scope()    
         for i in range(1, len(self.cardinality)):
             row = [scope[i]]
             row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
