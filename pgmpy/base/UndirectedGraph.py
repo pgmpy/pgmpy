@@ -174,3 +174,29 @@ class UndirectedGraph(nx.Graph):
         True
         """
         return nx.is_chordal(self)
+
+    def fill_in_edges(self, variables):
+        """
+        Return edges needed to be added to the graph if a variable is remvoed.
+
+        Parameters
+        ----------
+        variables: list of nodes, or one node name.
+            Node or nodes to be removed from the graph.
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite.BIF import BIFReader
+        >>> reader = BIFReader("datasets/asia.bif")
+        >>> bn = reader.get_bayesian_model()
+        >>> ug = bn.moralize()
+        >>> print(ug.fill_in_edges("bronc"))
+        [('dysp', 'smoke'), ('either', 'smoke')]
+        """
+        if not isinstance(variables, (list, set)):
+            variables = [variables]
+        edges = []
+        for variable in variables:
+            neighbors = self.neighbors(variable)
+            edges = [e for e in itertools.combinations(neighbors, 2) if not self.has_edge(*e)]
+        return edges

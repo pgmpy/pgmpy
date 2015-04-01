@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 import networkx as nx
 from pgmpy.inference import Inference
+from pgmpy.inference.EliminationOrdering import EliminationOrdering
 from pgmpy.factors.Factor import factor_product
 
 
@@ -32,8 +33,28 @@ class VariableElimination(Inference):
                 all_factors.extend(factor_li)
             return set(all_factors)
 
-        eliminated_variables = set()
-        working_factors = {node: {factor for factor in self.factors[node]}
+        # Separate the query variables and evidence from the ones to be eliminated
+        query_variables = variables
+        variables = set(self.model.nodes()) - set(variables) - set(evidence or [])
+
+        # Removing barren and independent variables generate sub-models (a modified version, hopefuly smaller).
+        # Then, a copy is used to do not disturb the original model.
+        modified_model = self.model.copy()
+        # Get all barren nodes.
+        barren_vars = self.model.barren_nodes(set(query_variables).union(set(evidence or [])), modified_model)
+        # Get all independent by evidence nodes
+        independent_vars = self.model.independent_by_evidence_nodes(query_variables, evidence, modified_model)
+        modified_model.remove_nodes_from(independent_vars)
+        # Get all nodes that weren't root but now are
+        new_root_vars = self.model.new_root_variables(self.model, modified_model)
+
+        # Union of irrelevant variables (barren and independent by evidence)
+        irrelevant_vars = barren_vars + independent_vars + new_root_vars
+        variables = set(variables) - set(irrelevant_vars)
+
+        # Load all factors used in this session of Variable Elimination
+        working_factors = {node: {factor for factor in self.factors[node]
+                           if all(factor != self.model.get_cpds(v).to_factor() for v in irrelevant_vars)}
                            for node in self.factors}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
@@ -48,17 +69,18 @@ class VariableElimination(Inference):
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
 
-        # TODO: Modify it to find the optimal elimination order
+        # If no elimination order is give, find one using Weighted Min Fill
         if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
+            elim_ord = EliminationOrdering(self.model)
+            elimination_order = elim_ord.find_elimination_ordering(variables, elim_ord.weighted_min_fill)
 
         elif any(var in elimination_order for var in
                  set(variables).union(set(evidence.keys() if evidence else []))):
             raise ValueError("Elimination order contains variables which are in"
                              " variables or evidence args")
 
+        # Perform elimination ordering
+        eliminated_variables = set()
         for var in elimination_order:
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
@@ -79,7 +101,7 @@ class VariableElimination(Inference):
                     final_distribution.add(factor)
 
         query_var_factor = {}
-        for query_var in variables:
+        for query_var in query_variables:
             phi = factor_product(*final_distribution)
             phi.marginalize(list(set(variables) - set([query_var])))
             query_var_factor[query_var] = phi.normalize(inplace=False)

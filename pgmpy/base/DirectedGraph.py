@@ -166,6 +166,60 @@ class DirectedGraph(nx.DiGraph):
         """
         return self.predecessors(node)
 
+    def leaves(self):
+        """
+        Returns a list of leaves of the graph.
+        """
+        return [n for n, d in self.out_degree_iter() if d == 0]
+
+    def roots(self):
+        """
+        Returns a list of roots of the graph.
+        """
+        return [n for n, d in self.in_degree().items() if d == 0]
+
+    def get_ancestors_of(self, obs_nodes_list):
+        """
+        Returns a list of all ancestors of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+        """
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
+
+        ancestors_list = set()
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in ancestors_list:
+                nodes_list.update(self.predecessors(node))
+            ancestors_list.add(node)
+        return ancestors_list
+
+    def get_descendants_of(self, obs_nodes_list):
+        """
+        Returns a list of all descendants of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+        """
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
+
+        descendants_list = set()
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in descendants_list:
+                nodes_list.update(self.successors(node))
+            descendants_list.add(node)
+        return descendants_list
+
     def moralize(self):
         """
         Removes all the immoralities in the DirectedGraph and creates a moral
