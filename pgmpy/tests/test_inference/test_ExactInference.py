@@ -89,10 +89,9 @@ class TestVariableElimination(unittest.TestCase):
     def test_induced_graph(self):
         induced_graph = self.bayesian_inference.induced_graph(['G', 'Q', 'A', 'J', 'L', 'R'])
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
-        self.assertEqual(
-          [['A', 'J'], ['A', 'R'], ['G', 'J'], ['G', 'L'], ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
-           result_edges)
-
+        self.assertEqual([['A', 'J'], ['A', 'R'], ['G', 'J'], ['G', 'L'],
+                          ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
+                         result_edges)
 
 
 class TestBeliefPropagation(unittest.TestCase):
@@ -103,11 +102,11 @@ class TestBeliefPropagation(unittest.TestCase):
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
         self.junction_tree.add_factors(phi1, phi2, phi3)
-        self.belief_propagation = BeliefPropagation(self.junction_tree)
 
     def test_calibrate_clique_belief(self):
-        self.belief_propagation.calibrate()
-        clique_belief = self.belief_propagation.get_clique_beliefs()
+        belief_propagation = BeliefPropagation(self.junction_tree)
+        belief_propagation.calibrate()
+        clique_belief = belief_propagation.get_clique_beliefs()
 
         phi1 = Factor(['A', 'B'], [2, 3], range(6))
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
@@ -122,18 +121,54 @@ class TestBeliefPropagation(unittest.TestCase):
         np_test.assert_array_almost_equal(clique_belief[('C', 'D')].values, b_C_D.values)
 
     def test_calibrate_sepset_belief(self):
-        self.belief_propagation.calibrate()
-        sepset_belief = self.belief_propagation.get_sepset_beliefs()
+        belief_propagation = BeliefPropagation(self.junction_tree)
+        belief_propagation.calibrate()
+        sepset_belief = belief_propagation.get_sepset_beliefs()
 
         phi1 = Factor(['A', 'B'], [2, 3], range(6))
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
 
-        b_B = (phi1 * (phi3.marginalize('D', inplace=False) * phi2).marginalize(
-            'C', inplace=False)).marginalize('A', inplace=False)
+        b_B = (phi1 * (phi3.marginalize('D', inplace=False) *
+                       phi2).marginalize('C', inplace=False)).marginalize('A', inplace=False)
 
-        b_C = (phi2 * (phi1.marginalize('A', inplace=False) * phi3.marginalize(
-            'D', inplace=False))).marginalize('B', inplace=False)
+        b_C = (phi2 * (phi1.marginalize('A', inplace=False) *
+                       phi3.marginalize('D', inplace=False))).marginalize('B', inplace=False)
+
+        np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
+        np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
+
+    def test_max_calibrate_clique_belief(self):
+        belief_propagation = BeliefPropagation(self.junction_tree)
+        belief_propagation.max_calibrate()
+        clique_belief = belief_propagation.get_clique_beliefs()
+
+        phi1 = Factor(['A', 'B'], [2, 3], range(6))
+        phi2 = Factor(['B', 'C'], [3, 2], range(6))
+        phi3 = Factor(['C', 'D'], [2, 2], range(4))
+
+        b_A_B = phi1 * (phi3.maximize('D', inplace=False) * phi2).maximize('C', inplace=False)
+        b_B_C = phi2 * (phi1.maximize('A', inplace=False) * phi3.maximize('D', inplace=False))
+        b_C_D = phi3 * (phi1.maximize('A', inplace=False) * phi2).maximize('B', inplace=False)
+
+        np_test.assert_array_almost_equal(clique_belief[('A', 'B')].values, b_A_B.values)
+        np_test.assert_array_almost_equal(clique_belief[('B', 'C')].values, b_B_C.values)
+        np_test.assert_array_almost_equal(clique_belief[('C', 'D')].values, b_C_D.values)
+
+    def test_max_calibrate_sepset_belief(self):
+        belief_propagation = BeliefPropagation(self.junction_tree)
+        belief_propagation.max_calibrate()
+        sepset_belief = belief_propagation.get_sepset_beliefs()
+
+        phi1 = Factor(['A', 'B'], [2, 3], range(6))
+        phi2 = Factor(['B', 'C'], [3, 2], range(6))
+        phi3 = Factor(['C', 'D'], [2, 2], range(4))
+
+        b_B = (phi1 * (phi3.maximize('D', inplace=False) *
+                       phi2).maximize('C', inplace=False)).maximize('A', inplace=False)
+
+        b_C = (phi2 * (phi1.maximize('A', inplace=False) *
+                       phi3.maximize('D', inplace=False))).maximize('B', inplace=False)
 
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
