@@ -361,22 +361,18 @@ class BeliefPropagation(Inference):
             neighboring ones.
             """
             sepset = frozenset(sending_clique).intersection(frozenset(recieving_clique))
-            print(sending_clique, sepset, recieving_clique)
 
             # \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
             # marginalize the clique over the sepset
             sigma = self.clique_beliefs[sending_clique].marginalize(
                 list(frozenset(sending_clique) - sepset), inplace=False)
-            print(sigma)
 
             # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
             self.clique_beliefs[recieving_clique] *= (sigma / self.sepset_beliefs[sepset]
                                                       if self.sepset_beliefs[sepset] else sigma)
-            print(self.clique_beliefs[recieving_clique])
 
             # \mu_{i, j} = \sigma_{i \rightarrow j}
             self.sepset_beliefs[sepset] = sigma
-            print(self.sepset_beliefs[sepset])
 
         def _converged():
             """
