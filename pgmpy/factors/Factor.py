@@ -475,6 +475,11 @@ class Factor:
         else:
             return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
 
+    def __repr__(self):
+        var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
+                              for var, card in zip(self.variables, self.cardinality)])
+        return "<Factor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
+
     def _repr_html_(self):
         # Checks for IPython Notebook, not required in IPython 3
         try:
