@@ -283,7 +283,8 @@ class BeliefPropagation(Inference):
         if not isinstance(model, JunctionTree):
             self.junction_tree = model.to_junction_tree()
         else:
-            self.junction_tree = model
+            import copy
+            self.junction_tree = copy.deepcopy(model)
 
         self.clique_beliefs = {}
         self.sepset_beliefs = {}
@@ -362,6 +363,10 @@ class BeliefPropagation(Inference):
         for edge in self.junction_tree.edges():
             sepset = frozenset(edge[0]).intersection(frozenset(edge[1]))
             sepset_key = frozenset(edge)
+            if (edge[0] not in self.clique_beliefs or edge[1] not in self.clique_beliefs or
+                    sepset_key not in self.sepset_beliefs):
+                return False
+
             marginal_1 = getattr(self.clique_beliefs[edge[0]], operation)(list(frozenset(edge[0]) - sepset),
                                                                           inplace=False)
             marginal_2 = getattr(self.clique_beliefs[edge[1]], operation)(list(frozenset(edge[1]) - sepset),
@@ -469,6 +474,187 @@ class BeliefPropagation(Inference):
         ...                         evidence=['grade'], evidence_card=[3])
         >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd, sat_cpd, letter_cpd)
         >>> bp = BeliefPropagation(G)
-        >>> bp.calibrate()
+        >>> bp.max_calibrate()
         """
         self._calibrate_junction_tree(operation='maximize')
+
+    def _query(self, variables, operation, evidence=None):
+        """
+        This is a generalized query method that can be used for both query and map query.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables for which you want to compute the probability
+        operation: str ('marginalize' | 'maximize')
+            The operation to do for passing messages between nodes.
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+
+        Examples
+        --------
+        >>> from pgmpy.inference import BeliefPropagation
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = BeliefPropagation(model)
+        >>> phi_query = inference.query(['A', 'B'])
+
+        References
+        ----------
+        Algorithm 10.4 Out-of-clique inference in clique tree
+        Probabilistic Graphical Models: Principles and Techniques Daphne Koller and Nir Friedman.
+        """
+        from pgmpy.models import JunctionTree
+
+        is_calibrated = self._is_converged(operation=operation)
+        # Calibrate the junction tree if not calibrated
+        if not is_calibrated:
+            self.calibrate()
+
+        if not isinstance(variables, (list, tuple, set)):
+            query_variables = [variables]
+        else:
+            query_variables = list(variables)
+        query_variables.extend(evidence.keys() if evidence else [])
+
+        # Find a tree T' such that query_variables are a subset of scope(T')
+        nodes_with_query_variables = set()
+        for var in query_variables:
+            nodes_with_query_variables.update(filter(lambda x: var in x, self.junction_tree.nodes()))
+        subtree_nodes = nodes_with_query_variables
+
+        # Conversion of set to tuple just for indexing
+        nodes_with_query_variables = tuple(nodes_with_query_variables)
+        # As junction tree is a tree, that means that there would be only path between any two nodes in the tree
+        # thus we can just take the path between any two nodes; no matter there order is
+        for i in range(len(nodes_with_query_variables) - 1):
+            subtree_nodes.update(nx.shortest_path(self.junction_tree, nodes_with_query_variables[i],
+                                                  nodes_with_query_variables[i + 1]))
+        subtree_undirected_graph = self.junction_tree.subgraph(subtree_nodes)
+        # Converting subtree into a junction tree
+        if len(subtree_nodes) == 1:
+            subtree = JunctionTree()
+            subtree.add_node(subtree_nodes.pop())
+        else:
+            subtree = JunctionTree(subtree_undirected_graph.edges())
+
+        # Selecting a node is root node. Root node would be having only one neighbor
+        if len(subtree.nodes()) == 1:
+            root_node = subtree.nodes()[0]
+        else:
+            root_node = tuple(filter(lambda x: len(subtree.neighbors(x)) == 1, subtree.nodes()))[0]
+        clique_potential_list = [self.clique_beliefs[root_node]]
+
+        # For other nodes in the subtree compute the clique potentials as follows
+        # As all the nodes are nothing but tuples so simple set(root_node) won't work at it would update the set with'
+        # all the elements of the tuple; instead use set([root_node]) as it would include only the tuple not the
+        # internal elements within it.
+        parent_nodes = set([root_node])
+        nodes_traversed = set()
+        while parent_nodes:
+            parent_node = parent_nodes.pop()
+            for child_node in set(subtree.neighbors(parent_node)) - nodes_traversed:
+                clique_potential_list.append(self.clique_beliefs[child_node] /
+                                             self.sepset_beliefs[frozenset([parent_node, child_node])])
+                parent_nodes.update([child_node])
+            nodes_traversed.update([parent_node])
+
+        # Add factors to the corresponding junction tree
+        subtree.add_factors(*clique_potential_list)
+
+        # Sum product variable elimination on the subtree
+        variable_elimination = VariableElimination(subtree)
+        if operation == 'marginalize':
+            return variable_elimination.query(variables=variables, evidence=evidence)
+        elif operation == 'maximize':
+            return variable_elimination.map_query(variables=variables, evidence=evidence)
+
+    def query(self, variables, evidence=None):
+        """
+        Query method using belief propagation.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables for which you want to compute the probability
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import BeliefPropagation
+        >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
+        ...                                 ('J', 'L'), ('G', 'L')])
+        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
+        >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
+        >>> cpd_j = TabularCPD('J', 2,
+        ...                    [[0.9, 0.6, 0.7, 0.1],
+        ...                     [0.1, 0.4, 0.3, 0.9]],
+        ...                    ['R', 'A'], [2, 2])
+        >>> cpd_q = TabularCPD('Q', 2,
+        ...                    [[0.9, 0.2],
+        ...                     [0.1, 0.8]],
+        ...                    ['J'], [2])
+        >>> cpd_l = TabularCPD('L', 2,
+        ...                    [[0.9, 0.45, 0.8, 0.1],
+        ...                     [0.1, 0.55, 0.2, 0.9]],
+        ...                    ['G', 'J'], [2, 2])
+        >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> belief_propagation = BeliefPropagation(bayesian_model)
+        >>> belief_propagation.query(variables=['J', 'Q'],
+        ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
+        """
+        return self._query(variables=variables, operation='marginalize', evidence=evidence)
+
+    def map_query(self, variables=None, evidence=None):
+        """
+        MAP Query method using belief propagation.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables for which you want to compute the probability
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import BeliefPropagation
+        >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
+        ...                                 ('J', 'L'), ('G', 'L')])
+        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
+        >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
+        >>> cpd_j = TabularCPD('J', 2,
+        ...                    [[0.9, 0.6, 0.7, 0.1],
+        ...                     [0.1, 0.4, 0.3, 0.9]],
+        ...                    ['R', 'A'], [2, 2])
+        >>> cpd_q = TabularCPD('Q', 2,
+        ...                    [[0.9, 0.2],
+        ...                     [0.1, 0.8]],
+        ...                    ['J'], [2])
+        >>> cpd_l = TabularCPD('L', 2,
+        ...                    [[0.9, 0.45, 0.8, 0.1],
+        ...                     [0.1, 0.55, 0.2, 0.9]],
+        ...                    ['G', 'J'], [2, 2])
+        >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> belief_propagation = BeliefPropagation(bayesian_model)
+        >>> belief_propagation.map_query(variables=['J', 'Q'],
+        ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
+        """
+        # If no variables are specified then run the MAP query for all the variables present in the model
+        if variables is None:
+            variables = set(self.variables)
+
+        return self._query(variables=variables, operation='maximize', evidence=evidence)
