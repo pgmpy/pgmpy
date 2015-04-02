@@ -150,20 +150,6 @@ class TabularCPD(Factor):
         """
         Print TabularCPD in form of a table in IPython Notebook
         """
-        # Checks for IPython Notebook, not required in IPython 3
-        try:
-            ip = get_ipython()
-            front_end = (
-                ip.config.get('KernelApp', {}).get('parent_appname', "") or
-                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
-            )
-            if 'notebook' in front_end.lower():
-                pass
-            else:
-                return str(self)
-        except NameError:
-            return str(self)
-
         string_list = []
 
         cpd_value = self.get_cpd()
