@@ -107,6 +107,25 @@ class TestBeliefPropagation(unittest.TestCase):
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
         self.junction_tree.add_factors(phi1, phi2, phi3)
 
+        self.bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
+                                             ('J', 'L'), ('G', 'L')])
+        cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
+        cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
+        cpd_j = TabularCPD('J', 2,
+                           [[0.9, 0.6, 0.7, 0.1],
+                            [0.1, 0.4, 0.3, 0.9]],
+                           ['R', 'A'], [2, 2])
+        cpd_q = TabularCPD('Q', 2,
+                           [[0.9, 0.2],
+                            [0.1, 0.8]],
+                           ['J'], [2])
+        cpd_l = TabularCPD('L', 2,
+                           [[0.9, 0.45, 0.8, 0.1],
+                            [0.1, 0.55, 0.2, 0.9]],
+                           ['G', 'J'], [2, 2])
+        cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
+
     def test_calibrate_clique_belief(self):
         belief_propagation = BeliefPropagation(self.junction_tree)
         belief_propagation.calibrate()
@@ -176,6 +195,52 @@ class TestBeliefPropagation(unittest.TestCase):
 
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
+
+    # All the values that are used for comparision in the all the tests are
+    # found using SAMIAM (assuming that it is correct ;))
+
+    def test_query_single_variable(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        query_result = belief_propagation.query(['J'])
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.416, 0.584]))
+
+    def test_query_multiple_variable(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        query_result = belief_propagation.query(['Q', 'J'])
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.416, 0.584]))
+        np_test.assert_array_almost_equal(query_result['Q'].values,
+                                          np.array([0.4912, 0.5088]))
+
+    def test_query_single_variable_with_evidence(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        query_result = belief_propagation.query(variables=['J'],
+                                                evidence={'A': 0, 'R': 1})
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.60, 0.40]))
+
+    def test_query_multiple_variable_with_evidence(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        query_result = belief_propagation.query(variables=['J', 'Q'],
+                                                evidence={'A': 0, 'R': 0,
+                                                          'G': 0, 'L': 1})
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.818182, 0.181818]))
+        np_test.assert_array_almost_equal(query_result['Q'].values,
+                                          np.array([0.772727, 0.227273]))
+
+    def test_map_query(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        map_query = belief_propagation.map_query()
+        self.assertDictEqual(map_query, {'A': 1, 'R': 1, 'J': 1, 'Q': 1, 'G': 0,
+                                         'L': 0})
+
+    def test_map_query_with_evidence(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        map_query = belief_propagation.map_query(['A', 'R', 'L'],
+                                                 {'J': 0, 'Q': 1, 'G': 0})
+        self.assertDictEqual(map_query, {'A': 1, 'R': 0, 'L': 0})
 
     def tearDown(self):
         del self.junction_tree
