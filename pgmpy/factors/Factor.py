@@ -435,7 +435,6 @@ class Factor:
         else:
             string_header = self.scope()
             string_header.append("phi({variables})".format(variables=",".join(string_header)))
-            string_list.append(string_header)
 
         # fun and gen are functions to generate the different values of
         # variables in the table.
@@ -456,6 +455,7 @@ class Factor:
                 yield fun(b)
 
         value_index = 0
+        factor_table = []
         for prob in gen():
             prob_list = ["%s_%d" % (list(self.variables)[i], prob[i])
                          for i in range(len(self.variables))]
@@ -467,13 +467,13 @@ class Factor:
                 string_list.append(html_string)
             else:
                 prob_list.append(self.values[value_index])
-                string_list.append(prob_list)
+                factor_table.append(prob_list)
             value_index += 1
 
         if html:
             return "\n".join(string_list)
         else:
-            return tabulate(string_list, tablefmt="grid")
+            return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
 
     def _repr_html_(self):
         # Checks for IPython Notebook, not required in IPython 3
