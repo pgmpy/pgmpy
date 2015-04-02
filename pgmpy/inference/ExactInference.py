@@ -350,8 +350,7 @@ class BeliefPropagation(Inference):
         # Initialize clique beliefs as well as sepset beliefs
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique)
                                for clique in self.junction_tree.nodes()}
-        self.sepset_beliefs = {frozenset(x[0]).intersection(frozenset(x[1])): None
-                               for x in self.junction_tree.edges()}
+        self.sepset_beliefs = {frozenset(edge): None for edge in self.junction_tree.edges()}
 
         def _update_beliefs(sending_clique, recieving_clique):
             """
@@ -361,6 +360,7 @@ class BeliefPropagation(Inference):
             neighboring ones.
             """
             sepset = frozenset(sending_clique).intersection(frozenset(recieving_clique))
+            sepset_key = frozenset((sending_clique, recieving_clique))
 
             # \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
             # marginalize the clique over the sepset
@@ -368,11 +368,11 @@ class BeliefPropagation(Inference):
                 list(frozenset(sending_clique) - sepset), inplace=False)
 
             # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
-            self.clique_beliefs[recieving_clique] *= (sigma / self.sepset_beliefs[sepset]
-                                                      if self.sepset_beliefs[sepset] else sigma)
+            self.clique_beliefs[recieving_clique] *= (sigma / self.sepset_beliefs[sepset_key]
+                                                      if self.sepset_beliefs[sepset_key] else sigma)
 
             # \mu_{i, j} = \sigma_{i \rightarrow j}
-            self.sepset_beliefs[sepset] = sigma
+            self.sepset_beliefs[sepset_key] = sigma
 
         def _converged():
             """
