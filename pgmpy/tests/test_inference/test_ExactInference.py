@@ -244,3 +244,4 @@ class TestBeliefPropagation(unittest.TestCase):
 
     def tearDown(self):
         del self.junction_tree
+        del self.bayesian_model
