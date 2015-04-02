@@ -136,9 +136,6 @@ class TabularCPD(Factor):
             return self.values.reshape(1, np.prod(self.cardinality))
 
     def __str__(self):
-        return self._str(html=False)
-
-    def _str(self, html=False):
         table_list = []
         indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
         scope = self.scope()
@@ -147,7 +144,7 @@ class TabularCPD(Factor):
             row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
             table_list.append(row)
         table_list.extend(np.column_stack((np.array(self.variables[self.variable]), self.get_cpd())))
-        return tabulate(table_list, tablefmt="grid")
+        return tabulate(table_list, tablefmt="fancy_grid")
 
     def _repr_html_(self):
         """
