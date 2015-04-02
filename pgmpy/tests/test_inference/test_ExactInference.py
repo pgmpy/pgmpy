@@ -93,6 +93,10 @@ class TestVariableElimination(unittest.TestCase):
                           ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
                          result_edges)
 
+    def tearDown(self):
+        del self.bayesian_inference
+        del self.bayesian_model
+
 
 class TestBeliefPropagation(unittest.TestCase):
     def setUp(self):
@@ -172,3 +176,6 @@ class TestBeliefPropagation(unittest.TestCase):
 
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
+
+    def tearDown(self):
+        del self.junction_tree
