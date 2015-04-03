@@ -187,4 +187,4 @@ def factorset_divide(factorset1, factorset2):
     """
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
         raise TypeError("factorset1 and factorset2 must be factor sets")
-    return FactorSet(*factorset1.factors_set.union([x.indentity_factor() / x for x in factorset2.factors_set]))
+    return FactorSet(*factorset1.factors_set.union([x.identity_factor() / x for x in factorset2.factors_set]))
