@@ -30,9 +30,10 @@ class FactorSet:
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set = FactorSet(phi1, phi2)
         """
+        from copy import deepcopy
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
-        self.factors_set = set(factors_list)
+        self.factors_set = set(deepcopy(factors_list))
 
     def product(self, *factorsets):
         r"""
