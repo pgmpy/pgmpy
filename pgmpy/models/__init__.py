@@ -3,10 +3,11 @@ from .NoisyOrModel import *
 from .MarkovModel import *
 from .FactorGraph import *
 from .JunctionTree import *
+from .ClusterGraph import *
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
            'MarkovModel',
            'FactorGraph',
-           'JunctionTree'
-           ]
+           'JunctionTree',
+           'ClusterGraph']
