@@ -7,6 +7,7 @@ from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
 from pgmpy.exceptions import ModelError
+from networkx import graph_clique_number
 
 
 class Inference:
@@ -79,3 +80,33 @@ class Inference:
             for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)
+
+
+def induced_graph_width(indg):
+    """
+    Returns the width of the induced graph, defined as the number of nodes
+    in the largest clique in the graph minus 1.
+
+    Parameters
+    ----------
+    indg:
+        induced graph (NetworkX object)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from pgmpy.inference import VariableElimination, induced_graph_width
+    >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+    >>>                       columns=['A', 'B', 'C', 'D', 'E'])
+    >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> model.fit(values)
+    >>> inference = VariableElimination(model)
+    >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+    >>> induced = inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
+    >>> width = induced_graph_width(induced)
+    >>> width
+    3
+
+    """
+    return graph_clique_number(indg) - 1
