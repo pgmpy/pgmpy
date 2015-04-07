@@ -7,7 +7,7 @@ from pgmpy.exceptions import CardinalityError
 
 
 class ClusterGraph(UndirectedGraph):
-    """
+    r"""
     Base class for representing Cluster Graph.
 
     Cluster graph is an undirected graph which is associated with a subset of variables. The graph contains undirected
@@ -207,7 +207,7 @@ class ClusterGraph(UndirectedGraph):
             self.factors.remove(factor)
 
     def get_partition_function(self):
-        """
+        r"""
         Returns the partition function for a given undirected graph.
 
         A partition function is defined as
