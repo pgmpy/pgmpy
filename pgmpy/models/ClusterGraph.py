@@ -83,7 +83,7 @@ class ClusterGraph(UndirectedGraph):
 
     def add_nodes_from(self, nodes, **kwargs):
         """
-        Add multiple nodes to the junction tree.
+        Add multiple nodes to the cluster graph.
 
         Parameters
         ----------
@@ -150,7 +150,7 @@ class ClusterGraph(UndirectedGraph):
         """
         for factor in factors:
             factor_scope = set(factor.scope())
-            nodes = set([set(node) for node in self.nodes()])
+            nodes = [set(node) for node in self.nodes()]
             if factor_scope not in nodes:
                 raise ValueError('Factors defined on clusters of variable not'
                                  'present in model')
@@ -184,10 +184,27 @@ class ClusterGraph(UndirectedGraph):
         else:
             nodes = [set(node) for node in self.nodes()]
             if set(node) not in nodes:
-                raise ValueError('Node not present in Junction Tree')
+                raise ValueError('Node not present in Cluster Graph')
             factors = list(filter(lambda x: set(x.scope()) == set(node),
                                   self.factors))
             return factors[0]
+
+    def remove_factors(self, *factors):
+        """
+        Removes the given factors from the added factors.
+
+        Examples
+        --------
+        >>> from pgmpy.models import ClusterGraph
+        >>> from pgmpy.factors import Factor
+        >>> student = ClusterGraph()
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        ...                 value=np.random.rand(4))
+        >>> student.add_factors(factor)
+        >>> student.remove_factors(factor)
+        """
+        for factor in factors:
+            self.factors.remove(factor)
 
     def get_partition_function(self):
         """
@@ -256,3 +273,4 @@ class ClusterGraph(UndirectedGraph):
                     self.cardinalities[variable] = cardinality
 
         return True
+
