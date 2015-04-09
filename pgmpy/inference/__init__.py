@@ -1,4 +1,4 @@
-from .base import *
+from .base import Inference
 from .ExactInference import VariableElimination
 from .ExactInference import BeliefPropagation
 
