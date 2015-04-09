@@ -114,17 +114,16 @@ class TabularCPD(Factor):
         super().__init__(variables, cardinality, values.flatten('C'))
 
     def __repr__(self):
-        if not self.evidence:
-            str_1 = '<TabularCPD representing P({variable}:{cardinality}) at {address}>'\
-                .format(variable=self.variable, cardinality=self.variable_card, address=hex(id(self)))
-            return str_1
+        var_str = '<TabularCPD representing P({var}:{card}'.format(
+                            var=self.variable, card=self.variable_card)
+
+        if self.evidence:
+            evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
+                                              for var, card in zip(self.evidence, self.evidence_card)])
         else:
-            str_2 = ', '.join(['{variable}:{cardinality}'.format(variable=variable, cardinality=cardinality)
-                               for variable, cardinality in zip(self.evidence, self.evidence_card)])
-            str_1 = '<TabularCPD representing P({variable}:{cardinality} |{string2}) at {address}>'\
-                .format(variable=self.variable, cardinality=self.variable_card, string2=str_2,
-                        address=hex(id(self)))
-            return str_1
+            evidence_str = ''
+
+        return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
 
     def get_cpd(self):
         """
