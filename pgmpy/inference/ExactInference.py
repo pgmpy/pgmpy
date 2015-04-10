@@ -262,7 +262,7 @@ class VariableElimination(Inference):
                       for c in filter(lambda x: len(x) > 1, cliques)]
         return nx.Graph(itertools.chain(*edges_comb))
 
-    def induced_graph_width(self, elimination_order):
+    def induced_width(self, elimination_order):
         """
         Returns the width (integer) of the induced graph formed by running Variable Elimination on the network.
         The width is the defined as the number of nodes in the largest clique in the graph minus 1.
@@ -283,7 +283,7 @@ class VariableElimination(Inference):
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
-        >>> inference.induced_graph_width(['C', 'D', 'A', 'B', 'E'])
+        >>> inference.induced_width(['C', 'D', 'A', 'B', 'E'])
         3
         """
         induced_graph = self.induced_graph(elimination_order)
