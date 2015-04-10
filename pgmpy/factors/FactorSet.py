@@ -177,8 +177,9 @@ class FactorSet:
         if not isinstance(variables, (list, set, tuple)):
             variables = [variables]
 
-        factors_to_be_marginalized = set(filter(lambda x: len(set(x.scope()).intersection(variables)) != 0,
+        factors_to_be_marginalized = set(filter(lambda x: set(x.scope()).intersection(variables),
                                                 self.factors))
+
         if not inplace:
             new_factors = self.factors - factors_to_be_marginalized
 
