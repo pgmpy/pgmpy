@@ -5,6 +5,7 @@ import numpy as np
 import networkx as nx
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
+from networkx import graph_clique_number
 
 
 class VariableElimination(Inference):
@@ -260,6 +261,33 @@ class VariableElimination(Inference):
         edges_comb = [itertools.combinations(c, 2) 
                       for c in filter(lambda x: len(x) > 1, cliques)]
         return nx.Graph(itertools.chain(*edges_comb))
+
+    def induced_width(self, elimination_order):
+        """
+        Returns the width (integer) of the induced graph formed by running Variable Elimination on the network.
+        The width is the defined as the number of nodes in the largest clique in the graph minus 1.
+
+        Parameters
+        ----------
+        elimination_order: list, array like
+            List of variables in the order in which they are to be eliminated.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import VariableElimination
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> inference.induced_width(['C', 'D', 'A', 'B', 'E'])
+        3
+        """
+        induced_graph = self.induced_graph(elimination_order)
+        return graph_clique_number(induced_graph) - 1
 
 
 class BeliefPropagation(Inference):

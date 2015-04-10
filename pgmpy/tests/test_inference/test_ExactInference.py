@@ -93,6 +93,9 @@ class TestVariableElimination(unittest.TestCase):
           [['A', 'J'], ['A', 'R'], ['G', 'J'], ['G', 'L'], ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
            result_edges)
 
+    def test_induced_width(self):
+        result_width = self.bayesian_inference.induced_width(['G', 'Q', 'A', 'J', 'L', 'R'])
+        self.assertEqual(2, result_width)
 
 
 class TestBeliefPropagation(unittest.TestCase):
