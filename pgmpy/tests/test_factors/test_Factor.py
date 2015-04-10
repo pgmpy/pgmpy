@@ -339,11 +339,11 @@ class TestTabularCPDMethods(unittest.TestCase):
                                evidence=['intel', 'diff'], evidence_card=[3, 2])
         intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
         diff_cpd = TabularCPD('grade', 3, [[0.1, 0.1], [0.1, 0.1],  [0.8, 0.8]], evidence=['diff'], evidence_card=[2])
-        self.assertEqual(repr(grade_cpd), '<TabularCPD representing P(grade:3 |intel:3, diff:2) at {address}>'
+        self.assertEqual(repr(grade_cpd), '<TabularCPD representing P(grade:3 | intel:3, diff:2) at {address}>'
                          .format(address=hex(id(grade_cpd))))
         self.assertEqual(repr(intel_cpd), '<TabularCPD representing P(intel:3) at {address}>'
                          .format(address=hex(id(intel_cpd))))
-        self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 |diff:2) at {address}>'
+        self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 | diff:2) at {address}>'
                          .format(address=hex(id(diff_cpd))))
 
     def test_reduce_1(self):
