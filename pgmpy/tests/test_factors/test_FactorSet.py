@@ -8,7 +8,16 @@ class TestFactorSet(unittest.TestCase):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         factor_set1 = FactorSet(phi1, phi2)
-        self.assertEqual(set([phi1, phi2]), factor_set1.factors)
+        self.assertEqual(set([phi1, phi2]), factor_set1.get_factors())
+
+    def test_factorset_add_remove_factors(self):
+        phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        factor_set1 = FactorSet()
+        factor_set1.add_factors(phi1, phi2)
+        self.assertEqual(set([phi1, phi2]), factor_set1.get_factors())
+        factor_set1.remove_factors(phi2)
+        self.assertEqual(set([phi1]), factor_set1.get_factors())
 
     def test_factorset_product(self):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
