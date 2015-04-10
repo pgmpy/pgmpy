@@ -220,7 +220,7 @@ def factorset_product(*factorsets_list):
     >>> factor_set3 = factorset_product(factor_set1, factor_set2)
     """
     if not all(isinstance(factorset, FactorSet) for factorset in factorsets_list):
-        raise TypeError("Input parameters must be factor sets")
+        raise TypeError("Input parameters must be FactorSet instances")
     return reduce(lambda x, y: FactorSet(*(x.factors.union(y.factors))), factorsets_list)
 
 
@@ -253,5 +253,5 @@ def factorset_divide(factorset1, factorset2):
     >>> factor_set3 = factorset_divide(factor_set1, factor_set2)
     """
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
-        raise TypeError("factorset1 and factorset2 must be factor sets")
+        raise TypeError("factorset1 and factorset2 must be FactorSet instances")
     return FactorSet(*factorset1.factors.union([x.identity_factor() / x for x in factorset2.factors]))
