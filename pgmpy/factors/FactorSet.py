@@ -35,6 +35,51 @@ class FactorSet:
             raise TypeError("Input parameters must be all factors")
         self.factors = set(deepcopy(factors_list))
 
+    def add_factors(self, *factors):
+        """
+        Adds factors to the factor set.
+
+        Parameters
+        ----------
+        factors: Factor1, Factor2, ...., Factorn
+            factors to be added into the factor set
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3, phi4)
+        """
+        self.factors.update(factors)
+
+    def remove_factors(self, *factors):
+        """
+        Removes factors from the factor set.
+
+        Parameters
+        ----------
+        factors: Factor1, Factor2, ...., Factorn
+            factors to be removed from the factor set
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3)
+        >>> factor_set1.remove_factors(phi1, phi2)
+        """
+        for factor in factors:
+            self.factors.remove(factor)
+
     def product(self, *factorsets):
         r"""
         Return the factor sets product with the given factor sets
