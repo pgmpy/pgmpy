@@ -80,6 +80,26 @@ class FactorSet:
         for factor in factors:
             self.factors.remove(factor)
 
+    def get_factors(self):
+        """
+        Returns all the factors present in factor set.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3)
+        >>> factor_set1.get_factors()
+        {<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f827c0a23c8>,
+         <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f827c0a2358>,
+         <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f825243f9e8>}
+        """
+        return self.factors
+
     def product(self, *factorsets):
         r"""
         Return the factor sets product with the given factor sets
