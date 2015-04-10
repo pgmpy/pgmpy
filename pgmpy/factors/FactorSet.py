@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from pgmpy.factors import Factor
 from functools import reduce
+from pgmpy.factors import Factor
 
 
 class FactorSet:
