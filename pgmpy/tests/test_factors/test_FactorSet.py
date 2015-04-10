@@ -8,7 +8,7 @@ class TestFactorSet(unittest.TestCase):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         factor_set1 = FactorSet(phi1, phi2)
-        self.assertEqual(set([phi1, phi2]), factor_set1.factors_set)
+        self.assertEqual(set([phi1, phi2]), factor_set1.factors)
 
     def test_factorset_product(self):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
@@ -18,7 +18,7 @@ class TestFactorSet(unittest.TestCase):
         phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         factor_set2 = FactorSet(phi3, phi4)
         factor_set3 = factor_set2.product(factor_set1)
-        self.assertEqual(set([phi1, phi2, phi3, phi4]), factor_set3.factors_set)
+        self.assertEqual(set([phi1, phi2, phi3, phi4]), factor_set3.factors)
 
     def test_factorset_divide(self):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
@@ -31,7 +31,7 @@ class TestFactorSet(unittest.TestCase):
         self.assertEqual(set([phi3, phi4,
                               phi1.identity_factor() / phi1,
                               phi2.identity_factor() / phi2]),
-                         factor_set3.factors_set)
+                         factor_set3.factors)
 
     def test_factorset_marginalize_inplace(self):
         phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
@@ -41,16 +41,16 @@ class TestFactorSet(unittest.TestCase):
         factor_set = FactorSet(phi1, phi2, phi3, phi4)
         factor_set.marginalize(['x1', 'x5'], inplace=True)
         phi1_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x2', 'x3']),
-                                                    factor_set.factors_set))[0]
+                                                    factor_set.factors))[0]
         self.assertEqual(phi1.marginalize('x1', inplace=False), phi1_equivalent_in_factor_set)
         phi2_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x4', 'x3']),
-                                                    factor_set.factors_set))[0]
+                                                    factor_set.factors))[0]
         self.assertEqual(phi2.marginalize('x1', inplace=False), phi2_equivalent_in_factor_set)
         phi3_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x6', 'x7']),
-                                                    factor_set.factors_set))[0]
+                                                    factor_set.factors))[0]
         self.assertEqual(phi3.marginalize('x5', inplace=False), phi3_equivalent_in_factor_set)
         phi4_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x8', 'x7']),
-                                                    factor_set.factors_set))[0]
+                                                    factor_set.factors))[0]
         self.assertEqual(phi4.marginalize('x5', inplace=False), phi4_equivalent_in_factor_set)
 
     def test_factorset_marginalize_not_inplace(self):
@@ -61,14 +61,14 @@ class TestFactorSet(unittest.TestCase):
         factor_set = FactorSet(phi1, phi2, phi3, phi4)
         new_factor_set = factor_set.marginalize(['x1', 'x5'], inplace=False)
         phi1_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x2', 'x3']),
-                                                    new_factor_set.factors_set))[0]
+                                                    new_factor_set.factors))[0]
         self.assertEqual(phi1.marginalize('x1', inplace=False), phi1_equivalent_in_factor_set)
         phi2_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x4', 'x3']),
-                                                    new_factor_set.factors_set))[0]
+                                                    new_factor_set.factors))[0]
         self.assertEqual(phi2.marginalize('x1', inplace=False), phi2_equivalent_in_factor_set)
         phi3_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x6', 'x7']),
-                                                    new_factor_set.factors_set))[0]
+                                                    new_factor_set.factors))[0]
         self.assertEqual(phi3.marginalize('x5', inplace=False), phi3_equivalent_in_factor_set)
         phi4_equivalent_in_factor_set = list(filter(lambda x: set(x.scope()) == set(['x8', 'x7']),
-                                                    new_factor_set.factors_set))[0]
+                                                    new_factor_set.factors))[0]
         self.assertEqual(phi4.marginalize('x5', inplace=False), phi4_equivalent_in_factor_set)

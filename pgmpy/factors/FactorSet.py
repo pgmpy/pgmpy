@@ -33,7 +33,7 @@ class FactorSet:
         from copy import deepcopy
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
-        self.factors_set = set(deepcopy(factors_list))
+        self.factors = set(deepcopy(factors_list))
 
     def product(self, *factorsets):
         r"""
@@ -113,19 +113,19 @@ class FactorSet:
             variables = [variables]
 
         factors_to_be_marginalized = set(filter(lambda x: len(set(x.scope()).intersection(variables)) != 0,
-                                                self.factors_set))
+                                                self.factors))
         if not inplace:
-            new_factors_set = self.factors_set - factors_to_be_marginalized
+            new_factors = self.factors - factors_to_be_marginalized
 
         for factor in factors_to_be_marginalized:
             variables_to_be_marginalized = list(set(factor.scope()).intersection(variables))
             if inplace:
                 factor.marginalize(variables_to_be_marginalized, inplace=True)
             else:
-                new_factors_set.add(factor.marginalize(variables_to_be_marginalized, inplace=False))
+                new_factors.add(factor.marginalize(variables_to_be_marginalized, inplace=False))
 
         if not inplace:
-            return FactorSet(*new_factors_set)
+            return FactorSet(*new_factors)
 
 
 def factorset_product(*factorsets_list):
@@ -155,7 +155,7 @@ def factorset_product(*factorsets_list):
     """
     if not all(isinstance(factorset, FactorSet) for factorset in factorsets_list):
         raise TypeError("Input parameters must be factor sets")
-    return reduce(lambda x, y: FactorSet(*(x.factors_set.union(y.factors_set))), factorsets_list)
+    return reduce(lambda x, y: FactorSet(*(x.factors.union(y.factors))), factorsets_list)
 
 
 def factorset_divide(factorset1, factorset2):
@@ -188,4 +188,4 @@ def factorset_divide(factorset1, factorset2):
     """
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
         raise TypeError("factorset1 and factorset2 must be factor sets")
-    return FactorSet(*factorset1.factors_set.union([x.identity_factor() / x for x in factorset2.factors_set]))
+    return FactorSet(*factorset1.factors.union([x.identity_factor() / x for x in factorset2.factors]))
