@@ -49,6 +49,9 @@ factors module
 .. autoclass:: JointProbabilityDistribution
    :members:
 
+.. autoclass:: FactorSet
+   :members:
+
 inference module
 ----------------
 
