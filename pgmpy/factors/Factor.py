@@ -591,10 +591,11 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                                                 phi1_cumprod, phi2_cumprod)
                     for index in product(*[range(card) for card in cardinality]))
             else:
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-                                  phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                # TODO: @ankurankan Make this cleaner
+                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
+                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
+                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
+
         elif operation == 'D':
             if use_joblib and n_jobs != 1:
                 values = Parallel(n_jobs, backend='threading')(
@@ -603,15 +604,10 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                                                 phi1_cumprod, phi2_cumprod)
                     for index in product(*[range(card) for card in cardinality]))
             else:
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    try:
-                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
-                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                    except FloatingPointError:
-                        # zero division error should return 0.
-                        # Ref Koller page 365, Fig 10.7
-                        values.append(0)
+                # TODO: @ankurankan Make this cleaner and handle case of division by zero
+                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
+                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
+                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
 
         phi = Factor(variables, cardinality, values)
         return phi
