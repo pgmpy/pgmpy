@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 import itertools
+import copy
+
 import numpy as np
 import networkx as nx
+
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
-
+from pgmpy.models import JunctionTree
 
 class VariableElimination(Inference):
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
@@ -283,7 +286,6 @@ class BeliefPropagation(Inference):
         if not isinstance(model, JunctionTree):
             self.junction_tree = model.to_junction_tree()
         else:
-            import copy
             self.junction_tree = copy.deepcopy(model)
 
         self.clique_beliefs = {}
@@ -510,8 +512,6 @@ class BeliefPropagation(Inference):
         Algorithm 10.4 Out-of-clique inference in clique tree
         Probabilistic Graphical Models: Principles and Techniques Daphne Koller and Nir Friedman.
         """
-        from pgmpy.models import JunctionTree
-
         is_calibrated = self._is_converged(operation=operation)
         # Calibrate the junction tree if not calibrated
         if not is_calibrated:
