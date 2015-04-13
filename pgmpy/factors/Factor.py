@@ -483,17 +483,7 @@ class Factor:
         return "<Factor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
 
     def _repr_html_(self):
-        # Checks for IPython Notebook, not required in IPython 3
-        try:
-            ip = get_ipython()
-            front_end = (
-                ip.config.get('KernelApp', {}).get('parent_appname', "") or
-                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
-            )
-            if 'notebook' in front_end.lower():
-                return self._str(html=True)
-        except NameError:
-            return self._str(html=False)
+        return self._str(html=True)
 
     def __mul__(self, other):
         return self.product(other)
