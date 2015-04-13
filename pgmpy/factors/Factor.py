@@ -1,9 +1,11 @@
 import functools
-import numpy as np
-import itertools
-from collections import OrderedDict
-from pgmpy.exceptions import Exceptions
 from operator import lt
+from itertools import product, starmap
+from collections import OrderedDict
+
+import numpy as np
+
+from pgmpy.exceptions import Exceptions
 from pgmpy.extern import tabulate
 
 
@@ -196,7 +198,7 @@ class Factor:
         assign = np.array(factor.cardinality)
         assign[marginalize_index] = -1
         marginalized_values = []
-        for i in itertools.product(*[range(index) for index in assign[assign != -1]]):
+        for i in product(*[range(index) for index in assign[assign != -1]]):
             assign[assign != -1] = i
             marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
         factor.values = np.array(marginalized_values)
@@ -274,7 +276,7 @@ class Factor:
             raise Exceptions.ScopeError('%s not in scope' % list(set(reduced_variables)-set(factor.scope())))
 
         reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
-        if not all(itertools.starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
+        if not all(starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
             raise Exceptions.SizeError('Value is greater than max possible value')
 
         reduce_assign = np.full(len(factor.cardinality), -1, dtype=int)
@@ -287,7 +289,7 @@ class Factor:
         if not inplace:
             return factor
 
-    def product(self, *factors):
+    def product(self, *factors, n_jobs=1):
         """
         Returns the factor product with factors.
 
@@ -306,9 +308,9 @@ class Factor:
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
-        return factor_product(self, *factors)
+        return factor_product(self, *factors, n_jobs=n_jobs)
 
-    def divide(self, factor):
+    def divide(self, factor, n_jobs=1):
         """
         Returns a new factors instance after division by factor.
 
@@ -338,7 +340,7 @@ class Factor:
         x1_0	x2_2	x3_1	3.33333333333
         x1_1	x2_2	x3_1	2.75
         """
-        return factor_divide(self, factor)
+        return factor_divide(self, factor, n_jobs=n_jobs)
 
     def maximize(self, variable, inplace=True):
         """
@@ -369,7 +371,7 @@ class Factor:
         assign = np.array(self.cardinality)
         assign[indexes] = -1
         new_values = np.array([])
-        for i in itertools.product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+        for i in product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
             assign[assign != -1] = i
             new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
         new_variables = np.array(self.scope())[~np.in1d(self.scope(),
@@ -410,7 +412,7 @@ class Factor:
             indexes = np.where(assignment == -1)[0]
             cardinalities = self.cardinality[indexes]
             array_to_return = np.array([])
-            for i in itertools.product(*[range(card) for card in cardinalities]):
+            for i in product(*[range(card) for card in cardinalities]):
                 temp_assignment = np.array(assignment)
                 temp_assignment[temp_assignment == -1] = i
                 array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
@@ -516,7 +518,7 @@ class Factor:
                 return False
 
             indexes = np.zeros((np.prod(self.cardinality), self.cardinality.shape[0]), dtype=int)
-            for k, i in enumerate(itertools.product(*[range(i) for i in self.cardinality])):
+            for k, i in enumerate(product(*[range(i) for i in self.cardinality])):
                 indexes[k] = i
 
             transformed_assign = np.zeros(indexes.shape, dtype=np.int)
@@ -580,7 +582,6 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
             (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
         phi2_cumprod = np.delete(np.concatenate(
             (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
-        from itertools import product
 
         if operation == 'M':
             if use_joblib:
@@ -655,7 +656,7 @@ def _parallel_helper_d(index, phi1, phi2,
         return 0
 
 
-def factor_product(*args):
+def factor_product(*args, n_jobs=1):
     """
     Returns factor product of multiple factors.
 
@@ -677,10 +678,11 @@ def factor_product(*args):
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Input parameters must be factors")
-    return functools.reduce(lambda phi1, phi2: _bivar_factor_operation(phi1, phi2, operation='M'), args)
+    return functools.reduce(lambda phi1, phi2: _bivar_factor_operation(phi1, phi2, operation='M',
+                                                                       n_jobs=n_jobs), args)
 
 
-def factor_divide(phi1, phi2):
+def factor_divide(phi1, phi2, n_jobs=1):
     """
     Returns new factors instance equal to phi1/phi2.
 
@@ -718,4 +720,4 @@ def factor_divide(phi1, phi2):
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")
-    return _bivar_factor_operation(phi1, phi2, operation='D')
+    return _bivar_factor_operation(phi1, phi2, operation='D', n_jobs=n_jobs)
