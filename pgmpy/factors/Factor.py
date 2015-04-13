@@ -584,7 +584,7 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
             (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
 
         if operation == 'M':
-            if use_joblib:
+            if use_joblib and n_jobs != 1:
                 values = Parallel(n_jobs=n_jobs, backend='threading')(
                     delayed(_parallel_helper_m)(index, phi1, phi2,
                                                 phi1_indexes, phi2_indexes,
@@ -596,7 +596,7 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                     values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
                                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
         elif operation == 'D':
-            if use_joblib:
+            if use_joblib and n_jobs != 1:
                 values = Parallel(n_jobs, backend='threading')(
                     delayed(_parallel_helper_d)(index, phi1, phi2,
                                                 phi1_indexes, phi2_indexes,
