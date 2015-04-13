@@ -616,10 +616,10 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
         phi = Factor(variables, cardinality, values)
         return phi
     else:
-        values = np.array([])
+        values = []
         if operation == 'M':
             for value in phi1.values:
-                values = np.concatenate((values, value*phi2.values), axis=1)
+                values.extend(value * phi2.values)
         elif operation == 'D':
             # reference: Koller Defination 10.7
             raise ValueError("Factors Division not defined for factors with no"
