@@ -605,9 +605,15 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                     for index in product(*[range(card) for card in cardinality]))
             else:
                 # TODO: @ankurankan Make this cleaner and handle case of division by zero
-                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
-                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
-                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    try:
+                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                    except FloatingPointError:
+                        # zero division error should return 0.
+                        # Ref Koller page 365, Fig 10.7
+                        values.append(0)
 
         phi = Factor(variables, cardinality, values)
         return phi
