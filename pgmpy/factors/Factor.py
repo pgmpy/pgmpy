@@ -569,81 +569,54 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
+
+    Reference
+    ----------
+    "Probabilistic Graphical Models: Principles and Techniques",
+    Daphne Koller, Nir Friedman, 2009, Page 359,
+    Algorithm 10.A.1 — Efficient implementation of a factor
+    product operation.
+    Note: in an old edition of the book Algorithm 10.A.1 was
+    missing one line (currently line 9: assignment[l] <- 0).
     """
-    try:
-        from joblib import Parallel, delayed
-        use_joblib = True
-    except ImportError:
-        use_joblib = False
 
-    np.seterr(divide='raise')
-
-    phi1_vars = list(phi1.variables)
-    phi2_vars = list(phi2.variables)
-    common_var_list = [var for var in phi1_vars if var in phi2_vars]
-    if common_var_list:
-        variables = phi1_vars
-        variables.extend([var for var in phi2.variables
-                         if var not in common_var_list])
-        cardinality = list(phi1.cardinality)
-        cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
-                           if var not in common_var_list)
-
-        phi1_indexes = [i for i in range(len(phi1.variables))]
-        phi2_indexes = [variables.index(var) for var in phi2.variables]
-        values = []
-        phi1_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
-
-        if operation == 'M':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs=n_jobs, backend='threading')(
-                    delayed(_parallel_helper_m)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
+    # Variables, cardinality and values of the product factor
+    variables = list(phi1.variables)
+    variables.extend([var for var in phi2.variables
+                      if var not in phi1.variables])
+    cardinality = list(phi1.cardinality)
+    cardinality.extend(phi2.get_cardinality(var)
+                       for var in phi2.variables
+                       if var not in phi1.variables)
+    values = []
+    # Algorithm 10.A.1
+    j = 0
+    k = 0
+    assignment = {var: 0 for var in variables}
+    for i in range(np.prod(np.array(cardinality))):
+        if operation == "M":
+            values.append(phi1.values[j] * phi2.values[k])
+        elif operation == "D":
+            # Zero division should return zero
+            if phi2.values[k] == 0:
+                values.append(0)
             else:
-                # TODO: @ankurankan Make this cleaner
-                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
-                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
-                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
-
-        elif operation == 'D':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs, backend='threading')(
-                    delayed(_parallel_helper_d)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
+                values.append(phi1.values[j] / phi2.values[k])
+        for idx, variable in enumerate(variables):
+            assignment[variable] = assignment[variable] + 1
+            if assignment[variable] == cardinality[idx]:
+                assignment[variable] = 0
+                j = j - (cardinality[idx] - 1) * phi1.stride(variable)
+                k = k - (cardinality[idx] - 1) * phi2.stride(variable)
             else:
-                # TODO: @ankurankan Make this cleaner and handle case of division by zero
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    try:
-                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
-                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                    except FloatingPointError:
-                        # zero division error should return 0.
-                        # Ref Koller page 365, Fig 10.7
-                        values.append(0)
+                j = j + phi1.stride(variable)
+                k = k + phi2.stride(variable)
+                break
 
-        phi = Factor(variables, cardinality, values)
-        return phi
-    else:
-        values = []
-        if operation == 'M':
-            for value in phi1.values:
-                values.extend(value * phi2.values)
-        elif operation == 'D':
-            # reference: Koller Defination 10.7
-            raise ValueError("Factors Division not defined for factors with no"
-                             " common scope")
-        variables = phi1_vars + phi2_vars
-        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-        phi = Factor(variables, cardinality, values)
-        return phi
+    # Construct the product Factor
+    phi = Factor(variables, cardinality, values)
+
+    return phi
 
 
 def _parallel_helper_m(index, phi1, phi2,
