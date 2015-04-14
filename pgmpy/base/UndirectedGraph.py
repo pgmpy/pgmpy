@@ -198,5 +198,6 @@ class UndirectedGraph(nx.Graph):
         edges = []
         for variable in variables:
             neighbors = self.neighbors(variable)
-            edges = [e for e in itertools.combinations(neighbors, 2) if not self.has_edge(*e)]
+            edges.extend([e for e in itertools.combinations(neighbors, 2)
+                          if not self.has_edge(*e)])
         return edges
