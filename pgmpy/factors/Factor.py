@@ -537,13 +537,15 @@ class Factor:
         Return the stride of given variable. A stride of a variable in a
         factor is its step size, that is how many configurations it
         takes from the factor to a variable change its domain value.
+        A stride of a variable not in the scope of the Factor is considered
+        to be zero.
 
         Parameters
         ----------
         variable: str or int
         """
         if variable not in self.variables:
-            raise ValueError("Variable not in Factor scope.")
+            return 0
         if variable not in self.strides:
             stride = 1
             for v in self.variables:
