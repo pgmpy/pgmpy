@@ -533,27 +533,44 @@ class Factor:
                     ' '.join(list(map(str, self.values))))
 
     def stride(self, variable):
-        """
-        Return the stride of given variable. A stride of a variable in a
-        factor is its step size, that is how many configurations it
-        takes from the factor to a variable change its domain value.
-        A stride of a variable not in the scope of the Factor is considered
-        to be zero.
-
-        Parameters
-        ----------
-        variable: str or int
-        """
-        if variable not in self.variables:
-            return 0
         if variable not in self.strides:
-            stride = 1
-            for v in self.variables:
-                if v == variable:
-                    break
-                stride = stride * self.get_cardinality(v)
-            self.strides[variable] = stride
+            self.strides[variable] = _stride(variable,
+                                             self.variables, self.cardinality)
         return self.strides[variable]
+
+
+def _stride(variable, variables, cardinalities):
+    """
+    Return the stride of given variable. A stride of a variable in a
+    factor is its step size, that is how many configurations it
+    takes from the factor to a variable change its domain value.
+    A stride of a variable not in the scope of the Factor is considered
+    to be zero.
+
+    Parameters
+    ----------
+    variable: str
+        Variable to be computed the stride.
+    variables: list or list-type
+        A list with variables.
+    cardinalities: list or list-type
+        A list with cardinalities of variables
+        are the cardinality of the variables.
+    """
+    if variable not in variables:
+        stride = 0
+    else:
+        stride = 1
+        # We used "reversed" here to match the configuration
+        # setting used in pgmpy. Ex: (0,0,0), (0,0,1), (0,1,0),
+        # (1,0,0), and so on instead of (0,0,0) (1,0,0),
+        # (0,1,0), (0,0,1)
+        for (cardinality, v) in zip(reversed(cardinalities),
+                                    reversed(variables)):
+            if v == variable:
+                break
+            stride = stride * cardinality
+    return stride
 
 
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
@@ -580,6 +597,12 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     missing one line (currently line 9: assignment[l] <- 0).
     """
 
+    # Reference: Koller Defination 10.7
+    if len(set(phi1.variables).intersection(
+           set(phi2.variables))) == 0 and operation == "D":
+            raise ValueError("Factors Division not defined for factors with no"
+                             " common scope")
+
     # Variables, cardinality and values of the product factor
     variables = list(phi1.variables)
     variables.extend([var for var in phi2.variables
@@ -588,20 +611,29 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     cardinality.extend(phi2.get_cardinality(var)
                        for var in phi2.variables
                        if var not in phi1.variables)
-    values = []
+    quantity_values = np.prod(np.array(cardinality))
+    values = [0] * quantity_values
     # Algorithm 10.A.1
     j = 0
     k = 0
     assignment = {var: 0 for var in variables}
-    for i in range(np.prod(np.array(cardinality))):
+    for i in range(quantity_values):
+        # We re-organize the values list to match the configuration
+        # setting used in pgmpy. Ex: (0,0,0), (0,0,1), (0,1,0),
+        # (1,0,0), and so on instead of (0,0,0) (1,0,0),
+        # (0,1,0), (0,0,1)
+        index = 0
+        for v in variables:
+            index = index + assignment[v] * _stride(
+                                            v, variables, cardinality)
         if operation == "M":
-            values.append(phi1.values[j] * phi2.values[k])
+            values[index] = phi1.values[j] * phi2.values[k]
         elif operation == "D":
             # Zero division should return zero
             if phi2.values[k] == 0:
-                values.append(0)
+                values[index] = 0
             else:
-                values.append(phi1.values[j] / phi2.values[k])
+                values[index] = phi1.values[j] / phi2.values[k]
         for idx, variable in enumerate(variables):
             assignment[variable] = assignment[variable] + 1
             if assignment[variable] == cardinality[idx]:

@@ -245,11 +245,11 @@ class TestFactorMethods(unittest.TestCase):
                       [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
                        0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
         stride = phi1.stride('x1')
-        self.assertEqual(stride, 1)
+        self.assertEqual(stride, 4)
         stride = phi1.stride('x2')
-        self.assertEqual(stride, 3)
+        self.assertEqual(stride, 2)
         stride = phi1.stride('x3')
-        self.assertEqual(stride, 6)
+        self.assertEqual(stride, 1)
 
 
 class TestTabularCPDInit(unittest.TestCase):
