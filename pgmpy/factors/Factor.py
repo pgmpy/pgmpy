@@ -75,6 +75,7 @@ class Factor:
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
         self.values = np.array(value, dtype=np.double)
+        self.strides = {}
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
@@ -530,6 +531,27 @@ class Factor:
         """
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
+
+    def stride(self, variable):
+        """
+        Return the stride of given variable. A stride of a variable in a
+        factor is its step size, that is how many configurations it
+        takes from the factor to a variable change its domain value.
+
+        Parameters
+        ----------
+        variable: str or int
+        """
+        if variable not in self.variables:
+            raise ValueError("Variable not in Factor scope.")
+        if variable not in self.strides:
+            stride = 1
+            for v in self.variables:
+                if v == variable:
+                    break
+                stride = stride * self.get_cardinality(v)
+            self.strides[variable] = stride
+        return self.strides[variable]
 
 
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):

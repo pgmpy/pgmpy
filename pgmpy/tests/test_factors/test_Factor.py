@@ -239,6 +239,18 @@ class TestFactorMethods(unittest.TestCase):
         del self.phi
         del self.phi1
 
+    def test_stride(self):
+        phi1 = Factor(['x1', 'x2', 'x3'],
+                      [3, 2, 2],
+                      [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+                       0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
+        stride = phi1.stride('x1')
+        self.assertEqual(stride, 1)
+        stride = phi1.stride('x2')
+        self.assertEqual(stride, 3)
+        stride = phi1.stride('x3')
+        self.assertEqual(stride, 6)
+
 
 class TestTabularCPDInit(unittest.TestCase):
     def test_cpd_init(self):
