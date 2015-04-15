@@ -1,8 +1,6 @@
 from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
-from pgmpy.factors import Factor
 import unittest
-import numpy as np
 
 
 class TestJunctionTreeCreation(unittest.TestCase):
@@ -33,44 +31,10 @@ class TestJunctionTreeCreation(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.add_edge,
                           ('a', 'b'), ('c', 'd'))
 
+    def test_add_cyclic_path_raises_error(self):
+        self.graph.add_edge(('a', 'b'), ('b', 'c'))
+        self.graph.add_edge(('b', 'c'), ('c', 'd'))
+        self.assertRaises(ValueError, self.graph.add_edge, ('c', 'd'), ('a', 'b'))
+
     def tearDown(self):
         del self.graph
-
-
-class TestJunctionTreeFactorOperations(unittest.TestCase):
-    def setUp(self):
-        self.graph = JunctionTree()
-
-    def test_add_single_factor(self):
-        self.graph.add_node(('a', 'b'))
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        self.graph.add_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi1])
-
-    def test_add_single_factor_raises_error(self):
-        self.graph.add_node(('a', 'b'))
-        phi1 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
-        self.assertRaises(ValueError, self.graph.add_factors, phi1)
-
-    def test_add_multiple_factors(self):
-        self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
-        self.graph.add_factors(phi1, phi2)
-        self.assertEqual(self.graph.get_factors(node=('b', 'a')), phi1)
-        self.assertEqual(self.graph.get_factors(node=('b', 'c')), phi2)
-
-    def test_remove_factors(self):
-        self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
-        self.graph.add_factors(phi1, phi2)
-        self.graph.remove_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi2])
-
-    def test_get_partition_function(self):
-        self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
-        self.graph.add_factors(phi1, phi2)
-        self.assertEqual(self.graph.get_partition_function(), 22.0)
