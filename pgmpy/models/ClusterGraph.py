@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-from pgmpy.base import UndirectedGraph
 from collections import defaultdict
+
 import numpy as np
+
+from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 
 
@@ -75,8 +77,7 @@ class ClusterGraph(UndirectedGraph):
         >>> G.add_node(('a', 'b', 'c'))
         """
         if not isinstance(node, (list, set, tuple)):
-            raise TypeError('Node can only be a list, set or tuple of nodes'
-                            'forming a clique')
+            raise TypeError('Node can only be a list, set or tuple of nodes forming a clique')
 
         node = tuple(node)
         super().add_node(node, **kwargs)
@@ -233,8 +234,7 @@ class ClusterGraph(UndirectedGraph):
         """
         if self.check_model():
             factor = self.factors[0]
-            factor = factor.product(*[self.factors[i] for i in
-                                      range(1, len(self.factors))])
+            factor = factor.product(*[self.factors[i] for i in range(1, len(self.factors))])
             return np.sum(factor.values)
 
     def check_model(self):
