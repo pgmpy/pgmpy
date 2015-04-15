@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from pgmpy.factors import Factor
 from functools import reduce
+from pgmpy.factors import Factor
 
 
 class FactorSet:
@@ -33,7 +33,72 @@ class FactorSet:
         from copy import deepcopy
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
-        self.factors_set = set(deepcopy(factors_list))
+        self.factors = set(deepcopy(factors_list))
+
+    def add_factors(self, *factors):
+        """
+        Adds factors to the factor set.
+
+        Parameters
+        ----------
+        factors: Factor1, Factor2, ...., Factorn
+            factors to be added into the factor set
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3, phi4)
+        """
+        self.factors.update(factors)
+
+    def remove_factors(self, *factors):
+        """
+        Removes factors from the factor set.
+
+        Parameters
+        ----------
+        factors: Factor1, Factor2, ...., Factorn
+            factors to be removed from the factor set
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3)
+        >>> factor_set1.remove_factors(phi1, phi2)
+        """
+        for factor in factors:
+            self.factors.remove(factor)
+
+    def get_factors(self):
+        """
+        Returns all the factors present in factor set.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        >>> factor_set1.add_factors(phi3)
+        >>> factor_set1.get_factors()
+        {<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f827c0a23c8>,
+         <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f827c0a2358>,
+         <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f825243f9e8>}
+        """
+        return self.factors
 
     def product(self, *factorsets):
         r"""
@@ -112,20 +177,21 @@ class FactorSet:
         if not isinstance(variables, (list, set, tuple)):
             variables = [variables]
 
-        factors_to_be_marginalized = set(filter(lambda x: len(set(x.scope()).intersection(variables)) != 0,
-                                                self.factors_set))
+        factors_to_be_marginalized = set(filter(lambda x: set(x.scope()).intersection(variables),
+                                                self.factors))
+
         if not inplace:
-            new_factors_set = self.factors_set - factors_to_be_marginalized
+            new_factors = self.factors - factors_to_be_marginalized
 
         for factor in factors_to_be_marginalized:
             variables_to_be_marginalized = list(set(factor.scope()).intersection(variables))
             if inplace:
                 factor.marginalize(variables_to_be_marginalized, inplace=True)
             else:
-                new_factors_set.add(factor.marginalize(variables_to_be_marginalized, inplace=False))
+                new_factors.add(factor.marginalize(variables_to_be_marginalized, inplace=False))
 
         if not inplace:
-            return FactorSet(*new_factors_set)
+            return FactorSet(*new_factors)
 
 
 def factorset_product(*factorsets_list):
@@ -154,8 +220,8 @@ def factorset_product(*factorsets_list):
     >>> factor_set3 = factorset_product(factor_set1, factor_set2)
     """
     if not all(isinstance(factorset, FactorSet) for factorset in factorsets_list):
-        raise TypeError("Input parameters must be factor sets")
-    return reduce(lambda x, y: FactorSet(*(x.factors_set.union(y.factors_set))), factorsets_list)
+        raise TypeError("Input parameters must be FactorSet instances")
+    return reduce(lambda x, y: FactorSet(*(x.factors.union(y.factors))), factorsets_list)
 
 
 def factorset_divide(factorset1, factorset2):
@@ -187,5 +253,5 @@ def factorset_divide(factorset1, factorset2):
     >>> factor_set3 = factorset_divide(factor_set1, factor_set2)
     """
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
-        raise TypeError("factorset1 and factorset2 must be factor sets")
-    return FactorSet(*factorset1.factors_set.union([x.identity_factor() / x for x in factorset2.factors_set]))
+        raise TypeError("factorset1 and factorset2 must be FactorSet instances")
+    return FactorSet(*factorset1.factors.union([x.identity_factor() / x for x in factorset2.factors]))
