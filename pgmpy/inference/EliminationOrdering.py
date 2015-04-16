@@ -22,13 +22,12 @@ class EliminationOrdering(object):
 
     def __init__(self, model):
         self.bayesian_model = model
-        if model is not BayesianModel:
+        if not isinstance(model, BayesianModel):
             raise ValueError("EliminationOrdering should"
                              " receive a Bayesian model.")
-        self.moralized_graph = self.model.moralize()
+        self.moralized_graph = self.bayesian_model.moralize()
 
-    @staticmethod
-    def find_elimination_ordering(nodes, cost_func):
+    def find_elimination_ordering(self, nodes, cost_func):
         """
         A greedy algorithm that eliminates a less score variable per time.
 
