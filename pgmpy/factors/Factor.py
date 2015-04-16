@@ -612,34 +612,35 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                        for var in phi2.variables
                        if var not in phi1.variables)
     quantity_values = np.prod(np.array(cardinality))
-    values = [0] * quantity_values
-    # Algorithm 10.A.1
+    # Constants for jumping in j and i
+    j_star = {}
+    k_star = {}
+    for idx, variable in zip(reversed(range(len(variables))),
+                             reversed(variables)):
+        j_star[variable] = (cardinality[idx] - 1) * phi1.stride(variable)
+        k_star[variable] = (cardinality[idx] - 1) * phi2.stride(variable)
+    # Counter for the assignments within the domain cardinality of variables
+    assignment = {var: 0 for var in variables}
+    # Loop building the product table
+    values = []
     j = 0
     k = 0
-    assignment = {var: 0 for var in variables}
     for i in range(quantity_values):
-        # We re-organize the values list to match the configuration
-        # setting used in pgmpy. Ex: (0,0,0), (0,0,1), (0,1,0),
-        # (1,0,0), and so on instead of (0,0,0) (1,0,0),
-        # (0,1,0), (0,0,1)
-        index = 0
-        for v in variables:
-            index = index + assignment[v] * _stride(
-                                            v, variables, cardinality)
         if operation == "M":
-            values[index] = phi1.values[j] * phi2.values[k]
+            values.append(phi1.values[j] * phi2.values[k])
         elif operation == "D":
             # Zero division should return zero
             if phi2.values[k] == 0:
-                values[index] = 0
+                values.append(0)
             else:
-                values[index] = phi1.values[j] / phi2.values[k]
-        for idx, variable in enumerate(variables):
+                values.append(phi1.values[j] / phi2.values[k])
+        for idx, variable in zip(reversed(range(len(variables))),
+                                 reversed(variables)):
             assignment[variable] = assignment[variable] + 1
             if assignment[variable] == cardinality[idx]:
                 assignment[variable] = 0
-                j = j - (cardinality[idx] - 1) * phi1.stride(variable)
-                k = k - (cardinality[idx] - 1) * phi2.stride(variable)
+                j = j - j_star[variable]
+                k = k - k_star[variable]
             else:
                 j = j + phi1.stride(variable)
                 k = k + phi2.stride(variable)
@@ -647,6 +648,20 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
 
     # Construct the product Factor
     phi = Factor(variables, cardinality, values)
+
+    # Re-organize the structure for resultant factor
+    lhs = []
+    if operation == 'M':
+        lhs = list(set(phi1.left_hand_side).union(set(phi2.left_hand_side)))
+    elif operation == 'D':
+        lhs = [v for v in set(phi1.left_hand_side).union(
+               set(phi2.left_hand_side))
+               if v not in phi2.left_hand_side]
+    rhs = [v for v in set(phi1.right_hand_side).union(
+            set(phi2.right_hand_side))
+           if v not in lhs]
+    phi.left_hand_side = lhs
+    phi.right_hand_side = rhs
 
     return phi
 
