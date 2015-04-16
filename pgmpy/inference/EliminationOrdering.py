@@ -1,3 +1,6 @@
+from pgmpy.models import BayesianModel
+
+
 class EliminationOrdering(object):
 
     """
@@ -12,14 +15,17 @@ class EliminationOrdering(object):
 
     Parameters
     ----------
-    bayesian_model: input bayesian model
+    model: input bayesian model
         A bayesian model to be moralized (an undirected graph where the parents
         of a v-structures are connected).
     """
 
-    def __init__(self, bayesian_model):
-        self.bayesian_model = bayesian_model
-        self.moralized_graph = bayesian_model.moralize()
+    def __init__(self, model):
+        self.bayesian_model = model
+        if model is not BayesianModel:
+            raise ValueError("EliminationOrdering should"
+                             " receive a Bayesian model.")
+        self.moralized_graph = self.model.moralize()
 
     @staticmethod
     def find_elimination_ordering(nodes, cost_func):
