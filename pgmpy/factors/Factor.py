@@ -658,7 +658,7 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                set(phi2.left_hand_side))
                if v not in phi2.left_hand_side]
     rhs = [v for v in set(phi1.right_hand_side).union(
-            set(phi2.right_hand_side))
+           set(phi2.right_hand_side))
            if v not in lhs]
     phi.left_hand_side = lhs
     phi.right_hand_side = rhs
