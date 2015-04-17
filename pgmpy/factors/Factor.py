@@ -597,6 +597,8 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     missing one line (currently line 9: assignment[l] <- 0).
     """
 
+    # TODO: use joblib for parallel computation.
+
     # Reference: Koller Defination 10.7
     if len(set(phi1.variables).intersection(
            set(phi2.variables))) == 0 and operation == "D":
