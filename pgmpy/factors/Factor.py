@@ -651,20 +651,6 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     # Construct the product Factor
     phi = Factor(variables, cardinality, values)
 
-    # Re-organize the structure for resultant factor
-    lhs = []
-    if operation == 'M':
-        lhs = list(set(phi1.left_hand_side).union(set(phi2.left_hand_side)))
-    elif operation == 'D':
-        lhs = [v for v in set(phi1.left_hand_side).union(
-               set(phi2.left_hand_side))
-               if v not in phi2.left_hand_side]
-    rhs = [v for v in set(phi1.right_hand_side).union(
-           set(phi2.right_hand_side))
-           if v not in lhs]
-    phi.left_hand_side = lhs
-    phi.right_hand_side = rhs
-
     return phi
 
 
