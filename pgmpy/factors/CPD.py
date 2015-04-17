@@ -125,26 +125,78 @@ class TabularCPD(Factor):
 
         return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
 
-    def replace_variables(self, var1, var2):
-        new_scope = self.scope()
-        new_scope.reverse()
-        new_cardinality = self.cardinality[::-1].copy()
-        index_1 = new_scope.index(var1)
-        index_2 = new_scope.index(var2)
-        index_11 = self.scope().index(var1)
-        index_22 = self.scope().index(var2)
-        new_scope[index_1], new_scope[index_2] = new_scope[index_2], new_scope[index_1]
-        new_cardinality[index_1], new_cardinality[index_2] = new_cardinality[index_2], new_cardinality[index_1]
-        values = self.values.reshape([self.cardinality[0], self.cardinality[1:].prod()])
-        old_heading = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
-        new_heading = np.array(list(product(*[range(i) for i in new_cardinality[-2::-1]])))
-        new_heading[:, [index_11-1, index_22-1]] = new_heading[:, [index_22-1, index_11-1]]
+    def set_parents_order(self, new_order):
+        """
+        Change the order of the parents
+
+        Parameters
+        ----------
+        new_order: list
+            reordered list of evidences.
+        The returned tabular cpd has values reordered according to the new order provided by the user.
+
+        Example
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> final_cpd = TabularCPD('grade', 5, [
+        ... [0.12, 0.6, 0.2, 0.9, 0.5, 0.4, 0.5, 0.5, 0.4, 0.9, 0.8, 0.8],
+        ... [0.12, 0.6, 0.2, 0.9, 0.5, 0.4, 0.5, 0.5, 0.4, 0.9, 0.8, 0.8],
+        ... [0.3, 0.8, 0.4, 0.8, 0.8, 0.8, 0.7, 0.7, 0.2, 0.8, 0.8, 0.4],
+        ... [0.4, 0.9, 0.5, 0.7, 0.3, 0.2, 0.8, 0.8, 0.1, 0.6, 0.8, 0.8],
+        ... [0.5, 0.1, 0.6, 0.6, 0.2, 0.1, 0.9, 0.9, 0.8, 0.5, 0.8, 0.8]],
+        ...                                   evidence=['intel', 'diff', 'iq'], evidence_card=[2, 3, 2])
+        >>> print(final_cpd)
+╒═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╕
+│ iq      │ iq_0    │ iq_0    │ iq_0    │ iq_0    │ iq_0    │ iq_0    │ iq_1    │ iq_1    │ iq_1    │ iq_1    │ iq_1    │ iq_1    │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ diff    │ diff_0  │ diff_0  │ diff_1  │ diff_1  │ diff_2  │ diff_2  │ diff_0  │ diff_0  │ diff_1  │ diff_1  │ diff_2  │ diff_2  │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ intel   │ intel_0 │ intel_1 │ intel_0 │ intel_1 │ intel_0 │ intel_1 │ intel_0 │ intel_1 │ intel_0 │ intel_1 │ intel_0 │ intel_1 │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_0 │ 0.12    │ 0.6     │ 0.2     │ 0.9     │ 0.5     │ 0.4     │ 0.5     │ 0.5     │ 0.4     │ 0.9     │ 0.8     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_1 │ 0.12    │ 0.6     │ 0.2     │ 0.9     │ 0.5     │ 0.4     │ 0.5     │ 0.5     │ 0.4     │ 0.9     │ 0.8     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_2 │ 0.3     │ 0.8     │ 0.4     │ 0.8     │ 0.8     │ 0.8     │ 0.7     │ 0.7     │ 0.2     │ 0.8     │ 0.8     │ 0.4     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_3 │ 0.4     │ 0.9     │ 0.5     │ 0.7     │ 0.3     │ 0.2     │ 0.8     │ 0.8     │ 0.1     │ 0.6     │ 0.8     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_4 │ 0.5     │ 0.1     │ 0.6     │ 0.6     │ 0.2     │ 0.1     │ 0.9     │ 0.9     │ 0.8     │ 0.5     │ 0.8     │ 0.8     │
+╘═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╛
+        >>> final_cpd.set_parents_order(['iq', 'intel', 'diff'])
+        >>> print(final_cpd)
+╒═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╤═════════╕
+│ diff    │ diff_0  │ diff_0  │ diff_0  │ diff_0  │ diff_1  │ diff_1  │ diff_1  │ diff_1  │ diff_2  │ diff_2  │ diff_2  │ diff_2  │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ intel   │ intel_0 │ intel_0 │ intel_1 │ intel_1 │ intel_0 │ intel_0 │ intel_1 │ intel_1 │ intel_0 │ intel_0 │ intel_1 │ intel_1 │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ iq      │ iq_0    │ iq_1    │ iq_0    │ iq_1    │ iq_0    │ iq_1    │ iq_0    │ iq_1    │ iq_0    │ iq_1    │ iq_0    │ iq_1    │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_0 │ 0.12    │ 0.5     │ 0.6     │ 0.5     │ 0.2     │ 0.4     │ 0.9     │ 0.9     │ 0.5     │ 0.8     │ 0.4     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_1 │ 0.12    │ 0.5     │ 0.6     │ 0.5     │ 0.2     │ 0.4     │ 0.9     │ 0.9     │ 0.5     │ 0.8     │ 0.4     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_2 │ 0.3     │ 0.7     │ 0.8     │ 0.7     │ 0.4     │ 0.2     │ 0.8     │ 0.8     │ 0.8     │ 0.8     │ 0.8     │ 0.4     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_3 │ 0.4     │ 0.8     │ 0.9     │ 0.8     │ 0.5     │ 0.1     │ 0.7     │ 0.6     │ 0.3     │ 0.8     │ 0.2     │ 0.8     │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│ grade_4 │ 0.5     │ 0.9     │ 0.1     │ 0.9     │ 0.6     │ 0.8     │ 0.6     │ 0.5     │ 0.2     │ 0.8     │ 0.1     │ 0.8     │
+╘═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╧═════════╛
+        """
+        old_scope = self.scope()[::-1].copy()
+        new_cardinality = np.asarray(self.evidence_card)
+        new_order.append(self.variable)
+        list_a = [i for i in range(len(self.evidence_card))]
+        # list_b is to be used for cardinality mapping and column mapping.
+        list_b = [new_order[:].index(i) for i in old_scope]
+        new_cardinality[[x for x in list_b[:-1]]] = new_cardinality[[x for x in list_a]]
+        values = self.values.reshape([self.cardinality[0], new_cardinality.prod()])
+        new_heading = np.array(list(product(*[range(i) for i in new_cardinality[::-1]])))
+        new_heading[:, [x for x in list_b[:-1]]] = new_heading[:, [x for x in list_a]]
         new_value_list = []
-        for i in new_heading:
-            temp = (i == old_heading)
-            [new_value_list.append(k) for k in range(len(temp)) if np.all(temp[k])]
+        [new_value_list.append(self._index_for_assignment([0] + list(i))[0]) for i in new_heading]
         new_values = (values[:, np.array(new_value_list)])
-        self.__init__(self.variable, int(self.cardinality[0]), new_values, new_scope[:-1], new_cardinality[:-1])
+        self.__init__(self.variable, int(self.cardinality[0]), new_values, new_order[:-1], new_cardinality)
 
     def get_cpd(self):
         """
@@ -158,7 +210,7 @@ class TabularCPD(Factor):
     def __str__(self):
         table_list = []
         indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
-        scope = self.scope()    
+        scope = self.scope()
         for i in range(1, len(self.cardinality)):
             row = [scope[i]]
             row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
@@ -446,7 +498,7 @@ class TreeCPD(nx.DiGraph):
         stack = []
         values = []
         cardinality = []
-        
+
         for edge in edge_attributes:
             edge_dict.setdefault(edge[0], []).append(edge_attributes[edge])
             if isinstance(edge[1], Factor):
