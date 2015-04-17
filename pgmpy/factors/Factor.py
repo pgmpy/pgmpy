@@ -622,18 +622,18 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     # Counter for the assignments within the domain cardinality of variables
     assignment = {var: 0 for var in variables}
     # Loop building the product table
-    values = []
+    values = np.zeros(quantity_values)
     j = 0
     k = 0
     for i in range(quantity_values):
         if operation == "M":
-            values.append(phi1.values[j] * phi2.values[k])
+            values[i] = phi1.values[j] * phi2.values[k]
         elif operation == "D":
             # Zero division should return zero
             if phi2.values[k] == 0:
-                values.append(0)
+                values[i] = 0
             else:
-                values.append(phi1.values[j] / phi2.values[k])
+                values[i] = phi1.values[j] / phi2.values[k]
         for idx, variable in zip(reversed(range(len(variables))),
                                  reversed(variables)):
             assignment[variable] = assignment[variable] + 1
