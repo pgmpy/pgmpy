@@ -612,17 +612,23 @@ class BayesianModel(DirectedGraph):
 
     def get_cardinality(self, variable):
         """
-        Returns cardinality of a given variable
+        Returns cardinality of a given variable by looking for
+        the variable withing the factors of the BayesianModel.
 
         Parameters
         ----------
-        variable: string
+        variable: a node
 
         """
         if variable not in self.nodes():
-            raise Exceptions.ScopeError("%s not in scope" % variable)
-        cpds = [cpd.get_cardinality(variable) for cpd in self.get_cpds() if variable in cpd.variables]
-        return cpds[0]
+            raise ValueError("%s not in scope of any CPD assigned to "
+                             "this model" % variable)
+        if len(self.get_cpds()) == 0:
+            raise ValueError("No CPDs assigned to this model.")
+        cardinalities = [cpd.get_cardinality(variable)
+                         for cpd in self.get_cpds()
+                         if variable in cpd.variables]
+        return cardinalities[0]
 
     def barren_nodes(self, variables):
         """
