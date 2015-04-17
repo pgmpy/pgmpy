@@ -624,12 +624,10 @@ class BayesianModel(DirectedGraph):
         cpds = [cpd.get_cardinality(variable) for cpd in self.get_cpds() if variable in cpd.variables]
         return cpds[0]
 
-    @staticmethod
-    def barren_nodes(variables, bayesian_model):
+    def barren_nodes(self, variables):
         """
         Return all barren variables, given the nodes to ignore
-        (query and/or evidence nodes). Barren variables ["A Simple Approach
-        to Bayesian Network Computations", Zhang and Pool, CAI-94]
+        (query and/or evidence nodes). Barren variables
         are leaf variables not in query of evidence.
 
         Parameters
@@ -637,38 +635,46 @@ class BayesianModel(DirectedGraph):
         variables: a list, list-type
             name of all variables to me desconsidered
             (query and evidence variables)
+
+        Reference
+        ---------
+        A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+        Proceedings of Canadian Artificial Intelligence, 1994.
         """
+        copy_model = self.copy()
         barren_vars = []
         while True:
             barren = [v for v in (n for n, d
-                      in bayesian_model.out_degree_iter()
+                      in copy_model.out_degree_iter()
                       if d == 0) if v not in variables]
             barren_vars.extend(barren)
-            bayesian_model.remove_nodes_from(barren)
+            copy_model.remove_nodes_from(barren)
             if len(barren) == 0:
                 break
         return barren_vars
 
-    @staticmethod
-    def independent_by_evidence_nodes(query_variables, evidence, bayesian_model):
+    def independent_by_evidence_nodes(self, query, evidence):
         """
         Return all independent by evidence variables.
         They are variables that does not have an
         active trail to any of the query variables,
         given the evidence.
+
+        Parameters
+        ----------
+        query: one query variable
+            The query variable
+        evidence: dictionary with evidences
+            Evidences given for inference
+
+        Reference
+        ---------
+        LAZY propagation: A junction tree inference algorithm based
+        on lazy evaluation, Anders L. Madsen, Finn V. Jensen,
+        Artificial Intelligence 113 (1999) 203–245
         """
         evidence_vars = evidence.keys() if evidence is not None else []
-        return [v for v in bayesian_model.nodes()
+        return [v for v in self.nodes()
                 if (v not in evidence_vars) and
-                not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
-
-    @staticmethod
-    def new_root_variables(old_model, new_model):
-        """
-        Return all nodes that were roots in
-        an older model, but are not root in
-        a newer version of the same mode.
-        """
-        old_roots = old_model.roots()
-        new_roots = new_model.roots()
-        return [v for v in new_roots if v not in old_roots]
+                not self.is_active_trail(v, query,
+                                         list(evidence_vars))]
