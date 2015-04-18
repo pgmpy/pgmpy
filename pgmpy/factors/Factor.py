@@ -532,46 +532,62 @@ class Factor:
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
 
-    def stride(self, variable):
-        if variable not in self.strides:
-            self.strides[variable] = _stride(variable,
-                                             self.variables, self.cardinality)
-        return self.strides[variable]
-
-
-def _stride(variable, variables, cardinalities):
+def _index_to_assignment(indices, cardinalities):
     """
-    Return the stride of given variable. A stride of a variable in a
-    factor is its step size, that is how many configurations it
-    takes from the factor to a variable change its domain value.
-    A stride of a variable not in the scope of the Factor is considered
-    to be zero.
+    Helper function used to discover the assignment (configuration)
+    in the Factor, given the indice of the row.
 
     Parameters
     ----------
-    variable: str
-        Variable to be computed the stride.
-    variables: list or list-type
-        A list with variables.
-    cardinalities: list or list-type
-        A list with cardinalities of variables
-        are the cardinality of the variables.
+    indices: list, numpy array
+        indices of the rows in the Factor
+    cardinalities: list, numpy array
+        cardinalities of the variables in the Factor
     """
-    if variable not in variables:
-        stride = 0
-    else:
-        stride = 1
-        # We used "reversed" here to match the configuration
-        # setting used in pgmpy. Ex: (0,0,0), (0,0,1), (0,1,0),
-        # (1,0,0), and so on instead of (0,0,0) (1,0,0),
-        # (0,1,0), (0,0,1)
-        for (cardinality, v) in zip(reversed(cardinalities),
-                                    reversed(variables)):
-            if v == variable:
-                break
-            stride = stride * cardinality
-    return stride
+    # Helper constants
+    num_columns = len(cardinalities)
+    num_rows = len(indices)
+    # Find the assignments
+    index = np.tile(indices.reshape(num_rows, 1), num_columns)
+    stride = np.tile(
+                np.array(list(reversed(np.cumprod(
+                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
+                )))),
+                num_rows
+            ).reshape(num_rows, num_columns)
+    division = np.divide(index, stride)
+    floor = np.floor(division)
+    mod_card = np.tile(cardinalities,num_rows).reshape(num_rows, num_columns)
+    assignments = np.mod(floor, mod_card)
+    return assignments
 
+def _assignment_to_index(assignments, cardinalities):
+    """
+    Helper function used to discover the indice of the row
+    in the Factor, given the assignments (configurations) of the row.
+
+    Parameters
+    ----------
+    assignments: list of list, numpy multidimensional array
+        a matrix with the assignments
+    cardinalities: list, numpy array
+        cardinalities of the variables in the Factor
+    """
+    if len(assignments.shape) == 1 or any(e == 1 for e in assignments.shape):
+        stride = np.array(list(reversed(np.cumprod(
+                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
+                    ))))
+        indices = assignments.dot(stride.T)
+    else:
+        stride = np.tile(
+                np.array(list(reversed(np.cumprod(
+                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
+                    )))),
+                assignments.shape[0]
+            ).reshape(assignments.shape[0], assignments.shape[1])
+        multiplication = stride * assignments
+        indices = np.sum(multiplication,axis=1)
+    return indices
 
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
@@ -590,11 +606,7 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     Reference
     ----------
     "Probabilistic Graphical Models: Principles and Techniques",
-    Daphne Koller, Nir Friedman, 2009, Page 359,
-    Algorithm 10.A.1 — Efficient implementation of a factor
-    product operation.
-    Note: in an old edition of the book Algorithm 10.A.1 was
-    missing one line (currently line 9: assignment[l] <- 0).
+    Daphne Koller, Nir Friedman, 2009, Page 359.
     """
 
     # TODO: use joblib for parallel computation.
@@ -605,51 +617,43 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
             raise ValueError("Factors Division not defined for factors with no"
                              " common scope")
 
-    # Variables, cardinality and values of the product factor
+    # Define the variables in the scope of the product.
     variables = list(phi1.variables)
-    variables.extend([var for var in phi2.variables
-                      if var not in phi1.variables])
-    cardinality = list(phi1.cardinality)
-    cardinality.extend(phi2.get_cardinality(var)
-                       for var in phi2.variables
-                       if var not in phi1.variables)
-    quantity_values = np.prod(np.array(cardinality))
-    # Constants for jumping in j and i
-    j_star = {}
-    k_star = {}
-    for idx, variable in zip(reversed(range(len(variables))),
-                             reversed(variables)):
-        j_star[variable] = (cardinality[idx] - 1) * phi1.stride(variable)
-        k_star[variable] = (cardinality[idx] - 1) * phi2.stride(variable)
-    # Counter for the assignments within the domain cardinality of variables
-    assignment = {var: 0 for var in variables}
-    # Loop building the product table
-    values = np.zeros(quantity_values)
-    j = 0
-    k = 0
-    for i in range(quantity_values):
-        if operation == "M":
-            values[i] = phi1.values[j] * phi2.values[k]
-        elif operation == "D":
-            # Zero division should return zero
-            if phi2.values[k] == 0:
-                values[i] = 0
-            else:
-                values[i] = phi1.values[j] / phi2.values[k]
-        for idx, variable in zip(reversed(range(len(variables))),
-                                 reversed(variables)):
-            assignment[variable] = assignment[variable] + 1
-            if assignment[variable] == cardinality[idx]:
-                assignment[variable] = 0
-                j = j - j_star[variable]
-                k = k - k_star[variable]
-            else:
-                j = j + phi1.stride(variable)
-                k = k + phi2.stride(variable)
-                break
+    variables.extend(v for v in phi2.variables
+                     if v not in phi1.variables)
 
-    # Construct the product Factor
-    phi = Factor(variables, cardinality, values)
+    # Creates a map between the new scope and each factor scope.
+    map_phi1 = [variables.index(var)
+                for var in phi1.variables if var in variables]
+    map_phi2 = [variables.index(var)
+                for var in phi2.variables if var in variables]
+
+    # Define the cardinality for the product factor.
+    cardinality = np.zeros(len(variables))
+    cardinality[map_phi1] = phi1.cardinality
+    cardinality[map_phi2] = phi2.cardinality
+
+    # Reserve memory for the product values
+    quantity_values = np.prod(cardinality)
+    values = np.zeros(quantity_values)
+
+    # Figure out indices for the operation in both Factors
+    assignments = _index_to_assignment(np.arange(0, quantity_values),
+                                       cardinality)
+    index_phi1 = _assignment_to_index(assignments[:, map_phi1], phi1.cardinality)
+    index_phi2 = _assignment_to_index(assignments[:, map_phi2], phi2.cardinality)
+
+    # Execute the operation
+    if operation == "M":
+        values = phi1.values[index_phi1.astype(int)] * phi2.values[index_phi2.astype(int)]
+    elif operation == "D":
+        # Handle division by zero
+        np.seterr(divide='ignore')
+        values = phi1.values[index_phi1.astype(int)] / phi2.values[index_phi2.astype(int)]
+        values[values == np.inf] = 0
+
+    # # Construct the product Factor
+    phi = Factor(variables, cardinality.astype(int), values)
 
     return phi
 
