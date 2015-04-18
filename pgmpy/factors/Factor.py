@@ -532,6 +532,7 @@ class Factor:
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
 
+
 def _index_to_assignment(indices, cardinalities):
     """
     Helper function used to discover the assignment (configuration)
@@ -551,15 +552,21 @@ def _index_to_assignment(indices, cardinalities):
     index = np.tile(indices.reshape(num_rows, 1), num_columns)
     stride = np.tile(
                 np.array(list(reversed(np.cumprod(
-                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
-                )))),
+                    np.concatenate(
+                        ([1],
+                         np.array(list(reversed(cardinalities[1:, ])))
+                         ),
+                        axis=1
+                    ))))
+                ),
                 num_rows
             ).reshape(num_rows, num_columns)
     division = np.divide(index, stride)
     floor = np.floor(division)
-    mod_card = np.tile(cardinalities,num_rows).reshape(num_rows, num_columns)
+    mod_card = np.tile(cardinalities, num_rows).reshape(num_rows, num_columns)
     assignments = np.mod(floor, mod_card)
     return assignments
+
 
 def _assignment_to_index(assignments, cardinalities):
     """
@@ -575,19 +582,28 @@ def _assignment_to_index(assignments, cardinalities):
     """
     if len(assignments.shape) == 1 or any(e == 1 for e in assignments.shape):
         stride = np.array(list(reversed(np.cumprod(
-                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
+                    np.concatenate(
+                        ([1],
+                         np.array(list(reversed(cardinalities[1:, ])))
+                         ),
+                        axis=1)
                     ))))
         indices = assignments.dot(stride.T)
     else:
         stride = np.tile(
-                np.array(list(reversed(np.cumprod(
-                    np.concatenate(([1], np.array(list(reversed(cardinalities[1:,])))), axis=1)
+                    np.array(list(reversed(np.cumprod(
+                        np.concatenate(
+                            ([1],
+                             np.array(list(reversed(cardinalities[1:, ])))
+                             ),
+                            axis=1)
                     )))),
-                assignments.shape[0]
-            ).reshape(assignments.shape[0], assignments.shape[1])
+                    assignments.shape[0]
+                ).reshape(assignments.shape[0], assignments.shape[1])
         multiplication = stride * assignments
-        indices = np.sum(multiplication,axis=1)
+        indices = np.sum(multiplication, axis=1)
     return indices
+
 
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
@@ -640,16 +656,24 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     # Figure out indices for the operation in both Factors
     assignments = _index_to_assignment(np.arange(0, quantity_values),
                                        cardinality)
-    index_phi1 = _assignment_to_index(assignments[:, map_phi1], phi1.cardinality)
-    index_phi2 = _assignment_to_index(assignments[:, map_phi2], phi2.cardinality)
+    index_phi1 = _assignment_to_index(
+                                      assignments[:, map_phi1],
+                                      phi1.cardinality)
+    index_phi2 = _assignment_to_index(
+                                      assignments[:, map_phi2],
+                                      phi2.cardinality)
 
     # Execute the operation
     if operation == "M":
-        values = phi1.values[index_phi1.astype(int)] * phi2.values[index_phi2.astype(int)]
+        values = phi1.values[
+                             index_phi1.astype(int)] * phi2.values[
+                             index_phi2.astype(int)]
     elif operation == "D":
         # Handle division by zero
         np.seterr(divide='ignore')
-        values = phi1.values[index_phi1.astype(int)] / phi2.values[index_phi2.astype(int)]
+        values = phi1.values[
+                             index_phi1.astype(int)] / phi2.values[
+                             index_phi2.astype(int)]
         values[values == np.inf] = 0
 
     # # Construct the product Factor
