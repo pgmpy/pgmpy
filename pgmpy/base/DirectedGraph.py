@@ -166,17 +166,31 @@ class DirectedGraph(nx.DiGraph):
         """
         return self.predecessors(node)
 
-    def leaves(self):
+    def get_leaves(self):
         """
         Returns a list of leaves of the graph.
-        """
-        return [n for n, d in self.out_degree_iter() if d == 0]
 
-    def roots(self):
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> graph = DirectedGraph([('A', 'B'), ('B', 'C'), ('B', 'D')])
+        >>> graph.get_leaves()
+        ['C', 'D']
+        """
+        return [node for node, out_degree in self.out_degree_iter() if out_degree == 0]
+
+    def get_roots(self):
         """
         Returns a list of roots of the graph.
+
+        Examples
+        --------
+        >>> from pgmpy.base  import DirectedGraph
+        >>> graph = DirectedGraph([('A', 'B'), ('B', 'C'), ('B', 'D'), ('E', 'B')])
+        >>> graph.get_roots()
+        ['A', 'E']
         """
-        return [n for n, d in self.in_degree().items() if d == 0]
+        return [node for node, in_degree in self.in_degree().items() if in_degree == 0]
 
     def moralize(self):
         """
