@@ -75,7 +75,6 @@ class Factor:
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
         self.values = np.array(value, dtype=np.double)
-        self.strides = {}
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
@@ -185,31 +184,69 @@ class Factor:
         >>> phi.variables
         OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
         """
+
+        # TODO: use joblib for parallel computation.
+
         if not isinstance(variables, list):
             variables = [variables]
         for variable in variables:
             if variable not in self.variables:
-                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
+                raise Exceptions.ScopeError(
+                    "{variable} not in scope".format(variable=variable))
 
         if inplace:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
-        assign = np.array(factor.cardinality)
-        assign[marginalize_index] = -1
-        marginalized_values = []
-        for i in product(*[range(index) for index in assign[assign != -1]]):
-            assign[assign != -1] = i
-            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
-        factor.values = np.array(marginalized_values)
-        for variable in variables:
-            index = list(factor.variables.keys()).index(variable)
-            del(factor.variables[variable])
-            factor.cardinality = np.delete(factor.cardinality, index)
+
+        # Creates a map between the variables of the current factor
+        # and the marginalized factor. The map contains the indices in the
+        # current factor of the variables which are not being marginalized.
+        # The variables in scope of the marginalized factor are also kept.
+        factor_map = []
+        factor_vars = []
+        for (ind, var) in enumerate(self.variables):
+            if var not in variables:
+                factor_map.append(ind)
+                factor_vars.append(var)
+        remove_vars = [v for v in factor.variables
+                       if v not in factor_vars]
+        # Remove marginalized variables.
+        for var in remove_vars:
+            del(factor.variables[var])
+
+        # Determine the cardinalities of variables in the marginalized factor.
+        factor_cardinality = self.cardinality[factor_map]
+        # Handle specific case when all variables are being marginalized.
+        if len(factor.variables) == 0:
+            factor.values = np.array([np.sum(factor.values)], dtype=np.double)
+        else:
+            # Reserve memory for values in marginalized factor.
+            factor_values = np.zeros(np.prod(factor_cardinality),
+                                     dtype=np.double)
+
+            # Discover the assignments (configurations) in current factor for
+            # all indices, given the variables cardinalities.
+            assignments = _index_to_assignment(np.arange(
+                0, len(factor.values)),
+                factor.cardinality)
+            # Discover the indeces in current factor respective to the
+            # assignments (configurations) of current factor in the columns
+            # of variables which are being marginalized.
+            indices = _assignment_to_index(assignments[:, factor_map],
+                                           factor_cardinality)
+            indices = indices.astype(int)
+
+            # Perform the summation
+            for i in range(0, len(factor.values)):
+                factor_values[indices[i]] += factor.values[i]
+            factor.values = factor_values
+        # Record the cardinality
+        factor.cardinality = factor_cardinality
+
         if not inplace:
             return factor
-            
+
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
@@ -535,8 +572,11 @@ class Factor:
 
 def _index_to_assignment(indices, cardinalities):
     """
-    Helper function used to discover the assignment (configuration)
-    in the Factor, given the indice of the row.
+    Helper function used to discover the assignment (configuration) in factor
+    for the desired indices (of rows), given the cardinalities of variables.
+    For example, consider a factor containing 2 variables with cardinalities
+    2 and 2. If the given indices are [0 1 0 1], than the assignments will be
+    [[ 0.  0.] [ 0.  1.] [ 1.  0.] [ 1.  1.]].
 
     Parameters
     ----------
@@ -570,8 +610,11 @@ def _index_to_assignment(indices, cardinalities):
 
 def _assignment_to_index(assignments, cardinalities):
     """
-    Helper function used to discover the indice of the row
-    in the Factor, given the assignments (configurations) of the row.
+    Helper function used to discover the indice (of rows) in factor for
+    given assignments (configurations) and variables cardinalities.
+    For example, consider a factor containing 2 variables with cardinalities
+    2 and 2. If given assignments are [[ 0.  0.] [ 0.  1.] [ 1.  0.]
+    [ 1.  1.]], than the indices will be [0 1 0 1].
 
     Parameters
     ----------
