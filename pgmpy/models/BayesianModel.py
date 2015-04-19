@@ -239,54 +239,26 @@ class BayesianModel(DirectedGraph):
                                      ' is not equal to 1.' % node)
         return True
 
-    @staticmethod
-    def barren_nodes(variables, bayesian_model):
+    def _get_ancestors_of(self, obs_nodes_list):
         """
-        Return all barren variables, given the nodes to ignore
-        (query and/or evidence nodes). Barren variables ["A Simple Approach
-        to Bayesian Network Computations", Zhang and Pool, CAI-94]
-        are leaf variables not in query of evidence.
+        Returns a list of all ancestors of all the observed nodes.
 
         Parameters
         ----------
-        variables: a list, list-type
-            name of all variables to me desconsidered
-            (query and evidence variables)
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
         """
-        barren_vars = []
-        while True:
-            barren = [v for v in (n for n, d
-                      in bayesian_model.out_degree_iter()
-                      if d == 0) if v not in variables]
-            barren_vars.extend(barren)
-            bayesian_model.remove_nodes_from(barren)
-            if len(barren) == 0:
-                break
-        return barren_vars
+        if not isinstance(obs_nodes_list, (list, tuple)):
+            obs_nodes_list = [obs_nodes_list]
 
-    @staticmethod
-    def independent_by_evidence_nodes(query_variables, evidence, bayesian_model):
-        """
-        Return all independent by evidence variables.
-        They are variables that does not have an
-        active trail to any of the query variables,
-        given the evidence.
-        """
-        evidence_vars = evidence.keys() if evidence is not None else []
-        return [v for v in bayesian_model.nodes()
-                if (v not in evidence_vars) and
-                not bayesian_model.is_active_trail(v, query_variables, list(evidence_vars))]
-
-    @staticmethod
-    def new_root_variables(old_model, new_model):
-        """
-        Return all nodes that were roots in
-        an older model, but are not root in
-        a newer version of the same mode.
-        """
-        old_roots = old_model.roots()
-        new_roots = new_model.roots()
-        return [v for v in new_roots if v not in old_roots]
+        ancestors_list = set()
+        nodes_list = set(obs_nodes_list)
+        while nodes_list:
+            node = nodes_list.pop()
+            if node not in ancestors_list:
+                nodes_list.update(self.predecessors(node))
+            ancestors_list.add(node)
+        return ancestors_list
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -322,7 +294,7 @@ class BayesianModel(DirectedGraph):
             observed_list = [observed] if isinstance(observed, str) else observed
         else:
             observed_list = []
-        ancestors_list = self.get_ancestors_of(observed_list)
+        ancestors_list = self._get_ancestors_of(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -647,10 +619,12 @@ class BayesianModel(DirectedGraph):
 
     def get_cardinality(self, variables=None):
         """
-        Returns cardinality of a given variable
+        Returns cardinality of a given variable by looking for
+        the variable withing the factors of the BayesianModel.
 
         Parameters
         ----------
+<<<<<<< HEAD
         variable: node or list of nodes. Node can be any hashable python object.
             Node whose cardinality is to be returned.
             If no argument is passed. Returns a dict of cardinalities of each variable in
@@ -681,3 +655,58 @@ class BayesianModel(DirectedGraph):
             card_dict[variable] = var_cpd.cardinality[0]
 
         return card_dict
+
+    def barren_nodes(self, variables):
+        """
+        Return all barren variables, given the nodes to ignore
+        (query and/or evidence nodes). Barren variables
+        are leaf variables not in query of evidence.
+
+        Parameters
+        ----------
+        variables: a list, list-type
+            name of all variables to me desconsidered
+            (query and evidence variables)
+
+        Reference
+        ---------
+        A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+        Proceedings of Canadian Artificial Intelligence, 1994.
+        """
+        copy_model = self.copy()
+        barren_vars = []
+        while True:
+            barren = [v for v in (n for n, d
+                      in copy_model.out_degree_iter()
+                      if d == 0) if v not in variables]
+            barren_vars.extend(barren)
+            copy_model.remove_nodes_from(barren)
+            if len(barren) == 0:
+                break
+        return barren_vars
+
+    def independent_by_evidence_nodes(self, query, evidence):
+        """
+        Return all independent by evidence variables.
+        They are variables that does not have an
+        active trail to any of the query variables,
+        given the evidence.
+
+        Parameters
+        ----------
+        query: one query variable
+            The query variable
+        evidence: dictionary with evidences
+            Evidences given for inference
+
+        Reference
+        ---------
+        LAZY propagation: A junction tree inference algorithm based
+        on lazy evaluation, Anders L. Madsen, Finn V. Jensen,
+        Artificial Intelligence 113 (1999) 203–245
+        """
+        evidence_vars = evidence.keys() if evidence is not None else []
+        return [v for v in self.nodes()
+                if (v not in evidence_vars) and
+                not self.is_active_trail(v, query,
+                                         list(evidence_vars))]
