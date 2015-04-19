@@ -212,15 +212,15 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds('s'), cpd_s)
 
     def test_get_cardinality(self):
-        from pgmpy.factors import TabularCPD
         cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
         cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
         cpd_g = TabularCPD('g', 3, np.random.rand(3, 4), ['d', 'i'], [2, 2])
         self.G.add_cpds(cpd_d, cpd_i, cpd_g)
 
-        self.assertEqual(self.G.get_cardinality('d'), 2)
-        self.assertEqual(self.G.get_cardinality('i'), 2)
-        self.assertEqual(self.G.get_cardinality('g'), 3)
+        self.assertDictEqual(self.G.get_cardinality('d'), {'d': 2})
+        self.assertDictEqual(self.G.get_cardinality('i'), {'i': 2})
+        self.assertDictEqual(self.G.get_cardinality('g'), {'g': 3})
+        self.assertDictEqual(self.G.get_cardinality(['i', 'g']), {'i': 2, 'g': 3})
 
     def tearDown(self):
         del self.G
