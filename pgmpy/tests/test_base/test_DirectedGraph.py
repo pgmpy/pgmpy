@@ -81,11 +81,11 @@ class TestDirectedGraphInformations(unittest.TestCase):
     def setUp(self):
         self.graph = DirectedGraph()
 
-    def test_leaves(self):
+    def test_get_leaves(self):
         self.graph.add_edges_from([('a', 'b'), ('c', 'b'), ('b', 'd')])
-        self.assertListEqual(self.graph.leaves(), ['d'])
+        self.assertListEqual(self.graph.get_leaves(), ['d'])
 
-    def test_roots(self):
+    def test_get_roots(self):
         self.graph.add_edges_from([('a', 'b'), ('c', 'b'), ('b', 'd')])
         self.assertListEqual(sorted(self.graph.roots()), ['a', 'c'])
 
