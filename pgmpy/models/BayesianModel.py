@@ -645,16 +645,39 @@ class BayesianModel(DirectedGraph):
     def is_imap(self, independence):
         pass
 
-    def get_cardinality(self, variable):
+    def get_cardinality(self, variables=None):
         """
         Returns cardinality of a given variable
 
         Parameters
         ----------
-        variable: string
+        variable: node or list of nodes. Node can be any hashable python object.
+            Node whose cardinality is to be returned.
+            If no argument is passed. Returns a dict of cardinalities of each variable in
+            the network.
 
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> model.get_cardinality('A')
+        {'A': 2}
+        >>> model.get_cardinality(['A', 'B', 'C', 'D', 'E'])
+        {'A': 2, 'B': 2, 'C': 2, 'D': 2, 'E': 2}
         """
-        if variable not in self.nodes():
-            raise Exceptions.ScopeError("%s not in scope" % variable)
-        cpds = [cpd.get_cardinality(variable) for cpd in self.get_cpds() if variable in cpd.variables]
-        return cpds[0]
+        if not isinstance(variables, (list, tuple, set)):
+            variables = [variables]
+
+        card_dict = {}
+        for variable in set(variables):
+            if variable not in self.nodes():
+                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
+            var_cpd = self.get_cpds(variable)
+            card_dict[variable] = var_cpd.cardinality[0]
+
+        return card_dict
