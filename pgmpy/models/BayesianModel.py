@@ -429,8 +429,7 @@ class BayesianModel(DirectedGraph):
         >>> student.is_active_trail('grade', 'sat')
         True
         """
-        active_trails = self.active_trail_nodes(start, observed)
-        if len(set(active_trails).intersection(set(end))) != 0:
+        if end in self.active_trail_nodes(start, observed):
             return True
         else:
             return False
