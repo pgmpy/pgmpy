@@ -184,31 +184,69 @@ class Factor:
         >>> phi.variables
         OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
         """
+
+        # TODO: use joblib for parallel computation.
+
         if not isinstance(variables, list):
             variables = [variables]
         for variable in variables:
             if variable not in self.variables:
-                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
+                raise Exceptions.ScopeError(
+                    "{variable} not in scope".format(variable=variable))
 
         if inplace:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
-        assign = np.array(factor.cardinality)
-        assign[marginalize_index] = -1
-        marginalized_values = []
-        for i in product(*[range(index) for index in assign[assign != -1]]):
-            assign[assign != -1] = i
-            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
-        factor.values = np.array(marginalized_values)
-        for variable in variables:
-            index = list(factor.variables.keys()).index(variable)
-            del(factor.variables[variable])
-            factor.cardinality = np.delete(factor.cardinality, index)
+
+        # Creates a map between the variables of the current factor
+        # and the marginalized factor. The map contains the indices in the
+        # current factor of the variables which are not being marginalized.
+        # The variables in scope of the marginalized factor are also kept.
+        factor_map = []
+        factor_vars = []
+        for (ind, var) in enumerate(self.variables):
+            if var not in variables:
+                factor_map.append(ind)
+                factor_vars.append(var)
+        remove_vars = [v for v in factor.variables
+                       if v not in factor_vars]
+        # Remove marginalized variables.
+        for var in remove_vars:
+            del(factor.variables[var])
+
+        # Determine the cardinalities of variables in the marginalized factor.
+        factor_cardinality = self.cardinality[factor_map]
+        # Handle specific case when all variables are being marginalized.
+        if len(factor.variables) == 0:
+            factor.values = np.array([np.sum(factor.values)], dtype=np.double)
+        else:
+            # Reserve memory for values in marginalized factor.
+            factor_values = np.zeros(np.prod(factor_cardinality),
+                                     dtype=np.double)
+
+            # Discover the assignments (configurations) in current factor for
+            # all indices, given the variables cardinalities.
+            assignments = _index_to_assignment(np.arange(
+                0, len(factor.values)),
+                factor.cardinality)
+            # Discover the indeces in current factor respective to the
+            # assignments (configurations) of current factor in the columns
+            # of variables which are being marginalized.
+            indices = _assignment_to_index(assignments[:, factor_map],
+                                           factor_cardinality)
+            indices = indices.astype(int)
+
+            # Perform the summation
+            for i in range(0, len(factor.values)):
+                factor_values[indices[i]] += factor.values[i]
+            factor.values = factor_values
+        # Record the cardinality
+        factor.cardinality = factor_cardinality
+
         if not inplace:
             return factor
-            
+
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
@@ -532,6 +570,86 @@ class Factor:
                     ' '.join(list(map(str, self.values))))
 
 
+def _index_to_assignment(indices, cardinalities):
+    """
+    Helper function used to discover the assignment (configuration) in factor
+    for the desired indices (of rows), given the cardinalities of variables.
+    For example, consider a factor containing 2 variables with cardinalities
+    2 and 2. If the given indices are [0 1 0 1], than the assignments will be
+    [[ 0.  0.] [ 0.  1.] [ 1.  0.] [ 1.  1.]].
+
+    Parameters
+    ----------
+    indices: list, numpy array
+        indices of the rows in the Factor
+    cardinalities: list, numpy array
+        cardinalities of the variables in the Factor
+    """
+    # Helper constants
+    num_columns = len(cardinalities)
+    num_rows = len(indices)
+    # Find the assignments
+    index = np.tile(indices.reshape(num_rows, 1), num_columns)
+    stride = np.tile(
+        np.array(list(reversed(np.cumprod(
+            np.concatenate(
+                ([1],
+                 np.array(list(reversed(cardinalities[1:, ])))
+                 ),
+                axis=1
+            ))))
+        ),
+        num_rows
+    ).reshape(num_rows, num_columns)
+    division = np.divide(index, stride)
+    floor = np.floor(division)
+    mod_card = np.tile(cardinalities, num_rows).reshape(num_rows, num_columns)
+    assignments = np.mod(floor, mod_card)
+    return assignments
+
+
+def _assignment_to_index(assignments, cardinalities):
+    """
+    Helper function used to discover the indice (of rows) in factor for
+    given assignments (configurations) and variables cardinalities.
+    For example, consider a factor containing 2 variables with cardinalities
+    2 and 2. If given assignments are [[ 0.  0.] [ 0.  1.] [ 1.  0.]
+    [ 1.  1.]], than the indices will be [0 1 0 1].
+
+    Parameters
+    ----------
+    assignments: list of list, numpy multidimensional array
+        a matrix with the assignments
+    cardinalities: list, numpy array
+        cardinalities of the variables in the Factor
+    """
+    if len(assignments.shape) == 1 or any(e == 1 for e in assignments.shape):
+        stride = np.array(list(reversed(np.cumprod(
+            np.concatenate(
+                ([1],
+                 np.array(list(reversed(cardinalities[1:, ])))
+                 ),
+                axis=1
+            )
+        ))))
+        indices = assignments.dot(stride.T)
+    else:
+        stride = np.tile(
+            np.array(list(reversed(np.cumprod(
+                np.concatenate(
+                    ([1],
+                     np.array(list(reversed(cardinalities[1:, ])))
+                     ),
+                    axis=1
+                )
+            )))),
+            assignments.shape[0]
+        ).reshape(assignments.shape[0], assignments.shape[1])
+        multiplication = stride * assignments
+        indices = np.sum(multiplication, axis=1)
+    return indices
+
+
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
@@ -545,83 +663,66 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
+
+    Reference
+    ----------
+    "Probabilistic Graphical Models: Principles and Techniques",
+    Daphne Koller, Nir Friedman, 2009, Page 359.
     """
-    try:
-        from joblib import Parallel, delayed
-        use_joblib = True
-    except ImportError:
-        use_joblib = False
 
-    np.seterr(divide='raise')
+    # TODO: use joblib for parallel computation.
 
-    phi1_vars = list(phi1.variables)
-    phi2_vars = list(phi2.variables)
-    common_var_list = [var for var in phi1_vars if var in phi2_vars]
-    if common_var_list:
-        variables = phi1_vars
-        variables.extend([var for var in phi2.variables
-                         if var not in common_var_list])
-        cardinality = list(phi1.cardinality)
-        cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
-                           if var not in common_var_list)
-
-        phi1_indexes = [i for i in range(len(phi1.variables))]
-        phi2_indexes = [variables.index(var) for var in phi2.variables]
-        values = []
-        phi1_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
-
-        if operation == 'M':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs=n_jobs, backend='threading')(
-                    delayed(_parallel_helper_m)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
-            else:
-                # TODO: @ankurankan Make this cleaner
-                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
-                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
-                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
-
-        elif operation == 'D':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs, backend='threading')(
-                    delayed(_parallel_helper_d)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
-            else:
-                # TODO: @ankurankan Make this cleaner and handle case of division by zero
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    try:
-                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
-                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                    except FloatingPointError:
-                        # zero division error should return 0.
-                        # Ref Koller page 365, Fig 10.7
-                        values.append(0)
-
-        phi = Factor(variables, cardinality, values)
-        return phi
-    else:
-        values = np.zeros(phi1.values.shape[0] * phi2.values.shape[0])
-        phi2_shape = phi2.values.shape[0]
-        if operation == 'M':
-            for value_index in range(phi1.values.shape[0]):
-                values[value_index * phi2_shape: (value_index + 1) * phi2_shape] = (phi1.values[value_index] *
-                                                                                    phi2.values)
-        elif operation == 'D':
-            # reference: Koller Defination 10.7
+    # Reference: Koller Defination 10.7
+    if len(set(phi1.variables).intersection(
+           set(phi2.variables))) == 0 and operation == "D":
             raise ValueError("Factors Division not defined for factors with no"
                              " common scope")
-        variables = phi1_vars + phi2_vars
-        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-        phi = Factor(variables, cardinality, values)
-        return phi
+
+    # Define the variables in the scope of the product.
+    variables = list(phi1.variables)
+    variables.extend(v for v in phi2.variables
+                     if v not in phi1.variables)
+
+    # Creates a map between the new scope and each factor scope.
+    map_phi1 = [variables.index(var)
+                for var in phi1.variables if var in variables]
+    map_phi2 = [variables.index(var)
+                for var in phi2.variables if var in variables]
+
+    # Define the cardinality for the product factor.
+    cardinality = np.zeros(len(variables))
+    cardinality[map_phi1] = phi1.cardinality
+    cardinality[map_phi2] = phi2.cardinality
+
+    # Reserve memory for the product values
+    quantity_values = np.prod(cardinality)
+    values = np.zeros(quantity_values)
+
+    # Figure out indices for the operation in both Factors
+    assignments = _index_to_assignment(np.arange(0, quantity_values),
+                                       cardinality)
+    index_phi1 = _assignment_to_index(
+        assignments[:, map_phi1],
+        phi1.cardinality)
+    index_phi2 = _assignment_to_index(
+        assignments[:, map_phi2],
+        phi2.cardinality)
+
+    # Execute the operation
+    if operation == "M":
+        values = phi1.values[index_phi1.astype(int)] * phi2.values[
+            index_phi2.astype(int)]
+    elif operation == "D":
+        # Handle division by zero
+        np.seterr(divide='ignore')
+        values = phi1.values[index_phi1.astype(int)] / phi2.values[
+            index_phi2.astype(int)]
+        values[values == np.inf] = 0
+
+    # # Construct the product Factor
+    phi = Factor(variables, cardinality.astype(int), values)
+
+    return phi
 
 
 def _parallel_helper_m(index, phi1, phi2,
