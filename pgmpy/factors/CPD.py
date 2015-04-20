@@ -302,6 +302,34 @@ class TabularCPD(Factor):
             return tabular_cpd
 
     def to_factor(self):
+        """
+        Returns an equivalent factor with the same variables, cardinality, values as that of the cpd
+
+        Examples
+        --------
+        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+        ...                               [0.1, 0.1],
+        ...                               [0.8, 0.8]],
+        ...                  evidence='evi1', evidence_card=2)
+        >>> factor = cpd.to_factor()
+        >>> print(factor)
+        ╒═════════╤════════╤═══════════════════╕
+        │ grade   │ evi1   │   phi(grade,evi1) │
+        ╞═════════╪════════╪═══════════════════╡
+        │ grade_0 │ evi1_0 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_0 │ evi1_1 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_1 │ evi1_0 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_1 │ evi1_1 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_2 │ evi1_0 │            0.8000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_2 │ evi1_1 │            0.8000 │
+        ╘═════════╧════════╧═══════════════════
+        """
         return Factor(self.variables, self.cardinality, self.values)
 
 
