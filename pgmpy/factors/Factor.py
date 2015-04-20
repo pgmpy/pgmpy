@@ -538,13 +538,10 @@ class Factor:
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
-
     Parameters
     ----------
     phi1: factors
-
     phi2: factors
-
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
@@ -575,28 +572,29 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
             (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
         phi2_cumprod = np.delete(np.concatenate(
             (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
-        from itertools import product
 
         if operation == 'M':
-            if use_joblib:
+            if use_joblib and n_jobs != 1:
                 values = Parallel(n_jobs=n_jobs, backend='threading')(
                     delayed(_parallel_helper_m)(index, phi1, phi2,
                                                 phi1_indexes, phi2_indexes,
                                                 phi1_cumprod, phi2_cumprod)
                     for index in product(*[range(card) for card in cardinality]))
             else:
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-                                  phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+                # TODO: @ankurankan Make this cleaner
+                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
+                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
+                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
+
         elif operation == 'D':
-            if use_joblib:
+            if use_joblib and n_jobs != 1:
                 values = Parallel(n_jobs, backend='threading')(
                     delayed(_parallel_helper_d)(index, phi1, phi2,
                                                 phi1_indexes, phi2_indexes,
                                                 phi1_cumprod, phi2_cumprod)
                     for index in product(*[range(card) for card in cardinality]))
             else:
+                # TODO: @ankurankan Make this cleaner and handle case of division by zero
                 for index in product(*[range(card) for card in cardinality]):
                     index = np.array(index)
                     try:
@@ -610,10 +608,12 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
         phi = Factor(variables, cardinality, values)
         return phi
     else:
-        values = np.array([])
+        values = np.zeros(phi1.values.shape[0] * phi2.values.shape[0])
+        phi2_shape = phi2.values.shape[0]
         if operation == 'M':
-            for value in phi1.values:
-                values = np.concatenate((values, value*phi2.values), axis=1)
+            for value_index in range(phi1.values.shape[0]):
+                values[value_index * phi2_shape: (value_index + 1) * phi2_shape] = (phi1.values[value_index] *
+                                                                                    phi2.values)
         elif operation == 'D':
             # reference: Koller Defination 10.7
             raise ValueError("Factors Division not defined for factors with no"
