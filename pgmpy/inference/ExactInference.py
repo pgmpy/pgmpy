@@ -10,7 +10,8 @@ from pgmpy.models import BayesianModel
 
 
 class VariableElimination(Inference):
-    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation,
+                              evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
 
@@ -95,15 +96,22 @@ class VariableElimination(Inference):
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
 
-        # If no elimination order is given, find one using Weighted-Min-Fill
         if not elimination_order:
-            elim_ord = EliminationOrdering(model_copy)
-            elimination_order = elim_ord.find_elimination_ordering(
-                                list(set(model_copy.nodes()) -
-                                     set(variables) -
-                                     set(evidence.keys()
-                                         if evidence else [])),
-                                elim_ord.weighted_min_fill)
+            # If is BayesianModel, find a good elimination ordering
+            # using Weighted-Min-Fill heuristic.
+            if isinstance(model_copy, BayesianModel):
+                elim_ord = EliminationOrdering(model_copy)
+                elimination_order = elim_ord.find_elimination_ordering(
+                                    list(set(model_copy.nodes()) -
+                                         set(variables) -
+                                         set(evidence.keys()
+                                             if evidence else [])),
+                                    elim_ord.weighted_min_fill)
+            else:
+                elimination_order = list(set(self.variables) -
+                                         set(variables) -
+                                         set(evidence.keys()
+                                             if evidence else []))
 
         elif any(var in elimination_order for var in
                  set(variables).union(
