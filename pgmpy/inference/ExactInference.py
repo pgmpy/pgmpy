@@ -13,6 +13,29 @@ from pgmpy.models import BayesianModel, JunctionTree
 
 
 class VariableElimination(Inference):
+    def _barren_nodes(self, variables):
+        """
+        Return a list of variables to be removed.
+        """
+        copy_model = self.copy()
+        barren_vars = []
+        while True:
+            barren = [v for v in (n for n, d
+                      in copy_model.out_degree_iter()
+                      if d == 0) if v not in variables]
+            barren_vars.extend(barren)
+            copy_model.remove_nodes_from(barren)
+            if len(barren) == 0:
+                break
+        return barren_vars
+
+    def _independent_by_evidence_nodes(self, variables, evidence):
+        evidence_vars = evidence.keys() if evidence is not None else []
+        return [v for v in self.nodes()
+                if (v not in evidence_vars) and
+                not self.is_active_trail(v, query,
+                                         list(evidence_vars))]
+
     def _optimize_bayesian_marginalize(self, evidence, working_factors):
         def _remove_factor(nodes, factors):
             for node in nodes:
