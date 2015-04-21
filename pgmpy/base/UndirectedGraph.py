@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+
 import networkx as nx
 
 

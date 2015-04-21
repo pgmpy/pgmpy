@@ -54,6 +54,8 @@ class Inference:
         if not model.check_model():
             raise ModelError("Model of type {!r} not valid".format(type(model).__name__))
 
+        self.model = model
+
         if isinstance(model, JunctionTree):
             self.variables = set(chain(*model.nodes()))
         else:

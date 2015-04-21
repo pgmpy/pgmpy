@@ -5,5 +5,4 @@ from .EliminationOrdering import EliminationOrdering
 
 __all__ = ['Inference',
            'VariableElimination',
-           'BeliefPropagation',
-           'EliminationOrdering']
+           'BeliefPropagation']
