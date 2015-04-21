@@ -6,26 +6,50 @@ import copy
 import numpy as np
 import networkx as nx
 
-from pgmpy.inference import Inference
-from pgmpy.inference.EliminationOrdering import BaseEliminationOrder, WeightedMinFill, MinNeighbours, MinWeight, MinFill
-from pgmpy.factors.Factor import factor_product
+from pgmpy.base import DirectedGraph
 from pgmpy.models import BayesianModel, JunctionTree
+from pgmpy.factors.Factor import factor_product
+from pgmpy.inference import Inference
+from pgmpy.inference import BaseEliminationOrder, WeightedMinFill, MinNeighbours, MinWeight, MinFill
 
 
 class VariableElimination(Inference):
     def _barren_nodes(self, variables):
         """
-        Return a list of variables to be removed.
+        Return all barren variables, given the nodes to ignore
+        (query and/or evidence nodes). Barren variables
+        are leaf variables not in query of evidence.
+
+        Parameters
+        ----------
+        variables: list, tuple, set (array-like)
+            list of variables to which are not to be considered.
+            In the case of Variable Elimination its variables + evidence.
+
+        Reference
+        ---------
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> barren_nodes = inference._barren_nodes(['A', 'B'])
         """
-        copy_model = self.copy()
+        model_copy = DirectedGraph(self.model.edges())
         barren_vars = []
         while True:
-            barren = [v for v in (n for n, d
-                      in copy_model.out_degree_iter()
-                      if d == 0) if v not in variables]
-            barren_vars.extend(barren)
-            copy_model.remove_nodes_from(barren)
-            if len(barren) == 0:
+            leaves = model_copy.get_leaves()
+            barren_nodes = [node for node in leaves if node not in variables]
+            barren_vars.extend(barren_nodes)
+            model_copy.remove_nodes_from(barren_nodes)
+            if not barren_nodes:
                 break
         return barren_vars
 
