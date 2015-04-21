@@ -13,7 +13,7 @@ from pgmpy.models import BayesianModel, JunctionTree
 
 
 class VariableElimination(Inference):
-    def _optimize_bayesian_marginalize(self):
+    def _optimize_bayesian_marginalize(self, evidence, working_factors):
         def _remove_factor(nodes, factors):
             for node in nodes:
                 for key in factors:
@@ -27,7 +27,7 @@ class VariableElimination(Inference):
 
         # Remove irrelevant variables (barren, independent and new roots).
         # Collect root nodes
-        roots = model_copy.roots()
+        roots = self.model.roots()
         # Remove all barren nodes.
         evidence_var = list(evidence.keys()) if evidence else []
         barren = model_copy.barren_nodes(list(variables) + evidence_var)
@@ -68,6 +68,11 @@ class VariableElimination(Inference):
                 all_factors.extend(factor_li)
             return set(all_factors)
 
+        # Load all factors used in this session of Variable Elimination
+        working_factors = {node: {factor for factor in self.reduced_factors[node]}
+                           for node in self.reduced_model}
+
+        # Finding the elimination_order
         if isinstance(elimination_order, BaseEliminationOrder):
             elimination_order = elimination_order.get_elimination_order(self.model.nodes())
         elif isinstance(elimination_order, str):
@@ -78,24 +83,9 @@ class VariableElimination(Inference):
             if set(elimination_order) != set(self.reduced_model.nodes()):
                 raise ValueError("Variables in elimination_order not in the model")
 
-        # Removing barren and independent variables generate sub-models
-        # (a modified version of the model).
-        # Then, a copy is used to do not disturb the original model.
-        # model_copy = self.model.copy()
-        # factors_copy = self.factors.copy()
-
-        # The following removal of irrelevant variables is only defined
-        # for BayesianModels when computing the with operation
-        # "marginalize" and not "maximize".
+        # Optimizations
         if isinstance(self.model, BayesianModel) and operation == "marginalize":
-            self.reduced_model, self.reduced_factors = self._optimize_bayesian_marginalize()
-
-            # A helper function to remove the factor related to a list of
-            # nodes from a BayesianModel.
-
-        # Load all factors used in this session of Variable Elimination
-        working_factors = {node: {factor for factor in self.reduced_factors[node]}
-                           for node in self.reduced_model}
+            self.reduced_model, self.reduced_factors = self._optimize_bayesian_marginalize(evidence, working_factors)
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
