@@ -75,35 +75,27 @@ class VariableElimination(Inference):
         return [node for node in self.model.nodes() if
                 ((node not in evidence_vars) and self.model.is_active_trail(node, query, list(evidence_vars)))]
 
-    def _optimize_bayesian_marginalize(self, evidence, working_factors):
-        def _remove_factor(nodes, factors):
-            for node in nodes:
-                for key in factors:
-                    factors[key] = list(
-                                    filter(
-                                        lambda x: x.scope() !=
-                                        model_copy.get_cpds(node).scope(),
-                                        factors[key]
-                                    )
-                                )
+    def _optimize_bayesian_elimination(self, query, evidence, working_factors):
+        model_copy = self.model.copy()
+        factors_copy = copy.deepcopy(working_factors)
 
-        # Remove irrelevant variables (barren, independent and new roots).
-        # Collect root nodes
-        roots = self.model.roots()
-        # Remove all barren nodes.
-        evidence_var = list(evidence.keys()) if evidence else []
-        barren = model_copy.barren_nodes(list(variables) + evidence_var)
-        _remove_factor(barren, factors_copy)
-        model_copy.remove_nodes_from(barren)
-        # Remove all independent by evidence nodes
-        independent = model_copy.independent_by_evidence_nodes(
-                      variables, evidence)
-        _remove_factor(independent, factors_copy)
-        model_copy.remove_nodes_from(independent)
-        # Remove all nodes that weren't root but now are
-        new_roots = [n for n in model_copy.roots() if n not in roots]
-        _remove_factor(new_roots, factors_copy)
-        model_copy.remove_nodes_from(new_roots)
+        nodes_to_remove = []
+        # Barren Nodes
+        barren_nodes = model_copy._barren_nodes(list(query) + evidence)
+        nodes_to_remove.extend(barren_nodes)
+
+        # Independent Nodes
+        independent_nodes = model_copy._independent_by_evidence(query, evidence)
+        nodes_to_remove.extend(independent_nodes)
+
+        # Removing nodes
+        for node in nodes_to_remove:
+            for var, factor_set in factors_copy.items():
+                factors_copy[var] = {factor for factor in factor_set if
+                                     set(factor.scope()).intersection(nodes_to_remove)}
+            del factors_copy[node]
+            model_copy.remove_node(node)
+
         return model_copy, factors_copy
 
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
@@ -147,7 +139,8 @@ class VariableElimination(Inference):
 
         # Optimizations
         if isinstance(self.model, BayesianModel) and operation == "marginalize":
-            self.reduced_model, self.reduced_factors = self._optimize_bayesian_marginalize(evidence, working_factors)
+            self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(
+                                                        variables, evidence, working_factors)
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
