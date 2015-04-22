@@ -1,7 +1,8 @@
 from .base import Inference
+from .EliminationOrdering import *
 from .ExactInference import VariableElimination
 from .ExactInference import BeliefPropagation
-from .EliminationOrdering import *
+
 
 __all__ = ['Inference',
            'VariableElimination',
