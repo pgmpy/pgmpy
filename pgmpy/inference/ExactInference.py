@@ -16,9 +16,8 @@ from pgmpy.inference import BaseEliminationOrder, WeightedMinFill, MinNeighbours
 class VariableElimination(Inference):
     def _barren_nodes(self, variables):
         """
-        Return all barren variables, given the nodes to ignore
-        (query and/or evidence nodes). Barren variables
-        are leaf variables not in query of evidence.
+        Return all barren variables, given the nodes to ignore (query and/or evidence nodes).
+        Barren variables are leaf variables not in query or evidence.
 
         Parameters
         ----------
@@ -28,6 +27,8 @@ class VariableElimination(Inference):
 
         Reference
         ---------
+        A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+        Proceedings of Canadian Artificial Intelligence, 1994.
 
         Examples
         --------

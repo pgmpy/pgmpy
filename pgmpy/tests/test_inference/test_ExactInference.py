@@ -32,6 +32,10 @@ class TestVariableElimination(unittest.TestCase):
 
         self.bayesian_inference = VariableElimination(self.bayesian_model)
 
+    def test_barren_nodes(self):
+        barren_nodes = self.bayesian_inference._barren_nodes(['A', 'J'])
+        self.assertSetEqual(set(barren_nodes), {'L', 'Q', 'G'})
+
     # All the values that are used for comparision in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 

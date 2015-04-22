@@ -118,11 +118,12 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
-    def test_barren_nodes(self):
-        self.assertListEqual(sorted(self.G.barren_nodes(['d', 'a'])),
-                             ['c', 'e'])
-        self.assertListEqual(sorted(self.G.barren_nodes(['e', 'c'])),
-                             [])
+
+    # def test_barren_nodes(self):
+    #     self.assertListEqual(sorted(self.G.barren_nodes(['d', 'a'])),
+    #                          ['c', 'e'])
+    #     self.assertListEqual(sorted(self.G.barren_nodes(['e', 'c'])),
+    #                          [])
 
     def test_independent_by_evidence_nodes(self):
         self.assertListEqual(sorted(self.G.
