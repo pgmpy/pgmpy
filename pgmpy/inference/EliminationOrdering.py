@@ -6,16 +6,72 @@ from pgmpy.models import BayesianModel
 
 
 class BaseEliminationOrder:
+    """
+    Base class for finding elimination orders.
+    """
     def __init__(self, model):
+        """
+        Init method for the base class of Elimination Orders.
+
+        Parameters
+        ----------
+        model: BayesianModel instance
+            The model on which we want to compute the elimination orders.
+        """
         if not isinstance(model, BayesianModel):
             raise ValueError("Model should be a BayesianModel instance")
         self.bayesian_model = model
         self.moralized_model = self.bayesian_model.moralize()
 
     def cost(self, node):
+        """
+        The cost function to compute the cost of elimination of each node.
+        This method is just a dummy and returns 0 for all the nodes. Actual cost functions
+        are implemented in the classes inheriting BaseEliminationOrder.
+
+        Parameters
+        ----------
+        node: string, any hashable python object.
+            The node whose cost is to be computed.
+        """
         return 0
 
     def get_elimination_order(self, nodes):
+        """
+        Returns the optimal elimination order.
+
+        Parameters
+        ----------
+        nodes: list, tuple, set (array-like)
+            The variables which are to be eliminated.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> model = BayesianModel([('c', 'd'), ('d', 'g'), ('i', 'g'),
+        ...                        ('i', 's'), ('s', 'j'), ('g', 'l'),
+        ...                        ('l', 'j'), ('j', 'h'), ('g', 'h')])
+        >>> cpd_c = TabularCPD('c', 2, np.random.rand(2, 1))
+        >>> cpd_d = TabularCPD('d', 2, np.random.rand(2, 2),
+        ...                   ['c'], [2])
+        >>> cpd_g = TabularCPD('g', 3, np.random.rand(3, 4),
+        ...                   ['d', 'i'], [2, 2])
+        >>> cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
+        >>> cpd_s = TabularCPD('s', 2, np.random.rand(2, 2),
+        ...                   ['i'], [2])
+        >>> cpd_j = TabularCPD('j', 2, np.random.rand(2, 4),
+        ...                   ['l', 's'], [2, 2])
+        >>> cpd_l = TabularCPD('l', 2, np.random.rand(2, 3),
+        ...                   ['g'], [3])
+        >>> cpd_h = TabularCPD('h', 2, np.random.rand(2, 6),
+        ...                   ['g', 'j'], [3, 2])
+        >>> model.add_cpds(cpd_c, cpd_d, cpd_g, cpd_i, cpd_s, cpd_j,
+        ...                cpd_l, cpd_h)
+        >>> WeightedMinFill(model).get_elimination_order(['c', 'd', 'g', 'l', 's'])
+        ['c', 'l', 's', 'd', 'g']
+        """
         ordering = []
         while nodes:
             scores = {node: self.cost(node) for node in nodes}
@@ -30,7 +86,7 @@ class BaseEliminationOrder:
 
         Parameters
         ----------
-        node: one node.
+        node: string (any hashable python object)
             Node to be removed from the graph.
         """
         return combinations(self.bayesian_model.neighbours(node), 2)
@@ -38,6 +94,12 @@ class BaseEliminationOrder:
 
 class WeightedMinFill(BaseEliminationOrder):
     def cost(self, node):
+        """
+        Cost function for WeightedMinFill.
+        The cost of eliminating a node is the sum of weights of the edges that need to
+        be added to the graph due to its elimination, where a weight of an edge is the
+        product of the weights, domain cardinality, of its constituent vertices.
+        """
         edges = self.moralized_model.fill_in_edges(node)
         return sum([self.bayesian_model.get_cardinality(edge[0]) *
                     self.bayesian_model.get_cardinality(edge[1]) for edge in edges])
@@ -45,119 +107,27 @@ class WeightedMinFill(BaseEliminationOrder):
 
 class MinNeighbours(BaseEliminationOrder):
     def cost(self, node):
+        """
+        The cost of a eliminating a node is the number of neighbors it has in the
+        current graph.
+        """
         return len(self.moralized_model.neighbors(node))
 
 
 class MinWeight(BaseEliminationOrder):
     def cost(self, node):
+        """
+        The cost of a eliminating a node is the product of weights, domain cardinality,
+        of its neighbors.
+        """
         return np.prod([self.bayesian_model.get_cardinality(neig_node) for neig_node in
                         self.moralized_model.neighbors(node)])
 
 
 class MinFill(BaseEliminationOrder):
     def cost(self, node):
+        """
+        The cost of a eliminating a node is the number of edges that need to be added
+        (fill in edges) to the graph due to its elimination
+        """
         return len(self.moralized_model.fill_in_edges(node))
-
-# class EliminationOrdering:
-#
-#     """
-#     This class implements tools to help finding good elimination orderings.
-#     Besically, a greedy algorithm scores each variables currently in the
-#     moralized graph, pick one, removing it, and score the graph again.
-#     The scoring is done by a cost function. From ('Probabilistic Graphical
-#     Model Principles and Techniques' - Koller and Friedman), "empirical results
-#     show that these heuristic algorithms [min-neighbors, min-fill, min-weight,
-#     weighted-min-fill] perform surprisingly well in practice. Generally,
-#     Min-Fill and Weighted-Min-Fill tend to work better on more problems".
-#
-#     Parameters
-#     ----------
-#     model: input bayesian model
-#         A bayesian model to be moralized (an undirected graph where the parents
-#         of a v-structures are connected).
-#     """
-#
-#     def __init__(self, model):
-#         self.bayesian_model = model
-#         if not isinstance(model, BayesianModel):
-#             raise ValueError("EliminationOrdering should"
-#                              " receive a Bayesian model.")
-#         self.moralized_graph = self.bayesian_model.moralize()
-#
-#     def find_elimination_ordering(self, nodes, cost_func):
-#         """
-#         A greedy algorithm that eliminates a less score variable per time.
-#
-#         Parameters
-#         ----------
-#         nodes: list with nodes
-#             nodes to be eliminated
-#         cost_func: a function
-#             A function which can compute the score of a given
-#         """
-#         ordering = []
-#         while nodes:
-#             scorings = [{"node": v, "score": cost_func(v)} for v in nodes]
-#             scorings_in_order = sorted(scorings, key=lambda k: k['score'])
-#             ordering.append(scorings_in_order[0]["node"])
-#             nodes.remove(scorings_in_order[0]["node"])
-#         return ordering
-#
-#     def weighted_min_fill(self, node):
-#         """
-#         The score of a node is the sum of weights of the edges that need to
-#         be added to the graph due to its elimination, where a weight of an
-#         edge is the product of the weights, domain cardinality, of its
-#         constituent vertices.
-#
-#         Parameters
-#         ----------
-#             node: a string
-#                 the variable to be scored
-#         """
-#         edges = self.moralized_graph.fill_in_edges(node)
-#         sum_weight = 0
-#         for edge in edges:
-#             sum_weight = sum_weight + \
-#                 self.bayesian_model.get_cardinality(
-#                     edge[0]) * self.bayesian_model.get_cardinality(edge[1])
-#         return sum_weight
-#
-#     def min_neighbors(self, node):
-#         """
-#         The cost of a node is the number of neighbors it has in
-#         the current graph.
-#
-#         Parameters
-#         ----------
-#             node: a string
-#                 the variable to be scored
-#         """
-#         return len(self.moralized_graph.neighbors(node))
-#
-#     def min_weight(self, node):
-#         """
-#         The cost of a vertex is the product of weights, domain cardinality,
-#         of its neighbors.
-#
-#         Parameters
-#         ----------
-#             node: a string
-#                 the variable to be scored
-#         """
-#         product = 1
-#         for neighbor in self.moralized_graph.neighbors(node):
-#             product = product * self.bayesian_model.get_cardinality(neighbor)
-#         return product
-#
-#     def min_fill(self, node):
-#         """
-#         The cost of a node is the number of edges that need to be added
-#         (fill in edges) to the graph due to its elimination
-#
-#         Parameters
-#         ----------
-#             node: a string
-#                 the variable to be scored
-#         """
-#         return len(self.moralized_graph.fill_in_edges(node))
