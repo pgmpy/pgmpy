@@ -125,10 +125,10 @@ class TestBayesianModelMethods(unittest.TestCase):
     #     self.assertListEqual(sorted(self.G.barren_nodes(['e', 'c'])),
     #                          [])
 
-    def test_independent_by_evidence_nodes(self):
-        self.assertListEqual(sorted(self.G.
-                             independent_by_evidence_nodes('e', {'d': 0})),
-                             ['a', 'b', 'c'])
+    # def test_independent_by_evidence_nodes(self):
+    #     self.assertListEqual(sorted(self.G.
+    #                          independent_by_evidence_nodes('e', {'d': 0})),
+    #                          ['a', 'b', 'c'])
 
     def tearDown(self):
         del self.G

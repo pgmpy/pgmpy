@@ -54,12 +54,26 @@ class VariableElimination(Inference):
                 break
         return barren_vars
 
-    def _independent_by_evidence_nodes(self, variables, evidence):
-        evidence_vars = evidence.keys() if evidence is not None else []
-        return [v for v in self.nodes()
-                if (v not in evidence_vars) and
-                not self.is_active_trail(v, query,
-                                         list(evidence_vars))]
+    def _independent_by_evidence(self, query, evidence):
+        """
+        Return all the variables that doesn't have an active trail to any of the query variables,
+        given the evidence.
+
+        Parameters
+        ----------
+        query: string
+            The query variable.
+        evidence: dict
+            Evidences given for inference.
+
+        Reference
+        ---------
+        LAZY propagation: A junction tree inference algorithm based on lazy evaluation, Anders L. Madsen,
+        Finn V. Jensen, Artificial Intelligence 113 (1999) 203–245
+        """
+        evidence_vars = evidence.keys() if evidence else []
+        return [node for node in self.model.nodes() if
+                ((node not in evidence_vars) and self.model.is_active_trail(node, query, list(evidence_vars)))]
 
     def _optimize_bayesian_marginalize(self, evidence, working_factors):
         def _remove_factor(nodes, factors):
