@@ -150,7 +150,8 @@ class VariableElimination(Inference):
         query_var_factor = {}
         for query_var in variables:
             phi = factor_product(*final_distribution)
-            phi.marginalize(list(set(variables) - set([query_var])))
+            phi = phi.marginalize(list(set(variables) - set([query_var])),
+                                  inplace=False)
             query_var_factor[query_var] = phi.normalize(inplace=False)
         return query_var_factor
 
