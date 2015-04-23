@@ -1,5 +1,5 @@
 import unittest
-from pgmpy.inference import EliminationOrdering
+from pgmpy.inference.EliminationOrdering import EliminationOrdering, find_elimination_ordering
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
@@ -48,26 +48,22 @@ class TestEliminationOrdering(unittest.TestCase):
         self.assertEqual(self.elim_ord.min_fill('h'), 0)
 
     def test_find_elimination_ordering(self):
-        self.assertListEqual(self.elim_ord.
-                             find_elimination_ordering(['c', 'd',
+        self.assertListEqual(find_elimination_ordering(['c', 'd',
                                                         'g', 'l', 's'],
                                                        self.elim_ord.
                                                        weighted_min_fill),
                              ['c', 'l', 's', 'd', 'g'])
-        self.assertListEqual(self.elim_ord.
-                             find_elimination_ordering(['c', 'd',
+        self.assertListEqual(find_elimination_ordering(['c', 'd',
                                                         'g', 'l', 's'],
                                                        self.elim_ord.
                                                        min_neighbors),
                              ['c', 'd', 'l', 's', 'g'])
-        self.assertListEqual(self.elim_ord.
-                             find_elimination_ordering(['c', 'd',
+        self.assertListEqual(find_elimination_ordering(['c', 'd',
                                                         'g', 'l', 's'],
                                                        self.elim_ord.
                                                        min_weight),
                              ['c', 's', 'd', 'l', 'g'])
-        self.assertListEqual(self.elim_ord.
-                             find_elimination_ordering(['c', 'd',
+        self.assertListEqual(find_elimination_ordering(['c', 'd',
                                                         'g', 'l', 's'],
                                                        self.elim_ord.
                                                        min_fill),

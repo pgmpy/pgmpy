@@ -27,25 +27,6 @@ class EliminationOrdering(object):
                              " receive a Bayesian model.")
         self.moralized_graph = self.bayesian_model.moralize()
 
-    def find_elimination_ordering(self, nodes, cost_func):
-        """
-        A greedy algorithm that eliminates a less score variable per time.
-
-        Parameters
-        ----------
-        nodes: list with nodes
-            nodes to be eliminated
-        cost_func: a function
-            A function which can compute the score of a given
-        """
-        ordering = []
-        while nodes:
-            scorings = [{"node": v, "score": cost_func(v)} for v in nodes]
-            scorings_in_order = sorted(scorings, key=lambda k: k['score'])
-            ordering.append(scorings_in_order[0]["node"])
-            nodes.remove(scorings_in_order[0]["node"])
-        return ordering
-
     def weighted_min_fill(self, node):
         """
         The score of a node is the sum of weights of the edges that need to
@@ -104,3 +85,23 @@ class EliminationOrdering(object):
                 the variable to be scored
         """
         return len(self.moralized_graph.fill_in_edges(node))
+
+
+def find_elimination_ordering(nodes, cost_func):
+    """
+    A greedy algorithm that eliminates a less score variable per time.
+
+    Parameters
+    ----------
+    nodes: list with nodes
+        nodes to be eliminated
+    cost_func: a function
+        A function which can compute the score of a given
+    """
+    ordering = []
+    while nodes:
+        scorings = [{"node": v, "score": cost_func(v)} for v in nodes]
+        scorings_in_order = sorted(scorings, key=lambda k: k['score'])
+        ordering.append(scorings_in_order[0]["node"])
+        nodes.remove(scorings_in_order[0]["node"])
+    return ordering

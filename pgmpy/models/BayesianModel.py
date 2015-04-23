@@ -5,7 +5,6 @@ from collections import defaultdict
 import networkx as nx
 import numpy as np
 import pandas as pd
-from pgmpy.exceptions import Exceptions
 
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
@@ -685,7 +684,7 @@ class BayesianModel(DirectedGraph):
         ---------
         LAZY propagation: A junction tree inference algorithm based
         on lazy evaluation, Anders L. Madsen, Finn V. Jensen,
-        Artificial Intelligence 113 (1999) 203–245
+        Artificial Intelligence 113 (1999) 203-245
         """
         evidence_vars = evidence.keys() if evidence is not None else []
         return [v for v in self.nodes()
