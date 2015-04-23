@@ -262,6 +262,7 @@ class ProbModelXMLWriter:
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
         self.potential = etree.SubElement(self.probnet, 'Potential')
+        self.additional_constraints = etree.SubElement(self.probnet, 'AdditionalConstraints')
 
         # adding information for probnet
         self.probnet.attrib['type'] = self.data['probnet']['type']
@@ -277,6 +278,10 @@ class ProbModelXMLWriter:
             self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
         except KeyError:
             etree.SubElement(self.probnet, 'AdditionalProperties')
+
+        # Add Additional Constraints
+        for constraint in sorted(self.data['probnet']['AdditionalConstraints']):
+            self._add_constraint(constraint)
 
         # Add variables
         for variable in sorted(self.data['probnet']['Variables']):
@@ -340,6 +345,18 @@ class ProbModelXMLWriter:
             self._add_additional_properties(link, edge_data['AdditionalProperties'])
         except KeyError:
             etree.SubElement(link, 'AdditionalProperties')
+
+    def _add_constraint(self, constraint):
+        """
+        Adds constraint to the ProbModelXML.
+        """
+        constraint_data = self.data['probnet']['AdditionalConstraints'][constraint]
+        constraint_element = etree.SubElement(
+            self.additional_constraints, 'Constraint', attrib={'name': constraint})
+        for argument in sorted(constraint_data):
+            name = argument
+            value = constraint_data[name]
+            etree.SubElement(constraint_element, 'Argument', attrib={'name': name, 'value': value})
 
     def _add_potential(self):
         pass

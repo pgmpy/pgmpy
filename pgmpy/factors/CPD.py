@@ -113,6 +113,18 @@ class TabularCPD(Factor):
 
         super().__init__(variables, cardinality, values.flatten('C'))
 
+    def __repr__(self):
+        var_str = '<TabularCPD representing P({var}:{card}'.format(
+                            var=self.variable, card=self.variable_card)
+
+        if self.evidence:
+            evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
+                                              for var, card in zip(self.evidence, self.evidence_card)])
+        else:
+            evidence_str = ''
+
+        return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
+
     def get_cpd(self):
         """
         Returns the cpd
@@ -123,9 +135,6 @@ class TabularCPD(Factor):
             return self.values.reshape(1, np.prod(self.cardinality))
 
     def __str__(self):
-        return self._str(html=False)
-
-    def _str(self, html=False):
         table_list = []
         indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
         scope = self.scope()
@@ -134,26 +143,12 @@ class TabularCPD(Factor):
             row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
             table_list.append(row)
         table_list.extend(np.column_stack((np.array(self.variables[self.variable]), self.get_cpd())))
-        return tabulate(table_list, tablefmt="grid")
+        return tabulate(table_list, tablefmt="fancy_grid")
 
     def _repr_html_(self):
         """
         Print TabularCPD in form of a table in IPython Notebook
         """
-        # Checks for IPython Notebook, not required in IPython 3
-        try:
-            ip = get_ipython()
-            front_end = (
-                ip.config.get('KernelApp', {}).get('parent_appname', "") or
-                ip.config.get('IPKernelApp', {}).get('parent_appname', "")
-            )
-            if 'notebook' in front_end.lower():
-                pass
-            else:
-                return str(self)
-        except NameError:
-            return str(self)
-
         string_list = []
 
         cpd_value = self.get_cpd()
@@ -307,6 +302,34 @@ class TabularCPD(Factor):
             return tabular_cpd
 
     def to_factor(self):
+        """
+        Returns an equivalent factor with the same variables, cardinality, values as that of the cpd
+
+        Examples
+        --------
+        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+        ...                               [0.1, 0.1],
+        ...                               [0.8, 0.8]],
+        ...                  evidence='evi1', evidence_card=2)
+        >>> factor = cpd.to_factor()
+        >>> print(factor)
+        ╒═════════╤════════╤═══════════════════╕
+        │ grade   │ evi1   │   phi(grade,evi1) │
+        ╞═════════╪════════╪═══════════════════╡
+        │ grade_0 │ evi1_0 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_0 │ evi1_1 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_1 │ evi1_0 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_1 │ evi1_1 │            0.1000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_2 │ evi1_0 │            0.8000 │
+        ├─────────┼────────┼───────────────────┤
+        │ grade_2 │ evi1_1 │            0.8000 │
+        ╘═════════╧════════╧═══════════════════
+        """
         return Factor(self.variables, self.cardinality, self.values)
 
 
@@ -384,7 +407,7 @@ class TreeCPD(nx.DiGraph):
         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
         """
         if u != v:
-            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u): 
+            if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
                 # check if adding edge (u, v) forms a cycle
                 raise ValueError(
                     'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
@@ -422,46 +445,56 @@ class TreeCPD(nx.DiGraph):
         nx.DiGraph.add_edges_from(self, [(edge[0], edge[1], {'label': edge[2]}) for edge in ebunch])
 
     def to_tabular_cpd(self, parents_order=None):
-        from collections import OrderedDict
+        edge_attributes = nx.get_edge_attributes(self, 'label')
+        edge_values = {}
+        edge_dict = {}
+        adjlist = {}
+        node_list = []
+        stack = []
+        values = []
+        cardinality = []
+        
+        for edge in edge_attributes:
+            edge_dict.setdefault(edge[0], []).append(edge_attributes[edge])
+            if isinstance(edge[1], Factor):
+                variable = edge[1].scope()
+                variable_card = edge[1].cardinality
+                edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1].values.tolist()
+            else:
+                edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1]
+        #adjlist
+        for source in self.nodes():
+            if not isinstance(source, Factor):
+                adjlist[source] = [i[1] for i in edge_attributes if not isinstance(i[1], Factor) and i[0] == source]
+                adjlist[source] = sorted(adjlist[source], key=lambda x: (len(nx.descendants(self, x)), x))
 
         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
-        evidence = []
-        evidence_card = []
-        paths = []
+        stack.append(root)
 
-        # DFS for finding the evidences and evidence cardinalities and paths to factors.
-        def dfs(node, path):
-            if isinstance(node, tuple):
-                evidence.extend(node)
-                labels = [value['label'] for value in self.edge[node].values()]
-                labels_zip = zip(*labels)
-                for i in range(len(node)):
-                    evidence_card.append(max(labels_zip[i]))
+        #dfs
+        while stack:
+            top_node = stack[-1]
+            node_list.append(top_node)
+            stack = stack[:-1]
+            for end_node in adjlist[top_node]:
+                stack.append(end_node)
 
-            elif isinstance(node, Factor):
-                variable = node.scope()
-                path.append((path, node))
+        for node in node_list:
+            cardinality.append(len(edge_dict[node]))
 
-            else:
-                evidence.append(node)
-                evidence_card.append(self.out_degree(node))
+        for i in product(*[range(index) for index in cardinality]):
+            edge_list = [a + str(b) for a, b in zip(node_list, i)]
+            current_node = root
+            for edge in edge_list:
+                if (current_node, edge) in edge_values.keys():
+                    if not isinstance(edge_values[(current_node, edge)], list):
+                        current_node = edge_values[(current_node, edge)]
+                    else:
+                        values.append(edge_values[(current_node, edge)])
+                        break
 
-            for out_edge in self.out_edges_iter(node):
-                path.update({node: self.edge[node][out_edge[1]]['label']})
-                dfs(out_edge[1])
-
-        dfs(root, path=OrderedDict())
-
-        if parents_order:
-            new_evidence = []
-            new_evidence_card = []
-            for var in parents_order:
-                new_evidence.append(var)
-                new_evidence_card.append(evidence_card[evidence.index(var)])
-            evidence = new_evidence
-            evidence_card = new_evidence_card
-
-    # TODO: Construct TabularCPD from the paths
+        values = np.array(values).flatten('F').reshape((len(values[0]), len(values)))
+        return TabularCPD(variable[0], int(variable_card[0]), values, node_list[::-1], cardinality)
 
     def to_rule_cpd(self):
         """

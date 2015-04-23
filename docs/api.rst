@@ -26,6 +26,9 @@ Undirected Graphical Models
 .. autoclass:: FactorGraph
    :members:
 
+.. autoclass:: ClusterGraph
+   :members:
+
 .. autoclass:: JunctionTree
    :members:
 
@@ -47,6 +50,9 @@ factors module
    :members:
 
 .. autoclass:: JointProbabilityDistribution
+   :members:
+
+.. autoclass:: FactorSet
    :members:
 
 inference module

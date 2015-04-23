@@ -13,9 +13,9 @@ irc: #pgmpy on freenode.net
 Dependencies:
 =============
 - Python 3.3
-- NetworkX 1.8.1
+- NetworkX 1.9.1
 - Scipy 0.12.1
-- Numpy 1.7.1
+- Numpy 1.9.2
 - Cython 0.21
 - Pandas 0.15.1
 
