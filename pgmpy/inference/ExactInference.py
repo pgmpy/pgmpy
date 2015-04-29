@@ -75,17 +75,19 @@ class VariableElimination(Inference):
         return [node for node in self.model.nodes() if
                 ((node not in evidence_vars) and self.model.is_active_trail(node, query, list(evidence_vars)))]
 
-    def _optimize_bayesian_elimination(self, query, evidence, working_factors):
+    def _optimize_bayesian_elimination(self, query, evidence):
+        # import pdb; pdb.set_trace()
+        evidence = evidence if evidence else {}
         model_copy = self.model.copy()
-        factors_copy = copy.deepcopy(working_factors)
+        factors_copy = copy.deepcopy(self.working_factors)
 
         nodes_to_remove = []
         # Barren Nodes
-        barren_nodes = model_copy._barren_nodes(list(query) + evidence)
+        barren_nodes = self._barren_nodes(list(query) + list(evidence.keys()))
         nodes_to_remove.extend(barren_nodes)
 
         # Independent Nodes
-        independent_nodes = model_copy._independent_by_evidence(query, evidence)
+        independent_nodes = self._independent_by_evidence(query, evidence)
         nodes_to_remove.extend(independent_nodes)
 
         # Removing nodes
@@ -123,8 +125,13 @@ class VariableElimination(Inference):
             return set(all_factors)
 
         # Load all factors used in this session of Variable Elimination
-        working_factors = {node: {factor for factor in self.reduced_factors[node]}
-                           for node in self.reduced_model}
+        self.working_factors = {node: {factor for factor in self.factors[node]}
+                           for node in self.model}
+
+        # Optimizations
+        if isinstance(self.model, BayesianModel) and operation == "marginalize":
+            self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(
+                                                        variables, evidence)
 
         # Finding the elimination_order
         if isinstance(elimination_order, BaseEliminationOrder):
@@ -137,21 +144,16 @@ class VariableElimination(Inference):
             if set(elimination_order) != set(self.reduced_model.nodes()):
                 raise ValueError("Variables in elimination_order not in the model")
 
-        # Optimizations
-        if isinstance(self.model, BayesianModel) and operation == "marginalize":
-            self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(
-                                                        variables, evidence, working_factors)
-
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor in working_factors[evidence_var]:
+                for factor in self.working_factors[evidence_var]:
                     factor_reduced = factor.reduce('{evidence_var}_{state}'.format(
                         evidence_var=evidence_var, state=evidence[evidence_var]), inplace=False)
                     for var in factor_reduced.scope():
-                        working_factors[var].remove(factor)
-                        working_factors[var].add(factor_reduced)
-                del working_factors[evidence_var]
+                        self.working_factors[var].remove(factor)
+                        self.working_factors[var].add(factor_reduced)
+                del self.working_factors[evidence_var]
 
         # if not elimination_order:
         #     # If is BayesianModel, find a good elimination ordering

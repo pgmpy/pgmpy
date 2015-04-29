@@ -401,6 +401,7 @@ class BayesianModel(DirectedGraph):
         >>> student.is_active_trail('grade', 'sat')
         True
         """
+        import pdb; pdb.set_trace()
         if end in self.active_trail_nodes(start, observed):
             return True
         else:
