@@ -83,7 +83,6 @@ class VariableElimination(Inference):
         return return_nodes
 
     def _optimize_bayesian_elimination(self, query, evidence_vars):
-        import pdb; pdb.set_trace()
         model_copy = self.model.copy()
         factors_copy = copy.deepcopy(self.working_factors)
 
@@ -106,6 +105,7 @@ class VariableElimination(Inference):
 
         return model_copy, factors_copy
 
+    @profile
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
@@ -140,14 +140,16 @@ class VariableElimination(Inference):
             self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(variables, evidence_vars)
 
         # Finding the elimination_order
+        var_to_eliminate = set(self.reduced_model.nodes()) - set(variables) - \
+                           set(evidence.keys() if evidence else [])
         if isinstance(elimination_order, BaseEliminationOrder):
-            elimination_order = elimination_order.get_elimination_order(self.model.nodes())
+            elimination_order = elimination_order.get_elimination_order(var_to_eliminate)
         elif isinstance(elimination_order, str):
-            elimination_order = getattr(elimination_order, 'get_elimination_order')(self.model.nodes())
+            elimination_order = getattr(elimination_order, 'get_elimination_order')(var_to_eliminate)
         elif elimination_order is None:
-            elimination_order = WeightedMinFill(self.reduced_model).get_elimination_order(self.model.nodes())
+            elimination_order = WeightedMinFill(self.reduced_model).get_elimination_order(var_to_eliminate)
         elif isinstance(elimination_order, (list, tuple)):
-            if set(elimination_order) != set(self.reduced_model.nodes()):
+            if set(elimination_order) != var_to_eliminate:
                 raise ValueError("Variables in elimination_order not in the model")
 
         # Dealing with evidence. Reducing factors over it before VE is run.
@@ -207,7 +209,6 @@ class VariableElimination(Inference):
                            eliminated_variables):
                     final_distribution.add(factor)
 
-        import pdb; pdb.set_trace()
         # Normalization
         query_var_factor = {}
         for query_var in variables:
