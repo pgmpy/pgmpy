@@ -7,12 +7,15 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.inference import Inference
+from pgmpy.inference.EliminationOrdering import EliminationOrdering, find_elimination_ordering
 from pgmpy.factors.Factor import factor_product
+from pgmpy.models import BayesianModel
 from pgmpy.models import JunctionTree
 
 
 class VariableElimination(Inference):
-    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation,
+                              evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
 
@@ -36,38 +39,71 @@ class VariableElimination(Inference):
                 all_factors.extend(factor_li)
             return set(all_factors)
 
-        eliminated_variables = set()
-        working_factors = {node: {factor for factor in self.factors[node]}
-                           for node in self.factors}
+        # Removing barren and independent variables generate sub-models
+        # (a modified version of the model).
+        # Then, a copy is used to do not disturb the original model.
+        model_copy = self.model.copy()
+        factors_copy = self.factors.copy()
+
+        # The following removal of irrelevant variables is only defined
+        # for BayesianModels when computing the with operation
+        # "marginalize" and not "maximize".
+        if isinstance(model_copy,
+                      BayesianModel) and operation == "marginalize":
+            VariableElimination._remove_irrelevant(model_copy, factors_copy,
+                                                   variables, evidence)
+
+        # Load all factors used in this session of Variable Elimination
+        working_factors = {node: {factor for factor in factors_copy[node]}
+                           for node in factors_copy}
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor in working_factors[evidence_var]:
-                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
-                                                                                   state=evidence[evidence_var]),
-                                                   inplace=False)
+                for factor in working_factors[evidence_var].copy():
+                    factor_reduced = factor.reduce(
+                        '{evidence_var}_{state}'
+                        .format(evidence_var=evidence_var,
+                                state=evidence[evidence_var]),
+                        inplace=False)
                     for var in factor_reduced.scope():
                         working_factors[var].remove(factor)
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
 
-        # TODO: Modify it to find the optimal elimination order
         if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
+            # If is BayesianModel, find a good elimination ordering
+            # using Weighted-Min-Fill heuristic.
+            if isinstance(model_copy, BayesianModel):
+                elim_ord = EliminationOrdering(model_copy)
+                elimination_order = find_elimination_ordering(
+                    list(set(model_copy.nodes()) -
+                         set(variables) -
+                         set(evidence.keys()
+                             if evidence else [])),
+                    elim_ord.weighted_min_fill)
+            else:
+                elimination_order = list(set(self.variables) -
+                                         set(variables) -
+                                         set(evidence.keys()
+                                             if evidence else []))
 
         elif any(var in elimination_order for var in
-                 set(variables).union(set(evidence.keys() if evidence else []))):
-            raise ValueError("Elimination order contains variables which are in"
-                             " variables or evidence args")
+                 set(variables).union(
+                    set(evidence.keys() if evidence else [])
+                    )
+                 ):
+            raise ValueError("Elimination order contains variables"
+                             " which are in variables or evidence args")
 
+        # Perform elimination ordering
+        eliminated_variables = set()
         for var in elimination_order:
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in working_factors[var]
-                       if not set(factor.variables).intersection(eliminated_variables)]
+                       if not set(factor.variables).intersection(
+                        eliminated_variables)]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)(var, inplace=False)
             del working_factors[var]
@@ -79,13 +115,16 @@ class VariableElimination(Inference):
         for node in working_factors:
             factors = working_factors[node]
             for factor in factors:
-                if not set(factor.variables).intersection(eliminated_variables):
+                if not set(factor.variables).intersection(
+                           eliminated_variables):
                     final_distribution.add(factor)
 
+        # Normalization
         query_var_factor = {}
         for query_var in variables:
             phi = factor_product(*final_distribution)
-            phi.marginalize(list(set(variables) - set([query_var])))
+            phi = phi.marginalize(list(set(variables) - set([query_var])),
+                                  inplace=False)
             query_var_factor[query_var] = phi.normalize(inplace=False)
         return query_var_factor
 
@@ -291,6 +330,56 @@ class VariableElimination(Inference):
         """
         induced_graph = self.induced_graph(elimination_order)
         return nx.graph_clique_number(induced_graph) - 1
+
+    @staticmethod
+    def _remove_irrelevant(model, factors, query_vars, evidence):
+        """
+        Remove irrelevant factors (and variables). Given the query and
+        evidence, some nodes can be safely removed from the model:
+        barren, independent by evidence (followed by new root nodes).
+
+        Parameters
+        ----------
+        model: a BayesianModel
+            A model which will me modified by removing nodes.
+        factors: list of factors
+            Factors representing the factorization of the model.
+        query_vars: list of nodes
+            Variables on the query.
+        evidence: a dictionary
+            Evidence variables and its values.
+        """
+        # A helper function to remove the factor related to a list of
+        # nodes from a BayesianModel.
+        def _remove_factor(nodes, factors):
+            for node in nodes:
+                factor_scope = model.get_cpds(node).scope()
+                for key in factors:
+                    factors[key] = list(
+                        filter(
+                            lambda x: x.scope() !=
+                            factor_scope,
+                            factors[key]
+                            )
+                        )
+
+        # Remove irrelevant variables (barren, independent and new roots).
+        # Collect root nodes
+        roots = model.roots()
+        # Remove all barren nodes.
+        evidence_var = list(evidence.keys()) if evidence else []
+        barren = model.barren_nodes(list(query_vars) + evidence_var)
+        _remove_factor(barren, factors)
+        model.remove_nodes_from(barren)
+        # Remove all independent by evidence nodes
+        independent = model.independent_by_evidence_nodes(
+            query_vars, evidence)
+        _remove_factor(independent, factors)
+        model.remove_nodes_from(independent)
+        # Remove all nodes that weren't root but now are
+        new_roots = [n for n in model.roots() if n not in roots]
+        _remove_factor(new_roots, factors)
+        model.remove_nodes_from(new_roots)
 
 
 class BeliefPropagation(Inference):

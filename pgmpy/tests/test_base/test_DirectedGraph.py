@@ -77,6 +77,19 @@ class TestDirectedGraphCreation(unittest.TestCase):
         del self.graph
 
 
+class TestDirectedGraphInformations(unittest.TestCase):
+    def setUp(self):
+        self.graph = DirectedGraph()
+
+    def test_leaves(self):
+        self.graph.add_edges_from([('a', 'b'), ('c', 'b'), ('b', 'd')])
+        self.assertListEqual(self.graph.leaves(), ['d'])
+
+    def test_roots(self):
+        self.graph.add_edges_from([('a', 'b'), ('c', 'b'), ('b', 'd')])
+        self.assertListEqual(sorted(self.graph.roots()), ['a', 'c'])
+
+
 class TestDirectedGraphMoralization(unittest.TestCase):
     def setUp(self):
         self.graph = DirectedGraph()

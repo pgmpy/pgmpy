@@ -400,7 +400,8 @@ class BayesianModel(DirectedGraph):
         >>> student.is_active_trail('grade', 'sat')
         True
         """
-        if end in self.active_trail_nodes(start, observed):
+        active_trails = self.active_trail_nodes(start, observed)
+        if len(set(active_trails).intersection(set(end))) != 0:
             return True
         else:
             return False
@@ -615,3 +616,78 @@ class BayesianModel(DirectedGraph):
 
     def is_imap(self, independence):
         pass
+
+    def get_cardinality(self, variable):
+        """
+        Returns cardinality of a given variable by looking for
+        the variable withing the factors of the BayesianModel.
+
+        Parameters
+        ----------
+        variable: a node
+
+        """
+        if variable not in self.nodes():
+            raise ValueError("%s not in scope of any CPD assigned to "
+                             "this model" % variable)
+        if len(self.get_cpds()) == 0:
+            raise ValueError("No CPDs assigned to this model.")
+        cardinalities = [cpd.get_cardinality(variable)
+                         for cpd in self.get_cpds()
+                         if variable in cpd.variables]
+        return cardinalities[0]
+
+    def barren_nodes(self, variables):
+        """
+        Return all barren variables, given the nodes to ignore
+        (query and/or evidence nodes). Barren variables
+        are leaf variables not in query of evidence.
+
+        Parameters
+        ----------
+        variables: a list, list-type
+            name of all variables to me desconsidered
+            (query and evidence variables)
+
+        Reference
+        ---------
+        A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+        Proceedings of Canadian Artificial Intelligence, 1994.
+        """
+        copy_model = self.copy()
+        barren_vars = []
+        while True:
+            barren = [v for v in (n for n, d
+                      in copy_model.out_degree_iter()
+                      if d == 0) if v not in variables]
+            barren_vars.extend(barren)
+            copy_model.remove_nodes_from(barren)
+            if len(barren) == 0:
+                break
+        return barren_vars
+
+    def independent_by_evidence_nodes(self, query, evidence):
+        """
+        Return all independent by evidence variables.
+        They are variables that does not have an
+        active trail to any of the query variables,
+        given the evidence.
+
+        Parameters
+        ----------
+        query: one query variable
+            The query variable
+        evidence: dictionary with evidences
+            Evidences given for inference
+
+        Reference
+        ---------
+        LAZY propagation: A junction tree inference algorithm based
+        on lazy evaluation, Anders L. Madsen, Finn V. Jensen,
+        Artificial Intelligence 113 (1999) 203-245
+        """
+        evidence_vars = evidence.keys() if evidence is not None else []
+        return [v for v in self.nodes()
+                if (v not in evidence_vars) and
+                not self.is_active_trail(v, query,
+                                         list(evidence_vars))]

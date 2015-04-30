@@ -535,13 +535,10 @@ class Factor:
 def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     """
     Returns product of two factors.
-
     Parameters
     ----------
     phi1: factors
-
     phi2: factors
-
     operation: M | D
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2

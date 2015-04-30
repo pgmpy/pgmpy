@@ -166,6 +166,18 @@ class DirectedGraph(nx.DiGraph):
         """
         return self.predecessors(node)
 
+    def leaves(self):
+        """
+        Returns a list of leaves of the graph.
+        """
+        return [n for n, d in self.out_degree_iter() if d == 0]
+
+    def roots(self):
+        """
+        Returns a list of roots of the graph.
+        """
+        return [n for n, d in self.in_degree().items() if d == 0]
+
     def moralize(self):
         """
         Removes all the immoralities in the DirectedGraph and creates a moral
