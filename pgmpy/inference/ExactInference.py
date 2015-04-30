@@ -105,7 +105,6 @@ class VariableElimination(Inference):
 
         return model_copy, factors_copy
 
-    @profile
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
@@ -189,6 +188,7 @@ class VariableElimination(Inference):
         # Perform elimination ordering
         eliminated_variables = set()
         for var in elimination_order:
+            import pdb; pdb.set_trace()
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in self.working_factors[var]
