@@ -83,17 +83,18 @@ class VariableElimination(Inference):
         return return_nodes
 
     def _optimize_bayesian_elimination(self, query, evidence_vars):
+        import pdb; pdb.set_trace()
         model_copy = self.model.copy()
         factors_copy = copy.deepcopy(self.working_factors)
 
         nodes_to_remove = set()
         # Barren Nodes
         barren_nodes = self._barren_nodes(query, evidence_vars)
-        nodes_to_remove.union(barren_nodes)
+        nodse_to_remove = nodes_to_remove.union(barren_nodes)
 
         # Independent Nodes
         independent_nodes = self._independent_by_evidence(query, evidence_vars)
-        nodes_to_remove.union(independent_nodes)
+        nodes_to_remove = nodes_to_remove.union(independent_nodes)
 
         # Removing nodes
         for node in nodes_to_remove:
@@ -136,6 +137,7 @@ class VariableElimination(Inference):
         # Optimizations
         if isinstance(self.model, BayesianModel) and operation == "marginalize":
             evidence_vars = list(evidence.keys()) if evidence else []
+            import pdb; pdb.set_trace()
             self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(variables, evidence_vars)
 
         # Finding the elimination_order
