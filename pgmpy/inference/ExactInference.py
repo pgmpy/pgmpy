@@ -43,7 +43,16 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> barren_nodes = inference._barren_nodes(['A', 'B'])
         """
-        return set(self.model.get_leaves()) - set(variables)
+        model_copy = DirectedGraph(self.model.edges())
+        barren_vars = []
+        while True:
+            leaves = model_copy.get_leaves()
+            barren_nodes = [node for node in leaves if node not in variables]
+            barren_vars.extend(barren_nodes)
+            model_copy.remove_nodes_from(barren_nodes)
+            if not barren_nodes:
+                break
+        return barren_vars
 
     def _independent_by_evidence(self, query, evidence):
         """
