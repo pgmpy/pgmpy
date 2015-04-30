@@ -60,7 +60,7 @@ class VariableElimination(Inference):
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor in working_factors[evidence_var]:
+                for factor in working_factors[evidence_var].copy():
                     factor_reduced = factor.reduce(
                         '{evidence_var}_{state}'
                         .format(evidence_var=evidence_var,
