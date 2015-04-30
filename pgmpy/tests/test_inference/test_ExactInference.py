@@ -34,7 +34,7 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_barren_nodes(self):
         barren_nodes = self.bayesian_inference._barren_nodes(['A', 'J'])
-        self.assertSetEqual(set(barren_nodes), {'L', 'Q', 'G'})
+        self.assertSetEqual(set(barren_nodes), {'L', 'Q'})
 
     def test_independent_by_evidence(self):
         independent_nodes = self.bayesian_inference._independent_by_evidence('A', {'J': 0})

@@ -100,9 +100,9 @@ class WeightedMinFill(BaseEliminationOrder):
         be added to the graph due to its elimination, where a weight of an edge is the
         product of the weights, domain cardinality, of its constituent vertices.
         """
-        edges = self.moralized_model.fill_in_edges(node)
-        return sum([self.bayesian_model.get_cardinality(edge[0]) *
-                    self.bayesian_model.get_cardinality(edge[1]) for edge in edges])
+        edges = combinations(self.moralized_model.neighbors(node), 2)
+        return sum([self.bayesian_model.get_cardinality(edge[0])[edge[0]] *
+                    self.bayesian_model.get_cardinality(edge[1])[edge[1]] for edge in edges])
 
 
 class MinNeighbours(BaseEliminationOrder):
