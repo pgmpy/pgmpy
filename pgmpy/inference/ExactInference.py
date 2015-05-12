@@ -85,8 +85,9 @@ class VariableElimination(Inference):
         query_var_factor = {}
         for query_var in variables:
             phi = factor_product(*final_distribution)
-            phi.marginalize(list(set(variables) - set([query_var])))
-            query_var_factor[query_var] = phi.normalize(inplace=False)
+            query_var_factor[query_var] = phi.marginalize(list(set(variables) -
+                                                               set([query_var])),
+                                                          inplace=False).normalize(inplace=False)
         return query_var_factor
 
     def query(self, variables, evidence=None, elimination_order=None):
@@ -261,7 +262,7 @@ class VariableElimination(Inference):
                 working_factors[variable].append(list(phi))
             eliminated_variables.add(var)
 
-        edges_comb = [itertools.combinations(c, 2) 
+        edges_comb = [itertools.combinations(c, 2)
                       for c in filter(lambda x: len(x) > 1, cliques)]
         return nx.Graph(itertools.chain(*edges_comb))
 

@@ -193,6 +193,11 @@ class FactorSet:
         if not inplace:
             return FactorSet(*new_factors)
 
+    def __mul__(self, other):
+        return self.product(other)
+
+    def __truediv__(self, other):
+        return self.divide(other)
 
 def factorset_product(*factorsets_list):
     r"""
