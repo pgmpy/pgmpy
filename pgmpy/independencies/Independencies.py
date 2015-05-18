@@ -177,8 +177,13 @@ class IndependenceAssertion:
         self.event3 = set(self._return_list_if_str(event3))
 
     def __str__(self):
-        return ('%s _|_ %s | %s' % (', '.join(self.event1), ', '.join(self.event2),
-                                    ', '.join(self.event3)))
+        if self.event3:
+            return('{event1} _|_ {event2} | {event3}'.format(event1=', '.join(self.event1),
+                                                             event2=', '.join(self.event2),
+                                                             event3=', '.join(self.event3)))
+        else:
+            return('{event1} _|_ {event2}'.format(event1=', '.join(self.event1),
+                                                  event2=', '.join(self.event2)))
 
     __repr__ = __str__
 
