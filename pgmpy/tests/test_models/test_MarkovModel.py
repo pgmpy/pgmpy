@@ -133,14 +133,14 @@ class TestMarkovModelMethods(unittest.TestCase):
         independencies = self.graph.get_local_independecies()
 
         self.assertIsInstance(independencies, Independencies)
-        self.assertEqual(len(independencies.get_independencies()), 2)
+        self.assertEqual(len(independencies.get_assertions()), 2)
 
         string = ''
-        for assertion in sorted(independencies.get_independencies(),
+        for assertion in sorted(independencies.get_assertions(),
                                 key=lambda x: list(x.event1)):
             string += str(assertion) + '\n'
 
-        self.assertEqual(string, 'a _|_ c | b\nc _|_ a | b\n')
+        self.assertEqual(string, '(a _|_ c | b)\n(c _|_ a | b)\n')
 
     def test_bayesian_model(self):
         from pgmpy.models import BayesianModel

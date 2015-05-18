@@ -37,16 +37,12 @@ class Independencies:
     Public Methods
     --------------
     add_assertions
-    get_independencies
+    get_assertions
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies = set()
-        for assertion in assertions:
-            try:
-                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
-            except IndexError:
-                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
+        self.independencies = []
+        self.add_assertions(*assertions)
 
     def __str__(self):
         string = '\n'.join([str(assertion) for assertion in self.independencies])
@@ -54,7 +50,7 @@ class Independencies:
 
     __repr__ = __str__
 
-    def get_independencies(self):
+    def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
 
@@ -62,7 +58,7 @@ class Independencies:
         --------
         >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies(['X', 'Y', 'Z'])
-        >>> independencies.get_independencies()
+        >>> independencies.get_assertions()
         """
         return self.independencies
 
@@ -83,7 +79,13 @@ class Independencies:
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """
         for assertion in assertions:
-            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            if isinstance(assertion, IndependenceAssertion):
+                self.independencies.append(assertion)
+            else:
+                try:
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+                except IndexError:
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
 
         # TODO: write reduce function.
     def reduce(self):
@@ -97,7 +99,7 @@ class Independencies:
         Returns a list of string.
         Each string represents the IndependenceAssertion in latex.
         """
-        return [assertion.latex_string() for assertion in self.get_independencies()]
+        return [assertion.latex_string() for assertion in self.get_assertions()]
 
     def get_factorized_product(self, random_variables=None, latex=False):
         # TODO: Write this whole function
@@ -177,8 +179,13 @@ class IndependenceAssertion:
         self.event3 = set(self._return_list_if_str(event3))
 
     def __str__(self):
-        return ('%s _|_ %s | %s' % (', '.join(self.event1), ', '.join(self.event2),
-                                    ', '.join(self.event3)))
+        if self.event3:
+            return('({event1} _|_ {event2} | {event3})'.format(event1=', '.join(self.event1),
+                                                             event2=', '.join(self.event2),
+                                                             event3=', '.join(self.event3)))
+        else:
+            return('({event1} _|_ {event2})'.format(event1=', '.join(self.event1),
+                                                  event2=', '.join(self.event2)))
 
     __repr__ = __str__
 
