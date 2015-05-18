@@ -180,11 +180,11 @@ class IndependenceAssertion:
 
     def __str__(self):
         if self.event3:
-            return('{event1} _|_ {event2} | {event3}'.format(event1=', '.join(self.event1),
+            return('({event1} _|_ {event2} | {event3})'.format(event1=', '.join(self.event1),
                                                              event2=', '.join(self.event2),
                                                              event3=', '.join(self.event3)))
         else:
-            return('{event1} _|_ {event2}'.format(event1=', '.join(self.event1),
+            return('({event1} _|_ {event2})'.format(event1=', '.join(self.event1),
                                                   event2=', '.join(self.event2)))
 
     __repr__ = __str__
