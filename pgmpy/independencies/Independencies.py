@@ -41,12 +41,8 @@ class Independencies:
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies = set()
-        for assertion in assertions:
-            try:
-                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
-            except IndexError:
-                self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
+        self.independencies = []
+        self.add_assertions(*assertions)
 
     def __str__(self):
         string = '\n'.join([str(assertion) for assertion in self.independencies])
@@ -83,7 +79,13 @@ class Independencies:
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
         """
         for assertion in assertions:
-            self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+            if isinstance(assertion, IndependenceAssertion):
+                self.independencies.append(assertion)
+            else:
+                try:
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+                except IndexError:
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
 
         # TODO: write reduce function.
     def reduce(self):
