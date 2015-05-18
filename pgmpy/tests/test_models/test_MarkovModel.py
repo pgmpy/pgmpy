@@ -140,7 +140,7 @@ class TestMarkovModelMethods(unittest.TestCase):
                                 key=lambda x: list(x.event1)):
             string += str(assertion) + '\n'
 
-        self.assertEqual(string, 'a _|_ c | b\nc _|_ a | b\n')
+        self.assertEqual(string, '(a _|_ c | b)\n(c _|_ a | b)\n')
 
     def test_bayesian_model(self):
         from pgmpy.models import BayesianModel
