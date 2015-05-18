@@ -37,7 +37,7 @@ class Independencies:
     Public Methods
     --------------
     add_assertions
-    get_independencies
+    get_assertions
     get_factorized_product
     """
     def __init__(self, *assertions):
@@ -54,7 +54,7 @@ class Independencies:
 
     __repr__ = __str__
 
-    def get_independencies(self):
+    def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
 
@@ -62,7 +62,7 @@ class Independencies:
         --------
         >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies(['X', 'Y', 'Z'])
-        >>> independencies.get_independencies()
+        >>> independencies.get_assertions()
         """
         return self.independencies
 
@@ -97,7 +97,7 @@ class Independencies:
         Returns a list of string.
         Each string represents the IndependenceAssertion in latex.
         """
-        return [assertion.latex_string() for assertion in self.get_independencies()]
+        return [assertion.latex_string() for assertion in self.get_assertions()]
 
     def get_factorized_product(self, random_variables=None, latex=False):
         # TODO: Write this whole function
