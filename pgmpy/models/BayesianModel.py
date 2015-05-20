@@ -156,7 +156,7 @@ class BayesianModel(DirectedGraph):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning("Repacing existing CPD for {var}".format(var=cpd.variable))
+                    logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
