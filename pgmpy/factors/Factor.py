@@ -71,7 +71,7 @@ class Factor:
         if len(variables) != len(cardinality):
             raise ValueError("The size of variables and cardinality should be same")
         for variable, card in zip(variables, cardinality):
-            self.variables[variable] = [variable + '_' + str(index)
+            self.variables[str(variable)] = [str(variable) + '_' + str(index)
                                         for index in range(card)]
         self.cardinality = np.array(cardinality)
         self.values = np.array(value, dtype=np.double)
