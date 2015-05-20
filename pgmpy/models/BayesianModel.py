@@ -2,6 +2,8 @@
 
 import itertools
 from collections import defaultdict
+import logging
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -152,7 +154,13 @@ class BayesianModel(DirectedGraph):
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            self.cpds.append(cpd)
+            for prev_cpd_index in range(len(self.cpds)):
+                if self.cpds[prev_cpd_index].variable == cpd.variable:
+                    logging.warning("Repacing existing CPD for {var}".format(var=cpd.variable))
+                    self.cpds[prev_cpd_index] = cpd
+                    break
+            else:
+                self.cpds.append(cpd)
 
     def get_cpds(self, node=None):
         """
