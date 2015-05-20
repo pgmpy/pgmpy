@@ -777,5 +777,3 @@ class RuleCPD:
             key_string = ', '.join(key)
             string += 'p' + str(index) + ': <' + key_string + '; ' + str(self.rules[key]) + '>' + '\n'
         return string
-
-    __repr__ = __str__
