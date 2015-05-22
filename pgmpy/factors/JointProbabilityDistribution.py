@@ -79,8 +79,14 @@ class JointProbabilityDistribution(Factor):
         else:
             raise ValueError("The probability values doesn't sum to 1.")
 
+    def __repr__(self):
+        var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
+                              for var, card in zip(self.variables, self.cardinality)])
+        return "<Joint Distribution representing P({var_card}) at {address}>".format(address=hex(id(self)),
+                                                                                     var_card=var_card)
+
     def __str__(self):
-        return self._str('P')
+        return self._str(phi_or_p='P')
 
     def marginal_distribution(self, variables):
         """
