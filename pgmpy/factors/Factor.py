@@ -421,22 +421,25 @@ class Factor:
             return np.array([np.sum(assignment * card_cumprod)])
 
     def __str__(self):
-        return self._str(html=False)
+        return self._str(phi_or_p='phi', html=False)
 
-    def _str(self, html=False):
+    def _str(self, phi_or_p, html=False):
         string_list = []
         if html:
-            html_string_header = """<table><caption>Factor</caption>"""
+            html_string_header = '<table><caption>Factor</caption>'
             string_list.append(html_string_header)
 
         if html:
-            html_string_header = "%s%s%s" % ("""<tr>""", ''.join(
-                ["""<td><b>%s</b></td>""" % var for var in self.variables]),
-                """<td><b>phi(%s)</b><d></tr>""" % ', '.join(self.variables))
+            html_string_header = '{tr}{variable_cols}{phi}'.format(
+                tr='<tr',
+                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=var) for var in self.variables]),
+                phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_P=phi_or_p,
+                                                                 vars=', '.join(self.variables)))
             string_list.append(html_string_header)
         else:
             string_header = self.scope()
-            string_header.append("phi({variables})".format(variables=",".join(string_header)))
+            string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
+                                                                  variables=','.join(string_header)))
 
         # fun and gen are functions to generate the different values of
         # variables in the table.
@@ -481,9 +484,6 @@ class Factor:
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
                               for var, card in zip(self.variables, self.cardinality)])
         return "<Factor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
-
-    def _repr_html_(self):
-        return self._str(html=True)
 
     def __mul__(self, other):
         return self.product(other)
