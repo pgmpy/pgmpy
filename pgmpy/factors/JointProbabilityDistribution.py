@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+from itertools import product
 
 import numpy as np
+
 from pgmpy.factors import Factor
 from pgmpy.independencies import Independencies
 
@@ -88,7 +90,7 @@ class JointProbabilityDistribution(Factor):
     def __str__(self):
         return self._str(phi_or_p='P')
 
-    def marginal_distribution(self, variables):
+    def marginal_distribution(self, variables, inplace=True):
         """
         Returns the marginal distribution over variables.
 
@@ -113,8 +115,10 @@ class JointProbabilityDistribution(Factor):
             x1_1    x2_1    0.108469538521
             x1_1    x2_2    0.275541180284
         """
-        self.marginalize(list(set(list(self.variables)) - set(variables if isinstance(variables, (list, set, dict, tuple))
-                                                              else [variables])))
+        return self.marginalize(list(set(list(self.variables)) -
+                                     set(variables if isinstance(
+                                         variables, (list, set, dict, tuple)) else [variables])),
+                                inplace=inplace)
 
     def check_independence(self, event1, event2, event3=None):
         """
@@ -143,14 +147,12 @@ class JointProbabilityDistribution(Factor):
         >>> prob.check_independence(['x1'], ['x2'], 'x3')
         True
         """
-        from itertools import product
-        from copy import deepcopy
         if event3:
             self.conditional_distribution(event3)
         for variable_pair in product(event1, event2):
-            if JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair) != \
-                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[0]) * \
-                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[1]):
+            if (self.marginal_distribution(variable_pair, inplace=False) !=
+                    self.marginal_distribution(variable_pair[0], inplace=False) *
+                        self.marginal_distribution(variable_pair[1], inplace=False)):
                 return False
         return True
 
