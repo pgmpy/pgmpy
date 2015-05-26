@@ -160,10 +160,9 @@ class XMLBIFReader:
          'hear-bark': ['position = (154, 241)'],
          'light-on': ['position = (73, 165)']}
         """
-        self.variable_property = {variable.find('NAME').text:
-                                  [property.text for property in variable.findall('PROPERTY')]
-                                  for variable in self.network.findall('VARIABLE')}
-        return self.variable_property
+        variable_property = {variable.find('NAME').text: [property.text for property in variable.findall('PROPERTY')]
+                             for variable in self.network.findall('VARIABLE')}
+        return variable_property
 
     def get_model(self):
         model = BayesianModel(self.get_edges())
