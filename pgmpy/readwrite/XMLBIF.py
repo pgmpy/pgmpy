@@ -40,6 +40,7 @@ class XMLBIFReader:
             self.network = etree.fromstring(string).find('NETWORK')
         else:
             raise ValueError("Must specify either path or string")
+        self.network_name = self.network.find('NAME').text
         self.variables = None
         self.edge_list = None
         self.variable_states = None
@@ -76,7 +77,7 @@ class XMLBIFReader:
         """
         if self.variable_parents is None:
             self.variable_parents = {definition.find('FOR').text:
-                                         [edge.text for edge in definition.findall('GIVEN')][::-1]
+                                     [edge.text for edge in definition.findall('GIVEN')][::-1]
                                      for definition in self.network.findall('DEFINITION')}
         self.edge_list = [[value, key] for key in self.variable_parents
                           for value in self.variable_parents[key]]
@@ -97,7 +98,7 @@ class XMLBIFReader:
          'light-on': ['true', 'false']}
         """
         self.variable_states = {variable.find('NAME').text:
-                                    [outcome.text for outcome in variable.findall('OUTCOME')]
+                                [outcome.text for outcome in variable.findall('OUTCOME')]
                                 for variable in self.network.findall('VARIABLE')}
         return self.variable_states
 
@@ -117,7 +118,7 @@ class XMLBIFReader:
         """
         if self.variable_parents is None:
             self.variable_parents = {definition.find('FOR').text:
-                                         [edge.text for edge in definition.findall('GIVEN')][::-1]
+                                     [edge.text for edge in definition.findall('GIVEN')][::-1]
                                      for definition in self.network.findall('DEFINITION')}
         return self.variable_parents
 
@@ -145,7 +146,7 @@ class XMLBIFReader:
                              for table in definition.findall('TABLE')}
         if self.variable_states is None:
             self.variable_states = {variable.find('NAME').text:
-                                        [outcome.text for outcome in variable.findall('OUTCOME')]
+                                    [outcome.text for outcome in variable.findall('OUTCOME')]
                                     for variable in self.network.findall('VARIABLE')}
         for variable in self.variable_CPD:
             arr = np.array(self.variable_CPD[variable])
@@ -169,7 +170,86 @@ class XMLBIFReader:
          'light-on': ['position = (73, 165)']}
         """
         self.variable_property = {variable.find('NAME').text:
-                                      [property.text for property in variable.findall('PROPERTY')]
+                                  [property.text for property in variable.findall('PROPERTY')]
                                   for variable in self.network.findall('VARIABLE')}
         return self.variable_property
 
+
+class XMLBIFWriter:
+    """
+    Base class for writing XMLBIF network file format.
+    """
+    def __init__(self, model_data, encoding='utf-8', prettyprint=True):
+        """
+        Initialise a XMLBIFWriter object.
+
+        Parameters
+        ----------
+        model: Model to write
+        encoding: String(optional)
+            Encoding for text data
+        prettyprint: Bool(optional)
+            Indentation in output XML if true
+        """
+        self.model = model_data
+
+        self.encoding = encoding
+        self.prettyprint = prettyprint
+
+        self.xml = etree.Element("BIF", attrib={'version': '0.3'})
+        self.network = etree.SubElement(self.xml, 'NETWORK')
+        try:
+            etree.SubElement(self.network, 'NAME').text = self.model['network_name']
+        except KeyError:
+            pass
+        self.variables = self.get_variables()
+
+    def __str__(self):
+        """
+        Return the XML as string.
+        """
+        if self.prettyprint:
+            self.indent(self.xml)
+        return etree.tostring(self.xml, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        """
+        Inplace prettyprint formatter.
+        """
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def get_variables(self):
+        """
+        Add variables to XMLBIF
+
+        Return
+        ---------------
+        xml containing variables tag
+        """
+        variables = self.model['variables']
+        variable_tag = {}
+        for var in sorted(variables):
+            variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={'TYPE': 'nature'})
+
+        variables_states = self.model['states']
+        for variable in variables_states:
+            for state in variables_states[variable]:
+                etree.SubElement(variable_tag[variable], "OUTCOME").text = state
+
+        variables_property = self.model['property']
+        for variable in variables_property:
+            for property_var in variables_property[variable]:
+                etree.SubElement(variable_tag[variable], "PROPERTY").text = property_var
+        return variable_tag

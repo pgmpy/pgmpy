@@ -2,7 +2,17 @@ import os
 import unittest
 import numpy as np
 import numpy.testing as np_test
-from pgmpy.readwrite import XMLBIFReader
+from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        try:
+            import xml.etree.ElementTree as etree
+        except ImportError:
+            warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestXMLBIFReaderMethodsString(unittest.TestCase):
@@ -294,3 +304,52 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         del self.reader
         os.remove("test_bif.xml")
 
+
+class TestXMLBIFWriterMethodsString(unittest.TestCase):
+    def setUp(self):
+        self.model_data = {'variables': ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out'],
+                           'states': {'bowel-problem': ['true', 'false'],
+                                      'dog-out': ['true', 'false'],
+                                      'family-out': ['true', 'false'],
+                                      'hear-bark': ['true', 'false'],
+                                      'light-on': ['true', 'false']},
+                           'property': {'bowel-problem': ['position = (190, 69)'],
+                                        'dog-out': ['position = (155, 165)'],
+                                        'family-out': ['position = (112, 69)'],
+                                        'hear-bark': ['position = (154, 241)'],
+                                        'light-on': ['position = (73, 165)']}}
+        self.writer = XMLBIFWriter(model_data=self.model_data)
+
+    def test_file(self):
+        self.expected_xml = etree.XML("""<BIF version="0.3">
+  <NETWORK>
+    <VARIABLE TYPE="nature">
+      <OUTCOME>true</OUTCOME>
+      <OUTCOME>false</OUTCOME>
+      <PROPERTY>position = (190, 69)</PROPERTY>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+      <OUTCOME>true</OUTCOME>
+      <OUTCOME>false</OUTCOME>
+      <PROPERTY>position = (155, 165)</PROPERTY>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+      <OUTCOME>true</OUTCOME>
+      <OUTCOME>false</OUTCOME>
+      <PROPERTY>position = (112, 69)</PROPERTY>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+      <OUTCOME>true</OUTCOME>
+      <OUTCOME>false</OUTCOME>
+      <PROPERTY>position = (154, 241)</PROPERTY>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+      <OUTCOME>true</OUTCOME>
+      <OUTCOME>false</OUTCOME>
+      <PROPERTY>position = (73, 165)</PROPERTY>
+    </VARIABLE>
+  </NETWORK>
+</BIF>
+""")
+        self.maxDiff = None
+        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
