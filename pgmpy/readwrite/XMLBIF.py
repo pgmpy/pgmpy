@@ -12,6 +12,9 @@ except ImportError:
             print("Failed to import ElementTree from any known place")
 import numpy as np
 
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
+
 
 class XMLBIFReader:
     """
@@ -41,12 +44,12 @@ class XMLBIFReader:
         else:
             raise ValueError("Must specify either path or string")
         self.network_name = self.network.find('NAME').text
-        self.variables = None
-        self.edge_list = None
-        self.variable_states = None
-        self.variable_parents = None
-        self.variable_CPD = None
-        self.variable_property = None
+        self.variables = self.get_variables()
+        self.variable_parents = self.get_parents()
+        self.edge_list = self.get_edges()
+        self.variable_states = self.get_states()
+        self.variable_CPD = self.get_cpd()
+        self.variable_property = self.get_property()
 
     def get_variables(self):
         """
@@ -58,9 +61,8 @@ class XMLBIFReader:
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
         """
-        self.variables = [variable.find('NAME').text
-                          for variable in self.network.findall('VARIABLE')]
-        return self.variables
+        variables = [variable.find('NAME').text for variable in self.network.findall('VARIABLE')]
+        return variables
 
     def get_edges(self):
         """
@@ -75,13 +77,9 @@ class XMLBIFReader:
          ['bowel-problem', 'dog-out'],
          ['dog-out', 'hear-bark']]
         """
-        if self.variable_parents is None:
-            self.variable_parents = {definition.find('FOR').text:
-                                     [edge.text for edge in definition.findall('GIVEN')][::-1]
-                                     for definition in self.network.findall('DEFINITION')}
-        self.edge_list = [[value, key] for key in self.variable_parents
-                          for value in self.variable_parents[key]]
-        return self.edge_list
+        edge_list = [[value, key] for key in self.variable_parents
+                     for value in self.variable_parents[key]]
+        return edge_list
 
     def get_states(self):
         """
@@ -97,10 +95,9 @@ class XMLBIFReader:
          'hear-bark': ['true', 'false'],
          'light-on': ['true', 'false']}
         """
-        self.variable_states = {variable.find('NAME').text:
-                                [outcome.text for outcome in variable.findall('OUTCOME')]
-                                for variable in self.network.findall('VARIABLE')}
-        return self.variable_states
+        variable_states = {variable.find('NAME').text: [outcome.text for outcome in variable.findall('OUTCOME')]
+                           for variable in self.network.findall('VARIABLE')}
+        return variable_states
 
     def get_parents(self):
         """
@@ -116,11 +113,9 @@ class XMLBIFReader:
          'hear-bark': ['dog-out'],
          'light-on': ['family-out']}
         """
-        if self.variable_parents is None:
-            self.variable_parents = {definition.find('FOR').text:
-                                     [edge.text for edge in definition.findall('GIVEN')][::-1]
-                                     for definition in self.network.findall('DEFINITION')}
-        return self.variable_parents
+        variable_parents = {definition.find('FOR').text: [edge.text for edge in definition.findall('GIVEN')][::-1]
+                            for definition in self.network.findall('DEFINITION')}
+        return variable_parents
 
     def get_cpd(self):
         """
@@ -141,19 +136,15 @@ class XMLBIFReader:
          'light-on': array([[ 0.6 ,  0.4 ],
                             [ 0.05,  0.95]])}
         """
-        self.variable_CPD = {definition.find('FOR').text: list(map(float, table.text.split()))
-                             for definition in self.network.findall('DEFINITION')
-                             for table in definition.findall('TABLE')}
-        if self.variable_states is None:
-            self.variable_states = {variable.find('NAME').text:
-                                    [outcome.text for outcome in variable.findall('OUTCOME')]
-                                    for variable in self.network.findall('VARIABLE')}
-        for variable in self.variable_CPD:
-            arr = np.array(self.variable_CPD[variable])
+        variable_CPD = {definition.find('FOR').text: list(map(float, table.text.split()))
+                        for definition in self.network.findall('DEFINITION')
+                        for table in definition.findall('TABLE')}
+        for variable in variable_CPD:
+            arr = np.array(variable_CPD[variable])
             arr = arr.reshape((len(self.variable_states[variable]),
                                arr.size//len(self.variable_states[variable])))
-            self.variable_CPD[variable] = arr
-        return self.variable_CPD
+            variable_CPD[variable] = arr
+        return variable_CPD
 
     def get_property(self):
         """
@@ -173,6 +164,20 @@ class XMLBIFReader:
                                   [property.text for property in variable.findall('PROPERTY')]
                                   for variable in self.network.findall('VARIABLE')}
         return self.variable_property
+
+    def get_model(self):
+        model = BayesianModel(self.get_edges())
+
+        tabular_cpds = []
+        for var, values in self.variable_CPD.items():
+            cpd = TabularCPD(var, len(self.variable_states[var]), values,
+                             evidence=self.variable_parents[var],
+                             evidence_card=[len(self.variable_states[evidence_var])
+                                            for evidence_var in self.variable_parents[var]])
+            tabular_cpds.append(cpd)
+
+        model.add_cpds(*tabular_cpds)
+        return model
 
 
 class XMLBIFWriter:

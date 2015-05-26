@@ -95,7 +95,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
     def test_get_variables(self):
         var_expected = ['light-on', 'bowel-problem', 'dog-out',
                         'hear-bark', 'family-out']
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        self.assertListEqual(self.reader.variables, var_expected)
 
     def test_get_states(self):
         states_expected = {'bowel-problem': ['true', 'false'],
@@ -103,7 +103,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                            'family-out': ['true', 'false'],
                            'hear-bark': ['true', 'false'],
                            'light-on': ['true', 'false']}
-        states = self.reader.get_states()
+        states = self.reader.variable_states
         for variable in states_expected:
             self.assertListEqual(states_expected[variable],
                                  states[variable])
@@ -114,7 +114,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                             'family-out': [],
                             'hear-bark': ['dog-out'],
                             'light-on': ['family-out']}
-        parents = self.reader.get_parents()
+        parents = self.reader.variable_parents
         for variable in parents_expected:
             self.assertListEqual(parents_expected[variable],
                                  parents[variable])
@@ -124,7 +124,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                           ['bowel-problem', 'dog-out'],
                           ['family-out', 'light-on'],
                           ['dog-out', 'hear-bark']]
-        self.assertListEqual(sorted(self.reader.get_edges()),
+        self.assertListEqual(sorted(self.reader.edge_list),
                              sorted(edges_expected))
 
     def test_get_cpd(self):
@@ -138,7 +138,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                                                [0.01, 0.99]]),
                         'light-on': np.array([[0.6, 0.4],
                                               [0.05, 0.95]])}
-        cpd = self.reader.get_cpd()
+        cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
                                        cpd[variable])
@@ -149,10 +149,10 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
                              'family-out': ['position = (112, 69)'],
                              'hear-bark': ['position = (154, 241)'],
                              'light-on': ['position = (73, 165)']}
-        property = self.reader.get_property()
+        prop = self.reader.variable_property
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
-                                 property[variable])
+                                 prop[variable])
 
     def tearDown(self):
         del self.reader
@@ -241,7 +241,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     def test_get_variables(self):
         var_expected = ['light-on', 'bowel-problem', 'dog-out',
                         'hear-bark', 'family-out']
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        self.assertListEqual(self.reader.variables, var_expected)
 
     def test_get_states(self):
         states_expected = {'bowel-problem': ['true', 'false'],
@@ -249,7 +249,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                            'family-out': ['true', 'false'],
                            'hear-bark': ['true', 'false'],
                            'light-on': ['true', 'false']}
-        states = self.reader.get_states()
+        states = self.reader.variable_states
         for variable in states_expected:
             self.assertListEqual(states_expected[variable],
                                  states[variable])
@@ -260,7 +260,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                             'family-out': [],
                             'hear-bark': ['dog-out'],
                             'light-on': ['family-out']}
-        parents = self.reader.get_parents()
+        parents = self.reader.variable_parents
         for variable in parents_expected:
             self.assertListEqual(parents_expected[variable],
                                  parents[variable])
@@ -270,7 +270,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                           ['bowel-problem', 'dog-out'],
                           ['family-out', 'light-on'],
                           ['dog-out', 'hear-bark']]
-        self.assertListEqual(sorted(self.reader.get_edges()),
+        self.assertListEqual(sorted(self.reader.edge_list),
                              sorted(edges_expected))
 
     def test_get_cpd(self):
@@ -284,7 +284,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                                                [0.01, 0.99]]),
                         'light-on': np.array([[0.6, 0.4],
                                               [0.05, 0.95]])}
-        cpd = self.reader.get_cpd()
+        cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
                                        cpd[variable])
@@ -295,10 +295,10 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                              'family-out': ['position = (112, 69)'],
                              'hear-bark': ['position = (154, 241)'],
                              'light-on': ['position = (73, 165)']}
-        property = self.reader.get_property()
+        prop = self.reader.variable_property
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
-                                 property[variable])
+                                 prop[variable])
 
     def tearDown(self):
         del self.reader
