@@ -194,6 +194,10 @@ class XMLBIFWriter:
             Encoding for text data
         prettyprint: Bool(optional)
             Indentation in output XML if true
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
         """
         self.model = model_data
 
@@ -241,6 +245,11 @@ class XMLBIFWriter:
         Return
         ---------------
         xml containing variables tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.get_variables()
         """
         variables = self.model['variables']
         variable_tag = {}
