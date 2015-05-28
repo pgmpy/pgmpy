@@ -210,7 +210,9 @@ class XMLBIFWriter:
             etree.SubElement(self.network, 'NAME').text = self.model['network_name']
         except KeyError:
             pass
-        self.variables = self.get_variables()
+
+        self.variables = self.add_variables()
+        self.definition = self.add_definition()
 
     def __str__(self):
         """
@@ -238,7 +240,7 @@ class XMLBIFWriter:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
-    def get_variables(self):
+    def add_variables(self):
         """
         Add variables to XMLBIF
 
@@ -266,3 +268,26 @@ class XMLBIFWriter:
             for property_var in variables_property[variable]:
                 etree.SubElement(variable_tag[variable], "PROPERTY").text = property_var
         return variable_tag
+
+    def add_definition(self):
+        """
+        Add Definition to XMLBIF
+
+        Return
+        ---------------
+        xml containing definition tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.add_definition()
+        """
+        parents = self.model['parents']
+        definition_tag = {}
+        for var in sorted(parents):
+            definition_tag[var] = etree.SubElement(self.network, "DEFINITION")
+            etree.SubElement(definition_tag[var], "FOR").text = var
+            for child in sorted(parents[var]):
+                etree.SubElement(definition_tag[var], "GIVEN").text = child
+
+        return definition_tag

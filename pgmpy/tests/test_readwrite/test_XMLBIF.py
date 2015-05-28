@@ -317,7 +317,12 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
                                         'dog-out': ['position = (155, 165)'],
                                         'family-out': ['position = (112, 69)'],
                                         'hear-bark': ['position = (154, 241)'],
-                                        'light-on': ['position = (73, 165)']}}
+                                        'light-on': ['position = (73, 165)']},
+                           'parents': {'bowel-problem': [],
+                                       'dog-out': ['family-out', 'bowel-problem'],
+                                       'family-out': [],
+                                       'hear-bark': ['dog-out'],
+                                       'light-on': ['family-out']}}
         self.writer = XMLBIFWriter(model_data=self.model_data)
 
     def test_file(self):
@@ -348,8 +353,26 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (73, 165)</PROPERTY>
     </VARIABLE>
+    <DEFINITION>
+      <FOR>bowel-problem</FOR>
+    </DEFINITION>
+    <DEFINITION>
+      <FOR>dog-out</FOR>
+      <GIVEN>bowel-problem</GIVEN>
+      <GIVEN>family-out</GIVEN>
+    </DEFINITION>
+    <DEFINITION>
+      <FOR>family-out</FOR>
+    </DEFINITION>
+    <DEFINITION>
+      <FOR>hear-bark</FOR>
+      <GIVEN>dog-out</GIVEN>
+    </DEFINITION>
+    <DEFINITION>
+      <FOR>light-on</FOR>
+      <GIVEN>family-out</GIVEN>
+    </DEFINITION>
   </NETWORK>
-</BIF>
-""")
+</BIF>""")
         self.maxDiff = None
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
