@@ -56,9 +56,12 @@ def sample_discrete(values, weights, size=1):
 
     Parameters
     ----------
-    values: a numpy.array of possible values that the random variable can take.
-    weights: a numpy.array representing the PMF of the random variable.
-    size: size of the sample to be generated
+    values: numpy.array
+        Array of all possible values that the random variable can take.
+    weights: numpy.array
+        Array representing the PMF of the random variable.
+    size: int
+        Size of the sample to be generated.
 
     Returns
     -------
