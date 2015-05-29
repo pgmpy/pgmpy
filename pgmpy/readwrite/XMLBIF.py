@@ -213,6 +213,7 @@ class XMLBIFWriter:
 
         self.variables = self.add_variables()
         self.definition = self.add_definition()
+        self.tables = self.add_cpd()
 
     def __str__(self):
         """
@@ -291,3 +292,28 @@ class XMLBIFWriter:
                 etree.SubElement(definition_tag[var], "GIVEN").text = child
 
         return definition_tag
+
+    def add_cpd(self):
+        """
+        Add Table to XMLBIF.
+
+        Return
+        ---------------
+        xml containing table tag.
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.add_cpd()
+        """
+        cpds = self.model['cpds']
+        definition_tag = self.definition
+        table_tag = {}
+        for var in cpds:
+            table_tag[var] = etree.SubElement(definition_tag[var], "TABLE")
+            table_tag[var].text = ''
+            for val in cpds[var]:
+                table_tag[var].text += ' '.join(map(str, val))
+                table_tag[var].text += ' '
+
+        return table_tag
