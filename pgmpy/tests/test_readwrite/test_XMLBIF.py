@@ -322,7 +322,17 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
                                        'dog-out': ['family-out', 'bowel-problem'],
                                        'family-out': [],
                                        'hear-bark': ['dog-out'],
-                                       'light-on': ['family-out']}}
+                                       'light-on': ['family-out']},
+                           'cpds': {'bowel-problem': np.array([[0.01],
+                                                               [0.99]]),
+                                    'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
+                                                         [0.9, 0.1, 0.3, 0.7]]),
+                                    'family-out': np.array([[0.15],
+                                                            [0.85]]),
+                                    'hear-bark': np.array([[0.7, 0.3],
+                                                           [0.01, 0.99]]),
+                                    'light-on': np.array([[0.6, 0.4],
+                                                          [0.05, 0.95]])}}
         self.writer = XMLBIFWriter(model_data=self.model_data)
 
     def test_file(self):
@@ -355,22 +365,27 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
     </VARIABLE>
     <DEFINITION>
       <FOR>bowel-problem</FOR>
+      <TABLE>0.01 0.99 </TABLE>
     </DEFINITION>
     <DEFINITION>
       <FOR>dog-out</FOR>
       <GIVEN>bowel-problem</GIVEN>
       <GIVEN>family-out</GIVEN>
+      <TABLE>0.99 0.01 0.97 0.03 0.9 0.1 0.3 0.7 </TABLE>
     </DEFINITION>
     <DEFINITION>
       <FOR>family-out</FOR>
+      <TABLE>0.15 0.85 </TABLE>
     </DEFINITION>
     <DEFINITION>
       <FOR>hear-bark</FOR>
       <GIVEN>dog-out</GIVEN>
+      <TABLE>0.7 0.3 0.01 0.99 </TABLE>
     </DEFINITION>
     <DEFINITION>
       <FOR>light-on</FOR>
       <GIVEN>family-out</GIVEN>
+      <TABLE>0.6 0.4 0.05 0.95 </TABLE>
     </DEFINITION>
   </NETWORK>
 </BIF>""")
