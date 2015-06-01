@@ -57,16 +57,14 @@ def sample_discrete(values, weights, size=1):
 
     Parameters
     ----------
-    values: numpy.array
-        Array of all possible values that the random variable can take.
-    weights: numpy.array
-        Array representing the PMF of the random variable.
-    size: int
-        Size of the sample to be generated.
+    values: numpy.array: Array of all possible values that the random variable
+            can take.
+    weights: numpy.array: Array representing the PMF of the random variable.
+    size: int: Size of the sample to be generated.
 
     Returns
     -------
-    a numpy.array of values of the random variable sampled from the given PMF.
+    numpy.array: of values of the random variable sampled from the given PMF.
 
     Example
     -------
@@ -75,8 +73,8 @@ def sample_discrete(values, weights, size=1):
     >>> values = np.array(['v_0', 'v_1', 'v_2'])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
     >>> sample_discrete(values, probabilities, 10)
-    array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1', 'v_2'],
-      dtype='<U3')
+    array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1',
+      'v_2'], dtype='<U3')
     """
     bins = np.add.accumulate(weights)
     return values[np.digitize(random_sample(size), bins)]

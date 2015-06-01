@@ -23,7 +23,7 @@ class BayesianModelSampling(Inference):
     """
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
-            raise TypeError("Argument must be of type BayesianModel")
+            raise TypeError("model must an instance of BayesianModel")
         super(BayesianModelSampling, self).__init__(model)
         self.topological_order = nx.topological_sort(model)
         self.cpds = {}
@@ -48,6 +48,7 @@ class BayesianModelSampling(Inference):
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
         >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.inference.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -55,7 +56,6 @@ class BayesianModelSampling(Inference):
         ...                0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
         ...                ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
-        >>> from pgmpy.inference.approximate_inference.Sampling import *
         >>> inference = BayesianModelSampling(student)
         >>> inference.forward_sample(2)
         [{'intel': 'intel_0', 'grade': 'grade_1', 'diff': 'diff_1'},
@@ -76,4 +76,3 @@ class BayesianModelSampling(Inference):
                 particle[node] = sample_discrete(cpd.variables[cpd.variable], weights)
             sampled.append(particle)
         return sampled
-
