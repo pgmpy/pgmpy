@@ -339,26 +339,31 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.expected_xml = etree.XML("""<BIF version="0.3">
   <NETWORK>
     <VARIABLE TYPE="nature">
+      <NAME>bowel-problem</NAME>
       <OUTCOME>true</OUTCOME>
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (190, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
+      <NAME>dog-out</NAME>
       <OUTCOME>true</OUTCOME>
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (155, 165)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
+      <NAME>family-out</NAME>
       <OUTCOME>true</OUTCOME>
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (112, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
+      <NAME>hear-bark</NAME>
       <OUTCOME>true</OUTCOME>
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (154, 241)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
+      <NAME>light-on</NAME>
       <OUTCOME>true</OUTCOME>
       <OUTCOME>false</OUTCOME>
       <PROPERTY>position = (73, 165)</PROPERTY>
@@ -390,4 +395,8 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
   </NETWORK>
 </BIF>""")
         self.maxDiff = None
+        self.writer.write_xmlbif("test_bif.xml")
+        with open("test_bif.xml", "r") as myfile:
+            data = myfile.read()
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+        self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))

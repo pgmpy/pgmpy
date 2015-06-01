@@ -258,6 +258,7 @@ class XMLBIFWriter:
         variable_tag = {}
         for var in sorted(variables):
             variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={'TYPE': 'nature'})
+            etree.SubElement(variable_tag[var], "NAME").text = var
 
         variables_states = self.model['states']
         for variable in variables_states:
@@ -317,3 +318,21 @@ class XMLBIFWriter:
                 table_tag[var].text += ' '
 
         return table_tag
+
+    def write_xmlbif(self, filename):
+        """
+        Write the xml data into the file.
+
+        Parameters
+        ----------
+        filename: Name of the file.
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.write_xmlbif(test_file)
+        """
+        writer = self.__str__()[:-1].decode('utf-8')
+        print(writer)
+        with open(filename,'w') as fout:
+            fout.write(writer)
