@@ -50,6 +50,7 @@ def cartesian(arrays, out=None):
 
     return out
 
+
 def sample_discrete(values, weights, size=1):
     """
     Generate a sample of given size, given a probability mass function.
