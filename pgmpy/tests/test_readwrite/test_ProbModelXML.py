@@ -27,7 +27,9 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         </AdditionalConstraints>
         <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
         <Language>English</Language>
-        <AdditionalProperties />
+        <AdditionalProperties>
+            <Property name="elvira.title" value="X ray result"/>
+        </AdditionalProperties>
         <Variables>
             <Variable name="intelligence" type="FiniteState" role="Chance">
                 <Comment />
@@ -135,6 +137,14 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertDictEqual(self.reader_file.probnet['AdditionalConstraints'],
                              additionalconstraints_expected)
 
+    def test_additionalproperties(self):
+        additionalproperties_expected = {'elvira.title': 'X ray result'}
+        self.maxDiff = None
+        self.assertDictEqual(self.reader_string.probnet['AdditionalProperties'],
+                             additionalproperties_expected)
+        self.assertDictEqual(self.reader_file.probnet['AdditionalProperties'],
+                             additionalproperties_expected)
+
 
 class TestProbModelXMLWriter(unittest.TestCase):
     def setUp(self):
@@ -143,6 +153,7 @@ class TestProbModelXMLWriter(unittest.TestCase):
                             'Language': 'English',
                             'AdditionalConstraints': {'MaxNumParents':
                                                       {'numParents': '5'}},
+                            'AdditionalProperties': {'elvira.title': 'X ray result'},
                             'Variables': {'difficulty':
                                           {'type': 'FiniteState',
                                            'role': 'Chance',
@@ -235,8 +246,10 @@ class TestProbModelXMLWriter(unittest.TestCase):
     </AdditionalConstraints>
     <Language>English</Language>
     <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
-    <AdditionalProperties/>
   </ProbNet>
+  <AdditionalProperties>
+    <Property name="elvira.title" value="X ray result"/>
+  </AdditionalProperties>
 </ProbModelXML>""")
         self.maxDiff = None
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
