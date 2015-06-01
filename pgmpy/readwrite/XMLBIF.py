@@ -43,6 +43,7 @@ class XMLBIFReader:
             self.network = etree.fromstring(string).find('NETWORK')
         else:
             raise ValueError("Must specify either path or string")
+        self.network_name = self.network.find('NAME').text
         self.variables = self.get_variables()
         self.variable_parents = self.get_parents()
         self.edge_list = self.get_edges()
@@ -176,3 +177,143 @@ class XMLBIFReader:
 
         model.add_cpds(*tabular_cpds)
         return model
+
+
+class XMLBIFWriter:
+    """
+    Base class for writing XMLBIF network file format.
+    """
+    def __init__(self, model_data, encoding='utf-8', prettyprint=True):
+        """
+        Initialise a XMLBIFWriter object.
+
+        Parameters
+        ----------
+        model: Model to write
+        encoding: String(optional)
+            Encoding for text data
+        prettyprint: Bool(optional)
+            Indentation in output XML if true
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        """
+        self.model = model_data
+
+        self.encoding = encoding
+        self.prettyprint = prettyprint
+
+        self.xml = etree.Element("BIF", attrib={'version': '0.3'})
+        self.network = etree.SubElement(self.xml, 'NETWORK')
+        try:
+            etree.SubElement(self.network, 'NAME').text = self.model['network_name']
+        except KeyError:
+            pass
+
+        self.variables = self.add_variables()
+        self.definition = self.add_definition()
+        self.tables = self.add_cpd()
+
+    def __str__(self):
+        """
+        Return the XML as string.
+        """
+        if self.prettyprint:
+            self.indent(self.xml)
+        return etree.tostring(self.xml, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        """
+        Inplace prettyprint formatter.
+        """
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def add_variables(self):
+        """
+        Add variables to XMLBIF
+
+        Return
+        ---------------
+        xml containing variables tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.get_variables()
+        """
+        variables = self.model['variables']
+        variable_tag = {}
+        for var in sorted(variables):
+            variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={'TYPE': 'nature'})
+
+        variables_states = self.model['states']
+        for variable in variables_states:
+            for state in variables_states[variable]:
+                etree.SubElement(variable_tag[variable], "OUTCOME").text = state
+
+        variables_property = self.model['property']
+        for variable in variables_property:
+            for property_var in variables_property[variable]:
+                etree.SubElement(variable_tag[variable], "PROPERTY").text = property_var
+        return variable_tag
+
+    def add_definition(self):
+        """
+        Add Definition to XMLBIF
+
+        Return
+        ---------------
+        xml containing definition tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.add_definition()
+        """
+        parents = self.model['parents']
+        definition_tag = {}
+        for var in sorted(parents):
+            definition_tag[var] = etree.SubElement(self.network, "DEFINITION")
+            etree.SubElement(definition_tag[var], "FOR").text = var
+            for child in sorted(parents[var]):
+                etree.SubElement(definition_tag[var], "GIVEN").text = child
+
+        return definition_tag
+
+    def add_cpd(self):
+        """
+        Add Table to XMLBIF.
+
+        Return
+        ---------------
+        xml containing table tag.
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.add_cpd()
+        """
+        cpds = self.model['cpds']
+        definition_tag = self.definition
+        table_tag = {}
+        for var in cpds:
+            table_tag[var] = etree.SubElement(definition_tag[var], "TABLE")
+            table_tag[var].text = ''
+            for val in cpds[var]:
+                table_tag[var].text += ' '.join(map(str, val))
+                table_tag[var].text += ' '
+
+        return table_tag
