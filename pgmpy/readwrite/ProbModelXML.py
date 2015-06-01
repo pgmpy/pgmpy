@@ -417,7 +417,7 @@ class ProbModelXMLReader:
         { probnet: { type:
                      Comment:
                      Language:
-                     AdditionalProperty: { property_name1: property_value1,
+                     AdditionalProperties: { property_name1: property_value1,
                                            property_name2: property_value2,
                                                         ....
                                          }
@@ -425,18 +425,18 @@ class ProbModelXMLReader:
                                                     roles:
                                                     Comment:
                                                     Coordinates:
-                                                    AdditionalProperty: { property_name1: property_value1,
-                                                                          property_name2: property_value2,
-                                                                                      ....
-                                                                        }
-                                                    states: { state1: {AdditionalProperty: {
-                                                                                             ....
-                                                                                             ....
-                                                                                           }
-                                                              state2: {AdditionalProperty: {
-                                                                                             ....
-                                                                                             ....
-                                                                                           }
+                                                    AdditionalProperties: { property_name1: property_value1,
+                                                                            property_name2: property_value2,
+                                                                                        ....
+                                                                          }
+                                                    states: { state1: {AdditionalProperties: {
+                                                                                               ....
+                                                                                               ....
+                                                                                             }
+                                                              state2: {AdditionalProperties: {
+                                                                                               ....
+                                                                                               ....
+                                                                                             }
                                                                  .....
                                                             }
                                                   }
@@ -448,10 +448,10 @@ class ProbModelXMLReader:
                      edges: { (var1, var2): { directed:
                                               Comment:
                                               Label:
-                                              AdditionalProperty: { property_name1: property_value1,
-                                                                    property_name2: property_value2,
-                                                                               .....
-                                                                  }
+                                              AdditionalProperties: { property_name1: property_value1,
+                                                                      property_name2: property_value2,
+                                                                                 .....
+                                                                    }
                               (var3, var4): {
                                               .....
                                               .....
@@ -486,8 +486,9 @@ class ProbModelXMLReader:
         self.probnet['type'] = probnet_elem.attrib['type']
         self.add_comment(probnet_elem.find('Comment').text)
         self.add_language(probnet_elem.find('Language').text)
-        if probnet_elem.find('AdditionalProperty'):
-            for prop in probnet_elem.find('AdditionalProperty'):
+        if probnet_elem.find('AdditionalProperties') is not None:
+            self.probnet['AdditionalProperties'] = {}
+            for prop in probnet_elem.find('AdditionalProperties'):
                 self.add_additional_property(self.probnet['AdditionalProperties'], prop)
 
         # Add additional Constraints
