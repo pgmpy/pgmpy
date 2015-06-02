@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
 try:
     from lxml import etree
 except ImportError:
@@ -307,66 +309,71 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
 
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
-        self.model_data = {'variables': ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out'],
-                           'states': {'bowel-problem': ['true', 'false'],
-                                      'dog-out': ['true', 'false'],
-                                      'family-out': ['true', 'false'],
-                                      'hear-bark': ['true', 'false'],
-                                      'light-on': ['true', 'false']},
-                           'property': {'bowel-problem': ['position = (190, 69)'],
-                                        'dog-out': ['position = (155, 165)'],
-                                        'family-out': ['position = (112, 69)'],
-                                        'hear-bark': ['position = (154, 241)'],
-                                        'light-on': ['position = (73, 165)']},
-                           'parents': {'bowel-problem': [],
-                                       'dog-out': ['family-out', 'bowel-problem'],
-                                       'family-out': [],
-                                       'hear-bark': ['dog-out'],
-                                       'light-on': ['family-out']},
-                           'cpds': {'bowel-problem': np.array([[0.01],
-                                                               [0.99]]),
-                                    'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
-                                                         [0.9, 0.1, 0.3, 0.7]]),
-                                    'family-out': np.array([[0.15],
-                                                            [0.85]]),
-                                    'hear-bark': np.array([[0.7, 0.3],
-                                                           [0.01, 0.99]]),
-                                    'light-on': np.array([[0.6, 0.4],
-                                                          [0.05, 0.95]])}}
-        self.writer = XMLBIFWriter(model_data=self.model_data)
+        edges = [['family-out', 'dog-out'],
+                 ['bowel-problem', 'dog-out'],
+                 ['family-out', 'light-on'],
+                 ['dog-out', 'hear-bark']]
+        cpds = {'bowel-problem': np.array([[0.01],
+                                           [0.99]]),
+                'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
+                                     [0.9, 0.1, 0.3, 0.7]]),
+                'family-out': np.array([[0.15],
+                                        [0.85]]),
+                'hear-bark': np.array([[0.7, 0.3],
+                                       [0.01, 0.99]]),
+                'light-on': np.array([[0.6, 0.4],
+                                      [0.05, 0.95]])}
+        states = {'bowel-problem': ['true', 'false'],
+                  'dog-out': ['true', 'false'],
+                  'family-out': ['true', 'false'],
+                  'hear-bark': ['true', 'false'],
+                  'light-on': ['true', 'false']}
+        parents = {'bowel-problem': [],
+                   'dog-out': ['family-out', 'bowel-problem'],
+                   'family-out': [],
+                   'hear-bark': ['dog-out'],
+                   'light-on': ['family-out']}
+
+        self.model = BayesianModel(edges)
+
+        tabular_cpds = []
+        for var, values in cpds.items():
+            cpd = TabularCPD(var, len(states[var]), values,
+                             evidence=parents[var],
+                             evidence_card=[len(states[evidence_var])
+                                            for evidence_var in parents[var]])
+            tabular_cpds.append(cpd)
+
+        self.model.add_cpds(*tabular_cpds)
+        self.writer = XMLBIFWriter(model=self.model)
 
     def test_file(self):
         self.expected_xml = etree.XML("""<BIF version="0.3">
   <NETWORK>
     <VARIABLE TYPE="nature">
       <NAME>bowel-problem</NAME>
-      <OUTCOME>true</OUTCOME>
-      <OUTCOME>false</OUTCOME>
-      <PROPERTY>position = (190, 69)</PROPERTY>
+      <OUTCOME>bowel-problem_0</OUTCOME>
+      <OUTCOME>bowel-problem_1</OUTCOME>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>dog-out</NAME>
-      <OUTCOME>true</OUTCOME>
-      <OUTCOME>false</OUTCOME>
-      <PROPERTY>position = (155, 165)</PROPERTY>
+      <OUTCOME>dog-out_0</OUTCOME>
+      <OUTCOME>dog-out_1</OUTCOME>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>family-out</NAME>
-      <OUTCOME>true</OUTCOME>
-      <OUTCOME>false</OUTCOME>
-      <PROPERTY>position = (112, 69)</PROPERTY>
+      <OUTCOME>family-out_0</OUTCOME>
+      <OUTCOME>family-out_1</OUTCOME>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>hear-bark</NAME>
-      <OUTCOME>true</OUTCOME>
-      <OUTCOME>false</OUTCOME>
-      <PROPERTY>position = (154, 241)</PROPERTY>
+      <OUTCOME>hear-bark_0</OUTCOME>
+      <OUTCOME>hear-bark_1</OUTCOME>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>light-on</NAME>
-      <OUTCOME>true</OUTCOME>
-      <OUTCOME>false</OUTCOME>
-      <PROPERTY>position = (73, 165)</PROPERTY>
+      <OUTCOME>light-on_0</OUTCOME>
+      <OUTCOME>light-on_1</OUTCOME>
     </VARIABLE>
     <DEFINITION>
       <FOR>bowel-problem</FOR>

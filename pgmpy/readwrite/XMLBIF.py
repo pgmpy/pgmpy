@@ -183,7 +183,7 @@ class XMLBIFWriter:
     """
     Base class for writing XMLBIF network file format.
     """
-    def __init__(self, model_data, encoding='utf-8', prettyprint=True):
+    def __init__(self, model, encoding='utf-8', prettyprint=True):
         """
         Initialise a XMLBIFWriter object.
 
@@ -199,7 +199,9 @@ class XMLBIFWriter:
         -------
         >>> writer = XMLBIFWriter(model)
         """
-        self.model = model_data
+        if not isinstance(model, BayesianModel):
+            raise TypeError("model must an instance of BayesianModel")
+        self.model = model
 
         self.encoding = encoding
         self.prettyprint = prettyprint
@@ -212,6 +214,8 @@ class XMLBIFWriter:
             pass
 
         self.variables = self.add_variables()
+        self.states = self.add_states()
+        # TODO: add Property tag
         self.definition = self.add_definition()
         self.tables = self.add_cpd()
 
@@ -254,22 +258,37 @@ class XMLBIFWriter:
         >>> writer = XMLBIFWriter(model)
         >>> writer.get_variables()
         """
-        variables = self.model['variables']
+        variables = self.model.nodes()
         variable_tag = {}
         for var in sorted(variables):
             variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={'TYPE': 'nature'})
             etree.SubElement(variable_tag[var], "NAME").text = var
-
-        variables_states = self.model['states']
-        for variable in variables_states:
-            for state in variables_states[variable]:
-                etree.SubElement(variable_tag[variable], "OUTCOME").text = state
-
-        variables_property = self.model['property']
-        for variable in variables_property:
-            for property_var in variables_property[variable]:
-                etree.SubElement(variable_tag[variable], "PROPERTY").text = property_var
         return variable_tag
+
+    def add_states(self):
+        """
+        Add outcome to variables of XMLBIF
+
+        Return
+        ---------------
+        xml containing outcome tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.get_states()
+        """
+        outcome_tag = {}
+        cpds = self.model.get_cpds()
+        for cpd in cpds:
+            var = cpd.variable
+            outcome_tag[var] = []
+            for state in cpd.variables[var]:
+              state_tag = etree.SubElement(self.variables[var], "OUTCOME")
+              state_tag.text = state
+              outcome_tag[var].append(state_tag)
+        return outcome_tag
+
 
     def add_definition(self):
         """
@@ -284,13 +303,14 @@ class XMLBIFWriter:
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_definition()
         """
-        parents = self.model['parents']
+        cpds = self.model.get_cpds()
+        cpds.sort(key=lambda x: x.variable)
         definition_tag = {}
-        for var in sorted(parents):
-            definition_tag[var] = etree.SubElement(self.network, "DEFINITION")
-            etree.SubElement(definition_tag[var], "FOR").text = var
-            for child in sorted(parents[var]):
-                etree.SubElement(definition_tag[var], "GIVEN").text = child
+        for cpd in cpds:
+            definition_tag[cpd.variable] = etree.SubElement(self.network, "DEFINITION")
+            etree.SubElement(definition_tag[cpd.variable], "FOR").text = cpd.variable
+            for child in sorted(cpd.evidence):
+                etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = child
 
         return definition_tag
 
@@ -307,15 +327,15 @@ class XMLBIFWriter:
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_cpd()
         """
-        cpds = self.model['cpds']
+        cpds = self.model.get_cpds()
         definition_tag = self.definition
         table_tag = {}
-        for var in cpds:
-            table_tag[var] = etree.SubElement(definition_tag[var], "TABLE")
-            table_tag[var].text = ''
-            for val in cpds[var]:
-                table_tag[var].text += ' '.join(map(str, val))
-                table_tag[var].text += ' '
+        for cpd in cpds:
+            table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
+            table_tag[cpd.variable].text = ''
+            for val in cpd.values:
+                table_tag[cpd.variable].text += str(val)
+                table_tag[cpd.variable].text += ' '
 
         return table_tag
 
@@ -333,6 +353,5 @@ class XMLBIFWriter:
         >>> writer.write_xmlbif(test_file)
         """
         writer = self.__str__()[:-1].decode('utf-8')
-        print(writer)
         with open(filename,'w') as fout:
             fout.write(writer)
