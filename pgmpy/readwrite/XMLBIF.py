@@ -175,4 +175,10 @@ class XMLBIFReader:
             tabular_cpds.append(cpd)
 
         model.add_cpds(*tabular_cpds)
+
+        for node, properties in self.variable_property:
+            for prop in properties:
+                prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                model.node[node][prop_name] = prop_value
+
         return model
