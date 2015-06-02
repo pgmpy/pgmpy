@@ -166,6 +166,7 @@ class XMLBIFReader:
 
     def get_model(self):
         model = BayesianModel(self.get_edges())
+        model.name = self.network_name
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
@@ -215,10 +216,8 @@ class XMLBIFWriter:
 
         self.xml = etree.Element("BIF", attrib={'version': '0.3'})
         self.network = etree.SubElement(self.xml, 'NETWORK')
-        try:
-            etree.SubElement(self.network, 'NAME').text = self.model['network_name']
-        except KeyError:
-            pass
+        if self.model.name:
+            etree.SubElement(self.network, 'NAME').text = self.model.name
 
         self.variables = self.get_variables()
         self.states = self.get_states()
