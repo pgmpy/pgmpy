@@ -215,7 +215,7 @@ class XMLBIFWriter:
 
         self.variables = self.add_variables()
         self.states = self.add_states()
-        # TODO: add Property tag
+        self.properties = self.add_properties()
         self.definition = self.add_definition()
         self.tables = self.add_cpd()
 
@@ -284,11 +284,32 @@ class XMLBIFWriter:
             var = cpd.variable
             outcome_tag[var] = []
             for state in cpd.variables[var]:
-              state_tag = etree.SubElement(self.variables[var], "OUTCOME")
-              state_tag.text = state
-              outcome_tag[var].append(state_tag)
+                state_tag = etree.SubElement(self.variables[var], "OUTCOME")
+                state_tag.text = state
+                outcome_tag[var].append(state_tag)
         return outcome_tag
 
+    def add_properties(self):
+        """
+        Add property to variables in XMLBIF
+
+        Return
+        ---------------
+        xml containing property tag
+
+        Examples
+        -------
+        >>> writer = XMLBIFWriter(model)
+        >>> writer.add_property()
+        """
+        variables = self.model.nodes()
+        property_tag = {}
+        for var in sorted(variables):
+            properties = self.model.node[var]
+            property_tag[var] = etree.SubElement(self.variables[var], "PROPERTY")
+            for prop, val in properties.items():
+                property_tag[var].text = str(prop) + " = " + str(val)
+        return property_tag
 
     def add_definition(self):
         """

@@ -333,6 +333,11 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
                    'family-out': [],
                    'hear-bark': ['dog-out'],
                    'light-on': ['family-out']}
+        properties = {'bowel-problem': ['position = (190, 69)'],
+                      'dog-out': ['position = (155, 165)'],
+                      'family-out': ['position = (112, 69)'],
+                      'hear-bark': ['position = (154, 241)'],
+                      'light-on': ['position = (73, 165)']}
 
         self.model = BayesianModel(edges)
 
@@ -343,8 +348,13 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
                              evidence_card=[len(states[evidence_var])
                                             for evidence_var in parents[var]])
             tabular_cpds.append(cpd)
-
         self.model.add_cpds(*tabular_cpds)
+
+        for node, properties in properties.items():
+            for prop in properties:
+                prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                self.model.node[node][prop_name] = prop_value
+
         self.writer = XMLBIFWriter(model=self.model)
 
     def test_file(self):
@@ -354,26 +364,31 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
       <NAME>bowel-problem</NAME>
       <OUTCOME>bowel-problem_0</OUTCOME>
       <OUTCOME>bowel-problem_1</OUTCOME>
+      <PROPERTY>position = (190, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>dog-out</NAME>
       <OUTCOME>dog-out_0</OUTCOME>
       <OUTCOME>dog-out_1</OUTCOME>
+      <PROPERTY>position = (155, 165)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>family-out</NAME>
       <OUTCOME>family-out_0</OUTCOME>
       <OUTCOME>family-out_1</OUTCOME>
+      <PROPERTY>position = (112, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>hear-bark</NAME>
       <OUTCOME>hear-bark_0</OUTCOME>
       <OUTCOME>hear-bark_1</OUTCOME>
+      <PROPERTY>position = (154, 241)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>light-on</NAME>
       <OUTCOME>light-on_0</OUTCOME>
       <OUTCOME>light-on_1</OUTCOME>
+      <PROPERTY>position = (73, 165)</PROPERTY>
     </VARIABLE>
     <DEFINITION>
       <FOR>bowel-problem</FOR>
