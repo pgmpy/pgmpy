@@ -189,8 +189,9 @@ class XMLBIFWriter:
 
         Parameters
         ----------
-        model: Model to write
-        encoding: String(optional)
+        model: BayesianModel Instance
+            Model to write
+        encoding: str (optional)
             Encoding for text data
         prettyprint: Bool(optional)
             Indentation in output XML if true
@@ -213,11 +214,11 @@ class XMLBIFWriter:
         except KeyError:
             pass
 
-        self.variables = self.add_variables()
-        self.states = self.add_states()
-        self.properties = self.add_properties()
-        self.definition = self.add_definition()
-        self.tables = self.add_cpd()
+        self.variables = self.get_variables()
+        self.states = self.get_states()
+        self.properties = self.get_properties()
+        self.definition = self.get_definition()
+        self.tables = self.get_cpd()
 
     def __str__(self):
         """
@@ -245,18 +246,23 @@ class XMLBIFWriter:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
-    def add_variables(self):
+    def get_variables(self):
         """
         Add variables to XMLBIF
 
         Return
         ---------------
-        xml containing variables tag
+        dict: dict of type {variable: variable tags}
 
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
         >>> writer.get_variables()
+        {'bowel-problem': <Element VARIABLE at 0x7fe28607dd88>,
+         'family-out': <Element VARIABLE at 0x7fe28607de08>,
+         'hear-bark': <Element VARIABLE at 0x7fe28607de48>,
+         'dog-out': <Element VARIABLE at 0x7fe28607ddc8>,
+         'light-on': <Element VARIABLE at 0x7fe28607de88>}
         """
         variables = self.model.nodes()
         variable_tag = {}
@@ -265,18 +271,23 @@ class XMLBIFWriter:
             etree.SubElement(variable_tag[var], "NAME").text = var
         return variable_tag
 
-    def add_states(self):
+    def get_states(self):
         """
         Add outcome to variables of XMLBIF
 
         Return
         ---------------
-        xml containing outcome tag
+        dict: dict of type {variable: outcome tags}
 
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
         >>> writer.get_states()
+        {'dog-out': [<Element OUTCOME at 0x7ffbabfcdec8>, <Element OUTCOME at 0x7ffbabfcdf08>],
+         'family-out': [<Element OUTCOME at 0x7ffbabfd4108>, <Element OUTCOME at 0x7ffbabfd4148>],
+         'bowel-problem': [<Element OUTCOME at 0x7ffbabfd4088>, <Element OUTCOME at 0x7ffbabfd40c8>],
+         'hear-bark': [<Element OUTCOME at 0x7ffbabfcdf48>, <Element OUTCOME at 0x7ffbabfcdf88>],
+         'light-on': [<Element OUTCOME at 0x7ffbabfcdfc8>, <Element OUTCOME at 0x7ffbabfd4048>]}
         """
         outcome_tag = {}
         cpds = self.model.get_cpds()
@@ -289,18 +300,23 @@ class XMLBIFWriter:
                 outcome_tag[var].append(state_tag)
         return outcome_tag
 
-    def add_properties(self):
+    def get_properties(self):
         """
         Add property to variables in XMLBIF
 
         Return
         ---------------
-        xml containing property tag
+        dict: dict of type {variable: property tag}
 
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_property()
+        {'light-on': <Element PROPERTY at 0x7f7a2ffac1c8>,
+         'family-out': <Element PROPERTY at 0x7f7a2ffac148>,
+         'hear-bark': <Element PROPERTY at 0x7f7a2ffac188>,
+         'bowel-problem': <Element PROPERTY at 0x7f7a2ffac0c8>,
+         'dog-out': <Element PROPERTY at 0x7f7a2ffac108>}
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -311,18 +327,23 @@ class XMLBIFWriter:
                 property_tag[var].text = str(prop) + " = " + str(val)
         return property_tag
 
-    def add_definition(self):
+    def get_definition(self):
         """
         Add Definition to XMLBIF
 
         Return
         ---------------
-        xml containing definition tag
+        dict: dict of type {variable: definition tag}
 
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_definition()
+        {'hear-bark': <Element DEFINITION at 0x7f1d48977408>,
+         'family-out': <Element DEFINITION at 0x7f1d489773c8>,
+         'dog-out': <Element DEFINITION at 0x7f1d48977388>,
+         'bowel-problem': <Element DEFINITION at 0x7f1d48977348>,
+         'light-on': <Element DEFINITION at 0x7f1d48977448>}
         """
         cpds = self.model.get_cpds()
         cpds.sort(key=lambda x: x.variable)
@@ -335,18 +356,23 @@ class XMLBIFWriter:
 
         return definition_tag
 
-    def add_cpd(self):
+    def get_cpd(self):
         """
         Add Table to XMLBIF.
 
         Return
         ---------------
-        xml containing table tag.
+        dict: dict of type {variable: table tag}
 
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_cpd()
+        {'dog-out': <Element TABLE at 0x7f240726f3c8>,
+         'light-on': <Element TABLE at 0x7f240726f488>,
+         'bowel-problem': <Element TABLE at 0x7f240726f388>,
+         'family-out': <Element TABLE at 0x7f240726f408>,
+         'hear-bark': <Element TABLE at 0x7f240726f448>}
         """
         cpds = self.model.get_cpds()
         definition_tag = self.definition
@@ -355,8 +381,7 @@ class XMLBIFWriter:
             table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
             table_tag[cpd.variable].text = ''
             for val in cpd.values:
-                table_tag[cpd.variable].text += str(val)
-                table_tag[cpd.variable].text += ' '
+                table_tag[cpd.variable].text += str(val) + ' '
 
         return table_tag
 
