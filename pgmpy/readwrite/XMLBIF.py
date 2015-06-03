@@ -204,7 +204,7 @@ class XMLBIFWriter:
             Indentation in output XML if true
 
         Examples
-        -------
+        --------
         >>> writer = XMLBIFWriter(model)
         """
         if not isinstance(model, BayesianModel):
@@ -256,11 +256,11 @@ class XMLBIFWriter:
         Add variables to XMLBIF
 
         Return
-        ---------------
+        ------
         dict: dict of type {variable: variable tags}
 
         Examples
-        -------
+        --------
         >>> writer = XMLBIFWriter(model)
         >>> writer.get_variables()
         {'bowel-problem': <Element VARIABLE at 0x7fe28607dd88>,
@@ -281,11 +281,11 @@ class XMLBIFWriter:
         Add outcome to variables of XMLBIF
 
         Return
-        ---------------
+        ------
         dict: dict of type {variable: outcome tags}
 
         Examples
-        -------
+        --------
         >>> writer = XMLBIFWriter(model)
         >>> writer.get_states()
         {'dog-out': [<Element OUTCOME at 0x7ffbabfcdec8>, <Element OUTCOME at 0x7ffbabfcdf08>],
@@ -310,11 +310,11 @@ class XMLBIFWriter:
         Add property to variables in XMLBIF
 
         Return
-        ---------------
+        ------
         dict: dict of type {variable: property tag}
 
         Examples
-        -------
+        --------
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_property()
         {'light-on': <Element PROPERTY at 0x7f7a2ffac1c8>,
@@ -337,11 +337,11 @@ class XMLBIFWriter:
         Add Definition to XMLBIF
 
         Return
-        ---------------
+        ------
         dict: dict of type {variable: definition tag}
 
         Examples
-        -------
+        --------
         >>> writer = XMLBIFWriter(model)
         >>> writer.add_definition()
         {'hear-bark': <Element DEFINITION at 0x7f1d48977408>,
@@ -404,5 +404,5 @@ class XMLBIFWriter:
         >>> writer.write_xmlbif(test_file)
         """
         writer = self.__str__()[:-1].decode('utf-8')
-        with open(filename,'w') as fout:
+        with open(filename, 'w') as fout:
             fout.write(writer)
