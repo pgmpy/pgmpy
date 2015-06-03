@@ -316,7 +316,7 @@ class XMLBIFWriter:
         Examples
         --------
         >>> writer = XMLBIFWriter(model)
-        >>> writer.add_property()
+        >>> writer.get_property()
         {'light-on': <Element PROPERTY at 0x7f7a2ffac1c8>,
          'family-out': <Element PROPERTY at 0x7f7a2ffac148>,
          'hear-bark': <Element PROPERTY at 0x7f7a2ffac188>,
@@ -343,7 +343,7 @@ class XMLBIFWriter:
         Examples
         --------
         >>> writer = XMLBIFWriter(model)
-        >>> writer.add_definition()
+        >>> writer.get_definition()
         {'hear-bark': <Element DEFINITION at 0x7f1d48977408>,
          'family-out': <Element DEFINITION at 0x7f1d489773c8>,
          'dog-out': <Element DEFINITION at 0x7f1d48977388>,
@@ -356,7 +356,7 @@ class XMLBIFWriter:
         for cpd in cpds:
             definition_tag[cpd.variable] = etree.SubElement(self.network, "DEFINITION")
             etree.SubElement(definition_tag[cpd.variable], "FOR").text = cpd.variable
-            for child in sorted(cpd.evidence):
+            for child in sorted([] if cpd.evidence == None else cpd.evidence):
                 etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = child
 
         return definition_tag
@@ -372,7 +372,7 @@ class XMLBIFWriter:
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
-        >>> writer.add_cpd()
+        >>> writer.get_cpd()
         {'dog-out': <Element TABLE at 0x7f240726f3c8>,
          'light-on': <Element TABLE at 0x7f240726f488>,
          'bowel-problem': <Element TABLE at 0x7f240726f388>,
