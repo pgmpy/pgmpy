@@ -233,12 +233,11 @@ class Factor:
                 0.15151515,  0.16666667])
 
         """
+        values = self.values / np.sum(self.values)
         if inplace:
-            self.values = self.values / np.sum(self.values)
+            self.values = values
         else:
-            factor = Factor(self.scope(), self.cardinality, self.values)
-            factor.values = factor.values / np.sum(factor.values)
-            return factor
+            return Factor(self.scope(), self.cardinality, values)
 
     def reduce(self, values, inplace=True):
         """
