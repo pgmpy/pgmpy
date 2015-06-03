@@ -1,12 +1,15 @@
 import functools
 from operator import lt
 from itertools import product, starmap
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 import numpy as np
 
 from pgmpy.exceptions import Exceptions
 from pgmpy.extern import tabulate
+
+
+State = namedtuple('State', ['var', 'state'])
 
 
 class Factor:
@@ -71,10 +74,9 @@ class Factor:
         if len(variables) != len(cardinality):
             raise ValueError("The size of variables and cardinality should be same")
         for variable, card in zip(variables, cardinality):
-            self.variables[str(variable)] = [str(variable) + '_' + str(index)
-                                        for index in range(card)]
+            self.variables[variable] = [State(variable, index) for index in range(card)]
         self.cardinality = np.array(cardinality)
-        self.values = np.array(value, dtype=np.double)
+        self.values = np.array(value, dtype=np.float)
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
