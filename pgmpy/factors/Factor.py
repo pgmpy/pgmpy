@@ -4,6 +4,7 @@ from itertools import product, starmap
 from collections import OrderedDict
 
 import numpy as np
+from sklearn.utils.extmath import cartesian
 
 from pgmpy.exceptions import Exceptions
 from pgmpy.extern import tabulate
@@ -67,6 +68,7 @@ class Factor:
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
+
         self.variables = OrderedDict()
         if len(variables) != len(cardinality):
             raise ValueError("The size of variables and cardinality should be same")
@@ -77,6 +79,8 @@ class Factor:
         self.values = np.array(value, dtype=np.double)
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
+        
+        self._stride = np.cumprod(np.r_[self.cardinality[1:],1][::-1])[::-1]
 
     def scope(self):
         """
@@ -200,12 +204,11 @@ class Factor:
         marginalized_values = []
         for i in product(*[range(index) for index in assign[assign != -1]]):
             assign[assign != -1] = i
-            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
+            idxa = factor._index_for_assignment(assign)
+            marginalized_values.append(np.sum(factor.values[idxa]))
         factor.values = np.array(marginalized_values)
-        for variable in variables:
-            index = list(factor.variables.keys()).index(variable)
-            del(factor.variables[variable])
-            factor.cardinality = np.delete(factor.cardinality, index)
+        factor._remove_variables(variables)
+        
         if not inplace:
             return factor
             
@@ -271,24 +274,25 @@ class Factor:
             
         value_row = list(zip(*[value.split('_') for value in values]))
         reduced_variables = list(value_row[0])
-        value_indices = list(map(int, value_row[1]))
+        value_indices = np.array(list(map(int, value_row[1])))
         if not set(reduced_variables).issubset(set(factor.scope())):
             raise Exceptions.ScopeError('%s not in scope' % list(set(reduced_variables)-set(factor.scope())))
 
-        reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
+        _scope = np.array(factor.scope())
+        reduced_indices = np.where(np.in1d(_scope, reduced_variables))
         if not all(starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
             raise Exceptions.SizeError('Value is greater than max possible value')
-
+        
+        index_map = list(map(reduced_variables.index, _scope[reduced_indices]))
         reduce_assign = np.full(len(factor.cardinality), -1, dtype=int)
-        reduce_assign[reduced_indices] = value_indices
+        reduce_assign[reduced_indices] = value_indices[index_map]
+        
         factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
-        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
-        for var in reduced_variables:
-            del factor.variables[var]
+        factor._remove_variables(reduced_variables)
 
         if not inplace:
             return factor
-
+        
     def product(self, *factors, n_jobs=1):
         """
         Returns the factor product with factors.
@@ -407,19 +411,31 @@ class Factor:
         array([  9,  10,  11,  12,  13,  14,  15,  16,  17])
         """
         assignment = np.array(assignment)
-        card_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(self.cardinality[::-1])), axis=1)[::-1], 0)
-        if -1 in assignment:
-            indexes = np.where(assignment == -1)[0]
-            cardinalities = self.cardinality[indexes]
-            array_to_return = np.array([])
-            for i in product(*[range(card) for card in cardinalities]):
-                temp_assignment = np.array(assignment)
-                temp_assignment[temp_assignment == -1] = i
-                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
-            return array_to_return.astype('int')
-        else:
-            return np.array([np.sum(assignment * card_cumprod)])
-
+        # starcols: the columns with -1 wildcard; fixedcols: columns with values
+        starcols = assignment == -1
+        fixedcols = np.logical_not(starcols)
+        
+        # if no wildcards: single assignment. Index is dot product of stride and assignment
+        if not np.any(starcols):
+            return np.dot(self._stride, assignment)
+        
+        # create an assignment matrix with all assignments implied by the fixed and wildcard columns    
+        cardinalities = self.cardinality[starcols]
+        assignments = np.empty((np.prod(cardinalities), len(self.cardinality)), dtype=np.int64)
+        assignments[:, np.nonzero(fixedcols)[0]] = assignment[fixedcols]
+        # cartesian function 5x faster than itertools.product (see stackoverflow.com)        
+        assignments[:, np.nonzero(starcols)[0]] = cartesian([np.arange(card) for card in cardinalities])
+        
+        # indices are dot product of stride with transpose of assignments matrix
+        return np.dot(self._stride, assignments.T)
+   
+    def _remove_variables(self, variables):
+        for variable in variables:
+            index = list(self.variables.keys()).index(variable)
+            del(self.variables[variable])
+            self.cardinality = np.delete(self.cardinality, index)
+        self._stride = np.cumprod(np.r_[self.cardinality[1:],1][::-1])[::-1]
+             
     def __str__(self):
         return self._str(phi_or_p='phi', html=False)
 
