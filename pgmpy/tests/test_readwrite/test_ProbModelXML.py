@@ -30,6 +30,14 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         <AdditionalProperties>
             <Property name="elvira.title" value="X ray result"/>
         </AdditionalProperties>
+        <DecisionCriteria>
+            <Criterion name="cost">
+                <AdditionalProperties/>
+            </Criterion>
+            <Criterion name="effectiveness">
+                <AdditionalProperties/>
+            </Criterion>
+        </DecisionCriteria>
         <Variables>
             <Variable name="intelligence" type="FiniteState" role="Chance">
                 <Comment />
@@ -85,6 +93,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.reader_file = ProbModelXMLReader(path=StringIO(string))
 
     def test_comment(self):
+        print(self.reader_string.probnet['DecisionCriteria'])
         comment_expected = "Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller"
         self.maxDiff = None
         self.assertEqual(self.reader_string.probnet['Comment'], comment_expected)
@@ -145,6 +154,15 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertDictEqual(self.reader_file.probnet['AdditionalProperties'],
                              additionalproperties_expected)
 
+    def test_decisioncriteria(self):
+        decisioncriteria_expected = {'effectiveness': {},
+                                     'cost': {}}
+        self.maxDiff = None
+        self.assertDictEqual(self.reader_string.probnet['DecisionCriteria'],
+                             decisioncriteria_expected)
+        self.assertDictEqual(self.reader_file.probnet['DecisionCriteria'],
+                             decisioncriteria_expected)
+
 
 class TestProbModelXMLWriter(unittest.TestCase):
     def setUp(self):
@@ -154,6 +172,8 @@ class TestProbModelXMLWriter(unittest.TestCase):
                             'AdditionalConstraints': {'MaxNumParents':
                                                       {'numParents': '5'}},
                             'AdditionalProperties': {'elvira.title': 'X ray result'},
+                            'DecisionCriteria': {'effectiveness': {},
+                                                 'cost': {}},
                             'Variables': {'difficulty':
                                           {'type': 'FiniteState',
                                            'role': 'Chance',
@@ -250,6 +270,14 @@ class TestProbModelXMLWriter(unittest.TestCase):
   <AdditionalProperties>
     <Property name="elvira.title" value="X ray result"/>
   </AdditionalProperties>
+  <DecisionCriteria>
+    <Criterion name="cost">
+      <AdditionalProperties/>
+    </Criterion>
+    <Criterion name="effectiveness">
+      <AdditionalProperties/>
+    </Criterion>
+  </DecisionCriteria>
 </ProbModelXML>""")
         self.maxDiff = None
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))

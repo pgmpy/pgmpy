@@ -278,6 +278,10 @@ class ProbModelXMLWriter:
             self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
         except KeyError:
             etree.SubElement(self.probnet, 'AdditionalProperties')
+        try:
+            self._add_decisioncriteria(self.data['probnet']['DecisionCriteria'])
+        except KeyError:
+            etree.SubElement(self.probnet, 'DecisionCriteria')
 
         # Add Additional Constraints
         for constraint in sorted(self.data['probnet']['AdditionalConstraints']):
@@ -357,6 +361,15 @@ class ProbModelXMLWriter:
             name = argument
             value = constraint_data[name]
             etree.SubElement(constraint_element, 'Argument', attrib={'name': name, 'value': value})
+
+    def _add_decisioncriteria(self, criteria_dict):
+        """
+        Adds Decision Criteria to the ProbModelXML.
+        """
+        decision_tag = etree.SubElement(self.xml, 'DecisionCriteria', attrib={})
+        for criteria in sorted(criteria_dict):
+            criteria_tag = etree.SubElement(decision_tag, 'Criterion', attrib={'name': criteria})
+            self._add_additional_properties(criteria_tag, criteria_dict[criteria])
 
     def _add_potential(self):
         pass
@@ -496,6 +509,11 @@ class ProbModelXMLReader:
         for constraint in probnet_elem.findall('AdditionalConstraints/Constraint'):
             self.add_probnet_additionalconstraints(constraint)
 
+        # Add Decision Criterion
+        self.probnet['DecisionCriteria'] = {}
+        for criterion in probnet_elem.findall('DecisionCriteria/Criterion'):
+            self.add_criterion(criterion)
+
         # Add nodes
         self.probnet['Variables'] = {}
         for variable in probnet_elem.find('Variables'):
@@ -517,6 +535,14 @@ class ProbModelXMLReader:
             argument_name = argument.attrib['name']
             argument_value = argument.attrib['value']
             self.probnet['AdditionalConstraints'][constraint_name][argument_name] = argument_value
+
+    def add_criterion(self, criterion):
+        criterion_name = criterion.attrib['name']
+        self.probnet['DecisionCriteria'][criterion_name] = {}
+        if criterion.find('AdditionalProperties/Property') is not None:
+            for prop in criterion.findall('AdditionalProperties/Property'):
+                self.probnet['DecisionCriteria'][criterion_name]['AdditionalProperties'][prop.attrib['name']] = \
+                    prop.attrib['value']
 
     def add_comment(self, comment):
         self.probnet['Comment'] = comment
