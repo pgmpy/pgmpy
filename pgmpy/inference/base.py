@@ -2,10 +2,8 @@
 
 from collections import defaultdict
 from itertools import chain
-from pgmpy.models import BayesianModel
-from pgmpy.models import MarkovModel
-from pgmpy.models import FactorGraph
-from pgmpy.models import JunctionTree
+
+from pgmpy.models import BayesianModel, MarkovModel, FactorGraph, JunctionTree
 from pgmpy.exceptions import ModelError
 
 
@@ -55,6 +53,8 @@ class Inference:
     def __init__(self, model):
         if not model.check_model():
             raise ModelError("Model of type {!r} not valid".format(type(model).__name__))
+
+        self.model = model
 
         if isinstance(model, JunctionTree):
             self.variables = set(chain(*model.nodes()))

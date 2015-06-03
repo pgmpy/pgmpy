@@ -67,5 +67,12 @@ class TestUndirectedGraphCreation(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertEqual(len(self.graph.neighbors('b')), 2)
 
+    def test_fill_in_edges(self):
+        self.graph.add_edges_from([('a', 'b'), ('c', 'b'),
+                                  ('b', 'd'), ('a', 'c')])
+        edges = [frozenset(e) for e in self.graph.fill_in_edges('b')]
+        self.assertEqual(set(edges),
+                         set([frozenset(('d', 'a')), frozenset(('d', 'c'))]))
+
     def tearDown(self):
         del self.graph

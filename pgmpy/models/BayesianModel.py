@@ -7,6 +7,7 @@ import logging
 import networkx as nx
 import numpy as np
 import pandas as pd
+from pgmpy.exceptions import Exceptions
 
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
@@ -623,3 +624,96 @@ class BayesianModel(DirectedGraph):
 
     def is_imap(self, independence):
         pass
+
+    def get_cardinality(self, variables=None):
+        """
+        Returns cardinality of a given variable by looking for
+        the variable withing the factors of the BayesianModel.
+
+        Parameters
+        ----------
+        variable: node or list of nodes. Node can be any hashable python object.
+            Node whose cardinality is to be returned.
+            If no argument is passed. Returns a dict of cardinalities of each variable in
+            the network.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> model.get_cardinality('A')
+        {'A': 2}
+        >>> model.get_cardinality(['A', 'B', 'C', 'D', 'E'])
+        {'A': 2, 'B': 2, 'C': 2, 'D': 2, 'E': 2}
+        """
+        if not isinstance(variables, (list, tuple, set)):
+            variables = [variables]
+
+        card_dict = {}
+        for variable in set(variables):
+            if variable not in self.nodes():
+                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
+            var_cpd = self.get_cpds(variable)
+            card_dict[variable] = var_cpd.cardinality[0]
+
+        return card_dict
+
+    # def barren_nodes(self, variables):
+    #     """
+    #     Return all barren variables, given the nodes to ignore
+    #     (query and/or evidence nodes). Barren variables
+    #     are leaf variables not in query of evidence.
+    #
+    #     Parameters
+    #     ----------
+    #     variables: a list, list-type
+    #         name of all variables to me desconsidered
+    #         (query and evidence variables)
+    #
+    #     Reference
+    #     ---------
+    #     A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+    #     Proceedings of Canadian Artificial Intelligence, 1994.
+    #     """
+    #     copy_model = self.copy()
+    #     barren_vars = []
+    #     while True:
+    #         barren = [v for v in (n for n, d
+    #                   in copy_model.out_degree_iter()
+    #                   if d == 0) if v not in variables]
+    #         barren_vars.extend(barren)
+    #         copy_model.remove_nodes_from(barren)
+    #         if len(barren) == 0:
+    #             break
+    #     return barren_vars
+
+    # def independent_by_evidence_nodes(self, query, evidence):
+    #     """
+    #     Return all independent by evidence variables.
+    #     They are variables that does not have an
+    #     active trail to any of the query variables,
+    #     given the evidence.
+    #
+    #     Parameters
+    #     ----------
+    #     query: one query variable
+    #         The query variable
+    #     evidence: dictionary with evidences
+    #         Evidences given for inference
+    #
+    #     Reference
+    #     ---------
+    #     LAZY propagation: A junction tree inference algorithm based
+    #     on lazy evaluation, Anders L. Madsen, Finn V. Jensen,
+    #     Artificial Intelligence 113 (1999) 203–245
+    #     """
+    #     evidence_vars = evidence.keys() if evidence is not None else []
+    #     return [v for v in self.nodes()
+    #             if (v not in evidence_vars) and
+    #             not self.is_active_trail(v, query,
+    #                                      list(evidence_vars))]

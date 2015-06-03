@@ -118,6 +118,18 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
+
+    # def test_barren_nodes(self):
+    #     self.assertListEqual(sorted(self.G.barren_nodes(['d', 'a'])),
+    #                          ['c', 'e'])
+    #     self.assertListEqual(sorted(self.G.barren_nodes(['e', 'c'])),
+    #                          [])
+
+    # def test_independent_by_evidence_nodes(self):
+    #     self.assertListEqual(sorted(self.G.
+    #                          independent_by_evidence_nodes('e', {'d': 0})),
+    #                          ['a', 'b', 'c'])
+
     def tearDown(self):
         del self.G
 
@@ -199,6 +211,17 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds('g'), cpd_g)
         self.assertEqual(self.G.get_cpds('l'), cpd_l)
         self.assertEqual(self.G.get_cpds('s'), cpd_s)
+
+    def test_get_cardinality(self):
+        cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
+        cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
+        cpd_g = TabularCPD('g', 3, np.random.rand(3, 4), ['d', 'i'], [2, 2])
+        self.G.add_cpds(cpd_d, cpd_i, cpd_g)
+
+        self.assertDictEqual(self.G.get_cardinality('d'), {'d': 2})
+        self.assertDictEqual(self.G.get_cardinality('i'), {'i': 2})
+        self.assertDictEqual(self.G.get_cardinality('g'), {'g': 3})
+        self.assertDictEqual(self.G.get_cardinality(['i', 'g']), {'i': 2, 'g': 3})
 
     def tearDown(self):
         del self.G

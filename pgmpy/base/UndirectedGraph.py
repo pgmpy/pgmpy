@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+
 import networkx as nx
 
 
@@ -174,3 +175,18 @@ class UndirectedGraph(nx.Graph):
         True
         """
         return nx.is_chordal(self)
+
+    # def fill_in_edges(self, node):
+    #     """
+    #     Return edges needed to be added to the graph if a node is remvoed.
+    #
+    #     Parameters
+    #     ----------
+    #     node: one node.
+    #         Node to be removed from the graph.
+    #     """
+    #     edges = []
+    #     neighbors = self.neighbors(node)
+    #     edges.extend([e for e in itertools.combinations(neighbors, 2)
+    #                   if not self.has_edge(*e)])
+    #     return edges

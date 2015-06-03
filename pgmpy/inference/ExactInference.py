@@ -6,12 +6,106 @@ import copy
 import numpy as np
 import networkx as nx
 
-from pgmpy.inference import Inference
+from pgmpy.base import DirectedGraph
+from pgmpy.models import BayesianModel, JunctionTree
 from pgmpy.factors.Factor import factor_product
-from pgmpy.models import JunctionTree
+from pgmpy.inference import Inference
+from pgmpy.inference import BaseEliminationOrder, WeightedMinFill, MinNeighbours, MinWeight, MinFill
 
 
 class VariableElimination(Inference):
+    def _barren_nodes(self, query, evidence_vars):
+        """
+        Return all barren variables, given the nodes to ignore (query and/or evidence nodes).
+        Barren variables are leaf variables not in query or evidence.
+
+        Parameters
+        ----------
+        variables: list, tuple, set (array-like)
+            list of variables to which are not to be considered.
+            In the case of Variable Elimination its variables + evidence.
+
+        Reference
+        ---------
+        A Simple Approach to Bayesian Network Computations, Zhang and Pool,
+        Proceedings of Canadian Artificial Intelligence, 1994.
+
+        Examples
+        --------
+        >>> from pgmpy.inference import VariableElimination
+        >>> from pgmpy.models import BayesianModel
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> inference = VariableElimination(model)
+        >>> barren_nodes = inference._barren_nodes(['A', 'B'])
+        {'D', 'E'}
+        """
+        variables = query + evidence_vars
+
+        model_copy = DirectedGraph(self.model.edges())
+        barren_vars = []
+        while True:
+            leaves = model_copy.get_leaves()
+            barren_nodes = [node for node in leaves if node not in variables]
+            barren_vars.extend(barren_nodes)
+            model_copy.remove_nodes_from(barren_nodes)
+            if not barren_nodes:
+                break
+        return barren_vars
+
+    def _independent_by_evidence(self, query, evidence_vars):
+        """
+        Return all the variables that doesn't have an active trail to any of the query variables,
+        given the evidence.
+
+        Parameters
+        ----------
+        query: string
+            The query variable.
+        evidence: dict
+            Evidences given for inference.
+
+        Reference
+        ---------
+        LAZY propagation: A junction tree inference algorithm based on lazy evaluation, Anders L. Madsen,
+        Finn V. Jensen, Artificial Intelligence 113 (1999) 203–245
+        """
+        return_nodes = []
+        for query_var in query:
+            return_nodes.extend([node for node in self.model.nodes() if (
+                (node not in evidence_vars) and
+                self.model.is_active_trail(node, query_var, list(evidence_vars)))])
+
+        return return_nodes
+
+    def _optimize_bayesian_elimination(self, query, evidence_vars):
+        import pdb; pdb.set_trace()
+        model_copy = self.model.copy()
+        factors_copy = copy.deepcopy(self.working_factors)
+
+        nodes_to_remove = set()
+        # Barren Nodes
+        barren_nodes = self._barren_nodes(query, evidence_vars)
+        nodse_to_remove = nodes_to_remove.union(barren_nodes)
+
+        # Independent Nodes
+        independent_nodes = self._independent_by_evidence(query, evidence_vars)
+        nodes_to_remove = nodes_to_remove.union(independent_nodes)
+
+        # Removing nodes
+        for node in nodes_to_remove:
+            for var, factor_set in factors_copy.items():
+                factors_copy[var] = {factor for factor in factor_set if
+                                     set(factor.scope()).intersection(nodes_to_remove)}
+            del factors_copy[node]
+            model_copy.remove_node(node)
+
+        return model_copy, factors_copy
+
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
@@ -36,52 +130,88 @@ class VariableElimination(Inference):
                 all_factors.extend(factor_li)
             return set(all_factors)
 
-        eliminated_variables = set()
-        working_factors = {node: {factor for factor in self.factors[node]}
-                           for node in self.factors}
+        # Load all factors used in this session of Variable Elimination
+        self.working_factors = {node: {factor for factor in self.factors[node]}
+                                for node in self.model}
+
+        # Optimizations
+        if isinstance(self.model, BayesianModel) and operation == "marginalize":
+            evidence_vars = list(evidence.keys()) if evidence else []
+            import pdb; pdb.set_trace()
+            self.reduced_model, self.reduced_factors = self._optimize_bayesian_elimination(variables, evidence_vars)
+
+        # Finding the elimination_order
+        var_to_eliminate = set(self.reduced_model.nodes()) - set(variables) - \
+                           set(evidence.keys() if evidence else [])
+        if isinstance(elimination_order, BaseEliminationOrder):
+            elimination_order = elimination_order.get_elimination_order(var_to_eliminate)
+        elif isinstance(elimination_order, str):
+            elimination_order = getattr(elimination_order, 'get_elimination_order')(var_to_eliminate)
+        elif elimination_order is None:
+            elimination_order = WeightedMinFill(self.reduced_model).get_elimination_order(var_to_eliminate)
+        elif isinstance(elimination_order, (list, tuple)):
+            if set(elimination_order) != var_to_eliminate:
+                raise ValueError("Variables in elimination_order not in the model")
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor in working_factors[evidence_var]:
-                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
-                                                                                   state=evidence[evidence_var]),
-                                                   inplace=False)
+                for factor in self.working_factors[evidence_var]:
+                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(
+                        evidence_var=evidence_var, state=evidence[evidence_var]), inplace=False)
                     for var in factor_reduced.scope():
-                        working_factors[var].remove(factor)
-                        working_factors[var].add(factor_reduced)
-                del working_factors[evidence_var]
+                        self.working_factors[var].remove(factor)
+                        self.working_factors[var].add(factor_reduced)
+                del self.working_factors[evidence_var]
 
-        # TODO: Modify it to find the optimal elimination order
-        if not elimination_order:
-            elimination_order = list(set(self.variables) -
-                                     set(variables) -
-                                     set(evidence.keys() if evidence else []))
+        # if not elimination_order:
+        #     # If is BayesianModel, find a good elimination ordering
+        #     # using Weighted-Min-Fill heuristic.
+        #     if isinstance(self.reduced_model, BayesianModel):
+        #         elim_ord = EliminationOrdering(model_copy)
+        #         elimination_order = elim_ord.find_elimination_ordering(
+        #                             list(set(model_copy.nodes()) -
+        #                                  set(variables) -
+        #                                  set(evidence.keys()
+        #                                      if evidence else [])),
+        #                             elim_ord.weighted_min_fill)
+        #     else:
+        #         elimination_order = list(set(self.variables) -
+        #                                  set(variables) -
+        #                                  set(evidence.keys()
+        #                                      if evidence else []))
 
-        elif any(var in elimination_order for var in
-                 set(variables).union(set(evidence.keys() if evidence else []))):
-            raise ValueError("Elimination order contains variables which are in"
-                             " variables or evidence args")
+        # elif any(var in elimination_order for var in
+        #          set(variables).union(
+        #             set(evidence.keys() if evidence else []))):
+        #     raise ValueError("Elimination order contains variables"
+        #                      " which are in variables or evidence args")
 
+        # Perform elimination ordering
+        eliminated_variables = set()
         for var in elimination_order:
+            import pdb; pdb.set_trace()
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
-            factors = [factor for factor in working_factors[var]
-                       if not set(factor.variables).intersection(eliminated_variables)]
+            factors = [factor for factor in self.working_factors[var]
+                       if not set(factor.variables).intersection(
+                                  eliminated_variables)]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)(var, inplace=False)
-            del working_factors[var]
+            del self.working_factors[var]
             for variable in phi.variables:
-                working_factors[variable].add(phi)
+                self.working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
         final_distribution = set()
-        for node in working_factors:
-            factors = working_factors[node]
+        for node in self.working_factors:
+            factors = self.working_factors[node]
             for factor in factors:
-                if not set(factor.variables).intersection(eliminated_variables):
+                if not set(factor.variables).intersection(
+                           eliminated_variables):
                     final_distribution.add(factor)
 
+        # Normalization
         query_var_factor = {}
         for query_var in variables:
             phi = factor_product(*final_distribution)
