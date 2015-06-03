@@ -180,12 +180,12 @@ class IndependenceAssertion:
 
     def __str__(self):
         if self.event3:
-            return('({event1} _|_ {event2} | {event3})'.format(event1=', '.join(self.event1),
-                                                               event2=', '.join(self.event2),
-                                                               event3=', '.join(self.event3)))
+            return('({event1} _|_ {event2} | {event3})'.format(event1=', '.join(str(self.event1)),
+                                                               event2=', '.join(str(self.event2)),
+                                                               event3=', '.join(str(self.event3))))
         else:
-            return('({event1} _|_ {event2})'.format(event1=', '.join(self.event1),
-                                                    event2=', '.join(self.event2)))
+            return('({event1} _|_ {event2})'.format(event1=', '.join(str(self.event1)),
+                                                    event2=', '.join(str(self.event2))))
 
     __repr__ = __str__
 
@@ -246,5 +246,5 @@ class IndependenceAssertion:
         self.__init__(event1, event2, event3)
 
     def latex_string(self):
-        return ('%s \perp %s \mid %s' % (', '.join(self.event1), ', '.join(self.event2),
-                                         ', '.join(self.event3)))
+        return ('%s \perp %s \mid %s' % (', '.join(str(self.event1)), ', '.join(str(self.event2)),
+                                         ', '.join(str(self.event3))))
