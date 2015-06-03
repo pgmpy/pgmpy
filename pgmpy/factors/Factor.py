@@ -110,20 +110,21 @@ class Factor:
         >>> phi.assignment([1, 2])
         [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
-        if not isinstance(index, np.ndarray):
-            index = np.atleast_1d(index)
+        index = np.array(index)
+
         max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
-        assignments = []
-        for ind in index:
-            assign = []
-            for card in self.cardinality[::-1]:
-                assign.insert(0, ind % card)
-                ind = ind/card
-            assignments.append(map(int, assign))
-        return [[self.variables[key][val] for key, val in
-                 zip(self.variables.keys(), values)] for values in assignments]
+
+        assignments = np.zeros((len(index), len(self.scope())), dtype=np.int)
+        rev_card = self.cardinality[::-1]
+        for i, card in enumerate(rev_card):
+            assignments[:, i] = index % card
+            index = index//card
+
+        assignments = assignments[:, ::-1]
+
+        return [[self.variables[key][val] for key, val in zip(self.variables.keys(), values)] for values in assignments]
 
     def get_cardinality(self, variable):
         """
