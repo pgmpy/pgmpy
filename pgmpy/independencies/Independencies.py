@@ -177,15 +177,15 @@ class IndependenceAssertion:
         self.event1 = set(self._return_list_if_str(event1))
         self.event2 = set(self._return_list_if_str(event2))
         self.event3 = set(self._return_list_if_str(event3))
+        self.string1 = ','.join([str(elem) for elem in self.event1])
+        self.string2 = ','.join([str(elem) for elem in self.event2])
+        self.string3 = ','.join([str(elem) for elem in self.event3])
 
     def __str__(self):
         if self.event3:
-            return('({event1} _|_ {event2} | {event3})'.format(event1=', '.join(self.event1),
-                                                               event2=', '.join(self.event2),
-                                                               event3=', '.join(self.event3)))
+            return'({0} _|_ {1} | {2})'.format(self.string1, self.string2, self.string3)
         else:
-            return('({event1} _|_ {event2})'.format(event1=', '.join(self.event1),
-                                                    event2=', '.join(self.event2)))
+            return'({0} _|_ {1})'.format(self.string1, self.string2)
 
     __repr__ = __str__
 
@@ -195,7 +195,7 @@ class IndependenceAssertion:
         If variable is a string returns a list containing variable.
         Else returns variable itself.
         """
-        if isinstance(event, str):
+        if isinstance(event, (str, tuple)):
             return [event]
         else:
             return event
@@ -246,5 +246,4 @@ class IndependenceAssertion:
         self.__init__(event1, event2, event3)
 
     def latex_string(self):
-        return ('%s \perp %s \mid %s' % (', '.join(self.event1), ', '.join(self.event2),
-                                         ', '.join(self.event3)))
+        return '%s \perp %s \mid %s' % (self.string1, self.string2, self.string3)
