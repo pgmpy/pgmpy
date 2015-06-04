@@ -245,8 +245,8 @@ class Factor:
 
         Parameters
         ----------
-        values: string, list-type
-            name of the variable values
+        values: list-type
+            A single tuple of the form (variable_name, variable_state) or a list of tuples of the same form.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -262,6 +262,9 @@ class Factor:
         """
         if not isinstance(values, list):
             values = [values]
+
+        if not all(map(lambda t: isinstance(t, (tuple, list, np.ndarray)), values)):
+            raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
 
         reduce_vars, reduce_states = zip(*values)
         reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
