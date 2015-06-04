@@ -19,7 +19,8 @@ State = namedtuple('State', ['var', 'state'])
 class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-        dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1'], 'x3': ['x3_0', 'x3_1']}
+        dic = {'x1': [State('x1', 0), State('x1', 1)], 'x2': [State('x2', 0), State('x2', 1)],
+               'x3': [State('x3', 0), State('x3', 1)]}
         self.assertEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8))
@@ -41,7 +42,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
 
     def test_assignment(self):
-        self.assertListEqual(self.phi.assignment([0]), [['x1_0', 'x2_0', 'x3_0']])
+        self.assertListEqual(self.phi.assignment([0]), [[State('x1', 0), State('x2', 0), State('x3', 0)]])
         self.assertListEqual(self.phi.assignment([4, 5, 6]), [[State('x1', 1), State('x2', 0), State('x3', 0)],
                                                               [State('x1', 1), State('x2', 0), State('x3', 1)],
                                                               [State('x1', 1), State('x2', 1), State('x3', 0)]])
@@ -91,7 +92,7 @@ class TestFactorMethods(unittest.TestCase):
         
     def test_complete_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
-        np_test.assert_array_equal(self.phi1.values, np.array([3]))
+        np_test.assert_array_equal(self.phi1.values, np.array([0]))
         np_test.assert_array_equal(self.phi1.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
 
