@@ -256,40 +256,27 @@ class Factor:
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.reduce(['x1_0', 'x2_0'])
+        >>> phi.reduce([('x1', 0), ('x2', 0)])
         >>> phi.values
         array([0., 1.])
         """
         if not isinstance(values, list):
             values = [values]
 
+        reduce_vars, reduce_states = zip(*values)
+        reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
+        new_card = self.cardinality[reduce_var_indexes == 0]
+        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
+
+        reduce_var_indexes[reduce_var_indexes == 0] = -1
+        reduce_var_indexes[reduce_var_indexes == 1] = reduce_states
+        value_indexes = self._index_for_assignment(reduce_var_indexes)
+        new_values = self.values[value_indexes]
+
         if inplace:
-            factor = self
+            self.__init__(new_vars, new_card, new_values)
         else:
-            factor = Factor(self.scope(), self.cardinality, self.values)
-            
-        if not all('_' in value for value in values):
-            raise TypeError('Values should be in the form of variablename_index')
-            
-        value_row = list(zip(*[value.split('_') for value in values]))
-        reduced_variables = list(value_row[0])
-        value_indices = list(map(int, value_row[1]))
-        if not set(reduced_variables).issubset(set(factor.scope())):
-            raise Exceptions.ScopeError('%s not in scope' % list(set(reduced_variables)-set(factor.scope())))
-
-        reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
-        if not all(starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
-            raise Exceptions.SizeError('Value is greater than max possible value')
-
-        reduce_assign = np.full(len(factor.cardinality), -1, dtype=int)
-        reduce_assign[reduced_indices] = value_indices
-        factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
-        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
-        for var in reduced_variables:
-            del factor.variables[var]
-
-        if not inplace:
-            return factor
+            return Factor(new_vars, new_card, new_values)
 
     def product(self, *factors, n_jobs=1):
         """
