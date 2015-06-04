@@ -362,32 +362,32 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
   <NETWORK>
     <VARIABLE TYPE="nature">
       <NAME>bowel-problem</NAME>
-      <OUTCOME>bowel-problem_0</OUTCOME>
-      <OUTCOME>bowel-problem_1</OUTCOME>
+      <OUTCOME>0</OUTCOME>
+      <OUTCOME>1</OUTCOME>
       <PROPERTY>position = (190, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>dog-out</NAME>
-      <OUTCOME>dog-out_0</OUTCOME>
-      <OUTCOME>dog-out_1</OUTCOME>
+      <OUTCOME>0</OUTCOME>
+      <OUTCOME>1</OUTCOME>
       <PROPERTY>position = (155, 165)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>family-out</NAME>
-      <OUTCOME>family-out_0</OUTCOME>
-      <OUTCOME>family-out_1</OUTCOME>
+      <OUTCOME>0</OUTCOME>
+      <OUTCOME>1</OUTCOME>
       <PROPERTY>position = (112, 69)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>hear-bark</NAME>
-      <OUTCOME>hear-bark_0</OUTCOME>
-      <OUTCOME>hear-bark_1</OUTCOME>
+      <OUTCOME>0</OUTCOME>
+      <OUTCOME>1</OUTCOME>
       <PROPERTY>position = (154, 241)</PROPERTY>
     </VARIABLE>
     <VARIABLE TYPE="nature">
       <NAME>light-on</NAME>
-      <OUTCOME>light-on_0</OUTCOME>
-      <OUTCOME>light-on_1</OUTCOME>
+      <OUTCOME>0</OUTCOME>
+      <OUTCOME>1</OUTCOME>
       <PROPERTY>position = (73, 165)</PROPERTY>
     </VARIABLE>
     <DEFINITION>

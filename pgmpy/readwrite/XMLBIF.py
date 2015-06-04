@@ -301,7 +301,7 @@ class XMLBIFWriter:
             outcome_tag[var] = []
             for state in cpd.variables[var]:
                 state_tag = etree.SubElement(self.variables[var], "OUTCOME")
-                state_tag.text = state
+                state_tag.text = str(state.state)
                 outcome_tag[var].append(state_tag)
         return outcome_tag
 
@@ -356,7 +356,7 @@ class XMLBIFWriter:
         for cpd in cpds:
             definition_tag[cpd.variable] = etree.SubElement(self.network, "DEFINITION")
             etree.SubElement(definition_tag[cpd.variable], "FOR").text = cpd.variable
-            for child in sorted([] if cpd.evidence == None else cpd.evidence):
+            for child in sorted([] if cpd.evidence is None else cpd.evidence):
                 etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = child
 
         return definition_tag
