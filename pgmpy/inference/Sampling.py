@@ -81,26 +81,6 @@ class BayesianModelSampling(Inference):
             sampled.loc[i] = [particle[node] for node in self.topological_order]
         return sampled
 
-    @staticmethod
-    def check_if_consistent(dict1, dict2):
-        """
-        Checks if two assignments of variables contradict each other.
-
-        Parameters
-        ----------
-        dict1, dict2: dicts
-            key, value pairs denoting the variable and the assignment to it
-
-        Returns
-        -------
-        boolean: True/False
-        """
-        common_keys = set(dict1.keys()) - set(dict2.keys())
-        for k in common_keys:
-            if dict1[k] != dict2[k]:
-                return False
-        return True
-
     def rejection_sample(self, evidence=None, size=1):
         """
         Generates sample(s) from joint distribution of the bayesian network,
@@ -138,6 +118,25 @@ class BayesianModelSampling(Inference):
         0  grade_2  intel_1
         1  grade_0  intel_0
         """
+        def check_if_consistent(dict1, dict2):
+            """
+            Checks if two assignments of variables contradict each other.
+
+            Parameters
+            ----------
+            dict1, dict2: dicts
+                key, value pairs denoting the variable and the assignment to it
+
+            Returns
+            -------
+            boolean: True/False
+            """
+            common_keys = set(dict1.keys()) - set(dict2.keys())
+            for k in common_keys:
+                if dict1[k] != dict2[k]:
+                    return False
+            return True
+
         if evidence is None:
             return self.forward_sample(size)
 
@@ -158,7 +157,7 @@ class BayesianModelSampling(Inference):
                     weights = cpd.values
                 particle[node] = sample_discrete(cpd.variables[cpd.variable],
                                                  weights)
-            if self.check_if_consistent(evidence, particle):
+            if check_if_consistent(evidence, particle):
                 # reject if the sample contradicts the evidence
                 sampled.loc[i] = [particle[node] for node in
                                   query_vars]
