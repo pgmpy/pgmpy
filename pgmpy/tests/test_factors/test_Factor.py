@@ -100,10 +100,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.phi1.reduce, ['x10'])
 
     def test_reduce_scopeerror(self):
-        self.assertRaises(exceptions.ScopeError, self.phi1.reduce, ('x4', 1))
+        self.assertRaises(ValueError, self.phi1.reduce, ('x4', 1))
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(exceptions.SizeError, self.phi1.reduce, ('x3', 5))
+        self.assertRaises(IndexError, self.phi1.reduce, ('x3', 5))
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()

@@ -267,6 +267,10 @@ class Factor:
             raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
 
         reduce_vars, reduce_states = zip(*values)
+
+        if not all([var in self.scope() for var in reduce_vars]):
+            raise ValueError("Variable out of Scope")
+
         reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
         new_card = self.cardinality[reduce_var_indexes == 0]
         new_vars = np.array(self.scope())[reduce_var_indexes == 0]
