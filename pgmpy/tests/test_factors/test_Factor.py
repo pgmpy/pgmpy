@@ -390,7 +390,7 @@ class TestJointProbabilityDistributionInit(unittest.TestCase):
         jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12) / 12)
         np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(jpd.values, np.ones(12) / 12)
-        dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1', 'x2_2'], 'x3': ['x3_0', 'x3_1']}
+        dic = {'x1': [('x1', 0), ('x1', 1)], 'x2': [('x2', 0), ('x2', 1), ('x2', 2)], 'x3': [('x3', 0), ('x3', 1)]}
         self.assertEqual(jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
 
     def test_jpd_init_exception(self):
@@ -406,7 +406,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.16666667, 0.16666667, 0.16666667,
                                                                      0.16666667, 0.16666667, 0.16666667]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
-        dic = {'x1': ['x1_0', 'x1_1'], 'x2': ['x2_0', 'x2_1', 'x2_2']}
+        dic = {'x1': [('x1', 0), ('x1', 1)], 'x2': [('x2', 0), ('x2', 1), ('x2', 2)]}
         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
 
@@ -414,25 +414,25 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.jpd.marginal_distribution('x1')
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-        dic = {'x1': ['x1_0', 'x1_1']}
+        dic = {'x1': [('x1', 0), ('x1', 1)]}
         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
 
     def test_conditional_distribution_list(self):
-        self.jpd.conditional_distribution(['x1_1', 'x2_0'])
+        self.jpd.conditional_distribution([('x1', 1), ('x2', 0)])
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-        dic = {'x3': ['x3_0', 'x3_1']}
+        dic = {'x3': [('x3', 0), ('x3', 1)]}
         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
 
     def test_conditional_distribution_str(self):
-        self.jpd.conditional_distribution('x1_1')
+        self.jpd.conditional_distribution(('x1', 1))
         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.16666667, 0.16666667,
                                                                      0.16666667, 0.16666667,
                                                                      0.16666667, 0.16666667]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([3, 2]))
-        dic = {'x2': ['x2_0', 'x2_1', 'x2_2'], 'x3': ['x3_0', 'x3_1']}
+        dic = {'x2': [('x2', 0), ('x2', 1), ('x2', 2)], 'x3': [('x3', 0), ('x3', 1)]}
         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
 
