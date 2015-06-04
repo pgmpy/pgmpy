@@ -281,7 +281,12 @@ class Factor:
         new_values = self.values[value_indexes]
 
         if inplace:
-            self.__init__(new_vars, new_card, new_values)
+            new_variables = OrderedDict()
+            for variable, card in zip(new_vars, new_card):
+                new_variables[variable] = [State(variable, index) for index in range(card)]
+            self.variables = new_variables
+            self.cardinality = new_card
+            self.values = new_values
         else:
             return Factor(new_vars, new_card, new_values)
 
