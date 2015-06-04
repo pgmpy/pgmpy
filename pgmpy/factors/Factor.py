@@ -110,6 +110,8 @@ class Factor:
         >>> phi.assignment([1, 2])
         [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
+        if isinstance(index, (int, np.integer)):
+            index = [index]
         index = np.array(index)
 
         max_index = np.prod(self.cardinality) - 1
