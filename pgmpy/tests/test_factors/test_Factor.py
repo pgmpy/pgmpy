@@ -1,14 +1,19 @@
 import unittest
-from collections import OrderedDict
-import numpy as np
 import itertools
+from collections import OrderedDict, namedtuple
+
+import numpy as np
 import numpy.testing as np_test
+
 from pgmpy.factors import Factor
 from pgmpy.factors import factor_product
 from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD, TreeCPD, RuleCPD
 from pgmpy import exceptions
 from pgmpy.factors import JointProbabilityDistribution as JPD
+
+
+State = namedtuple('State', ['var', 'state'])
 
 
 class TestFactorInit(unittest.TestCase):
@@ -37,12 +42,14 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_assignment(self):
         self.assertListEqual(self.phi.assignment([0]), [['x1_0', 'x2_0', 'x3_0']])
-        self.assertListEqual(self.phi.assignment([4, 5, 6]), [['x1_1', 'x2_0', 'x3_0'],
-                                                              ['x1_1', 'x2_0', 'x3_1'],
-                                                              ['x1_1', 'x2_1', 'x3_0']])
-        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])), [['x1_0', 'x2_2', 'x3_0'],
-                                                                        ['x1_0', 'x2_2', 'x3_1'],
-                                                                        ['x1_1', 'x2_0', 'x3_0']])
+        self.assertListEqual(self.phi.assignment([4, 5, 6]), [[State('x1', 1), State('x2', 0), State('x3', 0)],
+                                                              [State('x1', 1), State('x2', 0), State('x3', 1)],
+                                                              [State('x1', 1), State('x2', 1), State('x3', 0)]])
+
+        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])),
+                             [[State('x1', 0), State('x2', 2), State('x3', 0)],
+                              [State('x1', 0), State('x2', 2), State('x3', 1)],
+                              [State('x1', 1), State('x2', 0), State('x3', 0)]])
 
     def test_assignment_indexerror(self):
         self.assertRaises(IndexError, self.phi.assignment, [10])
@@ -79,24 +86,24 @@ class TestFactorMethods(unittest.TestCase):
              0.13636364, 0.15151515, 0.16666667]))
 
     def test_reduce(self):
-        self.phi1.reduce(['x1_0', 'x2_0'])
+        self.phi1.reduce([('x1', 0), ('x2', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
         
     def test_complete_reduce(self):
-        self.phi1.reduce(['x1_0', 'x2_1', 'x3_1'])
+        self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
         np_test.assert_array_equal(self.phi1.values, np.array([3]))
         np_test.assert_array_equal(self.phi1.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
 
     def test_reduce_typeerror(self):
-        self.assertRaises(TypeError, self.phi1.reduce, 'x10')
-        self.assertRaises(TypeError, self.phi1.reduce, ['x10'])
+        self.assertRaises(ValueError, self.phi1.reduce, 'x10')
+        self.assertRaises(ValueError, self.phi1.reduce, ['x10'])
 
     def test_reduce_scopeerror(self):
-        self.assertRaises(exceptions.ScopeError, self.phi1.reduce, 'x4_1')
+        self.assertRaises(exceptions.ScopeError, self.phi1.reduce, ('x4', 1))
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(exceptions.SizeError, self.phi1.reduce, 'x3_5')
+        self.assertRaises(exceptions.SizeError, self.phi1.reduce, ('x3', 5))
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
@@ -113,10 +120,10 @@ class TestFactorMethods(unittest.TestCase):
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
         self.assertEqual(prod.variables, OrderedDict([
-            ('x1', ['x1_0', 'x1_1']),
-            ('x2', ['x2_0', 'x2_1']),
-            ('x3', ['x3_0', 'x3_1']),
-            ('x4', ['x4_0', 'x4_1'])]
+            ('x1', [State('x1', 0), State('x1', 1)]),
+            ('x2', [State('x2', 0), State('x2', 1)]),
+            ('x3', [State('x3', 0), State('x3', 1)]),
+            ('x4', [State('x4', 0), State('x4', 1)])]
         ))
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
@@ -125,9 +132,9 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
         self.assertEqual(prod.variables, OrderedDict(
-            [('x1', ['x1_0', 'x1_1', 'x1_2']),
-             ('x2', ['x2_0', 'x2_1']),
-             ('x3', ['x3_0', 'x3_1'])]))
+            [('x1', [State('x1', 0), State('x1', 1), State('x1', 2)]),
+             ('x2', [State('x2', 0), State('x2', 1)]),
+             ('x3', [State('x3', 0), State('x3', 1)])]))
 
     def test_factor_product2(self):
         from pgmpy import factors
@@ -139,10 +146,10 @@ class TestFactorMethods(unittest.TestCase):
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
         self.assertEqual(prod.variables, OrderedDict([
-            ('x1', ['x1_0', 'x1_1']),
-            ('x2', ['x2_0', 'x2_1']),
-            ('x3', ['x3_0', 'x3_1']),
-            ('x4', ['x4_0', 'x4_1'])]
+            ('x1', [State('x1', 0), State('x1', 1)]),
+            ('x2', [State('x2', 0), State('x2', 1)]),
+            ('x3', [State('x3', 0), State('x3', 1)]),
+            ('x4', [State('x4', 0), State('x4', 1)])]
         ))
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
@@ -151,9 +158,9 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
         self.assertEqual(prod.variables, OrderedDict(
-            [('x1', ['x1_0', 'x1_1', 'x1_2']),
-             ('x2', ['x2_0', 'x2_1']),
-             ('x3', ['x3_0', 'x3_1'])]))
+            [('x1', [State('x1', 0), State('x1', 1), State('x1', 2)]),
+             ('x2', [State('x2', 0), State('x2', 1)]),
+             ('x3', [State('x3', 0), State('x3', 1)])]))
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
@@ -167,10 +174,10 @@ class TestFactorMethods(unittest.TestCase):
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]))
         self.assertEqual(prod.variables, OrderedDict([
-            ('x1', ['x1_0', 'x1_1']),
-            ('x2', ['x2_0', 'x2_1']),
-            ('x3', ['x3_0', 'x3_1']),
-            ('x4', ['x4_0', 'x4_1'])]
+            ('x1', [State('x1', 0), State('x1', 1)]),
+            ('x2', [State('x2', 0), State('x2', 1)]),
+            ('x3', [State('x3', 0), State('x3', 1)]),
+            ('x4', [State('x4', 0), State('x4', 1)])]
         ))
 
     def test_factor_divide(self):
@@ -347,25 +354,25 @@ class TestTabularCPDMethods(unittest.TestCase):
                          .format(address=hex(id(diff_cpd))))
 
     def test_reduce_1(self):
-        self.cpd.reduce('diff_0')
+        self.cpd.reduce(('diff', 0))
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
                                                                  [0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8]]))
 
     def test_reduce_2(self):
-        self.cpd.reduce('intel_0')
+        self.cpd.reduce(('intel', 0))
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1],
                                                                  [0.1, 0.1],
                                                                  [0.8, 0.8]]))
 
     def test_reduce_3(self):
-        self.cpd.reduce(['intel_0', 'diff_0'])
+        self.cpd.reduce([('intel', 0), ('diff', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1],
                                                                  [0.1],
                                                                  [0.8]]))
 
     def test_reduce_4(self):
-        self.cpd.reduce('grade_0')
+        self.cpd.reduce(('grade', 0))
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[1, 1, 1, 1, 1, 1]]))
 
     def test_get_cpd(self):
