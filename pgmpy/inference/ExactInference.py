@@ -195,13 +195,12 @@ class VariableElimination(Inference):
             final_distribution = final_distribution.values()
         distribution = factor_product(*final_distribution)
         argmax = np.argmax(distribution.values)
-        import pdb; pdb.set_trace()
         assignment = distribution.assignment(argmax)[0]
 
         map_query_results = {}
         for var_assignment in assignment:
             var, value = var_assignment
-            map_query_results[var] = int(value)
+            map_query_results[var] = value
 
         if not variables:
             return map_query_results
