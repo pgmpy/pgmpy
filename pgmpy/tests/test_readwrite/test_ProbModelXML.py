@@ -193,7 +193,6 @@ class TestProbModelXMLReaderString(unittest.TestCase):
     def test_comment(self):
         comment_expected = ("Student example model from Probabilistic Graphical Models: "
                             "Principles and Techniques by Daphne Koller")
-        print(self.reader_string.probnet['Potential'])
         self.assertEqual(self.reader_string.probnet['Comment'], comment_expected)
         self.assertEqual(self.reader_file.probnet['Comment'], comment_expected)
 
