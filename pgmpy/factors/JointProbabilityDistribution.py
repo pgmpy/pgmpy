@@ -198,7 +198,7 @@ class JointProbabilityDistribution(Factor):
         --------
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
-        >>> prob.conditional_distribution('x1_1')
+        >>> prob.conditional_distribution(('x1', 1))
         >>> print(prob)
             x2      x3      P(x1, x2)
             x2_0    x3_0    0.25
