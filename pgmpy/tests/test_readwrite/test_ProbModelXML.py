@@ -80,22 +80,120 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                 <AdditionalProperties />
             </Link>
         </Links>
-        <Potential type="Table" role="ConditionalProbability" label="string">
-            <Comment>CPDs in the form of table</Comment>
-            <AdditionalProperties />
+        <Potential type="Tree/ADD" role="Utility">
+                <UtilityVariable name="U1" />
+                <Variables>
+                    <Variable name="D0"/>
+                    <Variable name="D1"/>
+                    <Variable name="C0"/>
+                    <Variable name="C1"/>
+                 </Variables>
+                <TopVariable name="D0"/>
+                <Branches>
+                   <Branch>
+                      <States><State name="no"/></States>
+                      <Potential type="Tree/ADD">
+                         <TopVariable name="C1"/>
+                         <Branches>
+                              <Branch>
+                                  <Thresholds>
+                                       <Threshold value="–Infinity"/>
+                                       <Threshold value="0" belongsTo="Left"/>
+                                  </Thresholds>
+                                  <Potential type="MixtureOfExponentials">
+                                      <Variables>
+                                         <Variable name="C0"/>
+                                         <Variable name="C1"/>
+                                      </Variables>
+                                      <Subpotentials>
+                                         <Potential type="Exponential">
+                                             <Potential type="Table">
+                                                  <Values>3</Values>
+                                              </Potential>
+                                          </Potential>
+                                          <Potential type="Exponential">
+                                              <Potential type="Table">
+                                                  <Values>–1</Values>
+                                              </Potential>
+                                              <NumericVariables>
+                                                  <Variable name="C0"/>
+                                                  <Variable name="C1"/>
+                                              </NumericVariables>
+                                              <Coefficients>4 –1</Coefficients>
+                                           </Potential>
+                                      </Subpotentials>
+                                 </Potential>
+                              </Branch>
+                              <Branch>
+                                    <Thresholds>
+                                        <Threshold value="0" belongsTo="Left" />
+                                        <Threshold value="+Infinity" />
+                                     </Thresholds>
+                                     <Potential type="MixtureOfExponentials">
+                                        <Variables>
+                                              <Variable name="C1"/>
+                                              <Variable name="D1"/>
+                                        </Variables>
+                                        <Subpotentials>
+                                              <Potential type="Exponential">
+                                                 <Potential type="Table">
+                                                      <Variables>
+                                                          <Variable name="D1"/>
+                                                      </Variables>
+                                                      <Values>10  5</Values>
+                                                 </Potential>
+                                                 <NumericVariables>
+                                                    <Variable name="C1"/>
+                                                 </NumericVariables>
+                                                 <Coefficients>0.25</Coefficients>
+                                              </Potential>
+                                         </Subpotentials>
+                                     </Potential>
+                              </Branch>
+                         </Branches>
+                      </Potential>
+                   </Branch>
+                  <Branch>
+                        <States>
+                            <State name="yes"/>
+                         </States>
+                         <Potential type="MixtureOfExponentials">
+                                <Variables>
+                                    <Variable name="C0"/>
+                                </Variables>
+                                <Subpotentials>
+                                    <Potential type="Exponential">
+                                        <Potential type="Table">
+                                             <Values>0.3</Values>
+                                        </Potential>
+                                        <NumericVariables>
+                                             <Variable name="C0"/>
+                                        </NumericVariables>
+                                        <Coefficients>1</Coefficients>
+                                    </Potential>
+                                   <Potential type="Exponential">
+                                        <Potential type="Table">
+                                             <Values>0.7</Values>
+                                        </Potential>
+                                   </Potential>
+                                </Subpotentials>
+                         </Potential>
+                  </Branch>
+                </Branches>
         </Potential>
     </ProbNet>
     <Policies />
     <InferenceOptions />
 </ProbModelXML>
 """
+        self.maxDiff = None
         self.reader_string = ProbModelXMLReader(string=string)
         self.reader_file = ProbModelXMLReader(path=StringIO(string))
 
     def test_comment(self):
-        print(self.reader_string.probnet['DecisionCriteria'])
-        comment_expected = "Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller"
-        self.maxDiff = None
+        comment_expected = ("Student example model from Probabilistic Graphical Models: "
+                            "Principles and Techniques by Daphne Koller")
+        print(self.reader_string.probnet['Potential'])
         self.assertEqual(self.reader_string.probnet['Comment'], comment_expected)
         self.assertEqual(self.reader_file.probnet['Comment'], comment_expected)
 
@@ -112,7 +210,6 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                       'role': 'Chance',
                       'type': 'FiniteState',
                       'States': {'smart': {}, 'dumb': {}}}}
-        self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['Variables'], variables)
         self.assertDictEqual(self.reader_file.probnet['Variables'], variables)
 
@@ -133,14 +230,12 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                 {'directed': '1',
                  'Comment': 'Directed Edge from intelligence to SAT',
                  'Label': 'intel_to_sat'}}
-        self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['edges'], edge)
         self.assertDictEqual(self.reader_file.probnet['edges'], edge)
 
     def test_additionalconstraints(self):
         additionalconstraints_expected = {'MaxNumParents':
                                           {'numParents': '5'}}
-        self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['AdditionalConstraints'],
                              additionalconstraints_expected)
         self.assertDictEqual(self.reader_file.probnet['AdditionalConstraints'],
@@ -148,7 +243,6 @@ class TestProbModelXMLReaderString(unittest.TestCase):
 
     def test_additionalproperties(self):
         additionalproperties_expected = {'elvira.title': 'X ray result'}
-        self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['AdditionalProperties'],
                              additionalproperties_expected)
         self.assertDictEqual(self.reader_file.probnet['AdditionalProperties'],
@@ -157,11 +251,57 @@ class TestProbModelXMLReaderString(unittest.TestCase):
     def test_decisioncriteria(self):
         decisioncriteria_expected = {'effectiveness': {},
                                      'cost': {}}
-        self.maxDiff = None
         self.assertDictEqual(self.reader_string.probnet['DecisionCriteria'],
                              decisioncriteria_expected)
         self.assertDictEqual(self.reader_file.probnet['DecisionCriteria'],
                              decisioncriteria_expected)
+
+    def test_potential(self):
+        potential_expected = {'role': 'Utility',
+                              'Variables': ['D0', 'D1', 'C0', 'C1'],
+                              'type': 'Tree/ADD',
+                              'UtilityVaribale': 'U1',
+                              'Branches': [{'Potential': {'type': 'Tree/ADD',
+                                                          'Branches': [{'Thresholds': [{'value': '–Infinity'},
+                                                                                       {'value': '0', 'belongsTo': 'Left'}],
+                                                                        'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
+                                                                                                                       'Values': '3'},
+                                                                                                         'type': 'Exponential'},
+                                                                                                        {'NumericVariables': ['C0', 'C1'],
+                                                                                                         'Potential': {'type': 'Table',
+                                                                                                                       'Values': '–1'},
+                                                                                                         'Coefficients': '4 –1',
+                                                                                                         'type': 'Exponential'}],
+                                                                                      'Variables': ['C0', 'C1'],
+                                                                                      'type': 'MixtureOfExponentials'}},
+                                                                       {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
+                                                                                       {'value': '+Infinity'}],
+                                                                        'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
+                                                                                                         'Potential': {'Variables': ['D1'],
+                                                                                                                       'type': 'Table',
+                                                                                                                       'Values': '10  5'},
+                                                                                                         'Coefficients': '0.25',
+                                                                                                         'type': 'Exponential'}],
+                                                                                      'Variables': ['C1', 'D1'],
+                                                                                      'type': 'MixtureOfExponentials'}}],
+                                                          'TopVariable': 'C1'},
+                                            'States': [{'name': 'no'}]},
+                                           {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
+                                                                             'Potential': {'type': 'Table',
+                                                                                           'Values': '0.3'},
+                                                                             'Coefficients': '1',
+                                                                             'type': 'Exponential'},
+                                                                            {'Potential': {'type': 'Table',
+                                                                                           'Values': '0.7'},
+                                                                             'type': 'Exponential'}],
+                                                          'Variables': ['C0'],
+                                                          'type': 'MixtureOfExponentials'},
+                                            'States': [{'name': 'yes'}]}],
+                              'TopVariable': 'D0'}
+        self.assertDictEqual(self.reader_string.probnet['Potential'],
+                             potential_expected)
+        self.assertDictEqual(self.reader_file.probnet['Potential'],
+                             potential_expected)
 
 
 class TestProbModelXMLWriter(unittest.TestCase):
@@ -203,6 +343,7 @@ class TestProbModelXMLWriter(unittest.TestCase):
                                       {'directed': '1',
                                        'Label': 'grad_to_reco',
                                        'Comment': 'Directed Edge from grade to recommendation_letter'}}}}
+        self.maxDiff = None
         self.writer = ProbModelXMLWriter(model_data=self.model_data)
 
     def test_file(self):
@@ -279,5 +420,4 @@ class TestProbModelXMLWriter(unittest.TestCase):
     </Criterion>
   </DecisionCriteria>
 </ProbModelXML>""")
-        self.maxDiff = None
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
