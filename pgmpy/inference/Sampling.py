@@ -159,7 +159,6 @@ class BayesianModelSampling(Inference):
                                                  weights)
             if check_if_consistent(evidence, particle):
                 # reject if the sample contradicts the evidence
-                sampled.loc[i] = [particle[node] for node in
-                                  query_vars]
+                sampled.loc[i] = [particle[node] for node in query_vars]
                 i += 1
         return sampled
