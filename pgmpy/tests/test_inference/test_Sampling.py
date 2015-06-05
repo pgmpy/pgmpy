@@ -1,8 +1,11 @@
+from collections import namedtuple
 import unittest
 from pgmpy.models import MarkovModel
 from pgmpy.inference.Sampling import BayesianModelSampling
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+
+State = namedtuple('State', ['var', 'state'])
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -42,12 +45,18 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertEquals(set(sample.A), {'A_0', 'A_1', None})
-        self.assertTrue(set(sample.J).issubset({'J_0', 'J_1'}))
-        self.assertTrue(set(sample.R).issubset({'R_0', 'R_1'}))
-        self.assertTrue(set(sample.Q).issubset({'Q_0', 'Q_1'}))
-        self.assertTrue(set(sample.G).issubset({'G_0', 'G_1'}))
-        self.assertTrue(set(sample.L).issubset({'L_0', 'L_1'}))
+        self.assertTrue(set(sample.A).issubset({State(var='A', state=0),
+                                                State(var='A', state=1)}))
+        self.assertTrue(set(sample.J).issubset({State(var='J', state=0),
+                                               State(var='J', state=1)}))
+        self.assertTrue(set(sample.R).issubset({State(var='R', state=0),
+                                               State(var='R', state=1)}))
+        self.assertTrue(set(sample.Q).issubset({State(var='Q', state=0),
+                                               State(var='Q', state=1)}))
+        self.assertTrue(set(sample.G).issubset({State(var='G', state=0),
+                                               State(var='G', state=1)}))
+        self.assertTrue(set(sample.L).issubset({State(var='L', state=0),
+                                               State(var='L', state=1)}))
 
     def test_rejection_sample_basic(self):
         sample = self.sampling_inference.rejection_sample({'A': 'A_0',
@@ -58,9 +67,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertEquals(set(sample.Q), {'Q_0', 'Q_1', None})
-        self.assertTrue(set(sample.G).issubset({'G_0', 'G_1'}))
-        self.assertTrue(set(sample.L).issubset({'L_0', 'L_1'}))
+        self.assertTrue(set(sample.Q).issubset({State(var='Q', state=0),
+                                                State(var='Q', state=1)}))
+        self.assertTrue(set(sample.G).issubset({State(var='G', state=0),
+                                                State(var='G', state=1)}))
+        self.assertTrue(set(sample.L).issubset({State(var='L', state=0),
+                                                State(var='L', state=1)}))
 
     def tearDown(self):
         del self.sampling_inference
