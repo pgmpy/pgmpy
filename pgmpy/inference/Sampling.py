@@ -42,7 +42,7 @@ class BayesianModelSampling(Inference):
 
         Returns
         -------
-        sampled: list of dicts
+        sampled: pandas.DataFrame
             the generated samples
 
         Examples
@@ -59,9 +59,9 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> inference.forward_sample(2)
-             diff    intel    grade
-        0  diff_1  intel_0  grade_1
-        1  diff_1  intel_0  grade_2
+                diff       intel       grade
+        0  (diff, 1)  (intel, 0)  (grade, 1)
+        1  (diff, 1)  (intel, 0)  (grade, 2)
         """
         sampled = DataFrame(index=range(0, size),
                             columns=self.topological_order)
@@ -96,13 +96,14 @@ class BayesianModelSampling(Inference):
 
         Returns
         -------
-        sampled: list of dicts
+        sampled: pandas.DataFrame
             the generated samples
 
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
         >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.Factor import State
         >>> from pgmpy.inference.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
@@ -112,11 +113,11 @@ class BayesianModelSampling(Inference):
         ...                ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> evidence = {'diff': 'diff_0'}
+        >>> evidence = {'diff': State(var='diff', state=0)}
         >>> inference.rejection_sample(evidence, 2)
-             grade    intel
-        0  grade_2  intel_1
-        1  grade_0  intel_0
+                grade       intel
+        0  (grade, 2)  (intel, 1)
+        1  (grade, 0)  (intel, 0)
         """
         def check_if_consistent(dict1, dict2):
             """
