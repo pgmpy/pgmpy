@@ -76,9 +76,9 @@ class DynamicBayesianNetwork(BayesianModel):
         self.timestate = 1
         self.computed = False
 
-    def add_nodes_from(self, nodes):
+    def add_node(self, node):
         """
-        adding nodes in the static Bayesian Network.
+        adding node in the static Bayesian Network.
 
         Parameters:
         ----------
@@ -89,10 +89,9 @@ class DynamicBayesianNetwork(BayesianModel):
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
+        >>> dbn.add_node('D')
         """
-        for node in nodes:
-            self.list_of_nodes.extend(node)
+        self.list_of_nodes.extend(node)
 
     def add_edge(self, start, end, **kwargs):
         """
