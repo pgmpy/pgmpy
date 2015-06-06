@@ -15,7 +15,7 @@ class DynamicBayesianNetwork(BayesianModel):
 
         This model is a time variant of the static Bayesian model, where each timeslice has
         some static nodes and is then replicated over a certain time slice.
-        
+
         The nodes can be hashable python objects.
 
         However, the hidden nodes will compulsory have the following form.
@@ -79,7 +79,7 @@ class DynamicBayesianNetwork(BayesianModel):
     def add_nodes_from(self, nodes):
         """
         adding nodes in the static Bayesian Network.
-        
+
         Parameters:
         ----------
         nodes: nodes
@@ -198,7 +198,7 @@ class DynamicBayesianNetwork(BayesianModel):
         """
         returns the inter-slice edges in which the edges end in
         the given time slice
-        
+
         Parameters:
         ----------
         timeslice: integer value. should be ranging from 0
@@ -232,7 +232,7 @@ class DynamicBayesianNetwork(BayesianModel):
         cpds  :  list, set, tuple (array-like)
             List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
             which will be associated with the model
-            
+
         timeslice :integer value. should be ranging from 0
                    to the number of the slices present in
                    the bayesian network.
@@ -271,13 +271,13 @@ class DynamicBayesianNetwork(BayesianModel):
     def get_dbn_cpds(self, node=None, timeslice=None):
         """
         Returns the cpds that have been added till now to the graph
-        
+
         Parameters
         ---------
         node: any hashable python object (optional)
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
-    
+
         timeslice: integer value.
                    should be ranging from 0 to the number of the
                    slices present in the bayesian network.
@@ -329,7 +329,9 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> student = DBN()
         >>> student.add_nodes_from(['D','G','I','S','L'])
         >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],[0.4, 0.25, 0.08, 0.3],[0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
+        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                 [0.4, 0.25, 0.08, 0.3],
+        ...                                 [0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
         >>> intel_cpd = TabularCPD('I', 2, [[0.9, 0.4],[0.1, 0.6]],['I'],[2])
         >>> diff_cpd = TabularCPD('D', 2, [[0.3, 0.2],[0.7, 0.8]], ['D'],[2])
         >>> d_cpd = TabularCPD('D', 2, [[0.6, 0.4]])
@@ -351,8 +353,7 @@ class DynamicBayesianNetwork(BayesianModel):
                 cpd = self.dbn_cpds[node]
                 if list_of_parents:
                     self.dbn_cpds[node] = TabularCPD(node, cpd.variable_card, np.split(cpd.values, cpd.variable_card),
-                                                 list_of_parents,
-                                                 cpd.evidence_card)
+                                                list_of_parents, cpd.evidence_card)
                 else:
                     self.dbn_cpds[node] = TabularCPD(node, cpd.variable_card, np.split(cpd.values, cpd.variable_card))
                 super().add_cpds(self.dbn_cpds[node])
@@ -382,7 +383,9 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> student = DBN()
         >>> student.add_nodes_from(['D','G','I','S','L'])
         >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],[0.4, 0.25, 0.08, 0.3],[0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
+        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                 [0.4, 0.25, 0.08, 0.3],
+        ...                                 [0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
         >>> intel_cpd = TabularCPD('I', 2, [[0.9, 0.4],[0.1, 0.6]],['I'],[2])
         >>> diff_cpd = TabularCPD('D', 2, [[0.3, 0.2],[0.7, 0.8]], ['D'],[2])
         >>> d_cpd = TabularCPD('D', 2, [[0.6, 0.4]])
@@ -426,10 +429,10 @@ class DynamicBayesianNetwork(BayesianModel):
             start += 1
         self.timestate += number_of_time_slices
 
-    def remove_timeslice(self, object, number_of_time_slices):
+    def remove_timeslice(self, number_of_time_slices):
         """
         removes the time slices that have been previously added to the bayesian network.
-        
+
         Parameters
         ----------
         number_of_time_slices: int value
@@ -443,7 +446,9 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> student = DBN()
         >>> student.add_nodes_from(['D','G','I','S','L'])
         >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],[0.4, 0.25, 0.08, 0.3],[0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
+        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                 [0.4, 0.25, 0.08, 0.3],
+        ...                                 [0.3, 0.7, 0.02, 0.2]], ['I', 'D'],[2,2])
         >>> intel_cpd = TabularCPD('I', 2, [[0.9,0.4],[0.1,0.6]],['I'],[2])
         >>> diff_cpd = TabularCPD('D', 2, [[0.3,0.2],[0.7, 0.8]], ['D'],[2])
         >>> d_cpd = TabularCPD('D', 2, [[0.6,0.4]])
@@ -484,7 +489,7 @@ class DynamicBayesianNetwork(BayesianModel):
         (('I', 2), ('G', 2))]
         """
         start = 1
-        if not (self.timestate - number_of_time_slices):
+        if not self.timestate - number_of_time_slices:
             raise ValueError('complete removal of bayesian network is not allowed')
         while start <= number_of_time_slices:
             super().remove_edges_from(self.intra_slice(self.timestate) + self.inter_slice(self.timestate))
