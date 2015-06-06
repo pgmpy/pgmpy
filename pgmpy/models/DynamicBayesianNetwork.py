@@ -140,32 +140,7 @@ class DynamicBayesianNetwork(BayesianModel):
 
         super().add_edge(*edge_type(*edge))
 
-    def add_edges_from(self, ebunch, **kwargs):
-        """
-        Adding multiple edges in a single list
-        Extension of the add_edge method
-
-        Parameters:
-        ----------
-        List of edges: Each edge should consist of two nodes
-                       where each node is of the form
-                       (node_name, time_slice)
-                       Here, node_name can be a hashable 
-                       python object while the time_slice is an
-                       integer value, which denotes the index of
-                       the time_slice that the node belongs to.
-
-        EXAMPLE
-        -------
-        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0))])
-        """
-        for edge in ebunch:
-            self.add_edge(edge[0], edge[1])
-
-    def intra_slice(self, timeslice):
+    def get_intra_slice(self, timeslice):
         """
         returns the intra slice edges present in a single time slice.
 
@@ -194,7 +169,7 @@ class DynamicBayesianNetwork(BayesianModel):
             raise ValueError('the bayesian network does not contain the intra slice edges of this timeslice')
         return list(filter(lambda x: x.start[1] == x.end[1] == timeslice, self.intra_edges))
 
-    def inter_slice(self, timeslice):
+    def get_inter_slice(self, timeslice):
         """
         returns the inter-slice edges in which the edges end in
         the given time slice
@@ -281,13 +256,15 @@ class DynamicBayesianNetwork(BayesianModel):
         timeslice: integer value.
                    should be ranging from 0 to the number of the
                    slices present in the bayesian network.
-    
+
         EXAMPLE
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors import TabularCPD
         >>> student = DBN('D','G','I','S','L')
-        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],[0.4, 0.25, 0.08, 0.3],[0.3, 0.7, 0.02, 0.2]], ['I','D'],[2,2])
+        >>> grade_cpd = TabularCPD('G', 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                 [0.4, 0.25, 0.08, 0.3],
+        ...                                 [0.3, 0.7, 0.02, 0.2]], ['I','D'], [2, 2])
         >>> student.add_dbn_cpds(0, grade_cpd)
         >>> student.get_dbn_cpds('G',0)
         ╒═════╤═════╤══════╤══════╤═════╕
@@ -314,7 +291,7 @@ class DynamicBayesianNetwork(BayesianModel):
         else:
             return self.dbn_cpds
 
-    def compute_initial_state(self):
+    def initialize_initial_state(self):
         """
         This method will automatically re-adjust the cpds and the edges added to the bayesian network.
         If an edge that is added as an intra time slice edge in the 0th timeslice, this method will automatically
@@ -414,7 +391,7 @@ class DynamicBayesianNetwork(BayesianModel):
         start = 1
         while start <= number_of_time_slices:
             new_edges = [edge_type(*((a, b + start) for a, b in group)) for group in
-                         self.intra_slice(self.timestate) + self.inter_slice(self.timestate)]
+                         self.get_intra_slice(self.timestate) + self.get_inter_slice(self.timestate)]
             self.add_edges_from(new_edges)
             for node in self.dbn_cpds:
                 if node[1] == 1:
@@ -492,7 +469,7 @@ class DynamicBayesianNetwork(BayesianModel):
         if not self.timestate - number_of_time_slices:
             raise ValueError('complete removal of bayesian network is not allowed')
         while start <= number_of_time_slices:
-            super().remove_edges_from(self.intra_slice(self.timestate) + self.inter_slice(self.timestate))
+            super().remove_edges_from(self.get_intra_slice(self.timestate) + self.get_inter_slice(self.timestate))
             list_of_nodes = list(filter(lambda x: x[1] == self.timestate, super().nodes()))
             list_of_cpds = [self.dbn_cpds[node] for node in list_of_nodes]
             super().remove_cpds(*list_of_cpds)
