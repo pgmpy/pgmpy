@@ -1,11 +1,9 @@
-from collections import namedtuple
 import unittest
+
 from pgmpy.models import MarkovModel
 from pgmpy.inference.Sampling import BayesianModelSampling
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
-
-State = namedtuple('State', ['var', 'state'])
+from pgmpy.factors import TabularCPD, State
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -45,34 +43,46 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertTrue(set(sample.A).issubset({State(var='A', state=0),
-                                                State(var='A', state=1)}))
-        self.assertTrue(set(sample.J).issubset({State(var='J', state=0),
-                                               State(var='J', state=1)}))
-        self.assertTrue(set(sample.R).issubset({State(var='R', state=0),
-                                               State(var='R', state=1)}))
-        self.assertTrue(set(sample.Q).issubset({State(var='Q', state=0),
-                                               State(var='Q', state=1)}))
-        self.assertTrue(set(sample.G).issubset({State(var='G', state=0),
-                                               State(var='G', state=1)}))
-        self.assertTrue(set(sample.L).issubset({State(var='L', state=0),
-                                               State(var='L', state=1)}))
+        self.assertTrue(set(sample.A).issubset({State('A', 0), State('A', 1)}))
+        self.assertTrue(set(sample.J).issubset({State('J', 0), State('J', 1)}))
+        self.assertTrue(set(sample.R).issubset({State('R', 0), State('R', 1)}))
+        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
+        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
+        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
 
     def test_rejection_sample_basic(self):
-        sample = self.sampling_inference.rejection_sample({'A': 'A_0',
-                                                           'J': 'J_1',
-                                                           'R': 'R_0'}, 25)
+        sample = self.sampling_inference.rejection_sample({'A': State('A', 0),
+                                                           'J': State('J', 1),
+                                                           'R': State('R', 0)},
+                                                          25)
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 3)
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertTrue(set(sample.Q).issubset({State(var='Q', state=0),
-                                                State(var='Q', state=1)}))
-        self.assertTrue(set(sample.G).issubset({State(var='G', state=0),
-                                                State(var='G', state=1)}))
-        self.assertTrue(set(sample.L).issubset({State(var='L', state=0),
-                                                State(var='L', state=1)}))
+        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
+        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
+        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+
+    def test_likelihood_weighted_sample(self):
+        sample = self.sampling_inference.likelihood_weighted_sample({'A': State(
+            'A', 0), 'J': State('J', 1), 'R': State('R', 0)}, 25)
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 7)
+        self.assertIn('A', sample.columns)
+        self.assertIn('J', sample.columns)
+        self.assertIn('R', sample.columns)
+        self.assertIn('Q', sample.columns)
+        self.assertIn('G', sample.columns)
+        self.assertIn('L', sample.columns)
+        self.assertIn('_weight', sample.columns)
+        self.assertTrue(set(sample.A).issubset({State('A', 0), State('A', 1)}))
+        self.assertTrue(set(sample.J).issubset({State('J', 0), State('J', 1)}))
+        self.assertTrue(set(sample.R).issubset({State('R', 0), State('R', 1)}))
+        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
+        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
+        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+
 
     def tearDown(self):
         del self.sampling_inference
