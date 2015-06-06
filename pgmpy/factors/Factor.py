@@ -435,9 +435,9 @@ class Factor:
         if html:
             html_string_header = '{tr}{variable_cols}{phi}'.format(
                 tr='<tr',
-                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=var) for var in self.variables]),
+                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=str(var)) for var in self.variables]),
                 phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_P=phi_or_p,
-                                                                 vars=', '.join(self.variables)))
+                                                                 vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
             string_header = self.scope()
