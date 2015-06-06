@@ -39,7 +39,7 @@ class UAIReader:
 
         for i in range(self.no_of_functions):
             function_data = self.functions_data[i]
-            vars_index = list(map(int, function_data.strip().split(' ')))[1:]
+            vars_index = list(map(int, function_data.strip().split()))[1:]
             function_vars = self.variables[vars_index]
 
             self.model.add_edges_from(combinations(function_vars, 2))
