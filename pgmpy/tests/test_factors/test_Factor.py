@@ -517,7 +517,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
+        self.tree2 = TreeCPD([('C', 'A', '0'), ('C', 'B', '1'),
                               ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
                               ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
                               ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
@@ -551,8 +551,8 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
-        np_test.assert_array_equal(tabular_cpd.values, 
-                                  np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
+        np_test.assert_array_equal(tabular_cpd.values,
+                                   np.array([0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
                                              0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 
     @unittest.skip('Not implemented yet')
@@ -678,4 +678,9 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
+
+    def test_to_tree_cpd(self):
+        tree_cpd_string = repr(self.rule_cpd_with_rules.to_tree_cpd())
+        self.assertEqual(tree_cpd_string, '<pgmpy.factors.CPD.TreeCPD object at {address}'
+                         .format(address=tree_cpd_string.split(" ")[-1]))
 
