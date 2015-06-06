@@ -369,7 +369,7 @@ class ProbModelXMLWriter:
 
         Parameters
         ----------
-        criteria_dict: Dictionary containing.
+        criteria_dict: Dictionary containing Decision Critera data.
 
         Examples
         -------
