@@ -416,11 +416,11 @@ class Factor:
         if -1 in assignment:
             indexes = np.where(assignment == -1)[0]
             cardinalities = self.cardinality[indexes]
-            array_to_return = np.array([])
-            for i in product(*[range(card) for card in cardinalities]):
+            array_to_return = np.zeros(np.product(cardinalities))
+            for index, i in enumerate(product(*[range(card) for card in cardinalities])):
                 temp_assignment = np.array(assignment)
                 temp_assignment[temp_assignment == -1] = i
-                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
+                array_to_return[index] = np.sum(temp_assignment * card_cumprod)
             return array_to_return.astype('int')
         else:
             return np.array([np.sum(assignment * card_cumprod)])
