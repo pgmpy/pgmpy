@@ -544,6 +544,19 @@ class ProbModelXMLReader:
             self.probnet['Potentials'].append(probnet_dict)
 
     def add_probnet_additionalconstraints(self, constraint):
+        """
+        Adds Additional Constraints to the probnet dict.
+
+        Parameters
+        ----------
+        criterion: <Element Constraint at AdditionalConstraints Node in XML>
+            etree Element consisting Constraint tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_additionalconstraints(constraint)
+        """
         constraint_name = constraint.attrib['name']
         self.probnet['AdditionalConstraints'][constraint_name] = {}
         for argument in constraint.findall('Argument'):
@@ -557,7 +570,8 @@ class ProbModelXMLReader:
 
         Parameters
         ----------
-        criterion: etree Element consisting DecisionCritera tag.
+        criterion: <Element Criterion at Decision Criteria Node in XML>
+            etree Element consisting DecisionCritera tag.
 
         Examples
         -------
@@ -573,9 +587,35 @@ class ProbModelXMLReader:
                 self.probnet['DecisionCriteria'][criterion_name]['AdditionalProperties'][prop_name] = prop_value
 
     def add_comment(self, comment):
+        """
+        Adds Comment to the probnet dict.
+
+        Parameters
+        ----------
+        comment: string
+            String consisting of comment.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_comment(comment)
+        """
         self.probnet['Comment'] = comment
 
     def add_language(self, language):
+        """
+        Adds Language to the probnet dict.
+
+        Parameters
+        ----------
+        comment: string
+            String consisting of language.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_language(language)
+        """
         self.probnet['Language'] = language
 
     @staticmethod
@@ -583,6 +623,19 @@ class ProbModelXMLReader:
         place[prop.attrib['name']] = prop.attrib['value']
 
     def add_node(self, variable):
+        """
+        Adds Variables to the probnet dict.
+
+        Parameters
+        ----------
+        variable: <Element Variable at Variables Node in XML>
+            etree Element consisting Variable tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_node(variable)
+        """
         # TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
@@ -603,6 +656,19 @@ class ProbModelXMLReader:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
 
     def add_edge(self, edge):
+        """
+        Adds Edges to the probnet dict.
+
+        Parameters
+        ----------
+        edge: <Element Link at Links Node in XML>
+            etree Element consisting Variable tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_edge(edge)
+        """
         var1 = edge.findall('Variable')[0].attrib['name']
         var2 = edge.findall('Variable')[1].attrib['name']
         self.probnet['edges'][(var1, var2)] = {}
@@ -623,8 +689,10 @@ class ProbModelXMLReader:
 
         Parameters
         ----------
-        potential: etree Element consisting Potential tag.
-        potential_dict: Dictionary to parse Potential tag.
+        potential: <Element Potential at Potentials node in XML>
+            etree Element consisting Potential tag.
+        potential_dict: dict{}
+            Dictionary to parse Potential tag.
 
         Examples
         -------
@@ -723,7 +791,16 @@ class ProbModelXMLReader:
 
     def get_model(self):
         """
-        Returns the model instance of the ProbModel
+        Returns the model instance of the ProbModel.
+
+        Return
+        ---------------
+        dict: dict of type {variable: table tag}
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.get_model()
         """
         if self.probnet.get('type') == "BayesianNetwork":
             from pgmpy.models import BayesianModel
