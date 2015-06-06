@@ -2,7 +2,9 @@
 import unittest
 from io import StringIO
 import networkx as nx
+import numpy as np
 from pgmpy.readwrite import ProbModelXMLReader, ProbModelXMLWriter
+import numpy.testing as np_test
 import warnings
 try:
     from lxml import etree
@@ -59,28 +61,37 @@ class TestProbModelXMLReaderString(unittest.TestCase):
             </Variable>
         </Variables>
         <Links>
-            <Link var1="difficulty" var2="grade" directed="1">
+            <Link directed="1">
+                <Variable name="difficulty" />
+                <Variable name="grade" />
                 <Comment>Directed Edge from difficulty to grade</Comment>
                 <Label>diff_to_grad</Label>
                 <AdditionalProperties />
             </Link>
-            <Link var1="intelligence" var2="grade" directed="1">
+            <Link directed="1">
+                <Variable name="intelligence" />
+                <Variable name="grade" />
                 <Comment>Directed Edge from intelligence to grade</Comment>
                 <Label>intel_to_grad</Label>
                 <AdditionalProperties />
             </Link>
-            <Link var1="intelligence" var2="SAT" directed="1">
+            <Link directed="1">
+                <Variable name="intelligence" />
+                <Variable name="SAT" />
                 <Comment>Directed Edge from intelligence to SAT</Comment>
                 <Label>intel_to_sat</Label>
                 <AdditionalProperties />
             </Link>
-            <Link var1="grade" var2="recommendation_letter" directed="1">
+            <Link directed="1">
+                <Variable name="grade" />
+                <Variable name="recommendation_letter" />
                 <Comment>Directed Edge from grade to recommendation_letter</Comment>
                 <Label>grad_to_reco</Label>
                 <AdditionalProperties />
             </Link>
         </Links>
-        <Potential type="Tree/ADD" role="Utility">
+        <Potentials>
+          <Potential type="Tree/ADD" role="Utility">
                 <UtilityVariable name="U1" />
                 <Variables>
                     <Variable name="D0"/>
@@ -180,7 +191,8 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                          </Potential>
                   </Branch>
                 </Branches>
-        </Potential>
+          </Potential>
+      </Potentials>
     </ProbNet>
     <Policies />
     <InferenceOptions />
@@ -256,51 +268,321 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                              decisioncriteria_expected)
 
     def test_potential(self):
-        potential_expected = {'role': 'Utility',
-                              'Variables': ['D0', 'D1', 'C0', 'C1'],
-                              'type': 'Tree/ADD',
-                              'UtilityVaribale': 'U1',
-                              'Branches': [{'Potential': {'type': 'Tree/ADD',
-                                                          'Branches': [{'Thresholds': [{'value': '–Infinity'},
-                                                                                       {'value': '0', 'belongsTo': 'Left'}],
-                                                                        'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
-                                                                                                                       'Values': '3'},
-                                                                                                         'type': 'Exponential'},
-                                                                                                        {'NumericVariables': ['C0', 'C1'],
-                                                                                                         'Potential': {'type': 'Table',
-                                                                                                                       'Values': '–1'},
-                                                                                                         'Coefficients': '4 –1',
-                                                                                                         'type': 'Exponential'}],
-                                                                                      'Variables': ['C0', 'C1'],
-                                                                                      'type': 'MixtureOfExponentials'}},
-                                                                       {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
-                                                                                       {'value': '+Infinity'}],
-                                                                        'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
-                                                                                                         'Potential': {'Variables': ['D1'],
-                                                                                                                       'type': 'Table',
-                                                                                                                       'Values': '10  5'},
-                                                                                                         'Coefficients': '0.25',
-                                                                                                         'type': 'Exponential'}],
-                                                                                      'Variables': ['C1', 'D1'],
-                                                                                      'type': 'MixtureOfExponentials'}}],
-                                                          'TopVariable': 'C1'},
-                                            'States': [{'name': 'no'}]},
-                                           {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
-                                                                             'Potential': {'type': 'Table',
-                                                                                           'Values': '0.3'},
-                                                                             'Coefficients': '1',
-                                                                             'type': 'Exponential'},
-                                                                            {'Potential': {'type': 'Table',
-                                                                                           'Values': '0.7'},
-                                                                             'type': 'Exponential'}],
-                                                          'Variables': ['C0'],
-                                                          'type': 'MixtureOfExponentials'},
-                                            'States': [{'name': 'yes'}]}],
-                              'TopVariable': 'D0'}
-        self.assertDictEqual(self.reader_string.probnet['Potential'],
+        potential_expected = [{'role': 'Utility',
+                               'Variables': ['D0', 'D1', 'C0', 'C1'],
+                               'type': 'Tree/ADD',
+                               'UtilityVaribale': 'U1',
+                               'Branches': [{'Potential': {'type': 'Tree/ADD',
+                                                           'Branches': [{'Thresholds': [{'value': '–Infinity'},
+                                                                                        {'value': '0', 'belongsTo': 'Left'}],
+                                                                         'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
+                                                                                                                        'Values': '3'},
+                                                                                                          'type': 'Exponential'},
+                                                                                                         {'NumericVariables': ['C0', 'C1'],
+                                                                                                          'Potential': {'type': 'Table',
+                                                                                                                        'Values': '–1'},
+                                                                                                          'Coefficients': '4 –1',
+                                                                                                          'type': 'Exponential'}],
+                                                                                       'Variables': ['C0', 'C1'],
+                                                                                       'type': 'MixtureOfExponentials'}},
+                                                                        {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
+                                                                                        {'value': '+Infinity'}],
+                                                                         'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
+                                                                                                          'Potential': {'Variables': ['D1'],
+                                                                                                                        'type': 'Table',
+                                                                                                                        'Values': '10  5'},
+                                                                                                          'Coefficients': '0.25',
+                                                                                                          'type': 'Exponential'}],
+                                                                                       'Variables': ['C1', 'D1'],
+                                                                                       'type': 'MixtureOfExponentials'}}],
+                                                           'TopVariable': 'C1'},
+                                             'States': [{'name': 'no'}]},
+                                            {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
+                                                                              'Potential': {'type': 'Table',
+                                                                                            'Values': '0.3'},
+                                                                              'Coefficients': '1',
+                                                                              'type': 'Exponential'},
+                                                                             {'Potential': {'type': 'Table',
+                                                                                            'Values': '0.7'},
+                                                                              'type': 'Exponential'}],
+                                                           'Variables': ['C0'],
+                                                           'type': 'MixtureOfExponentials'},
+                                             'States': [{'name': 'yes'}]}],
+                               'TopVariable': 'D0'}]
+        self.assertListEqual(self.reader_string.probnet['Potentials'],
                              potential_expected)
-        self.assertDictEqual(self.reader_file.probnet['Potential'],
+        self.assertListEqual(self.reader_file.probnet['Potentials'],
                              potential_expected)
+
+    def test_get_model(self):
+        string = """<ProbModelXML formatVersion="0.2.0">
+  <ProbNet type="BayesianNetwork">
+    <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
+    <Variables>
+      <Variable name="X-ray" type="finiteStates" role="chance" isInput="false">
+        <Comment><![CDATA[Indica si el test de rayos X ha sido positivo]]></Comment>
+        <Coordinates x="252" y="322" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="X" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="Bronchitis" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="698" y="181" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="B" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="Dyspnea" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="533" y="321" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="D" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="VisitToAsia" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="290" y="58" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="A" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="Smoker" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="568" y="52" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="S" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="LungCancer" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="421" y="152" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="L" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="Tuberculosis" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="201" y="150" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="T" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+      <Variable name="TuberculosisOrCancer" type="finiteStates" role="chance" isInput="false">
+        <Coordinates x="336" y="238" />
+        <AdditionalProperties>
+          <Property name="Relevance" value="7.0" />
+          <Property name="Title" value="E" />
+        </AdditionalProperties>
+        <Precision>0.01</Precision>
+        <States>
+          <State name="no" />
+          <State name="yes" />
+        </States>
+      </Variable>
+    </Variables>
+    <Links>
+      <Link directed="true">
+        <Variable name="Bronchitis" />
+        <Variable name="Dyspnea" />
+      </Link>
+      <Link directed="true">
+        <Variable name="VisitToAsia" />
+        <Variable name="Tuberculosis" />
+      </Link>
+      <Link directed="true">
+        <Variable name="Smoker" />
+        <Variable name="Bronchitis" />
+      </Link>
+      <Link directed="true">
+        <Variable name="Smoker" />
+        <Variable name="LungCancer" />
+      </Link>
+      <Link directed="true">
+        <Variable name="LungCancer" />
+        <Variable name="TuberculosisOrCancer" />
+      </Link>
+      <Link directed="true">
+        <Variable name="Tuberculosis" />
+        <Variable name="TuberculosisOrCancer" />
+      </Link>
+      <Link directed="true">
+        <Variable name="TuberculosisOrCancer" />
+        <Variable name="Dyspnea" />
+      </Link>
+      <Link directed="true">
+        <Variable name="TuberculosisOrCancer" />
+        <Variable name="X-ray" />
+      </Link>
+    </Links>
+    <Potentials>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="X-ray" />
+          <Variable name="TuberculosisOrCancer" />
+        </Variables>
+        <Values>0.95 0.05 0.02 0.98</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="Bronchitis" />
+          <Variable name="Smoker" />
+        </Variables>
+        <Values>0.7 0.3 0.4 0.6</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="Dyspnea" />
+          <Variable name="TuberculosisOrCancer" />
+          <Variable name="Bronchitis" />
+        </Variables>
+        <Values>0.9 0.1 0.3 0.7 0.2 0.8 0.1 0.9</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="VisitToAsia" />
+        </Variables>
+        <Values>0.99 0.01</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="Smoker" />
+        </Variables>
+        <Values>0.5 0.5</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="LungCancer" />
+          <Variable name="Smoker" />
+        </Variables>
+        <Values>0.99 0.01 0.9 0.1</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="Tuberculosis" />
+          <Variable name="VisitToAsia" />
+        </Variables>
+        <Values>0.99 0.01 0.95 0.05</Values>
+      </Potential>
+      <Potential type="Table" role="conditionalProbability">
+        <Variables>
+          <Variable name="TuberculosisOrCancer" />
+          <Variable name="LungCancer" />
+          <Variable name="Tuberculosis" />
+        </Variables>
+        <Values>1.0 0.0 0.0 1.0 0.0 1.0 0.0 1.0</Values>
+      </Potential>
+    </Potentials>
+    <AdditionalProperties>
+      <Property name="VisualPrecision" value="0.0" />
+      <Property name="KindOfGraph" value="directed" />
+      <Property name="WhenChanged" value="19/08/99" />
+      <Property name="Version" value="1.0" />
+      <Property name="WhoChanged" value="Jose A. Gamez" />
+    </AdditionalProperties>
+  </ProbNet>
+</ProbModelXML>"""
+        self.maxDiff = None
+        self.reader = ProbModelXMLReader(string=string)
+        model = self.reader.get_model()
+        edges_expected = [('VisitToAsia', 'Tuberculosis'),
+                          ('LungCancer', 'TuberculosisOrCancer'),
+                          ('Smoker', 'LungCancer'),
+                          ('Smoker', 'Bronchitis'),
+                          ('Tuberculosis', 'TuberculosisOrCancer'),
+                          ('Bronchitis', 'Dyspnea'),
+                          ('TuberculosisOrCancer', 'Dyspnea'),
+                          ('TuberculosisOrCancer', 'X-ray')]
+        node_expected = {'Smoker': {'States': {'no': {}, 'yes': {}},
+                                    'role': 'chance',
+                                    'type': 'finiteStates',
+                                    'Coordinates': {'y': '52', 'x': '568'},
+                                    'AdditionalProperties': {'Title': 'S', 'Relevance': '7.0'}},
+                         'Bronchitis': {'States': {'no': {}, 'yes': {}},
+                                        'role': 'chance',
+                                        'type': 'finiteStates',
+                                        'Coordinates': {'y': '181', 'x': '698'},
+                                        'AdditionalProperties': {'Title': 'B', 'Relevance': '7.0'}},
+                         'VisitToAsia': {'States': {'no': {}, 'yes': {}},
+                                         'role': 'chance',
+                                         'type': 'finiteStates',
+                                         'Coordinates': {'y': '58', 'x': '290'},
+                                         'AdditionalProperties': {'Title': 'A', 'Relevance': '7.0'}},
+                         'Tuberculosis': {'States': {'no': {}, 'yes': {}},
+                                          'role': 'chance',
+                                          'type': 'finiteStates',
+                                          'Coordinates': {'y': '150', 'x': '201'},
+                                          'AdditionalProperties': {'Title': 'T', 'Relevance': '7.0'}},
+                         'X-ray': {'States': {'no': {}, 'yes': {}},
+                                   'role': 'chance',
+                                   'AdditionalProperties': {'Title': 'X', 'Relevance': '7.0'},
+                                   'Coordinates': {'y': '322', 'x': '252'},
+                                   'Comment': 'Indica si el test de rayos X ha sido positivo',
+                                   'type': 'finiteStates'},
+                         'Dyspnea': {'States': {'no': {}, 'yes': {}},
+                                     'role': 'chance',
+                                     'type': 'finiteStates',
+                                     'Coordinates': {'y': '321', 'x': '533'},
+                                     'AdditionalProperties': {'Title': 'D', 'Relevance': '7.0'}},
+                         'TuberculosisOrCancer': {'States': {'no': {}, 'yes': {}},
+                                                  'role': 'chance',
+                                                  'type': 'finiteStates',
+                                                  'Coordinates': {'y': '238', 'x': '336'},
+                                                  'AdditionalProperties': {'Title': 'E', 'Relevance': '7.0'}},
+                         'LungCancer': {'States': {'no': {}, 'yes': {}},
+                                        'role': 'chance',
+                                        'type': 'finiteStates',
+                                        'Coordinates': {'y': '152', 'x': '421'},
+                                        'AdditionalProperties': {'Title': 'L', 'Relevance': '7.0'}}}
+        cpds_expected = [np.array([[0.95, 0.05], [0.02, 0.98]]),
+                         np.array([[0.7, 0.3], [0.4,  0.6]]),
+                         np.array([[0.9, 0.1,  0.3,  0.7], [0.2,  0.8,  0.1,  0.9]]),
+                         np.array([[0.99], [0.01]]),
+                         np.array([[0.5], [0.5]]),
+                         np.array([[0.99, 0.01], [0.9, 0.1]]),
+                         np.array([[0.99, 0.01], [0.95, 0.05]]),
+                         np.array([[1, 0, 0, 1], [0, 1, 0, 1]])]
+        for cpd_index in range(0, len(cpds_expected)):
+            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_cpd(),
+                                       cpds_expected[cpd_index])
+        self.assertDictEqual(model.node, node_expected)
+        self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
 
 class TestProbModelXMLWriter(unittest.TestCase):

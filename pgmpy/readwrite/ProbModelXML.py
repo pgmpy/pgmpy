@@ -118,6 +118,7 @@ except ImportError:
             print("Failed to import ElementTree from any known place")
 
 import networkx as nx
+import numpy as np
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -506,8 +507,10 @@ class ProbModelXMLReader:
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
-        self.add_comment(probnet_elem.find('Comment').text)
-        self.add_language(probnet_elem.find('Language').text)
+        if probnet_elem.find('Comment') is not None:
+            self.add_comment(probnet_elem.find('Comment').text)
+        if probnet_elem.find('Language') is not None:
+            self.add_language(probnet_elem.find('Language').text)
         if probnet_elem.find('AdditionalProperties') is not None:
             self.probnet['AdditionalProperties'] = {}
             for prop in probnet_elem.find('AdditionalProperties'):
@@ -530,13 +533,15 @@ class ProbModelXMLReader:
 
         # Add edges
         self.probnet['edges'] = {}
-        for edge in self.xml.findall('.//Links')[0]:
+        for edge in probnet_elem.findall('Links/Link'):
             self.add_edge(edge)
 
         # Add CPD
-        self.probnet['Potential'] = {}
-        if probnet_elem.find('Potential') is not None:
-            self.add_potential(probnet_elem.find('Potential'), self.probnet['Potential'])
+        self.probnet['Potentials'] = []
+        for potential in probnet_elem.findall('Potentials/Potential'):
+            probnet_dict = {}
+            self.add_potential(potential, probnet_dict)
+            self.probnet['Potentials'].append(probnet_dict)
 
     def add_probnet_additionalconstraints(self, constraint):
         constraint_name = constraint.attrib['name']
@@ -588,6 +593,7 @@ class ProbModelXMLReader:
         if variable.find('Coordinates') is not None:
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
         if variable.find('AdditionalProperties/Property') is not None:
+            self.probnet['Variables'][variable_name]['AdditionalProperties'] = {}
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
@@ -597,8 +603,8 @@ class ProbModelXMLReader:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
 
     def add_edge(self, edge):
-        var1 = edge.attrib['var1']
-        var2 = edge.attrib['var2']
+        var1 = edge.findall('Variable')[0].attrib['name']
+        var2 = edge.findall('Variable')[1].attrib['name']
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         # TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
@@ -607,6 +613,7 @@ class ProbModelXMLReader:
         if edge.find('Label') is not None:
             self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
         if edge.find('AdditionalProperties/Property') is not None:
+            self.probnet['edges'][(var1, var2)]['AdditionalProperties'] = {}
             for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
@@ -720,5 +727,28 @@ class ProbModelXMLReader:
         """
         if self.probnet.get('type') == "BayesianNetwork":
             from pgmpy.models import BayesianModel
+            from pgmpy.factors import TabularCPD
             model = BayesianModel(self.probnet['edges'].keys())
+
+            tabular_cpds = []
+            cpds = self.probnet['Potentials']
+            for cpd in cpds:
+                var = cpd['Variables'][0]
+                states = self.probnet['Variables'][var]['States']
+                evidence = cpd['Variables'][1:]
+                evidence_card = [len(self.probnet['Variables'][evidence_var]['States'])
+                                 for evidence_var in evidence]
+                arr = list(map(float, cpd['Values'].split()))
+                values = np.array(arr)
+                values = values.reshape((len(states), values.size//len(states)))
+                tabular_cpds.append(TabularCPD(var, len(states), values, evidence, evidence_card))
+
+            model.add_cpds(*tabular_cpds)
+
+            variables = model.nodes()
+            for var in variables:
+                for prop_name, prop_value in self.probnet['Variables'][var].items():
+                    model.node[var][prop_name] = prop_value
             return model
+        else:
+            raise ValueError("Please specify only Bayesian Network.")
