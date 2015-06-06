@@ -90,6 +90,10 @@ class TestFactorMethods(unittest.TestCase):
         self.phi1.reduce([('x1', 0), ('x2', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
 
+    def test_reduce1(self):
+        self.phi1.reduce([('x2', 0), ('x1', 0)])
+        np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+
     @unittest.skip
     def test_complete_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
