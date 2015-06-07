@@ -795,7 +795,7 @@ class ProbModelXMLReader:
 
         Return
         ---------------
-        dict: dict of type {variable: table tag}
+        model: an instance of BayesianModel.
 
         Examples
         -------
