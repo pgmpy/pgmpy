@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import numpy as np
 
+from pgmpy.factors import TabularCPD
 from pgmpy.models import BayesianModel
 
 
@@ -92,10 +93,10 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> dbn.edges()
         [(('D', 0), ('I', 0))]
         """
-        if not (isinstance(start, (tuple, list)) and  isinstance(end, (tuple, list))): 
+        if not (isinstance(start, (tuple, list)) and isinstance(end, (tuple, list))): 
             raise ValueError('the nodes inside the edge must be enclosed in a list or a tuple')
 
-        if not (start[1] in (0,1) and end[1] in (0,1)):
+        if not (start[1] in (0, 1) and end[1] in (0, 1)):
             raise ValueError('the timeslices inside the node must belong to 0 or 1')
 
         super().add_edge(start, end)
@@ -215,7 +216,7 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> student.initialize_initial_state()
         """
 
-        self.add_edges_from([list((a, 1-b) for a,b in group) for group in self.get_intra_edges()])
+        self.add_edges_from([list((a, 1-b) for a, b in group) for group in self.get_intra_edges()])
         for cpd in self.cpds:
             temp_var = (cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
