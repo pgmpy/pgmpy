@@ -218,10 +218,11 @@ class DynamicBayesianNetwork(BayesianModel):
         self.add_edges_from([list((a, 1-b) for a,b in group) for group in self.get_intra_edges()])
         for cpd in self.cpds:
             temp_var = (cpd.variable[0], 1 - cpd.variable[1])
-            if not any(x.variable == temp_var for x in self.cpds) and all(x[1] == new_parents[0][1] for x in new_parents):
-                if new_parents:
-                    new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card),
-                                             new_parents, cpd.evidence_card)
+            parents = self.get_parents(temp_var)
+            if not any(x.variable == temp_var for x in self.cpds) and all(x[1] == parents[0][1] for x in parents):
+                if parents:
+                    new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card), parents,
+                                        cpd.evidence_card)
                 else:
                     new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card)) 
                 self.cpds.append(new_cpd)
