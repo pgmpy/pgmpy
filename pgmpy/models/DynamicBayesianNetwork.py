@@ -141,7 +141,7 @@ class DynamicBayesianNetwork(BayesianModel):
         """
         return [edge for edge in self.edges() if edge[0][1] == edge[1][1]]
 
-    def get_inter_edges(self, timeslice):
+    def get_inter_edges(self):
         """
         returns the inter-slice edges present in the 2-TBN
 
@@ -219,11 +219,12 @@ class DynamicBayesianNetwork(BayesianModel):
         for cpd in self.cpds:
             temp_var = (cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
-            if not any(x.variable == temp_var for x in self.cpds) and all(x[1] == parents[0][1] for x in parents):
-                if parents:
-                    new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card), parents,
-                                        cpd.evidence_card)
-                else:
-                    new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card)) 
+            if not any(x.variable == temp_var for x in self.cpds):
+                if all(x[1] == parents[0][1] for x in parents):
+                    if parents:
+                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card), parents,
+                         cpd.evidence_card) 
+                    else:
+                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card)) 
                 self.cpds.append(new_cpd)
         self.check_model()
