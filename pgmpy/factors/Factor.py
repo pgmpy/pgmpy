@@ -229,8 +229,8 @@ class Factor:
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> norm_phi = phi.normalize()
-        >>> norm_phi.values
+        >>> phi.normalize()
+        >>> phi.values
         array([ 0.        ,  0.01515152,  0.03030303,  0.04545455,  0.06060606,
                 0.07575758,  0.09090909,  0.10606061,  0.12121212,  0.13636364,
                 0.15151515,  0.16666667])
