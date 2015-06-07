@@ -83,7 +83,6 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
         self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
 
-
     def tearDown(self):
         del self.sampling_inference
         del self.bayesian_model
