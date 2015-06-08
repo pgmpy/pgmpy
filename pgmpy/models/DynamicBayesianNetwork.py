@@ -99,6 +99,9 @@ class DynamicBayesianNetwork(BayesianModel):
         if not (start[1] in (0, 1) and end[1] in (0, 1)):
             raise ValueError('the timeslices inside the node must belong to 0 or 1')
 
+        if start[1] == end[1]:
+            super().add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
+
         super().add_edge(start, end)
         self.correct_nodes()
 
@@ -216,7 +219,6 @@ class DynamicBayesianNetwork(BayesianModel):
         >>> student.initialize_initial_state()
         """
 
-        self.add_edges_from([list((a, 1-b) for a, b in group) for group in self.get_intra_edges()])
         for cpd in self.cpds:
             temp_var = (cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
@@ -227,5 +229,5 @@ class DynamicBayesianNetwork(BayesianModel):
                          cpd.evidence_card) 
                     else:
                         new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card)) 
-                self.cpds.append(new_cpd)
+                    self.cpds.append(new_cpd)
         self.check_model()
