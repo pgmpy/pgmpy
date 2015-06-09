@@ -369,7 +369,9 @@ class ProbModelXMLWriter:
 
         Parameters
         ----------
-        criteria_dict: Dictionary containing Decision Critera data.
+        criteria_dict: dict
+            Dictionary containing Deecision Criteria data.
+            For example: {'effectiveness': {}, 'cost': {}}
 
         Examples
         -------
@@ -826,6 +828,11 @@ class ProbModelXMLReader:
             for var in variables:
                 for prop_name, prop_value in self.probnet['Variables'][var].items():
                     model.node[var][prop_name] = prop_value
+
+            edges = model.edges()
+            for edge in edges:
+                for prop_name, prop_value in self.probnet['edges'][edge].items():
+                    model.edge[edge[0]][edge[1]][prop_name] = prop_value
             return model
         else:
             raise ValueError("Please specify only Bayesian Network.")

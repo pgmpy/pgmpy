@@ -570,6 +570,17 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                                         'type': 'finiteStates',
                                         'Coordinates': {'y': '152', 'x': '421'},
                                         'AdditionalProperties': {'Title': 'L', 'Relevance': '7.0'}}}
+        edge_expected = {'LungCancer': {'TuberculosisOrCancer': {'directed': 'true'}},
+                         'Smoker': {'LungCancer': {'directed': 'true'},
+                                    'Bronchitis': {'directed': 'true'}},
+                         'Dyspnea': {},
+                         'X-ray': {},
+                         'VisitToAsia': {'Tuberculosis': {'directed': 'true'}},
+                         'TuberculosisOrCancer': {'X-ray': {'directed': 'true'},
+                                                  'Dyspnea': {'directed': 'true'}},
+                         'Bronchitis': {'Dyspnea': {'directed': 'true'}},
+                         'Tuberculosis': {'TuberculosisOrCancer': {'directed': 'true'}}}
+
         cpds_expected = [np.array([[0.95, 0.05], [0.02, 0.98]]),
                          np.array([[0.7, 0.3], [0.4,  0.6]]),
                          np.array([[0.9, 0.1,  0.3,  0.7], [0.2,  0.8,  0.1,  0.9]]),
@@ -582,6 +593,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
             np_test.assert_array_equal(model.get_cpds()[cpd_index].get_cpd(),
                                        cpds_expected[cpd_index])
         self.assertDictEqual(model.node, node_expected)
+        self.assertDictEqual(model.edge, edge_expected)
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
 
