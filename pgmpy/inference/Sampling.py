@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+from itertools import product
 
 import networkx as nx
 from pandas import DataFrame
+
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel
 from pgmpy.utils.mathext import sample_discrete
-
+from pgmpy.factors.Factor import State
 
 class BayesianModelSampling(Inference):
     """
@@ -24,11 +26,10 @@ class BayesianModelSampling(Inference):
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
             raise TypeError("model must an instance of BayesianModel")
-        super(BayesianModelSampling, self).__init__(model)
+        Inference.__init__(self, model)
         self.topological_order = nx.topological_sort(model)
         self.cpds = {}
-        for node in model.nodes():
-            self.cpds[node] = model.get_cpds(node)
+        self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 
     def forward_sample(self, size=1):
         """
@@ -62,22 +63,27 @@ class BayesianModelSampling(Inference):
         0  (diff, 1)  (intel, 0)  (grade, 1)
         1  (diff, 1)  (intel, 0)  (grade, 2)
         """
-        sampled = DataFrame(index=range(0, size),
-                            columns=self.topological_order)
-        for i in range(size):
-            particle = {}
-            for node in self.topological_order:
-                cpd = self.cpds[node]
-                if cpd.evidence:
-                    evid = []
-                    for var in cpd.evidence:
-                        evid.append(particle[var])
-                    weights = cpd.reduce(evid, inplace=False).values
-                else:
-                    weights = cpd.values
-                particle[node] = sample_discrete(cpd.variables[cpd.variable],
-                                                 weights)
-            sampled.loc[i] = [particle[node] for node in self.topological_order]
+        sampled = DataFrame(index=range(size), columns=self.topological_order)
+        for node in self.topological_order:
+            cpd = self.cpds[node]
+            if cpd.evidence:
+                # memoizing calls to cpd.reduce
+                weights = {}
+                card_iter = [range(card) for card in cpd.evidence_card]
+                for tup in product(*card_iter):
+                    evid = [State(v, s) for v, s in zip(cpd.evidence, tup)]
+                    weights[tup] = cpd.reduce(evid, inplace=False).values
+                # can now fill values, row by row
+                for i in range(size):
+                    tup = tuple(sampled[var][i].state for var in cpd.evidence)
+                    sampled[node][i] = \
+                        sample_discrete(cpd.variables[cpd.variable],
+                                        weights[tup])[0]
+            else:
+                # can generate the column at once
+                weights = cpd.values
+                sampled[node] = \
+                    sample_discrete(cpd.variables[cpd.variable], weights, size)
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
@@ -156,7 +162,7 @@ class BayesianModelSampling(Inference):
                 else:
                     weights = cpd.values
                 particle[node] = sample_discrete(cpd.variables[cpd.variable],
-                                                 weights)
+                                                 weights)[0]
             if check_if_consistent(evidence, particle):
                 # reject if the sample contradicts the evidence
                 sampled.loc[i] = [particle[node] for node in query_vars]
@@ -222,7 +228,7 @@ class BayesianModelSampling(Inference):
                     w *= weights[evidence[node].state]
                 else:
                     particle[node] = sample_discrete(
-                        cpd.variables[cpd.variable], weights)
+                        cpd.variables[cpd.variable], weights)[0]
             row = [particle[node] for node in self.topological_order]
             row.append(w)
             sampled.loc[i] = row

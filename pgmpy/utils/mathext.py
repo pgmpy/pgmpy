@@ -77,4 +77,4 @@ def sample_discrete(values, weights, size=1):
       'v_2'], dtype='<U3')
     """
     bins = np.add.accumulate(weights)
-    return values[np.digitize(random_sample(size), bins)]
+    return [values[i] for i in np.digitize(random_sample(size), bins)]
