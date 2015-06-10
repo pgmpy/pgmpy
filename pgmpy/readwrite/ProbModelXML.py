@@ -261,7 +261,7 @@ class ProbModelXMLWriter:
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
-        self.potential = etree.SubElement(self.probnet, 'Potential')
+        self.potentials = etree.SubElement(self.probnet, 'Potentials')
         self.additional_constraints = etree.SubElement(self.probnet, 'AdditionalConstraints')
 
         # adding information for probnet
@@ -290,6 +290,10 @@ class ProbModelXMLWriter:
         # Add edges
         for edge in sorted(self.data['probnet']['edges']):
             self._add_link(edge)
+
+        # Add Potentials
+        for potential in sorted(self.data['probnet']['Potentials']):
+            self._add_potential(potential, self.potentials)
 
     def __str__(self):
         """
@@ -358,8 +362,130 @@ class ProbModelXMLWriter:
             value = constraint_data[name]
             etree.SubElement(constraint_element, 'Argument', attrib={'name': name, 'value': value})
 
-    def _add_potential(self):
-        pass
+    def _add_decision_criteria(self, criteria_dict):
+        """
+        Adds Decision Criteria to the ProbModelXML.
+
+        Parameters
+        ----------
+        criteria_dict: dict
+            Dictionary containing Deecision Criteria data.
+            For example: {'effectiveness': {}, 'cost': {}}
+
+        Examples
+        -------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer._add_decision_criteria(criteria_dict)
+        """
+        decision_tag = etree.SubElement(self.xml, 'DecisionCriteria', attrib={})
+        for criteria in sorted(criteria_dict):
+            criteria_tag = etree.SubElement(decision_tag, 'Criterion', attrib={'name': criteria})
+            self._add_additional_properties(criteria_tag, criteria_dict[criteria])
+
+    def _add_potential(self, potential, parent_tag):
+        """
+        Adds Potentials to the ProbModelXML.
+
+        Parameters
+        ----------
+        potential: dict
+            Dictionary containing Potential data.
+            For example: {'role': 'Utility',
+                          'Variables': ['D0', 'D1', 'C0', 'C1'],
+                          'type': 'Tree/ADD',
+                          'UtilityVaribale': 'U1'}
+        parent_tag: etree Element
+            etree element which would contain potential tag
+            For example: <Element Potentials at 0x7f315fc44b08>
+                         <Element Branch at 0x7f315fc44c88>
+                         <Element Branch at 0x7f315fc44d88>
+                         <Element Subpotentials at 0x7f315fc44e48>
+
+        Examples
+        -------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer._add_potential(potential, parent_tag)
+        """
+        potential_type = potential['type']
+        try:
+            potential_tag = etree.SubElement(parent_tag, 'Potential', attrib={
+                'type': potential['type'], 'role': potential['role']})
+        except KeyError:
+            potential_tag = etree.SubElement(parent_tag, 'Potential', attrib={
+                'type': potential['type']})
+        if 'Comment' in potential:
+            etree.SubElement(potential_tag, 'Comment').text = potential['Comment']
+        if 'AdditionalProperties' in potential:
+            self._add_additional_properties(potential_tag, potential['AdditionalProperties'])
+        if potential_type == "delta":
+            etree.SubElement(potential_tag, 'Variable', attrib={'name': potential['Variable']})
+            if 'State' in potential:
+                etree.SubElement(potential_tag, 'State').text = potential['State']
+            if 'StateIndex' in potential:
+                etree.SubElement(potential_tag, 'StateIndex').text = potential['StateIndex']
+            if 'NumericValue' in potential:
+                etree.SubElement(potential_tag, 'NumericValue').text = potential['NumericValue']
+        else:
+            if 'UtilityVariable' in potential:
+                etree.SubElement(potential_tag, 'UtilityVariable', attrib={
+                    'name': potential['UtilityVariable']})
+            if 'Variables' in potential:
+                variable_tag = etree.SubElement(potential_tag, 'Variables')
+                for var in sorted(potential['Variables']):
+                    etree.SubElement(variable_tag, 'Variable', attrib={'name': var})
+            if 'Values' in potential:
+                etree.SubElement(potential_tag, 'Values').text = potential['Values']
+            if 'UncertainValues' in potential:
+                value_tag = etree.SubElement(potential_tag, 'UncertainValues', attrib={})
+                for value in sorted(potential['UncertainValues']):
+                    try:
+                        etree.SubElement(value_tag, 'Value', attrib={
+                            'distribution': value['distribution'],
+                            'name': value['name']}).text = value['value']
+                    except KeyError:
+                        etree.SubElement(value_tag, 'Value', attrib={
+                            'distribution': value['distribution']}).text = value['value']
+            if 'TopVariable' in potential:
+                etree.SubElement(potential_tag, 'TopVariable', attrib={'name': potential['TopVariable']})
+            if 'Branches' in potential:
+                branches_tag = etree.SubElement(potential_tag, 'Branches')
+                for branch in potential['Branches']:
+                    branch_tag = etree.SubElement(branches_tag, 'Branch')
+                    if 'States' in branch:
+                        states_tag = etree.SubElement(branch_tag, 'States')
+                        for state in sorted(branch['States']):
+                            etree.SubElement(states_tag, 'State', attrib={'name': state['name']})
+                    if 'Potential' in branch:
+                        self._add_potential(branch['Potential'], branch_tag)
+                    if 'Label' in branch:
+                        etree.SubElement(branch_tag, 'Label').text = branch['Label']
+                    if 'Reference' in branch:
+                        etree.SubElement(branch_tag, 'Reference').text = branch['Reference']
+                    if 'Thresholds' in branch:
+                        thresholds_tag = etree.SubElement(branch_tag, 'Thresholds')
+                        for threshold in branch['Thresholds']:
+                            try:
+                                etree.SubElement(thresholds_tag, 'Threshold', attrib={
+                                    'value': threshold['value'], 'belongsTo': threshold['belongsTo']})
+                            except KeyError:
+                                etree.SubElement(thresholds_tag, 'Threshold', attrib={
+                                    'value': threshold['value']})
+            if 'Model' in potential:
+                etree.SubElement(potential_tag, 'Model').text = potential['Model']
+            if 'Subpotentials' in potential:
+                subpotentials = etree.SubElement(potential_tag, 'Subpotentials')
+                for subpotential in potential['Subpotentials']:
+                    self._add_potential(subpotential, subpotentials)
+            if 'Coefficients' in potential:
+                etree.SubElement(potential_tag, 'Coefficients').text = potential['Coefficients']
+            if 'CovarianceMatrix' in potential:
+                etree.SubElement(potential_tag, 'CovarianceMatrix').text = potential['CovarianceMatrix']
+            if 'Potential' in potential:
+                self._add_potential(potential['Potential'], potential_tag)
+            if 'NumericVariables' in potential:
+                numvar_tag = etree.SubElement(potential_tag, 'NumericVariables')
+                for var in sorted(potential['NumericVariables']):
+                    etree.SubElement(numvar_tag, 'Variable', attrib={'name': var})
 
     def dump(self, stream):
         """
