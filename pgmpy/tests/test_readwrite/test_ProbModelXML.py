@@ -635,7 +635,48 @@ class TestProbModelXMLWriter(unittest.TestCase):
                                       ('grade', 'recommendation_letter'):
                                       {'directed': '1',
                                        'Label': 'grad_to_reco',
-                                       'Comment': 'Directed Edge from grade to recommendation_letter'}}}}
+                                       'Comment': 'Directed Edge from grade to recommendation_letter'}},
+                            'Potentials': [{'role': 'Utility',
+                                            'Variables': ['D0', 'D1', 'C0', 'C1'],
+                                            'type': 'Tree/ADD',
+                                            'UtilityVaribale': 'U1',
+                                            'Branches': [{'Potential': {'type': 'Tree/ADD',
+                                                                        'Branches': [{'Thresholds': [{'value': '-Infinity'},
+                                                                                                     {'value': '0', 'belongsTo': 'Left'}],
+                                                                                      'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
+                                                                                                                                     'Values': '3'},
+                                                                                                                       'type': 'Exponential'},
+                                                                                                                      {'NumericVariables': ['C0', 'C1'],
+                                                                                                                       'Potential': {'type': 'Table',
+                                                                                                                                     'Values': '-1'},
+                                                                                                                       'Coefficients': '4 -1',
+                                                                                                                       'type': 'Exponential'}],
+                                                                                                    'Variables': ['C0', 'C1'],
+                                                                                                    'type': 'MixtureOfExponentials'}},
+                                                                                     {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
+                                                                                                     {'value': '+Infinity'}],
+                                                                                      'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
+                                                                                                                       'Potential': {'Variables': ['D1'],
+                                                                                                                                     'type': 'Table',
+                                                                                                                                     'Values': '10  5'},
+                                                                                                                       'Coefficients': '0.25',
+                                                                                                                       'type': 'Exponential'}],
+                                                                                                    'Variables': ['C1', 'D1'],
+                                                                                                    'type': 'MixtureOfExponentials'}}],
+                                                                        'TopVariable': 'C1'},
+                                                          'States': [{'name': 'no'}]},
+                                                         {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
+                                                                                           'Potential': {'type': 'Table',
+                                                                                                         'Values': '0.3'},
+                                                                                           'Coefficients': '1',
+                                                                                           'type': 'Exponential'},
+                                                                                          {'Potential': {'type': 'Table',
+                                                                                                         'Values': '0.7'},
+                                                                                           'type': 'Exponential'}],
+                                                                        'Variables': ['C0'],
+                                                                        'type': 'MixtureOfExponentials'},
+                                                          'States': [{'name': 'yes'}]}],
+                                            'TopVariable': 'D0'}]}}
         self.maxDiff = None
         self.writer = ProbModelXMLWriter(model_data=self.model_data)
 
@@ -692,7 +733,110 @@ class TestProbModelXMLWriter(unittest.TestCase):
         <AdditionalProperties/>
       </Link>
     </Links>
-    <Potential/>
+    <Potentials>
+      <Potential role="Utility" type="Tree/ADD">
+        <Variables>
+          <Variable name="C0"/>
+          <Variable name="C1"/>
+          <Variable name="D0"/>
+          <Variable name="D1"/>
+        </Variables>
+        <TopVariable name="D0"/>
+        <Branches>
+          <Branch>
+            <States>
+              <State name="no"/>
+            </States>
+            <Potential type="Tree/ADD">
+              <TopVariable name="C1"/>
+              <Branches>
+                <Branch>
+                  <Potential type="MixtureOfExponentials">
+                    <Variables>
+                      <Variable name="C0"/>
+                      <Variable name="C1"/>
+                    </Variables>
+                    <Subpotentials>
+                      <Potential type="Exponential">
+                        <Potential type="Table">
+                          <Values>3</Values>
+                        </Potential>
+                      </Potential>
+                      <Potential type="Exponential">
+                        <Coefficients>4 -1</Coefficients>
+                        <Potential type="Table">
+                          <Values>-1</Values>
+                        </Potential>
+                        <NumericVariables>
+                          <Variable name="C0"/>
+                          <Variable name="C1"/>
+                        </NumericVariables>
+                      </Potential>
+                    </Subpotentials>
+                  </Potential>
+                  <Thresholds>
+                    <Threshold value="-Infinity"/>
+                    <Threshold belongsTo="Left" value="0"/>
+                  </Thresholds>
+                </Branch>
+                <Branch>
+                  <Potential type="MixtureOfExponentials">
+                    <Variables>
+                      <Variable name="C1"/>
+                      <Variable name="D1"/>
+                    </Variables>
+                    <Subpotentials>
+                      <Potential type="Exponential">
+                        <Coefficients>0.25</Coefficients>
+                        <Potential type="Table">
+                          <Variables>
+                            <Variable name="D1"/>
+                          </Variables>
+                          <Values>10  5</Values>
+                        </Potential>
+                        <NumericVariables>
+                          <Variable name="C1"/>
+                        </NumericVariables>
+                      </Potential>
+                    </Subpotentials>
+                  </Potential>
+                  <Thresholds>
+                    <Threshold belongsTo="Left" value="0"/>
+                    <Threshold value="+Infinity"/>
+                  </Thresholds>
+                </Branch>
+              </Branches>
+            </Potential>
+          </Branch>
+          <Branch>
+            <States>
+              <State name="yes"/>
+            </States>
+            <Potential type="MixtureOfExponentials">
+              <Variables>
+                <Variable name="C0"/>
+              </Variables>
+              <Subpotentials>
+                <Potential type="Exponential">
+                  <Coefficients>1</Coefficients>
+                  <Potential type="Table">
+                    <Values>0.3</Values>
+                  </Potential>
+                  <NumericVariables>
+                    <Variable name="C0"/>
+                  </NumericVariables>
+                </Potential>
+                <Potential type="Exponential">
+                  <Potential type="Table">
+                    <Values>0.7</Values>
+                  </Potential>
+                </Potential>
+              </Subpotentials>
+            </Potential>
+          </Branch>
+        </Branches>
+      </Potential>
+    </Potentials>
     <AdditionalConstraints>
       <Constraint name="MaxNumParents">
         <Argument name="numParents" value="5"/>
