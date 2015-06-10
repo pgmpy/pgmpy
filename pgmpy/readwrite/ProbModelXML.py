@@ -118,6 +118,7 @@ except ImportError:
             print("Failed to import ElementTree from any known place")
 
 import networkx as nx
+import numpy as np
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -278,6 +279,10 @@ class ProbModelXMLWriter:
             self._add_additional_properties(self.xml, self.data['probnet']['AdditionalProperties'])
         except KeyError:
             etree.SubElement(self.probnet, 'AdditionalProperties')
+        try:
+            self._add_decision_criteria(self.data['probnet']['DecisionCriteria'])
+        except KeyError:
+            etree.SubElement(self.probnet, 'DecisionCriteria')
 
         # Add Additional Constraints
         for constraint in sorted(self.data['probnet']['AdditionalConstraints']):
@@ -610,8 +615,10 @@ class ProbModelXMLReader:
         # Add general properties
         probnet_elem = self.xml.find('ProbNet')
         self.probnet['type'] = probnet_elem.attrib['type']
-        self.add_comment(probnet_elem.find('Comment').text)
-        self.add_language(probnet_elem.find('Language').text)
+        if probnet_elem.find('Comment') is not None:
+            self.add_comment(probnet_elem.find('Comment').text)
+        if probnet_elem.find('Language') is not None:
+            self.add_language(probnet_elem.find('Language').text)
         if probnet_elem.find('AdditionalProperties') is not None:
             self.probnet['AdditionalProperties'] = {}
             for prop in probnet_elem.find('AdditionalProperties'):
@@ -622,6 +629,11 @@ class ProbModelXMLReader:
         for constraint in probnet_elem.findall('AdditionalConstraints/Constraint'):
             self.add_probnet_additionalconstraints(constraint)
 
+        # Add Decision Criterion
+        self.probnet['DecisionCriteria'] = {}
+        for criterion in probnet_elem.findall('DecisionCriteria/Criterion'):
+            self.add_criterion(criterion)
+
         # Add nodes
         self.probnet['Variables'] = {}
         for variable in probnet_elem.find('Variables'):
@@ -629,14 +641,30 @@ class ProbModelXMLReader:
 
         # Add edges
         self.probnet['edges'] = {}
-        for edge in self.xml.findall('.//Links')[0]:
+        for edge in probnet_elem.findall('Links/Link'):
             self.add_edge(edge)
 
         # Add CPD
-        for potential in self.xml.findall('.//Potential')[0]:
-            self.add_potential(potential)
+        self.probnet['Potentials'] = []
+        for potential in probnet_elem.findall('Potentials/Potential'):
+            probnet_dict = {}
+            self.add_potential(potential, probnet_dict)
+            self.probnet['Potentials'].append(probnet_dict)
 
     def add_probnet_additionalconstraints(self, constraint):
+        """
+        Adds Additional Constraints to the probnet dict.
+
+        Parameters
+        ----------
+        criterion: <Element Constraint at AdditionalConstraints Node in XML>
+            etree Element consisting Constraint tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_additionalconstraints(constraint)
+        """
         constraint_name = constraint.attrib['name']
         self.probnet['AdditionalConstraints'][constraint_name] = {}
         for argument in constraint.findall('Argument'):
@@ -644,10 +672,58 @@ class ProbModelXMLReader:
             argument_value = argument.attrib['value']
             self.probnet['AdditionalConstraints'][constraint_name][argument_name] = argument_value
 
+    def add_criterion(self, criterion):
+        """
+        Adds Decision Criteria to the probnet dict.
+
+        Parameters
+        ----------
+        criterion: <Element Criterion at Decision Criteria Node in XML>
+            etree Element consisting DecisionCritera tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_criterion(criterion)
+        """
+        criterion_name = criterion.attrib['name']
+        self.probnet['DecisionCriteria'][criterion_name] = {}
+        if criterion.find('AdditionalProperties/Property') is not None:
+            for prop in criterion.findall('AdditionalProperties/Property'):
+                prop_name = prop.attrib['name']
+                prop_value = prop.attrib['value']
+                self.probnet['DecisionCriteria'][criterion_name]['AdditionalProperties'][prop_name] = prop_value
+
     def add_comment(self, comment):
+        """
+        Adds Comment to the probnet dict.
+
+        Parameters
+        ----------
+        comment: string
+            String consisting of comment.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_comment(comment)
+        """
         self.probnet['Comment'] = comment
 
     def add_language(self, language):
+        """
+        Adds Language to the probnet dict.
+
+        Parameters
+        ----------
+        comment: string
+            String consisting of language.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_language(language)
+        """
         self.probnet['Language'] = language
 
     @staticmethod
@@ -655,6 +731,19 @@ class ProbModelXMLReader:
         place[prop.attrib['name']] = prop.attrib['value']
 
     def add_node(self, variable):
+        """
+        Adds Variables to the probnet dict.
+
+        Parameters
+        ----------
+        variable: <Element Variable at Variables Node in XML>
+            etree Element consisting Variable tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_node(variable)
+        """
         # TODO: Do some checks with variable type and roles. Right now I don't know when they are to be used.
         variable_name = variable.attrib['name']
         self.probnet['Variables'][variable_name] = {}
@@ -665,6 +754,7 @@ class ProbModelXMLReader:
         if variable.find('Coordinates') is not None:
             self.probnet['Variables'][variable_name]['Coordinates'] = variable.find('Coordinates').attrib
         if variable.find('AdditionalProperties/Property') is not None:
+            self.probnet['Variables'][variable_name]['AdditionalProperties'] = {}
             for prop in variable.findall('AdditionalProperties/Property'):
                 self.probnet['Variables'][variable_name]['AdditionalProperties'][prop.attrib['name']] = \
                     prop.attrib['value']
@@ -674,8 +764,21 @@ class ProbModelXMLReader:
             self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
 
     def add_edge(self, edge):
-        var1 = edge.attrib['var1']
-        var2 = edge.attrib['var2']
+        """
+        Adds Edges to the probnet dict.
+
+        Parameters
+        ----------
+        edge: <Element Link at Links Node in XML>
+            etree Element consisting Variable tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_edge(edge)
+        """
+        var1 = edge.findall('Variable')[0].attrib['name']
+        var2 = edge.findall('Variable')[1].attrib['name']
         self.probnet['edges'][(var1, var2)] = {}
         self.probnet['edges'][(var1, var2)]['directed'] = edge.attrib['directed']
         # TODO: check for the case of undirected graphs if we need to add to both elements of the dic for a single edge.
@@ -684,9 +787,158 @@ class ProbModelXMLReader:
         if edge.find('Label') is not None:
             self.probnet['edges'][(var1, var2)]['Label'] = edge.find('Label').text
         if edge.find('AdditionalProperties/Property') is not None:
+            self.probnet['edges'][(var1, var2)]['AdditionalProperties'] = {}
             for prop in edge.findall('AdditionalProperties/Property'):
                 self.probnet['edges'][(var1, var2)]['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
 
-    def add_potential(self, potential):
-        # TODO: Add code to read potential
-        pass
+    def add_potential(self, potential, potential_dict):
+        """
+        Adds Potential to the potential dict.
+
+        Parameters
+        ----------
+        potential: <Element Potential at Potentials node in XML>
+            etree Element consisting Potential tag.
+        potential_dict: dict{}
+            Dictionary to parse Potential tag.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.add_potential(potential, potential_dict)
+        """
+        potential_type = potential.attrib['type']
+        potential_dict['type'] = potential_type
+        try:
+            potential_dict['role'] = potential.attrib['role']
+        except KeyError:
+            pass
+        if potential.find('Comment') is not None:
+            potential_dict['Comment'] = potential.find('Comment').text
+        for prop in potential.findall('AdditionalProperties/Property'):
+            potential_dict['AdditionalProperties'][prop.attrib['name']] = prop.attrib['value']
+        if potential_type == "delta":
+            potential_dict['Variable'] = potential.find('Variable').attrib['name']
+            if potential.find('State') is not None:
+                potential_dict['State'] = potential.find('State').text
+            if potential.find('StateIndex') is not None:
+                potential_dict['StateIndex'] = potential.find('StateIndex').text
+            if potential.find('NumericValue') is not None:
+                potential_dict['NumericValue'] = potential.find('NumericValue').text
+        else:
+            if potential.find('UtilityVariable') is not None:
+                potential_dict['UtilityVaribale'] = potential.find('UtilityVariable').attrib['name']
+            if len(potential.findall('Variables/Variable')):
+                potential_dict['Variables'] = []
+                for var in potential.findall('Variables/Variable'):
+                    potential_dict['Variables'].append(var.attrib['name'])
+            if potential.find('Values') is not None:
+                potential_dict['Values'] = potential.find('Values').text
+            if len(potential.findall('UncertainValues/Value')):
+                potential_dict['UncertainValues'] = []
+                for value in potential.findall('UncertainValues/Value'):
+                    try:
+                        potential_dict['UncertainValues'].append(
+                            {'distribution': value.attrib['distribution'], 'name': value.attrib['name'],
+                             'value': value.text})
+                    except KeyError:
+                        potential_dict['UncertainValues'].append(
+                            {'distribution': value.attrib['distribution'], 'value': value.text})
+            if potential.find('TopVariable') is not None:
+                potential_dict['TopVariable'] = potential.find('TopVariable').attrib['name']
+
+            if len(potential.findall('Branches/Branch')):
+                potential_dict['Branches'] = []
+                for branch in potential.findall('Branches/Branch'):
+                    branch_dict = {}
+                    if len(branch.findall('States/State')):
+                        states = []
+                        for state in branch.findall('States/State'):
+                            states.append({'name': state.attrib['name']})
+                        branch_dict['States'] = states
+                    if branch.find('Potential') is not None:
+                        branch_potential = {}
+                        self.add_potential(branch.find('Potential'), branch_potential)
+                        branch_dict['Potential'] = branch_potential
+                    if branch.find('Label') is not None:
+                        label = branch.find('Label').text
+                        branch_dict['Label'] = label
+                    if branch.find('Reference') is not None:
+                        reference = branch.find('Reference').text
+                        branch_dict['Reference'] = reference
+                    if len(branch.findall('Thresholds/Threshold')):
+                        thresholds = []
+                        for threshold in branch.findall('Thresholds/Threshold'):
+                            try:
+                                thresholds.append({
+                                    'value': threshold.attrib['value'], 'belongsTo': threshold.attrib['belongsTo']})
+                            except KeyError:
+                                thresholds.append({'value': threshold.attrib['value']})
+                        branch_dict['Thresholds'] = thresholds
+                    potential_dict['Branches'].append(branch_dict)
+
+            if potential.find('Model') is not None:
+                potential_dict['Model'] = potential.find('Model').text
+            if len(potential.findall('Subpotentials/Potential')):
+                potential_dict['Subpotentials'] = []
+                for subpotential in potential.findall('Subpotentials/Potential'):
+                    subpotential_dict = {}
+                    self.add_potential(subpotential, subpotential_dict)
+                    potential_dict['Subpotentials'].append(subpotential_dict)
+            if potential.find('Coefficients') is not None:
+                potential_dict['Coefficients'] = potential.find('Coefficients').text
+            if potential.find('CovarianceMatrix') is not None:
+                potential_dict['CovarianceMatrix'] = potential.find('CovarianceMatrix').text
+            if potential.find('Potential') is not None:
+                potential_dict['Potential'] = {}
+                self.add_potential(potential.find('Potential'), potential_dict['Potential'])
+            if len(potential.findall('NumericVariables/Variable')):
+                potential_dict['NumericVariables'] = []
+                for variable in potential.findall('NumericVariables/Variable'):
+                    potential_dict['NumericVariables'].append(variable.attrib['name'])
+
+    def get_model(self):
+        """
+        Returns the model instance of the ProbModel.
+
+        Return
+        ---------------
+        model: an instance of BayesianModel.
+
+        Examples
+        -------
+        >>> reader = ProbModelXMLReader()
+        >>> reader.get_model()
+        """
+        if self.probnet.get('type') == "BayesianNetwork":
+            from pgmpy.models import BayesianModel
+            from pgmpy.factors import TabularCPD
+            model = BayesianModel(self.probnet['edges'].keys())
+
+            tabular_cpds = []
+            cpds = self.probnet['Potentials']
+            for cpd in cpds:
+                var = cpd['Variables'][0]
+                states = self.probnet['Variables'][var]['States']
+                evidence = cpd['Variables'][1:]
+                evidence_card = [len(self.probnet['Variables'][evidence_var]['States'])
+                                 for evidence_var in evidence]
+                arr = list(map(float, cpd['Values'].split()))
+                values = np.array(arr)
+                values = values.reshape((len(states), values.size//len(states)))
+                tabular_cpds.append(TabularCPD(var, len(states), values, evidence, evidence_card))
+
+            model.add_cpds(*tabular_cpds)
+
+            variables = model.nodes()
+            for var in variables:
+                for prop_name, prop_value in self.probnet['Variables'][var].items():
+                    model.node[var][prop_name] = prop_value
+
+            edges = model.edges()
+            for edge in edges:
+                for prop_name, prop_value in self.probnet['edges'][edge].items():
+                    model.edge[edge[0]][edge[1]][prop_name] = prop_value
+            return model
+        else:
+            raise ValueError("Please specify only Bayesian Network.")
