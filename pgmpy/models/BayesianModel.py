@@ -84,6 +84,7 @@ class BayesianModel(DirectedGraph):
             self.add_edges_from(ebunch)
         self.cpds = []
         self.cardinalities = defaultdict(int)
+        self.check_nodes = set()
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -150,9 +151,18 @@ class BayesianModel(DirectedGraph):
                 raise ValueError('Only TabularCPD, TreeCPD or RuleCPD can be'
                                  ' added.')
 
-            if set(cpd.variables) - set(cpd.variables).intersection(
+            check_nodes = []
+
+            if all(map(lambda x: isinstance(x, (tuple, list)) and len(x) == 2 and x[1] in (0,1), iter(cpd.variables))):
+                check_nodes.extend([x[0] for x in cpd.variables])
+            else:
+                check_nodes = cpd.variables
+
+            if set(check_nodes) - set(check_nodes).intersection(
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
+
+            self.check_nodes = self.check_nodes.union(cpd.variables)
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
@@ -184,7 +194,7 @@ class BayesianModel(DirectedGraph):
         >>> student.get_cpds()
         """
         if node:
-            if node not in self.nodes():
+            if node not in self.check_nodes:
                 raise ValueError('Node not present in the Directed Graph')
             for cpd in self.cpds:
                 if cpd.variable == node:
@@ -231,7 +241,7 @@ class BayesianModel(DirectedGraph):
         check: boolean
             True if all the checks are passed
         """
-        for node in self.nodes():
+        for node in self.check_nodes:
             cpd = self.get_cpds(node=node)
             if isinstance(cpd, TabularCPD):
                 evidence = cpd.evidence
