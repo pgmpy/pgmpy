@@ -521,6 +521,23 @@ class ProbModelXMLWriter:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
+    def write_file(self, filename):
+        """
+        Write the xml data into the file.
+
+        Parameters
+        ----------
+        filename: Name of the file.
+
+        Examples
+        -------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer.write_file(test_file)
+        """
+        writer = self.__str__()[:-1].decode('utf-8')
+        with open(filename, 'w') as fout:
+            fout.write(writer)
+
 
 class ProbModelXMLReader:
     """

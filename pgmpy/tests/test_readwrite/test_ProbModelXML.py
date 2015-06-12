@@ -858,3 +858,186 @@ class TestProbModelXMLWriter(unittest.TestCase):
   </DecisionCriteria>
 </ProbModelXML>""")
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+
+    def test_write_file(self):
+        self.expected_xml = etree.XML("""<ProbModelXML formatVersion="1.0">
+  <ProbNet type="BayesianNetwork">
+    <Variables>
+      <Variable name="difficulty" role="Chance" type="FiniteState">
+        <Comment/>
+        <Coordinates/>
+        <AdditionalProperties/>
+        <States>
+          <State name="difficult">
+            <AdditionalProperties/>
+          </State>
+          <State name="easy">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="intelligence" role="Chance" type="FiniteState">
+        <Comment/>
+        <Coordinates/>
+        <AdditionalProperties/>
+        <States>
+          <State name="dumb">
+            <AdditionalProperties/>
+          </State>
+          <State name="smart">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+    </Variables>
+    <Links>
+      <Link directed="1" var1="difficulty" var2="grade">
+        <Comment>Directed Edge from difficulty to grade</Comment>
+        <Label>diff_to_grad</Label>
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="1" var1="grade" var2="recommendation_letter">
+        <Comment>Directed Edge from grade to recommendation_letter</Comment>
+        <Label>grad_to_reco</Label>
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="1" var1="intelligence" var2="SAT">
+        <Comment>Directed Edge from intelligence to SAT</Comment>
+        <Label>intel_to_sat</Label>
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="1" var1="intelligence" var2="grade">
+        <Comment>Directed Edge from intelligence to grade</Comment>
+        <Label>intel_to_grad</Label>
+        <AdditionalProperties/>
+      </Link>
+    </Links>
+    <Potentials>
+      <Potential role="Utility" type="Tree/ADD">
+        <Variables>
+          <Variable name="C0"/>
+          <Variable name="C1"/>
+          <Variable name="D0"/>
+          <Variable name="D1"/>
+        </Variables>
+        <TopVariable name="D0"/>
+        <Branches>
+          <Branch>
+            <States>
+              <State name="no"/>
+            </States>
+            <Potential type="Tree/ADD">
+              <TopVariable name="C1"/>
+              <Branches>
+                <Branch>
+                  <Potential type="MixtureOfExponentials">
+                    <Variables>
+                      <Variable name="C0"/>
+                      <Variable name="C1"/>
+                    </Variables>
+                    <Subpotentials>
+                      <Potential type="Exponential">
+                        <Potential type="Table">
+                          <Values>3</Values>
+                        </Potential>
+                      </Potential>
+                      <Potential type="Exponential">
+                        <Coefficients>4 -1</Coefficients>
+                        <Potential type="Table">
+                          <Values>-1</Values>
+                        </Potential>
+                        <NumericVariables>
+                          <Variable name="C0"/>
+                          <Variable name="C1"/>
+                        </NumericVariables>
+                      </Potential>
+                    </Subpotentials>
+                  </Potential>
+                  <Thresholds>
+                    <Threshold value="-Infinity"/>
+                    <Threshold belongsTo="Left" value="0"/>
+                  </Thresholds>
+                </Branch>
+                <Branch>
+                  <Potential type="MixtureOfExponentials">
+                    <Variables>
+                      <Variable name="C1"/>
+                      <Variable name="D1"/>
+                    </Variables>
+                    <Subpotentials>
+                      <Potential type="Exponential">
+                        <Coefficients>0.25</Coefficients>
+                        <Potential type="Table">
+                          <Variables>
+                            <Variable name="D1"/>
+                          </Variables>
+                          <Values>10  5</Values>
+                        </Potential>
+                        <NumericVariables>
+                          <Variable name="C1"/>
+                        </NumericVariables>
+                      </Potential>
+                    </Subpotentials>
+                  </Potential>
+                  <Thresholds>
+                    <Threshold belongsTo="Left" value="0"/>
+                    <Threshold value="+Infinity"/>
+                  </Thresholds>
+                </Branch>
+              </Branches>
+            </Potential>
+          </Branch>
+          <Branch>
+            <States>
+              <State name="yes"/>
+            </States>
+            <Potential type="MixtureOfExponentials">
+              <Variables>
+                <Variable name="C0"/>
+              </Variables>
+              <Subpotentials>
+                <Potential type="Exponential">
+                  <Coefficients>1</Coefficients>
+                  <Potential type="Table">
+                    <Values>0.3</Values>
+                  </Potential>
+                  <NumericVariables>
+                    <Variable name="C0"/>
+                  </NumericVariables>
+                </Potential>
+                <Potential type="Exponential">
+                  <Potential type="Table">
+                    <Values>0.7</Values>
+                  </Potential>
+                </Potential>
+              </Subpotentials>
+            </Potential>
+          </Branch>
+        </Branches>
+      </Potential>
+    </Potentials>
+    <AdditionalConstraints>
+      <Constraint name="MaxNumParents">
+        <Argument name="numParents" value="5"/>
+      </Constraint>
+    </AdditionalConstraints>
+    <Language>English</Language>
+    <Comment>Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller</Comment>
+  </ProbNet>
+  <AdditionalProperties>
+    <Property name="elvira.title" value="X ray result"/>
+  </AdditionalProperties>
+  <DecisionCriteria>
+    <Criterion name="cost">
+      <AdditionalProperties/>
+    </Criterion>
+    <Criterion name="effectiveness">
+      <AdditionalProperties/>
+    </Criterion>
+  </DecisionCriteria>
+</ProbModelXML>""")
+        self.writer.write_file("test_xml.pgmx")
+        with open("test_xml.pgmx", "r") as myfile:
+            data = myfile.read()
+        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+        self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))
