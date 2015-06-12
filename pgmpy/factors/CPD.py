@@ -169,7 +169,7 @@ class TabularCPD(Factor):
             evidence = evidence[::-1]
 
             for i in range(len(evidence)):
-                var = evidence[i]
+                var = str(evidence[i])
                 card = cpd_evidence_card[i + 1]
                 num_repeat = cum_card[i]
                 col_span = max_card / (num_repeat * card)
@@ -186,7 +186,7 @@ class TabularCPD(Factor):
 
         m, n = cpd_value.shape
         for i in range(m):
-            html_substring = """<tr><td><b>%s_%d</b></td>""" % (self.variable, i)
+            html_substring = """<tr><td><b>%s_%d</b></td>""" % (str(self.variable), i)
             string_list.append(html_substring)
             for j in range(n):
                 html_substring = """<td>%4.4f</td>""" % cpd_value[i, j]
