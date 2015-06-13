@@ -119,6 +119,8 @@ except ImportError:
 
 import networkx as nx
 import numpy as np
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -224,6 +226,59 @@ def parse_probmodelxml(string):
     """
     reader = ProbModelXMLReader(string=string)
     return reader.make_network()
+
+def get_model_data(model):
+    """
+    Returns the model_data based on the given model.
+
+    Parameters
+    ----------
+    model: BayesianModel instance
+        Model to write
+
+    Return
+    ------
+    model_data: dict
+        dictionary containing model data of the given model.
+
+    Examples
+    --------
+    >>> model_data = pgmpy.readwrite.get_model_data(model)
+    >>> writer.get_model_data(model)
+    """
+    if not isinstance(model, BayesianModel):
+        raise TypeError("model must an instance of BayesianModel")
+    model_data = {}
+    model_data['probnet'] = {}
+    model_data['probnet']['type'] = 'BayesianNetwork'
+
+    model_data['probnet']['Variables'] = {}
+    variables = model.nodes()
+    for var in variables:
+        model_data['probnet']['Variables'][var] = model.node[var]
+
+    model_data['probnet']['edges'] = {}
+    edges = model.edges()
+    for edge in edges:
+        model_data['probnet']['edges'][edge] = model.edge[edge[0]][edge[1]]
+
+    model_data['probnet']['Potentials'] = []
+    cpds = model.get_cpds()
+    for cpd in cpds:
+        potential_dict = {}
+        potential_dict['Variables'] = {}
+        if cpd.evidence is None:
+            potential_dict['Variables'][cpd.variable] = []
+        else:
+            potential_dict['Variables'][cpd.variable] = cpd.evidence
+        potential_dict['type'] = "Table"
+        potential_dict['role'] = "conditionalProbability"
+        potential_dict['Values'] = ''
+        for val in cpd.values:
+            potential_dict['Values'] += str(val) + ' '
+        model_data['probnet']['Potentials'].append(potential_dict)
+
+    return model_data
 
 
 class ProbModelXMLWriter:
@@ -438,6 +493,8 @@ class ProbModelXMLWriter:
                 variable_tag = etree.SubElement(potential_tag, 'Variables')
                 for var in sorted(potential['Variables']):
                     etree.SubElement(variable_tag, 'Variable', attrib={'name': var})
+                    for child in sorted(potential['Variables'][var]):
+                        etree.SubElement(variable_tag, 'Variable', attrib={'name': child})
             if 'Values' in potential:
                 etree.SubElement(potential_tag, 'Values').text = potential['Values']
             if 'UncertainValues' in potential:
@@ -846,9 +903,11 @@ class ProbModelXMLReader:
             if potential.find('UtilityVariable') is not None:
                 potential_dict['UtilityVaribale'] = potential.find('UtilityVariable').attrib['name']
             if len(potential.findall('Variables/Variable')):
-                potential_dict['Variables'] = []
+                potential_dict['Variables'] = {}
+                var_list = []
                 for var in potential.findall('Variables/Variable'):
-                    potential_dict['Variables'].append(var.attrib['name'])
+                    var_list.append(var.attrib['name'])
+                potential_dict['Variables'][var_list[0]] = var_list[1:]
             if potential.find('Values') is not None:
                 potential_dict['Values'] = potential.find('Values').text
             if len(potential.findall('UncertainValues/Value')):
@@ -928,16 +987,14 @@ class ProbModelXMLReader:
         >>> reader.get_model()
         """
         if self.probnet.get('type') == "BayesianNetwork":
-            from pgmpy.models import BayesianModel
-            from pgmpy.factors import TabularCPD
             model = BayesianModel(self.probnet['edges'].keys())
 
             tabular_cpds = []
             cpds = self.probnet['Potentials']
             for cpd in cpds:
-                var = cpd['Variables'][0]
+                var = list(cpd['Variables'].keys())[0]
                 states = self.probnet['Variables'][var]['States']
-                evidence = cpd['Variables'][1:]
+                evidence = cpd['Variables'][var]
                 evidence_card = [len(self.probnet['Variables'][evidence_var]['States'])
                                  for evidence_var in evidence]
                 arr = list(map(float, cpd['Values'].split()))
