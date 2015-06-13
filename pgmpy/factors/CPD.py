@@ -155,7 +155,7 @@ class TabularCPD(Factor):
         cpd_value = self.get_cpd()
 
         html_string_header = (
-            """<table><caption>TabularCPD for <b>%s</b></caption>""" % self.variable)
+            """<table><caption>TabularCPD for <b>%s</b></caption>""" % str(self.variable))
         string_list.append(html_string_header)
 
         if self.evidence:
