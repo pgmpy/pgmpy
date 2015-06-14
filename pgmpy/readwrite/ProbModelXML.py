@@ -227,6 +227,7 @@ def parse_probmodelxml(string):
     reader = ProbModelXMLReader(string=string)
     return reader.make_network()
 
+
 def get_model_data(model):
     """
     Returns the model_data based on the given model.
@@ -473,18 +474,14 @@ class ProbModelXMLWriter:
         except KeyError:
             potential_tag = etree.SubElement(parent_tag, 'Potential', attrib={
                 'type': potential['type']})
-        if 'Comment' in potential:
-            etree.SubElement(potential_tag, 'Comment').text = potential['Comment']
+        self._add_element(potential, 'Comment', potential_tag)
         if 'AdditionalProperties' in potential:
             self._add_additional_properties(potential_tag, potential['AdditionalProperties'])
         if potential_type == "delta":
             etree.SubElement(potential_tag, 'Variable', attrib={'name': potential['Variable']})
-            if 'State' in potential:
-                etree.SubElement(potential_tag, 'State').text = potential['State']
-            if 'StateIndex' in potential:
-                etree.SubElement(potential_tag, 'StateIndex').text = potential['StateIndex']
-            if 'NumericValue' in potential:
-                etree.SubElement(potential_tag, 'NumericValue').text = potential['NumericValue']
+            self._add_element(potential, 'State', potential_tag)
+            self._add_element(potential, 'StateIndex', potential_tag)
+            self._add_element(potential, 'NumericValue', potential_tag)
         else:
             if 'UtilityVariable' in potential:
                 etree.SubElement(potential_tag, 'UtilityVariable', attrib={
@@ -495,8 +492,7 @@ class ProbModelXMLWriter:
                     etree.SubElement(variable_tag, 'Variable', attrib={'name': var})
                     for child in sorted(potential['Variables'][var]):
                         etree.SubElement(variable_tag, 'Variable', attrib={'name': child})
-            if 'Values' in potential:
-                etree.SubElement(potential_tag, 'Values').text = potential['Values']
+            self._add_element(potential, 'Values', potential_tag)
             if 'UncertainValues' in potential:
                 value_tag = etree.SubElement(potential_tag, 'UncertainValues', attrib={})
                 for value in sorted(potential['UncertainValues']):
@@ -519,10 +515,8 @@ class ProbModelXMLWriter:
                             etree.SubElement(states_tag, 'State', attrib={'name': state['name']})
                     if 'Potential' in branch:
                         self._add_potential(branch['Potential'], branch_tag)
-                    if 'Label' in branch:
-                        etree.SubElement(branch_tag, 'Label').text = branch['Label']
-                    if 'Reference' in branch:
-                        etree.SubElement(branch_tag, 'Reference').text = branch['Reference']
+                    self._add_element(potential, 'Label', potential_tag)
+                    self._add_element(potential, 'Reference', potential_tag)
                     if 'Thresholds' in branch:
                         thresholds_tag = etree.SubElement(branch_tag, 'Thresholds')
                         for threshold in branch['Thresholds']:
@@ -532,22 +526,50 @@ class ProbModelXMLWriter:
                             except KeyError:
                                 etree.SubElement(thresholds_tag, 'Threshold', attrib={
                                     'value': threshold['value']})
-            if 'Model' in potential:
-                etree.SubElement(potential_tag, 'Model').text = potential['Model']
+            self._add_element(potential, 'Model', potential_tag)
+            self._add_element(potential, 'Coefficients', potential_tag)
+            self._add_element(potential, 'CovarianceMatrix', potential_tag)
             if 'Subpotentials' in potential:
                 subpotentials = etree.SubElement(potential_tag, 'Subpotentials')
                 for subpotential in potential['Subpotentials']:
                     self._add_potential(subpotential, subpotentials)
-            if 'Coefficients' in potential:
-                etree.SubElement(potential_tag, 'Coefficients').text = potential['Coefficients']
-            if 'CovarianceMatrix' in potential:
-                etree.SubElement(potential_tag, 'CovarianceMatrix').text = potential['CovarianceMatrix']
             if 'Potential' in potential:
                 self._add_potential(potential['Potential'], potential_tag)
             if 'NumericVariables' in potential:
                 numvar_tag = etree.SubElement(potential_tag, 'NumericVariables')
                 for var in sorted(potential['NumericVariables']):
                     etree.SubElement(numvar_tag, 'Variable', attrib={'name': var})
+
+    @staticmethod
+    def _add_element(potential, var, potential_tag):
+        """
+        Helper function to add variable tag to the potential_tag
+
+        Parameters
+        ----------
+        potential: dict
+            Dictionary containing Potential data.
+            For example: {'role': 'Utility',
+                          'Variables': ['D0', 'D1', 'C0', 'C1'],
+                          'type': 'Tree/ADD',
+                          'UtilityVaribale': 'U1'}
+        var: string
+            New Element tag which needs to be added to the potential tag.
+            For example: 'type'
+        potential_tag: etree Element
+            etree element which would contain potential tag
+            For example: <Element Potentials at 0x7f315fc44b08>
+                         <Element Branch at 0x7f315fc44c88>
+                         <Element Branch at 0x7f315fc44d88>
+                         <Element Subpotentials at 0x7f315fc44e48>
+
+        Examples
+        -------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer._add_element(potential, 'State', parent_tag)
+        """
+        if var in potential:
+            etree.SubElement(potential_tag, var).text = potential[var]
 
     def dump(self, stream):
         """
