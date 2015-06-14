@@ -171,26 +171,26 @@ class BayesianModelSampling(Inference):
         1  (intel, 1)  (diff, 0)  (grade, 1)      0.6
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
-        sampled['_weight'] = [0] * size
-        for i in range(size):
-            w = 1
-            particle = {}
-            for node in self.topological_order:
-                cpd = self.cpds[node]
-                if cpd.evidence:
-                    evid = []
-                    for var in cpd.evidence:
-                        evid.append(particle[var])
-                    weights = cpd.reduce(evid, inplace=False).values
-                else:
-                    weights = cpd.values
+        sampled['_weight'] = [1] * size
+        for node in self.topological_order:
+            cpd = self.cpds[node]
+            if cpd.evidence:
+                weights = []
+                for i in range(size):
+                    evid = [sampled[var][i] for var in cpd.evidence]
+                    weights.append(cpd.reduce(evid, inplace=False).values)
                 if node in evidence:
-                    particle[node] = evidence[node]
-                    w *= weights[evidence[node].state]
+                    sampled[node] = [evidence[node]] * size
+                    for i in range(size):
+                        sampled.loc[i, '_weight'] *= weights[i][evidence[node].state]
                 else:
-                    particle[node] = sample_discrete(
-                        cpd.variables[cpd.variable], weights)[0]
-            row = [particle[node] for node in self.topological_order]
-            row.append(w)
-            sampled.loc[i] = row
+                    sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
+            else:
+                weights = cpd.values
+                if node in evidence:
+                    sampled[node] = [evidence[node]] * size
+                    for i in range(size):
+                        sampled.loc[i, '_weight'] *= weights[evidence[node].state]
+                else:
+                    sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights, size)
         return sampled
