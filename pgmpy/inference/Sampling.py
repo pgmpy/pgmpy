@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-from itertools import product
-
 import networkx as nx
 from pandas import DataFrame
 
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel
 from pgmpy.utils.mathext import sample_discrete
-from pgmpy.factors.Factor import State
+
 
 class BayesianModelSampling(Inference):
     """
@@ -26,9 +24,8 @@ class BayesianModelSampling(Inference):
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
             raise TypeError("model must an instance of BayesianModel")
-        Inference.__init__(self, model)
+        super().__init__(model)
         self.topological_order = nx.topological_sort(model)
-        self.cpds = {}
         self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 
     def forward_sample(self, size=1):
@@ -67,23 +64,15 @@ class BayesianModelSampling(Inference):
         for node in self.topological_order:
             cpd = self.cpds[node]
             if cpd.evidence:
-                # memoizing calls to cpd.reduce
-                weights = {}
-                card_iter = [range(card) for card in cpd.evidence_card]
-                for tup in product(*card_iter):
-                    evid = [State(v, s) for v, s in zip(cpd.evidence, tup)]
-                    weights[tup] = cpd.reduce(evid, inplace=False).values
-                # can now fill values, row by row
+                weights = []
                 for i in range(size):
-                    tup = tuple(sampled[var][i].state for var in cpd.evidence)
-                    sampled[node][i] = \
-                        sample_discrete(cpd.variables[cpd.variable],
-                                        weights[tup])[0]
+                    evid = [sampled[var][i] for var in cpd.evidence]
+                    weights.append(cpd.reduce(evid, inplace=False).values)
+                sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
             else:
                 # can generate the column at once
                 weights = cpd.values
-                sampled[node] = \
-                    sample_discrete(cpd.variables[cpd.variable], weights, size)
+                sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights, size)
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
@@ -120,54 +109,26 @@ class BayesianModelSampling(Inference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = {'diff': State(var='diff', state=0)}
         >>> inference.rejection_sample(evidence, 2)
-                grade       intel
-        0  (grade, 2)  (intel, 1)
-        1  (grade, 0)  (intel, 0)
+                intel       diff       grade
+        0  (intel, 0)  (diff, 0)  (grade, 1)
+        1  (intel, 0)  (diff, 0)  (grade, 1)
         """
-        def check_if_consistent(dict1, dict2):
-            """
-            Checks if two assignments of variables contradict each other.
-
-            Parameters
-            ----------
-            dict1, dict2: dicts
-                key, value pairs denoting the variable and the assignment to it
-
-            Returns
-            -------
-            boolean: True/False
-            """
-            common_keys = set(dict1.keys()) - set(dict2.keys())
-            for k in common_keys:
-                if dict1[k] != dict2[k]:
-                    return False
-            return True
-
         if evidence is None:
             return self.forward_sample(size)
-
-        query_vars = list(set(self.topological_order) - set(evidence.keys()))
-        sampled = DataFrame(index=range(0, size),
-                            columns=query_vars)
-        i = 0
-        while i < size:
-            particle = {}
-            for node in self.topological_order:
-                cpd = self.cpds[node]
-                if cpd.evidence:
-                    evid = []
-                    for var in cpd.evidence:
-                        evid.append(particle[var])
-                    weights = cpd.reduce(evid, inplace=False).values
-                else:
-                    weights = cpd.values
-                particle[node] = sample_discrete(cpd.variables[cpd.variable],
-                                                 weights)[0]
-            if check_if_consistent(evidence, particle):
-                # reject if the sample contradicts the evidence
-                sampled.loc[i] = [particle[node] for node in query_vars]
-                i += 1
-        return sampled
+        sampled = DataFrame(columns=self.topological_order)
+        prob = 1
+        while len(sampled) < size:
+            _size = int((size - len(sampled)) / prob)
+            _sampled = self.forward_sample(_size)
+            for i in range(_size):
+                for var in evidence:
+                    if evidence[var] != _sampled[var][i]:
+                        _sampled.drop(i, inplace=True)
+                        break
+            prob = max(len(_sampled) / _size, 0.01)  # 0.01 assumed if len(sampled) is small or zero
+            sampled = sampled.append(_sampled)
+        sampled.reset_index(inplace=True, drop=True)
+        return sampled[:size]
 
     def likelihood_weighted_sample(self, evidence=None, size=1):
         """
