@@ -59,7 +59,7 @@ def sample_discrete(values, weights, size=1):
     ----------
     values: numpy.array: Array of all possible values that the random variable
             can take.
-    weights: numpy.array: Array representing the PMF of the random variable.
+    weights: numpy.array or list of numpy.array: Array(s) representing the PMF of the random variable.
     size: int: Size of the sample to be generated.
 
     Returns
@@ -76,5 +76,20 @@ def sample_discrete(values, weights, size=1):
     array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1',
       'v_2'], dtype='<U3')
     """
+    assert len(weights) > 0
+
+    # if a list of weight vectors is passed
+    if isinstance(weights[0], (list, np.ndarray)):
+        assert size == 1
+        assert len(weights[0]) == len(values)
+        ret = []
+        for w in weights:
+            bins = np.add.accumulate(w)
+            r_val = np.digitize(random_sample(size), bins)[0]
+            ret.append(values[r_val])
+        return ret
+
+    # if a single weight vector is passed
+    assert len(weights) == len(values)
     bins = np.add.accumulate(weights)
     return [values[i] for i in np.digitize(random_sample(size), bins)]
