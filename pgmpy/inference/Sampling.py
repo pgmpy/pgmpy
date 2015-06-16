@@ -115,14 +115,11 @@ class BayesianModelSampling(Inference):
         sampled = DataFrame(columns=self.topological_order)
         prob = 1
         while len(sampled) < size:
-            _size = int((size - len(sampled)) / prob)
+            _size = int(((size - len(sampled)) / prob) * 1.5)
             _sampled = self.forward_sample(_size)
-            for i in range(_size):
-                for var in evidence:
-                    if evidence[var] != _sampled[var][i]:
-                        _sampled.drop(i, inplace=True)
-                        break
-            prob = max(len(_sampled) / _size, 0.01)  # 0.01 assumed if len(sampled) is small or zero
+            for evid in evidence:
+                _sampled = _sampled[_sampled.ix[:, evid.var] == evid]
+            prob = max(len(_sampled) / _size, 0.01)
             sampled = sampled.append(_sampled)
         sampled.reset_index(inplace=True, drop=True)
         return sampled[:size]
