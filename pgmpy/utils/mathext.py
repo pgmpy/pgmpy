@@ -82,12 +82,9 @@ def sample_discrete(values, weights, size=1):
     if isinstance(weights[0], (list, np.ndarray)):
         assert size == 1
         assert len(weights[0]) == len(values)
-        ret = []
-        for w in weights:
-            bins = np.add.accumulate(w)
-            r_val = np.digitize(random_sample(size), bins)[0]
-            ret.append(values[r_val])
-        return ret
+        bins = map(np.add.accumulate, weights)
+        rand_val = map(lambda x: np.digitize(random_sample(1), x)[0], bins)
+        return [values[i] for i in rand_val]
 
     # if a single weight vector is passed
     assert len(weights) == len(values)
