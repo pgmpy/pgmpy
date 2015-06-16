@@ -1,5 +1,9 @@
+from collections import namedtuple
+
 import numpy as np
-from numpy.random import random_sample
+
+
+State = namedtuple('State', ['var', 'state'])
 
 
 def cartesian(arrays, out=None):
@@ -76,17 +80,12 @@ def sample_discrete(values, weights, size=1):
     array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1',
       'v_2'], dtype='<U3')
     """
-    assert len(weights) > 0
+    weights = np.array(weights)
+    variable = values[0][0]
+    state_names = np.array(values)[:, 1]
+    if weights.ndim == 1:
+        states = np.random.choice(state_names, size=size, p=weights)
+    else:
+        states = np.fromiter(map(lambda t: np.random.choice(state_names, p=t), weights), dtype='int')
 
-    # if a list of weight vectors is passed
-    if isinstance(weights[0], (list, np.ndarray)):
-        assert size == 1
-        assert len(weights[0]) == len(values)
-        bins = map(np.add.accumulate, weights)
-        rand_val = map(lambda x: np.digitize(random_sample(1), x)[0], bins)
-        return [values[i] for i in rand_val]
-
-    # if a single weight vector is passed
-    assert len(weights) == len(values)
-    bins = np.add.accumulate(weights)
-    return [values[i] for i in np.digitize(random_sample(size), bins)]
+    return list(map(lambda t: State(variable, t), states))
