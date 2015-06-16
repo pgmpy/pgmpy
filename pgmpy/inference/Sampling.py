@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import networkx as nx
+import numpy as np
 from pandas import DataFrame
 
 from pgmpy.inference import Inference
@@ -61,18 +62,14 @@ class BayesianModelSampling(Inference):
         1  (diff, 1)  (intel, 0)  (grade, 2)
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
-        for node in self.topological_order:
+        for index, node in enumerate(self.topological_order):
             cpd = self.cpds[node]
             if cpd.evidence:
-                weights = []
-                for i in range(size):
-                    evid = [sampled[var][i] for var in cpd.evidence]
-                    weights.append(cpd.reduce(evid, inplace=False).values)
+                evidence = sampled.values[:, :index].tolist()
+                weights = np.apply_along_axis(lambda t: cpd.reduce(t, inplace=False).values, 1, evidence)
                 sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
             else:
-                # can generate the column at once
-                weights = cpd.values
-                sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights, size)
+                sampled[node] = sample_discrete(cpd.variables[cpd.variable], cpd.values, size)
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
