@@ -66,7 +66,7 @@ class BayesianModelSampling(Inference):
             cpd = self.cpds[node]
             if cpd.evidence:
                 evidence = sampled.values[:, :index].tolist()
-                weights = np.apply_along_axis(lambda t: cpd.reduce(t, inplace=False).values, 1, evidence)
+                weights = list(map(lambda t: cpd.reduce(t, inplace=False).values, evidence))
                 sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
             else:
                 sampled[node] = sample_discrete(cpd.variables[cpd.variable], cpd.values, size)
