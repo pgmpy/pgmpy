@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.random import random_sample
 
 
 def cartesian(arrays, out=None):
@@ -48,3 +49,44 @@ def cartesian(arrays, out=None):
         out[:, n] = arrays[n][ix[:, n]]
 
     return out
+
+
+def sample_discrete(values, weights, size=1):
+    """
+    Generate a sample of given size, given a probability mass function.
+
+    Parameters
+    ----------
+    values: numpy.array: Array of all possible values that the random variable
+            can take.
+    weights: numpy.array or list of numpy.array: Array(s) representing the PMF of the random variable.
+    size: int: Size of the sample to be generated.
+
+    Returns
+    -------
+    numpy.array: of values of the random variable sampled from the given PMF.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from pgmpy.utils.mathext import sample_discrete
+    >>> values = np.array(['v_0', 'v_1', 'v_2'])
+    >>> probabilities = np.array([0.2, 0.5, 0.3])
+    >>> sample_discrete(values, probabilities, 10)
+    array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1',
+      'v_2'], dtype='<U3')
+    """
+    assert len(weights) > 0
+
+    # if a list of weight vectors is passed
+    if isinstance(weights[0], (list, np.ndarray)):
+        assert size == 1
+        assert len(weights[0]) == len(values)
+        bins = map(np.add.accumulate, weights)
+        rand_val = map(lambda x: np.digitize(random_sample(1), x)[0], bins)
+        return [values[i] for i in rand_val]
+
+    # if a single weight vector is passed
+    assert len(weights) == len(values)
+    bins = np.add.accumulate(weights)
+    return [values[i] for i in np.digitize(random_sample(size), bins)]
