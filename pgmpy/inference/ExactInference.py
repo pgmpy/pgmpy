@@ -44,9 +44,7 @@ class VariableElimination(Inference):
         if evidence:
             for evidence_var in evidence:
                 for factor in working_factors[evidence_var]:
-                    factor_reduced = factor.reduce('{evidence_var}_{state}'.format(evidence_var=evidence_var,
-                                                                                   state=evidence[evidence_var]),
-                                                   inplace=False)
+                    factor_reduced = factor.reduce((evidence_var, evidence[evidence_var]), inplace=False)
                     for var in factor_reduced.scope():
                         working_factors[var].remove(factor)
                         working_factors[var].add(factor_reduced)
@@ -201,8 +199,8 @@ class VariableElimination(Inference):
 
         map_query_results = {}
         for var_assignment in assignment:
-            var, value = var_assignment.split('_')
-            map_query_results[var] = int(value)
+            var, value = var_assignment
+            map_query_results[var] = value
 
         if not variables:
             return map_query_results

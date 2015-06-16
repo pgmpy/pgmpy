@@ -142,7 +142,8 @@ class TabularCPD(Factor):
             row = [scope[i]]
             row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
             table_list.append(row)
-        table_list.extend(np.column_stack((np.array(self.variables[self.variable]), self.get_cpd())))
+        variable_array = np.array([str([v.var, v.state]) for v in self.variables[self.variable]])
+        table_list.extend(np.column_stack((variable_array, self.get_cpd())))
         return tabulate(table_list, tablefmt="fancy_grid")
 
     def _repr_html_(self):

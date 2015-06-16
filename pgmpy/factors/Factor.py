@@ -1,12 +1,16 @@
 import functools
 from operator import lt
 from itertools import product, starmap
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 import numpy as np
 
 from pgmpy.exceptions import Exceptions
 from pgmpy.extern import tabulate
+from pgmpy.utils.mathext import cartesian
+
+
+State = namedtuple('State', ['var', 'state'])
 
 
 class Factor:
@@ -71,10 +75,9 @@ class Factor:
         if len(variables) != len(cardinality):
             raise ValueError("The size of variables and cardinality should be same")
         for variable, card in zip(variables, cardinality):
-            self.variables[str(variable)] = [str(variable) + '_' + str(index)
-                                        for index in range(card)]
+            self.variables[variable] = [State(variable, index) for index in range(card)]
         self.cardinality = np.array(cardinality)
-        self.values = np.array(value, dtype=np.double)
+        self.values = np.array(value, dtype=np.float)
         if not self.values.shape[0] == np.prod(self.cardinality):
             raise Exceptions.SizeError("Incompetant value array")
 
@@ -108,20 +111,23 @@ class Factor:
         >>> phi.assignment([1, 2])
         [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
         """
-        if not isinstance(index, np.ndarray):
-            index = np.atleast_1d(index)
+        if isinstance(index, (int, np.integer)):
+            index = [index]
+        index = np.array(index)
+
         max_index = np.prod(self.cardinality) - 1
         if not all(i <= max_index for i in index):
             raise IndexError("Index greater than max possible index")
-        assignments = []
-        for ind in index:
-            assign = []
-            for card in self.cardinality[::-1]:
-                assign.insert(0, ind % card)
-                ind = ind/card
-            assignments.append(map(int, assign))
-        return [[self.variables[key][val] for key, val in
-                 zip(self.variables.keys(), values)] for values in assignments]
+
+        assignments = np.zeros((len(index), len(self.scope())), dtype=np.int)
+        rev_card = self.cardinality[::-1]
+        for i, card in enumerate(rev_card):
+            assignments[:, i] = index % card
+            index = index//card
+
+        assignments = assignments[:, ::-1]
+
+        return [[self.variables[key][val] for key, val in zip(self.variables.keys(), values)] for values in assignments]
 
     def get_cardinality(self, variable):
         """
@@ -223,19 +229,18 @@ class Factor:
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> norm_phi = phi.normalize()
-        >>> norm_phi.values
+        >>> phi.normalize()
+        >>> phi.values
         array([ 0.        ,  0.01515152,  0.03030303,  0.04545455,  0.06060606,
                 0.07575758,  0.09090909,  0.10606061,  0.12121212,  0.13636364,
                 0.15151515,  0.16666667])
 
         """
+        values = self.values / np.sum(self.values)
         if inplace:
-            self.values = self.values / np.sum(self.values)
+            self.values = values
         else:
-            factor = Factor(self.scope(), self.cardinality, self.values)
-            factor.values = factor.values / np.sum(factor.values)
-            return factor
+            return Factor(self.scope(), self.cardinality, values)
 
     def reduce(self, values, inplace=True):
         """
@@ -243,8 +248,8 @@ class Factor:
 
         Parameters
         ----------
-        values: string, list-type
-            name of the variable values
+        values: list-type
+            A single tuple of the form (variable_name, variable_state) or a list of tuples of the same form.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -254,40 +259,41 @@ class Factor:
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.reduce(['x1_0', 'x2_0'])
+        >>> phi.reduce([('x1', 0), ('x2', 0)])
         >>> phi.values
         array([0., 1.])
         """
         if not isinstance(values, list):
             values = [values]
 
+        if not all(map(lambda t: isinstance(t, (tuple, list, np.ndarray)), values)):
+            raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
+
+        reduce_vars, reduce_states = zip(*values)
+
+        if not all([var in self.scope() for var in reduce_vars]):
+            raise ValueError("Variable out of Scope")
+
+        var_indexes = [self.scope().index(i) for i in reduce_vars]
+
+        reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
+        new_card = self.cardinality[reduce_var_indexes == 0]
+        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
+
+        reduce_var_indexes[reduce_var_indexes == 0] = -1
+        reduce_var_indexes[var_indexes] = reduce_states
+        value_indexes = self._index_for_assignment(reduce_var_indexes)
+        new_values = self.values[value_indexes]
+
         if inplace:
-            factor = self
+            new_variables = OrderedDict()
+            for variable, card in zip(new_vars, new_card):
+                new_variables[variable] = [State(variable, index) for index in range(card)]
+            self.variables = new_variables
+            self.cardinality = new_card
+            self.values = new_values
         else:
-            factor = Factor(self.scope(), self.cardinality, self.values)
-            
-        if not all('_' in value for value in values):
-            raise TypeError('Values should be in the form of variablename_index')
-            
-        value_row = list(zip(*[value.split('_') for value in values]))
-        reduced_variables = list(value_row[0])
-        value_indices = list(map(int, value_row[1]))
-        if not set(reduced_variables).issubset(set(factor.scope())):
-            raise Exceptions.ScopeError('%s not in scope' % list(set(reduced_variables)-set(factor.scope())))
-
-        reduced_indices = np.where(np.in1d(factor.scope(), reduced_variables))
-        if not all(starmap(lt, zip(value_indices, factor.cardinality[reduced_indices]))):
-            raise Exceptions.SizeError('Value is greater than max possible value')
-
-        reduce_assign = np.full(len(factor.cardinality), -1, dtype=int)
-        reduce_assign[reduced_indices] = value_indices
-        factor.values = factor.values[factor._index_for_assignment(reduce_assign)]
-        factor.cardinality = np.delete(factor.cardinality, reduced_indices)
-        for var in reduced_variables:
-            del factor.variables[var]
-
-        if not inplace:
-            return factor
+            return Factor(new_vars, new_card, new_values)
 
     def product(self, *factors, n_jobs=1):
         """
@@ -411,12 +417,10 @@ class Factor:
         if -1 in assignment:
             indexes = np.where(assignment == -1)[0]
             cardinalities = self.cardinality[indexes]
-            array_to_return = np.array([])
-            for i in product(*[range(card) for card in cardinalities]):
-                temp_assignment = np.array(assignment)
-                temp_assignment[temp_assignment == -1] = i
-                array_to_return = np.append(array_to_return, np.sum(temp_assignment * card_cumprod))
-            return array_to_return.astype('int')
+
+            temp_assignment = np.tile(assignment, (np.product(cardinalities), 1))
+            temp_assignment[temp_assignment == -1] = cartesian([range(card) for card in cardinalities]).ravel()
+            return np.sum(temp_assignment * card_cumprod, axis=1).astype('int')
         else:
             return np.array([np.sum(assignment * card_cumprod)])
 
@@ -432,9 +436,9 @@ class Factor:
         if html:
             html_string_header = '{tr}{variable_cols}{phi}'.format(
                 tr='<tr',
-                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=var) for var in self.variables]),
+                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=str(var)) for var in self.variables]),
                 phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_P=phi_or_p,
-                                                                 vars=', '.join(self.variables)))
+                                                                 vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
             string_header = self.scope()
