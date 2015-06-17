@@ -77,7 +77,7 @@ class BayesianModelSampling(Inference):
                 sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
             else:
                 sampled[node] = list(map(lambda t: State(node, t),
-                                    sample_discrete(states, cpd.values, size)))
+                                     sample_discrete(states, cpd.values, size)))
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
@@ -87,8 +87,7 @@ class BayesianModelSampling(Inference):
 
         Parameters
         ----------
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
+        evidence: list of `pgmpy.factor.State` namedtuples
             None if no evidence
         size: int
             size of sample to be generated
@@ -141,8 +140,7 @@ class BayesianModelSampling(Inference):
 
         Parameters
         ----------
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
+        evidence: list of `pgmpy.factor.State` namedtuples
             None if no evidence
         size: int
             size of sample to be generated
@@ -173,26 +171,27 @@ class BayesianModelSampling(Inference):
         1  (intel, 1)  (diff, 0)  (grade, 1)      0.6
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
-        sampled['_weight'] = [1] * size
+        sampled['_weight'] = np.ones(size)
+        evidence_dict = {var: st for var, st in evidence}
         for node in self.topological_order:
             cpd = self.cpds[node]
+            states = [st for var, st in cpd.variables[node]]
             if cpd.evidence:
-                weights = []
-                for i in range(size):
-                    evid = [sampled[var][i] for var in cpd.evidence]
-                    weights.append(cpd.reduce(evid, inplace=False).values)
-                if node in evidence:
-                    sampled[node] = [evidence[node]] * size
+                indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
+                evidence = sampled.values[:, [indices]].tolist()
+                weights = list(map(lambda t: cpd.reduce(t[0], inplace=False).values, evidence))
+                if node in evidence_dict:
+                    sampled[node] = (State(node, evidence_dict[node]), ) * size
                     for i in range(size):
-                        sampled.loc[i, '_weight'] *= weights[i][evidence[node].state]
+                        sampled.loc[i, '_weight'] *= weights[i][evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
+                    sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
             else:
-                weights = cpd.values
-                if node in evidence:
-                    sampled[node] = [evidence[node]] * size
+                if node in evidence_dict:
+                    sampled[node] = (State(node, evidence_dict[node]), ) * size
                     for i in range(size):
-                        sampled.loc[i, '_weight'] *= weights[evidence[node].state]
+                        sampled.loc[i, '_weight'] *= cpd.values[evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights, size)
+                    sampled[node] = list(map(lambda t: State(node, t),
+                                         sample_discrete(states, cpd.values, size)))
         return sampled
