@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from collections import namedtuple
+
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
@@ -6,6 +8,9 @@ from pandas import DataFrame
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel
 from pgmpy.utils.mathext import sample_discrete
+
+
+State = namedtuple('State', ['var', 'state'])
 
 
 class BayesianModelSampling(Inference):
@@ -64,12 +69,14 @@ class BayesianModelSampling(Inference):
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for index, node in enumerate(self.topological_order):
             cpd = self.cpds[node]
+            states = [st for var, st in cpd.variables[node]]
             if cpd.evidence:
                 evidence = sampled.values[:, :index].tolist()
                 weights = list(map(lambda t: cpd.reduce(t, inplace=False).values, evidence))
-                sampled[node] = sample_discrete(cpd.variables[cpd.variable], weights)
+                sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
             else:
-                sampled[node] = sample_discrete(cpd.variables[cpd.variable], cpd.values, size)
+                sampled[node] = list(map(lambda t: State(node, t),
+                                    sample_discrete(states, cpd.values, size)))
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
