@@ -81,11 +81,7 @@ def sample_discrete(values, weights, size=1):
       'v_2'], dtype='<U3')
     """
     weights = np.array(weights)
-    variable = values[0][0]
-    state_names = np.array(values)[:, 1]
     if weights.ndim == 1:
-        states = np.random.choice(state_names, size=size, p=weights)
+        return np.random.choice(values, size=size, p=weights)
     else:
-        states = np.fromiter(map(lambda t: np.random.choice(state_names, p=t), weights), dtype='int')
-
-    return list(map(lambda t: State(variable, t), states))
+        return np.fromiter(map(lambda t: np.random.choice(values, p=t), weights), dtype='int')
