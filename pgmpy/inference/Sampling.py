@@ -71,8 +71,9 @@ class BayesianModelSampling(Inference):
             cpd = self.cpds[node]
             states = [st for var, st in cpd.variables[node]]
             if cpd.evidence:
-                evidence = sampled.values[:, :index].tolist()
-                weights = list(map(lambda t: cpd.reduce(t, inplace=False).values, evidence))
+                indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
+                evidence = sampled.values[:, [indices]].tolist()
+                weights = list(map(lambda t: cpd.reduce(t[0], inplace=False).values, evidence))
                 sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
             else:
                 sampled[node] = list(map(lambda t: State(node, t),
