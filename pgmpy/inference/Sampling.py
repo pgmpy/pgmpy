@@ -67,7 +67,7 @@ class BayesianModelSampling(Inference):
         1  (diff, 1)  (intel, 0)  (grade, 2)
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
-        for index, node in enumerate(self.topological_order):
+        for node in self.topological_order:
             cpd = self.cpds[node]
             states = [st for var, st in cpd.variables[node]]
             if cpd.evidence:
