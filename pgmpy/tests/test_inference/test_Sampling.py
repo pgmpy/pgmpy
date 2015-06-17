@@ -51,10 +51,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
 
     def test_rejection_sample_basic(self):
-        sample = self.sampling_inference.rejection_sample({'A': State('A', 1),
-                                                           'J': State('J', 1),
-                                                           'R': State('R', 1)},
-                                                          25)
+        sample = self.sampling_inference.rejection_sample([State('A', 1), State('J', 1), State('R', 1)], 25)
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 6)
         self.assertIn('A', sample.columns)
