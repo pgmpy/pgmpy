@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 
+import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.factors import TabularCPD
 
@@ -22,8 +23,22 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
         self.assertListEqual(sorted(self.network.edges()), [(('a', 0), ('b', 0)), (('a', 1), ('b', 1))])
         self.assertListEqual(sorted(self.network.nodes()), ['a', 'b'])
 
+    def test_add_edge_with_different_number_timeslice(self):
+        self.network.add_edge(('a', 2), ('b', 2))
+        self.assertListEqual(sorted(self.network.edges()), [(('a', 0), ('b', 0)), (('a', 1), ('b', 1))])
+
+    def test_add_edge_going_backward(self):
+        self.assertRaises(ValueError, self.network.add_edge, ('a', 1), ('b', 0))
+
+    def test_add_edge_with_farther_timeslice(self):
+        self.assertRaises(ValueError, self.network.add_edge, ('a', 2), ('b', 4))
+
     def test_add_edge_with_self_loop(self):
         self.assertRaises(ValueError, self.network.add_edge, ('a', 0), ('a', 0))
+
+    def test_add_edge_with_varying_length(self):
+        self.assertRaises(ValueError, self.network.add_edge, ('a', 1, 1), ('b', 2))
+        self.assertRaises(ValueError, self.network.add_edge, ('b', 2), ('a', 2, 3))
 
     def test_add_edge_with_closed_path(self):
         self.assertRaises(ValueError, self.network.add_edges_from,
@@ -76,6 +91,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(('I', 1)).variable, ('I', 1))
 
     def test_initialize_initial_state(self):
+
         self.network.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
         self.network.add_edges_from(
             [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
@@ -83,6 +99,14 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.network.initialize_initial_state()
         self.assertEqual(len(self.network.cpds), 6)
         self.assertEqual(self.network.get_cpds(('G', 1)).variable, ('G', 1))
+
+    def test_moralize(self):
+        self.network.add_edges_from(([(('D',0), ('G',0)), (('I',0), ('G',0))]))
+        moral_graph = self.network.moralize()
+        self.assertListEqual(hf.recursive_sorted(moral_graph.edges()),
+                             [[('D', 0), ('G', 0)], [('D', 0), ('I', 0)],
+                              [('D', 1), ('G', 1)], [('D', 1), ('I', 1)],
+                              [('G', 0), ('I', 0)], [('G', 1), ('I', 1)]])
 
     def tearDown(self):
         del self.network
