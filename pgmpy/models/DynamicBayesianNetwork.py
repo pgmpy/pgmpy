@@ -71,7 +71,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         super().add_node((node, 0), **attr)
 
     def add_nodes_from(self, nodes, **attr):
-        super().add_nodes_from([(node, 0) for node in nodes], **attr)
+        for node in nodes:
+            self.add_node(node)
 
     def nodes(self):
         return list(set([node for node, slice in super().nodes()]))
@@ -236,7 +237,7 @@ class DynamicBayesianNetwork(DirectedGraph):
             #         self.cpds[prev_cpd_index] = cpd
             #         break
             # else:
-                self.cpds.append(cpd)
+            self.cpds.append(cpd)
 
     def get_cpds(self, node=None):
         """
