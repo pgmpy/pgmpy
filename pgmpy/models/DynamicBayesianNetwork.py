@@ -14,48 +14,51 @@ class DynamicBayesianNetwork(DirectedGraph):
     def __init__(self, ebunch=None):
         """
         Base class for Dynamic Bayesian Network
-        This model is a time variant of the static Bayesian model, where each timeslice has
-        some static nodes and is then replicated over a certain time slice.
-        The nodes can be hashable python objects.
-        However, the hidden nodes will compulsory have the following form.
-        (node_name, time_slice)
-        Here, node_name is the node that is inserted
-        while the time_slice is an integer value, which denotes
-        the index of the time_slice that the node belongs to.
-        Edges are represented as links between the nodes.
+
+        This model is a time variant of the static Bayesian model, where each
+        time-slice has some static nodes and is then replicated over a certain
+        time-slice.
+
+        The nodes can be any hashable python objects.
+
         Parameters:
         ----------
-        data: Data to initialize graph.  If data=None (default) an empty
-              graph is created.  The data can be an edge list, or any
-              NetworkX graph object
+        ebunch: Data to initialize graph.  If data=None (default) an empty
+              graph is created.  The data can be an edge list, or any NetworkX
+              graph object
+
         Examples:
         --------
         Create an empty Dynamic Bayesian Network with no nodes and no edges
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
 
-        adding nodes and edges inside the dynamic bayesian network. A single
-        node can be added using the method below.
+        Adding nodes and edges inside the dynamic bayesian network. A single
+        node can be added using the method below. For adding edges we need to
+        specify the time slice since edges can be across different time slices.
 
         >>> dbn.add_nodes_from(['D','G','I','S','L'])
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0))])
-        Most of the methods will be imported from Bayesian Model
+
         >>> dbn.nodes()
         ['L', 'G', 'S', 'I', 'D']
         >>> dbn.edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))]
-        If some edges connect nodes not yet in the model, the nodes
-        are added automatically. There are no errors when adding
-        nodes or edges that already exist.
-        Methods:
-        -------
-        add_nodes_from
+
+        If any variable is not present in the network while adding an edge,
+        pgmpy will automatically add that variable to the network.
+
+
+        Public Methods:
+        ---------------
+        add_cpds
         add_edge
         add_edges_from
-        intra_slice
-        inter_slice
-        add_cpds
+        add_node
+        add_nodes_from
         initialize_initial_state
+        inter_slice
+        intra_slice
         """
         super().__init__()
         if ebunch:
