@@ -494,7 +494,7 @@ class MarkovModel(UndirectedGraph):
         """
         return self.neighbors(node)
 
-    def get_local_independecies(self, latex=False):
+    def get_local_independencies(self, latex=False):
         """
         Returns all the local independencies present in the markov model.
 
