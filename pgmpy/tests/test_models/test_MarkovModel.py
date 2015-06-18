@@ -130,7 +130,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         from pgmpy.independencies import Independencies
 
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
-        independencies = self.graph.get_local_independecies()
+        independencies = self.graph.get_local_independencies()
 
         self.assertIsInstance(independencies, Independencies)
         self.assertEqual(len(independencies.get_assertions()), 2)
