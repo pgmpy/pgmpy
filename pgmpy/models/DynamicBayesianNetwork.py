@@ -1,13 +1,11 @@
-import logging
 import itertools
-from copy import deepcopy
 from collections import defaultdict
 
 import numpy as np
 import networkx as nx
 
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DirectedGraph, UndirectedGraph
 
 
 class DynamicBayesianNetwork(DirectedGraph):
@@ -69,10 +67,12 @@ class DynamicBayesianNetwork(DirectedGraph):
     def add_node(self, node, **attr):
         """
         Adds a single node to the Network
+
         Parameters
         ----------
         node: node
             A node can be any hashable Python object.
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -84,10 +84,12 @@ class DynamicBayesianNetwork(DirectedGraph):
     def add_nodes_from(self, nodes, **attr):
         """
         Add multiple nodes to the Network.
+
         Parameters
         ----------
         nodes: iterable container
             A container of nodes (list, dict, set, etc.).
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -100,6 +102,7 @@ class DynamicBayesianNetwork(DirectedGraph):
     def nodes(self):
         """
         Returns the list of nodes present in the network
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -160,7 +163,6 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         if start[1] == end[1]:
             super().add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
-
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -305,21 +307,22 @@ class DynamicBayesianNetwork(DirectedGraph):
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with %s doesn't have "
-                                      "proper parents associated with it." % node)
+                                     "proper parents associated with it." % node)
                 if not np.allclose(cpd.marginalize(node, inplace=False).values,
-                                     np.ones(np.product(cpd.evidence_card)),
-                                     atol=0.01):
-                    raise ValueError('Sum of probabilites of states for node %s'
-                                       ' is not equal to 1.' % node)
+                                   np.ones(np.product(cpd.evidence_card)),
+                                   atol=0.01):
+                    raise ValueError('Sum of probabilities of states for node {node}'
+                                     ' is not equal to 1'.format(node=node))
         return True
 
     def initialize_initial_state(self):
         """
         This method will automatically re-adjust the cpds and the edges added to the bayesian network.
-        If an edge that is added as an intra time slice edge in the 0th timeslice, this method will automatically
-        add it in the 1st timeslice. It will also add the cpds.
-        However, to call this method, one needs to add cpds as well as the edges in the
-        bayesian network of the whole skeleton including the 0th and the 1st timeslice,.
+        If an edge that is added as an intra time slice edge in the 0th timeslice, this method will
+        automatically add it in the 1st timeslice. It will also add the cpds. However, to call this
+        method, one needs to add cpds as well as the edges in the bayesian network of the whole
+        skeleton including the 0th and the 1st timeslice,.
+
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -354,8 +357,10 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Removes all the immoralities in the Network and creates a moral
         graph (UndirectedGraph).
+
         A v-structure X->Z<-Y is an immorality if there is no directed edge
         between X and Y.
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -369,7 +374,6 @@ class DynamicBayesianNetwork(DirectedGraph):
         (('I', 0), ('D', 0)),
         (('G', 1), ('I', 1))]
         """
-        from pgmpy.base import UndirectedGraph
         moral_graph = UndirectedGraph(self.to_undirected().edges())
 
         for node in super().nodes():
