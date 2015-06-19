@@ -248,12 +248,9 @@ def get_model_data(model):
     >>> writer.get_model_data(model)
     """
     if not isinstance(model, BayesianModel):
-        raise TypeError("model must an instance of BayesianModel")
-    model_data = {}
-    model_data['probnet'] = {}
-    model_data['probnet']['type'] = 'BayesianNetwork'
+        raise TypeError("Model must an instance of BayesianModel.")
+    model_data = {'probnet': {'type': 'BayesianNetwork', 'Variables': {}}}
 
-    model_data['probnet']['Variables'] = {}
     variables = model.nodes()
     for var in variables:
         model_data['probnet']['Variables'][var] = model.node[var]
@@ -261,7 +258,7 @@ def get_model_data(model):
     model_data['probnet']['edges'] = {}
     edges = model.edges()
     for edge in edges:
-        model_data['probnet']['edges'][edge] = model.edge[edge[0]][edge[1]]
+        model_data['probnet']['edges'][str(edge)] = model.edge[edge[0]][edge[1]]
 
     model_data['probnet']['Potentials'] = []
     cpds = model.get_cpds()
@@ -274,9 +271,7 @@ def get_model_data(model):
             potential_dict['Variables'][cpd.variable] = cpd.evidence
         potential_dict['type'] = "Table"
         potential_dict['role'] = "conditionalProbability"
-        potential_dict['Values'] = ''
-        for val in cpd.values:
-            potential_dict['Values'] += str(val) + ' '
+        potential_dict['Values'] = " ".join([str(val) for val in cpd.values]) + " "
         model_data['probnet']['Potentials'].append(potential_dict)
 
     return model_data
@@ -463,7 +458,7 @@ class ProbModelXMLWriter:
                          <Element Subpotentials at 0x7f315fc44e48>
 
         Examples
-        -------
+        --------
         >>> writer = ProbModelXMLWriter(model)
         >>> writer._add_potential(potential, parent_tag)
         """
@@ -564,7 +559,7 @@ class ProbModelXMLWriter:
                          <Element Subpotentials at 0x7f315fc44e48>
 
         Examples
-        -------
+        --------
         >>> writer = ProbModelXMLWriter(model)
         >>> writer._add_element(potential, 'State', parent_tag)
         """
