@@ -120,6 +120,19 @@ class TestMarkovModelMethods(unittest.TestCase):
                              [['a', 'b', 'd'], ['b', 'c', 'd']])
         self.assertEqual(len(junction_tree.edges()), 1)
 
+    def test_junction_tree_single_clique(self):
+        from pgmpy.factors import factor_product
+
+        self.graph.add_edges_from([('x1','x2'), ('x2', 'x3'), ('x1', 'x3')])
+        phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
+        self.graph.add_factors(*phi)
+
+        junction_tree = self.graph.to_junction_tree()
+        self.assertListEqual(hf.recursive_sorted(junction_tree.nodes()),
+                             [['x1', 'x2', 'x3']])
+        factors = junction_tree.get_factors()
+        self.assertEqual(factors[0], factor_product(*phi))
+
     def test_markov_blanket(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertListEqual(self.graph.markov_blanket('a'), ['b'])
