@@ -3,7 +3,7 @@ import unittest
 from io import StringIO
 import networkx as nx
 import numpy as np
-from pgmpy.readwrite import ProbModelXMLReader, ProbModelXMLWriter, get_model_data
+from pgmpy.readwrite import ProbModelXMLReader, ProbModelXMLWriter, get_probmodel_data
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 import numpy.testing as np_test

@@ -228,7 +228,7 @@ def parse_probmodelxml(string):
     return reader.make_network()
 
 
-def get_model_data(model):
+def get_probmodel_data(model):
     """
     Returns the model_data based on the given model.
 
