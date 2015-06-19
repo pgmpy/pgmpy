@@ -10,6 +10,7 @@ import pandas as pd
 
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
+from pgmpy.independencies import Independencies
 
 
 class BayesianModel(DirectedGraph):
@@ -432,13 +433,12 @@ class BayesianModel(DirectedGraph):
         ...                         ('intel', 'sat')])
         >>> student.get_independencies()
         """
-        from pgmpy.independencies import Independencies
-
         independencies = Independencies()
         for start in (self.nodes()):
             for r in (1, len(self.nodes())):
                 for observed in itertools.combinations(self.nodes(), r):
                     independent_variables = self.active_trail_nodes(start, observed=observed)
+                    independent_variables = set(independent_variables) - {start}
                     if independent_variables:
                         independencies.add_assertions([start, independent_variables,
                                                        observed])
