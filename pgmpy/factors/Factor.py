@@ -200,7 +200,8 @@ class Factor:
             factor = self
         else:
             factor = Factor(self.scope(), self.cardinality, self.values)
-        marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
+        # marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
+        marginalize_index = np.array([i in variables for i in factor.scope()])
         assign = np.array(factor.cardinality)
         assign[marginalize_index] = -1
         marginalized_values = []
