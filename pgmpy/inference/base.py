@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from itertools import chain
+
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph

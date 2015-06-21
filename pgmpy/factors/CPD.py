@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
 
-import numpy as np
+from itertools import product
+
 import networkx as nx
-from pgmpy.factors import Factor
+import numpy as np
+
 from pgmpy import exceptions
-from itertools import repeat, product
+from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 
 

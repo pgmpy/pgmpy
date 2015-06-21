@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-from pgmpy.base import UndirectedGraph
-from pgmpy.exceptions import CardinalityError
-from networkx.algorithms import bipartite
 import itertools
 from collections import defaultdict
+
 import numpy as np
+from networkx.algorithms import bipartite
+
+from pgmpy.base import UndirectedGraph
+from pgmpy.exceptions import CardinalityError
 
 
 class FactorGraph(UndirectedGraph):
