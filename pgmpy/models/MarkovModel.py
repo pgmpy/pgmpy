@@ -441,28 +441,42 @@ class MarkovModel(UndirectedGraph):
         # Find maximal cliques in the chordal graph
         cliques = list(map(tuple, nx.find_cliques(triangulated_graph)))
 
-        # Create a complete graph with all the cliques as nodes and
-        # weight of the edges being the length of sepset between two cliques
-        complete_graph = UndirectedGraph()
-        edges = list(itertools.combinations(cliques, 2))
-        weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))),
-                           edges))
-        for edge, weight in zip(edges, weights):
-            complete_graph.add_edge(*edge, weight=-weight)
+        # If there is only 1 clique, then the junction tree formed is just a
+        # clique tree with that single clique as the node
+        if len(cliques) == 1:
+            clique_trees = JunctionTree()
+            clique_trees.add_node(cliques[0])
 
-        # Create clique trees by minimum (or maximum) spanning tree method
-        clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
+        # Else if the number of cliques is more than 1 then create a complete
+        # graph with all the cliques as nodes and weight of the edges being
+        # the length of sepset between two cliques
+        elif len(cliques) >= 2:
+            complete_graph = UndirectedGraph()
+            edges = list(itertools.combinations(cliques, 2))
+            weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))),
+                           edges))
+            for edge, weight in zip(edges, weights):
+                complete_graph.add_edge(*edge, weight=-weight)
+
+            # Create clique trees by minimum (or maximum) spanning tree method
+            clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
 
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
         if set(all_vars) != set(self.nodes()):
             ValueError('Factor for all the random variables not specified')
 
+        # Dictionary stating whether the factor is used to create clique
+        # potential or not
+        # If false, then it is not used to create any clique potential
         is_used = {factor: False for factor in self.factors}
 
         for node in clique_trees.nodes():
             clique_factors = []
             for factor in self.factors:
+                # If the factor is not used in creating any clique potential as
+                # well as has any variable of the given clique in its scope,
+                # then use it in creating clique potential
                 if not is_used[factor] and set(factor.scope()).issubset(node):
                     clique_factors.append(factor)
                     is_used[factor] = True
