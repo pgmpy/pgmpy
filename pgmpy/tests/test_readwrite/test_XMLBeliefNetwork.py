@@ -174,3 +174,45 @@ class TestXBNReader(unittest.TestCase):
         np_test.assert_array_equal(distribution['b']['DPIS'], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution['c']['DPIS'], np.array([[0.2, 0.8], [0.05, 0.95]]))
         np_test.assert_array_equal(distribution['c']['CARDINALITY'], np.array([2]))
+
+    def test_get_model(self):
+        model = self.reader_string.get_model()
+        node_expected = {'c': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(c) Brain Tumor',
+                               'YPOS': '11935',
+                               'XPOS': '15250',
+                               'TYPE': 'discrete'},
+                         'a': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(a) Metastatic Cancer',
+                               'YPOS': '10465',
+                               'XPOS': '13495',
+                               'TYPE': 'discrete'},
+                         'b': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(b) Serum Calcium Increase',
+                               'YPOS': '11965',
+                               'XPOS': '11290',
+                               'TYPE': 'discrete'},
+                         'e': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(e) Papilledema',
+                               'YPOS': '13240',
+                               'XPOS': '17305',
+                               'TYPE': 'discrete'},
+                         'd': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(d) Coma',
+                               'YPOS': '12985',
+                               'XPOS': '13960',
+                               'TYPE': 'discrete'}}
+        cpds_expected = {'b': np.array([[0.8, 0.2],
+                                        [0.2, 0.8]]),
+                         'e': np.array([[0.8, 0.2],
+                                        [0.6, 0.4]]),
+                         'c': np.array([[0.2, 0.8],
+                                        [0.05, 0.95]]),
+                         'a': np.array([[0.2],
+                                        [0.8]]),
+                         'd': np.array([[0.8, 0.2, 0.9, 0.1],
+                                        [0.7, 0.3, 0.05, 0.95]])}
+        for cpd in model.get_cpds():
+            np_test.assert_array_equal(cpd.get_cpd(), cpds_expected[cpd.variable])
+        self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')]))
+        self.assertDictEqual(model.node, node_expected)
