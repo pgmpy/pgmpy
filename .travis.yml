@@ -4,8 +4,6 @@ virtualenv:
 env:
     - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
     - DISTRIB="conda" PYTHON_VERSION="3.3" COVERAGE="true"
-    - DISTRIB="conda" PYTHON_VERSION="3.2" COVERAGE="true"
-    - DISTRIB="conda" PYTHON_VERSION="3.1" COVERAGE="true"
 
 before_install:
     - uname -a
