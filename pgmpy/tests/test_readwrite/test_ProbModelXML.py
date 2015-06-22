@@ -1145,6 +1145,6 @@ class TestProbModelXMLmethods(unittest.TestCase):
 
     def test_get_probmodel_data(self):
         model_data = get_probmodel_data(self.model)
-        with open('./testdata/test_probmodelxml_data.json') as data_file:
+        with open('pgmpy/tests/test_readwrite/testdata/test_probmodelxml_data.json') as data_file:
             model_data_expected = json.load(data_file)
         self.assertDictEqual(model_data, model_data_expected)
