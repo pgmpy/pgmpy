@@ -119,6 +119,8 @@ except ImportError:
 
 import networkx as nx
 import numpy as np
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -226,6 +228,55 @@ def parse_probmodelxml(string):
     return reader.make_network()
 
 
+def get_probmodel_data(model):
+    """
+    Returns the model_data based on the given model.
+
+    Parameters
+    ----------
+    model: BayesianModel instance
+        Model to write
+
+    Return
+    ------
+    model_data: dict
+        dictionary containing model data of the given model.
+
+    Examples
+    --------
+    >>> model_data = pgmpy.readwrite.get_model_data(model)
+    >>> writer.get_model_data(model)
+    """
+    if not isinstance(model, BayesianModel):
+        raise TypeError("Model must an instance of BayesianModel.")
+    model_data = {'probnet': {'type': 'BayesianNetwork', 'Variables': {}}}
+
+    variables = model.nodes()
+    for var in variables:
+        model_data['probnet']['Variables'][var] = model.node[var]
+
+    model_data['probnet']['edges'] = {}
+    edges = model.edges()
+    for edge in edges:
+        model_data['probnet']['edges'][str(edge)] = model.edge[edge[0]][edge[1]]
+
+    model_data['probnet']['Potentials'] = []
+    cpds = model.get_cpds()
+    for cpd in cpds:
+        potential_dict = {}
+        potential_dict['Variables'] = {}
+        if cpd.evidence is None:
+            potential_dict['Variables'][cpd.variable] = []
+        else:
+            potential_dict['Variables'][cpd.variable] = cpd.evidence
+        potential_dict['type'] = "Table"
+        potential_dict['role'] = "conditionalProbability"
+        potential_dict['Values'] = " ".join([str(val) for val in cpd.values]) + " "
+        model_data['probnet']['Potentials'].append(potential_dict)
+
+    return model_data
+
+
 class ProbModelXMLWriter:
     """
     Class for writing models in ProbModelXML format.
@@ -262,7 +313,7 @@ class ProbModelXMLWriter:
         self.probnet = etree.SubElement(self.xml, 'ProbNet')
         self.variables = etree.SubElement(self.probnet, 'Variables')
         self.links = etree.SubElement(self.probnet, 'Links')
-        self.potential = etree.SubElement(self.probnet, 'Potential')
+        self.potentials = etree.SubElement(self.probnet, 'Potentials')
         self.additional_constraints = etree.SubElement(self.probnet, 'AdditionalConstraints')
 
         # adding information for probnet
@@ -295,6 +346,10 @@ class ProbModelXMLWriter:
         # Add edges
         for edge in sorted(self.data['probnet']['edges']):
             self._add_link(edge)
+
+        # Add Potentials
+        for potential in sorted(self.data['probnet']['Potentials']):
+            self._add_potential(potential, self.potentials)
 
     def __str__(self):
         """
@@ -383,8 +438,133 @@ class ProbModelXMLWriter:
             criteria_tag = etree.SubElement(decision_tag, 'Criterion', attrib={'name': criteria})
             self._add_additional_properties(criteria_tag, criteria_dict[criteria])
 
-    def _add_potential(self):
-        pass
+    def _add_potential(self, potential, parent_tag):
+        """
+        Adds Potentials to the ProbModelXML.
+
+        Parameters
+        ----------
+        potential: dict
+            Dictionary containing Potential data.
+            For example: {'role': 'Utility',
+                          'Variables': ['D0', 'D1', 'C0', 'C1'],
+                          'type': 'Tree/ADD',
+                          'UtilityVaribale': 'U1'}
+        parent_tag: etree Element
+            etree element which would contain potential tag
+            For example: <Element Potentials at 0x7f315fc44b08>
+                         <Element Branch at 0x7f315fc44c88>
+                         <Element Branch at 0x7f315fc44d88>
+                         <Element Subpotentials at 0x7f315fc44e48>
+
+        Examples
+        --------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer._add_potential(potential, parent_tag)
+        """
+        potential_type = potential['type']
+        try:
+            potential_tag = etree.SubElement(parent_tag, 'Potential', attrib={
+                'type': potential['type'], 'role': potential['role']})
+        except KeyError:
+            potential_tag = etree.SubElement(parent_tag, 'Potential', attrib={
+                'type': potential['type']})
+        self._add_element(potential, 'Comment', potential_tag)
+        if 'AdditionalProperties' in potential:
+            self._add_additional_properties(potential_tag, potential['AdditionalProperties'])
+        if potential_type == "delta":
+            etree.SubElement(potential_tag, 'Variable', attrib={'name': potential['Variable']})
+            self._add_element(potential, 'State', potential_tag)
+            self._add_element(potential, 'StateIndex', potential_tag)
+            self._add_element(potential, 'NumericValue', potential_tag)
+        else:
+            if 'UtilityVariable' in potential:
+                etree.SubElement(potential_tag, 'UtilityVariable', attrib={
+                    'name': potential['UtilityVariable']})
+            if 'Variables' in potential:
+                variable_tag = etree.SubElement(potential_tag, 'Variables')
+                for var in sorted(potential['Variables']):
+                    etree.SubElement(variable_tag, 'Variable', attrib={'name': var})
+                    for child in sorted(potential['Variables'][var]):
+                        etree.SubElement(variable_tag, 'Variable', attrib={'name': child})
+            self._add_element(potential, 'Values', potential_tag)
+            if 'UncertainValues' in potential:
+                value_tag = etree.SubElement(potential_tag, 'UncertainValues', attrib={})
+                for value in sorted(potential['UncertainValues']):
+                    try:
+                        etree.SubElement(value_tag, 'Value', attrib={
+                            'distribution': value['distribution'],
+                            'name': value['name']}).text = value['value']
+                    except KeyError:
+                        etree.SubElement(value_tag, 'Value', attrib={
+                            'distribution': value['distribution']}).text = value['value']
+            if 'TopVariable' in potential:
+                etree.SubElement(potential_tag, 'TopVariable', attrib={'name': potential['TopVariable']})
+            if 'Branches' in potential:
+                branches_tag = etree.SubElement(potential_tag, 'Branches')
+                for branch in potential['Branches']:
+                    branch_tag = etree.SubElement(branches_tag, 'Branch')
+                    if 'States' in branch:
+                        states_tag = etree.SubElement(branch_tag, 'States')
+                        for state in sorted(branch['States']):
+                            etree.SubElement(states_tag, 'State', attrib={'name': state['name']})
+                    if 'Potential' in branch:
+                        self._add_potential(branch['Potential'], branch_tag)
+                    self._add_element(potential, 'Label', potential_tag)
+                    self._add_element(potential, 'Reference', potential_tag)
+                    if 'Thresholds' in branch:
+                        thresholds_tag = etree.SubElement(branch_tag, 'Thresholds')
+                        for threshold in branch['Thresholds']:
+                            try:
+                                etree.SubElement(thresholds_tag, 'Threshold', attrib={
+                                    'value': threshold['value'], 'belongsTo': threshold['belongsTo']})
+                            except KeyError:
+                                etree.SubElement(thresholds_tag, 'Threshold', attrib={
+                                    'value': threshold['value']})
+            self._add_element(potential, 'Model', potential_tag)
+            self._add_element(potential, 'Coefficients', potential_tag)
+            self._add_element(potential, 'CovarianceMatrix', potential_tag)
+            if 'Subpotentials' in potential:
+                subpotentials = etree.SubElement(potential_tag, 'Subpotentials')
+                for subpotential in potential['Subpotentials']:
+                    self._add_potential(subpotential, subpotentials)
+            if 'Potential' in potential:
+                self._add_potential(potential['Potential'], potential_tag)
+            if 'NumericVariables' in potential:
+                numvar_tag = etree.SubElement(potential_tag, 'NumericVariables')
+                for var in sorted(potential['NumericVariables']):
+                    etree.SubElement(numvar_tag, 'Variable', attrib={'name': var})
+
+    @staticmethod
+    def _add_element(potential, var, potential_tag):
+        """
+        Helper function to add variable tag to the potential_tag
+
+        Parameters
+        ----------
+        potential: dict
+            Dictionary containing Potential data.
+            For example: {'role': 'Utility',
+                          'Variables': ['D0', 'D1', 'C0', 'C1'],
+                          'type': 'Tree/ADD',
+                          'UtilityVaribale': 'U1'}
+        var: string
+            New Element tag which needs to be added to the potential tag.
+            For example: 'type'
+        potential_tag: etree Element
+            etree element which would contain potential tag
+            For example: <Element Potentials at 0x7f315fc44b08>
+                         <Element Branch at 0x7f315fc44c88>
+                         <Element Branch at 0x7f315fc44d88>
+                         <Element Subpotentials at 0x7f315fc44e48>
+
+        Examples
+        --------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer._add_element(potential, 'State', parent_tag)
+        """
+        if var in potential:
+            etree.SubElement(potential_tag, var).text = potential[var]
 
     def dump(self, stream):
         """
@@ -414,6 +594,23 @@ class ProbModelXMLWriter:
         else:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
+
+    def write_file(self, filename):
+        """
+        Write the xml data into the file.
+
+        Parameters
+        ----------
+        filename: Name of the file.
+
+        Examples
+        -------
+        >>> writer = ProbModelXMLWriter(model)
+        >>> writer.write_file(test_file)
+        """
+        writer = self.__str__()[:-1].decode('utf-8')
+        with open(filename, 'w') as fout:
+            fout.write(writer)
 
 
 class ProbModelXMLReader:
@@ -723,9 +920,11 @@ class ProbModelXMLReader:
             if potential.find('UtilityVariable') is not None:
                 potential_dict['UtilityVaribale'] = potential.find('UtilityVariable').attrib['name']
             if len(potential.findall('Variables/Variable')):
-                potential_dict['Variables'] = []
+                potential_dict['Variables'] = {}
+                var_list = []
                 for var in potential.findall('Variables/Variable'):
-                    potential_dict['Variables'].append(var.attrib['name'])
+                    var_list.append(var.attrib['name'])
+                potential_dict['Variables'][var_list[0]] = var_list[1:]
             if potential.find('Values') is not None:
                 potential_dict['Values'] = potential.find('Values').text
             if len(potential.findall('UncertainValues/Value')):
@@ -805,16 +1004,14 @@ class ProbModelXMLReader:
         >>> reader.get_model()
         """
         if self.probnet.get('type') == "BayesianNetwork":
-            from pgmpy.models import BayesianModel
-            from pgmpy.factors import TabularCPD
             model = BayesianModel(self.probnet['edges'].keys())
 
             tabular_cpds = []
             cpds = self.probnet['Potentials']
             for cpd in cpds:
-                var = cpd['Variables'][0]
+                var = list(cpd['Variables'].keys())[0]
                 states = self.probnet['Variables'][var]['States']
-                evidence = cpd['Variables'][1:]
+                evidence = cpd['Variables'][var]
                 evidence_card = [len(self.probnet['Variables'][evidence_var]['States'])
                                  for evidence_var in evidence]
                 arr = list(map(float, cpd['Values'].split()))
