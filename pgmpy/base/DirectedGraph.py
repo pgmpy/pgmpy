@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from collections import defaultdict
-from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
 import itertools
+
 import networkx as nx
 
 

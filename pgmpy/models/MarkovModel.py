@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-
-from collections import defaultdict
-from pgmpy.exceptions import CardinalityError
-from pgmpy.base import UndirectedGraph
-from pgmpy.independencies import Independencies
-from pgmpy.factors import factor_product
 import itertools
+from collections import defaultdict
+
 import networkx as nx
 import numpy as np
+
+from pgmpy.base import UndirectedGraph
+from pgmpy.exceptions import CardinalityError
+from pgmpy.factors import factor_product
+from pgmpy.independencies import Independencies
 
 
 class MarkovModel(UndirectedGraph):

@@ -1,6 +1,5 @@
 import functools
-from operator import lt
-from itertools import product, starmap
+from itertools import product
 from collections import OrderedDict, namedtuple
 
 import numpy as np

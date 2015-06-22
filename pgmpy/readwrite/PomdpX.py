@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import warnings
 from collections import defaultdict
 
 try:
