@@ -9,6 +9,9 @@ except ImportError:
         except ImportError:
             print("Failed to import ElementTree from any known place")
 
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
+
 
 class XBNReader:
     """
@@ -42,6 +45,12 @@ class XBNReader:
             raise ValueError("Must specify either path or string")
 
         self.bnmodel = self.network.find('BNMODEL')
+        self.analysisnotebook = self.get_analysisnotebook_values()
+        self.model_name = self.get_bnmodel_name()
+        self.static_properties = self.get_static_properties()
+        self.variables = self.get_variables()
+        self.edges = self.get_edges()
+        self.variable_CPD = self.get_distributions()
 
     def get_analysisnotebook_values(self):
         """
@@ -166,6 +175,31 @@ class XBNReader:
             distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
+
+    def get_model(self):
+        """
+        Returns an instance of Bayesian Model.
+        """
+        model = BayesianModel(self.edges)
+        model.name = self.model_name
+
+        tabular_cpds = []
+        for var, values in self.variable_CPD.items():
+            evidence = values['CONDSET'] if 'CONDSET' in values else []
+            cpd = values['DPIS']
+            evidence_card = values['CARDINALITY'] if 'CARDINALITY' in values else []
+            states = self.variables[var]['STATES']
+            cpd = TabularCPD(var, len(states), cpd,
+                             evidence=evidence,
+                             evidence_card=evidence_card)
+            tabular_cpds.append(cpd)
+
+        model.add_cpds(*tabular_cpds)
+
+        for var, properties in self.variables.items():
+            model.node[var] = properties
+
+        return model
 
 
 class XBNWriter:
@@ -306,7 +340,7 @@ class XBNWriter:
         distributions = etree.SubElement(self.bnmodel, 'DISTRIBUTIONS')
 
         def get_arr():
-            #TODO: funtion to return values as used in print of factor class. Need to find a good way to write this.
+            # TODO: funtion to return values as used in print of factor class. Need to find a good way to write this.
             pass
 
         for var in data:
@@ -323,4 +357,3 @@ class XBNWriter:
 
             for dpi in range(len(dist.find('DPIS'))):
                 dpi.text = ' ' + ' '.join(map(str, data[var]['DPIS'][dpi]))
-
