@@ -7,6 +7,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
+from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.exceptions import ModelError
 
 
@@ -80,3 +81,24 @@ class Inference:
             for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)
+        elif isinstance(model,  DynamicBayesianNetwork):
+            # I am constructing a temporary Bayesian Model so as to create the
+            # initial potential for inference.
+            # Also, what I will be declaring two parameters
+            # 1) interface nodes:- These are the nodes whose children are in the 
+            # first timeslice.
+            # 2) one_and_half_model:- This is the bayesian model which consists of the
+            # interface nodes along with the first time slice nodes.
+            # Both of the above parameters will be required by the junction tree algorithm
+            # too.
+            temp_model = BayesianModel(model.edges())
+            temp_model.add_cpds(*model.cpds)
+            self.start_bayesian_model = temp_model
+            self.interface_nodes = [(edge[0][0], 0) for edge in model.get_inter_edges()]
+            interface_nodes_1 = [(edge[0][0], 1) for edge in model.get_inter_edges()]
+            intra_edges_1 = [edge for edge in model.get_intra_edges() if edge[1][1] == 1]
+            self.one_and_half_model = BayesianModel(model.get_inter_edges() + intra_edges_1)
+            nodes_1 = [(node, 1) for node in model.nodes()]
+            cpd_1 = [cpd for cpd in model.cpds if set(list(cpd.variables)).issubset(nodes_1)]
+            cpd_inter = [model.get_cpds(node) for node in interface_nodes_1]
+            self.one_and_half_model.add_cpds(*(cpd_1 + cpd_inter))
