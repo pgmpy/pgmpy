@@ -3,6 +3,18 @@ from io import StringIO
 import numpy as np
 import numpy.testing as np_test
 from pgmpy.readwrite import XMLBeliefNetwork
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        try:
+            import xml.etree.ElementTree as etree
+        except ImportError:
+            warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestXBNReader(unittest.TestCase):
@@ -216,3 +228,154 @@ class TestXBNReader(unittest.TestCase):
             np_test.assert_array_equal(cpd.get_cpd(), cpds_expected[cpd.variable])
         self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')]))
         self.assertDictEqual(model.node, node_expected)
+
+
+class TestXBNWriter(unittest.TestCase):
+    def setUp(self):
+        nodes = {'c': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(c) Brain Tumor',
+                       'YPOS': '11935',
+                       'XPOS': '15250',
+                       'TYPE': 'discrete'},
+                 'a': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(a) Metastatic Cancer',
+                       'YPOS': '10465',
+                       'XPOS': '13495',
+                       'TYPE': 'discrete'},
+                 'b': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(b) Serum Calcium Increase',
+                       'YPOS': '11965',
+                       'XPOS': '11290',
+                       'TYPE': 'discrete'},
+                 'e': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(e) Papilledema',
+                       'YPOS': '13240',
+                       'XPOS': '17305',
+                       'TYPE': 'discrete'},
+                 'd': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(d) Coma',
+                       'YPOS': '12985',
+                       'XPOS': '13960',
+                       'TYPE': 'discrete'}}
+        model = BayesianModel([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')])
+        cpd_distribution = {'a': {'TYPE': 'discrete', 'DPIS': np.array([[0.2, 0.8]])},
+                            'e': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
+                                                                        [0.6, 0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
+                            'b': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
+                                                                        [0.2, 0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
+                            'c': {'TYPE': 'discrete', 'DPIS': np.array([[0.2, 0.8],
+                                                                        [0.05, 0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
+                            'd': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
+                                                                        [0.9, 0.1],
+                                                                        [0.7, 0.3],
+                                                                        [0.05, 0.95]]), 'CONDSET': ['b', 'c'], 'CARDINALITY': [2, 2]}}
+
+        tabular_cpds = []
+        for var, values in cpd_distribution.items():
+            evidence = values['CONDSET'] if 'CONDSET' in values else []
+            cpd = values['DPIS']
+            evidence_card = values['CARDINALITY'] if 'CARDINALITY' in values else []
+            states = nodes[var]['STATES']
+            cpd = TabularCPD(var, len(states), cpd,
+                             evidence=evidence,
+                             evidence_card=evidence_card)
+            tabular_cpds.append(cpd)
+        model.add_cpds(*tabular_cpds)
+
+        for var, properties in nodes.items():
+            model.node[var] = properties
+
+        self.maxDiff = None
+        self.writer = XMLBeliefNetwork.XBNWriter(model=model)
+
+    def test_file(self):
+        self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
+  <BNMODEL>
+    <VARIABLES>
+      <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        <DESCRIPTION DESCRIPTION="(a) Metastatic Cancer"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
+      <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        <DESCRIPTION DESCRIPTION="(b) Serum Calcium Increase"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
+      <VAR NAME="c" TYPE="discrete" XPOS="15250" YPOS="11935">
+        <DESCRIPTION DESCRIPTION="(c) Brain Tumor"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
+      <VAR NAME="d" TYPE="discrete" XPOS="13960" YPOS="12985">
+        <DESCRIPTION DESCRIPTION="(d) Coma"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
+      <VAR NAME="e" TYPE="discrete" XPOS="17305" YPOS="13240">
+        <DESCRIPTION DESCRIPTION="(e) Papilledema"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
+    </VARIABLES>
+    <STRUCTURE>
+      <ARC CHILD="b" PARENT="a"/>
+      <ARC CHILD="c" PARENT="a"/>
+      <ARC CHILD="d" PARENT="b"/>
+      <ARC CHILD="d" PARENT="c"/>
+      <ARC CHILD="e" PARENT="c"/>
+    </STRUCTURE>
+    <DISTRIBUTIONS>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="a"/>
+        <DPIS>
+          <DPI> 0.2 0.8</DPI>
+        </DPIS>
+      </DIST>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="b"/>
+        <DPIS>
+          <DPI INDEXES=" "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" "> 0.2 0.8 </DPI>
+        </DPIS>
+        <CONDSET>
+          <CONDELEM NAME="a"/>
+        </CONDSET>
+      </DIST>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="c"/>
+        <DPIS>
+          <DPI INDEXES=" "> 0.2 0.8 </DPI>
+          <DPI INDEXES=" "> 0.05 0.95 </DPI>
+        </DPIS>
+        <CONDSET>
+          <CONDELEM NAME="a"/>
+        </CONDSET>
+      </DIST>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="d"/>
+        <DPIS>
+          <DPI INDEXES=" "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" "> 0.9 0.1 </DPI>
+          <DPI INDEXES=" "> 0.7 0.3 </DPI>
+          <DPI INDEXES=" "> 0.05 0.95 </DPI>
+        </DPIS>
+        <CONDSET>
+          <CONDELEM NAME="b"/>
+          <CONDELEM NAME="c"/>
+        </CONDSET>
+      </DIST>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="e"/>
+        <DPIS>
+          <DPI INDEXES=" "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" "> 0.6 0.4 </DPI>
+        </DPIS>
+        <CONDSET>
+          <CONDELEM NAME="c"/>
+        </CONDSET>
+      </DIST>
+    </DISTRIBUTIONS>
+  </BNMODEL>
+</ANALYSISNOTEBOOK>""")
+        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))

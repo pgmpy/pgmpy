@@ -206,16 +206,68 @@ class XBNWriter:
     """
     Base class for writing XML Belief Network file format.
     """
-    def __init__(self):
+    def __init__(self, model, encoding='utf-8', prettyprint=True):
         """
         Initializer for XBNWriter class
+
+        Parameters
+        ----------
+        model: BayesianModel Instance
+            Model to write
+        encoding: str(optional)
+            Encoding for test data
+        prettyprint: Bool(optional)
+            Indentation in output XML if true
 
         Reference
         ---------
         http://xml.coverpages.org/xbn-MSdefault19990414.html
+
+        Examples
+        --------
+        >>> writer = XBNWriter(model)
         """
+        if not isinstance(model, BayesianModel):
+            raise TypeError("Model must be an instance of Bayesian Model.")
+        self.model = model
+
+        self.encoding = encoding
+        self.prettyprint = prettyprint
+
         self.network = etree.Element('ANALYSISNOTEBOOK')
         self.bnmodel = etree.SubElement(self.network, 'BNMODEL')
+        if self.model.name:
+            etree.SubElement(self.bnmodel, 'NAME').text = self.model.name
+
+        self.variables = self.set_variables(self.model.node)
+        self.structure = self.set_edges(sorted(self.model.edges()))
+        self.distribution = self.set_distributions()
+
+    def __str__(self):
+        """
+        Return the XML as string.
+        """
+        if self.prettyprint:
+            self.indent(self.network)
+        return etree.tostring(self.network, encoding=self.encoding)
+
+    def indent(self, elem, level=0):
+        """
+        Inplace prettyprint formatter.
+        """
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
     def set_analysisnotebook(self, **data):
         """
@@ -292,11 +344,11 @@ class XBNWriter:
         ...                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
         ...                             'STATES': ['Present', 'Absent']}})
         """
-        variables = etree.SubElement(self.bnmodel)
-        for var in data:
+        variables = etree.SubElement(self.bnmodel, "VARIABLES")
+        for var in sorted(data):
             variable = etree.SubElement(variables, 'VAR', attrib={'NAME': var, 'TYPE': data[var]['TYPE'],
                                                                   'XPOS': data[var]['XPOS'], 'YPOS': data[var]['YPOS']})
-            etree.SubElement(variable, 'DESCRIPTION', data[var]['DESCRIPTION'])
+            etree.SubElement(variable, 'DESCRIPTION', attrib={'DESCRIPTION': data[var]['DESCRIPTION']})
             for state in data[var]['STATES']:
                 etree.SubElement(variable, 'STATENAME').text = state
 
@@ -319,41 +371,32 @@ class XBNWriter:
         for edge in edge_list:
             etree.SubElement(structure, 'ARC', attrib={'PARENT': edge[0], 'CHILD': edge[1]})
 
-    def set_distributions(self, data):
+    def set_distributions(self):
         """
         Set distributions in the network.
-
-        Parameters
-        ----------
-        data: dict
-            dict in the form of {var: {'TYPE': , 'DPIS': , 'CONDSET': }
 
         Examples
         --------
         >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
         >>> writer =XBNWriter()
-        >>> writer.set_distributions({'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
-        ...                           'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-        ...                                                                    [ 0.6,  0.4]]),
-        ...                                 'CONDSET': ['c'], 'CARDINALITY': [2]})
+        >>> writer.set_distributions()
         """
         distributions = etree.SubElement(self.bnmodel, 'DISTRIBUTIONS')
 
-        def get_arr():
-            # TODO: funtion to return values as used in print of factor class. Need to find a good way to write this.
-            pass
-
-        for var in data:
-            dist = etree.SubElement(distributions, 'DIST', attrib=data[var]['TYPE'])
+        cpds = self.model.get_cpds()
+        cpds.sort(key=lambda x: x.variable)
+        for cpd in cpds:
+            var = cpd.variable
+            dist = etree.SubElement(distributions, 'DIST', attrib={'TYPE': self.model.node[var]['TYPE']})
             etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
-            if 'CONDSET' in data:
+            dpis = etree.SubElement(dist, 'DPIS')
+            if len(cpd.evidence):
                 condset = etree.SubElement(dist, 'CONDSET')
-                for cond in data[var]['CONDSET']:
-                    etree.SubElement(condset, 'CONDELEM', attrib={'NAME': cond})
-
-                dpis = etree.SubElement(dist, 'DPIS')
-                for dpi in range(len(data[var]['DPIS'])):
-                    etree.SubElement(dpis, "DPI", attrib={'INDEXES': ' ' + ' '.join(map(str, get_arr())) + ' '})
-
-            for dpi in range(len(dist.find('DPIS'))):
-                dpi.text = ' ' + ' '.join(map(str, data[var]['DPIS'][dpi]))
+                for condelem in sorted(cpd.evidence):
+                    etree.SubElement(condset, 'CONDELEM', attrib={'NAME': condelem})
+                # TODO: Get Index value.
+                for val in range(0, len(cpd.values), 2):
+                    etree.SubElement(dpis, "DPI", attrib={'INDEXES': ' '}).text = \
+                        " " + str(cpd.values[val]) + " " + str(cpd.values[val+1]) + " "
+            else:
+                etree.SubElement(dpis, "DPI").text = ' ' + ' '.join(map(str, cpd.values))
