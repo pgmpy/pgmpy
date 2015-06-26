@@ -1,11 +1,11 @@
 from collections import defaultdict
 from pgmpy.inference import VariableElimination
 from pgmpy.factors import TabularCPD
+from pgmpy.inference import Inference
 
+class DBNInference(Inference):
 
-class DBNInference(base):
-    
-    def query(self, variables, evidence = None, elimination_order = None):
+    def query(self, variables, evidence= None, elimination_order= None):
         variable_dict = defaultdict(list)
         for var in variables:
             variable_dict[var[1]].append(var[0])
@@ -65,14 +65,14 @@ class DBNInference(base):
             extracted_nodes = filter_nodes(int_nodes, time, shift) + vect(variable_dict[time], shift)
             s_values = inference.query(extracted_nodes, evidence=dict_factor(time, shift))
 
-            if extracted_nodes!= int_nodes and dict_factor(time, shift) is not None:
+            if extracted_nodes != int_nodes and dict_factor(time, shift) is not None:
                 for node in list(set(dict_factor(time, shift)).intersection(int_nodes)):
                     cpd = self.start_bayesian_model.get_cpds(node)
                     cpd = cpd.reduce([(node, evidence[node])], inplace = False)
                     s_values[node] = cpd
             return s_values
 
-        start_values = assign_nodes(0,0)
+        start_values = assign_nodes(0, 0)
         final_values = {node: start_values[node] for node in vect(variable_dict[0], 0)}
         new_cpds = [factor_to_cpd(start_values[node]) for node in int_nodes]
         new_nodes = [(node[0], 1) for node in int_nodes]
