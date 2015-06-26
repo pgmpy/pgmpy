@@ -82,7 +82,7 @@ class Inference:
                 for var in factor.variables:
                     self.factors[var].append(factor)
         elif isinstance(model,  DynamicBayesianNetwork):
-            # I am constructing a temporary Bayesian Model so as to create the
+            # This method constructs a temporary Bayesian Model so as to create the
             # initial potential for inference.
             # Also, what I will be declaring two parameters
             # 1) interface nodes:- These are the nodes whose children are in the 
