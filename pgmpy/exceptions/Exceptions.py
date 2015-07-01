@@ -105,6 +105,7 @@ class ModelError(Exception):
     def __str__(self):
         return repr(str(self.extra))
 
+
 class InvalidValueError(Exception):
     def __init__(self, extra):
         self.extra = extra
