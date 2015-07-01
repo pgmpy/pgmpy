@@ -214,7 +214,7 @@ class Factor:
             factor.cardinality = np.delete(factor.cardinality, index)
         if not inplace:
             return factor
-            
+
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
@@ -556,7 +556,7 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     except ImportError:
         use_joblib = False
 
-    np.seterr(divide='raise')
+    np.seterr(invalid='raise')
 
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
