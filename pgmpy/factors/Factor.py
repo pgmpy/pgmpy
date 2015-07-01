@@ -214,7 +214,7 @@ class Factor:
             factor.cardinality = np.delete(factor.cardinality, index)
         if not inplace:
             return factor
-            
+
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
@@ -556,7 +556,11 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
     except ImportError:
         use_joblib = False
 
-    np.seterr(divide='raise')
+    def err_handler(type, flag):
+        raise Exceptions.InvalidValueError(type)
+
+    np.seterrcall(err_handler)
+    np.seterr(divide='raise', over='raise', under='raise', invalid='call')
 
     phi1_vars = list(phi1.variables)
     phi2_vars = list(phi2.variables)
@@ -604,9 +608,9 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                     try:
                         values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
                                       phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                    except FloatingPointError:
-                        # zero division error should return 0.
-                        # Ref Koller page 365, Fig 10.7
+                    except Exceptions.InvalidValueError:
+                        # zero division error should return 0 if both operands
+                        # equal to 0. Ref Koller page 365, Fig 10.7
                         values.append(0)
 
         phi = Factor(variables, cardinality, values)
