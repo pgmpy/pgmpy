@@ -200,11 +200,16 @@ class TestFactorMethods(unittest.TestCase):
         phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, div)
 
-    def test_factor_divide_invalid(self):
+    def test_factor_divide_dividebyzero(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = Factor(['x1'], [2], [0, 2])
+        self.assertRaises(FloatingPointError, factor_divide, phi1, phi2)
+
+    def test_factor_divide_invalidvalue(self):
+        phi1 = Factor(['x1', 'x2'], [3, 2], [0.5, 0.2, 0, 0, 0.3, 0.45])
+        phi2 = Factor(['x1'], [3], [0.8, 0, 0.6])
         div = phi1.divide(phi2)
-        np_test.assert_array_equal(div.values, np.array([0, 0, 1.5, 2]))
+        np_test.assert_array_equal(div.values, np.array([0.625, 0.25, 0, 0, 0.5, 0.75]))
 
     def test_factor_divide_no_common_scope(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
@@ -521,7 +526,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
+        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'),
                               ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
                               ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
                               ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
@@ -555,9 +560,9 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
-        np_test.assert_array_equal(tabular_cpd.values, 
-                                  np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
-                                             0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
+        np_test.assert_array_equal(tabular_cpd.values,
+                                  np.array([0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
+                                            0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 
     @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd_parent_order(self):
@@ -682,4 +687,3 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
-

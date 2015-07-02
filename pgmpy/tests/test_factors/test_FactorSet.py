@@ -30,11 +30,11 @@ class TestFactorSet(unittest.TestCase):
         self.assertEqual(set([phi1, phi2, phi3, phi4]), factor_set3.factors)
 
     def test_factorset_divide(self):
-        phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(1, 13))
+        phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(1, 9))
         factor_set1 = FactorSet(phi1, phi2)
-        phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-        phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(1, 9))
+        phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(1, 9))
         factor_set2 = FactorSet(phi3, phi4)
         factor_set3 = factor_set2.divide(factor_set1)
         self.assertEqual(set([phi3, phi4,
