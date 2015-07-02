@@ -523,7 +523,7 @@ class Factor:
             for k, index in enumerate(map(other._index_for_assignment, transformed_assign)):
                 transformed_indexes[k] = index
 
-            if all(other.values[transformed_indexes] == self.values):
+            if np.allclose(other.values[transformed_indexes], self.values):
                 return True
             else:
                 return False
