@@ -2,6 +2,7 @@ from .ProbModelXML import *
 from .XMLBIF import *
 from .PomdpX import *
 from .XMLBeliefNetwork import *
+from .UAI import *
 
 __all__ = ['ProbModelXMLReader',
            'ProbModelXMLWriter',
@@ -14,4 +15,5 @@ __all__ = ['ProbModelXMLReader',
            'XBNReader',
            'XBNWriter',
            'PomdpXReader',
-           'PomdpXWriter']
+           'PomdpXWriter',
+           'UAIReader']
