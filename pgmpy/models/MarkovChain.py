@@ -224,3 +224,50 @@ class MarkovChain(object):
                 self.state[var] = next_val
             sampled.loc[i + 1] = [self.state[var] for var in self.variables]
         return sampled
+
+    def prob_from_sample(self, state, sample=None, window_size=None):
+        """
+        Given an instantiation (partial or complete) of the variables of the model,
+        compute the probability of observing it over multiple windows in a given sample.
+
+        If 'sample' is not passed as an argument, generate the statisic by sampling from the
+        Markov Chain, starting with a random initial state.
+
+        Examples:
+        ---------
+        >>> from pgmpy.models.MarkovChain import MarkovChain as MC
+        >>> model = MC(['intel', 'diff'], [3, 2])
+        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {2: 1}}
+        >>> model.add_transition_model('intel', intel_tm)
+        >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
+        >>> model.add_transition_model('diff', diff_tm)
+        >>> model.prob_from_sample({'diff': 0})
+        array([ 0.27,  0.4 ,  0.18,  0.23, ... 0.29])
+        """
+        if sample is None:
+            # generate sample of size 10000
+            sample = self.sample(self.random_state(), size=10000)
+        if window_size is None:
+            window_size = len(sample) // 100  # default window size is 100
+        windows = len(sample) // window_size
+        probabilities = np.zeros(windows)
+        for i in range(windows):
+            for j in range(window_size):
+                ind = i * 100 + j
+                state_eq = [sample.loc[ind, k] == state[k] for k in state.keys()]
+                if all(state_eq):
+                    probabilities[i] += 1
+        return probabilities / window_size
+
+    def random_state(self):
+        """
+        Generates a random state of the Markov Chain.
+
+        Examples:
+        ---------
+        >>> from pgmpy.models import MarkovChain as MC
+        >>> model = MC(['intel', 'diff'], [2, 3])
+        >>> model.random_state()
+        {'diff': 2, 'intel': 1}
+        """
+        return {var: np.random.randint(self.cardinalities[var]) for var in self.variables}
