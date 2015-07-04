@@ -140,8 +140,8 @@ class MarkovChain(object):
         >>> model = MC()
         >>> model.add_variables_from(['x', 'y'], [3, 4])
         """
-        for v, c in zip(variables, cards):
-            self.add_variable(v, c)
+        for var, card in zip(variables, cards):
+            self.add_variable(var, card)
 
     def add_transition_model(self, variable, transition_model):
         """
@@ -167,7 +167,7 @@ class MarkovChain(object):
             raise ValueError('Transition model must be a dict.')
         if not set(transition_model.keys()) == set(range(self.cardinalities[variable])):
             raise ValueError('Transitions must be defined for all states of variable {var}.'.format(var=variable))
-        for var, transition in transition_model.items():
+        for _, transition in transition_model.items():
             if not isinstance(transition, dict):
                 raise ValueError('Each transition must be a dict.')
             prob_sum = 0
