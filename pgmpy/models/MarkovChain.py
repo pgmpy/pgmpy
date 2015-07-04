@@ -191,6 +191,10 @@ class MarkovChain(object):
         size: int
             number of samples to be generated.
 
+        Return Type:
+        ------------
+        pandas.DataFrame
+
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain as MC
@@ -258,6 +262,28 @@ class MarkovChain(object):
                 if all(state_eq):
                     probabilities[i] += 1
         return probabilities / window_size
+
+    def generate_sample(self, start_state=None, size=1):
+        """
+        Generator version of self.sample
+
+        Return Type:
+        ------------
+        dict representing the assignment to all variables of the model.
+        """
+        # check if the start state is valid
+        if start_state is not None and self._check_state(start_state):
+            self.state = start_state
+        elif start_state is None and self.state is None:
+            raise ValueError('Start state not set.')
+        # sampled.loc[0] = [self.state[var] for var in self.variables]
+        for i in range(size):
+            for var in self.variables:
+                val = self.state[var]
+                next_val = sample_discrete(list(self.transition_models[var][val].keys()),
+                                           list(self.transition_models[var][val].values()))[0]
+                self.state[var] = next_val
+            yield {var: self.state[var] for var in self.variables}
 
     def random_state(self):
         """
