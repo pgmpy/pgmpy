@@ -10,6 +10,10 @@ import math
 class MPLP:
     """
     Class for performing inference using Max-Product Linear Programming Relaxations.
+    We use the Max-Product Linear Programming (MPLP) algorithm to minimize the dual .
+    On all problems, we start by running MPLP for 1000 iterations. If the integrality gap is less than 10−4,
+    the algorithm terminates. Otherwise, we alternate between further tightening the relaxation and running
+    another 20 MPLP iterations, until the problem is solved optimally or a time limit is reached.
     """
 
     def __init__(self, all_cardinalities, all_factors, all_lambdas):
@@ -188,12 +192,18 @@ class MPLP:
         return objective
 
     def find_intersection_set(self, intersection_ind):
+        """
+        Finds the intersection set using the intersection_ind from the group of all the factors.
+        """
         if intersection_ind in self.m_all_intersect:
             return self.m_all_intersect.index(intersection_ind)
         else:
             return -1
 
     def add_intersection_set(self, new_intersection_ind):
+        """
+        When adding cycles, we use this method to add newly found intersection sets to the existing ones.
+        """
         self.m_all_intersect.append(new_intersection_ind)
         if len(new_intersection_ind) == 2:
             self.m_intersect_map.append((new_intersection_ind, len(self.m_all_intersect) - 1))
@@ -201,15 +211,24 @@ class MPLP:
         return len(self.m_all_intersect) - 1
 
     def add_region(self, inds_of_vars, intersect_inds):
+        """
+        Adds a new region to the MPLP algorithm.
+        If this code is run, then it is assumed that no intersection set already exists for this region
+        """
         region_intersection_set = self.add_intersection_set(inds_of_vars)
         new_region = Region(inds_of_vars, self.m_all_intersect, intersect_inds, self.m_var_sizes,
                             region_intersection_set)
         self.m_all_regions.append(new_region)
+        # Initializing messages of the current region to zero.(Warm-start)
         self.m_region_lambdas.append([0] * (2 ** len(inds_of_vars)))
         return region_intersection_set
 
     def create_k_projection_graph(self):
-
+        """
+        This method creates a k_projection_graph which has one node for every variable i and its state x_i.
+        All such nodes are fully connected across adjacent variables.
+        The k-ary cycle inequalities are defined using these k_projection_graphs G_pi.
+        """
         # Initialize the projection graph.
         projection_map = []
         projection_edge_weights = []
@@ -333,8 +352,11 @@ class MPLP:
 
         return result, num_projection_nodes
 
-    def find_optimal_R(self, projection_graph):
-
+    def find_optimal_r(self, projection_graph):
+        """
+        Does binary search over the edge weights to find largest
+        edge weight such that there is an odd-signed cycle.
+        """
         binary_search_lower_bound = 0
         binary_search_upper_bound = len(projection_graph.set_of_sij)
         sij_min = -1
@@ -396,7 +418,9 @@ class MPLP:
         return sij_min
 
     def add_cycle(self, cycle, projection_imap_var, triplet_set, num_projection_nodes):
-
+        """
+        Add cycles to the relaxation.
+        """
         nClustersAdded = 0
 
         # Number of clusters we are adding here is length_cycle-2
@@ -407,19 +431,17 @@ class MPLP:
         tripletcluster_array = []
         i = 0
         while i < (len(cycle) - 3) / 2:
-            tripletcluster = {'i': 0, 'j': 0, 'k': 0, 'ij_loc': 0, 'jk_loc': 0, 'ki_loc': 0}
-            tripletcluster['i'] = projection_imap_var[np.int(cycle[i])]
-            tripletcluster['j'] = projection_imap_var[np.int(cycle[i + 1])]
-            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle) - 2 - i])]
+            tripletcluster = {'i': projection_imap_var[np.int(cycle[i])],
+                              'j': projection_imap_var[np.int(cycle[i + 1])],
+                              'k': projection_imap_var[np.int(cycle[len(cycle) - 2 - i])]}
             tripletcluster_array.append(tripletcluster)
             i += 1
 
         i = len(cycle) - 1
         while i > len(cycle) / 2:
-            tripletcluster = {'i': 0, 'j': 0, 'k': 0, 'ij_loc': 0, 'jk_loc': 0, 'ki_loc': 0}
-            tripletcluster['i'] = projection_imap_var[np.int(cycle[i])]
-            tripletcluster['j'] = projection_imap_var[np.int(cycle[i - 1])]
-            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle) - 1 - i])]
+            tripletcluster = {'i': projection_imap_var[np.int(cycle[i])],
+                              'j': projection_imap_var[np.int(cycle[i - 1])],
+                              'k': projection_imap_var[np.int(cycle[len(cycle) - 1 - i])]}
             tripletcluster_array.append(tripletcluster)
             i -= 1
 
@@ -464,7 +486,12 @@ class MPLP:
             nClustersAdded += 1
         return nClustersAdded
 
-    def find_cycles(self, projection_graph, optimal_R):
+    def find_cycles(self, projection_graph, optimal_r):
+        """
+        Given a projection graph, finds an odd-signed cycle.
+        This works by breadth-first search.
+        A Random spanning tree is created initially.
+        """
         num_projection_nodes = len(projection_graph.projection_adjacency_list)
         node_sign = np.zeros(num_projection_nodes)
         node_depth = np.ones(num_projection_nodes) * -1
@@ -490,7 +517,7 @@ class MPLP:
                         # If this neighbour node has a greater weight than the Optimal and has not been traversed:
                         if node_sign[neighbour_node_no] == 0:
                             neighbour_node_wt = neighbour_node[1]
-                            if abs(neighbour_node_wt) >= optimal_R:
+                            if abs(neighbour_node_wt) >= optimal_r:
                                 sign_wt = np.sign(neighbour_node_wt)
                                 # Assign the properties for this neighbourhood node which qualifies for Spanning tree.
                                 node_sign[neighbour_node_no] = node_sign[front_node] * sign_wt
@@ -509,7 +536,7 @@ class MPLP:
             node_j_no = -1
             for node_j_tuple in node_i:
                 node_j_no += 1
-                if abs(node_j_tuple[1]) >= optimal_R:
+                if abs(node_j_tuple[1]) >= optimal_r:
                     node_j = node_j_tuple[0]
                     node_j_weight = node_j_tuple[1]
                     # If cycle is found
@@ -605,15 +632,23 @@ class MPLP:
         return cycle_set
 
     def tighten_cycle(self):
+        """
+        This function implements the UAI 2012 cycle tightening algorithm.
+        Here we search for k-ary cycle inequalities to tighten the relaxation rather cluster consistency constraints.
+        THis algorithm works in a way that it emulates the separation algorithm for finding the most violated cycle
+        inequality in the primal.
+        These cycle inequalities are just used for efficiently searching the cycle consistency constrains to be added.
+        """
+
         projection_graph, num_projection_nodes = self.create_k_projection_graph()
-        # Now we go for the "find_optimal_R"
+        # Now we go for the "find_optimal_r"
         nClustersAdded = 0
-        optimal_R = self.find_optimal_R(projection_graph)
+        optimal_r = self.find_optimal_r(projection_graph)
 
         # Look for cycles. Some will be discarded.
         # Given an undirected graph, finds an odd-signed cycle.
         # This works by breadth first search.
-        cycle_set = self.find_cycles(projection_graph, optimal_R)
+        cycle_set = self.find_cycles(projection_graph, optimal_r)
 
         # Add all the cycles that we have found to the relaxation.
         triplet_set = []
