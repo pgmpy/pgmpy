@@ -7,7 +7,7 @@ import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
-from pgmpy.factors import factor_product
+from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
 
 
@@ -436,6 +436,9 @@ class MarkovModel(UndirectedGraph):
         """
         from pgmpy.models import JunctionTree
 
+        # Check whether the model is valid or not
+        self.check_model()
+
         # Triangulate the graph to make it chordal
         triangulated_graph = self.triangulate()
 
@@ -482,7 +485,12 @@ class MarkovModel(UndirectedGraph):
                     clique_factors.append(factor)
                     is_used[factor] = True
 
-            clique_potential = factor_product(*clique_factors)
+            # To compute clique potential, initially set it as unity factor
+            var_card = [self.cardinalities[x] for x in node]
+            clique_potential = Factor(node, var_card, np.ones(np.product(var_card)))
+            # multiply it with the factors associated with the variables present
+            # in the clique (or node)
+            clique_potential *= factor_product(*clique_factors)
             clique_trees.add_factors(clique_potential)
 
         if not all(is_used.values()):
