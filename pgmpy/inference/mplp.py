@@ -7,7 +7,7 @@ import queue
 import math
 
 
-class MPLPAlg:
+class MPLP:
     """
     Class for performing inference using Max-Product Linear Programming Relaxations.
     """
@@ -33,14 +33,14 @@ class MPLPAlg:
             self.objective.append([log(y) for y in all_lambdas[i]])
             if len(all_factors[i]) > 1:
                 self.m_region_lambdas.append(self.objective[i])
-                curr_region = Region(all_factors[i], all_factors[:i+1], all_factors[i], all_cardinalities, i)
+                curr_region = Region(all_factors[i], all_factors[:i + 1], all_factors[i], all_cardinalities, i)
                 self.m_all_regions.append(curr_region)
             if len(all_factors[i]) == 2:
                 self.m_intersect_map.append((all_factors[i], i))
 
             # Initialise output vector
-            self.m_decoded_res = [0]*len(all_cardinalities)
-            self.m_best_decoded_res = [0]*len(all_cardinalities)
+            self.m_decoded_res = [0] * len(all_cardinalities)
+            self.m_best_decoded_res = [0] * len(all_cardinalities)
 
     def _get_flat_ind(self, base_ind, base_card):
         """
@@ -92,9 +92,9 @@ class MPLPAlg:
             for r in self.m_all_regions:
                 self.objective = self._update_msgs(self.objective, r)
             obj = self._local_decode()
-            obj_del = self.last_obj-obj
+            obj_del = self.last_obj - obj
             self.last_obj = obj
-            int_gap = obj-self.m_best_val
+            int_gap = obj - self.m_best_val
 
             print(i)
 
@@ -108,7 +108,7 @@ class MPLPAlg:
         Break the region's message into sub-messages for each of it's intersection
         """
         lst = [list(i) for i in itertools.product(*[list(range(k)) for k in region.region_var_sizes])]
-        subsets = [[-1e09]*len(i) for i in region.m_msgs_from_region]
+        subsets = [[-1e09] * len(i) for i in region.m_msgs_from_region]
         no_subsets = len(region.rintersects_relative_pos)
         for vi in range(len(big_message)):
             for si in range(no_subsets):
@@ -125,8 +125,8 @@ class MPLPAlg:
         """
         bit_values = [bit_value_big[i] for i in active_index]
         card_values = [region.region_var_sizes[i] for i in active_index]
-        multiplier = [np.product([j for j in card_values[i+1:]]) for i in range(len(card_values)-1)]+[1]
-        decimal_value = np.sum([bit_values[i]*multiplier[i] for i in range(len(card_values))])
+        multiplier = [np.product([j for j in card_values[i + 1:]]) for i in range(len(card_values) - 1)] + [1]
+        decimal_value = np.sum([bit_values[i] * multiplier[i] for i in range(len(card_values))])
         return decimal_value
 
     def _expand_and_operate(self, big_message, curr_inds_of_intersect, small_message, operation, region):
@@ -179,7 +179,7 @@ class MPLPAlg:
         sc = n_intersects
         for si in range(n_intersects):
             current_intersect_idx = region.rintersect_inds[si]
-            region.m_msgs_from_region[si] = [x*1/sc for x in region.m_msgs_from_region[si]]
+            region.m_msgs_from_region[si] = [x * 1 / sc for x in region.m_msgs_from_region[si]]
             objective[current_intersect_idx] = region.m_msgs_from_region[si]
             region.m_msgs_from_region[si] = list(map(sub, region.m_msgs_from_region[si], total_msgs_minus_region[si]))
             orig = self._expand_and_operate(orig, region.rintersects_relative_pos[si],
@@ -197,15 +197,15 @@ class MPLPAlg:
         self.m_all_intersect.append(new_intersection_ind)
         if len(new_intersection_ind) == 2:
             self.m_intersect_map.append((new_intersection_ind, len(self.m_all_intersect) - 1))
-        self.objective.append([0]*np.product([self.m_var_sizes[ind] for ind in new_intersection_ind]))
-        return len(self.m_all_intersect)-1
+        self.objective.append([0] * np.product([self.m_var_sizes[ind] for ind in new_intersection_ind]))
+        return len(self.m_all_intersect) - 1
 
     def add_region(self, inds_of_vars, intersect_inds):
         region_intersection_set = self.add_intersection_set(inds_of_vars)
         new_region = Region(inds_of_vars, self.m_all_intersect, intersect_inds, self.m_var_sizes,
                             region_intersection_set)
         self.m_all_regions.append(new_region)
-        self.m_region_lambdas.append([0]*(2**len(inds_of_vars)))
+        self.m_region_lambdas.append([0] * (2 ** len(inds_of_vars)))
         return region_intersection_set
 
     def create_k_projection_graph(self):
@@ -310,8 +310,8 @@ class MPLPAlg:
                     inds = [xi, xj]
                     tmp_val = edge_belief[self._get_flat_ind(inds, [2, 2])]
                     # Compute s_mn for this edge
-                    val_s = max(tmp_val, max_ij_bij_not_xi_xj[xi][xj]) -\
-                            max(max_i_bij_not_xi[xi][xj], max_j_bij_not_xj[xi][xj])
+                    val_s = max(tmp_val, max_ij_bij_not_xi_xj[xi][xj]) - max(max_i_bij_not_xi[xi][xj],
+                                                                             max_j_bij_not_xj[xi][xj])
 
                     if val_s != 0:
                         projection_adjacency_list[m].append((n, val_s))
@@ -325,10 +325,11 @@ class MPLPAlg:
         projection_adjacency_list = [sorted(i, key=lambda tup: tup[0]) for i in projection_adjacency_list]
         set_of_sij = sorted(set(list_of_sij))
         from collections import namedtuple
-        Result = namedtuple('Result', ['projection_map', 'num_projection_nodes', 'projection_imap_var', 'partition_imap'
-            ,'projection_edge_weights', 'projection_adjacency_list', 'set_of_sij'])
+        Result = namedtuple('Result', ['projection_map', 'num_projection_nodes', 'projection_imap_var',
+                                       'partition_imap', 'projection_edge_weights', 'projection_adjacency_list',
+                                       'set_of_sij'])
         result = Result(projection_map, num_projection_nodes, projection_imap_var, partition_imap,
-                                       projection_edge_weights, projection_adjacency_list, set_of_sij)
+                        projection_edge_weights, projection_adjacency_list, set_of_sij)
 
         return result, num_projection_nodes
 
@@ -341,7 +342,7 @@ class MPLPAlg:
         while binary_search_lower_bound <= binary_search_upper_bound:
 
             # compute the mid point
-            mid_position = math.floor((binary_search_lower_bound + binary_search_upper_bound)/2)
+            mid_position = math.floor((binary_search_lower_bound + binary_search_upper_bound) / 2)
             R = projection_graph.set_of_sij[mid_position]
             # Does there exist an odd signed cycle using just edges with sij >= R?
             # If yes, then go up.
@@ -399,31 +400,31 @@ class MPLPAlg:
         nClustersAdded = 0
 
         # Number of clusters we are adding here is length_cycle-2
-        nNewClusters = len(cycle)-2
+        nNewClusters = len(cycle) - 2
         cluster_index = 0
 
         # Found the violated cycle. Now we triangulate and add the relaxation.
-        tripletcluster_array=[]
+        tripletcluster_array = []
         i = 0
-        while i < (len(cycle)-3)/2:
-            tripletcluster = {'i':0, 'j':0, 'k':0, 'ij_loc':0, 'jk_loc':0, 'ki_loc':0,}
+        while i < (len(cycle) - 3) / 2:
+            tripletcluster = {'i': 0, 'j': 0, 'k': 0, 'ij_loc': 0, 'jk_loc': 0, 'ki_loc': 0}
             tripletcluster['i'] = projection_imap_var[np.int(cycle[i])]
-            tripletcluster['j'] = projection_imap_var[np.int(cycle[i+1])]
-            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle)-2-i])]
+            tripletcluster['j'] = projection_imap_var[np.int(cycle[i + 1])]
+            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle) - 2 - i])]
             tripletcluster_array.append(tripletcluster)
             i += 1
 
-        i = len(cycle)-1
-        while i > len(cycle)/2:
-            tripletcluster = {'i':0, 'j':0, 'k':0, 'ij_loc':0, 'jk_loc':0, 'ki_loc':0,}
+        i = len(cycle) - 1
+        while i > len(cycle) / 2:
+            tripletcluster = {'i': 0, 'j': 0, 'k': 0, 'ij_loc': 0, 'jk_loc': 0, 'ki_loc': 0}
             tripletcluster['i'] = projection_imap_var[np.int(cycle[i])]
-            tripletcluster['j'] = projection_imap_var[np.int(cycle[i-1])]
-            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle)-1-i])]
+            tripletcluster['j'] = projection_imap_var[np.int(cycle[i - 1])]
+            tripletcluster['k'] = projection_imap_var[np.int(cycle[len(cycle) - 1 - i])]
             tripletcluster_array.append(tripletcluster)
             i -= 1
 
         # Add the top nclus_to_add clsuters to the relaxation
-        for clusterId  in range(nNewClusters):
+        for clusterId in range(nNewClusters):
             # Check that these clusters and intersection sets haven't already been added
             temp = [tripletcluster_array[clusterId]['i'], tripletcluster_array[clusterId]['j'],
                     tripletcluster_array[clusterId]['k']]
@@ -623,13 +624,13 @@ class MPLPAlg:
                     temp = projection_graph.partition_imap[np.int(it)]
                     for s in temp[:]:
                         print("({}, ".format(s),  end="")
-                    print("{}), ".format(len(temp)-1), end="")
+                    print("{}), ".format(len(temp) - 1), end="")
 
                 print("")
 
                 # Add cycles to the relaxation
                 nClustersAdded += self.add_cycle(z, projection_graph.projection_imap_var, triplet_set,
-                                            num_projection_nodes)
+                                                 num_projection_nodes)
         return nClustersAdded
 
 
@@ -650,7 +651,7 @@ class Region:
         for i in self.rintersect_inds:
             curr_intersect = all_intersects[i]
             product = np.product([all_var_sizes[i] for i in curr_intersect])
-            self.m_msgs_from_region.append([0]*product)
+            self.m_msgs_from_region.append([0] * product)
             self.rintersects_relative_pos.\
                 append([rvariables_inds.index(i) for i in curr_intersect])
 
@@ -664,7 +665,7 @@ class Region:
     >>> for i in range(reader.no_of_functions):
     >>>     all_factors.append(list(map(int, reader.function_vars[i])))
     >>> all_cardinalities=reader.cardinality
-    >>> mplp=MPLPAlg(all_cardinalities, all_factors, all_lambdas)
+    >>> mplp = MPLPAlg(all_cardinalities, all_factors, all_lambdas)
     >>> mplp.RunMPLP(1000, 0.0002, 0.0002) # 31 is the number of iterations here.
     >>> mplp.tighten_cycle()
 """
