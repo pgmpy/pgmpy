@@ -4,6 +4,7 @@ from .ExactInference import BeliefPropagation
 from .Sampling import BayesianModelSampling
 
 __all__ = ['Inference',
+           'ApproxInference',
            'VariableElimination',
            'BeliefPropagation',
            'BayesianModelSampling']

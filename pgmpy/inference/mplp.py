@@ -1,27 +1,30 @@
-from math import log
 import itertools
 import numpy as np
 from operator import sub
 from operator import add
 import queue
 import math
+from collections import namedtuple
+from pgmpy.models import MarkovModel
+from pgmpy.inference import ApproxInference
 
 
-class MPLP:
+class MPLP(ApproxInference):
     """
     Class for performing inference using Max-Product Linear Programming Relaxations.
     We use the Max-Product Linear Programming (MPLP) algorithm to minimize the dual .
-    On all problems, we start by running MPLP for 1000 iterations. If the integrality gap is less than 10−4,
-    the algorithm terminates. Otherwise, we alternate between further tightening the relaxation and running
-    another 20 MPLP iterations, until the problem is solved optimally or a time limit is reached.
     """
 
-    def __init__(self, all_cardinalities, all_factors, all_lambdas):
+    def __init__(self, model):
+        super().__init__(model)
+
+        if not isinstance(model, MarkovModel):
+            raise ValueError('The model given is not MarkovModel.')
 
         # For containing the cardinalities of all the variables present in the model
-        self.m_var_sizes = all_cardinalities
+        self.m_var_sizes = self.cardinality
         # All the factors are kept here
-        self.m_all_intersect = all_factors
+        self.m_all_intersect = self.factors
         # All the messages per factor is kept here. It is updated in each iteration of run_mplp
         self.objective = []
         # It contain the Region objects for all the factors which are made of more than one variable
@@ -33,18 +36,18 @@ class MPLP:
         # This is to be used for calculating the breaking point of RunMPLP
         self.last_obj = 1e40
         self.m_intersect_map = []
-        for i in range(len(all_factors)):
-            self.objective.append([log(y) for y in all_lambdas[i]])
-            if len(all_factors[i]) > 1:
+        for i in range(len(self.factors)):
+            self.objective.append([np.log(y) for y in self.factor_values[i]])
+            if len(self.factors[i]) > 1:
                 self.m_region_lambdas.append(self.objective[i])
-                curr_region = Region(all_factors[i], all_factors[:i + 1], all_factors[i], all_cardinalities, i)
+                curr_region = Region(self.factors[i], self.factors[:i + 1], self.factors[i], self.cardinality, i)
                 self.m_all_regions.append(curr_region)
-            if len(all_factors[i]) == 2:
-                self.m_intersect_map.append((all_factors[i], i))
+            if len(self.factors[i]) == 2:
+                self.m_intersect_map.append((self.factors[i], i))
 
             # Initialise output vector
-            self.m_decoded_res = [0] * len(all_cardinalities)
-            self.m_best_decoded_res = [0] * len(all_cardinalities)
+            self.m_decoded_res = [0] * len(self.cardinality)
+            self.m_best_decoded_res = [0] * len(self.cardinality)
 
     def _get_flat_ind(self, base_ind, base_card):
         """
@@ -100,7 +103,9 @@ class MPLP:
             self.last_obj = obj
             int_gap = obj - self.m_best_val
 
-            print(i)
+            print("m_best_val: {}".format(self.m_best_val))
+            print("int_gap: {}".format(int_gap))
+            print("objective: {}".format(obj))
 
             if (obj_del < obj_del_thr) and (i > len(self.m_var_sizes)):
                 break
@@ -343,7 +348,7 @@ class MPLP:
 
         projection_adjacency_list = [sorted(i, key=lambda tup: tup[0]) for i in projection_adjacency_list]
         set_of_sij = sorted(set(list_of_sij))
-        from collections import namedtuple
+
         Result = namedtuple('Result', ['projection_map', 'num_projection_nodes', 'projection_imap_var',
                                        'partition_imap', 'projection_edge_weights', 'projection_adjacency_list',
                                        'set_of_sij'])
@@ -668,6 +673,62 @@ class MPLP:
                                                  num_projection_nodes)
         return nClustersAdded
 
+    def map_query(self, max_iterations, max_tightening, n_iter_later, objective_threshold, int_gap_threshold):
+        """
+        MAP Query method using Max Product Linear Programming.
+        On all problems, we start by running MPLP for 1000 iterations. If the integrality gap is less than 10−4,
+        the algorithm terminates. Otherwise, we alternate between further tightening the relaxation and running
+        another 20 MPLP iterations, until the problem is solved optimally or a time limit is reached.
+
+        Examples
+        --------
+        >>> from pgmpy.inference import mplp
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> student = MarkovModel()
+        >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
+        >>> factor_a   = Factor(['A'], cardinality=[2], value=np.array([0.54577, 1.8323]))
+        >>> factor_b   = Factor(['B'], cardinality=[2], value=np.array([0.93894, 1.065]))
+        >>> factor_c   = Factor(['C'], cardinality=[2], value=np.array([0.89205, 1.121]))
+        >>> factor_d   = Factor(['D'], cardinality=[2], value=np.array([0.56292, 1.7765]))
+        >>> factor_e   = Factor(['E'], cardinality=[2], value=np.array([0.47117, 2.1224]))
+        >>> factor_f   = Factor(['F'], cardinality=[2], value=np.array([1.5093, 0.66257]))
+        >>> factor_g   = Factor(['G'], cardinality=[2], value=np.array([0.48011, 2.0828]))
+        >>> factor_h   = Factor(['H'], cardinality=[2], value=np.array([2.6332, 0.37977]))
+        >>> factor_i   = Factor(['I'], cardinality=[2], value=np.array([1.992, 0.50202]))
+        >>> factor_j   = Factor(['J'], cardinality=[2], value=np.array([1.6443, 0.60817]))
+        >>> factor_k   = Factor(['K'], cardinality=[2], value=np.array([0.39909, 2.5057]))
+        >>> factor_l   = Factor(['L'], cardinality=[2], value=np.array([1.9965, 0.50087]))
+        >>> factor_m   = Factor(['M'], cardinality=[2], value=np.array([2.4581, 0.40681]))
+        >>> factor_n   = Factor(['N'], cardinality=[2], value=np.array([2.0481, 0.48826]))
+        >>> factor_o   = Factor(['O'], cardinality=[2], value=np.array([0.6477, 1.5439]))
+        >>> factor_p   = Factor(['P'], cardinality=[2], value=np.array([0.93844, 1.0656]))
+        >>> factor_a_b = Factor(['A', 'B'], cardinality=[2, 2], value=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
+        >>> factor_b_c = Factor(['B', 'C'], cardinality=[2, 2], value=np.array([0.00024189, 4134.2, 4134.2, 0.000241]))
+        >>> factor_c_d = Factor(['C', 'D'], cardinality=[2, 2], value=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
+        >>> factor_e_f = Factor(['E', 'F'], cardinality=[2, 2], value=np.array([31.228, 0.032023, 0.032023, 31.228]))
+        >>> student.add_factors(factor_a, factor_b, factor_c, factor_d,
+        ...            factor_e, factor_f, factor_g, factor_h,
+        ...            factor_i, factor_j, factor_k, factor_l,
+        ...            factor_m, factor_n, factor_o, factor_p,
+        ...            factor_a_b, factor_b_c, factor_c_d, factor_d_e,
+        >>> mplp = MPLP(student)
+        >>> mplp.map_query(1000, 100, 20, 0.0002, 0.0002)
+        """
+
+        self.run_mplp(max_iterations, objective_threshold, int_gap_threshold)
+        for i in range(max_tightening):
+            int_gap = self.last_obj - self.m_best_val
+            if int_gap < int_gap_threshold:
+                break
+            if int_gap < 1:
+                n_iter_later = 600
+            ncluster_added = self.tighten_cycle()
+            if ncluster_added == 0:
+                print("This is the best result")
+                break
+            self.run_mplp(n_iter_later, objective_threshold, int_gap_threshold)
+
 
 class Region:
     """
@@ -689,18 +750,3 @@ class Region:
             self.m_msgs_from_region.append([0] * product)
             self.rintersects_relative_pos.\
                 append([rvariables_inds.index(i) for i in curr_intersect])
-
-
-"""
-    Use case:
-
-    >>> reader=UAIReader(path="grid.uai")
-    >>> all_lambdas = reader.params
-    >>> all_factors=[]
-    >>> for i in range(reader.no_of_functions):
-    >>>     all_factors.append(list(map(int, reader.function_vars[i])))
-    >>> all_cardinalities=reader.cardinality
-    >>> mplp = MPLPAlg(all_cardinalities, all_factors, all_lambdas)
-    >>> mplp.RunMPLP(1000, 0.0002, 0.0002) # 31 is the number of iterations here.
-    >>> mplp.tighten_cycle()
-"""
