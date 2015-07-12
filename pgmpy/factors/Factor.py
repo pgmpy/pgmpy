@@ -25,7 +25,7 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
-    def __init__(self, variables, cardinality, value):
+    def __init__(self, variables, cardinality, values):
         """
         Initialize a factors class.
 
@@ -58,7 +58,7 @@ class Factor:
             List of scope of factor
         cardinality: list, array_like
             List of cardinality of each variable
-        value: list, array_like
+        values: list, array_like
             List or array of values of factor.
             A Factor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
@@ -70,15 +70,14 @@ class Factor:
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
-        self.variables = OrderedDict()
-        if len(variables) != len(cardinality):
-            raise ValueError("The size of variables and cardinality should be same")
-        for variable, card in zip(variables, cardinality):
-            self.variables[variable] = [State(variable, index) for index in range(card)]
-        self.cardinality = np.array(cardinality)
-        self.values = np.array(value, dtype=np.float)
-        if not self.values.shape[0] == np.prod(self.cardinality):
-            raise Exceptions.SizeError("Incompetant value array")
+        if values.size != np.product(cardinality):
+            raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
+
+        self.variables = list(variables)
+        self.cardinality = cardinality
+        self.cardinality_dict = {var: card for var, card in zip(variables, cardinality)}
+        self.var_index = {var: index for var, index in enumerate(variables)}
+        self.values = np.array(values).reshape(cardinality)
 
     def scope(self):
         """
@@ -91,7 +90,7 @@ class Factor:
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
-        return list(self.variables)
+        return self.variables
 
     def assignment(self, index):
         """
@@ -108,7 +107,7 @@ class Factor:
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
-        [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
+        [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
         if isinstance(index, (int, np.integer)):
             index = [index]
@@ -128,24 +127,28 @@ class Factor:
 
         return [[self.variables[key][val] for key, val in zip(self.variables.keys(), values)] for values in assignments]
 
-    def get_cardinality(self, variable):
+    def get_cardinality(self, variables):
         """
         Returns cardinality of a given variable
 
         Parameters
         ----------
-        variable: string
+        variables: list, array-like
+                A list of variable names.
 
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality('x1')
-        2
+        {'x1': 2}
+        >>> phi.get_cardinality(['x1', 'x2'])
+        {'x1': 2, 'x2': 3}
         """
-        if variable not in self.variables:
-            raise Exceptions.ScopeError("%s not in scope" % variable)
-        return self.cardinality[list(self.variables.keys()).index(variable)]
+        if not all([var in self.variables for var in variables]):
+            raise ValueError("Variable not in scope")
+
+        return {var: self.cardinality_dict[var] for var in variables}
 
     def identity_factor(self):
         """
@@ -164,7 +167,7 @@ class Factor:
         >>> phi_identity.values
         array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
         """
-        return Factor(self.variables, self.cardinality, np.ones(np.product(self.cardinality)))
+        return Factor(self.variables, self.cardinality, np.ones(self.values.size))
 
     def marginalize(self, variables, inplace=True):
         """
@@ -195,25 +198,31 @@ class Factor:
             if variable not in self.variables:
                 raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
 
-        if inplace:
-            factor = self
-        else:
-            factor = Factor(self.scope(), self.cardinality, self.values)
-        # marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
-        marginalize_index = np.array([i in variables for i in factor.scope()])
-        assign = np.array(factor.cardinality)
-        assign[marginalize_index] = -1
-        marginalized_values = []
-        for i in product(*[range(index) for index in assign[assign != -1]]):
-            assign[assign != -1] = i
-            marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
-        factor.values = np.array(marginalized_values)
-        for variable in variables:
-            index = list(factor.variables.keys()).index(variable)
-            del(factor.variables[variable])
-            factor.cardinality = np.delete(factor.cardinality, index)
-        if not inplace:
-            return factor
+        phi = self if inplace else self.copy()
+        for var in variables:
+            phi.values = np.sum(phi.values, axis=self.var_index[var])
+
+
+        # if inplace:
+        #     factor = self
+        # else:
+        #     factor = Factor(self.scope(), self.cardinality, self.values)
+        #
+        # # marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
+        # marginalize_index = np.array([i in variables for i in factor.scope()])
+        # assign = np.array(factor.cardinality)
+        # assign[marginalize_index] = -1
+        # marginalized_values = []
+        # for i in product(*[range(index) for index in assign[assign != -1]]):
+        #     assign[assign != -1] = i
+        #     marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
+        # factor.values = np.array(marginalized_values)
+        # for variable in variables:
+        #     index = list(factor.variables.keys()).index(variable)
+        #     del(factor.variables[variable])
+        #     factor.cardinality = np.delete(factor.cardinality, index)
+        # if not inplace:
+        #     return factor
 
     def normalize(self, inplace=True):
         """
@@ -388,6 +397,9 @@ class Factor:
             return self.__init__(new_variables, new_card, new_values)
         else:
             return Factor(new_variables, new_card, new_values)
+
+    def copy(self):
+        return Factor(self.scope(), self.cardinality, self.values)
 
     def _index_for_assignment(self, assignment):
         """
