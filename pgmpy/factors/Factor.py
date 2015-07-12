@@ -70,14 +70,14 @@ class Factor:
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         """
+        values = np.array(values)
+
         if values.size != np.product(cardinality):
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
 
         self.variables = list(variables)
         self.cardinality = cardinality
-        self.cardinality_dict = {var: card for var, card in zip(variables, cardinality)}
-        self.var_index = {var: index for var, index in enumerate(variables)}
-        self.values = np.array(values).reshape(cardinality)
+        self.values = values.reshape(cardinality)
 
     def scope(self):
         """
@@ -145,10 +145,13 @@ class Factor:
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
         """
+        if not hasattr(variables, '__iter__'):
+            variables = np.array([variables])
+
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope")
 
-        return {var: self.cardinality_dict[var] for var in variables}
+        return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
     def identity_factor(self):
         """
@@ -192,15 +195,26 @@ class Factor:
         >>> phi.variables
         OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
         """
-        if not isinstance(variables, list):
+        if not hasattr(variables, '__iter__'):
             variables = [variables]
-        for variable in variables:
-            if variable not in self.variables:
-                raise Exceptions.ScopeError("{variable} not in scope".format(variable=variable))
-
         phi = self if inplace else self.copy()
+
         for var in variables:
-            phi.values = np.sum(phi.values, axis=self.var_index[var])
+            if var not in phi.variables:
+                raise ValueError("{var} not in scope.".format(var=var))
+            
+            var_index = phi.variables.index(var)
+            phi.values = np.sum(phi.values, axis=var_index)
+
+            del phi.variables[var_index]
+            del phi.cardinality[var_index]
+
+        if not inplace:
+            return phi
+
+#        phi = self if inplace else self.copy()
+#        for var in variables:
+#            phi.values = np.sum(phi.values, axis=self.var_index[var])
 
 
         # if inplace:
@@ -245,11 +259,11 @@ class Factor:
                 0.15151515,  0.16666667])
 
         """
-        values = self.values / np.sum(self.values)
-        if inplace:
-            self.values = values
-        else:
-            return Factor(self.scope(), self.cardinality, values)
+        phi = self if inplace else self.copy()
+        phi.values = phi.values / phi.values.sum()
+
+        if not inplace:
+            return phi
 
     def reduce(self, values, inplace=True):
         """
@@ -272,37 +286,50 @@ class Factor:
         >>> phi.values
         array([0., 1.])
         """
-        if not isinstance(values, list):
-            values = [values]
+        if not hasattr(values, '__iter__'):
+            values = list(values)
 
-        if not all(map(lambda t: isinstance(t, (tuple, list, np.ndarray)), values)):
-            raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
+        phi = self if inplace else self.copy()
+        for var, state in values:
+            var_index = phi.variables.index(var)
+            phi.values = np.rollaxis(phi.values, var_index)[state]
+            del phi.variables[var_index]
+            del phi.cardinality[var_index]
 
-        reduce_vars, reduce_states = zip(*values)
+        if not inplace:
+            return phi
+            
+#        if not isinstance(values, list):
+#            values = [values]
+#
+#        if not all(map(lambda t: isinstance(t, (tuple, list, np.ndarray)), values)):
+#            raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
 
-        if not all([var in self.scope() for var in reduce_vars]):
-            raise ValueError("Variable out of Scope")
+#        reduce_vars, reduce_states = zip(*values)
 
-        var_indexes = [self.scope().index(i) for i in reduce_vars]
+#        if not all([var in self.scope() for var in reduce_vars]):
+#            raise ValueError("Variable out of Scope")
 
-        reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
-        new_card = self.cardinality[reduce_var_indexes == 0]
-        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
+#        var_indexes = [self.scope().index(i) for i in reduce_vars]
 
-        reduce_var_indexes[reduce_var_indexes == 0] = -1
-        reduce_var_indexes[var_indexes] = reduce_states
-        value_indexes = self._index_for_assignment(reduce_var_indexes)
-        new_values = self.values[value_indexes]
+#        reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
+#        new_card = self.cardinality[reduce_var_indexes == 0]
+#        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
 
-        if inplace:
-            new_variables = OrderedDict()
-            for variable, card in zip(new_vars, new_card):
-                new_variables[variable] = [State(variable, index) for index in range(card)]
-            self.variables = new_variables
-            self.cardinality = new_card
-            self.values = new_values
-        else:
-            return Factor(new_vars, new_card, new_values)
+#        reduce_var_indexes[reduce_var_indexes == 0] = -1
+#        reduce_var_indexes[var_indexes] = reduce_states
+#        value_indexes = self._index_for_assignment(reduce_var_indexes)
+#        new_values = self.values[value_indexes]
+
+#        if inplace:
+#            new_variables = OrderedDict()
+#            for variable, card in zip(new_vars, new_card):
+#                new_variables[variable] = [State(variable, index) for index in range(card)]
+#            self.variables = new_variables
+#            self.cardinality = new_card
+#            self.values = new_values
+#        else:
+#            return Factor(new_vars, new_card, new_values)
 
     def product(self, *factors, n_jobs=1):
         """
