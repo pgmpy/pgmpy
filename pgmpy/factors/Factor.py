@@ -295,12 +295,17 @@ class Factor:
         if not hasattr(values, '__iter__'):
             values = list(values)
 
-        phi = self if inplace else self.copy()
+        phi = self if inplace else deepcopy(self)
+
+        slice_ = [slice(None)] * len(self.variables)
         for var, state in values:
             var_index = phi.variables.index(var)
-            phi.values = np.rollaxis(phi.values, var_index)[state]
+            slice_[var_index] = state
+
             del phi.variables[var_index]
             del phi.cardinality[var_index]
+
+        phi.values = phi.values[tuple(slice_)]
 
         if not inplace:
             return phi
