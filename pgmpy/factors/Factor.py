@@ -265,7 +265,7 @@ class Factor:
                 0.15151515,  0.16666667])
 
         """
-        phi = self if inplace else self.copy()
+        phi = self if inplace else deepcopy(self)
         phi.values = phi.values / phi.values.sum()
 
         if not inplace:
@@ -395,7 +395,7 @@ class Factor:
         """
         return factor_divide(self, factor, n_jobs=n_jobs)
 
-    def maximize(self, variable, inplace=True):
+    def maximize(self, variables, inplace=True):
         """
         Maximizes the factor with respect to the variable.
 
@@ -420,21 +420,43 @@ class Factor:
         x1_2    x3_0    0.15
         x1_2    x3_1    0.21
         """
-        indexes = np.where(np.in1d(self.scope(), variable))[0]
-        assign = np.array(self.cardinality)
-        assign[indexes] = -1
-        new_values = np.array([])
-        for i in product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
-            assign[assign != -1] = i
-            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
-        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
-                                                        [variable] if isinstance(variable, str) else variable)]
-        new_card = self.cardinality[assign != -1]
+        if not hasattr(variables, '__iter__'):
+            variables = [variables]
 
-        if inplace:
-            return self.__init__(new_variables, new_card, new_values)
-        else:
-            return Factor(new_variables, new_card, new_values)
+        phi = self if inplace else deepcopy(self)
+
+        for var in variables:
+            if var not in phi.variables:
+                raise ValueError("{var} not in scope.".format(var=var))
+
+        var_indexes = [] 
+        for var in variables:
+            var_index = phi.variables.index(var)
+            var_indexes.append(var_index)
+
+            del phi.variables[var_index]
+            del phi.cardinality[var_index]
+
+        phi.values = np.max(phi.values, axis=tuple(var_indexes))
+
+        if not inplace:
+            return phi
+
+#        indexes = np.where(np.in1d(self.scope(), variable))[0]
+#        assign = np.array(self.cardinality)
+#        assign[indexes] = -1
+#        new_values = np.array([])
+#        for i in product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
+#            assign[assign != -1] = i
+#            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
+#        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
+#                                                        [variable] if isinstance(variable, str) else variable)]
+#        new_card = self.cardinality[assign != -1]
+#
+#        if inplace:
+#            return self.__init__(new_variables, new_card, new_values)
+#        else:
+#            return Factor(new_variables, new_card, new_values)
 
     def copy(self):
         return Factor(self.scope(), self.cardinality, self.values)
