@@ -1,6 +1,7 @@
 import functools
 from itertools import product
 from collections import OrderedDict, namedtuple
+from copy import deepcopy
 
 import numpy as np
 
@@ -197,7 +198,8 @@ class Factor:
         """
         if not hasattr(variables, '__iter__'):
             variables = [variables]
-        phi = self if inplace else self.copy()
+
+        phi = self if inplace else deepcopy(self)
 
         for var in variables:
             if var not in phi.variables:
