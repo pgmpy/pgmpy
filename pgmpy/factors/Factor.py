@@ -204,12 +204,16 @@ class Factor:
         for var in variables:
             if var not in phi.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
-            
+
+        var_indexes = [] 
+        for var in variables:
             var_index = phi.variables.index(var)
-            phi.values = np.sum(phi.values, axis=var_index)
+            var_indexes.append(var_index)
 
             del phi.variables[var_index]
             del phi.cardinality[var_index]
+
+        phi.values = np.sum(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi
