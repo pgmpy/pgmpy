@@ -19,9 +19,7 @@ State = namedtuple('State', ['var', 'state'])
 class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-        dic = {'x1': [State('x1', 0), State('x1', 1)], 'x2': [State('x2', 0), State('x2', 1)],
-               'x3': [State('x3', 0), State('x3', 1)]}
-        self.assertEqual(phi.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
+        self.assertEqual(phi.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8))
 
@@ -41,26 +39,29 @@ class TestFactorMethods(unittest.TestCase):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
 
-    def test_assignment(self):
-        self.assertListEqual(self.phi.assignment([0]), [[State('x1', 0), State('x2', 0), State('x3', 0)]])
-        self.assertListEqual(self.phi.assignment([4, 5, 6]), [[State('x1', 1), State('x2', 0), State('x3', 0)],
-                                                              [State('x1', 1), State('x2', 0), State('x3', 1)],
-                                                              [State('x1', 1), State('x2', 1), State('x3', 0)]])
+#    def test_assignment(self):
+#        self.assertListEqual(self.phi.assignment([0]), [[State('x1', 0), State('x2', 0), State('x3', 0)]])
+#        self.assertListEqual(self.phi.assignment([4, 5, 6]), [[State('x1', 1), State('x2', 0), State('x3', 0)],
+#                                                              [State('x1', 1), State('x2', 0), State('x3', 1)],
+#                                                              [State('x1', 1), State('x2', 1), State('x3', 0)]])
 
-        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])),
-                             [[State('x1', 0), State('x2', 2), State('x3', 0)],
-                              [State('x1', 0), State('x2', 2), State('x3', 1)],
-                              [State('x1', 1), State('x2', 0), State('x3', 0)]])
+#        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])),
+#                             [[State('x1', 0), State('x2', 2), State('x3', 0)],
+#                              [State('x1', 0), State('x2', 2), State('x3', 1)],
+#                              [State('x1', 1), State('x2', 0), State('x3', 0)]])
 
-    def test_assignment_indexerror(self):
-        self.assertRaises(IndexError, self.phi.assignment, [10])
-        self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
-        self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
+#    def test_assignment_indexerror(self):
+#        self.assertRaises(IndexError, self.phi.assignment, [10])
+#        self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
+#        self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
 
     def test_get_cardinality(self):
-        self.assertEqual(self.phi.get_cardinality('x1'), 2)
-        self.assertEqual(self.phi.get_cardinality('x2'), 2)
-        self.assertEqual(self.phi.get_cardinality('x3'), 2)
+        self.assertEqual(self.phi.get_cardinality('x1'), {'x1': 2})
+        self.assertEqual(self.phi.get_cardinality('x2'), {'x2': 2})
+        self.assertEqual(self.phi.get_cardinality('x3'), {'x3': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x2'], {'x1': 2, 'x2': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x3'], {'x1': 2, 'x3': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x2', 'x3'], {'x1': 2, 'x2': 2, 'x3': 2})
 
     def test_get_cardinality_scopeerror(self):
         self.assertRaises(exceptions.ScopeError, self.phi.get_cardinality, 'x4')
@@ -89,12 +90,7 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
-
-    def test_reduce1(self):
-        self.phi1.reduce([('x2', 0), ('x1', 0)])
-        np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
-
-    @unittest.skip
+        
     def test_complete_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
         np_test.assert_array_equal(self.phi1.values, np.array([0]))
@@ -200,16 +196,11 @@ class TestFactorMethods(unittest.TestCase):
         phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, div)
 
-    def test_factor_divide_dividebyzero(self):
+    def test_factor_divide_invalid(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = Factor(['x1'], [2], [0, 2])
-        self.assertRaises(FloatingPointError, factor_divide, phi1, phi2)
-
-    def test_factor_divide_invalidvalue(self):
-        phi1 = Factor(['x1', 'x2'], [3, 2], [0.5, 0.2, 0, 0, 0.3, 0.45])
-        phi2 = Factor(['x1'], [3], [0.8, 0, 0.6])
         div = phi1.divide(phi2)
-        np_test.assert_array_equal(div.values, np.array([0.625, 0.25, 0, 0, 0.5, 0.75]))
+        np_test.assert_array_equal(div.values, np.array([0, 0, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
@@ -526,7 +517,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'),
+        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
                               ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
                               ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
                               ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
@@ -560,9 +551,9 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
-        np_test.assert_array_equal(tabular_cpd.values,
-                                  np.array([0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
-                                            0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
+        np_test.assert_array_equal(tabular_cpd.values, 
+                                  np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
+                                             0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 
     @unittest.skip('Not implemented yet')
     def test_to_tabular_cpd_parent_order(self):
@@ -687,3 +678,4 @@ class TestRuleCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.rule_cpd_without_rules
+
