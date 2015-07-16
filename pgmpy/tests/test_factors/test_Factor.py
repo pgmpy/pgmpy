@@ -21,7 +21,13 @@ class TestFactorInit(unittest.TestCase):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         self.assertEqual(phi.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
-        np_test.assert_array_equal(phi.values, np.ones(8))
+        np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
+
+    def test_class_init1(self):
+        phi = Factor([1, 2, 3], [2, 3, 2], np.arange(12))
+        self.assertEqual(phi.variables, [1, 2, 3])
+        np.test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
+        np.test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
 
     def test_class_init_sizeerror(self):
         self.assertRaises(exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
