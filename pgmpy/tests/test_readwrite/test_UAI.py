@@ -45,3 +45,14 @@ class TestUAIReader(unittest.TestCase):
                            (['var_0', 'var_1', 'var_2'],
                             ['2.2500', '3.2500', '3.7500', '0.0000', '0.0000', '10.0000', '1.8750', '4.0000', '3.3330', '2.0000', '2.0000', '3.4000'])]
         self.assertListEqual(self.reader_string.tables, tables_expected)
+
+    def test_get_model(self):
+        model = self.reader_string.get_model()
+        edge_expected = {'var_2': {'var_0': {},
+                                   'var_1': {}},
+                         'var_0': {'var_2': {},
+                                   'var_1': {}},
+                         'var_1': {'var_2': {},
+                                   'var_0': {}}}
+        self.assertListEqual(sorted(model.nodes()), sorted(['var_0', 'var_2', 'var_1']))
+        self.assertDictEqual(model.edge, edge_expected)

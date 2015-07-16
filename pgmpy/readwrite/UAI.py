@@ -1,5 +1,8 @@
 from pyparsing import *
 from itertools import combinations
+from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.factors import TabularCPD, Factor
+import numpy as np
 
 
 class UAIReader:
@@ -189,3 +192,65 @@ class UAIReader:
                 values = self.grammar.parseString(self.network)['fun_values_'+str(function)]
                 tables.append((function_variables, list(values)))
         return tables
+
+    def get_evidence(self):
+        """
+        Returns the evidence of each variable.
+
+        Returns
+        -------
+        dict : dictionary of variable and the evidence of the variable
+
+        Example
+        -------
+        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader.get_evidence()
+        """
+        evidence = {}
+        for var in self.variables:
+            evidence[var] = []
+        for edge in self.edges:
+            evidence[edge[0]].append(edge[1])
+        return evidence
+
+    def get_model(self):
+        """
+        Returns an instance of Bayesian Model or Markov Model.
+
+        Return
+        ------
+        model: an instance of Bayesian or Markov Model.
+
+        Examples
+        --------
+        >>> reader = UAIReader('TestUAI.uai')
+        >>> reader.get_model()
+        """
+        if self.network_type == 'BAYES':
+            model = BayesianModel(self.edges)
+
+            tabular_cpds = []
+            for cpd in self.tables:
+                child_var = cpd[0]
+                states = int(self.domain[child_var])
+                arr = list(map(float, cpd[1]))
+                values = np.array(arr)
+                values = values.reshape(states, values.size//states)
+                tabular_cpds.append(TabularCPD(child_var, states, values))
+
+            model.add_cpds(*tabular_cpds)
+            return model
+
+        elif self.network_type == 'MARKOV':
+            model = MarkovModel(self.edges)
+
+            factors = []
+            for table in self.tables:
+                variables = table[0]
+                cardinality = [int(self.domain[var]) for var in variables]
+                value = list(map(float, table[1]))
+                factor = Factor(variables=variables, cardinality=cardinality, value=value)
+                factors.append(factor)
+
+            model.add_factors(*factors)
+            return model
