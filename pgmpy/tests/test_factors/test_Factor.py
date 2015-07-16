@@ -65,9 +65,9 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi.get_cardinality('x1'), {'x1': 2})
         self.assertEqual(self.phi.get_cardinality('x2'), {'x2': 2})
         self.assertEqual(self.phi.get_cardinality('x3'), {'x3': 2})
-        self.assertEqual(self.phi.get_cardinality(['x1', 'x2'], {'x1': 2, 'x2': 2})
-        self.assertEqual(self.phi.get_cardinality(['x1', 'x3'], {'x1': 2, 'x3': 2})
-        self.assertEqual(self.phi.get_cardinality(['x1', 'x2', 'x3'], {'x1': 2, 'x2': 2, 'x3': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x2']), {'x1': 2, 'x2': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x3']), {'x1': 2, 'x3': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1', 'x2', 'x3']), {'x1': 2, 'x2': 2, 'x3': 2})
 
     def test_get_cardinality_scopeerror(self):
         self.assertRaises(exceptions.ScopeError, self.phi.get_cardinality, 'x4')
