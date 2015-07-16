@@ -342,7 +342,7 @@ class Factor:
 #        else:
 #            return Factor(new_vars, new_card, new_values)
 
-    def product(self, *factors, n_jobs=1):
+    def product(self, phi1, inplace=True):
         """
         Returns the factor product with factors.
 
@@ -361,7 +361,25 @@ class Factor:
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
-        return factor_product(self, *factors, n_jobs=n_jobs)
+        # return factor_product(self, *factors, n_jobs=n_jobs)
+        phi = self if inplace else deepcopy(self)
+
+        non_common_vars = set(phi1.variables) - set(phi.variables)
+        if not set(phi.variables).issubset(set(phi1.variables)):
+            slice_ = [slice(None)] * len(phi.variables)
+            slice_.extend([np.newaxis] * len(non_common_vars))
+
+            #add card and variables and create a new factor
+            phi1.variables.extend(non_common_vars)
+            # add new axes to phi1 for these variables
+
+        for axis in range(phi1.ndims):
+            phi1 = phi1.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+
+        phi.values = phi.values * phi1.values
+
+        if not inplace:
+            return phi
 
     def divide(self, factor, n_jobs=1):
         """
@@ -622,112 +640,112 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
     """
-    try:
-        from joblib import Parallel, delayed
-        use_joblib = True
-    except ImportError:
-        use_joblib = False
+    # try:
+    #     from joblib import Parallel, delayed
+    #     use_joblib = True
+    # except ImportError:
+    #     use_joblib = False
+    #
+    # def err_handler(type, flag):
+    #     raise Exceptions.InvalidValueError(type)
+    #
+    # np.seterrcall(err_handler)
+    # np.seterr(divide='raise', over='raise', under='raise', invalid='call')
+    #
+    # phi1_vars = list(phi1.variables)
+    # phi2_vars = list(phi2.variables)
+    # common_var_list = [var for var in phi1_vars if var in phi2_vars]
+    # if common_var_list:
+    #     variables = phi1_vars
+    #     variables.extend([var for var in phi2.variables
+    #                      if var not in common_var_list])
+    #     cardinality = list(phi1.cardinality)
+    #     cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
+    #                        if var not in common_var_list)
+    #
+    #     phi1_indexes = [i for i in range(len(phi1.variables))]
+    #     phi2_indexes = [variables.index(var) for var in phi2.variables]
+    #     values = []
+    #     phi1_cumprod = np.delete(np.concatenate(
+    #         (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
+    #     phi2_cumprod = np.delete(np.concatenate(
+    #         (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
+    #
+    #     if operation == 'M':
+    #         if use_joblib and n_jobs != 1:
+    #             values = Parallel(n_jobs=n_jobs, backend='threading')(
+    #                 delayed(_parallel_helper_m)(index, phi1, phi2,
+    #                                             phi1_indexes, phi2_indexes,
+    #                                             phi1_cumprod, phi2_cumprod)
+    #                 for index in product(*[range(card) for card in cardinality]))
+    #         else:
+    #             # TODO: @ankurankan Make this cleaner
+    #             indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
+    #             values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
+    #                       phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
+    #
+    #     elif operation == 'D':
+    #         if use_joblib and n_jobs != 1:
+    #             values = Parallel(n_jobs, backend='threading')(
+    #                 delayed(_parallel_helper_d)(index, phi1, phi2,
+    #                                             phi1_indexes, phi2_indexes,
+    #                                             phi1_cumprod, phi2_cumprod)
+    #                 for index in product(*[range(card) for card in cardinality]))
+    #         else:
+    #             # TODO: @ankurankan Make this cleaner and handle case of division by zero
+    #             for index in product(*[range(card) for card in cardinality]):
+    #                 index = np.array(index)
+    #                 try:
+    #                     values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+    #                                   phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+    #                 except Exceptions.InvalidValueError:
+    #                     # zero division error should return 0 if both operands
+    #                     # equal to 0. Ref Koller page 365, Fig 10.7
+    #                     values.append(0)
+    #
+    #     phi = Factor(variables, cardinality, values)
+    #     return phi
+    # else:
+    #     values = np.zeros(phi1.values.shape[0] * phi2.values.shape[0])
+    #     phi2_shape = phi2.values.shape[0]
+    #     if operation == 'M':
+    #         for value_index in range(phi1.values.shape[0]):
+    #             values[value_index * phi2_shape: (value_index + 1) * phi2_shape] = (phi1.values[value_index] *
+    #                                                                                 phi2.values)
+    #     elif operation == 'D':
+    #         # reference: Koller Defination 10.7
+    #         raise ValueError("Factors Division not defined for factors with no"
+    #                          " common scope")
+    #     variables = phi1_vars + phi2_vars
+    #     cardinality = list(phi1.cardinality) + list(phi2.cardinality)
+    #     phi = Factor(variables, cardinality, values)
+    #     return phi
 
-    def err_handler(type, flag):
-        raise Exceptions.InvalidValueError(type)
-
-    np.seterrcall(err_handler)
-    np.seterr(divide='raise', over='raise', under='raise', invalid='call')
-
-    phi1_vars = list(phi1.variables)
-    phi2_vars = list(phi2.variables)
-    common_var_list = [var for var in phi1_vars if var in phi2_vars]
-    if common_var_list:
-        variables = phi1_vars
-        variables.extend([var for var in phi2.variables
-                         if var not in common_var_list])
-        cardinality = list(phi1.cardinality)
-        cardinality.extend(phi2.get_cardinality(var) for var in phi2.variables
-                           if var not in common_var_list)
-
-        phi1_indexes = [i for i in range(len(phi1.variables))]
-        phi2_indexes = [variables.index(var) for var in phi2.variables]
-        values = []
-        phi1_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi1.cardinality[::-1])), axis=1)[::-1], 0)
-        phi2_cumprod = np.delete(np.concatenate(
-            (np.array([1]), np.cumprod(phi2.cardinality[::-1])), axis=1)[::-1], 0)
-
-        if operation == 'M':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs=n_jobs, backend='threading')(
-                    delayed(_parallel_helper_m)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
-            else:
-                # TODO: @ankurankan Make this cleaner
-                indexes = np.array(list(map(list, product(*[range(card) for card in cardinality]))))
-                values = (phi1.values[np.sum(indexes[:, phi1_indexes] * phi1_cumprod, axis=1).ravel()] *
-                          phi2.values[np.sum(indexes[:, phi2_indexes] * phi2_cumprod, axis=1).ravel()])
-
-        elif operation == 'D':
-            if use_joblib and n_jobs != 1:
-                values = Parallel(n_jobs, backend='threading')(
-                    delayed(_parallel_helper_d)(index, phi1, phi2,
-                                                phi1_indexes, phi2_indexes,
-                                                phi1_cumprod, phi2_cumprod)
-                    for index in product(*[range(card) for card in cardinality]))
-            else:
-                # TODO: @ankurankan Make this cleaner and handle case of division by zero
-                for index in product(*[range(card) for card in cardinality]):
-                    index = np.array(index)
-                    try:
-                        values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
-                                      phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-                    except Exceptions.InvalidValueError:
-                        # zero division error should return 0 if both operands
-                        # equal to 0. Ref Koller page 365, Fig 10.7
-                        values.append(0)
-
-        phi = Factor(variables, cardinality, values)
-        return phi
-    else:
-        values = np.zeros(phi1.values.shape[0] * phi2.values.shape[0])
-        phi2_shape = phi2.values.shape[0]
-        if operation == 'M':
-            for value_index in range(phi1.values.shape[0]):
-                values[value_index * phi2_shape: (value_index + 1) * phi2_shape] = (phi1.values[value_index] *
-                                                                                    phi2.values)
-        elif operation == 'D':
-            # reference: Koller Defination 10.7
-            raise ValueError("Factors Division not defined for factors with no"
-                             " common scope")
-        variables = phi1_vars + phi2_vars
-        cardinality = list(phi1.cardinality) + list(phi2.cardinality)
-        phi = Factor(variables, cardinality, values)
-        return phi
-
-
-def _parallel_helper_m(index, phi1, phi2,
-                       phi1_indexes, phi2_indexes,
-                       phi1_cumprod, phi2_cumprod):
-    """
-    Helper function for parallelizing loops in factor product operations.
-    """
-    index = np.array(index)
-    return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
-            phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-
-
-def _parallel_helper_d(index, phi1, phi2,
-                       phi1_indexes, phi2_indexes,
-                       phi1_cumprod, phi2_cumprod):
-    """
-    Helper function for parallelizing loops in factor division operations.
-    """
-    index = np.array(index)
-    try:
-        return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
-                phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
-    except FloatingPointError:
-        # zero division error should return 0. ref Koller page 365, Fig 10.7
-        return 0
+#
+# def _parallel_helper_m(index, phi1, phi2,
+#                        phi1_indexes, phi2_indexes,
+#                        phi1_cumprod, phi2_cumprod):
+#     """
+#     Helper function for parallelizing loops in factor product operations.
+#     """
+#     index = np.array(index)
+#     return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] *
+#             phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+#
+#
+# def _parallel_helper_d(index, phi1, phi2,
+#                        phi1_indexes, phi2_indexes,
+#                        phi1_cumprod, phi2_cumprod):
+#     """
+#     Helper function for parallelizing loops in factor division operations.
+#     """
+#     index = np.array(index)
+#     try:
+#         return (phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] /
+#                 phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
+#     except FloatingPointError:
+#         # zero division error should return 0. ref Koller page 365, Fig 10.7
+#         return 0
 
 
 def factor_product(*args, n_jobs=1):
