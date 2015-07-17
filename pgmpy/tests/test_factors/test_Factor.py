@@ -74,24 +74,30 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_marginalize(self):
         self.phi1.marginalize('x1')
-        np_test.assert_array_equal(self.phi1.values, np.array([6, 8, 10, 12, 14, 16]))
+        np_test.assert_array_equal(self.phi1.values, np.array([[6, 8],
+                                                               [10, 12],
+                                                               [14, 16]]))
         self.phi1.marginalize(['x2'])
         np_test.assert_array_equal(self.phi1.values, np.array([30, 36]))
         self.phi1.marginalize('x3')
-        np_test.assert_array_equal(self.phi1.values, np.array([66]))
+        np_test.assert_array_equal(self.phi1.values, np.array(66))
 
     def test_marginalize_scopeerror(self):
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x4')
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, ['x4'])
+
         self.phi.marginalize('x1')
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x1')
 
     def test_normalize(self):
         self.phi1.normalize()
-        np_test.assert_almost_equal(self.phi1.values, np.array(
-            [0, 0.01515152, 0.03030303, 0.04545455, 0.06060606,
-             0.07575758, 0.09090909, 0.10606061, 0.12121212,
-             0.13636364, 0.15151515, 0.16666667]))
+        np_test.assert_almost_equal(self.phi1.values,
+                                    np.array([[[0, 0.01515152],
+                                               [0.03030303, 0.04545455],
+                                               [0.06060606, 0.07575758]],
+                                              [[0.09090909, 0.10606061],
+                                               [0.12121212, 0.13636364],
+                                               [0.15151515, 0.16666667]]]))
 
     def test_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0)])
@@ -117,7 +123,7 @@ class TestFactorMethods(unittest.TestCase):
         identity_factor = self.phi.identity_factor()
         self.assertEquals(list(identity_factor.variables), ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
-        np_test.assert_array_equal(identity_factor.values, np.ones(8))
+        np_test.assert_array_equal(identity_factor.values, np.ones(8).reshape(2, 2, 2))
 
     def test_factor_product(self):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
@@ -126,23 +132,16 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]))
-        self.assertEqual(prod.variables, OrderedDict([
-            ('x1', [State('x1', 0), State('x1', 1)]),
-            ('x2', [State('x2', 0), State('x2', 1)]),
-            ('x3', [State('x3', 0), State('x3', 1)]),
-            ('x4', [State('x4', 0), State('x4', 1)])]
-        ))
+                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
+        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
         prod = factor_product(phi, phi1)
         np_test.assert_array_equal(prod.values,
-                                   np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
-        self.assertEqual(prod.variables, OrderedDict(
-            [('x1', [State('x1', 0), State('x1', 1), State('x1', 2)]),
-             ('x2', [State('x2', 0), State('x2', 1)]),
-             ('x3', [State('x3', 0), State('x3', 1)])]))
+                                   np.array([0, 0, 2, 3, 0, 2,
+                                             6, 9, 0, 4, 10, 15]).reshape(3, 2, 2))
+        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3']))
 
     def test_factor_product2(self):
         from pgmpy import factors
@@ -152,23 +151,16 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]))
-        self.assertEqual(prod.variables, OrderedDict([
-            ('x1', [State('x1', 0), State('x1', 1)]),
-            ('x2', [State('x2', 0), State('x2', 1)]),
-            ('x3', [State('x3', 0), State('x3', 1)]),
-            ('x4', [State('x4', 0), State('x4', 1)])]
-        ))
+                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
+        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
         prod = phi.product(phi1)
         np_test.assert_array_equal(prod.values,
-                                   np.array([0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]))
-        self.assertEqual(prod.variables, OrderedDict(
-            [('x1', [State('x1', 0), State('x1', 1), State('x1', 2)]),
-             ('x2', [State('x2', 0), State('x2', 1)]),
-             ('x3', [State('x3', 0), State('x3', 1)])]))
+                                   np.array([0, 0, 2, 3, 0, 2, 6,
+                                             9, 0, 4, 10, 15]).reshape(3, 2, 2))
+        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3']))
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
@@ -180,13 +172,8 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]))
-        self.assertEqual(prod.variables, OrderedDict([
-            ('x1', [State('x1', 0), State('x1', 1)]),
-            ('x2', [State('x2', 0), State('x2', 1)]),
-            ('x3', [State('x3', 0), State('x3', 1)]),
-            ('x4', [State('x4', 0), State('x4', 1)])]
-        ))
+                                             0, 3, 6, 9]).reshape(2, 2, 2))
+        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
 
     def test_factor_divide(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
