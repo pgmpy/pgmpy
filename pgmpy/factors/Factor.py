@@ -1,6 +1,7 @@
 import functools
 from itertools import product
 from collections import OrderedDict, namedtuple
+from numbers import Number
 
 import numpy as np
 
@@ -314,7 +315,26 @@ class Factor:
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
-        return factor_product(self, *factors, n_jobs=n_jobs)
+        if isinstance(factors[0], Number):
+            return Factor(self.variables, self.cardinality, np.array([i * factors[0] for i in self.values]))
+        else:
+            return factor_product(self, *factors, n_jobs=n_jobs)
+
+    def sum(self, factor, n_jobs=1):
+        """
+        Returns a new factors instance after addition with factor
+
+        Parameters
+        ----------
+        factor : factors
+            The factor to be added
+        """
+        """
+        :param factor:
+        :param n_jobs:
+        :return:
+        """
+        return factor_sum(self, factor, n_jobs=n_jobs)
 
     def divide(self, factor, n_jobs=1):
         """
@@ -492,6 +512,15 @@ class Factor:
     def __mul__(self, other):
         return self.product(other)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __add__(self, other):
+        return self.sum(other)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __truediv__(self, other):
         return self.divide(other)
 
@@ -546,9 +575,10 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
 
     phi2: factors
 
-    operation: M | D
+    operation: M | D | S
             M: multiplies phi1 and phi2
             D: divides phi1 by phi2
+            S: add phi1 and phi2
     """
     try:
         from joblib import Parallel, delayed
@@ -612,6 +642,19 @@ def _bivar_factor_operation(phi1, phi2, operation, n_jobs=1):
                         # zero division error should return 0 if both operands
                         # equal to 0. Ref Koller page 365, Fig 10.7
                         values.append(0)
+
+        elif operation == 'S':
+            if use_joblib and n_jobs != 1:
+                values = Parallel(n_jobs, backend='threading')(
+                    delayed(_parallel_helper_d)(index, phi1, phi2,
+                                                phi1_indexes, phi2_indexes,
+                                                phi1_cumprod, phi2_cumprod)
+                    for index in product(*[range(card) for card in cardinality]))
+            else:
+                for index in product(*[range(card) for card in cardinality]):
+                    index = np.array(index)
+                    values.append(phi1.values[np.sum(index[phi1_indexes] * phi1_cumprod)] +
+                                  phi2.values[np.sum(index[phi2_indexes] * phi2_cumprod)])
 
         phi = Factor(variables, cardinality, values)
         return phi
@@ -723,3 +766,18 @@ def factor_divide(phi1, phi2, n_jobs=1):
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")
     return _bivar_factor_operation(phi1, phi2, operation='D', n_jobs=n_jobs)
+
+
+def factor_sum(phi1, phi2, n_jobs=1):
+    """
+    Returns new factors instance equal to phi1 + phi2.
+
+    Parameters
+    ----------
+    phi1 & phi2: factors
+        The two factors to be added
+    """
+    if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
+        raise TypeError("phi1 and phi2 should be factors instances")
+    return _bivar_factor_operation(phi1, phi2, operation='S', n_jobs=n_jobs)
+
