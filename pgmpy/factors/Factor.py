@@ -373,15 +373,15 @@ class Factor:
             phi1.variables.extend(non_common_vars)
             # add new axes to phi1 for these variables
 
-        for axis in range(phi1.ndims):
-            phi1 = phi1.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+        for axis in range(phi.ndims):
+            phi = phi.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
 
         phi.values = phi.values * phi1.values
 
         if not inplace:
             return phi
 
-    def divide(self, factor, n_jobs=1):
+    def divide(self, phi1, inplace=True):
         """
         Returns a new factors instance after division by factor.
 
@@ -411,7 +411,16 @@ class Factor:
         x1_0	x2_2	x3_1	3.33333333333
         x1_1	x2_2	x3_1	2.75
         """
-        return factor_divide(self, factor, n_jobs=n_jobs)
+        phi = self if inplace else deepcopy(self)
+
+        non_common_vars = set(phi1.variables) - set(phi.variables)
+        if non_common_vars:
+            raise ValueError
+
+        for axis in range(phi.ndims):
+            phi = phi.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+
+        phi.values = phi.values / phi1.values
 
     def maximize(self, variables, inplace=True):
         """
