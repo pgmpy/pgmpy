@@ -37,29 +37,26 @@ class Mplp(Inference):
     >>> mplp = Mplp(student)
     """
     def __init__(self, model):
-        super().__init__(model)
-
         if not isinstance(model, MarkovModel):
             raise ValueError('Only MarkovModel is supported')
 
-        # S = { c ∩ c': c, c' ∈ C, c ∩ c' != Null}
-        # It should be ready before initializing Cluster.
-        # Nothing but union of all the edge variables.
-        self.intersection_set_variables = set()
+        super().__init__(model)
 
-        # The generation of all the Intersections of all
-        # the pairwise edges taken one at a time
-        for edge_pair in it.combinations([sorted(i) for i in model.edges()], 2):
+        # S = \{c \cap c^{'} : c, c^{'} \in C, c \cap c^{'} \neq \emptyset\}
+        self.intersection_set_variables = set()
+        # We generate the Intersections of all the pairwise edges taken one at a time to form S
+        for edge_pair in it.combinations(model.edges(), 2):
             self.intersection_set_variables.add(frozenset(edge_pair[0]) & frozenset(edge_pair[1]))
 
         # Initialize each cluster for variables appearing in each of the edges.
         # We also need the potentials of the current edges.
         self.cluster_set = []
-        scope_list = [i.scope() for i in model.get_factors()]
-        for edge in [sorted(i) for i in model.edges()]:
-            index_of_factor = scope_list.index(list(edge))
+        model_factors = model.get_factors()
+        scope_list = [set(factor.scope()) for factor in model_factors]
+        for edge in model.edges():
+            index_of_factor = scope_list.index(set(edge))
             self.cluster_set.append(self.Cluster(edge, self.intersection_set_variables,
-                                                 model.get_factors()[index_of_factor]))
+                                                 model_factors[index_of_factor]))
 
     class Cluster:
 
@@ -74,7 +71,7 @@ class Mplp(Inference):
 
         intersection_set_variables: set containing frozensets.
                                     collection of intersection of all pairs of cluster variables.
-                                    For eg: {{C1 ∩ C2}, {C2 ∩ C3}, {C3 ∩ C1}} for clusters C1, C2 & C3.
+                        For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
 
         cluster_potential: Factor
                            Each cluster has a initial probability distribution provided beforehand.
@@ -98,13 +95,12 @@ class Mplp(Inference):
             # Initialize messages from this cluster to its respective intersection sets
             # \lambda_{c \rightarrow \s} = 1/|S(c)| * max_{x_{c-s}}{\theta_{ij}}
             self.message_from_cluster = {}
-            for i in self.intersection_sets_for_cluster_c:
-                other_variables = list(set(set_of_variables_for_cluster_c)-i)
+            for intersection in self.intersection_sets_for_cluster_c:
+                other_variables = list(set(set_of_variables_for_cluster_c) - intersection)
                 phi = copy.deepcopy(cluster_potential)
-
                 # phi = max_{x_{c-s}}{\theta_{ij}}
                 phi.maximize(other_variables)
-                self.message_from_cluster[i] = (1 / len(self.intersection_sets_for_cluster_c)) * phi
+                self.message_from_cluster[intersection] = (1 / len(self.intersection_sets_for_cluster_c)) * phi
 
     def _update_message(self, sending_cluster):
 
@@ -125,10 +121,8 @@ class Mplp(Inference):
         """
         updated_results = []
         # The new updates will take place for the intersection_sets of this cluster.
-        for i in sending_cluster.intersection_sets_for_cluster_c:
-
+        for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
             # Now we have to construct the crux of the equation which is used to update the messages there.
-
             # The terms which we need are:
             # 1. Message not originating from the current sending_cluster but going into the current intersect i
             message_not_from_cluster = []
@@ -137,36 +131,40 @@ class Mplp(Inference):
             #    intersects than i of this cluster only.
             sum_other_intersects = []
 
-            cluster_list_except_current = [j for j in self.cluster_set if j != sending_cluster]
-            other_intersects = [j for j in sending_cluster.intersection_sets_for_cluster_c if j != i]
-
-            for cluster in cluster_list_except_current:
+            for cluster in self.cluster_set:
+                if cluster == sending_cluster:
+                    continue
                 for intersection_set in cluster.intersection_sets_for_cluster_c:
-                    if i == intersection_set:
+                    if intersection_set == current_intersect:
                         message_not_from_cluster.append(cluster.message_from_cluster[intersection_set])
 
-                for other_intersect in other_intersects:
-                        for intersection_set in cluster.intersection_sets_for_cluster_c:
-                            if other_intersect == intersection_set:
-                                sum_other_intersects.append(cluster.message_from_cluster[intersection_set])
+                for other_intersect in sending_cluster.intersection_sets_for_cluster_c:
+                    if other_intersect == current_intersect:
+                        continue
+                    for intersection_set in cluster.intersection_sets_for_cluster_c:
+                        if other_intersect == intersection_set:
+                            sum_other_intersects.append(cluster.message_from_cluster[intersection_set])
 
             # lambda_1 = \lambda_{s}^{-c}
-            lambda_1 = copy.deepcopy(sending_cluster.message_from_cluster[i])
-            lambda_1.values = np.zeros(np.prod(lambda_1.cardinality))
-            # lambda_2 = \sum_{}{\lambda_{s'}^{-c}}
-            lambda_2 = copy.deepcopy(lambda_1)
-            for message in message_not_from_cluster:
-                lambda_1 += message
+            # lambda_2 = max_{x_{c-s}}{\sum_{}{\lambda_{s'}^{-c}} + /theta_c}
+            # here theta_c is the sending cluster potential
+            lambda_2 = copy.deepcopy(sending_cluster.cluster_potential)
             for message in sum_other_intersects:
                 lambda_2 += message
-            # maximize (lambda_2 + sending cluster potential) w.r.t nodes in the present cluster but not in intersect
-            phi = sending_cluster.cluster_potential + lambda_2
-            # phi = max_{x_{c-s}}{lambda_2 + /theta_c}
-            phi.maximize(list(set(sending_cluster.cluster_variables)-i))
+
+            # maximize w.r.t nodes in the present cluster but not in intersect
+            lambda_2.maximize(list(set(sending_cluster.cluster_variables) - current_intersect))
             intersection_length = len(sending_cluster.intersection_sets_for_cluster_c)
-            # \lambda_{c \rightarrow \s} = -(1 - 1 / |S(c)|) lambda_1 + (1 / |S(c)|) phi
-            lambda_c_s = -(1 - 1 / intersection_length) * lambda_1 + (1 / intersection_length) * phi
+
+            # lambda_c_s = K1(lambda_1) + K2(lambda_2)
+            k1 = 1 / intersection_length
+            k2 = -1 + k1
+            # here lambda_c_s is the updated message
+            lambda_c_s = k1 * lambda_2
+            for message in message_not_from_cluster:
+                lambda_c_s += k2 * message
             updated_results.append(lambda_c_s)
 
+        # update for all the intersects of the sending cluster simultaneously.
         for i, j in zip(sending_cluster.intersection_sets_for_cluster_c, range(len(updated_results))):
             sending_cluster.message_from_cluster[i] = updated_results[j]

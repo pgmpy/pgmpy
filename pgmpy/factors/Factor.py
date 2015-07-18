@@ -329,11 +329,6 @@ class Factor:
         factor : factors
             The factor to be added
         """
-        """
-        :param factor:
-        :param n_jobs:
-        :return:
-        """
         return factor_sum(self, factor, n_jobs=n_jobs)
 
     def divide(self, factor, n_jobs=1):
