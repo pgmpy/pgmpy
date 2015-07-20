@@ -1,5 +1,3 @@
-import functools
-from itertools import product
 from collections import OrderedDict, namedtuple
 from copy import deepcopy
 
@@ -364,20 +362,48 @@ class Factor:
         # return factor_product(self, *factors, n_jobs=n_jobs)
         phi = self if inplace else deepcopy(self)
 
+        # modifying phi to add new variables
         extra_vars = set(phi1.variables) - set(phi.variables)
         if extra_vars:
             slice_ = [slice(None)] * len(phi.variables)
             slice_.extend([np.newaxis] * len(extra_vars))
+            phi.values = phi.values[slice_]
 
             phi.variables.extend(extra_vars)
-            new_card = phi1.get_cardinality(extra_vars)
-            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
-            phi.values = phi.values[slice_]            
 
-        for axis in range(phi1.values.ndim):
-            phi.variables[axis], phi.variables[phi.variables.index(phi1.variables[axis])] = phi.variables[phi.variables.index(phi1.variables[axis])], phi.variables[axis]
-            phi.cardinality[axis], phi.cardinality[phi.variables.index(phi1.variables[axis])] = phi.cardinality[phi.variables.index(phi1.variables[axis])], phi.cardinality[axis]
-            phi.values = phi.values.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+            new_var_card = phi1.get_cardinality(extra_vars)
+            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
+
+        # modifying phi1 to add new variables
+        import pdb; pdb.set_trace()
+        extra_vars = set(phi.variables) - set(phi1.variables)
+        if extra_vars:
+            slice_ = [slice(None)] * len(phi1.variables)
+            slice_.extend([np.newaxis] * len(extra_vars))
+            phi1.values = phi1.values[slice_]
+
+            phi1.variables.extend(extra_vars)
+
+        # rearranging the axes of phi1 to match phi
+        for axis in range(phi.values.ndim):
+            exchange_index = phi1.variables.index(phi.variables[axis])
+            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
+            phi1.values = phi1.values.swapaxes(axis, exchange_index)
+
+#        extra_vars = set(phi1.variables) - set(phi.variables)
+#        if extra_vars:
+#            slice_ = [slice(None)] * len(phi.variables)
+#            slice_.extend([np.newaxis] * len(extra_vars))
+#
+#            phi.variables.extend(extra_vars)
+#            new_card = phi1.get_cardinality(extra_vars)
+#            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
+#            phi.values = phi.values[slice_]            
+#
+#        for axis in range(phi1.values.ndim):
+#            phi.variables[axis], phi.variables[phi.variables.index(phi1.variables[axis])] = phi.variables[phi.variables.index(phi1.variables[axis])], phi.variables[axis]
+#            phi.cardinality[axis], phi.cardinality[phi.variables.index(phi1.variables[axis])] = phi.cardinality[phi.variables.index(phi1.variables[axis])], phi.cardinality[axis]
+#            phi.values = phi.values.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
 
         phi.values = phi.values * phi1.values
 
