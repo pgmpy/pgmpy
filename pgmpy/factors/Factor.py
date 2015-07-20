@@ -369,10 +369,10 @@ class Factor:
         """
         phi = self if inplace else deepcopy(self)
 
-        if set(phi1) - set(phi):
+        if set(phi1.variables) - set(phi.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
-        extra_vars = set(phi) - set(phi1)
+        extra_vars = set(phi.variables) - set(phi1.variables)
         if extra_vars:
             slice_ = [slice(None)] * len(phi1.variables)
             slice_.extend([np.newaxis] * len(extra_vars))
@@ -506,10 +506,10 @@ class Factor:
         return "<Factor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
 
     def __mul__(self, other):
-        return self.product(other)
+        return self.product(other, inplace=False)
 
     def __truediv__(self, other):
-        return self.divide(other)
+        return self.divide(other, inplace=False)
 
     def __eq__(self, other):
         if type(self) != type(other):
