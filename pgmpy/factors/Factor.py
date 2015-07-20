@@ -375,7 +375,6 @@ class Factor:
             phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
 
         # modifying phi1 to add new variables
-        import pdb; pdb.set_trace()
         extra_vars = set(phi.variables) - set(phi1.variables)
         if extra_vars:
             slice_ = [slice(None)] * len(phi1.variables)
