@@ -388,6 +388,10 @@ class BeliefPropagation(Inference):
 
         .. math:: \max_{C_i - S_{i, j}} \beta_i = \max_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
         """
+        # If no clique belief, then the clique tree is not calibrated
+        if not self.clique_beliefs:
+            return False
+
         for edge in self.junction_tree.edges():
             sepset = frozenset(edge[0]).intersection(frozenset(edge[1]))
             sepset_key = frozenset(edge)
