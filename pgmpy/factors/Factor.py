@@ -364,17 +364,20 @@ class Factor:
         # return factor_product(self, *factors, n_jobs=n_jobs)
         phi = self if inplace else deepcopy(self)
 
-        non_common_vars = set(phi1.variables) - set(phi.variables)
-        if not set(phi.variables).issubset(set(phi1.variables)):
+        extra_vars = set(phi1.variables) - set(phi.variables)
+        if extra_vars:
             slice_ = [slice(None)] * len(phi.variables)
-            slice_.extend([np.newaxis] * len(non_common_vars))
+            slice_.extend([np.newaxis] * len(extra_vars))
 
-            #add card and variables and create a new factor
-            phi1.variables.extend(non_common_vars)
-            # add new axes to phi1 for these variables
+            phi.variables.extend(extra_vars)
+            new_card = phi1.get_cardinality(extra_vars)
+            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
+            phi.values = phi.values[slice_]            
 
-        for axis in range(phi.ndims):
-            phi = phi.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+        for axis in range(phi1.values.ndim):
+            phi.variables[axis], phi.variables[phi.variables.index(phi1.variables[axis])] = phi.variables[phi.variables.index(phi1.variables[axis])], phi.variables[axis]
+            phi.cardinality[axis], phi.cardinality[phi.variables.index(phi1.variables[axis])] = phi.cardinality[phi.variables.index(phi1.variables[axis])], phi.cardinality[axis]
+            phi.values = phi.values.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
 
         phi.values = phi.values * phi1.values
 
