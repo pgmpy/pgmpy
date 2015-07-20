@@ -436,60 +436,9 @@ class Factor:
         if not inplace:
             return phi
 
-#        indexes = np.where(np.in1d(self.scope(), variable))[0]
-#        assign = np.array(self.cardinality)
-#        assign[indexes] = -1
-#        new_values = np.array([])
-#        for i in product(*[range(i) for i in self.cardinality[np.where(assign != -1)[0]]]):
-#            assign[assign != -1] = i
-#            new_values = np.append(new_values, np.max(self.values[self._index_for_assignment(assign)]))
-#        new_variables = np.array(self.scope())[~np.in1d(self.scope(),
-#                                                        [variable] if isinstance(variable, str) else variable)]
-#        new_card = self.cardinality[assign != -1]
-#
-#        if inplace:
-#            return self.__init__(new_variables, new_card, new_values)
-#        else:
-#            return Factor(new_variables, new_card, new_values)
-
     def copy(self):
         return Factor(self.scope(), self.cardinality, self.values)
 
-#    def _index_for_assignment(self, assignment):
-#        """
-#        Returns the index of values for a given assignment.
-#        If -1 passed for any variable, returns all the indexes ignoring variables corresponding to -1.
-#
-#        Parameters
-#        ----------
-#        assignment: array-like
-#            An array for the states of each variable whose index is to be calculated.
-#            If any element is -1, that variable is ignored and all indexes for other variables
-#            are returned ignoring the variables corresponding to -1.
-#
-#        Examples
-#        --------
-#        >>> from pgmpy.factors import Factor
-#        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
-#        >>> phi._index_for_assignment([1, 1, 1])
-#        array([13])
-#        >>> phi._index_for_assignment([1, -1, 1])
-#        array([ 10,  13,  16])
-#        >>> phi._index_for_assignment([1, -1, -1])
-#        array([  9,  10,  11,  12,  13,  14,  15,  16,  17])
-#        """
- #       assignment = np.array(assignment)
- #       card_cumprod = np.delete(np.concatenate((np.array([1]), np.cumprod(self.cardinality[::-1])), axis=1)[::-1], 0)
-#        if -1 in assignment:
-#            indexes = np.where(assignment == -1)[0]
-#            cardinalities = self.cardinality[indexes]
-#
-#            temp_assignment = np.tile(assignment, (np.product(cardinalities), 1))
-#            temp_assignment[temp_assignment == -1] = cartesian([range(card) for card in cardinalities]).ravel()
-#            return np.sum(temp_assignment * card_cumprod, axis=1).astype('int')
-#        else:
-#            return np.array([np.sum(assignment * card_cumprod)])
-#
     def __str__(self):
         return self._str(phi_or_p='phi', html=False)
 
@@ -565,34 +514,23 @@ class Factor:
         if type(self) != type(other):
             return False
 
-        if set(self.scope()) != set(other.scope()):
+        elif set(self.scope()) != set(other.scope()):
             return False
         else:
-            order_dict = {}
-            other_scope = other.scope()
-            for var_index in range(len(self.scope())):
-                order_dict[var_index] = other_scope.index(self.scope()[var_index])
+            for axis in range(self.values.ndim):
+                exchange_index = other.variables.index(self.variables[axis])
+                other.variables[axis], other.variables[exchange_index] = (other.variables[exchange_index],
+                                                                          other.variables[axis])
+                other.cardinality[axis], other.cardinality[exchange_index] = (other.cardinality[exchange_index],
+                                                                              other.variables[axis])
+                other.values = other.values.swapaxes(axis, exchange_index)
 
-            order_change = [order_dict[i] for i in range(len(self.cardinality))]
-            if any(self.cardinality[order_change] != other.cardinality):
+            if not np.allclose(other.values, self.values):
                 return False
-
-            indexes = np.zeros((np.prod(self.cardinality), self.cardinality.shape[0]), dtype=int)
-            for k, i in enumerate(product(*[range(i) for i in self.cardinality])):
-                indexes[k] = i
-
-            transformed_assign = np.zeros(indexes.shape, dtype=np.int)
-            for k, v in order_dict.items():
-                transformed_assign[:, v] = indexes[:, k]
-
-            transformed_indexes = np.zeros(np.prod(self.cardinality), dtype=int)
-            for k, index in enumerate(map(other._index_for_assignment, transformed_assign)):
-                transformed_indexes[k] = index
-
-            if np.allclose(other.values[transformed_indexes], self.values):
-                return True
+            elif not self.cardinality == other.cardinality:
+                return False
             else:
-                return False
+                return True
 
     def __hash__(self):
         """
