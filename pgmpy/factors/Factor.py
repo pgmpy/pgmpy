@@ -91,6 +91,7 @@ class Factor:
         """
         return self.variables
 
+    #TODO: Fix this method
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -216,32 +217,6 @@ class Factor:
         if not inplace:
             return phi
 
-#        phi = self if inplace else self.copy()
-#        for var in variables:
-#            phi.values = np.sum(phi.values, axis=self.var_index[var])
-
-
-        # if inplace:
-        #     factor = self
-        # else:
-        #     factor = Factor(self.scope(), self.cardinality, self.values)
-        #
-        # # marginalize_index = np.array(np.where(np.in1d(factor.scope(), variables)))
-        # marginalize_index = np.array([i in variables for i in factor.scope()])
-        # assign = np.array(factor.cardinality)
-        # assign[marginalize_index] = -1
-        # marginalized_values = []
-        # for i in product(*[range(index) for index in assign[assign != -1]]):
-        #     assign[assign != -1] = i
-        #     marginalized_values.append(np.sum(factor.values[factor._index_for_assignment(assign)]))
-        # factor.values = np.array(marginalized_values)
-        # for variable in variables:
-        #     index = list(factor.variables.keys()).index(variable)
-        #     del(factor.variables[variable])
-        #     factor.cardinality = np.delete(factor.cardinality, index)
-        # if not inplace:
-        #     return factor
-
     def normalize(self, inplace=True):
         """
         Normalizes the values of factor so that they sum to 1.
@@ -307,38 +282,6 @@ class Factor:
 
         if not inplace:
             return phi
-            
-#        if not isinstance(values, list):
-#            values = [values]
-#
-#        if not all(map(lambda t: isinstance(t, (tuple, list, np.ndarray)), values)):
-#            raise ValueError("The input must be a tuple or a list of tuples of the form (variable_name, variable_state")
-
-#        reduce_vars, reduce_states = zip(*values)
-
-#        if not all([var in self.scope() for var in reduce_vars]):
-#            raise ValueError("Variable out of Scope")
-
-#        var_indexes = [self.scope().index(i) for i in reduce_vars]
-
-#        reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
-#        new_card = self.cardinality[reduce_var_indexes == 0]
-#        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
-
-#        reduce_var_indexes[reduce_var_indexes == 0] = -1
-#        reduce_var_indexes[var_indexes] = reduce_states
-#        value_indexes = self._index_for_assignment(reduce_var_indexes)
-#        new_values = self.values[value_indexes]
-
-#        if inplace:
-#            new_variables = OrderedDict()
-#            for variable, card in zip(new_vars, new_card):
-#                new_variables[variable] = [State(variable, index) for index in range(card)]
-#            self.variables = new_variables
-#            self.cardinality = new_card
-#            self.values = new_values
-#        else:
-#            return Factor(new_vars, new_card, new_values)
 
     def product(self, phi1, inplace=True):
         """
@@ -359,7 +302,6 @@ class Factor:
         OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
-        # return factor_product(self, *factors, n_jobs=n_jobs)
         phi = self if inplace else deepcopy(self)
 
         # modifying phi to add new variables
@@ -372,7 +314,7 @@ class Factor:
             phi.variables.extend(extra_vars)
 
             new_var_card = phi1.get_cardinality(extra_vars)
-            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
+            phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
 
         # modifying phi1 to add new variables
         extra_vars = set(phi.variables) - set(phi1.variables)
@@ -388,21 +330,6 @@ class Factor:
             exchange_index = phi1.variables.index(phi.variables[axis])
             phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
             phi1.values = phi1.values.swapaxes(axis, exchange_index)
-
-#        extra_vars = set(phi1.variables) - set(phi.variables)
-#        if extra_vars:
-#            slice_ = [slice(None)] * len(phi.variables)
-#            slice_.extend([np.newaxis] * len(extra_vars))
-#
-#            phi.variables.extend(extra_vars)
-#            new_card = phi1.get_cardinality(extra_vars)
-#            phi.cardinality = np.append(phi.cardinality, [new_card[var] for var in extra_vars])
-#            phi.values = phi.values[slice_]            
-#
-#        for axis in range(phi1.values.ndim):
-#            phi.variables[axis], phi.variables[phi.variables.index(phi1.variables[axis])] = phi.variables[phi.variables.index(phi1.variables[axis])], phi.variables[axis]
-#            phi.cardinality[axis], phi.cardinality[phi.variables.index(phi1.variables[axis])] = phi.cardinality[phi.variables.index(phi1.variables[axis])], phi.cardinality[axis]
-#            phi.values = phi.values.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
 
         phi.values = phi.values * phi1.values
 
@@ -441,14 +368,26 @@ class Factor:
         """
         phi = self if inplace else deepcopy(self)
 
-        non_common_vars = set(phi1.variables) - set(phi.variables)
-        if non_common_vars:
-            raise ValueError
+        if set(phi1) - set(phi):
+            raise ValueError("Scope of divisor should be a subset of dividend")
 
-        for axis in range(phi.ndims):
-            phi = phi.swapaxes(axis, phi.variables.index(phi1.variables[axis]))
+        extra_vars = set(phi) - set(phi1)
+        if extra_vars:
+            slice_ = [slice(None)] * len(phi1.variables)
+            slice_.extend([np.newaxis] * len(extra_vars))
+            phi1.values = phi1.values[slice_]
+
+            phi1.variables.extend(extra_vars)
+
+        for axis in range(phi.values.ndim):
+            exchange_index = phi1.variables.index(phi.variables[axis])
+            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
+            phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
         phi.values = phi.values / phi1.values
+
+        if not inplace:
+            return phi
 
     def maximize(self, variables, inplace=True):
         """
