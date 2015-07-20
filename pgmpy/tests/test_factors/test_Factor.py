@@ -26,11 +26,11 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init1(self):
         phi = Factor([1, 2, 3], [2, 3, 2], np.arange(12))
         self.assertEqual(phi.variables, [1, 2, 3])
-        np.test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
-        np.test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
+        np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
+        np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
 
     def test_class_init_sizeerror(self):
-        self.assertRaises(exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
+        self.assertRaises(exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
 
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
@@ -147,7 +147,7 @@ class TestFactorMethods(unittest.TestCase):
         from pgmpy import factors
         phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
-        prod = phi.product(phi1)
+        prod = phi.product(phi1, inplace=False)
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
@@ -172,7 +172,7 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]).reshape(2, 2, 2))
+                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
         self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
 
     def test_factor_divide(self):
@@ -192,7 +192,7 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_divide_invalid(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = Factor(['x1'], [2], [0, 2])
-        div = phi1.divide(phi2)
+        div = phi1.divide(phi2, inplace=False)
         np_test.assert_array_equal(div.values, np.array([0, 0, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
@@ -215,10 +215,6 @@ class TestFactorMethods(unittest.TestCase):
                                                       8, 18, 19, 20, 9, 10, 11,
                                                       21, 22, 23])
         self.assertTrue(phi1, phi2)
-
-    def test_index_for_assignment(self):
-        for i, j in enumerate(itertools.product(*[range(2), range(3), range(2)])):
-            self.assertEqual(self.phi1._index_for_assignment(j), i)
 
     def test_maximize1(self):
         self.phi1.maximize('x1')

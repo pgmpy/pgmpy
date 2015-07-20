@@ -526,7 +526,9 @@ class Factor:
                                                                               other.variables[axis])
                 other.values = other.values.swapaxes(axis, exchange_index)
 
-            if not np.allclose(other.values, self.values):
+            if other.values.shape != self.values.shape:
+                return False
+            elif not np.allclose(other.values, self.values):
                 return False
             elif not self.cardinality == other.cardinality:
                 return False
