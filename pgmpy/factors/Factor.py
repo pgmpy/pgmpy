@@ -76,7 +76,7 @@ class Factor:
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
 
         self.variables = list(variables)
-        self.cardinality = cardinality
+        self.cardinality = np.array(cardinality)
         self.values = values.reshape(cardinality)
 
     def scope(self):
@@ -271,14 +271,16 @@ class Factor:
 
         phi = self if inplace else deepcopy(self)
 
+        var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)
         for var, state in values:
             var_index = phi.variables.index(var)
             slice_[var_index] = state
+            var_index_to_del.append(var_index)
 
-            del phi.variables[var_index]
-            del phi.cardinality[var_index]
-
+        var_index_to_keep = list(set(range(len(phi.variables))) - set(var_index_to_del))
+        phi.variables = np.array(phi.variables)[var_index_to_keep].tolist()
+        phi.cardinality = phi.cardinality[var_index_to_keep]
         phi.values = phi.values[tuple(slice_)]
 
         if not inplace:
@@ -523,14 +525,14 @@ class Factor:
                 other.variables[axis], other.variables[exchange_index] = (other.variables[exchange_index],
                                                                           other.variables[axis])
                 other.cardinality[axis], other.cardinality[exchange_index] = (other.cardinality[exchange_index],
-                                                                              other.variables[axis])
+                                                                              other.cardinality[axis])
                 other.values = other.values.swapaxes(axis, exchange_index)
 
             if other.values.shape != self.values.shape:
                 return False
             elif not np.allclose(other.values, self.values):
                 return False
-            elif not self.cardinality == other.cardinality:
+            elif not all(self.cardinality == other.cardinality):
                 return False
             else:
                 return True

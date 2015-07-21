@@ -105,7 +105,7 @@ class TestFactorMethods(unittest.TestCase):
         
     def test_complete_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
-        np_test.assert_array_equal(self.phi1.values, np.array([0]))
+        np_test.assert_array_equal(self.phi1.values, np.array([1]))
         np_test.assert_array_equal(self.phi1.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
 
@@ -128,20 +128,20 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_product(self):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
-        prod = factor_product(phi, phi1)
+        prod = factor_product(phi, phi1, inplace=False)
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]).reshape(2, 2, 2, 2))
-        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
-        prod = factor_product(phi, phi1)
+        prod = factor_product(phi, phi1, inplace=False)
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2,
                                              6, 9, 0, 4, 10, 15]).reshape(3, 2, 2))
-        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3']))
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3'])
 
     def test_factor_product2(self):
         from pgmpy import factors
@@ -152,15 +152,15 @@ class TestFactorMethods(unittest.TestCase):
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]).reshape(2, 2, 2, 2))
-        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
-        prod = phi.product(phi1)
+        prod = phi.product(phi1, inplace=False)
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2, 6,
                                              9, 0, 4, 10, 15]).reshape(3, 2, 2))
-        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3']))
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3'])
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
@@ -173,12 +173,12 @@ class TestFactorMethods(unittest.TestCase):
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]).reshape(2, 2, 2, 2))
-        self.assertEqual(prod.variables, OrderedDict(['x1', 'x2', 'x3', 'x4']))
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
         phi2 = Factor(['x1'], [2], [1, 2])
-        div = phi1.divide(phi2)
+        div = phi1.divide(phi2, inplace=False)
         phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, div)
 
