@@ -146,9 +146,6 @@ class Factor:
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
         """
-        if not hasattr(variables, '__iter__'):
-            variables = np.array([variables])
-
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope")
 
@@ -196,9 +193,6 @@ class Factor:
         >>> phi.variables
         OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
         """
-        if not hasattr(variables, '__iter__'):
-            variables = [variables]
-
         phi = self if inplace else deepcopy(self)
 
         for var in variables:
@@ -417,9 +411,6 @@ class Factor:
         x1_2    x3_0    0.15
         x1_2    x3_1    0.21
         """
-        if not hasattr(variables, '__iter__'):
-            variables = [variables]
-
         phi = self if inplace else deepcopy(self)
 
         for var in variables:

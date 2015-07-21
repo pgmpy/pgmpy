@@ -62,31 +62,31 @@ class TestFactorMethods(unittest.TestCase):
 #        self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
 
     def test_get_cardinality(self):
-        self.assertEqual(self.phi.get_cardinality('x1'), {'x1': 2})
-        self.assertEqual(self.phi.get_cardinality('x2'), {'x2': 2})
-        self.assertEqual(self.phi.get_cardinality('x3'), {'x3': 2})
+        self.assertEqual(self.phi.get_cardinality(['x1']), {'x1': 2})
+        self.assertEqual(self.phi.get_cardinality(['x2']), {'x2': 2})
+        self.assertEqual(self.phi.get_cardinality(['x3']), {'x3': 2})
         self.assertEqual(self.phi.get_cardinality(['x1', 'x2']), {'x1': 2, 'x2': 2})
         self.assertEqual(self.phi.get_cardinality(['x1', 'x3']), {'x1': 2, 'x3': 2})
         self.assertEqual(self.phi.get_cardinality(['x1', 'x2', 'x3']), {'x1': 2, 'x2': 2, 'x3': 2})
 
     def test_get_cardinality_scopeerror(self):
-        self.assertRaises(exceptions.ScopeError, self.phi.get_cardinality, 'x4')
+        self.assertRaises(ValueError, self.phi.get_cardinality, 'x4')
 
     def test_marginalize(self):
-        self.phi1.marginalize('x1')
+        self.phi1.marginalize(['x1'])
         np_test.assert_array_equal(self.phi1.values, np.array([[6, 8],
                                                                [10, 12],
                                                                [14, 16]]))
         self.phi1.marginalize(['x2'])
         np_test.assert_array_equal(self.phi1.values, np.array([30, 36]))
-        self.phi1.marginalize('x3')
+        self.phi1.marginalize(['x3'])
         np_test.assert_array_equal(self.phi1.values, np.array(66))
 
     def test_marginalize_scopeerror(self):
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x4')
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, ['x4'])
 
-        self.phi.marginalize('x1')
+        self.phi.marginalize(['x1'])
         self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x1')
 
     def test_normalize(self):
@@ -128,16 +128,21 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_product(self):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
-        prod = factor_product(phi, phi1, inplace=False)
-        np_test.assert_array_equal(prod.values,
-                                   np.array([0, 0, 0, 0, 0, 1,
-                                             2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
+        prod = factor_product(phi, phi1)
+        np_test.assert_array_equal(prod.values, np.array([[[[0, 0],
+                                                            [0, 0]],
+                                                           [[0, 1],
+                                                            [2, 3]],
+
+                                                          [[[0, 2],
+                                                            [4, 6]],
+                                                           [[0, 3],
+                                                            [6, 9]]]]]))
         self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
-        prod = factor_product(phi, phi1, inplace=False)
+        prod = factor_product(phi, phi1)
         np_test.assert_array_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2,
                                              6, 9, 0, 4, 10, 15]).reshape(3, 2, 2))
@@ -217,9 +222,9 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(phi1, phi2)
 
     def test_maximize1(self):
-        self.phi1.maximize('x1')
+        self.phi1.maximize(['x1'])
         self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
-        self.phi1.maximize('x2')
+        self.phi1.maximize(['x2'])
         self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
 
     def test_maximize2(self):
@@ -229,7 +234,7 @@ class TestFactorMethods(unittest.TestCase):
     def test_maximize3(self):
         self.phi2 = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
                                                            0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
-        self.phi2.maximize('x2')
+        self.phi2.maximize(['x2'])
         self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
                                                                   0.07, 0.15, 0.21]))
 
