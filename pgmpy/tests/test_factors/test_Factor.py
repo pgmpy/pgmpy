@@ -258,7 +258,7 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertListEqual(list(cpd.variables), ['grade', 'diff', 'intel'])
         np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                                                          0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]))
+                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 2, 3))
 
         cpd = TabularCPD('grade', 3, [[0.1, 0.1],
                                       [0.1, 0.1],
@@ -270,7 +270,7 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertListEqual(list(cpd.variables), ['grade', 'evi1'])
         np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1,
                                                          0.1, 0.1,
-                                                         0.8, 0.8]))
+                                                         0.8, 0.8]).reshape(3, 2))
 
     def test_cpd_init_event_card_not_int(self):
         self.assertRaises(TypeError, TabularCPD, 'event', '2', [[0.1, 0.9]])
