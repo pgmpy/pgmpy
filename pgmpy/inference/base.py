@@ -95,11 +95,14 @@ class Inference:
             start_model = BayesianModel(model.edges())
             start_model.add_cpds(*model.cpds)
             self.start_bayesian_model = start_model
+            # interface nodes extraction for inference
             self.interface_nodes = [(edge[0][0], 0) for edge in model.get_inter_edges()]
-            interface_nodes_1 = [(edge[0][0], 1) for edge in model.get_inter_edges()]
-            intra_edges_1 = [edge for edge in model.get_intra_edges() if edge[1][1] == 1]
+            slice_1_interface_nodes = [(edge[0][0], 1) for edge in model.get_inter_edges()]
+
+            #constructing one and half timeslice for inference
+            slice_1_intra_edges = [edge for edge in model.get_intra_edges() if edge[1][1] == 1]
             self.one_and_half_model = BayesianModel(model.get_inter_edges() + intra_edges_1)
-            nodes_1 = [(node, 1) for node in model.nodes()]
-            cpd_1 = [cpd for cpd in model.cpds if set(list(cpd.variables)).issubset(nodes_1)]
+            slice_1_nodes = [(node, 1) for node in model.nodes()]
+            slice_1_cpd = [cpd for cpd in model.cpds if set(list(cpd.variables)).issubset(nodes_1)]
             cpd_inter = [model.get_cpds(node) for node in interface_nodes_1]
             self.one_and_half_model.add_cpds(*(cpd_1 + cpd_inter))
