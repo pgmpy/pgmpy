@@ -308,28 +308,28 @@ class TestTabularCPDMethods(unittest.TestCase):
                               evidence=['intel', 'diff'], evidence_card=[3, 2])
 
     def test_marginalize_1(self):
-        self.cpd.marginalize('diff')
+        self.cpd.marginalize(['diff'])
         self.assertEqual(self.cpd.variable, 'grade')
         self.assertEqual(self.cpd.variable_card, 3)
         self.assertListEqual(list(self.cpd.variables), ['grade', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
         np_test.assert_array_equal(self.cpd.values, np.array([0.1, 0.1, 0.1,
                                                               0.1, 0.1, 0.1,
-                                                              0.8, 0.8, 0.8]))
+                                                              0.8, 0.8, 0.8]).reshape(3, 3))
 
     def test_marginalize_2(self):
-        self.cpd.marginalize('grade')
+        self.cpd.marginalize(['grade'])
         self.assertEqual(self.cpd.variable, 'grade')
         self.assertListEqual(list(self.cpd.variables), ['diff', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([2, 3]))
-        np_test.assert_array_equal(self.cpd.values, np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+        np_test.assert_array_equal(self.cpd.values, np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]).reshape(2, 3))
 
     def test_normalize(self):
         cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
                                        ['intel', 'diff'], [2, 2])
         cpd_un_normalized.normalize()
         np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([0.63636364, 0.33333333, 0.6, 0.2,
-                                                                              0.36363636, 0.66666667, 0.4, 0.8]))
+                                                                              0.36363636, 0.66666667, 0.4, 0.8]).reshape(2, 2, 2))
 
     def test__repr__(self):
         grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
