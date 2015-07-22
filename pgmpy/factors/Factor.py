@@ -202,10 +202,11 @@ class Factor:
         var_indexes = [] 
         for var in variables:
             var_index = phi.variables.index(var)
-            var_indexes.append(var_index)
+            var_indexes.append(var_index) 
 
-            del phi.variables[var_index]
-            del phi.cardinality[var_index]
+        index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
+        phi.variables = list(np.array(phi.variables)[index_to_keep])
+        phi.cardinality = phi.cardinality[index_to_keep]
 
         phi.values = np.sum(phi.values, axis=tuple(var_indexes))
 
@@ -300,6 +301,7 @@ class Factor:
                 ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
         """
         phi = self if inplace else deepcopy(self)
+        phi1 = deepcopy(phi1)
 
         # modifying phi to add new variables
         extra_vars = set(phi1.variables) - set(phi.variables)
@@ -422,8 +424,9 @@ class Factor:
             var_index = phi.variables.index(var)
             var_indexes.append(var_index)
 
-            del phi.variables[var_index]
-            del phi.cardinality[var_index]
+        index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
+        phi.variables = list(np.array(phi.variables)[index_to_keep])
+        phi.cardinality = phi.cardinality[index_to_keep]
 
         phi.values = np.max(phi.values, axis=tuple(var_indexes))
 

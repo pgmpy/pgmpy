@@ -83,11 +83,11 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(self.phi1.values, np.array(66))
 
     def test_marginalize_scopeerror(self):
-        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x4')
-        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, ['x4'])
+        self.assertRaises(ValueError, self.phi.marginalize, ['x4'])
+        self.assertRaises(ValueError, self.phi.marginalize, ['x4'])
 
         self.phi.marginalize(['x1'])
-        self.assertRaises(exceptions.ScopeError, self.phi.marginalize, 'x1')
+        self.assertRaises(ValueError, self.phi.marginalize, 'x1')
 
     def test_normalize(self):
         self.phi1.normalize()
@@ -114,10 +114,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.phi1.reduce, ['x10'])
 
     def test_reduce_scopeerror(self):
-        self.assertRaises(ValueError, self.phi1.reduce, ('x4', 1))
+        self.assertRaises(ValueError, self.phi1.reduce, [('x4', 1)])
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(IndexError, self.phi1.reduce, ('x3', 5))
+        self.assertRaises(IndexError, self.phi1.reduce, [('x3', 5)])
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
@@ -129,43 +129,39 @@ class TestFactorMethods(unittest.TestCase):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        np_test.assert_array_equal(prod.values, np.array([[[[0, 0],
-                                                            [0, 0]],
-                                                           [[0, 1],
-                                                            [2, 3]],
-
-                                                          [[[0, 2],
-                                                            [4, 6]],
-                                                           [[0, 3],
-                                                            [6, 9]]]]]))
-        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
+        expected_factor = Factor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2], [0, 0, 0, 0, 0, 1,
+                                                                          2, 3, 0, 2, 4, 6,
+                                                                          0, 3, 6, 9])
+        self.assertEqual(prod, expected_factor)
+        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        np_test.assert_array_equal(prod.values,
+        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0, 0, 2, 3, 0, 2,
+                                                                 6, 9, 0, 4, 10, 15])
+        np_test.assert_almost_equal(prod.values,
                                    np.array([0, 0, 2, 3, 0, 2,
                                              6, 9, 0, 4, 10, 15]).reshape(3, 2, 2))
-        self.assertEqual(prod.variables, ['x1', 'x2', 'x3'])
+        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3'])
 
     def test_factor_product2(self):
         from pgmpy import factors
         phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        np_test.assert_array_equal(prod.values,
-                                   np.array([0, 0, 0, 0, 0, 1,
-                                             2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
-        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
+        expected_factor = Factor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
+                                 [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
+        self.assertEqual(prod, expected_factor)
+        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        np_test.assert_array_equal(prod.values,
-                                   np.array([0, 0, 2, 3, 0, 2, 6,
-                                             9, 0, 4, 10, 15]).reshape(3, 2, 2))
-        self.assertEqual(prod.variables, ['x1', 'x2', 'x3'])
+        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2], 
+                                 [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
+        self.assertEqual(prod, expected_factor)
+        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3'])
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
@@ -174,11 +170,11 @@ class TestFactorMethods(unittest.TestCase):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi * phi1
-        np_test.assert_array_equal(prod.values,
+        np_test.assert_almost_equal(prod.values,
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
                                              0, 3, 6, 9]).reshape(2, 2, 2, 2))
-        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
+        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
