@@ -3,9 +3,10 @@ from pgmpy.inference import VariableElimination
 from pgmpy.factors import TabularCPD
 from pgmpy.inference import Inference
 
+
 class DBNInference(Inference):
 
-    def query(self, variables, evidence= None, elimination_order= None):
+    def query(self, variables, evidence=None, elimination_order=None):
         variable_dict = defaultdict(list)
         for var in variables:
             variable_dict[var[1]].append(var[0])
@@ -13,18 +14,18 @@ class DBNInference(Inference):
         # This method extracts the max value in time slices
         timerange = max(variable_dict)
         if evidence:
-            for node,timeslice in list(evidence):
-                timerange = max(timerange, timeslice) 
+            for node, timeslice in list(evidence):
+                timerange = max(timerange, timeslice)
 
         int_nodes = self.interface_nodes
         inference = VariableElimination(self.start_bayesian_model)
 
-        def vect(variables,time):
+        def vect(variables, time):
             values = [(var, time) for var in variables]
             return values
 
         def factor_to_cpd(factor):
-            # This method converts factors to CPD 
+            # This method converts factors to CPD
             # The problem arises when the CPD having one variable
             # is reduced and is not converted to an appropriate factor
             if isinstance(factor, TabularCPD):
@@ -37,7 +38,7 @@ class DBNInference(Inference):
             return cpd
 
         def dict_factor(time, shift):
-            # This method filters out the nodes that are present in the evidence 
+            # This method filters out the nodes that are present in the evidence
             # and presents them in that format required for inference
             temp_dict = {}
             if evidence:
@@ -58,8 +59,7 @@ class DBNInference(Inference):
                     list_of_nodes.append(node)
             return list_of_nodes
 
-
-        def assign_nodes(time,shift):
+        def assign_nodes(time, shift):
             # This method extracts the values for inference. In case the evidence is applied to
             # the evidence nodes, they need to be reduced appropriately.
             extracted_nodes = filter_nodes(int_nodes, time, shift) + vect(variable_dict[time], shift)
@@ -68,7 +68,7 @@ class DBNInference(Inference):
             if extracted_nodes != int_nodes and dict_factor(time, shift) is not None:
                 for node in list(set(dict_factor(time, shift)).intersection(int_nodes)):
                     cpd = self.start_bayesian_model.get_cpds(node)
-                    cpd = cpd.reduce([(node, evidence[node])], inplace = False)
+                    cpd = cpd.reduce([(node, evidence[node])], inplace=False)
                     s_values[node] = cpd
             return s_values
 
