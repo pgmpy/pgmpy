@@ -209,8 +209,6 @@ class Mplp(Inference):
         # The current assignment of the single node factors is stored in the form of a dictionary
         decoded_result_assignment = {node[0]: np.argmax(self.objective[node].values)
                                      for node in self.objective if len(node) == 1}
-        decoded_result = {node[0]: np.max(self.objective[node].values)
-                          for node in self.objective if len(node) == 1}
 
         # Use the original cluster_potentials of each cluster to find the primal integral value.
         integer_value = 0
@@ -223,7 +221,6 @@ class Mplp(Inference):
         if self.best_int_objective < integer_value:
             self.best_int_objective = integer_value
             self.best_assignment = decoded_result_assignment
-            self.best_decoded_result = decoded_result
 
     def _is_converged(self, dual_threshold, integrality_gap_threshold):
         """
@@ -276,4 +273,8 @@ class Mplp(Inference):
             if self._is_converged(dual_threshold, integrality_gap_threshold):
                 break
             self._run_mplp()
+
+        # Get the best result from the best assignment
+        self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[factor.scope()[0]]]
+                               for factor in self.model.factors if len(factor.scope()) == 1}
         return self.best_decoded_result
