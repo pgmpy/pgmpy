@@ -1,5 +1,6 @@
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovModel
+from pgmpy.factors import Factor
 import numpy as np
 import itertools as it
 import copy
@@ -38,9 +39,10 @@ class Mplp(Inference):
     """
     def __init__(self, model):
         if not isinstance(model, MarkovModel):
-            raise ValueError('Only MarkovModel is supported')
+            raise TypeError('Only MarkovModel is supported')
 
         super().__init__(model)
+        self.model = model
 
         # S = \{c \cap c^{'} : c, c^{'} \in C, c \cap c^{'} \neq \emptyset\}
         self.intersection_set_variables = set()
@@ -48,15 +50,32 @@ class Mplp(Inference):
         for edge_pair in it.combinations(model.edges(), 2):
             self.intersection_set_variables.add(frozenset(edge_pair[0]) & frozenset(edge_pair[1]))
 
-        # Initialize each cluster for variables appearing in each of the edges.
-        # We also need the potentials of the current edges.
-        self.cluster_set = []
-        model_factors = model.get_factors()
-        scope_list = [set(factor.scope()) for factor in model_factors]
-        for edge in model.edges():
-            index_of_factor = scope_list.index(set(edge))
-            self.cluster_set.append(self.Cluster(edge, self.intersection_set_variables,
-                                                 model_factors[index_of_factor]))
+        # The corresponding optimization problem = \min_{\delta}{L(\delta)}
+        # Where L(\delta) = \sum_{i \in V}{max_{x_i}(Objective[nodes])} + \sum_{f /in F}{max_{x_f}(Objective[factors])
+        # Objective[nodes] = \theta_i(x_i) + \sum_{f \mid i \in f}{\delta_{fi}(x_i)}
+        # Objective[factors] = \theta_f(x_f) - \sum_{i \in f}{\delta_{fi}(x_i)}
+        # In a way Objective stores the corresponding optimization problem for all the nodes and the factors.
+
+        # Form Objective and cluster_set in the form of a dictionary.
+        self.objective = {}
+        self.cluster_set = {}
+        for factor in model.get_factors():
+            scope = tuple(factor.scope())
+            self.objective[scope] = factor
+            # For every factor consisting of more that a single node, we initialize a cluster.
+            if len(scope) > 1:
+                self.cluster_set[scope] = self.Cluster(self.intersection_set_variables, factor)
+
+        # L(\delta)
+        self.L = sum([max(self.objective[obj].values) for obj in self.objective])
+
+        # Best integral value of the primal objective is stored here
+        self.best_int_objective = 0
+
+        # Assignment of the nodes that results in the "maximum" integral value of the primal objective
+        self.best_assignment = {}
+        # Results of the "maximum" integral value of the primal objective.
+        self.best_decoded_result = {}
 
     class Cluster:
 
@@ -71,18 +90,18 @@ class Mplp(Inference):
 
         intersection_set_variables: set containing frozensets.
                                     collection of intersection of all pairs of cluster variables.
-                        For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
+                                    For eg: {{C1 ∩ C2}, {C2 ∩ C3}, {C3 ∩ C1}} for clusters C1, C2 & C3.
 
         cluster_potential: Factor
                            Each cluster has a initial probability distribution provided beforehand.
         """
-        def __init__(self, set_of_variables_for_cluster_c, intersection_set_variables, cluster_potential):
+        def __init__(self, intersection_set_variables, cluster_potential):
             """
             Initialization of the current cluster
             """
 
             # The variables with which the cluster is made of.
-            self.cluster_variables = set_of_variables_for_cluster_c
+            self.cluster_variables = cluster_potential.scope()
 
             # The cluster potentials must be specified before only.
             self.cluster_potential = copy.deepcopy(cluster_potential)
@@ -93,14 +112,19 @@ class Mplp(Inference):
                                                     if i.intersection(self.cluster_variables)]
 
             # Initialize messages from this cluster to its respective intersection sets
-            # \lambda_{c \rightarrow \s} = 1/|S(c)| * max_{x_{c-s}}{\theta_{ij}}
+            # \lambda_{c \rightarrow \s} = 0
             self.message_from_cluster = {}
             for intersection in self.intersection_sets_for_cluster_c:
-                other_variables = list(set(set_of_variables_for_cluster_c) - intersection)
-                phi = copy.deepcopy(cluster_potential)
-                # phi = max_{x_{c-s}}{\theta_{ij}}
-                phi.maximize(other_variables)
-                self.message_from_cluster[intersection] = (1 / len(self.intersection_sets_for_cluster_c)) * phi
+                # Present variable. It can be a node or an edge too. (that is ['A'] or ['A', 'C'] too)
+                present_variables = list(intersection)
+
+                # Present variables cardinality
+                present_variables_card = [cluster_potential.cardinality[cluster_potential.scope().index(variable)]
+                                          for variable in present_variables]
+
+                # We need to create a new factor whose messages are blank
+                self.message_from_cluster[intersection] = \
+                    Factor(present_variables, present_variables_card, np.zeros(np.prod(present_variables_card)))
 
     def _update_message(self, sending_cluster):
 
@@ -118,53 +142,138 @@ class Mplp(Inference):
         Fixing Max-Product: Convergent Message-Passing Algorithms for MAP LP Relaxations
         by Amir Globerson and Tommi Jaakkola.
         Section 6, Page: 5; Beyond pairwise potentials: Generalized MPLP
+        Later Modified by Sontag in "Introduction to Dual decomposition for Inference" Pg: 7 & 17
         """
-        updated_results = []
+
         # The new updates will take place for the intersection_sets of this cluster.
+        # The new updates are:
+        # \delta_{f \rightarrow i}(x_i) = - \delta_i^{-f} +
+        # 1/{\| f \|} max_{x_{f-i}}\left[{\theta_f(x_f) + \sum_{i' in f}{\delta_{i'}^{-f}}(x_i')} \right ]
+
+        # Step. 1) Calculate {\theta_f(x_f) + \sum_{i' in f}{\delta_{i'}^{-f}}(x_i')}
+        objective_cluster = self.objective[tuple(sending_cluster.cluster_variables)]
         for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
-            # Now we have to construct the crux of the equation which is used to update the messages there.
-            # The terms which we need are:
-            # 1. Message not originating from the current sending_cluster but going into the current intersect i
-            message_not_from_cluster = []
+            objective_cluster += self.objective[tuple(current_intersect)]
 
-            # 2. Summation of messages not originating from the current sending_cluster and going into other
-            #    intersects than i of this cluster only.
-            sum_other_intersects = []
+        updated_results = []
+        objective = []
+        for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
+            # Step. 2) Maximize step.1 result wrt variables present in the cluster but not in the current intersect.
+            phi = objective_cluster.maximize(list(set(sending_cluster.cluster_variables) - current_intersect),
+                                             inplace=False)
 
-            for cluster in self.cluster_set:
-                if cluster == sending_cluster:
-                    continue
-                for intersection_set in cluster.intersection_sets_for_cluster_c:
-                    if intersection_set == current_intersect:
-                        message_not_from_cluster.append(cluster.message_from_cluster[intersection_set])
-
-                for other_intersect in sending_cluster.intersection_sets_for_cluster_c:
-                    if other_intersect == current_intersect:
-                        continue
-                    for intersection_set in cluster.intersection_sets_for_cluster_c:
-                        if other_intersect == intersection_set:
-                            sum_other_intersects.append(cluster.message_from_cluster[intersection_set])
-
-            # lambda_1 = \lambda_{s}^{-c}
-            # lambda_2 = max_{x_{c-s}}{\sum_{}{\lambda_{s'}^{-c}} + /theta_c}
-            # here theta_c is the sending cluster potential
-            lambda_2 = copy.deepcopy(sending_cluster.cluster_potential)
-            for message in sum_other_intersects:
-                lambda_2 += message
-
-            # maximize w.r.t nodes in the present cluster but not in intersect
-            lambda_2.maximize(list(set(sending_cluster.cluster_variables) - current_intersect))
+            # Step. 3) Multiply 1/{\| f \|}
             intersection_length = len(sending_cluster.intersection_sets_for_cluster_c)
+            phi *= (1 / intersection_length)
+            objective.append(phi)
 
-            # lambda_c_s = K1(lambda_1) + K2(lambda_2)
-            k1 = 1 / intersection_length
-            k2 = -1 + k1
-            # here lambda_c_s is the updated message
-            lambda_c_s = k1 * lambda_2
-            for message in message_not_from_cluster:
-                lambda_c_s += k2 * message
-            updated_results.append(lambda_c_s)
+            # Step. 4) Subtract \delta_i^{-f}
+            # These are the messages not emanating from the sending cluster but going into the current intersect.
+            # which is = Objective[current_intersect_node] - messages from the cluster to the current intersect node.
+            updated_results.append(
+                phi + -1 * (self.objective[tuple(current_intersect)]
+                            + -1 * sending_cluster.message_from_cluster[current_intersect])
+            )
 
-        # update for all the intersects of the sending cluster simultaneously.
-        for i, j in zip(sending_cluster.intersection_sets_for_cluster_c, range(len(updated_results))):
-            sending_cluster.message_from_cluster[i] = updated_results[j]
+        # This loop is primarily for simultaneous updating:
+        # 1. This cluster's message to each of the intersects.
+        # 2. The value of the Objective for intersection_nodes.
+        index = -1
+        cluster_potential = copy.deepcopy(sending_cluster.cluster_potential)
+        for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
+            index += 1
+            sending_cluster.message_from_cluster[current_intersect] = updated_results[index]
+            self.objective[tuple(current_intersect)] = objective[index]
+            cluster_potential += (-1) * updated_results[index]
+
+        # Here we update the Objective for the current factor.
+        self.objective[tuple(sending_cluster.cluster_variables)] = cluster_potential
+
+    def _run_mplp(self):
+        """
+        Update messages for each factor whose scope is greater than 1
+
+        """
+        # We take the clusters in the order they were added in the model.
+        for factor in self.model.get_factors():
+            if len(factor.scope()) > 1:
+                self._update_message(self.cluster_set[tuple(factor.scope())])
+
+    def _local_decode(self):
+        """
+        Finds the index of the maximum values for all the single node dual objectives.
+
+        Reference:
+        code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
+        """
+        # The current assignment of the single node factors is stored in the form of a dictionary
+        decoded_result_assignment = {node[0]: np.argmax(self.objective[node].values)
+                                     for node in self.objective if len(node) == 1}
+        decoded_result = {node[0]: np.max(self.objective[node].values)
+                          for node in self.objective if len(node) == 1}
+
+        # Use the original cluster_potentials of each cluster to find the primal integral value.
+        integer_value = 0
+        for cluster_key in self.cluster_set:
+            cluster = self.cluster_set[cluster_key]
+            index = [tuple([variable, decoded_result_assignment[variable]]) for variable in cluster.cluster_variables]
+            integer_value += cluster.cluster_potential.reduce(index, inplace=False).values[0]
+
+        # Check if this is the best assignment till now
+        if self.best_int_objective < integer_value:
+            self.best_int_objective = integer_value
+            self.best_assignment = decoded_result_assignment
+            self.best_decoded_result = decoded_result
+
+    def _is_converged(self, dual_threshold, integrality_gap_threshold):
+        """
+        This method checks the integrality gap to ensure either:
+            * we have found a near to exact solution or
+            * stuck on a local minima.
+
+        Reference:
+        code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
+        """
+        # Find the new objective after the message updates
+        new_L = sum([max(self.objective[obj].values) for obj in self.objective])
+        # As the decrement of the L gets very low, we assume that we might have stuck in a local minima.
+        if abs(self.L - new_L) < 0.0002:
+            return True
+        # Check the threshold for the integrality gap
+        elif abs(self.L - self.best_int_objective) < 0.0002:
+            return True
+        else:
+            self.L = new_L
+            return False
+
+    def map_query(self, niter=1000, dual_threshold=0.0002, integrality_gap_threshold=0.0002):
+        """
+        MAP query method using Max Product LP method.
+        This returns the best assignment of the nodes in the form of a dictionary.
+
+        Parameters
+        ----------
+        niter: Number of maximum iterations that we want MPLP to run if _is_converged() fails
+
+        dual_threshold: This sets the minimum width between the dual objective decrements. Is the decrement is lesser
+                        than the threshold, then that means we have stuck on a local minima.
+
+        integrality_gap_threshold: This sets the threshold for the integrality gap below which we say that the solution
+                                   is satisfactory.
+
+        Reference:
+        Section 3.3: The Dual Algorithm; Tightening LP Relaxation for MAP using Message Passing (2008)
+        By Sontag Et al.
+        """
+        # Run one iteration of MPLP initially
+        self._run_mplp()
+
+        # Run MPLP until convergence using pairwise clusters.
+        for i in range(niter):
+            # Find an integral solution by locally maximizing the single node beliefs
+            self._local_decode()
+            # If the dual objective is sufficiently close to the primal objective, terminate
+            if self._is_converged(dual_threshold, integrality_gap_threshold):
+                break
+            self._run_mplp()
+        return self.best_decoded_result
