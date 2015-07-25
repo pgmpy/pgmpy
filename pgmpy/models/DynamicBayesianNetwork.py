@@ -183,7 +183,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         for edge in ebunch:
             self.add_edge(edge[0], edge[1])
 
-    def get_intra_edges(self):
+    def get_intra_edges(self, time_slice=0):
         """
         returns the intra slice edges present in the 2-TBN.
         Examples:
@@ -195,7 +195,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
-        return [edge for edge in self.edges() if edge[0][1] == edge[1][1]]
+        return [edge for edge in self.edges() if edge[0][1] == edge[1][1] == time_slice]
 
     def get_inter_edges(self):
         """
@@ -211,7 +211,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         return [edge for edge in self.edges() if edge[0][1] != edge[1][1]]
 
-    def get_interface_nodes(self, slice=None):
+    def get_interface_nodes(self, time_slice=0):
     	"""
     	returns the nodes in the first timeslice whose children are present in the first timeslice.
     	Examples:
@@ -223,12 +223,12 @@ class DynamicBayesianNetwork(DirectedGraph):
     	>>> dbn.get_interface_nodes()
     	[('D', 0)]
     	"""
-    	if slice not in (0, 1):
+    	if time_slice not in (0, 1):
     		raise ValueError("The timeslice should belong only to 0 or 1")
 
-    	return [(edge[0][0], slice if slice else 0) for edge in self.get_inter_edges()]
+    	return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
-    def get_slice_nodes(self, slice=None):
+    def get_slice_nodes(self, time_slice=0):
     	"""
     	returns the nodes present in a particular timeslice
     	Examples:
@@ -239,10 +239,10 @@ class DynamicBayesianNetwork(DirectedGraph):
     	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
     	>>> dbn.get_slice_nodes()
     	"""
-    	if slice not in (0, 1):
+    	if time_slice not in (0, 1):
     		raise ValueError("The timeslice should belong only to 0 or 1")
 
-    	return [(node, slice if slice else 0) for node in self.nodes()]
+    	return [(node, time_slice) for node in self.nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -319,7 +319,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         else:
             return self.cpds
 
-    def get_cpds_by_slice(self, slice=None):
+    def get_cpds_by_slice(self, time_slice=0):
     	"""
     	Returns the cpds by slice
     	Parameter
@@ -343,7 +343,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> student.initialize_initial_state()
         >>> student.get_cpds_by_slice()
     	"""
-    	return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(slice))]
+    	return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
 
     def check_model(self):
         """
