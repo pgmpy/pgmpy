@@ -85,12 +85,12 @@ class Mplp(Inference):
 
         Parameters
         ----------
-        set of variables: tuple
+        set_of_variables: tuple
                           This is the set of variables that form the cluster.
 
         intersection_set_variables: set containing frozensets.
                                     collection of intersection of all pairs of cluster variables.
-                                    For eg: {{C1 ∩ C2}, {C2 ∩ C3}, {C3 ∩ C1}} for clusters C1, C2 & C3.
+                        For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
 
         cluster_potential: Factor
                            Each cluster has a initial probability distribution provided beforehand.
@@ -261,6 +261,29 @@ class Mplp(Inference):
         Reference:
         Section 3.3: The Dual Algorithm; Tightening LP Relaxation for MAP using Message Passing (2008)
         By Sontag Et al.
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> import numpy as np
+        >>> student = MarkovModel()
+        >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
+        >>> factor_a = Factor(['A'], cardinality=[2], value=np.array([0.54577, 1.8323]))
+        >>> factor_b = Factor(['B'], cardinality=[2], value=np.array([0.93894, 1.065]))
+        >>> factor_c = Factor(['C'], cardinality=[2], value=np.array([0.89205, 1.121]))
+        >>> factor_d = Factor(['D'], cardinality=[2], value=np.array([0.56292, 1.7765]))
+        >>> factor_e = Factor(['E'], cardinality=[2], value=np.array([0.47117, 2.1224]))
+        >>> factor_f = Factor(['F'], cardinality=[2], value=np.array([1.5093, 0.66257]))
+        >>> factor_a_b = Factor(['A', 'B'], cardinality=[2, 2], value=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
+        >>> factor_b_c = Factor(['B', 'C'], cardinality=[2, 2], value=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]))
+        >>> factor_c_d = Factor(['C', 'D'], cardinality=[2, 2], value=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
+        >>> factor_d_e = Factor(['E', 'F'], cardinality=[2, 2], value=np.array([31.228, 0.032023, 0.032023, 31.228]))
+        >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f, factor_a_b,
+        ...    factor_b_c, factor_c_d, factor_d_e)
+        >>> mplp = Mplp(student)
+        >>> result = mplp.map_query()
+        {'B': 0.93894, 'C': 1.121, 'A': 1.8323, 'F': 1.5093, 'D': 1.7765, 'E': 2.12239}
+
         """
         # Run one iteration of MPLP initially
         self._run_mplp()
@@ -276,5 +299,5 @@ class Mplp(Inference):
 
         # Get the best result from the best assignment
         self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[factor.scope()[0]]]
-                               for factor in self.model.factors if len(factor.scope()) == 1}
+                                    for factor in self.model.factors if len(factor.scope()) == 1}
         return self.best_decoded_result
