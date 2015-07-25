@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+from warnings import warn
+
 import numpy as np
 from pandas import DataFrame
 
+from pgmpy.factors import State
 from pgmpy.utils import sample_discrete
 
 
-class MarkovChain(object):
+class MarkovChain:
     """
     Class to represent a Markov Chain with multiple kernels for factored state space,
     along with methods to simulate a run.
@@ -37,7 +40,8 @@ class MarkovChain(object):
     >>> model.add_transition_model('diff', diff_tm)
 
     Set a start state
-    >>> model.set_start_state({'intel': 0, 'diff': 2})
+    >>> from pgmpy.factors import State
+    >>> model.set_start_state([State('intel': 0), State('diff': 2)])
 
     Sample from it
     >>> model.sample(size=5)
@@ -52,19 +56,23 @@ class MarkovChain(object):
         """
         Parameters:
         -----------
-        variables: list
-            a list of variables of the model.
-        card: list
-            a list of cardinalities of the variables.
-        start_state: dict
-            representing the starting states of the variables.
+        variables: array-like iterable object
+            A list of variables of the model.
+
+        card: array-like iterable object
+            A list of cardinalities of the variables.
+
+        start_state: array-like iterable object
+            List of tuples representing the starting states of the variables.
         """
         if variables is None:
             variables = []
         if card is None:
             card = []
-        assert isinstance(card, list)
-        assert isinstance(variables, list)
+        if not hasattr(variables, '__iter__'):
+            raise ValueError('variables must be an iterable.')
+        if not hasattr(card, '__iter__'):
+            raise ValueError('card must be an iterable.')
         self.variables = variables
         self.cardinalities = {v: c for v, c in zip(variables, card)}
         self.transition_models = {var: {} for var in variables}
@@ -77,27 +85,32 @@ class MarkovChain(object):
 
         Parameters:
         -----------
-        start_state: dict
-            representing the starting states of the variables.
+        start_state: array-like iterable object
+            List of tuples representing the starting states of the variables.
 
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain as MC
+        >>> from pgmpy.factors import State
         >>> model = MC(['a', 'b'], [2, 2])
-        >>> model.set_start_state({'a': 0, 'b': 1})
+        >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
         if start_state is None or self._check_state(start_state):
             self.state = start_state
 
     def _check_state(self, state):
         """
-        Checks if the a dict representation of a states of the variables is valid.
+        Checks if a list representing the state of the variables is valid.
         """
-        if not isinstance(state, dict):
-            raise ValueError('Start state must be a dict.')
-        if not set(state.keys()) == set(self.transition_models.keys()):
-            raise ValueError('Start state must represent a complete assignment to all variables.')
-        for var, val in state.items():
+        if not hasattr(state, '__iter__'):
+            raise ValueError('Start state must be a iterable object.')
+        state_vars = {s.var for s in state}
+        model_vars = set(self.transition_models.keys())
+        if not state_vars == model_vars:
+            raise ValueError('Start state must represent a complete assignment to all variables.'
+                             'Expected variables in state: {svar}, Got: {mvar}.'.format(svar=state_vars,
+                                                                                        mvar=model_vars))
+        for var, val in state:
             if val >= self.cardinalities[var]:
                 raise ValueError('Assignment {val} to {var} invalid.'.format(val=val, var=var))
         return True
@@ -109,8 +122,9 @@ class MarkovChain(object):
         Parameters:
         -----------
         variable: any hashable python object
+
         card: int
-            representing the cardinality of the variable to be added.
+            Representing the cardinality of the variable to be added.
 
         Examples:
         ---------
@@ -118,8 +132,10 @@ class MarkovChain(object):
         >>> model = MC()
         >>> model.add_variable('x', 4)
         """
-        assert variable not in self.variables
-        self.variables.append(variable)
+        if variable not in self.variables:
+            self.variables.append(variable)
+        else:
+            warn('Variable {var} already exists.'.format(var=variable))
         self.cardinalities[variable] = card
         self.transition_models[variable] = {}
 
@@ -129,10 +145,11 @@ class MarkovChain(object):
 
         Parameters:
         -----------
-        variables: list
-            list of variables to be added.
-        cards: list
-            list of cardinalities of the variables to be added.
+        variables: array-like iterable object
+            List of variables to be added.
+
+        cards: array-like iterable object
+            List of cardinalities of the variables to be added.
 
         Examples:
         ---------
@@ -165,8 +182,12 @@ class MarkovChain(object):
         # check if the transition model is valid
         if not isinstance(transition_model, dict):
             raise ValueError('Transition model must be a dict.')
-        if not set(transition_model.keys()) == set(range(self.cardinalities[variable])):
-            raise ValueError('Transitions must be defined for all states of variable {var}.'.format(var=variable))
+
+        exp_states = set(range(self.cardinalities[variable]))
+        tm_states = set(transition_model.keys())
+        if not exp_states == tm_states:
+            raise ValueError('Transitions must be defined for all states of variable {v}. '
+                             'Expected states: {es}, Got: {ts}.'.format(v=variable, es=exp_states, ts=tm_states))
         for _, transition in transition_model.items():
             if not isinstance(transition, dict):
                 raise ValueError('Each transition must be a dict.')
@@ -216,7 +237,7 @@ class MarkovChain(object):
         if start_state is not None and self._check_state(start_state):
             self.state = start_state
         elif start_state is None and self.state is None:
-            raise ValueError('Start state not set.')
+            self.state = self.random_state()
 
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [self.state[var] for var in self.variables]
@@ -294,6 +315,6 @@ class MarkovChain(object):
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC(['intel', 'diff'], [2, 3])
         >>> model.random_state()
-        {'diff': 2, 'intel': 1}
+        [State('diff', 2), State('intel', 1)]
         """
-        return {var: np.random.randint(self.cardinalities[var]) for var in self.variables}
+        return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]

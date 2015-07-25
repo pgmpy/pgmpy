@@ -2,6 +2,7 @@
 import unittest
 from unittest.mock import patch, call
 
+from pgmpy.factors import State
 from pgmpy.models import MarkovChain as MC
 
 
@@ -13,7 +14,7 @@ class TestMarkovChain(unittest.TestCase):
         self.intel_tm = {0: {0: 0.1, 1: 0.25, 2: 0.65}, 1: {0: 0.5, 1: 0.3, 2: 0.2}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
         self.diff_tm = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.75, 1: 0.25}}
         self.grade_tm = {0: {0: 0.4, 1: 0.2, 2: 0.4}, 1: {0: 0.9, 1: 0.05, 2: 0.05}, 2: {0: 0.1, 1: 0.4, 2: 0.5}}
-        self.start_state = {'intel': 0, 'diff': 1, 'grade': 2}
+        self.start_state = [State('intel', 0), State('diff', 1), State('grade', 2)]
         self.model = MC()
 
     def tearDown(self):
@@ -33,13 +34,13 @@ class TestMarkovChain(unittest.TestCase):
         self.assertDictEqual(model.cardinalities, self.cardinalities)
         self.assertDictEqual(model.transition_models, {var: {} for var in self.variables})
         check_state.assert_called_once_with(model, self.start_state)
-        self.assertDictEqual(model.state, self.start_state)
+        self.assertListEqual(model.state, self.start_state)
 
     def test_init_bad_args1(self):
-        self.assertRaises(AssertionError, MC, variables=123)
+        self.assertRaises(ValueError, MC, variables=123)
 
     def test_init_bad_args2(self):
-        self.assertRaises(AssertionError, MC, card=123)
+        self.assertRaises(ValueError, MC, card=123)
 
     def test_init_less_args(self):
         model = MC()
@@ -68,19 +69,15 @@ class TestMarkovChain(unittest.TestCase):
 
     def test_check_state_fail2(self):
         model = MC()
-        self.assertRaises(ValueError, model._check_state, {1: 2})
+        self.assertRaises(ValueError, model._check_state, [State(1, 2)])
 
     def test_check_state_fail3(self):
         model = MC(['a'], [2])
-        self.assertRaises(ValueError, model._check_state, {'a': 3})
+        self.assertRaises(ValueError, model._check_state, [State('a', 3)])
 
     def test_check_state(self):
         model = MC(['a'], [2])
-        self.assertTrue(model._check_state({'a': 1}))
-
-    def test_add_variable_fail(self):
-        model = MC(['a'], [2])
-        self.assertRaises(AssertionError, model.add_variable, 'a', )
+        self.assertTrue(model._check_state([State('a', 1)]))
 
     def test_add_variable(self):
         model = MC(['a'], [2])
