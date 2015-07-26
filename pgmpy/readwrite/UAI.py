@@ -237,3 +237,166 @@ class UAIReader:
 
             model.add_factors(*factors)
             return model
+
+
+class UAIWriter:
+    """
+    Class for writing models in UAI.
+    """
+    def __init__(self, model):
+        """
+        Initialise a UAIWiter object
+
+        Parameters
+        ----------
+        model: A Bayesian or Markov model
+            The model to write
+        """
+        if isinstance(model, BayesianModel):
+            self.network = "BAYES\n"
+        elif isinstance(model, MarkovModel):
+            self.network = "MARKOV\n"
+        else:
+            raise TypeError("Model must be an instance of Bayesian or Markov model.")
+
+        self.model = model
+        self.no_nodes = self.get_nodes()
+        self.domain = self.get_domain()
+        self.functions = self.get_functions()
+        self.tables = self.get_tables()
+
+    def __str__(self):
+        """
+        Returns the UAI file as a string.
+        """
+        self.network += self.no_nodes + "\n"
+        domain = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
+        self.network += " ".join([var[1] for var in domain]) + "\n"
+        self.network += str(len(self.functions)) + "\n"
+        for fun in self.functions:
+            self.network += str(len(fun)) + " "
+            self.network += " ".join(fun) + "\n"
+        self.network += "\n"
+        for table in self.tables:
+            self.network += str(len(table)) + "\n"
+            self.network += " ".join(table) + "\n"
+        return self.network[:-1]
+
+    def get_nodes(self):
+        """
+        Adds variables to the network.
+
+        Example
+        -------
+        >>> writer = UAIWriter(model)
+        >>> writer.get_nodes()
+        """
+        no_nodes = len(self.model.nodes())
+        return str(no_nodes)
+
+    def get_domain(self):
+        """
+        Adds domain of each variable to the network.
+
+        Example
+        -------
+        >>> writer = UAIWriter(model)
+        >>> writer.get_domain()
+        """
+        if isinstance(self.model, BayesianModel):
+            cpds = self.model.get_cpds()
+            cpds.sort(key=lambda x: x.variable)
+            domain = {}
+            for cpd in cpds:
+                domain[cpd.variable] = str(cpd.variable_card)
+            print(domain)
+            return domain
+        elif isinstance(self.model, MarkovModel):
+            factors = self.model.get_factors()
+            domain = {}
+            for factor in factors:
+                variables = factor.variables
+                for var in variables:
+                    if var not in domain:
+                        domain[var] = str(len(variables[var]))
+            print(domain)
+            return domain
+        else:
+            raise TypeError("Model must be an instance of Markov or Bayesian model.")
+
+    def get_functions(self):
+        """
+        Adds functions to the network.
+
+        Example
+        -------
+        >>> writer = UAIWriter(model)
+        >>> writer.get_functions()
+        """
+        if isinstance(self.model, BayesianModel):
+            cpds = self.model.get_cpds()
+            cpds.sort(key=lambda x: x.variable)
+            variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
+            functions = []
+            for cpd in cpds:
+                child_var = cpd.variable
+                evidence = cpd.evidence
+                function = [str(variables.index((var, self.domain[var]))) for var in evidence]
+                function.append(str(variables.index((child_var, self.domain[child_var]))))
+                functions.append(function)
+            return functions
+        elif isinstance(self.model, MarkovModel):
+            factors = self.model.get_factors()
+            functions = []
+            variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
+            for factor in factors:
+                scope = factor.scope()
+                function = [str(variables.index((var, self.domain[var]))) for var in scope]
+                functions.append(function)
+            return functions
+        else:
+            raise TypeError("Model must be an instance of Markov or Bayesian model.")
+
+    def get_tables(self):
+        """
+        Adds tables to the network.
+
+        Example
+        -------
+        >>> writer = UAIWriter(model)
+        >>> writer.get_tables()
+        """
+        if isinstance(self.model, BayesianModel):
+            cpds = self.model.get_cpds()
+            cpds.sort(key=lambda x: x.variable)
+            tables = []
+            for cpd in cpds:
+                values = list(map(str, cpd.values))
+                tables.append(values)
+            return tables
+        elif isinstance(self.model, MarkovModel):
+            factors = self.model.get_factors()
+            tables = []
+            for factor in factors:
+                values = list(map(str, factor.values))
+                tables.append(values)
+            return tables
+        else:
+            raise TypeError("Model must be an instance of Markov or Bayesian model.")
+
+    def write_uai(self, filename):
+        """
+        Write the xml data into the file.
+
+        Parameters
+        ----------
+        filename: Name of the file.
+
+        Examples
+        -------
+        >>> writer = UAIWriter(model)
+        >>> writer.write_xmlbif(test_file)
+        """
+        writer = self.__str__()
+        with open(filename, 'w') as fout:
+            fout.write(writer)
