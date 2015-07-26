@@ -196,7 +196,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
         if time_slice not in (0, 1):
-    		raise ValueError("The timeslice should belong only to 0 or 1")
+            raise ValueError("The timeslice should belong only to 0 or 1")
 
         return [edge for edge in self.edges() if edge[0][1] == edge[1][1] == time_slice]
 
