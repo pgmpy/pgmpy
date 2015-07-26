@@ -186,6 +186,10 @@ class DynamicBayesianNetwork(DirectedGraph):
     def get_intra_edges(self, time_slice=0):
         """
         returns the intra slice edges present in the 2-TBN.
+        Parameter
+        ---------
+        time_slice: The time_slice should be a value belonging to 0 or 1
+
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -196,7 +200,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
         if time_slice not in (0, 1):
-    		raise ValueError("The timeslice should belong only to 0 or 1")
+            raise ValueError("The timeslice should belong only to 0 or 1")
 
         return [edge for edge in self.edges() if edge[0][1] == edge[1][1] == time_slice]
 
@@ -217,6 +221,10 @@ class DynamicBayesianNetwork(DirectedGraph):
     def get_interface_nodes(self, time_slice=0):
     	"""
     	returns the nodes in the first timeslice whose children are present in the first timeslice.
+        Parameter
+        ---------
+        time_slice: The time_slice should be a value belonging to 0 or 1
+
     	Examples:
     	-------
     	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -234,6 +242,10 @@ class DynamicBayesianNetwork(DirectedGraph):
     def get_slice_nodes(self, time_slice=0):
     	"""
     	returns the nodes present in a particular timeslice
+        Parameter
+        ---------
+        time_slice: The time_slice should be a value belonging to 0 or 1
+
     	Examples:
     	-------
     	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -288,7 +300,7 @@ class DynamicBayesianNetwork(DirectedGraph):
 
             self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(self, node=None, time_slice=0):
         """
         Returns the cpds that have been added till now to the graph
 
@@ -299,6 +311,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         Here, node_name is the node that is inserted
         while the time_slice is an integer value, which denotes
         the index of the time_slice that the node belongs to.
+
+        time_slice: The time_slice should be a value belonging to 0 or 1
 
         Examples:
         -------
@@ -320,33 +334,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                     if cpd.variable == node:
                         return cpd
         else:
-            return self.cpds
-
-    def get_cpds_by_slice(self, time_slice=0):
-    	"""
-    	Returns the cpds by slice
-    	Parameter
-    	---------
-    	slice: An integer value belonging to 0 or 1
-    	Examples:
-        --------
-        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
-        >>> student = DBN()
-        >>> student.add_nodes_from(['D','G','I','S','L'])
-        >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                                 [0.4,0.25,0.8,0.03],
-        ...                                                [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
-        >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
-        >>> student.initialize_initial_state()
-        >>> student.get_cpds_by_slice()
-    	"""
-    	return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
+            return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
 
     def check_model(self):
         """
