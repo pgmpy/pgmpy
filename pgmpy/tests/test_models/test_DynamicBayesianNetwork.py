@@ -69,6 +69,9 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
         self.intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
         self.i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4], [0.5, 0.6]], [('I', 0)], 2)
+        self.grade_1_cpd = TabularCPD(('G', 1), 3, [[0.3, 0.05, 0.9, 0.5],
+                                             [0.4, 0.25, 0.08, 0.3],
+                                             [0.3, 0.7, 0.2, 0.2]], [('D', 1), ('I', 1)], [2, 2])
 
     def test_get_intra_and_inter_edges(self):
         self.network.add_edges_from([(('a', 0), ('b', 0)), (('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
@@ -92,6 +95,14 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.network.add_cpds(self.grade_cpd)
         self.assertListEqual(self.network.get_cpds(), [self.grade_cpd])
 
+    def test_get_cpds(self):
+    	self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+    	self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
+    	self.network.initialize_initial_state()
+    	self.assertEqual(set(self.network.get_cpds()), set([self.diff_cpd, self.intel_cpd, self.grade_cpd]))
+    	self.assertEqual(set(self.network.get_cpds(time_slice=1)), set([self.grade_1_cpd]))
+
     def test_add_multiple_cpds(self):
         self.network.add_edges_from(
             [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
@@ -101,12 +112,6 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(('D', 0)).variable, ('D', 0))
         self.assertEqual(self.network.get_cpds(('I', 0)).variable, ('I', 0))
         self.assertEqual(self.network.get_cpds(('I', 1)).variable, ('I', 1))
-
-    def test_get_cpds_by_slice(self):
-    	self.network.add_edges_from(
-            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
-    	self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
-    	self.assertEqual(set(self.network.get_cpds_by_slice()), set([self.diff_cpd, self.intel_cpd, self.grade_cpd]))
 
     def test_initialize_initial_state(self):
 
