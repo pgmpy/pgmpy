@@ -1,5 +1,9 @@
+import numpy as np
 import unittest
+
 from pgmpy.readwrite import UAIReader
+from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.factors import TabularCPD, Factor
 
 
 class TestUAIReader(unittest.TestCase):

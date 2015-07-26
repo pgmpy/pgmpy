@@ -1,15 +1,16 @@
-from pyparsing import *
+import numpy as np
+
+from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 from itertools import combinations
+
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors import TabularCPD, Factor
-import numpy as np
 
 
 class UAIReader:
     """
     Class for reading UAI file format from files or strings.
     """
-
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of UAI reader class
@@ -50,7 +51,7 @@ class UAIReader:
         """
         network_name = Word(alphas).setResultsName('network_name')
         no_variables = Word(nums).setResultsName('no_variables')
-        grammar = network_name+no_variables
+        grammar = network_name + no_variables
         self.no_variables = int(grammar.parseString(self.network)['no_variables'])
         domain_variables = (Word(nums)*self.no_variables).setResultsName('domain_variables')
         grammar += domain_variables
@@ -58,10 +59,10 @@ class UAIReader:
         grammar += no_functions
         self.no_functions = int(grammar.parseString(self.network)['no_functions'])
         for function in range(0, self.no_functions):
-            scope_grammar = Word(nums).setResultsName('fun_scope_'+str(function))
+            scope_grammar = Word(nums).setResultsName('fun_scope_' + str(function))
             grammar += scope_grammar
-            function_scope = grammar.parseString(self.network)['fun_scope_'+str(function)]
-            function_grammar = ((Word(nums))*int(function_scope)).setResultsName('fun_'+str(function))
+            function_scope = grammar.parseString(self.network)['fun_scope_' + str(function)]
+            function_grammar = ((Word(nums))*int(function_scope)).setResultsName('fun_' + str(function))
             grammar += function_grammar
 
         floatnumber = Combine(Word(nums) + Optional(Literal(".") + Optional(Word(nums))))
@@ -69,7 +70,7 @@ class UAIReader:
             no_values_grammar = Word(nums).setResultsName('fun_no_values_' + str(function))
             grammar += no_values_grammar
             no_values = grammar.parseString(self.network)['fun_no_values_' + str(function)]
-            values_grammar = ((floatnumber)*int(no_values)).setResultsName('fun_values_'+str(function))
+            values_grammar = ((floatnumber)*int(no_values)).setResultsName('fun_values_' + str(function))
             grammar += values_grammar
         return grammar
 
@@ -110,7 +111,7 @@ class UAIReader:
         """
         variables = []
         for var in range(0, self.no_variables):
-            var_name = "var_"+str(var)
+            var_name = "var_" + str(var)
             variables.append(var_name)
         return variables
 
@@ -132,7 +133,7 @@ class UAIReader:
         domain = {}
         var_domain = self.grammar.parseString(self.network)['domain_variables']
         for var in range(0, len(var_domain)):
-            domain["var_"+str(var)] = var_domain[var]
+            domain["var_" + str(var)] = var_domain[var]
         return domain
 
     def get_edges(self):
@@ -151,12 +152,12 @@ class UAIReader:
         """
         edges = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)['fun_'+str(function)]
+            function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
             if self.network_type == 'BAYES':
                 child_var = "var_" + str(function_variables[-1])
                 function_variables = function_variables[:-1]
                 for var in function_variables:
-                    edges.append((child_var, "var_"+str(var)))
+                    edges.append((child_var, "var_" + str(var)))
             elif self.network_type == "MARKOV":
                 function_variables = ["var_" + var for var in function_variables]
                 edges.extend(list(combinations(function_variables, 2)))
@@ -182,40 +183,22 @@ class UAIReader:
         """
         tables = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)['fun_'+str(function)]
+            function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
             if self.network_type == 'BAYES':
                 child_var = "var_" + str(function_variables[-1])
-                values = self.grammar.parseString(self.network)['fun_values_'+str(function)]
+                values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
                 tables.append((child_var, list(values)))
             elif self.network_type == "MARKOV":
                 function_variables = ["var_" + var for var in function_variables]
-                values = self.grammar.parseString(self.network)['fun_values_'+str(function)]
+                values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
                 tables.append((function_variables, list(values)))
         return tables
-
-    def get_evidence(self):
-        """
-        Returns the evidence of each variable.
-
-        Returns
-        -------
-        dict : dictionary of variable and the evidence of the variable
-
-        Example
-        -------
-        >>> reader = UAIReader('TestUAI.uai')
-        >>> reader.get_evidence()
-        """
-        evidence = {}
-        for var in self.variables:
-            evidence[var] = []
-        for edge in self.edges:
-            evidence[edge[0]].append(edge[1])
-        return evidence
 
     def get_model(self):
         """
         Returns an instance of Bayesian Model or Markov Model.
+        Varibles are in the pattern var_0, var_1, var_2 where var_0 is
+        0th index variable, var_1 is 1st index variable.
 
         Return
         ------
