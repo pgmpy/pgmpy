@@ -532,7 +532,7 @@ class Factor:
         """
         Returns the hash of the factor object based on the scope of the factor.
         """
-        return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
+        return hash(' '.join(map(str, self.variables)) + ' '.join(map(str, self.cardinality)) +
                     ' '.join(list(map(str, self.values))))
 
 

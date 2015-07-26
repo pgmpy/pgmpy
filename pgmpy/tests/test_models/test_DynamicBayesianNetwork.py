@@ -72,8 +72,20 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
 
     def test_get_intra_and_inter_edges(self):
         self.network.add_edges_from([(('a', 0), ('b', 0)), (('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
-        self.assertListEqual(sorted(self.network.get_intra_edges()), [(('a', 0), ('b', 0)), (('a', 1), ('b', 1))])
+        self.assertListEqual(sorted(self.network.get_intra_edges()), [(('a', 0), ('b', 0))])
+        self.assertListEqual(sorted(self.network.get_intra_edges(1)), [(('a', 1), ('b', 1))])
         self.assertListEqual(sorted(self.network.get_inter_edges()), [(('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
+
+    def test_get_interface_nodes(self):
+    	self.network.add_edges_from(
+    		[(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+    	self.assertListEqual(sorted(self.network.get_interface_nodes()), [('D', 0), ('I',0)])
+
+    def test_get_slice_nodes(self):
+    	self.network.add_edges_from(
+    		[(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+    	self.assertListEqual(sorted(self.network.get_slice_nodes()), [('D', 0), ('G', 0), ('I', 0)])
+    	self.assertListEqual(sorted(self.network.get_slice_nodes(1)), [('D', 1), ('G', 1), ('I', 1)])
 
     def test_add_single_cpds(self):
         self.network.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))])
@@ -89,6 +101,12 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(('D', 0)).variable, ('D', 0))
         self.assertEqual(self.network.get_cpds(('I', 0)).variable, ('I', 0))
         self.assertEqual(self.network.get_cpds(('I', 1)).variable, ('I', 1))
+
+    def test_get_cpds_by_slice(self):
+    	self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+    	self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
+    	self.assertEqual(set(self.network.get_cpds_by_slice()), set([self.diff_cpd, self.intel_cpd, self.grade_cpd]))
 
     def test_initialize_initial_state(self):
 
