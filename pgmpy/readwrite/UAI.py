@@ -1,7 +1,8 @@
+from itertools import combinations
+
 import numpy as np
 
 from pyparsing import alphas, Combine, Literal, Optional, nums, Word
-from itertools import combinations
 
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors import TabularCPD, Factor
@@ -218,7 +219,7 @@ class UAIReader:
                 states = int(self.domain[child_var])
                 arr = list(map(float, cpd[1]))
                 values = np.array(arr)
-                values = values.reshape(states, values.size//states)
+                values = values.reshape(states, values.size // states)
                 tabular_cpds.append(TabularCPD(child_var, states, values))
 
             model.add_cpds(*tabular_cpds)
@@ -245,7 +246,7 @@ class UAIWriter:
     """
     def __init__(self, model):
         """
-        Initialise a UAIWiter object
+        Initialize an instance of UAI writer class
 
         Parameters
         ----------
