@@ -514,14 +514,18 @@ class BayesianModel(DirectedGraph):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data):
+    def fit(self, data, estimator_type=None):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.
 
         Parameters
         ----------
         data : pandas DataFrame object
-                A DataFrame object with column names same as the variable names of network
+            A DataFrame object with column names same as the variable names of network
+
+        estimator: Estimator class
+            Any pgmpy estimator. If nothing is specified, the default Maximum Likelihood
+            estimator would be used
 
         Examples
         --------
@@ -539,31 +543,18 @@ class BayesianModel(DirectedGraph):
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e198>,
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
         """
-        cpds_list = []
 
-        get_node_card = lambda _node, _data: _data.ix[:, _node].value_counts().shape[0]
-        node_card = {_node: get_node_card(_node, data) for _node in self.nodes()}
+        from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
 
-        for node in self.nodes():
-            parents = self.get_parents(node)
-            if not parents:
-                state_counts = data.ix[:, node].value_counts()
-                cpd = TabularCPD(node, node_card[node],
-                                 state_counts.values[:, np.newaxis])
-                cpd.normalize()
-                cpds_list.append(cpd)
-            else:
-                parent_card = np.array([node_card[parent] for parent in parents])
-                var_card = node_card[node]
-                state_counts = data.groupby([node] + self.predecessors(node)).count()
-                values = state_counts.iloc[:, 0].reshape(var_card,
-                                                         np.product(parent_card))
-                cpd = TabularCPD(node, var_card, values,
-                                 evidence=parents,
-                                 evidence_card=parent_card.astype('int'))
-                cpd.normalize()
-                cpds_list.append(cpd)
+        if estimator_type is None:
+            estimator_type = MaximumLikelihoodEstimator
+        else:
+            if not isinstance(estimator_type, BaseEstimator):
+                raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
+        estimator = estimator_type(self, data)
+
+        cpds_list = estimator.get_parameters()
         self.add_cpds(*cpds_list)
 
     def predict(self, data):
