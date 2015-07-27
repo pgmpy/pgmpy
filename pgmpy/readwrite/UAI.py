@@ -311,7 +311,6 @@ class UAIWriter:
             domain = {}
             for cpd in cpds:
                 domain[cpd.variable] = str(cpd.variable_card)
-            print(domain)
             return domain
         elif isinstance(self.model, MarkovModel):
             factors = self.model.get_factors()
@@ -321,7 +320,6 @@ class UAIWriter:
                 for var in variables:
                     if var not in domain:
                         domain[var] = str(len(variables[var]))
-            print(domain)
             return domain
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
