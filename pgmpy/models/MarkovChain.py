@@ -81,12 +81,13 @@ class MarkovChain:
 
     def set_start_state(self, start_state):
         """
-        Set the start state of the Markov Chain.
+        Set the start state of the Markov Chain. If the start_state is given as a array-like iterable, its contents
+        are reordered in the internal representation.
 
         Parameters:
         -----------
-        start_state: array-like iterable object
-            List of tuples representing the starting states of the variables.
+        start_state: dict or array-like iterable object
+            Dict (or list) of tuples representing the starting states of the variables.
 
         Examples:
         ---------
@@ -95,6 +96,12 @@ class MarkovChain:
         >>> model = MC(['a', 'b'], [2, 2])
         >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
+        if isinstance(start_state, dict):
+            start_state = [State(var, start_state[var]) for var in self.variables]
+        elif start_state is not None:
+            # Must be an array-like iterable. Reorder according to self.variables.
+            state_dict = {var: st for var, st in start_state}
+            start_state = [State(var, state_dict[var]) for var in self.variables]
         if start_state is None or self._check_state(start_state):
             self.state = start_state
 
@@ -207,10 +214,10 @@ class MarkovChain:
 
         Parameters:
         -----------
-        start_state: dict
-            representing the starting states of the variables.
+        start_state: dict or array-like iterable
+            Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
-            number of samples to be generated.
+            Number of samples to be generated.
 
         Return Type:
         ------------
@@ -233,21 +240,19 @@ class MarkovChain:
         3      1     0
         4      0     2
         """
-        # check if the start state is valid
-        if start_state is not None and self._check_state(start_state):
-            self.state = start_state
-        elif start_state is None and self.state is None:
+        if start_state is None and self.state is None:
             self.state = self.random_state()
+        else:
+            self.set_start_state(start_state)
 
         sampled = DataFrame(index=range(size), columns=self.variables)
-        sampled.loc[0] = [self.state[var] for var in self.variables]
+        sampled.loc[0] = [st for var, st in self.state]
         for i in range(size - 1):
-            for var in self.variables:
-                val = self.state[var]
-                next_val = sample_discrete(list(self.transition_models[var][val].keys()),
-                                           list(self.transition_models[var][val].values()))[0]
-                self.state[var] = next_val
-            sampled.loc[i + 1] = [self.state[var] for var in self.variables]
+            for j, (var, st) in enumerate(self.state):
+                next_st = sample_discrete(list(self.transition_models[var][st].keys()),
+                                          list(self.transition_models[var][st].values()))[0]
+                self.state[j] = State(var, next_st)
+            sampled.loc[i + 1] = [st for var, st in self.state]
         return sampled
 
     def prob_from_sample(self, state, sample=None, window_size=None):
@@ -290,25 +295,41 @@ class MarkovChain:
 
         Return Type:
         ------------
-        dict representing the assignment to all variables of the model.
+        List of State namedtuples, representing the assignment to all variables of the model.
+
+        Examples:
+        ---------
+        >>> from pgmpy.models.MarkovChain import MarkovChain
+        >>> model = MarkovChain()
+        >>> model.add_variables_from(['intel', 'diff'], [3, 2])
+        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
+        >>> model.add_transition_model('intel', intel_tm)
+        >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
+        >>> model.add_transition_model('diff', diff_tm)
+        >>> gen = model.generate_sample({'intel': 0, 'diff': 0}, 2)
+        >>> [sample for sample in gen]
+        [[State(var='intel', state=2), State(var='diff', state=1)],
+         [State(var='intel', state=2), State(var='diff', state=0)]]
         """
-        # check if the start state is valid
-        if start_state is not None and self._check_state(start_state):
-            self.state = start_state
-        elif start_state is None and self.state is None:
-            raise ValueError('Start state not set.')
+        if start_state is None and self.state is None:
+            self.state = self.random_state()
+        else:
+            self.set_start_state(start_state)
         # sampled.loc[0] = [self.state[var] for var in self.variables]
         for i in range(size):
-            for var in self.variables:
-                val = self.state[var]
-                next_val = sample_discrete(list(self.transition_models[var][val].keys()),
-                                           list(self.transition_models[var][val].values()))[0]
-                self.state[var] = next_val
-            yield {var: self.state[var] for var in self.variables}
+            for j, (var, st) in enumerate(self.state):
+                next_st = sample_discrete(list(self.transition_models[var][st].keys()),
+                                          list(self.transition_models[var][st].values()))[0]
+                self.state[j] = State(var, next_st)
+            yield self.state[:]
 
     def random_state(self):
         """
         Generates a random state of the Markov Chain.
+
+        Return Type:
+        ------------
+        List of namedtuples, representing a random assignment to all variables of the model.
 
         Examples:
         ---------
