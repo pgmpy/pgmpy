@@ -188,7 +188,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         returns the intra slice edges present in the 2-TBN.
         Parameter
         ---------
-        time_slice: The time_slice should be a value belonging to 0 or 1
+        time_slice: The timeslice should be a positive value greater than or equal to zero
 
         Examples:
         -------
@@ -199,10 +199,10 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
-        if time_slice not in (0, 1):
-            raise ValueError("The timeslice should belong only to 0 or 1")
+        if not str(time_slice).isdigit():
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-        return [edge for edge in self.edges() if edge[0][1] == edge[1][1] == time_slice]
+        return [tuple((x[0], time_slice) for x in edge) for edge in self.edges() if edge[0][1] == edge[1][1] == 0]
 
     def get_inter_edges(self):
         """
@@ -223,7 +223,7 @@ class DynamicBayesianNetwork(DirectedGraph):
     	returns the nodes in the first timeslice whose children are present in the first timeslice.
         Parameter
         ---------
-        time_slice: The time_slice should be a value belonging to 0 or 1
+        time_slice: The timeslice should be a positive value greater than or equal to zero
 
     	Examples:
     	-------
@@ -234,8 +234,8 @@ class DynamicBayesianNetwork(DirectedGraph):
     	>>> dbn.get_interface_nodes()
     	[('D', 0)]
     	"""
-    	if time_slice not in (0, 1):
-    		raise ValueError("The timeslice should belong only to 0 or 1")
+    	if not str(time_slice).isdigit():
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
     	return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
@@ -244,7 +244,7 @@ class DynamicBayesianNetwork(DirectedGraph):
     	returns the nodes present in a particular timeslice
         Parameter
         ---------
-        time_slice: The time_slice should be a value belonging to 0 or 1
+        time_slice: The timeslice should be a positive value greater than or equal to zero
 
     	Examples:
     	-------
@@ -254,8 +254,8 @@ class DynamicBayesianNetwork(DirectedGraph):
     	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
     	>>> dbn.get_slice_nodes()
     	"""
-    	if time_slice not in (0, 1):
-    		raise ValueError("The timeslice should belong only to 0 or 1")
+    	if not str(time_slice).isdigit():
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
     	return [(node, time_slice) for node in self.nodes()]
 
@@ -312,7 +312,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         while the time_slice is an integer value, which denotes
         the index of the time_slice that the node belongs to.
 
-        time_slice: The time_slice should be a value belonging to 0 or 1
+        time_slice: The time_slice should be a v
 
         Examples:
         -------
