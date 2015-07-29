@@ -77,18 +77,24 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.network.add_edges_from([(('a', 0), ('b', 0)), (('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
         self.assertListEqual(sorted(self.network.get_intra_edges()), [(('a', 0), ('b', 0))])
         self.assertListEqual(sorted(self.network.get_intra_edges(1)), [(('a', 1), ('b', 1))])
+        self.assertRaises(ValueError, self.network.get_intra_edges, -1)
+        self.assertRaises(TypeError, self.network.get_intra_edges, '-')
         self.assertListEqual(sorted(self.network.get_inter_edges()), [(('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
 
     def test_get_interface_nodes(self):
-    	self.network.add_edges_from(
-    		[(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
-    	self.assertListEqual(sorted(self.network.get_interface_nodes()), [('D', 0), ('I',0)])
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        self.assertListEqual(sorted(self.network.get_interface_nodes()), [('D', 0), ('I',0)])
+        self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
+        self.assertRaises(TypeError, self.network.get_interface_nodes, '-')
 
     def test_get_slice_nodes(self):
-    	self.network.add_edges_from(
-    		[(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
-    	self.assertListEqual(sorted(self.network.get_slice_nodes()), [('D', 0), ('G', 0), ('I', 0)])
-    	self.assertListEqual(sorted(self.network.get_slice_nodes(1)), [('D', 1), ('G', 1), ('I', 1)])
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        self.assertListEqual(sorted(self.network.get_slice_nodes()), [('D', 0), ('G', 0), ('I', 0)])
+        self.assertListEqual(sorted(self.network.get_slice_nodes(1)), [('D', 1), ('G', 1), ('I', 1)])
+        self.assertRaises(ValueError, self.network.get_slice_nodes, -1)
+        self.assertRaises(TypeError, self.network.get_slice_nodes, '-')
 
     def test_add_single_cpds(self):
         self.network.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))])
@@ -96,12 +102,12 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertListEqual(self.network.get_cpds(), [self.grade_cpd])
 
     def test_get_cpds(self):
-    	self.network.add_edges_from(
+        self.network.add_edges_from(
             [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
-    	self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
-    	self.network.initialize_initial_state()
-    	self.assertEqual(set(self.network.get_cpds()), set([self.diff_cpd, self.intel_cpd, self.grade_cpd]))
-    	self.assertEqual(self.network.get_cpds(time_slice=1)[0].variable, ('G', 1))
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
+        self.network.initialize_initial_state()
+        self.assertEqual(set(self.network.get_cpds()), set([self.diff_cpd, self.intel_cpd, self.grade_cpd]))
+        self.assertEqual(self.network.get_cpds(time_slice=1)[0].variable, ('G', 1))
 
     def test_add_multiple_cpds(self):
         self.network.add_edges_from(
