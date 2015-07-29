@@ -188,7 +188,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         returns the intra slice edges present in the 2-TBN.
         Parameter
         ---------
-        time_slice: The timeslice should be a positive value greater than or equal to zero
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
 
         Examples:
         -------
@@ -223,7 +224,8 @@ class DynamicBayesianNetwork(DirectedGraph):
     	returns the nodes in the first timeslice whose children are present in the first timeslice.
         Parameter
         ---------
-        time_slice: The timeslice should be a positive value greater than or equal to zero
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
 
     	Examples:
     	-------
@@ -244,7 +246,8 @@ class DynamicBayesianNetwork(DirectedGraph):
     	returns the nodes present in a particular timeslice
         Parameter
         ---------
-        time_slice: The timeslice should be a positive value greater than or equal to zero
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
 
     	Examples:
     	-------
@@ -312,7 +315,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         while the time_slice is an integer value, which denotes
         the index of the time_slice that the node belongs to.
 
-        time_slice: The time_slice should be a v
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
 
         Examples:
         -------
