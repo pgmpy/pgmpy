@@ -60,7 +60,7 @@ class Mplp(Inference):
         self.objective = {}
         self.cluster_set = {}
         for factor in model.get_factors():
-            scope = tuple(factor.scope())
+            scope = frozenset(factor.scope())
             self.objective[scope] = factor
             # For every factor consisting of more that a single node, we initialize a cluster.
             if len(scope) > 1:
@@ -101,15 +101,15 @@ class Mplp(Inference):
             """
 
             # The variables with which the cluster is made of.
-            self.cluster_variables = cluster_potential.scope()
+            self.cluster_variables = frozenset(cluster_potential.scope())
 
             # The cluster potentials must be specified before only.
             self.cluster_potential = copy.deepcopy(cluster_potential)
 
             # Generate intersection sets for this cluster; S(c)
-            self.intersection_sets_for_cluster_c = [i.intersection(self.cluster_variables)
-                                                    for i in intersection_set_variables
-                                                    if i.intersection(self.cluster_variables)]
+            self.intersection_sets_for_cluster_c = [intersect.intersection(self.cluster_variables)
+                                                    for intersect in intersection_set_variables
+                                                    if intersect.intersection(self.cluster_variables)]
 
             # Initialize messages from this cluster to its respective intersection sets
             # \lambda_{c \rightarrow \s} = 0
@@ -151,15 +151,15 @@ class Mplp(Inference):
         # 1/{\| f \|} max_{x_{f-i}}\left[{\theta_f(x_f) + \sum_{i' in f}{\delta_{i'}^{-f}}(x_i')} \right ]
 
         # Step. 1) Calculate {\theta_f(x_f) + \sum_{i' in f}{\delta_{i'}^{-f}}(x_i')}
-        objective_cluster = self.objective[tuple(sending_cluster.cluster_variables)]
+        objective_cluster = self.objective[sending_cluster.cluster_variables]
         for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
-            objective_cluster += self.objective[tuple(current_intersect)]
+            objective_cluster += self.objective[current_intersect]
 
         updated_results = []
         objective = []
         for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
             # Step. 2) Maximize step.1 result wrt variables present in the cluster but not in the current intersect.
-            phi = objective_cluster.maximize(list(set(sending_cluster.cluster_variables) - current_intersect),
+            phi = objective_cluster.maximize(list(sending_cluster.cluster_variables - current_intersect),
                                              inplace=False)
 
             # Step. 3) Multiply 1/{\| f \|}
@@ -170,8 +170,8 @@ class Mplp(Inference):
             # Step. 4) Subtract \delta_i^{-f}
             # These are the messages not emanating from the sending cluster but going into the current intersect.
             # which is = Objective[current_intersect_node] - messages from the cluster to the current intersect node.
-            updated_results.append(phi + -1 * (self.objective[tuple(current_intersect)]
-                                               + -1 * sending_cluster.message_from_cluster[current_intersect]))
+            updated_results.append(phi + -1 * (self.objective[current_intersect] + -1 * sending_cluster.
+                                               message_from_cluster[current_intersect]))
 
         # This loop is primarily for simultaneous updating:
         # 1. This cluster's message to each of the intersects.
@@ -181,11 +181,11 @@ class Mplp(Inference):
         for current_intersect in sending_cluster.intersection_sets_for_cluster_c:
             index += 1
             sending_cluster.message_from_cluster[current_intersect] = updated_results[index]
-            self.objective[tuple(current_intersect)] = objective[index]
+            self.objective[current_intersect] = objective[index]
             cluster_potential += (-1) * updated_results[index]
 
         # Here we update the Objective for the current factor.
-        self.objective[tuple(sending_cluster.cluster_variables)] = cluster_potential
+        self.objective[sending_cluster.cluster_variables] = cluster_potential
 
     def _run_mplp(self):
         """
@@ -195,7 +195,7 @@ class Mplp(Inference):
         # We take the clusters in the order they were added in the model.
         for factor in self.model.get_factors():
             if len(factor.scope()) > 1:
-                self._update_message(self.cluster_set[tuple(factor.scope())])
+                self._update_message(self.cluster_set[frozenset(factor.scope())])
 
     def _local_decode(self):
         """
@@ -205,14 +205,15 @@ class Mplp(Inference):
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # The current assignment of the single node factors is stored in the form of a dictionary
-        decoded_result_assignment = {node[0]: np.argmax(self.objective[node].values)
+        decoded_result_assignment = {node: np.argmax(self.objective[node].values)
                                      for node in self.objective if len(node) == 1}
 
         # Use the original cluster_potentials of each cluster to find the primal integral value.
         integer_value = 0
         for cluster_key in self.cluster_set:
             cluster = self.cluster_set[cluster_key]
-            index = [tuple([variable, decoded_result_assignment[variable]]) for variable in cluster.cluster_variables]
+            index = [tuple([variable, decoded_result_assignment[frozenset(variable)]])
+                     for variable in cluster.cluster_variables]
             integer_value += cluster.cluster_potential.reduce(index, inplace=False).values[0]
 
         # Check if this is the best assignment till now
@@ -273,7 +274,7 @@ class Mplp(Inference):
         >>> factor_e = Factor(['E'], cardinality=[2], value=np.array([0.47117, 2.1224]))
         >>> factor_f = Factor(['F'], cardinality=[2], value=np.array([1.5093, 0.66257]))
         >>> factor_a_b = Factor(['A', 'B'], cardinality=[2, 2], value=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
-        >>> factor_b_c = Factor(['B', 'C'], cardinality=[2, 2], value=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]))
+        >>> factor_b_c = Factor(['B', 'C'], cardinality=[2, 2], value=np.array([0.00024189, 4134.2, 4134.2, 0.0002418]))
         >>> factor_c_d = Factor(['C', 'D'], cardinality=[2, 2], value=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
         >>> factor_d_e = Factor(['E', 'F'], cardinality=[2, 2], value=np.array([31.228, 0.032023, 0.032023, 31.228]))
         >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f, factor_a_b,
@@ -296,6 +297,6 @@ class Mplp(Inference):
             self._run_mplp()
 
         # Get the best result from the best assignment
-        self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[factor.scope()[0]]]
+        self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[frozenset(factor.scope()[0])]]
                                     for factor in self.model.factors if len(factor.scope()) == 1}
         return self.best_decoded_result
