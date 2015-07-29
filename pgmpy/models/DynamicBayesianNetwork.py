@@ -183,9 +183,14 @@ class DynamicBayesianNetwork(DirectedGraph):
         for edge in ebunch:
             self.add_edge(edge[0], edge[1])
 
-    def get_intra_edges(self):
+    def get_intra_edges(self, time_slice=0):
         """
         returns the intra slice edges present in the 2-TBN.
+        Parameter
+        ---------
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
+
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -195,7 +200,10 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
-        return [edge for edge in self.edges() if edge[0][1] == edge[1][1]]
+        if not isinstance(time_slice, int) or time_slice < 0:
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+
+        return [tuple((x[0], time_slice) for x in edge) for edge in self.edges() if edge[0][1] == edge[1][1] == 0]
 
     def get_inter_edges(self):
         """
@@ -210,6 +218,49 @@ class DynamicBayesianNetwork(DirectedGraph):
         [(('D', 0), ('D', 1)), (('I', 0), ('I', 1))]
         """
         return [edge for edge in self.edges() if edge[0][1] != edge[1][1]]
+
+    def get_interface_nodes(self, time_slice=0):
+    	"""
+    	returns the nodes in the first timeslice whose children are present in the first timeslice.
+        Parameter
+        ---------
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
+
+    	Examples:
+    	-------
+    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
+    	>>> dbn = DBN()
+    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+    	>>> dbn.get_interface_nodes()
+    	[('D', 0)]
+    	"""
+    	if not isinstance(time_slice, int) or time_slice < 0:
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+
+    	return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
+
+    def get_slice_nodes(self, time_slice=0):
+    	"""
+    	returns the nodes present in a particular timeslice
+        Parameter
+        ---------
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
+
+    	Examples:
+    	-------
+    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
+    	>>> dbn = DBN()
+    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+    	>>> dbn.get_slice_nodes()
+    	"""
+    	if not isinstance(time_slice, int) or time_slice < 0:
+            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+
+    	return [(node, time_slice) for node in self.nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -252,7 +303,7 @@ class DynamicBayesianNetwork(DirectedGraph):
 
             self.cpds.append(cpd)
 
-    def get_cpds(self, node=None):
+    def get_cpds(self, node=None, time_slice=0):
         """
         Returns the cpds that have been added till now to the graph
 
@@ -264,6 +315,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         while the time_slice is an integer value, which denotes
         the index of the time_slice that the node belongs to.
 
+        time_slice:int 
+                   The timeslice should be a positive value greater than or equal to zero
 
         Examples:
         -------
@@ -285,7 +338,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                     if cpd.variable == node:
                         return cpd
         else:
-            return self.cpds
+            return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
 
     def check_model(self):
         """
