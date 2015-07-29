@@ -76,25 +76,25 @@ class TestMplp(unittest.TestCase):
     def test_query_single_variable(self):
         query_result = self.mplp.map_query(1000, 0.0002, 0.0002)
         # Results from the Sontag code for a mplp run without tightening is:
-        sontag_result = {
+        expected_result = {
             'A': 0.60557, 'B': -0.06300, 'C': 0.11422, 'D': -0.57461,
             'E': 0.75254, 'F': 0.41164, 'G': 0.73371, 'H': 0.96819,
             'I': 0.68913, 'J': 0.49731, 'K': 0.91856, 'L': -0.69140,
             'M': -0.89940, 'N': 0.71691, 'O': -0.43432, 'P': -0.06353}
 
-        self.assertAlmostEqual(sontag_result['A'], query_result['A'], places=4)
-        self.assertAlmostEqual(sontag_result['B'], query_result['B'], places=4)
-        self.assertAlmostEqual(sontag_result['C'], query_result['C'], places=4)
-        self.assertAlmostEqual(sontag_result['D'], query_result['D'], places=4)
-        self.assertAlmostEqual(sontag_result['E'], query_result['E'], places=4)
-        self.assertAlmostEqual(sontag_result['F'], query_result['F'], places=4)
-        self.assertAlmostEqual(sontag_result['G'], query_result['G'], places=4)
-        self.assertAlmostEqual(sontag_result['H'], query_result['H'], places=4)
-        self.assertAlmostEqual(sontag_result['I'], query_result['I'], places=4)
-        self.assertAlmostEqual(sontag_result['J'], query_result['J'], places=4)
-        self.assertAlmostEqual(sontag_result['K'], query_result['K'], places=4)
-        self.assertAlmostEqual(sontag_result['L'], query_result['L'], places=4)
-        self.assertAlmostEqual(sontag_result['M'], query_result['M'], places=4)
-        self.assertAlmostEqual(sontag_result['N'], query_result['N'], places=4)
-        self.assertAlmostEqual(sontag_result['O'], query_result['O'], places=4)
-        self.assertAlmostEqual(sontag_result['P'], query_result['P'], places=4)
+        self.assertAlmostEqual(expected_result['A'], query_result['A'], places=4)
+        self.assertAlmostEqual(expected_result['B'], query_result['B'], places=4)
+        self.assertAlmostEqual(expected_result['C'], query_result['C'], places=4)
+        self.assertAlmostEqual(expected_result['D'], query_result['D'], places=4)
+        self.assertAlmostEqual(expected_result['E'], query_result['E'], places=4)
+        self.assertAlmostEqual(expected_result['F'], query_result['F'], places=4)
+        self.assertAlmostEqual(expected_result['G'], query_result['G'], places=4)
+        self.assertAlmostEqual(expected_result['H'], query_result['H'], places=4)
+        self.assertAlmostEqual(expected_result['I'], query_result['I'], places=4)
+        self.assertAlmostEqual(expected_result['J'], query_result['J'], places=4)
+        self.assertAlmostEqual(expected_result['K'], query_result['K'], places=4)
+        self.assertAlmostEqual(expected_result['L'], query_result['L'], places=4)
+        self.assertAlmostEqual(expected_result['M'], query_result['M'], places=4)
+        self.assertAlmostEqual(expected_result['N'], query_result['N'], places=4)
+        self.assertAlmostEqual(expected_result['O'], query_result['O'], places=4)
+        self.assertAlmostEqual(expected_result['P'], query_result['P'], places=4)

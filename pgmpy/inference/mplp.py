@@ -50,8 +50,8 @@ class Mplp(Inference):
         for edge_pair in it.combinations(model.edges(), 2):
             self.intersection_set_variables.add(frozenset(edge_pair[0]) & frozenset(edge_pair[1]))
 
-        # The corresponding optimization problem = \min_{\delta}{L(\delta)}
-        # Where L(\delta) = \sum_{i \in V}{max_{x_i}(Objective[nodes])} + \sum_{f /in F}{max_{x_f}(Objective[factors])
+        # The corresponding optimization problem = \min_{\delta}{dual_lp(\delta)} where:
+        # dual_lp(\delta) = \sum_{i \in V}{max_{x_i}(Objective[nodes])} + \sum_{f /in F}{max_{x_f}(Objective[factors])
         # Objective[nodes] = \theta_i(x_i) + \sum_{f \mid i \in f}{\delta_{fi}(x_i)}
         # Objective[factors] = \theta_f(x_f) - \sum_{i \in f}{\delta_{fi}(x_i)}
         # In a way Objective stores the corresponding optimization problem for all the nodes and the factors.
@@ -66,8 +66,8 @@ class Mplp(Inference):
             if len(scope) > 1:
                 self.cluster_set[scope] = self.Cluster(self.intersection_set_variables, factor)
 
-        # L(\delta)
-        self.L = sum([max(self.objective[obj].values) for obj in self.objective])
+        # dual_lp(\delta) is the dual linear program
+        self.dual_lp = sum([max(self.objective[obj].values) for obj in self.objective])
 
         # Best integral value of the primal objective is stored here
         self.best_int_objective = 0
@@ -133,7 +133,7 @@ class Mplp(Inference):
 
         Parameters
         ----------
-        sending_cluster: The resulting messages are \lambda_{c \rightarrow s} from the given
+        sending_cluster: The resulting messages are lambda_{c-->s} from the given
             cluster 'c' to all of its intersection_sets 's'.
             Here 's' are the elements of intersection_sets_for_cluster_c.
 
@@ -170,10 +170,8 @@ class Mplp(Inference):
             # Step. 4) Subtract \delta_i^{-f}
             # These are the messages not emanating from the sending cluster but going into the current intersect.
             # which is = Objective[current_intersect_node] - messages from the cluster to the current intersect node.
-            updated_results.append(
-                phi + -1 * (self.objective[tuple(current_intersect)]
-                            + -1 * sending_cluster.message_from_cluster[current_intersect])
-            )
+            updated_results.append(phi + -1 * (self.objective[tuple(current_intersect)]
+                                               + -1 * sending_cluster.message_from_cluster[current_intersect]))
 
         # This loop is primarily for simultaneous updating:
         # 1. This cluster's message to each of the intersects.
@@ -232,15 +230,15 @@ class Mplp(Inference):
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # Find the new objective after the message updates
-        new_L = sum([max(self.objective[obj].values) for obj in self.objective])
-        # As the decrement of the L gets very low, we assume that we might have stuck in a local minima.
-        if abs(self.L - new_L) < 0.0002:
+        new_dual_lp = sum([max(self.objective[obj].values) for obj in self.objective])
+        # As the decrement of the dual_lp gets very low, we assume that we might have stuck in a local minima.
+        if abs(self.dual_lp - new_dual_lp) < dual_threshold:
             return True
         # Check the threshold for the integrality gap
-        elif abs(self.L - self.best_int_objective) < 0.0002:
+        elif abs(self.dual_lp - self.best_int_objective) < integrality_gap_threshold:
             return True
         else:
-            self.L = new_L
+            self.dual_lp = new_dual_lp
             return False
 
     def map_query(self, niter=1000, dual_threshold=0.0002, integrality_gap_threshold=0.0002):
@@ -289,7 +287,7 @@ class Mplp(Inference):
         self._run_mplp()
 
         # Run MPLP until convergence using pairwise clusters.
-        for i in range(niter):
+        for iter_no in range(niter):
             # Find an integral solution by locally maximizing the single node beliefs
             self._local_decode()
             # If the dual objective is sufficiently close to the primal objective, terminate
