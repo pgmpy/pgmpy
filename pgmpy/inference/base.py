@@ -92,17 +92,9 @@ class Inference:
             # interface nodes along with the first time slice nodes.
             # Both of the above parameters will be required by the junction tree algorithm
             # too.
-            start_model = BayesianModel(model.edges())
-            start_model.add_cpds(*model.cpds)
-            self.start_bayesian_model = start_model
-            # interface nodes extraction for inference
-            self.interface_nodes = [(edge[0][0], 0) for edge in model.get_inter_edges()]
-            slice_1_interface_nodes = [(edge[0][0], 1) for edge in model.get_inter_edges()]
-
-            #constructing one and half timeslice for inference
-            slice_1_intra_edges = [edge for edge in model.get_intra_edges() if edge[1][1] == 1]
-            self.one_and_half_model = BayesianModel(model.get_inter_edges() + intra_edges_1)
-            slice_1_nodes = [(node, 1) for node in model.nodes()]
-            slice_1_cpd = [cpd for cpd in model.cpds if set(list(cpd.variables)).issubset(nodes_1)]
-            cpd_inter = [model.get_cpds(node) for node in interface_nodes_1]
-            self.one_and_half_model.add_cpds(*(cpd_1 + cpd_inter))
+            self.start_bayesian_model = BayesianModel(model.edges())
+            self.start_bayesian_model.add_cpds(*model.cpds)
+            cpd_inter = [model.get_cpds(node) for node in model.get_interface_nodes(1)]
+            self.interface_nodes = model.get_interface_nodes(0)
+            self.one_and_half_model = BayesianModel(model.get_inter_edges() + model.get_intra_edges(1))
+            self.one_and_half_model.add_cpds(*(model.get_cpds(time_slice=1) + cpd_inter)
