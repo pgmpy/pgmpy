@@ -1,7 +1,10 @@
+import itertools
 from collections import defaultdict
+
+from pgmpy.inference import Inference
 from pgmpy.inference import VariableElimination
 from pgmpy.factors import TabularCPD
-from pgmpy.inference import Inference
+
 
 
 class DBNInference(Inference):
@@ -96,3 +99,36 @@ class DBNInference(Inference):
                 new_cpd = TabularCPD(key, int(cpd.cardinality[0]), [cpd.values])
                 final_values[key] = new_cpd
         return final_values
+
+class DBNJunctionTreeInference(Inference):
+    """
+    Class for performing inference using Junction Tree method.
+    Creates a Junction Trees or Clique Trees (JunctionTree class) for the input
+    Dynamic Bayesian Network and performs inference for the network
+    Parameters
+    ----------
+    model: Dynamic Bayesian Network
+        model for which inference is to performed
+    """
+    def __init__(self, model):
+        super().__init__(model)
+
+        #adding the edges between the interface nodes so as to form the cliques required for inference
+        #after converting it to the markov model
+        start_markov_model = self.start_bayesian_model.to_markov_model()
+        one_and_half_markov_model = self.one_and_half_model.to_markov_model()
+
+        combinations_slice_0 = list(itertools.combinations(model.get_interface_nodes(0), 2))
+        combinations_slice_1 = list(itertools.combinations(model.get_interface_nodes(1), 2))
+
+        start_markov_model.add_edges_from(combinations_slice_0)
+        one_and_half_markov_model.add_edges_from(combinations_slice_0 + combinations_slice_1)
+
+        #forming junction trees
+        self.one_and_half_junction_tree = one_and_half_markov_model.to_junction_tree()
+        self.start_junction_tree = start_markov_model.to_junction_tree()
+
+        #classifying the cliques
+        self.start_interface_clique = [clique for clique in self.start_junction_tree.nodes() if set(model.get_interface_nodes(0)).issubset(clique)]
+        self.in_clique = [clique for clique in self.start_junction_tree.nodes() if set(model.get_interface_nodes(0)).issubset(clique)]
+        self.out_clique = [clique for clique in self.one_and_half_junction_tree.nodes() if set(model.get_interface_nodes(1)).issubset(cliqu
