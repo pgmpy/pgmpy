@@ -1,5 +1,6 @@
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovModel
+import networkx as nx
 from pgmpy.factors import Factor
 import numpy as np
 import itertools as it
@@ -76,9 +77,14 @@ class Mplp(Inference):
         self.best_assignment = {}
         # Results of the "maximum" integral value of the primal objective.
         self.best_decoded_result = {}
+        # This sets the minimum width between the dual objective decrements. Default value = 0.0002. This can be
+        # changed in the map_query() method.
+        self.dual_threshold = 0.0002
+        # This sets the threshold for the integrality gap below which we say that the solution is satisfactory.
+        # Default value = 0.0002. This can be changed in the map_query() method.
+        self.integrality_gap_threshold = 0.0002
 
     class Cluster:
-
         """
         Inner class for representing a cluster.
         A cluster is a subset of variables.
@@ -187,16 +193,6 @@ class Mplp(Inference):
         # Here we update the Objective for the current factor.
         self.objective[sending_cluster.cluster_variables] = cluster_potential
 
-    def _run_mplp(self):
-        """
-        Update messages for each factor whose scope is greater than 1
-
-        """
-        # We take the clusters in the order they were added in the model.
-        for factor in self.model.get_factors():
-            if len(factor.scope()) > 1:
-                self._update_message(self.cluster_set[frozenset(factor.scope())])
-
     def _local_decode(self):
         """
         Finds the index of the maximum values for all the single node dual objectives.
@@ -212,7 +208,7 @@ class Mplp(Inference):
         integer_value = 0
         for cluster_key in self.cluster_set:
             cluster = self.cluster_set[cluster_key]
-            index = [tuple([variable, decoded_result_assignment[frozenset(variable)]])
+            index = [tuple([variable, decoded_result_assignment[frozenset([variable])]])
                      for variable in cluster.cluster_variables]
             integer_value += cluster.cluster_potential.reduce(index, inplace=False).values[0]
 
@@ -221,41 +217,242 @@ class Mplp(Inference):
             self.best_int_objective = integer_value
             self.best_assignment = decoded_result_assignment
 
-    def _is_converged(self, dual_threshold, integrality_gap_threshold):
+    def _is_converged(self, dual_threshold=None, integrality_gap_threshold=None):
         """
         This method checks the integrality gap to ensure either:
             * we have found a near to exact solution or
             * stuck on a local minima.
+
+        Parameters
+        ---------
+        dual_threshold: double
+                        This sets the minimum width between the dual objective decrements. If the decrement is lesser
+                        than the threshold, then that means we have stuck on a local minima.
+
+        integrality_gap_threshold: double
+                                   This sets the threshold for the integrality gap below which we say that the solution
+                                   is satisfactory.
 
         Reference:
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # Find the new objective after the message updates
         new_dual_lp = sum([max(self.objective[obj].values) for obj in self.objective])
+
+        # Update the dual_gap as the difference between the dual objective of the previous and the current iteration.
+        self.dual_gap = abs(self.dual_lp - new_dual_lp)
+
+        # Update the integrality_gap as the difference between our best result vs the dual objective of the lp.
+        self.integrality_gap = abs(self.dual_lp - self.best_int_objective)
+
         # As the decrement of the dual_lp gets very low, we assume that we might have stuck in a local minima.
-        if abs(self.dual_lp - new_dual_lp) < dual_threshold:
+        if dual_threshold and self.dual_gap < dual_threshold:
             return True
         # Check the threshold for the integrality gap
-        elif abs(self.dual_lp - self.best_int_objective) < integrality_gap_threshold:
+        elif integrality_gap_threshold and self.integrality_gap < integrality_gap_threshold:
             return True
         else:
             self.dual_lp = new_dual_lp
             return False
 
-    def map_query(self, niter=1000, dual_threshold=0.0002, integrality_gap_threshold=0.0002):
+    def find_triangles(self):
+        """
+        Finds all the triangles present in the given model
+
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.inference import Mplp
+        >>> mm = MarkovModel()
+        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_factors(*phi)
+        >>> mplp = Mplp(mm)
+        >>> mplp.find_triangles()
+        """
+        return [clique for clique in nx.find_cliques(self.model) if len(clique) == 3]
+
+    def _update_triangles(self, triangles_list):
+        """
+        From a set of variables forming a triangle in the model, we form the corresponding Clusters.
+        These clusters are then appended to the code.
+
+        Parameters
+        ----------
+        triangle_list : list
+                        The list of variables forming the triangles to be updated. It is of the form of
+                        [['var_5', 'var_8', 'var_7'], ['var_4', 'var_5', 'var_7']]
+
+        """
+        new_intersection_set = []
+        for triangle_vars in triangles_list:
+            cardinalities = [self.cardinality[variable] for variable in triangle_vars]
+            current_intersection_set = [frozenset(intersect) for intersect in it.combinations(triangle_vars, 2)]
+            current_factor = Factor(triangle_vars, cardinalities, np.zeros(np.prod(cardinalities)))
+            self.cluster_set[frozenset(triangle_vars)] = self.Cluster(current_intersection_set, current_factor)
+            # add new factors
+            self.model.factors.append(current_factor)
+            # add new intersection sets
+            new_intersection_set.extend(current_intersection_set)
+            # add new factors in objective
+            self.objective[frozenset(triangle_vars)] = current_factor
+
+    def _get_triplet_scores(self, triangles_list):
+        """
+        Returns the score of each of the triplets found in the current model
+
+        Parameters
+        ---------
+        triangles_list: list
+                        The list of variables forming the triangles to be updated. It is of the form of
+                        [['var_5', 'var_8', 'var_7'], ['var_4', 'var_5', 'var_7']]
+
+        Return: {frozenset({'var_8', 'var_5', 'var_7'}): 5.024, frozenset({'var_5', 'var_4', 'var_7'}): 10.23}
+        """
+        triplet_scores = {}
+        for triplet in triangles_list:
+
+            # Find the intersection sets of the current triplet
+            triplet_intersections = [intersect for intersect in it.combinations(triplet, 2)]
+
+            # Independent maximization
+            ind_max = sum([max(self.objective[frozenset(intersect)].values) for intersect in triplet_intersections])
+
+            # Joint maximization
+            joint_max = self.objective[frozenset(triplet_intersections[0])]
+            for intersect in triplet_intersections[1:]:
+                joint_max += self.objective[frozenset(intersect)]
+            joint_max = max(joint_max.values)
+            # score = Independent maximization solution - Joint maximization solution
+            score = ind_max - joint_max
+            triplet_scores[frozenset(triplet)] = score
+
+        return triplet_scores
+
+    def _run_mplp(self, no_iterations):
+        """
+        Updates messages until either Mplp converges or if doesn't converges; halts after no_iterations.
+
+        Parameters
+        --------
+        no_iterations:  integer
+                        Number of maximum iterations that we want MPLP to run.
+        """
+        for niter in range(no_iterations):
+            # We take the clusters in the order they were added in the model and update messages for all factors whose
+            # scope is greater than 1
+            for factor in self.model.get_factors():
+                if len(factor.scope()) > 1:
+                    self._update_message(self.cluster_set[frozenset(factor.scope())])
+            # Find an integral solution by locally maximizing the single node beliefs
+            self._local_decode()
+            # If mplp converges to a global/local optima, we break.
+            if self._is_converged(self.dual_threshold, self.integrality_gap_threshold) and niter >= 16:
+                break
+
+    def _tighten_triplet(self, max_iterations, later_iter, max_triplets, prolong):
+        """
+        This method finds all the triplets that are eligible and adds them iteratively in the bunch of max_triplets
+
+        Parameters
+        ----------
+        max_iterations: integer
+                        Maximum number of times we tighten the relaxation
+
+        later_iter: integer
+                    Number of maximum iterations that we want MPLP to run. This is lesser than the initial number
+                    of iterations.
+
+        max_triplets: integer
+                      Maximum number of triplets that can be added atmost in one iteration.
+        """
+        # Find all the triplets that are possible in the present model
+        triangles = self.find_triangles()
+        # Evaluate scores for each of the triplets found above
+        triplet_scores = self._get_triplet_scores(triangles)
+        # Arrange the keys on the basis of increasing order of the values of the dict. triplet_scores
+        sorted_scores = sorted(triplet_scores, key=triplet_scores.get)
+        for niter in range(max_iterations):
+            if self._is_converged(integrality_gap_threshold=self.integrality_gap_threshold):
+                break
+            # add triplets that are yet not added.
+            add_triplets = []
+            for triplet_number in (range(len(sorted_scores))):
+                # At once, we can add atmost 5 triplets
+                if triplet_number >= max_triplets:
+                    break
+                add_triplets.append(sorted_scores.pop())
+            # Break from the tighten triplets loop if there are no triplets to add if the prolong is set to False
+            if not add_triplets and prolong is False:
+                    break
+            # Update the eligible triplets to tighten the relaxation
+            self._update_triangles(add_triplets)
+            # Run MPLP for a maximum of later_iter times.
+            self._run_mplp(later_iter)
+
+    def get_integrality_gap(self):
+        """
+        Returns the integrality gap of the current state of the Mplp algorithm. The lesser it is, the closer we are
+                towards the exact solution.
+
+        Example:
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.inference import Mplp
+        >>> mm = MarkovModel()
+        >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
+        >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
+        ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
+        ...                    ('x4', 'x7'), ('x5', 'x7')])
+        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> mm.add_factors(*phi)
+        >>> mplp = Mplp(mm)
+        >>> mplp.map_query()
+        >>> int_gap = mplp.get_integrality_gap()
+        """
+
+        return self.integrality_gap
+
+    def map_query(self, init_iter=1000, later_iter=20, dual_threshold=0.0002, integrality_gap_threshold=0.0002,
+                  tighten_triplet=True, max_triplets=5, max_iterations=100, prolong=False):
         """
         MAP query method using Max Product LP method.
         This returns the best assignment of the nodes in the form of a dictionary.
 
         Parameters
         ----------
-        niter: Number of maximum iterations that we want MPLP to run if _is_converged() fails
+        init_iter: integer
+                   Number of maximum iterations that we want MPLP to run for the first time.
 
-        dual_threshold: This sets the minimum width between the dual objective decrements. Is the decrement is lesser
+        later_iter: integer
+                    Number of maximum iterations that we want MPLP to run for later iterations
+
+        dual_threshold: double
+                        This sets the minimum width between the dual objective decrements. If the decrement is lesser
                         than the threshold, then that means we have stuck on a local minima.
 
-        integrality_gap_threshold: This sets the threshold for the integrality gap below which we say that the solution
+        integrality_gap_threshold: double
+                                   This sets the threshold for the integrality gap below which we say that the solution
                                    is satisfactory.
+
+        tighten_triplet: bool
+                         set whether to use triplets as clusters or not.
+
+        max_triplets: integer
+                      Set the maximum number of triplets that can be added at once.
+
+        max_iterations: integer
+                        Maximum number of times we tighten the relaxation. Used only when tighten_triplet is set True.
+
+        prolong: bool
+                 If set False: The moment we exhaust of all the triplets the tightening stops.
+                 If set True: The tightening will be performed max_iterations number of times irrespective of the
+                              triplets.
 
         Reference:
         Section 3.3: The Dual Algorithm; Tightening LP Relaxation for MAP using Message Passing (2008)
@@ -281,22 +478,17 @@ class Mplp(Inference):
         ...    factor_b_c, factor_c_d, factor_d_e)
         >>> mplp = Mplp(student)
         >>> result = mplp.map_query()
-        {'B': 0.93894, 'C': 1.121, 'A': 1.8323, 'F': 1.5093, 'D': 1.7765, 'E': 2.12239}
-
+        Return: {'B': 0.93894, 'C': 1.121, 'A': 1.8323, 'F': 1.5093, 'D': 1.7765, 'E': 2.12239}
         """
-        # Run one iteration of MPLP initially
-        self._run_mplp()
 
-        # Run MPLP until convergence using pairwise clusters.
-        for iter_no in range(niter):
-            # Find an integral solution by locally maximizing the single node beliefs
-            self._local_decode()
-            # If the dual objective is sufficiently close to the primal objective, terminate
-            if self._is_converged(dual_threshold, integrality_gap_threshold):
-                break
-            self._run_mplp()
-
+        self.dual_threshold = dual_threshold
+        self.integrality_gap_threshold = integrality_gap_threshold
+        # Run MPLP initially for a maximum of init_iter times.
+        self._run_mplp(init_iter)
+        # If triplets are to be used for the tightening, we proceed as follows
+        if tighten_triplet:
+            self._tighten_triplet(max_iterations, later_iter, max_triplets, prolong)
         # Get the best result from the best assignment
-        self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[frozenset(factor.scope()[0])]]
+        self.best_decoded_result = {factor.scope()[0]: factor.values[self.best_assignment[frozenset(factor.scope())]]
                                     for factor in self.model.factors if len(factor.scope()) == 1}
         return self.best_decoded_result
