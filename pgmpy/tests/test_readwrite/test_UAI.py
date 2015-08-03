@@ -26,6 +26,7 @@ class TestUAIReader(unittest.TestCase):
  2.0000 2.0000 3.4000"""
         self.maxDiff = None
         self.reader_string = UAIReader(string=string)
+        self.reader_file = UAIReader('pgmpy/tests/test_readwrite/testdata/grid4x4.uai')
 
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
@@ -61,6 +62,14 @@ class TestUAIReader(unittest.TestCase):
                                    'var_0': {}}}
         self.assertListEqual(sorted(model.nodes()), sorted(['var_0', 'var_2', 'var_1']))
         self.assertDictEqual(model.edge, edge_expected)
+
+    def test_read_file(self):
+        model = self.reader_file.get_model()
+        node_expected = {'var_3': {}, 'var_8': {}, 'var_5': {}, 'var_14': {},
+                         'var_15': {}, 'var_0': {}, 'var_9': {}, 'var_7': {},
+                         'var_6': {}, 'var_13': {}, 'var_10': {}, 'var_12': {},
+                         'var_1': {}, 'var_11': {}, 'var_2': {}, 'var_4': {}}
+        self.assertDictEqual(model.node, node_expected)
 
 
 class TestUAIWriter(unittest.TestCase):
