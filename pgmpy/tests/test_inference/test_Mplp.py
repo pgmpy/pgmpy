@@ -15,7 +15,8 @@ class TestMplp(unittest.TestCase):
                                 ('I', 'J'), ('J', 'K'), ('K', 'L'), ('L', 'P'),
                                 ('M', 'N'), ('N', 'O'), ('O', 'P'), ('A', 'E'),
                                 ('E', 'I'), ('I', 'M'), ('B', 'F'), ('F', 'J'),
-                                ('J', 'N'), ('C', 'G'), ('G', 'K'), ('K', 'O')])
+                                ('J', 'N'), ('C', 'G'), ('G', 'K'), ('K', 'O'),
+                                ('K', 'P'), ('O','J'), ('A', 'F'), ('C', 'H')])
 
         factor_a = Factor(['A'], cardinality=[2], value=np.array([0.54577, 1.8323]))
         factor_b = Factor(['B'], cardinality=[2], value=np.array([0.93894, 1.065]))
@@ -57,6 +58,10 @@ class TestMplp(unittest.TestCase):
         factor_d_h = Factor(['D', 'H'], cardinality=[2, 2], value=np.array([1994.0, 0.0005015, 0.0005015, 1994.0]))
         factor_h_l = Factor(['H', 'L'], cardinality=[2, 2], value=np.array([0.022576, 44.295, 44.295, 0.022576]))
         factor_l_p = Factor(['L', 'P'], cardinality=[2, 2], value=np.array([0.0018291, 546.72, 546.72, 0.0018291]))
+        factor_k_p = Factor(['K', 'P'], cardinality=[2, 2], value=np.array([0.0018291, 546.72, 546.72, 0.0018291]))
+        factor_o_j = Factor(['O', 'J'], cardinality=[2, 2], value=np.array([0.001312, 762.21, 762.21, 0.001312]))
+        factor_a_f = Factor(['A', 'F'], cardinality=[2, 2], value=np.array([0.00023442, 4265.9, 4265.9, 0.00023442]))
+        factor_c_h = Factor(['C', 'H'], cardinality=[2, 2], value=np.array([134.43, 0.0074387, 0.0074387, 134.43]))
 
         self.markov_model.add_factors(factor_a, factor_b, factor_c, factor_d,
                                       factor_e, factor_f, factor_g, factor_h,
@@ -67,20 +72,26 @@ class TestMplp(unittest.TestCase):
                                       factor_k_l, factor_m_n, factor_n_o, factor_o_p,
                                       factor_a_e, factor_e_i, factor_i_m, factor_b_f,
                                       factor_f_j, factor_j_n, factor_c_g, factor_g_k,
-                                      factor_k_o, factor_d_h, factor_h_l, factor_l_p)
+                                      factor_k_o, factor_d_h, factor_h_l, factor_l_p,
+                                      factor_k_p, factor_o_j, factor_a_f, factor_c_h)
 
         for factor in self.markov_model.factors:
             factor.values = np.log(factor.values)
         self.mplp = Mplp(self.markov_model)
 
-    def test_query_single_variable(self):
-        query_result = self.mplp.map_query(1000, 0.0002, 0.0002)
+
+class TightenTripletOff(TestMplp):
+
+    # Query when tighten triplet is OFF
+    def test_query_tighten_triplet_off(self):
+        query_result = self.mplp.map_query(tighten_triplet=False)
+
         # Results from the Sontag code for a mplp run without tightening is:
         expected_result = {
-            'A': 0.60557, 'B': -0.06300, 'C': 0.11422, 'D': -0.57461,
-            'E': 0.75254, 'F': 0.41164, 'G': 0.73371, 'H': 0.96819,
-            'I': 0.68913, 'J': 0.49731, 'K': 0.91856, 'L': -0.69140,
-            'M': -0.89940, 'N': 0.71691, 'O': -0.43432, 'P': -0.06353}
+            'P': -0.06353, 'N': 0.71691, 'O': 0.43431, 'L': -0.69140,
+            'M': -0.89940, 'J': 0.49731, 'K': 0.91856, 'H': 0.96819,
+            'I': 0.68913, 'F': 0.41164, 'G': 0.73371, 'D': -0.57461,
+            'E': 0.75254, 'B': 0.06297, 'C': -0.11423, 'A': 0.60557}
 
         self.assertAlmostEqual(expected_result['A'], query_result['A'], places=4)
         self.assertAlmostEqual(expected_result['B'], query_result['B'], places=4)
@@ -98,3 +109,42 @@ class TestMplp(unittest.TestCase):
         self.assertAlmostEqual(expected_result['N'], query_result['N'], places=4)
         self.assertAlmostEqual(expected_result['O'], query_result['O'], places=4)
         self.assertAlmostEqual(expected_result['P'], query_result['P'], places=4)
+
+        # The final Integrality gap after solving for the present case
+        int_gap = self.mplp.get_integrality_gap()
+        self.assertAlmostEqual(64.59, int_gap, places=1)
+
+
+class TightenTripletOn(TestMplp):
+
+    # Query when tighten triplet is ON
+    def test_query_tighten_triplet_on(self):
+        query_result = self.mplp.map_query(tighten_triplet=True)
+        # Results from the Sontag code for a mplp run with tightening is:
+        expected_result = {
+            'P': 0.06353, 'C': 0.11422, 'B': -0.06300, 'A': 0.60557,
+            'G': -0.73374, 'F': 0.41164, 'E': 0.75254, 'D': -0.57461,
+            'K': -0.91856, 'J': 0.49731, 'I': 0.68913, 'H': 0.96819,
+            'O': 0.43431, 'N': 0.71691, 'M': -0.89940, 'L': 0.69139}
+
+        self.assertAlmostEqual(expected_result['A'], query_result['A'], places=4)
+        self.assertAlmostEqual(expected_result['B'], query_result['B'], places=4)
+        self.assertAlmostEqual(expected_result['C'], query_result['C'], places=4)
+        self.assertAlmostEqual(expected_result['D'], query_result['D'], places=4)
+        self.assertAlmostEqual(expected_result['E'], query_result['E'], places=4)
+        self.assertAlmostEqual(expected_result['F'], query_result['F'], places=4)
+        self.assertAlmostEqual(expected_result['G'], query_result['G'], places=4)
+        self.assertAlmostEqual(expected_result['H'], query_result['H'], places=4)
+        self.assertAlmostEqual(expected_result['I'], query_result['I'], places=4)
+        self.assertAlmostEqual(expected_result['J'], query_result['J'], places=4)
+        self.assertAlmostEqual(expected_result['K'], query_result['K'], places=4)
+        self.assertAlmostEqual(expected_result['L'], query_result['L'], places=4)
+        self.assertAlmostEqual(expected_result['M'], query_result['M'], places=4)
+        self.assertAlmostEqual(expected_result['N'], query_result['N'], places=4)
+        self.assertAlmostEqual(expected_result['O'], query_result['O'], places=4)
+        self.assertAlmostEqual(expected_result['P'], query_result['P'], places=4)
+
+        # The final Integrality gap after solving for the present case
+        int_gap = self.mplp.get_integrality_gap()
+        # Since the ties are broken arbitrary, we have 2 possible solutions howsoever trivial in difference
+        self.assertIn(round(int_gap, 2), (7.98, 8.07))

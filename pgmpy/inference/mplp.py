@@ -125,8 +125,7 @@ class Mplp(Inference):
                 present_variables = list(intersection)
 
                 # Present variables cardinality
-                present_variables_card = [cluster_potential.cardinality[cluster_potential.scope().index(variable)]
-                                          for variable in present_variables]
+                present_variables_card = [cluster_potential.get_cardinality(variable) for variable in present_variables]
 
                 # We need to create a new factor whose messages are blank
                 self.message_from_cluster[intersection] = \
@@ -204,8 +203,11 @@ class Mplp(Inference):
         decoded_result_assignment = {node: np.argmax(self.objective[node].values)
                                      for node in self.objective if len(node) == 1}
 
-        # Use the original cluster_potentials of each cluster to find the primal integral value.
-        integer_value = 0
+        # Use the original cluster_potentials of each factor to find the primal integral value.
+        # 1. For single node factors
+        integer_value = sum([self.factors[variable][0].values[decoded_result_assignment[frozenset(variable)]]
+                             for variable in self.variables])
+        # 2. For clusters
         for cluster_key in self.cluster_set:
             cluster = self.cluster_set[cluster_key]
             index = [tuple([variable, decoded_result_assignment[frozenset([variable])]])
@@ -369,6 +371,9 @@ class Mplp(Inference):
 
         max_triplets: integer
                       Maximum number of triplets that can be added atmost in one iteration.
+
+        prolong: bool
+                It sets the continuation of tightening after all the triplets are exhausted
         """
         # Find all the triplets that are possible in the present model
         triangles = self.find_triangles()
@@ -417,6 +422,9 @@ class Mplp(Inference):
         """
 
         return self.integrality_gap
+
+    def query(self):
+        raise NotImplementedError("map_query() is the only query method available.")
 
     def map_query(self, init_iter=1000, later_iter=20, dual_threshold=0.0002, integrality_gap_threshold=0.0002,
                   tighten_triplet=True, max_triplets=5, max_iterations=100, prolong=False):
