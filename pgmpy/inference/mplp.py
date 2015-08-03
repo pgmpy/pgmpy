@@ -205,7 +205,7 @@ class Mplp(Inference):
 
         # Use the original cluster_potentials of each factor to find the primal integral value.
         # 1. For single node factors
-        integer_value = sum([self.factors[variable][0].values[decoded_result_assignment[frozenset(variable)]]
+        integer_value = sum([self.factors[variable][0].values[decoded_result_assignment[frozenset([variable])]]
                              for variable in self.variables])
         # 2. For clusters
         for cluster_key in self.cluster_set:
