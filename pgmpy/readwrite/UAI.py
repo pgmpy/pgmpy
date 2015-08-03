@@ -59,11 +59,12 @@ class UAIReader:
         no_functions = Word(nums).setResultsName('no_functions')
         grammar += no_functions
         self.no_functions = int(grammar.parseString(self.network)['no_functions'])
+        integer = Word(nums).setParseAction(lambda t: int(t[0]))
         for function in range(0, self.no_functions):
             scope_grammar = Word(nums).setResultsName('fun_scope_' + str(function))
             grammar += scope_grammar
             function_scope = grammar.parseString(self.network)['fun_scope_' + str(function)]
-            function_grammar = ((Word(nums))*int(function_scope)).setResultsName('fun_' + str(function))
+            function_grammar = ((integer)*int(function_scope)).setResultsName('fun_' + str(function))
             grammar += function_grammar
 
         floatnumber = Combine(Word(nums) + Optional(Literal(".") + Optional(Word(nums))))
@@ -154,13 +155,15 @@ class UAIReader:
         edges = []
         for function in range(0, self.no_functions):
             function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
+            if isinstance(function_variables, int):
+                function_variables = [function_variables]
             if self.network_type == 'BAYES':
                 child_var = "var_" + str(function_variables[-1])
                 function_variables = function_variables[:-1]
                 for var in function_variables:
                     edges.append((child_var, "var_" + str(var)))
             elif self.network_type == "MARKOV":
-                function_variables = ["var_" + var for var in function_variables]
+                function_variables = ["var_" + str(var) for var in function_variables]
                 edges.extend(list(combinations(function_variables, 2)))
         return set(edges)
 
@@ -186,12 +189,14 @@ class UAIReader:
         tables = []
         for function in range(0, self.no_functions):
             function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
+            if isinstance(function_variables, int):
+                function_variables = [function_variables]
             if self.network_type == 'BAYES':
                 child_var = "var_" + str(function_variables[-1])
                 values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
                 tables.append((child_var, list(values)))
             elif self.network_type == "MARKOV":
-                function_variables = ["var_" + var for var in function_variables]
+                function_variables = ["var_" + str(var) for var in function_variables]
                 values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
                 tables.append((function_variables, list(values)))
         return tables
