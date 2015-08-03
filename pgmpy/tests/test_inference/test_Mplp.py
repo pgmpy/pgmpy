@@ -11,12 +11,12 @@ class TestMplp(unittest.TestCase):
         self.markov_model = MarkovModel()
 
         self.markov_model.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F'),
-                                ('F', 'G'), ('G', 'H'), ('D', 'H'), ('H', 'L'),
-                                ('I', 'J'), ('J', 'K'), ('K', 'L'), ('L', 'P'),
-                                ('M', 'N'), ('N', 'O'), ('O', 'P'), ('A', 'E'),
-                                ('E', 'I'), ('I', 'M'), ('B', 'F'), ('F', 'J'),
-                                ('J', 'N'), ('C', 'G'), ('G', 'K'), ('K', 'O'),
-                                ('K', 'P'), ('O','J'), ('A', 'F'), ('C', 'H')])
+                                          ('F', 'G'), ('G', 'H'), ('D', 'H'), ('H', 'L'),
+                                          ('I', 'J'), ('J', 'K'), ('K', 'L'), ('L', 'P'),
+                                          ('M', 'N'), ('N', 'O'), ('O', 'P'), ('A', 'E'),
+                                          ('E', 'I'), ('I', 'M'), ('B', 'F'), ('F', 'J'),
+                                          ('J', 'N'), ('C', 'G'), ('G', 'K'), ('K', 'O'),
+                                          ('K', 'P'), ('O', 'J'), ('A', 'F'), ('C', 'H')])
 
         factor_a = Factor(['A'], cardinality=[2], value=np.array([0.54577, 1.8323]))
         factor_b = Factor(['B'], cardinality=[2], value=np.array([0.93894, 1.065]))
