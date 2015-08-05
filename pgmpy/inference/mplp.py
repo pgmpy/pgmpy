@@ -226,7 +226,7 @@ class Mplp(Inference):
             * stuck on a local minima.
 
         Parameters
-        ---------
+        ----------
         dual_threshold: double
                         This sets the minimum width between the dual objective decrements. If the decrement is lesser
                         than the threshold, then that means we have stuck on a local minima.
@@ -235,7 +235,8 @@ class Mplp(Inference):
                                    This sets the threshold for the integrality gap below which we say that the solution
                                    is satisfactory.
 
-        Reference:
+        References
+        ----------
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # Find the new objective after the message updates
@@ -276,7 +277,7 @@ class Mplp(Inference):
         >>> mplp = Mplp(mm)
         >>> mplp.find_triangles()
         """
-        return [clique for clique in nx.find_cliques(self.model) if len(clique) == 3]
+        return list(filter(lambda x: len(x) == 3, nx.find_cliques(self.model)))
 
     def _update_triangles(self, triangles_list):
         """
