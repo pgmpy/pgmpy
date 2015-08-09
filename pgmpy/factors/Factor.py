@@ -441,7 +441,7 @@ class Factor:
                                                                  vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
-            string_header = self.scope()
+            string_header = [str(var) for var in self.scope()]
             string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                                   variables=','.join(string_header)))
 
