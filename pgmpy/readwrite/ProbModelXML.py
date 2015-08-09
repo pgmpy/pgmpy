@@ -349,7 +349,7 @@ class ProbModelXMLWriter:
             self._add_link(edge)
 
         # Add Potentials
-        for potential in sorted(self.data['probnet']['Potentials']):
+        for potential in self.data['probnet']['Potentials']:
             self._add_potential(potential, self.potentials)
 
     def __str__(self):
@@ -378,8 +378,16 @@ class ProbModelXMLWriter:
         variable_element = etree.SubElement(self.variables, 'Variable', attrib={'name': variable,
                                                                                 'type': variable_data['type'],
                                                                                 'role': variable_data['role']})
-        etree.SubElement(variable_element, 'Comment').text = variable_data['Comment']
-        etree.SubElement(variable_element, 'Coordinates', variable_data['Coordinates'])
+
+        try:
+            etree.SubElement(variable_element, 'Comment').text = variable_data['Comment']
+        except KeyError:
+            pass
+        try:
+            etree.SubElement(variable_element, 'Coordinates', variable_data['Coordinates'])
+        except KeyError:
+            pass
+
         try:
             for key, value in variable_data['AdditionalProperties'].items():
                 etree.SubElement(variable_element, 'Property', attrib={'name': key, 'value': value})
@@ -400,8 +408,14 @@ class ProbModelXMLWriter:
         edge_data = self.data['probnet']['edges'][edge]
         link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
                                                             'directed': edge_data['directed']})
-        etree.SubElement(link, 'Comment').text = edge_data['Comment']
-        etree.SubElement(link, 'Label').text = edge_data['Label']
+        try:
+            etree.SubElement(link, 'Comment').text = edge_data['Comment']
+        except KeyError:
+            pass
+        try:
+            etree.SubElement(link, 'Label').text = edge_data['Label']
+        except KeyError:
+            pass
         try:
             self._add_additional_properties(link, edge_data['AdditionalProperties'])
         except KeyError:
