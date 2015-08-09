@@ -336,8 +336,9 @@ class ProbModelXMLWriter:
             etree.SubElement(self.probnet, 'DecisionCriteria')
 
         # Add Additional Constraints
-        for constraint in sorted(self.data['probnet']['AdditionalConstraints']):
-            self._add_constraint(constraint)
+        if 'AdditionalConstraints' in self.data['probnet']:
+            for constraint in sorted(self.data['probnet']['AdditionalConstraints']):
+                self._add_constraint(constraint)
 
         # Add variables
         for variable in sorted(self.data['probnet']['Variables']):
