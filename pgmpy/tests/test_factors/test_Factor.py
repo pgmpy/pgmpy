@@ -36,6 +36,7 @@ class TestFactorMethods(unittest.TestCase):
     def setUp(self):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        self.phi2 = Factor([('x1', 0), ('x2', 0), ('x3', 0)], [2, 3, 2], range(12))
 
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
@@ -93,6 +94,10 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce1(self):
         self.phi1.reduce([('x2', 0), ('x1', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+
+    def test_reduce2(self):
+        self.phi2.reduce([(('x2', 0), 0), (('x1', 0), 0)])
+        np_test.assert_array_equal(self.phi2.values, np.array([0, 1]))
 
     @unittest.skip
     def test_complete_reduce(self):
