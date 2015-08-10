@@ -1,9 +1,9 @@
 import unittest
+from unittest.mock import MagicMock, patch
 
-from pgmpy.models import MarkovModel
-from pgmpy.inference.Sampling import BayesianModelSampling
-from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD, State
+from pgmpy.factors import Factor, TabularCPD, State
+from pgmpy.inference.Sampling import BayesianModelSampling, GibbsSampling
+from pgmpy.models import BayesianModel, MarkovModel
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -89,3 +89,46 @@ class TestBayesianModelSampling(unittest.TestCase):
         del self.sampling_inference
         del self.bayesian_model
         del self.markov_model
+
+
+class TestGibbsSampling(unittest.TestCase):
+    def setUp(self):
+        # A test Bayesian model
+        diff_cpd = TabularCPD('diff', 2, [[0.6], [0.4]])
+        intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
+        grade_cpd = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
+                               evidence=['diff', 'intel'], evidence_card=[2, 2])
+        self.bayesian_model = BayesianModel()
+        self.bayesian_model.add_nodes_from(['diff', 'intel', 'grade'])
+        self.bayesian_model.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+        self.bayesian_model.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+
+        # A test Markov model
+        self.markov_model = MarkovModel([('A', 'B'), ('C', 'B'), ('B', 'D')])
+        factor_ab = Factor(['A', 'B'], [2, 3], [1, 2, 3, 4, 5, 6])
+        factor_cb = Factor(['C', 'B'], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
+        factor_bd = Factor(['B', 'D'], [3, 2], [5, 7, 2, 1, 9, 3])
+        self.markov_model.add_factors(factor_ab, factor_cb, factor_bd)
+
+    def tearDown(self):
+        del self.bayesian_model
+        del self.markov_model
+
+    @patch('pgmpy.inference.Sampling.GibbsSampling._get_kernel_from_bayesian_model', autospec=True)
+    @patch('pgmpy.models.MarkovChain.__init__', autospec=True)
+    def test_init_bayesian_model(self, init, get_kernel):
+        model = MagicMock(spec_set=BayesianModel)
+        gibbs = GibbsSampling(model)
+        init.assert_called_once_with(gibbs)
+        get_kernel.assert_called_once_with(gibbs, model)
+
+    @patch('pgmpy.inference.Sampling.GibbsSampling._get_kernel_from_markov_model', autospec=True)
+    def test_init_markov_model(self, get_kernel):
+        model = MagicMock(spec_set=MarkovModel)
+        gibbs = GibbsSampling(model)
+        get_kernel.assert_called_once_with(gibbs, model)
+
+    def test_get_kernel_from_bayesian_model(self):
+        gibbs = GibbsSampling()
+        gibbs._get_kernel_from_bayesian_model(self.bayesian_model)
+        print(gibbs.transition_models)
