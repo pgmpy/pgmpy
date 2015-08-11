@@ -1153,8 +1153,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
     <Variables>
       <Variable name="Bronchitis" role="chance" type="finiteStates">
         <Coordinates x="698" y="181"/>
-        <Property name="Title" value="B"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="B"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1166,8 +1166,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="Dyspnea" role="chance" type="finiteStates">
         <Coordinates x="533" y="321"/>
-        <Property name="Title" value="D"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="D"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1179,8 +1179,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="LungCancer" role="chance" type="finiteStates">
         <Coordinates x="421" y="152"/>
-        <Property name="Title" value="L"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="L"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1192,8 +1192,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="Smoker" role="chance" type="finiteStates">
         <Coordinates x="568" y="52"/>
-        <Property name="Title" value="S"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="S"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1205,8 +1205,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="Tuberculosis" role="chance" type="finiteStates">
         <Coordinates x="201" y="150"/>
-        <Property name="Title" value="T"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="T"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1218,8 +1218,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="TuberculosisOrCancer" role="chance" type="finiteStates">
         <Coordinates x="336" y="238"/>
-        <Property name="Title" value="E"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="E"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1231,8 +1231,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
       <Variable name="VisitToAsia" role="chance" type="finiteStates">
         <Coordinates x="290" y="58"/>
-        <Property name="Title" value="A"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="A"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1245,8 +1245,8 @@ class TestProbModelXMLmethods(unittest.TestCase):
       <Variable name="X-ray" role="chance" type="finiteStates">
         <Comment>Indica si el test de rayos X ha sido positivo</Comment>
         <Coordinates x="252" y="322"/>
-        <Property name="Title" value="X"/>
         <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="X"/>
         <States>
           <State name="no">
             <AdditionalProperties/>
@@ -1258,28 +1258,28 @@ class TestProbModelXMLmethods(unittest.TestCase):
       </Variable>
     </Variables>
     <Links>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="Bronchitis" var2="Dyspnea">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="LungCancer" var2="TuberculosisOrCancer">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="Smoker" var2="Bronchitis">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="Smoker" var2="LungCancer">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="Tuberculosis" var2="TuberculosisOrCancer">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="TuberculosisOrCancer" var2="Dyspnea">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="TuberculosisOrCancer" var2="X-ray">
         <AdditionalProperties/>
       </Link>
-      <Link directed="true" var1="(" var2="'">
+      <Link directed="true" var1="VisitToAsia" var2="Tuberculosis">
         <AdditionalProperties/>
       </Link>
     </Links>

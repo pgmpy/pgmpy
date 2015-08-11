@@ -389,7 +389,7 @@ class ProbModelXMLWriter:
             pass
 
         try:
-            for key, value in variable_data['AdditionalProperties'].items():
+            for key, value in sorted(variable_data['AdditionalProperties'].items()):
                 etree.SubElement(variable_element, 'Property', attrib={'name': key, 'value': value})
         except KeyError:
             etree.SubElement(variable_element, 'AdditionalProperties')
@@ -406,6 +406,8 @@ class ProbModelXMLWriter:
         Adds an edge to the ProbModelXML.
         """
         edge_data = self.data['probnet']['edges'][edge]
+        if isinstance(edge, str):
+           edge = eval(edge)
         link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
                                                             'directed': edge_data['directed']})
         try:
