@@ -7,15 +7,14 @@ from pgmpy.inference import BeliefPropagation
 
 class DBNInference(Inference):
     def __init__(self, model):
-    """
-    Class for performing inference using Belief Propagation method
-    for the input Dynamic Bayesian Network.
-    Parameters
-    ----------
-    model: Dynamic Bayesian Network
+        """
+        Class for performing inference using Belief Propagation method
+        for the input Dynamic Bayesian Network.
+        Parameters
+        ----------
+        model: Dynamic Bayesian Network
         model for which inference is to performed
-    """
-        
+        """
         super().__init__(model)
         self.interface_nodes_0 = model.get_interface_nodes(0)
         self.interface_nodes_1 = model.get_interface_nodes(1)
@@ -72,7 +71,7 @@ class DBNInference(Inference):
         nodes: list
            The nodes which will be marginalized in the factor.
         factor: factor
-           factor 
+           factor which is to be marginalized. 
         """
         marginalizing_nodes = list(set(factor.scope()).difference(nodes))
         new_factor = factor.marginalize(marginalizing_nodes, inplace=False)
