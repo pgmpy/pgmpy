@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from pgmpy.models import BayesianModel, DynamicBayesianNetwork
 from pgmpy.factors import Factor
-from pgmpy.inference import BeliefPropagation
+from pgmpy.inference import Inference, BeliefPropagation
 
 class DBNInference(Inference):
     def __init__(self, model):
