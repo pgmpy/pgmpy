@@ -278,7 +278,7 @@ class Factor:
 
         reduce_var_indexes = np.array([1 if t in reduce_vars else 0 for t in self.scope()])
         new_card = self.cardinality[reduce_var_indexes == 0]
-        new_vars = np.array(self.scope())[reduce_var_indexes == 0]
+        new_vars = [self.scope()[index] for index in range(len(self.scope())) if reduce_var_indexes[index] == 0]
 
         reduce_var_indexes[reduce_var_indexes == 0] = -1
         reduce_var_indexes[var_indexes] = reduce_states
@@ -441,7 +441,7 @@ class Factor:
                                                                  vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
-            string_header = self.scope()
+            string_header = [str(var) for var in self.scope()]
             string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                                   variables=','.join(string_header)))
 
