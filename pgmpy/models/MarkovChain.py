@@ -41,7 +41,7 @@ class MarkovChain:
 
     Set a start state
     >>> from pgmpy.factors import State
-    >>> model.set_start_state([State('intel': 0), State('diff': 2)])
+    >>> model.set_start_state([State('intel', 0), State('diff', 2)])
 
     Sample from it
     >>> model.sample(size=5)
@@ -69,10 +69,10 @@ class MarkovChain:
             variables = []
         if card is None:
             card = []
-        if not hasattr(variables, '__iter__'):
-            raise ValueError('variables must be an iterable.')
-        if not hasattr(card, '__iter__'):
-            raise ValueError('card must be an iterable.')
+        if not hasattr(variables, '__iter__') or isinstance(variables, str):
+            raise ValueError('variables must be a non-string iterable.')
+        if not hasattr(card, '__iter__') or isinstance(card, str):
+            raise ValueError('card must be a non-string iterable.')
         self.variables = variables
         self.cardinalities = {v: c for v, c in zip(variables, card)}
         self.transition_models = {var: {} for var in variables}
@@ -96,9 +96,9 @@ class MarkovChain:
         >>> model = MC(['a', 'b'], [2, 2])
         >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
-        if isinstance(start_state, dict):
-            start_state = [State(var, start_state[var]) for var in self.variables]
-        elif start_state is not None:
+        if start_state is not None:
+            if not hasattr(start_state, '__iter__') or isinstance(start_state, str):
+                raise ValueError('start_state must be a non-string iterable.')
             # Must be an array-like iterable. Reorder according to self.variables.
             state_dict = {var: st for var, st in start_state}
             start_state = [State(var, state_dict[var]) for var in self.variables]
@@ -109,8 +109,8 @@ class MarkovChain:
         """
         Checks if a list representing the state of the variables is valid.
         """
-        if not hasattr(state, '__iter__'):
-            raise ValueError('Start state must be a iterable object.')
+        if not hasattr(state, '__iter__') or isinstance(state, str):
+            raise ValueError('Start state must be a non-string iterable object.')
         state_vars = {s.var for s in state}
         model_vars = set(self.transition_models.keys())
         if not state_vars == model_vars:
@@ -160,7 +160,7 @@ class MarkovChain:
 
         Examples:
         ---------
-        >>> from from pgmpy.models import MarkovChain as MC
+        >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC()
         >>> model.add_variables_from(['x', 'y'], [3, 4])
         """
@@ -195,14 +195,17 @@ class MarkovChain:
         if not exp_states == tm_states:
             raise ValueError('Transitions must be defined for all states of variable {v}. '
                              'Expected states: {es}, Got: {ts}.'.format(v=variable, es=exp_states, ts=tm_states))
+
         for _, transition in transition_model.items():
             if not isinstance(transition, dict):
                 raise ValueError('Each transition must be a dict.')
             prob_sum = 0
+
             for _, prob in transition.items():
                 if prob < 0 or prob > 1:
                     raise ValueError('Transitions must represent valid probability weights.')
                 prob_sum += prob
+
             if not np.allclose(prob_sum, 1):
                 raise ValueError('Transition probabilities must sum to 1.')
 
@@ -226,8 +229,9 @@ class MarkovChain:
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain as MC
+        >>> from pgmpy.factors import State
         >>> model = MC(['intel', 'diff'], [2, 3])
-        >>> model.set_start_state({'intel': 0, 'diff': 2})
+        >>> model.set_start_state([State('intel', 0), State('diff', 2)])
         >>> intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6 }, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
@@ -240,19 +244,23 @@ class MarkovChain:
         3      1     0
         4      0     2
         """
-        if start_state is None and self.state is None:
-            self.state = self.random_state()
+        if start_state is None:
+            if self.state is None:
+                self.state = self.random_state()
+            # else use previously-set state
         else:
             self.set_start_state(start_state)
 
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
+
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 next_st = sample_discrete(list(self.transition_models[var][st].keys()),
                                           list(self.transition_models[var][st].values()))[0]
                 self.state[j] = State(var, next_st)
             sampled.loc[i + 1] = [st for var, st in self.state]
+
         return sampled
 
     def prob_from_sample(self, state, sample=None, window_size=None):
@@ -272,7 +280,7 @@ class MarkovChain:
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
         >>> model.prob_from_sample({'diff': 0})
-        array([ 0.27,  0.4 ,  0.18,  0.23, ... 0.29])
+        array([ 0.27,  0.4 ,  0.18,  0.23, ..., 0.29])
         """
         if sample is None:
             # generate sample of size 10000
@@ -281,12 +289,14 @@ class MarkovChain:
             window_size = len(sample) // 100  # default window size is 100
         windows = len(sample) // window_size
         probabilities = np.zeros(windows)
+
         for i in range(windows):
             for j in range(window_size):
                 ind = i * 100 + j
                 state_eq = [sample.loc[ind, k] == state[k] for k in state.keys()]
                 if all(state_eq):
                     probabilities[i] += 1
+
         return probabilities / window_size
 
     def generate_sample(self, start_state=None, size=1):
@@ -300,22 +310,26 @@ class MarkovChain:
         Examples:
         ---------
         >>> from pgmpy.models.MarkovChain import MarkovChain
+        >>> from pgmpy.factors import State
         >>> model = MarkovChain()
         >>> model.add_variables_from(['intel', 'diff'], [3, 2])
         >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
-        >>> gen = model.generate_sample({'intel': 0, 'diff': 0}, 2)
+        >>> gen = model.generate_sample([State('intel', 0), State('diff', 0)], 2)
         >>> [sample for sample in gen]
         [[State(var='intel', state=2), State(var='diff', state=1)],
          [State(var='intel', state=2), State(var='diff', state=0)]]
         """
-        if start_state is None and self.state is None:
-            self.state = self.random_state()
+        if start_state is None:
+            if self.state is None:
+                self.state = self.random_state()
+            # else use previously-set state
         else:
             self.set_start_state(start_state)
         # sampled.loc[0] = [self.state[var] for var in self.variables]
+
         for i in range(size):
             for j, (var, st) in enumerate(self.state):
                 next_st = sample_discrete(list(self.transition_models[var][st].keys()),

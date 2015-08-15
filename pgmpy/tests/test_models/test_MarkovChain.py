@@ -50,15 +50,6 @@ class TestMarkovChain(unittest.TestCase):
         self.assertIsNone(model.state)
 
     @patch("pgmpy.models.MarkovChain._check_state", autospec=True)
-    def test_set_start_state_dict(self, check_state):
-        model = MC(['a', 'b'], [1, 2])
-        check_state.return_value = True
-        model.set_start_state({'a': 0, 'b': 1})
-        model_state = [State('a', 0), State('b', 1)]
-        check_state.assert_called_once_with(model, model_state)
-        self.assertEqual(model.state, model_state)
-
-    @patch("pgmpy.models.MarkovChain._check_state", autospec=True)
     def test_set_start_state_list(self, check_state):
         model = MC(['b', 'a'], [1, 2])
         check_state.return_value = True
