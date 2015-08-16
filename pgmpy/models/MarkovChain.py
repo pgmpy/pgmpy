@@ -268,7 +268,7 @@ class MarkovChain:
         Given an instantiation (partial or complete) of the variables of the model,
         compute the probability of observing it over multiple windows in a given sample.
 
-        If 'sample' is not passed as an argument, generate the statisic by sampling from the
+        If 'sample' is not passed as an argument, generate the statistic by sampling from the
         Markov Chain, starting with a random initial state.
 
         Examples:
@@ -279,7 +279,7 @@ class MarkovChain:
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
-        >>> model.prob_from_sample({'diff': 0})
+        >>> model.prob_from_sample([State('diff', 0)])
         array([ 0.27,  0.4 ,  0.18,  0.23, ..., 0.29])
         """
         if sample is None:
@@ -292,8 +292,8 @@ class MarkovChain:
 
         for i in range(windows):
             for j in range(window_size):
-                ind = i * 100 + j
-                state_eq = [sample.loc[ind, k] == state[k] for k in state.keys()]
+                ind = i * window_size + j
+                state_eq = [sample.loc[ind, v] == s for v, s in state]
                 if all(state_eq):
                     probabilities[i] += 1
 
