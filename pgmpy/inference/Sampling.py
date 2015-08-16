@@ -302,12 +302,6 @@ class GibbsSampling(MarkovChain):
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
 
-    def add_variable(self, *args):
-        """
-        Disallow adding of variables directly.
-        """
-        raise Exception('Cannot add variable directly to Gibbs chain. Add it to the underlying model instead.')
-
     def sample(self, start_state=None, size=1):
         """
         Sample from the Markov Chain.
@@ -340,7 +334,6 @@ class GibbsSampling(MarkovChain):
         2  1  1  0
         3  1  1  1
         """
-        print(start_state, self.state)
         if start_state is None and self.state is None:
             self.state = self.random_state()
         else:

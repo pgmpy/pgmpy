@@ -131,4 +131,3 @@ class TestGibbsSampling(unittest.TestCase):
     def test_get_kernel_from_bayesian_model(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_bayesian_model(self.bayesian_model)
-        print(gibbs.transition_models)
