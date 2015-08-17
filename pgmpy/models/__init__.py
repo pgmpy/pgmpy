@@ -5,6 +5,7 @@ from .FactorGraph import *
 from .ClusterGraph import *
 from .JunctionTree import *
 from .DynamicBayesianNetwork import *
+from .MarkovChain import MarkovChain
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
@@ -12,4 +13,5 @@ __all__ = ['BayesianModel',
            'FactorGraph',
            'JunctionTree',
            'ClusterGraph',
-           'DynamicBayesianNetwork']
+           'DynamicBayesianNetwork',
+           'MarkovChain']
