@@ -210,7 +210,7 @@ class DBNInference(Inference):
         for time in range(1, time_range + 1):
             evidence_time = self._get_evidence(evidence, time, 1)
             if interface_nodes_dict:
-                if evidence_time is not None:
+                if evidence_time:
                     evidence_time.update(interface_nodes_dict)
                 else:
                     evidence_time = interface_nodes_dict
@@ -229,6 +229,7 @@ class DBNInference(Inference):
             out_clique_phi = self._marginalize_factor(self.interface_nodes_1, clique_phi)
             new_scope = self._shift_nodes(out_clique_phi.scope(), 0)
             new_factor = Factor(new_scope, out_clique_phi.cardinality, out_clique_phi.values)
+            mid_bp = BeliefPropagation(self.one_and_half_junction_tree)
             self._update_belief(mid_bp, self.in_clique, new_factor)
             if evidence_time:
                 interface_nodes_dict = {(k[0], 0): v for k, v in evidence_time.items() if k in self.interface_nodes_1}
