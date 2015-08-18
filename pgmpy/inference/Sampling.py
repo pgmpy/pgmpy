@@ -164,7 +164,7 @@ class BayesianModelSampling(Inference):
         ...         ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> evidence = {'diff': State(var='diff',state=0)}
+        >>> evidence = [State('diff', 0)]
         >>> inference.likelihood_weighted_sample(evidence, 2)
                 intel       diff       grade  _weight
         0  (intel, 0)  (diff, 0)  (grade, 1)      0.6
