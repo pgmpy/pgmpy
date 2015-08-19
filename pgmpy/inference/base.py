@@ -80,3 +80,47 @@ class Inference:
             for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)
+
+
+class Approx_Inference:
+    """
+    Base class for the approximate inference algorithm.
+
+    Parameters
+    ----------
+    model: pgmpy.models.MarkovModel
+    We need a pairwise MarkovModel for Approx. inference.
+    """
+    def __init__(self, model):
+
+        # List of the variables in the present pairwise Markov Model
+        self.variables = []
+
+        # List of the cardinalities of the above variables in that order
+        self.cardinality = []
+
+        # List of all the factors that are present in the current model
+        self.factors = []
+
+        # List of all the factors values that are present in the current model
+        self.factor_values = []
+
+        # The integrality gap achieving which the approximation is considered completed.
+        self.int_gap = 0.002
+
+        # Number of iterations that the approximation algorithm should run, if say int_gap is not achieved
+        self.niter = 1000
+
+        # In a pairwise markov model, the order of the single node factors will define the cardinality order in the
+        # list. ( Following the way in which the data is provided in a UAI file )
+        for i in model.factors:
+            self.factor_values.append(i.values)
+            if len(i.cardinality) == 1:
+                self.cardinality.append(i.cardinality[0])
+                self.variables.append([key for key in i.variables.keys()][0])
+
+        for i in model.factors:
+            temp=[]
+            for factor_variables in i.variables.keys():
+                temp.extend([self.variables.index(variable_name) for variable_name in factor_variables])
+            self.factors.append(temp)
