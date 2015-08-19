@@ -1,5 +1,5 @@
-from pgmpy.estimators.base import *
-from pgmpy.estimators.MLE import *
+from pgmpy.estimators.base import BaseEstimator
+from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 
-__all__ = [BaseEstimator,
-           MaximumLikelihoodEstimator]
+__all__ = ['BaseEstimator',
+           'MaximumLikelihoodEstimator']
