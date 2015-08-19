@@ -387,6 +387,7 @@ class Factor:
             phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
         phi.values = phi.values / phi1.values
+        phi.values[np.isnan(phi.values)] = 0
 
         if not inplace:
             return phi

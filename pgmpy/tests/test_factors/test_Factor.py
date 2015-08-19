@@ -170,10 +170,10 @@ class TestFactorMethods(unittest.TestCase):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi * phi1
-        np_test.assert_almost_equal(prod.values,
+        np_test.assert_almost_equal(prod.values.ravel(),
                                    np.array([0, 0, 0, 0, 0, 1,
                                              2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]).reshape(2, 2, 2, 2))
+                                             0, 3, 6, 9]))
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
@@ -194,7 +194,7 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = Factor(['x1'], [2], [0, 2])
         div = phi1.divide(phi2, inplace=False)
-        np_test.assert_array_equal(div.values, np.array([0, 0, 1.5, 2]))
+        np_test.assert_array_equal(div.values.ravel(), np.array([np.inf, np.inf, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
