@@ -30,7 +30,7 @@ class TestFactorInit(unittest.TestCase):
         np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
 
     def test_class_init_sizeerror(self):
-        self.assertRaises(exceptions.SizeError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        self.assertRaises(ValueError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
@@ -102,7 +102,7 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
-        
+
     def test_complete_reduce(self):
         self.phi1.reduce([('x1', 0), ('x2', 0), ('x3', 1)])
         np_test.assert_array_equal(self.phi1.values, np.array([1]))
@@ -158,7 +158,7 @@ class TestFactorMethods(unittest.TestCase):
         phi = Factor(['x1', 'x2'], [3, 2], range(6))
         phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2], 
+        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2],
                                  [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3'])
@@ -507,7 +507,7 @@ class TestTreeCPD(unittest.TestCase):
                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
 
-        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'), 
+        self.tree2 = TreeCPD([('C','A','0'),('C','B','1'),
                               ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
                               ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
                               ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
@@ -541,7 +541,7 @@ class TestTreeCPD(unittest.TestCase):
         self.assertEqual(tabular_cpd.evidence, ['A', 'B', 'C'])
         self.assertEqual(tabular_cpd.evidence_card, [2, 2, 2])
         self.assertEqual(list(tabular_cpd.variables), ['J', 'C', 'B', 'A'])
-        np_test.assert_array_equal(tabular_cpd.values, 
+        np_test.assert_array_equal(tabular_cpd.values,
                                   np.array([ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4,
                                              0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]))
 

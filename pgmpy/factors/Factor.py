@@ -72,6 +72,9 @@ class Factor:
         """
         values = np.array(values)
 
+        if len(cardinality) != len(variables):
+            raise ValueError("Number of elements in cardinality must be equal to number of variables")
+
         if values.size != np.product(cardinality):
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
 
@@ -199,10 +202,10 @@ class Factor:
             if var not in phi.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
-        var_indexes = [] 
+        var_indexes = []
         for var in variables:
             var_index = phi.variables.index(var)
-            var_indexes.append(var_index) 
+            var_indexes.append(var_index)
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
         phi.variables = list(np.array(phi.variables)[index_to_keep])
@@ -419,7 +422,7 @@ class Factor:
             if var not in phi.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
-        var_indexes = [] 
+        var_indexes = []
         for var in variables:
             var_index = phi.variables.index(var)
             var_indexes.append(var_index)
