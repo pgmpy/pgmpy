@@ -1,5 +1,5 @@
 import copy
-import itertools
+from itertools import tee, chain, combinations
 from collections import defaultdict
 
 from pgmpy.models import BayesianModel, DynamicBayesianNetwork
@@ -50,11 +50,11 @@ class DBNInference(Inference):
         start_markov_model = self.start_bayesian_model.to_markov_model()
         one_and_half_markov_model = self.one_and_half_model.to_markov_model()
 
-        combinations_slice_0 = itertools.combinations(model.get_interface_nodes(0), 2)
-        combinations_slice_1 = itertools.combinations(model.get_interface_nodes(1), 2)
+        combinations_slice_0 = tee(combinations(self.interface_nodes_0, 2), 2)
+        combinations_slice_1 = combinations(self.interface_nodes_1, 2)
 
-        start_markov_model.add_edges_from(combinations_slice_0)
-        one_and_half_markov_model.add_edges_from(itertools.chain(combinations_slice_0, combinations_slice_1))
+        start_markov_model.add_edges_from(combinations_slice_0[0])
+        one_and_half_markov_model.add_edges_from(chain(combinations_slice_0[1], combinations_slice_1))
 
         self.one_and_half_junction_tree = one_and_half_markov_model.to_junction_tree()
         self.start_junction_tree = start_markov_model.to_junction_tree()
