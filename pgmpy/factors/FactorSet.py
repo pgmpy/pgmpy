@@ -100,7 +100,7 @@ class FactorSet:
         """
         return self.factors
 
-    def product(self, *factorsets):
+    def product(self, factorset, inplace=True):
         r"""
         Return the factor sets product with the given factor sets
 
@@ -124,9 +124,12 @@ class FactorSet:
         >>> factor_set2 = FactorSet(phi3, phi4)
         >>> factor_set2.product(factor_set1)
         """
-        return factorset_product(self, *factorsets)
+        factor_set = self if inplace else self.copy()
+        factor_set1 = factorset.copy()
 
-    def divide(self, factorset):
+        return factor_set.add_factors(factor_set1.factors)
+
+    def divide(self, factorset, inplace=True):
         r"""
         Returns a new factor set instance after division by the factor set
 
@@ -151,7 +154,13 @@ class FactorSet:
         >>> factor_set2 = FactorSet(phi3, phi4)
         >>> factor_set3 = factor_set2.divide(factor_set1)
         """
-        return factorset_divide(self, factorset)
+        factor_set = self if inplace else self.copy()
+        factor_set1 = factorset.copy()
+
+        factor_set.add_factors(*[phi.identity_factor() / phi for phi in factor_set1.factors])
+
+        if inplace:
+            return factor_set
 
     def marginalize(self, variables, inplace=True):
         """
@@ -216,6 +225,7 @@ class FactorSet:
         # No need to have copies of factors as argument because __init__ method creates copies.
         return FactorSet(*self.factors)
 
+
 def factorset_product(*factorsets_list):
     r"""
     Base method used for product of factor sets.
@@ -243,7 +253,7 @@ def factorset_product(*factorsets_list):
     """
     if not all(isinstance(factorset, FactorSet) for factorset in factorsets_list):
         raise TypeError("Input parameters must be FactorSet instances")
-    return reduce(lambda x, y: FactorSet(*(x.factors.union(y.factors))), factorsets_list)
+    return reduce(lambda x, y: x.product(y, inplace=False), factorsets_list)
 
 
 def factorset_divide(factorset1, factorset2):
@@ -276,4 +286,4 @@ def factorset_divide(factorset1, factorset2):
     """
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
         raise TypeError("factorset1 and factorset2 must be FactorSet instances")
-    return FactorSet(*factorset1.factors.union([x.identity_factor() / x for x in factorset2.factors]))
+    return factorset1.divide(factorset2, inplace=False)
