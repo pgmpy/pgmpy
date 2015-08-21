@@ -8,7 +8,7 @@ class FactorSet:
     r"""
     Base class of *Factor Sets*.
 
-    A factor set provides a compact representation of  higher dimensial factor
+    A factor set provides a compact representation of  higher dimensional factor
     :math:`\phi_1\cdot\phi_2\cdots\phi_n`
 
     For example the factor set corresponding to factor :math:`\phi_1\cdot\phi_2` would be the union of the factors
@@ -31,10 +31,9 @@ class FactorSet:
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set = FactorSet(phi1, phi2)
         """
-        from copy import deepcopy
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
-        self.factors = set(deepcopy(factors_list))
+        self.factors = set([factor.copy() for factor in factors_list])
 
     def add_factors(self, *factors):
         """
@@ -160,11 +159,11 @@ class FactorSet:
 
         Parameters
         ----------
-        variables: string, list-type
-            name of the variable (or variables) to be marginalized
+        variables: list, array-like
+            List of the variables to be marginalized.
 
         inplace: boolean
-            If inplace=True it will modify the factor set itself, else it would create a new factor set
+            If inplace=True it will modify the factor set itself, would create a new factor set
 
         Examples
         --------
@@ -175,30 +174,47 @@ class FactorSet:
         >>> factor_set1 = FactorSet(phi1, phi2)
         >>> factor_set1.marginalize('x1')
         """
-        if not isinstance(variables, (list, set, tuple)):
-            variables = [variables]
+        factor_set = self if inplace else self.copy()
 
         factors_to_be_marginalized = set(filter(lambda x: set(x.scope()).intersection(variables),
-                                                self.factors))
-
-        if not inplace:
-            new_factors = self.factors - factors_to_be_marginalized
+                                                factor_set.factors))
 
         for factor in factors_to_be_marginalized:
             variables_to_be_marginalized = list(set(factor.scope()).intersection(variables))
             if inplace:
                 factor.marginalize(variables_to_be_marginalized, inplace=True)
             else:
-                new_factors.add(factor.marginalize(variables_to_be_marginalized, inplace=False))
+                factor_set.remove_factors(factor)
+                factor_set.add_factors(factor.marginalize(variables_to_be_marginalized, inplace=False))
 
         if not inplace:
-            return FactorSet(*new_factors)
+            return factor_set
 
     def __mul__(self, other):
         return self.product(other)
 
     def __truediv__(self, other):
         return self.divide(other)
+
+    def copy(self):
+        """
+        Create a copy of factor set.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import FactorSet
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> factor_set = FactorSet(phi1, phi2)
+        >>> factor_set
+        <pgmpy.factors.FactorSet.FactorSet at 0x7fa68f390320>
+        >>> factor_set_copy = factor_set.copy()
+        >>> factor_set_copy
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f91a0031160>
+        """
+        # No need to have copies of factors as argument because __init__ method creates copies.
+        return FactorSet(*self.factors)
 
 def factorset_product(*factorsets_list):
     r"""
