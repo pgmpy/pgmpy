@@ -535,34 +535,15 @@ class Factor:
             html_string_header = '<table><caption>Factor</caption>'
             string_list.append(html_string_header)
 
-        if html:
             html_string_header = '<tr>{variable_cols}{phi}'.format(
                 variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=str(var)) for var in self.variables]),
                 phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_p=phi_or_p,
                                                                  vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
-            string_header = self.scope()
+            string_header = list(self.scope())
             string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                                   variables=','.join(string_header)))
-
-        # fun and gen are functions to generate the different values of
-        # variables in the table.
-        # gen starts with giving fun initial value of b=[0, 0, 0] then fun tries
-        # to increment it
-        # by 1.
-        # def fun(b, index=len(self.cardinality)-1):
-        #     b[index] += 1
-        #     if b[index] == self.cardinality[index]:
-        #         b[index] = 0
-        #         fun(b, index-1)
-        #     return b
-        #
-        # def gen():
-        #     b = [0] * len(self.variables)
-        #     yield b
-        #     for i in range(np.prod(self.cardinality)-1):
-        #         yield fun(b)
 
         value_index = 0
         factor_table = []
