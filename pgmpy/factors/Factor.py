@@ -517,10 +517,9 @@ class Factor:
         return Factor(self.scope(), self.cardinality, self.values)
 
     def __str__(self):
-        return self._str(phi_or_p='phi', html=False)
+        return self._str(phi_or_p='phi')
 
-    # TODO: fix this
-    def _str(self, phi_or_p, html=False):
+    def _str(self, phi_or_p):
         """
         Generate the string from `__str__` method.
 
@@ -530,41 +529,20 @@ class Factor:
                 'phi': When used for Factors.
                   'p': When used for CPDs.
         """
-        string_list = []
-        if html:
-            html_string_header = '<table><caption>Factor</caption>'
-            string_list.append(html_string_header)
-
-            html_string_header = '<tr>{variable_cols}{phi}'.format(
-                variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=str(var)) for var in self.variables]),
-                phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_p=phi_or_p,
-                                                                 vars=', '.join([str(var) for var in self.variables])))
-            string_list.append(html_string_header)
-        else:
-            string_header = list(self.scope())
-            string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
-                                                                  variables=','.join(string_header)))
+        string_header = list(self.scope())
+        string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
+                                                              variables=','.join(string_header)))
 
         value_index = 0
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
             prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
                          for i in range(len(self.variables))]
-            if html:
-                html_string = """<tr>%s<td>%4.4f</td></tr>""" % (
-                    ''.join(["""<td>%s</td>""" % assignment
-                             for assignment in prob_list]),
-                    self.values[value_index])
-                string_list.append(html_string)
-            else:
-                prob_list.append(self.values.ravel()[value_index])
-                factor_table.append(prob_list)
+            prob_list.append(self.values.ravel()[value_index])
+            factor_table.append(prob_list)
             value_index += 1
 
-        if html:
-            return "\n".join(string_list)
-        else:
-            return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
+        return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
 
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
