@@ -1,11 +1,10 @@
 import functools
+from itertools import product
 from collections import namedtuple
-from copy import deepcopy
 
 import numpy as np
 
 from pgmpy.extern import tabulate
-from pgmpy.utils.mathext import cartesian
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -13,7 +12,7 @@ State = namedtuple('State', ['var', 'state'])
 
 class Factor:
     """
-    Base class for *Factor*.
+    Base class for Factor.
 
     Public Methods
     --------------
@@ -102,42 +101,6 @@ class Factor:
         ['x1', 'x2', 'x3']
         """
         return self.variables
-
-    #TODO: Fix this method
-    def assignment(self, index):
-        """
-        Returns a list of assignments for the corresponding index.
-
-        Parameters
-        ----------
-        index: integer, list-type, ndarray
-            index or indices whose assignment is to be computed
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
-        >>> phi.assignment([1, 2])
-        [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
-        """
-        if isinstance(index, (int, np.integer)):
-            index = [index]
-        index = np.array(index)
-
-        max_index = np.prod(self.cardinality) - 1
-        if not all(i <= max_index for i in index):
-            raise IndexError("Index greater than max possible index")
-
-        assignments = np.zeros((len(index), len(self.scope())), dtype=np.int)
-        rev_card = self.cardinality[::-1]
-        for i, card in enumerate(rev_card):
-            assignments[:, i] = index % card
-            index = index//card
-
-        assignments = assignments[:, ::-1]
-
-        return [[self.variables[key][val] for key, val in zip(self.variables.keys(), values)] for values in assignments]
 
     def get_cardinality(self, variables):
         """
@@ -573,10 +536,9 @@ class Factor:
             string_list.append(html_string_header)
 
         if html:
-            html_string_header = '{tr}{variable_cols}{phi}'.format(
-                tr='<tr',
+            html_string_header = '<tr>{variable_cols}{phi}'.format(
                 variable_cols=''.join(['<td><b>{var}</b></td>'.format(var=str(var)) for var in self.variables]),
-                phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_P=phi_or_p,
+                phi='<td><b>{phi_or_p}{vars}</b><d></tr>'.format(phi_or_p=phi_or_p,
                                                                  vars=', '.join([str(var) for var in self.variables])))
             string_list.append(html_string_header)
         else:
@@ -589,23 +551,23 @@ class Factor:
         # gen starts with giving fun initial value of b=[0, 0, 0] then fun tries
         # to increment it
         # by 1.
-        def fun(b, index=len(self.cardinality)-1):
-            b[index] += 1
-            if b[index] == self.cardinality[index]:
-                b[index] = 0
-                fun(b, index-1)
-            return b
-
-        def gen():
-            b = [0] * len(self.variables)
-            yield b
-            for i in range(np.prod(self.cardinality)-1):
-                yield fun(b)
+        # def fun(b, index=len(self.cardinality)-1):
+        #     b[index] += 1
+        #     if b[index] == self.cardinality[index]:
+        #         b[index] = 0
+        #         fun(b, index-1)
+        #     return b
+        #
+        # def gen():
+        #     b = [0] * len(self.variables)
+        #     yield b
+        #     for i in range(np.prod(self.cardinality)-1):
+        #         yield fun(b)
 
         value_index = 0
         factor_table = []
-        for prob in gen():
-            prob_list = ["%s_%d" % (list(self.variables)[i], prob[i])
+        for prob in product(*[range(card) for card in self.cardinality]):
+            prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
                          for i in range(len(self.variables))]
             if html:
                 html_string = """<tr>%s<td>%4.4f</td></tr>""" % (
@@ -614,7 +576,7 @@ class Factor:
                     self.values[value_index])
                 string_list.append(html_string)
             else:
-                prob_list.append(self.values[value_index])
+                prob_list.append(self.values.ravel()[value_index])
                 factor_table.append(prob_list)
             value_index += 1
 
@@ -635,7 +597,7 @@ class Factor:
         return self.divide(other, inplace=False)
 
     def __eq__(self, other):
-        if type(self) != type(other):
+        if not isinstance(self, Factor) and isinstance(other, Factor):
             return False
 
         elif set(self.scope()) != set(other.scope()):
