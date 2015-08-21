@@ -127,7 +127,10 @@ class FactorSet:
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
 
-        return factor_set.add_factors(factor_set1.factors)
+        factor_set.add_factors(*factor_set1.factors)
+
+        if not inplace:
+            return factor_set
 
     def divide(self, factorset, inplace=True):
         r"""
