@@ -346,13 +346,13 @@ class TestTabularCPDMethods(unittest.TestCase):
                          .format(address=hex(id(diff_cpd))))
 
     def test_reduce_1(self):
-        self.cpd.reduce(('diff', 0))
+        self.cpd.reduce([('diff', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
                                                                  [0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8]]))
 
     def test_reduce_2(self):
-        self.cpd.reduce(('intel', 0))
+        self.cpd.reduce([('intel', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1],
                                                                  [0.1, 0.1],
                                                                  [0.8, 0.8]]))
@@ -364,7 +364,7 @@ class TestTabularCPDMethods(unittest.TestCase):
                                                                  [0.8]]))
 
     def test_reduce_4(self):
-        self.cpd.reduce(('grade', 0))
+        self.cpd.reduce([('grade', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[1, 1, 1, 1, 1, 1]]))
 
     def test_get_cpd(self):
