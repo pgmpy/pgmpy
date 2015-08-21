@@ -184,11 +184,12 @@ class ClusterGraph(UndirectedGraph):
             return self.factors
         else:
             nodes = [set(node) for node in self.nodes()]
+
             if set(node) not in nodes:
                 raise ValueError('Node not present in Cluster Graph')
-            factors = list(filter(lambda x: set(x.scope()) == set(node),
-                                  self.factors))
-            return factors[0]
+
+            factors = filter(lambda x: set(x.scope()) == set(node), self.factors)
+            return next(factors)
 
     def remove_factors(self, *factors):
         """

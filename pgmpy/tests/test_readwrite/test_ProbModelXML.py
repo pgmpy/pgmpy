@@ -1145,6 +1145,206 @@ class TestProbModelXMLmethods(unittest.TestCase):
 
     def test_get_probmodel_data(self):
         model_data = get_probmodel_data(self.model)
+        xmlfile = ProbModelXMLWriter(model_data)
         with open('pgmpy/tests/test_readwrite/testdata/test_probmodelxml_data.json') as data_file:
             model_data_expected = json.load(data_file)
+        xmlfile_expected = etree.XML("""<ProbModelXML formatVersion="1.0">
+  <ProbNet type="BayesianNetwork">
+    <Variables>
+      <Variable name="Bronchitis" role="chance" type="finiteStates">
+        <Coordinates x="698" y="181"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="B"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="Dyspnea" role="chance" type="finiteStates">
+        <Coordinates x="533" y="321"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="D"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="LungCancer" role="chance" type="finiteStates">
+        <Coordinates x="421" y="152"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="L"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="Smoker" role="chance" type="finiteStates">
+        <Coordinates x="568" y="52"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="S"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="Tuberculosis" role="chance" type="finiteStates">
+        <Coordinates x="201" y="150"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="T"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="TuberculosisOrCancer" role="chance" type="finiteStates">
+        <Coordinates x="336" y="238"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="E"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="VisitToAsia" role="chance" type="finiteStates">
+        <Coordinates x="290" y="58"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="A"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+      <Variable name="X-ray" role="chance" type="finiteStates">
+        <Comment>Indica si el test de rayos X ha sido positivo</Comment>
+        <Coordinates x="252" y="322"/>
+        <Property name="Relevance" value="7.0"/>
+        <Property name="Title" value="X"/>
+        <States>
+          <State name="no">
+            <AdditionalProperties/>
+          </State>
+          <State name="yes">
+            <AdditionalProperties/>
+          </State>
+        </States>
+      </Variable>
+    </Variables>
+    <Links>
+      <Link directed="true" var1="Bronchitis" var2="Dyspnea">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="LungCancer" var2="TuberculosisOrCancer">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="Smoker" var2="Bronchitis">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="Smoker" var2="LungCancer">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="Tuberculosis" var2="TuberculosisOrCancer">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="TuberculosisOrCancer" var2="Dyspnea">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="TuberculosisOrCancer" var2="X-ray">
+        <AdditionalProperties/>
+      </Link>
+      <Link directed="true" var1="VisitToAsia" var2="Tuberculosis">
+        <AdditionalProperties/>
+      </Link>
+    </Links>
+    <Potentials>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="X-ray"/>
+          <Variable name="TuberculosisOrCancer"/>
+        </Variables>
+        <Values>0.95 0.05 0.02 0.98 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="Bronchitis"/>
+          <Variable name="Smoker"/>
+        </Variables>
+        <Values>0.7 0.3 0.4 0.6 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="Dyspnea"/>
+          <Variable name="Bronchitis"/>
+          <Variable name="TuberculosisOrCancer"/>
+        </Variables>
+        <Values>0.9 0.1 0.3 0.7 0.2 0.8 0.1 0.9 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="VisitToAsia"/>
+        </Variables>
+        <Values>0.99 0.01 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="Smoker"/>
+        </Variables>
+        <Values>0.5 0.5 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="LungCancer"/>
+          <Variable name="Smoker"/>
+        </Variables>
+        <Values>0.99 0.01 0.9 0.1 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="Tuberculosis"/>
+          <Variable name="VisitToAsia"/>
+        </Variables>
+        <Values>0.99 0.01 0.95 0.05 </Values>
+      </Potential>
+      <Potential role="conditionalProbability" type="Table">
+        <Variables>
+          <Variable name="TuberculosisOrCancer"/>
+          <Variable name="LungCancer"/>
+          <Variable name="Tuberculosis"/>
+        </Variables>
+        <Values>1.0 0.0 0.0 1.0 0.0 1.0 0.0 1.0 </Values>
+      </Potential>
+    </Potentials>
+    <AdditionalConstraints/>
+    <AdditionalProperties/>
+    <DecisionCriteria/>
+  </ProbNet>
+</ProbModelXML>""")
         self.assertDictEqual(model_data, model_data_expected)
+        self.assertEqual(str(xmlfile.__str__()[:-1]), str(etree.tostring(xmlfile_expected)))

@@ -2,6 +2,9 @@ import functools
 from itertools import product
 from collections import namedtuple
 
+from collections import OrderedDict, namedtuple
+from numbers import Number
+
 import numpy as np
 
 from pgmpy.extern import tabulate
@@ -551,6 +554,15 @@ class Factor:
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __add__(self, other):
+        return self.sum(other)
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
     def __truediv__(self, other):
         return self.divide(other, inplace=False)
