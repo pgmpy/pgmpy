@@ -1,10 +1,9 @@
 import functools
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from copy import deepcopy
 
 import numpy as np
 
-from pgmpy.exceptions import Exceptions
 from pgmpy.extern import tabulate
 from pgmpy.utils.mathext import cartesian
 
@@ -25,9 +24,10 @@ class Factor:
     product(*Factor)
     reduce([variable_values_list])
     """
+
     def __init__(self, variables, cardinality, values):
         """
-        Initialize a factors class.
+        Initialize a factor class.
 
         Defined above, we have the following mapping from variable
         assignments to the index of the row vector in the value field:
@@ -54,21 +54,25 @@ class Factor:
 
         Parameters
         ----------
-        variables: list
-            List of scope of factor
+        variables: list, array-like
+            List of variables in the scope of the factor.
+
         cardinality: list, array_like
-            List of cardinality of each variable
+            List of cardinalities of each variable. `cardinality` array must have a value
+            corresponding to each variable in `variables`.
+
         values: list, array_like
-            List or array of values of factor.
+            List of values of factor.
             A Factor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
-            the variable field cycle through their values the fastest. More
-            concretely, for factor
+            `variables` cycle through their values the fastest.
 
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        >>> phi
+        <Factor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
         """
         values = np.array(values)
 
@@ -79,12 +83,16 @@ class Factor:
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
 
         self.variables = list(variables)
-        self.cardinality = np.array(cardinality)
+        self.cardinality = np.array(cardinality, dtype=int)
         self.values = values.reshape(cardinality)
 
     def scope(self):
         """
         Returns the scope of the factor.
+
+        Returns
+        -------
+        list: List of variable names in the scope of the factor.
 
         Examples
         --------
@@ -140,11 +148,15 @@ class Factor:
         variables: list, array-like
                 A list of variable names.
 
+        Returns
+        -------
+        dict: Dictionary of the form {variable: variable_cardinality}
+
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi.get_cardinality('x1')
+        >>> phi.get_cardinality(['x1'])
         {'x1': 2}
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
@@ -158,8 +170,13 @@ class Factor:
         """
         Returns the identity factor.
 
-        When the identity factor of a factor is multiplied with the factor
-        it returns the factor itself.
+        Def: The identity factor of a factor has the same scope and cardinality as the original factor,
+             but the values for all the assignments is 1. When the identity factor is multiplied with
+             the factor it returns the factor itself.
+
+        Returns
+        -------
+        Factor: The identity factor.
 
         Examples
         --------
@@ -167,9 +184,15 @@ class Factor:
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi_identity = phi.identity_factor()
         >>> phi_identity.variables
-        OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']), ('x3', ['x3_0', 'x3_1'])])
+        ['x1', 'x2', 'x3']
         >>> phi_identity.values
-        array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
+        array([[[ 1.,  1.],
+                [ 1.,  1.],
+                [ 1.,  1.]],
+
+               [[ 1.,  1.],
+                [ 1.,  1.],
+                [ 1.,  1.]]]
         """
         return Factor(self.variables, self.cardinality, np.ones(self.values.size))
 
@@ -179,12 +202,17 @@ class Factor:
 
         Parameters
         ----------
-        variables: string, list-type
-            name of variable to be marginalized
+        variables: list, array-like
+            List of variables over which to marginalize.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new factor
+            a new factor.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
 
         Examples
         --------
@@ -194,24 +222,71 @@ class Factor:
         >>> phi.values
         array([ 14.,  22.,  30.])
         >>> phi.variables
-        OrderedDict([('x2', ['x2_0', 'x2_1', 'x2_2'])])
+        ['x2']
         """
-        phi = self if inplace else deepcopy(self)
+        phi = self if inplace else self.copy()
 
         for var in variables:
             if var not in phi.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
-        var_indexes = []
+        var_indexes = [phi.variables.index(var) for var in variables]
+
+        index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
+        phi.variables = (np.array(phi.variables)[index_to_keep]).tolist()
+        phi.cardinality = phi.cardinality[index_to_keep]
+
+        phi.values = np.sum(phi.values, axis=tuple(var_indexes))
+
+        if not inplace:
+            return phi
+
+    def maximize(self, variables, inplace=True):
+        """
+        Maximizes the factor with respect to `variables`.
+
+        Parameters
+        ----------
+        variable: list, array-like
+            List of variables with respect to which factor is to be maximized
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.maximize(['x2'])
+        >>> phi.variables
+        ['x1', 'x3']
+        >>> phi.cardinality
+        array([3, 2])
+        >>> phi.values
+        array([[ 0.25,  0.35],
+               [ 0.05,  0.07],
+               [ 0.15,  0.21]]
+        """
+        phi = self if inplace else self.copy()
+
         for var in variables:
-            var_index = phi.variables.index(var)
-            var_indexes.append(var_index)
+            if var not in phi.variables:
+                raise ValueError("{var} not in scope.".format(var=var))
+
+        var_indexes = [phi.variables.index(var) for var in variables]
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
         phi.variables = list(np.array(phi.variables)[index_to_keep])
         phi.cardinality = phi.cardinality[index_to_keep]
 
-        phi.values = np.sum(phi.values, axis=tuple(var_indexes))
+        phi.values = np.max(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi
@@ -226,18 +301,32 @@ class Factor:
             If inplace=True it will modify the factor itself, else would return
             a new factor
 
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.normalize()
+        >>> phi.variables
+        ['x1', 'x2', 'x3']
+        >>> phi.cardinality
+        array([2, 3, 2])
         >>> phi.values
-        array([ 0.        ,  0.01515152,  0.03030303,  0.04545455,  0.06060606,
-                0.07575758,  0.09090909,  0.10606061,  0.12121212,  0.13636364,
-                0.15151515,  0.16666667])
+        array([[[ 0.        ,  0.01515152],
+                [ 0.03030303,  0.04545455],
+                [ 0.06060606,  0.07575758]],
+
+               [[ 0.09090909,  0.10606061],
+                [ 0.12121212,  0.13636364],
+                [ 0.15151515,  0.16666667]]]
 
         """
-        phi = self if inplace else deepcopy(self)
+        phi = self if inplace else self.copy()
+
         phi.values = phi.values / phi.values.sum()
 
         if not inplace:
@@ -249,25 +338,31 @@ class Factor:
 
         Parameters
         ----------
-        values: list-type
-            A single tuple of the form (variable_name, variable_state) or a list of tuples of the same form.
+        values: list, array-like
+            A list of tuples of the form (variable_name, variable_state).
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new factor
+            a new factor.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
 
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce([('x1', 0), ('x2', 0)])
+        >>> phi.variables
+        ['x3']
+        >>> phi.cardinality
+        array([2])
         >>> phi.values
         array([0., 1.])
         """
-        if not hasattr(values, '__iter__'):
-            values = list(values)
-
-        phi = self if inplace else deepcopy(self)
+        phi = self if inplace else self.copy()
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)
@@ -286,25 +381,50 @@ class Factor:
 
     def product(self, phi1, inplace=True):
         """
-        Returns the factor product with factors.
+        Factor product with `phi1`.
 
         Parameters
         ----------
-        *factors: Factor1, Factor2, ...
-            Factors to be multiplied
+        phi1: `Factor`
+            Factor to be multiplied.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
 
         Example
         -------
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
-        >>> phi = phi1.product(phi2)
-        >>> phi.variables
-        OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
-                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+        >>> phi1.product(phi2, inplace=True)
+        >>> phi1.variables
+        ['x1', 'x2', 'x3', 'x4']
+        >>> phi1.cardinality
+        array([2, 3, 2, 2])
+        >>> phi1.values
+        array([[[[ 0,  0],
+                 [ 4,  6]],
+
+                [[ 0,  4],
+                 [12, 18]],
+
+                [[ 0,  8],
+                 [20, 30]]],
+
+
+               [[[ 6, 18],
+                 [35, 49]],
+
+                [[ 8, 24],
+                 [45, 63]],
+
+                [[10, 30],
+                 [55, 77]]]]
         """
-        phi = self if inplace else deepcopy(self)
-        phi1 = deepcopy(phi1)
+        phi = self if inplace else self.copy()
+        phi1 = phi1.copy()
 
         # modifying phi to add new variables
         extra_vars = set(phi1.variables) - set(phi.variables)
@@ -326,6 +446,7 @@ class Factor:
             phi1.values = phi1.values[slice_]
 
             phi1.variables.extend(extra_vars)
+            # No need to modify cardinality as we don't need it.
 
         # rearranging the axes of phi1 to match phi
         for axis in range(phi.values.ndim):
@@ -340,39 +461,44 @@ class Factor:
 
     def divide(self, phi1, inplace=True):
         """
-        Returns a new factors instance after division by factor.
+        Factor division by `phi1`.
 
         Parameters
         ----------
-        factor : factors
-            The denominator
+        phi1 : Factor
+            The denominator for division.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
 
         Examples
         --------
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
-        >>> phi = phi1.divide(phi2)
-        >>> phi
-        x1	x2	x3	phi(x1, x2, x3)
-        x1_0	x2_0	x3_0	0.0
-        x1_1	x2_0	x3_0	0.5
-        x1_0	x2_1	x3_0	0.666666666667
-        x1_1	x2_1	x3_0	0.75
-        x1_0	x2_2	x3_0	4.0
-        x1_1	x2_2	x3_0	2.5
-        x1_0	x2_0	x3_1	2.0
-        x1_1	x2_0	x3_1	1.75
-        x1_0	x2_1	x3_1	8.0
-        x1_1	x2_1	x3_1	4.5
-        x1_0	x2_2	x3_1	3.33333333333
-        x1_1	x2_2	x3_1	2.75
+        >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5)])
+        >>> phi1.divide(phi2)
+        >>> phi1.variables
+        ['x1', 'x2', 'x3']
+        >>> phi1.cardinality
+        array([2, 3, 2])
+        >>> phi1.values
+        array([[[ 0.        ,  0.33333333],
+                [ 2.        ,  1.        ],
+                [ 4.        ,  1.66666667]],
+
+               [[ 3.        ,  1.75      ],
+                [ 4.        ,  2.25      ],
+                [ 5.        ,  2.75      ]]]
         """
-        phi = self if inplace else deepcopy(self)
+        phi = self if inplace else self.copy()
+        phi1 = phi1.copy()
 
         if set(phi1.variables) - set(phi.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
+        # Adding extra variables in phi1.
         extra_vars = set(phi.variables) - set(phi1.variables)
         if extra_vars:
             slice_ = [slice(None)] * len(phi1.variables)
@@ -381,69 +507,66 @@ class Factor:
 
             phi1.variables.extend(extra_vars)
 
+        # Rearranging the axes of phi1 to match phi
         for axis in range(phi.values.ndim):
             exchange_index = phi1.variables.index(phi.variables[axis])
             phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
             phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
         phi.values = phi.values / phi1.values
+
+        # If factor division 0/0 = 0 but is undefined for x/0. In pgmpy we are using
+        # np.inf to represent x/0 cases.
         phi.values[np.isnan(phi.values)] = 0
 
         if not inplace:
             return phi
 
-    def maximize(self, variables, inplace=True):
+    def copy(self):
         """
-        Maximizes the factor with respect to the variable.
+        Returns a copy of the factor.
 
-        Parameters
-        ----------
-        variable: int, string, any hashable python object or list
-            A variable or a list of variables with respect to which factor is to be maximized
+        Returns
+        -------
+        Factor: copy of the factor
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
-        ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
-        >>> phi.maximize('x2')
-        >>> print(phi)
-        x1      x3      phi(x1, x3)
-        -----------------------------
-        x1_0    x3_0    0.25
-        x1_0    x3_1    0.35
-        x1_1    x3_0    0.05
-        x1_1    x3_1    0.07
-        x1_2    x3_0    0.15
-        x1_2    x3_1    0.21
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> phi_copy = phi.copy()
+        >>> phi_copy.variables
+        ['x1', 'x2', 'x3']
+        >>> phi_copy.cardinality
+        array([2, 3, 3])
+        >>> phi_copy.values
+        array([[[ 0,  1,  2],
+                [ 3,  4,  5],
+                [ 6,  7,  8]],
+
+               [[ 9, 10, 11],
+                [12, 13, 14],
+                [15, 16, 17]]]
         """
-        phi = self if inplace else deepcopy(self)
-
-        for var in variables:
-            if var not in phi.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
-
-        var_indexes = []
-        for var in variables:
-            var_index = phi.variables.index(var)
-            var_indexes.append(var_index)
-
-        index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
-        phi.variables = list(np.array(phi.variables)[index_to_keep])
-        phi.cardinality = phi.cardinality[index_to_keep]
-
-        phi.values = np.max(phi.values, axis=tuple(var_indexes))
-
-        if not inplace:
-            return phi
-
-    def copy(self):
+        # not creating a new copy of self.values and self.cardinality
+        # because __init__ methods does that.
         return Factor(self.scope(), self.cardinality, self.values)
 
     def __str__(self):
         return self._str(phi_or_p='phi', html=False)
 
+    # TODO: fix this
     def _str(self, phi_or_p, html=False):
+        """
+        Generate the string from `__str__` method.
+
+        Parameters
+        ----------
+        phi_or_p: 'phi' | 'p'
+                'phi': When used for Factors.
+                  'p': When used for CPDs.
+        """
         string_list = []
         if html:
             html_string_header = '<table><caption>Factor</caption>'
@@ -517,6 +640,7 @@ class Factor:
 
         elif set(self.scope()) != set(other.scope()):
             return False
+
         else:
             for axis in range(self.values.ndim):
                 exchange_index = other.variables.index(self.variables[axis])
@@ -540,17 +664,21 @@ class Factor:
         Returns the hash of the factor object based on the scope of the factor.
         """
         return hash(' '.join(self.variables) + ' '.join(map(str, self.cardinality)) +
-                    ' '.join(list(map(str, self.values))))
+                    ' '.join(list(map(str, self.values.astype('float')))))
 
 
 def factor_product(*args):
     """
-    Returns factor product of multiple factors.
+    Returns factor product over `args`.
 
     Parameters
     ----------
-    factor1, factor2, .....: factors
+    args: `Factor` instances.
         factors to be multiplied
+
+    Returns
+    -------
+    Factor: `Factor` representing factor product over all the `Factor` instances in args.
 
     Examples
     --------
@@ -559,50 +687,68 @@ def factor_product(*args):
     >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> phi = factor_product(phi1, phi2)
     >>> phi.variables
-    OrderedDict([('x1', ['x1_0', 'x1_1']), ('x2', ['x2_0', 'x2_1', 'x2_2']),
-                ('x3', ['x3_0', 'x3_1']), ('x4', ['x4_0', 'x4_1'])])
+    ['x1', 'x2', 'x3', 'x4']
+    >>> phi.cardinality
+    array([2, 3, 2, 2])
+    >>> phi.values
+    array([[[[ 0,  0],
+             [ 4,  6]],
 
+            [[ 0,  4],
+             [12, 18]],
+
+            [[ 0,  8],
+             [20, 30]]],
+
+
+           [[[ 6, 18],
+             [35, 49]],
+
+            [[ 8, 24],
+             [45, 63]],
+
+            [[10, 30],
+             [55, 77]]]]
     """
     if not all(isinstance(phi, Factor) for phi in args):
-        raise TypeError("Input parameters must be factors")
-    return functools.reduce(lambda phi1, phi2: phi1.product(phi2, inplace=False), args)
+        raise TypeError("Arguments must be factors")
+    return functools.reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
 def factor_divide(phi1, phi2):
     """
-    Returns new factors instance equal to phi1/phi2.
+    Returns `Factor` representing `phi1 / phi2`.
 
     Parameters
     ----------
-    phi1: factors
+    phi1: Factor
         The Dividend.
 
-    phi2: factors
+    phi2: Factor
         The Divisor.
+
+    Returns
+    -------
+    Factor: `Factor` representing factor division `phi1 / phi2`.
 
     Examples
     --------
     >>> from pgmpy.factors import Factor, factor_divide
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x1'], [2, 2], [x+1 for x in range(4)])
-    >>> assert isinstance(phi1, Factor)
-    >>> assert isinstance(phi2, Factor)
+    >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5))
     >>> phi = factor_divide(phi1, phi2)
-    >>> phi
-    x1	x2	x3	phi(x1, x2, x3)
-    x1_0	x2_0	x3_0	0.0
-    x1_1	x2_0	x3_0	0.5
-    x1_0	x2_1	x3_0	0.666666666667
-    x1_1	x2_1	x3_0	0.75
-    x1_0	x2_2	x3_0	4.0
-    x1_1	x2_2	x3_0	2.5
-    x1_0	x2_0	x3_1	2.0
-    x1_1	x2_0	x3_1	1.75
-    x1_0	x2_1	x3_1	8.0
-    x1_1	x2_1	x3_1	4.5
-    x1_0	x2_2	x3_1	3.33333333333
-    x1_1	x2_2	x3_1	2.75
+    >>> phi.variables
+    ['x1', 'x2', 'x3']
+    >>> phi.cardinality
+    array([2, 3, 2])
+    >>> phi.values
+    array([[[ 0.        ,  0.33333333],
+            [ 2.        ,  1.        ],
+            [ 4.        ,  1.66666667]],
 
+           [[ 3.        ,  1.75      ],
+            [ 4.        ,  2.25      ],
+            [ 5.        ,  2.75      ]]]
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")
