@@ -239,7 +239,7 @@ class UAIReader:
                 variables = table[0]
                 cardinality = [int(self.domain[var]) for var in variables]
                 value = list(map(float, table[1]))
-                factor = Factor(variables=variables, cardinality=cardinality, value=value)
+                factor = Factor(variables=variables, cardinality=cardinality, values=value)
                 factors.append(factor)
 
             model.add_factors(*factors)

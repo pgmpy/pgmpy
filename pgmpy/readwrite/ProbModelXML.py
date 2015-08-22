@@ -271,7 +271,7 @@ def get_probmodel_data(model):
             potential_dict['Variables'][cpd.variable] = cpd.evidence
         potential_dict['type'] = "Table"
         potential_dict['role'] = "conditionalProbability"
-        potential_dict['Values'] = " ".join([str(val) for val in cpd.values]) + " "
+        potential_dict['Values'] = " ".join([str(val) for val in cpd.values.ravel().astype(float)]) + " "
         model_data['probnet']['Potentials'].append(potential_dict)
 
     return model_data
