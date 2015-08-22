@@ -386,6 +386,7 @@ class XBNWriter:
         cpds = self.model.get_cpds()
         cpds.sort(key=lambda x: x.variable)
         for cpd in cpds:
+            cpd_values = cpd.values.ravel()
             var = cpd.variable
             dist = etree.SubElement(distributions, 'DIST', attrib={'TYPE': self.model.node[var]['TYPE']})
             etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
@@ -395,8 +396,8 @@ class XBNWriter:
                 for condelem in sorted(cpd.evidence):
                     etree.SubElement(condset, 'CONDELEM', attrib={'NAME': condelem})
                 # TODO: Get Index value.
-                for val in range(0, len(cpd.values), 2):
+                for val in range(0, len(cpd_values), 2):
                     etree.SubElement(dpis, "DPI", attrib={'INDEXES': ' '}).text = \
-                        " " + str(cpd.values[val]) + " " + str(cpd.values[val+1]) + " "
+                        " " + str(cpd_values[val]) + " " + str(cpd_values[val+1]) + " "
             else:
-                etree.SubElement(dpis, "DPI").text = ' ' + ' '.join(map(str, cpd.values))
+                etree.SubElement(dpis, "DPI").text = ' ' + ' '.join(map(str, cpd_values))
