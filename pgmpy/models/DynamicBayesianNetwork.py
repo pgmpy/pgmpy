@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 import networkx as nx
 
-from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
+from pgmpy.factors import TabularCPD
 from pgmpy.base import DirectedGraph, UndirectedGraph
 
 
@@ -295,7 +295,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.cpds
         """
         for cpd in cpds:
-            if not isinstance(cpd, (TabularCPD, TreeCPD, RuleCPD)):
+            if not isinstance(cpd, TabularCPD):
                 raise ValueError('cpds should be an instances of TabularCPD, TreeCPD or RuleCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
