@@ -361,7 +361,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with %s doesn't have "
                                      "proper parents associated with it." % node)
-                if not np.allclose(cpd.marginalize(node, inplace=False).values,
+                if not np.allclose(cpd.marginalize([node], inplace=False).values,
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilities of states for node {node}'
