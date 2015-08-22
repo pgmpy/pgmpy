@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 from pandas import DataFrame
 
-from pgmpy.factors.Factor import Factor
+from pgmpy.factors.Factor import Factor, factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
@@ -257,14 +257,12 @@ class GibbsSampling(MarkovChain):
         self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
-            other_cards = [range(self.cardinalities[v]) for v in self.variables if var != v]
+            other_cards = [self.cardinalities[v] for v in other_vars]
             cpds = [cpd for cpd in model.cpds if var in cpd.scope()]
-            prod_cpd = cpds[0]
-            for i in range(1, len(cpds)):
-                prod_cpd = prod_cpd.product(cpds[i])
+            prod_cpd = factor_product(*cpds)
             kernel = {}
-            for tup in itertools.product(*other_cards):
-                scope = set(prod_cpd.scope())
+            scope = set(prod_cpd.scope())
+            for tup in itertools.product(*[range(card) for card in other_cards]):
                 states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
                 prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
                 kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
@@ -288,15 +286,16 @@ class GibbsSampling(MarkovChain):
                 factors_dict[var].append(factor)
 
         # Take factor product
-        factors_dict = {var: Factor.product(*factors) for var, factors in factors_dict.items()}
+        factors_dict = {var: Factor.product(*factors) if len(factors) > 1 else factors[0]
+                        for var, factors in factors_dict.items()}
         self.cardinalities = {var: factors_dict[var].get_cardinality(var) for var in self.variables}
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
-            other_cards = [range(self.cardinalities[v]) for v in self.variables if var != v]
+            other_cards = [self.cardinalities[v] for v in other_vars]
             kernel = {}
             factor = factors_dict[var]
-            for tup in itertools.product(*other_cards):
-                scope = set(factor.scope())
+            scope = set(factor.scope())
+            for tup in itertools.product(*[range(card) for card in other_cards]):
                 states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
                 reduced_factor = factor.reduce(states, inplace=False)
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
