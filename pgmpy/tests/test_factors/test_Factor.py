@@ -337,8 +337,8 @@ class TestTabularCPDMethods(unittest.TestCase):
         cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
                                        ['intel', 'diff'], [2, 2])
         cpd_un_normalized.normalize()
-        np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([0.63636364, 0.33333333, 0.6, 0.2,
-                                                                              0.36363636, 0.66666667, 0.4, 0.8]).reshape(2, 2, 2))
+        np_test.assert_array_almost_equal(cpd_un_normalized.values.ravel(), np.array([0.63636364, 0.33333333, 0.6, 0.2,
+                                                                                      0.36363636, 0.66666667, 0.4, 0.8]))
 
     def test__repr__(self):
         grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
