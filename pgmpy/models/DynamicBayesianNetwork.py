@@ -399,8 +399,9 @@ class DynamicBayesianNetwork(DirectedGraph):
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
-                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card), parents,
-                           cpd.evidence_card)
+                        new_cpd = TabularCPD(temp_var, cpd.variable_card,
+                                             cpd.values.reshape(cpd.variable_card, np.prod(cpd.evidence_card)),
+                                             parents, cpd.evidence_card)
                     else:
                         new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card))
                     self.add_cpds(new_cpd)
