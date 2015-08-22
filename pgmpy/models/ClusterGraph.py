@@ -6,6 +6,7 @@ import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
+from pgmpy.factors import factor_product
 
 
 class ClusterGraph(UndirectedGraph):
@@ -235,7 +236,7 @@ class ClusterGraph(UndirectedGraph):
         """
         if self.check_model():
             factor = self.factors[0]
-            factor = factor.product(*[self.factors[i] for i in range(1, len(self.factors))])
+            factor = factor_product(factor, *[self.factors[i] for i in range(1, len(self.factors))])
             return np.sum(factor.values)
 
     def check_model(self):
