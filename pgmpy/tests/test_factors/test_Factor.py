@@ -180,9 +180,9 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi * phi1
         np_test.assert_almost_equal(prod.values.ravel(),
-                                   np.array([0, 0, 0, 0, 0, 1,
-                                             2, 3, 0, 2, 4, 6,
-                                             0, 3, 6, 9]))
+                                    np.array([0, 0, 0, 0, 0, 1,
+                                              2, 3, 0, 2, 4, 6,
+                                              0, 3, 6, 9]))
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
@@ -322,16 +322,16 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(self.cpd.variable_card, 3)
         self.assertListEqual(list(self.cpd.variables), ['grade', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
-        np_test.assert_array_equal(self.cpd.values, np.array([0.1, 0.1, 0.1,
-                                                              0.1, 0.1, 0.1,
-                                                              0.8, 0.8, 0.8]).reshape(3, 3))
+        np_test.assert_array_equal(self.cpd.values.ravel(), np.array([0.1, 0.1, 0.1,
+                                                                      0.1, 0.1, 0.1,
+                                                                      0.8, 0.8, 0.8]))
 
     def test_marginalize_2(self):
         self.cpd.marginalize(['grade'])
         self.assertEqual(self.cpd.variable, 'grade')
         self.assertListEqual(list(self.cpd.variables), ['diff', 'intel'])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([2, 3]))
-        np_test.assert_array_equal(self.cpd.values, np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]).reshape(2, 3))
+        np_test.assert_array_equal(self.cpd.values.ravel(), np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
     def test_normalize(self):
         cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
