@@ -428,7 +428,7 @@ class Factor:
         """
         phi = self if inplace else self.copy()
         if isinstance(phi1, (int, float)):
-            phi.values = phi.values * phi1
+            phi.values += phi1
         else:
             phi1 = phi1.copy()
 
@@ -512,7 +512,7 @@ class Factor:
         """
         phi = self if inplace else self.copy()
         if isinstance(phi1, (int, float)):
-            phi.values = phi.values * phi1
+            phi.values *= phi1
         else:
             phi1 = phi1.copy()
 
