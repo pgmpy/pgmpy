@@ -132,6 +132,43 @@ class Factor:
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
+    def assignment(self, index):
+        """
+        Returns a list of assignments for the corresponding index.
+
+        Parameters
+        ----------
+        index: list, array-like
+            List of indices whose assignment is to be computed
+
+        Returns
+        -------
+        list: Returns a list of full assignments of all the variables of the factor.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import Factor
+        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
+        >>> phi.assignment([1, 2])
+        [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
+        """
+        index = np.array(index)
+
+        max_possible_index = np.prod(self.cardinality) - 1
+        if not all(i <= max_possible_index for i in index):
+            raise IndexError("Index greater than max possible index")
+
+        assignments = np.zeros((len(index), len(self.scope())), dtype=np.int)
+        rev_card = self.cardinality[::-1]
+        for i, card in enumerate(rev_card):
+            assignments[:, i] = index % card
+            index = index//card
+
+        assignments = assignments[:, ::-1]
+
+        return [[(key, val) for key, val in zip(self.variables, values)] for values in assignments]
+
     def identity_factor(self):
         """
         Returns the identity factor.

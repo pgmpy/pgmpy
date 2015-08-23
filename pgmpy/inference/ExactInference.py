@@ -43,7 +43,7 @@ class VariableElimination(Inference):
         if evidence:
             for evidence_var in evidence:
                 for factor in working_factors[evidence_var]:
-                    factor_reduced = factor.reduce((evidence_var, evidence[evidence_var]), inplace=False)
+                    factor_reduced = factor.reduce([(evidence_var, evidence[evidence_var])], inplace=False)
                     for var in factor_reduced.scope():
                         working_factors[var].remove(factor)
                         working_factors[var].add(factor_reduced)
@@ -194,7 +194,7 @@ class VariableElimination(Inference):
             final_distribution = final_distribution.values()
         distribution = factor_product(*final_distribution)
         argmax = np.argmax(distribution.values)
-        assignment = distribution.assignment(argmax)[0]
+        assignment = distribution.assignment([argmax])[0]
 
         map_query_results = {}
         for var_assignment in assignment:

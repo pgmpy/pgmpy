@@ -125,7 +125,8 @@ class Mplp(Inference):
                 present_variables = list(intersection)
 
                 # Present variables cardinality
-                present_variables_card = [cluster_potential.get_cardinality(variable) for variable in present_variables]
+                present_variables_card = cluster_potential.get_cardinality(present_variables)
+                present_variables_card = [present_variables_card[var] for var in present_variables]
 
                 # We need to create a new factor whose messages are blank
                 self.message_from_cluster[intersection] = \
