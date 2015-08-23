@@ -68,7 +68,7 @@ class Mplp(Inference):
                 self.cluster_set[scope] = self.Cluster(self.intersection_set_variables, factor)
 
         # dual_lp(\delta) is the dual linear program
-        self.dual_lp = sum([max(self.objective[obj].values) for obj in self.objective])
+        self.dual_lp = sum([np.amax(self.objective[obj].values) for obj in self.objective])
 
         # Best integral value of the primal objective is stored here
         self.best_int_objective = 0

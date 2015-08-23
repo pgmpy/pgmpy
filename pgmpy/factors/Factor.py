@@ -382,6 +382,76 @@ class Factor:
         if not inplace:
             return phi
 
+    def sum(self, phi1, inplace=True):
+        """
+        Factor sum with `phi1`.
+
+        Parameters
+        ----------
+        phi1: `Factor`
+            Factor to be added.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
+        Example
+        -------
+        >>> from pgmpy.factors import Factor
+        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> phi1.sum(phi2, inplace=True)
+        >>> phi1.variables
+        ['x1', 'x2', 'x3', 'x4']
+        >>> phi1.cardinality
+        array([2, 3, 2, 2])
+        >>> phi1.values
+        array([[[[ 0,  0],
+                 [ 4,  6]],
+
+                [[ 0,  4],
+                 [12, 18]],
+
+                [[ 0,  8],
+                 [20, 30]]],
+
+
+               [[[ 6, 18],
+                 [35, 49]],
+
+                [[ 8, 24],
+                 [45, 63]],
+
+                [[10, 30],
+                 [55, 77]]]]
+        """
+        phi = self if inplace else self.copy()
+        phi1 = phi1.copy()
+
+        if set(phi1.variables) - set(phi.variables):
+            raise ValueError("Scope of divisor should be a subset of dividend")
+
+        # Adding extra variables in phi1.
+        extra_vars = set(phi.variables) - set(phi1.variables)
+        if extra_vars:
+            slice_ = [slice(None)] * len(phi1.variables)
+            slice_.extend([np.newaxis] * len(extra_vars))
+            phi1.values = phi1.values[slice_]
+
+            phi1.variables.extend(extra_vars)
+
+        # Rearranging the axes of phi1 to match phi
+        for axis in range(phi.values.ndim):
+            exchange_index = phi1.variables.index(phi.variables[axis])
+            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
+            phi1.values = phi1.values.swapaxes(axis, exchange_index)
+
+        phi.values = phi.values + phi1.values
+
+        if not inplace:
+            return phi
+
     def product(self, phi1, inplace=True):
         """
         Factor product with `phi1`.
@@ -427,37 +497,41 @@ class Factor:
                  [55, 77]]]]
         """
         phi = self if inplace else self.copy()
-        phi1 = phi1.copy()
+        if isinstance(phi1, (int, float)):
+            phi.values = phi.values * phi1
+        else:
+            phi1 = phi1.copy()
 
-        # modifying phi to add new variables
-        extra_vars = set(phi1.variables) - set(phi.variables)
-        if extra_vars:
-            slice_ = [slice(None)] * len(phi.variables)
-            slice_.extend([np.newaxis] * len(extra_vars))
-            phi.values = phi.values[slice_]
+            # modifying phi to add new variables
+            extra_vars = set(phi1.variables) - set(phi.variables)
+            if extra_vars:
+                slice_ = [slice(None)] * len(phi.variables)
+                slice_.extend([np.newaxis] * len(extra_vars))
+                phi.values = phi.values[slice_]
 
-            phi.variables.extend(extra_vars)
+                phi.variables.extend(extra_vars)
 
-            new_var_card = phi1.get_cardinality(extra_vars)
-            phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
+                new_var_card = phi1.get_cardinality(extra_vars)
+                phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
 
-        # modifying phi1 to add new variables
-        extra_vars = set(phi.variables) - set(phi1.variables)
-        if extra_vars:
-            slice_ = [slice(None)] * len(phi1.variables)
-            slice_.extend([np.newaxis] * len(extra_vars))
-            phi1.values = phi1.values[slice_]
+            # modifying phi1 to add new variables
+            extra_vars = set(phi.variables) - set(phi1.variables)
+            if extra_vars:
+                slice_ = [slice(None)] * len(phi1.variables)
+                slice_.extend([np.newaxis] * len(extra_vars))
+                phi1.values = phi1.values[slice_]
 
-            phi1.variables.extend(extra_vars)
-            # No need to modify cardinality as we don't need it.
+                phi1.variables.extend(extra_vars)
+                # No need to modify cardinality as we don't need it.
 
-        # rearranging the axes of phi1 to match phi
-        for axis in range(phi.values.ndim):
-            exchange_index = phi1.variables.index(phi.variables[axis])
-            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
-            phi1.values = phi1.values.swapaxes(axis, exchange_index)
+            # rearranging the axes of phi1 to match phi
+            for axis in range(phi.values.ndim):
+                exchange_index = phi1.variables.index(phi.variables[axis])
+                phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
+                                                                       phi1.variables[axis]
+                phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
-        phi.values = phi.values * phi1.values
+            phi.values = phi.values * phi1.values
 
         if not inplace:
             return phi
@@ -596,7 +670,7 @@ class Factor:
         return self.__mul__(other)
 
     def __add__(self, other):
-        return self.sum(other)
+        return self.sum(other, inplace=False)
 
     def __radd__(self, other):
         return self.__add__(other)
