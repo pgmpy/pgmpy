@@ -427,27 +427,41 @@ class Factor:
                  [55, 77]]]]
         """
         phi = self if inplace else self.copy()
-        phi1 = phi1.copy()
+        if isinstance(phi1, (int, float)):
+            phi.values = phi.values * phi1
+        else:
+            phi1 = phi1.copy()
 
-        if set(phi1.variables) - set(phi.variables):
-            raise ValueError("Scope of divisor should be a subset of dividend")
+            # modifying phi to add new variables
+            extra_vars = set(phi1.variables) - set(phi.variables)
+            if extra_vars:
+                slice_ = [slice(None)] * len(phi.variables)
+                slice_.extend([np.newaxis] * len(extra_vars))
+                phi.values = phi.values[slice_]
 
-        # Adding extra variables in phi1.
-        extra_vars = set(phi.variables) - set(phi1.variables)
-        if extra_vars:
-            slice_ = [slice(None)] * len(phi1.variables)
-            slice_.extend([np.newaxis] * len(extra_vars))
-            phi1.values = phi1.values[slice_]
+                phi.variables.extend(extra_vars)
 
-            phi1.variables.extend(extra_vars)
+                new_var_card = phi1.get_cardinality(extra_vars)
+                phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
 
-        # Rearranging the axes of phi1 to match phi
-        for axis in range(phi.values.ndim):
-            exchange_index = phi1.variables.index(phi.variables[axis])
-            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
-            phi1.values = phi1.values.swapaxes(axis, exchange_index)
+            # modifying phi1 to add new variables
+            extra_vars = set(phi.variables) - set(phi1.variables)
+            if extra_vars:
+                slice_ = [slice(None)] * len(phi1.variables)
+                slice_.extend([np.newaxis] * len(extra_vars))
+                phi1.values = phi1.values[slice_]
 
-        phi.values = phi.values + phi1.values
+                phi1.variables.extend(extra_vars)
+                # No need to modify cardinality as we don't need it.
+
+            # rearranging the axes of phi1 to match phi
+            for axis in range(phi.values.ndim):
+                exchange_index = phi1.variables.index(phi.variables[axis])
+                phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
+                                                                       phi1.variables[axis]
+                phi1.values = phi1.values.swapaxes(axis, exchange_index)
+
+            phi.values = phi.values + phi1.values
 
         if not inplace:
             return phi

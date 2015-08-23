@@ -213,7 +213,7 @@ class Mplp(Inference):
             cluster = self.cluster_set[cluster_key]
             index = [tuple([variable, decoded_result_assignment[frozenset([variable])]])
                      for variable in cluster.cluster_variables]
-            integer_value += cluster.cluster_potential.reduce(index, inplace=False).values[0]
+            integer_value += cluster.cluster_potential.reduce(index, inplace=False).values
 
         # Check if this is the best assignment till now
         if self.best_int_objective < integer_value:
@@ -241,7 +241,7 @@ class Mplp(Inference):
         code presented by Sontag in 2012 here: http://cs.nyu.edu/~dsontag/code/README_v2.html
         """
         # Find the new objective after the message updates
-        new_dual_lp = sum([max(self.objective[obj].values) for obj in self.objective])
+        new_dual_lp = sum([np.amax(self.objective[obj].values) for obj in self.objective])
 
         # Update the dual_gap as the difference between the dual objective of the previous and the current iteration.
         self.dual_gap = abs(self.dual_lp - new_dual_lp)
@@ -324,13 +324,13 @@ class Mplp(Inference):
             triplet_intersections = [intersect for intersect in it.combinations(triplet, 2)]
 
             # Independent maximization
-            ind_max = sum([max(self.objective[frozenset(intersect)].values) for intersect in triplet_intersections])
+            ind_max = sum([np.amax(self.objective[frozenset(intersect)].values) for intersect in triplet_intersections])
 
             # Joint maximization
             joint_max = self.objective[frozenset(triplet_intersections[0])]
             for intersect in triplet_intersections[1:]:
                 joint_max += self.objective[frozenset(intersect)]
-            joint_max = max(joint_max.values)
+            joint_max = np.amax(joint_max.values)
             # score = Independent maximization solution - Joint maximization solution
             score = ind_max - joint_max
             triplet_scores[frozenset(triplet)] = score
