@@ -179,11 +179,19 @@ class TestFactorMethods(unittest.TestCase):
         phi = Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi * phi1
+
+        sorted_vars = ['x1', 'x2', 'x3', 'x4']
+        for axis in range(prod.values.ndim):
+            exchange_index = prod.variables.index(sorted_vars[axis])
+            prod.variables[axis], prod.variables[exchange_index] = prod.variables[exchange_index], prod.variables[axis]
+            prod.values = prod.values.swapaxes(axis, exchange_index)
+
         np_test.assert_almost_equal(prod.values.ravel(),
                                     np.array([0, 0, 0, 0, 0, 1,
                                               2, 3, 0, 2, 4, 6,
                                               0, 3, 6, 9]))
-        self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
+
+        self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
         phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
