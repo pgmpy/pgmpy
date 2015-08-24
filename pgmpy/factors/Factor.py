@@ -693,7 +693,7 @@ class Factor:
         return self.divide(other, inplace=False)
 
     def __eq__(self, other):
-        if not isinstance(self, Factor) and isinstance(other, Factor):
+        if not (isinstance(self, Factor) and isinstance(other, Factor)):
             return False
 
         elif set(self.scope()) != set(other.scope()):
