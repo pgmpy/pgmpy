@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+
 import networkx as nx
 
 
@@ -152,8 +153,8 @@ class UndirectedGraph(nx.Graph):
 
         Parameters
         ----------
-        nodes: list of nodes.
-            Nodes to check if they are a part of any clique.
+        nodes: list, array-like
+            List of nodes to check if they are a part of any clique.
         """
         for node1, node2 in itertools.combinations(nodes, 2):
             if not self.has_edge(node1, node2):

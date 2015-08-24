@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 import networkx as nx
 
-from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
+from pgmpy.factors import TabularCPD
 from pgmpy.base import DirectedGraph, UndirectedGraph
 
 
@@ -295,7 +295,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.cpds
         """
         for cpd in cpds:
-            if not isinstance(cpd, (TabularCPD, TreeCPD, RuleCPD)):
+            if not isinstance(cpd, TabularCPD):
                 raise ValueError('cpds should be an instances of TabularCPD, TreeCPD or RuleCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
@@ -361,7 +361,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with %s doesn't have "
                                      "proper parents associated with it." % node)
-                if not np.allclose(cpd.marginalize(node, inplace=False).values,
+                if not np.allclose(cpd.marginalize([node], inplace=False).values,
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilities of states for node {node}'
@@ -399,8 +399,9 @@ class DynamicBayesianNetwork(DirectedGraph):
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
-                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card), parents,
-                           cpd.evidence_card)
+                        new_cpd = TabularCPD(temp_var, cpd.variable_card,
+                                             cpd.values.reshape(cpd.variable_card, np.prod(cpd.evidence_card)),
+                                             parents, cpd.evidence_card)
                     else:
                         new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card))
                     self.add_cpds(new_cpd)
