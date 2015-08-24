@@ -43,12 +43,6 @@ factors module
 .. autoclass:: TabularCPD
    :members:
 
-.. autoclass:: TreeCPD
-   :members:
-
-.. autoclass:: RuleCPD
-   :members:
-
 .. autoclass:: JointProbabilityDistribution
    :members:
 
@@ -95,6 +89,18 @@ readwrite module
    :members:
 
 .. autoclass:: ProbModelXMLWriter
+   :members:
+
+.. autoclass:: UAIReader
+   :members:
+
+.. autoclass:: UAIWriter
+   :members:
+
+.. autoclass:: PomdpXReader
+   :members:
+
+.. autoclass:: PomdpXWriter
    :members:
 
 base module
