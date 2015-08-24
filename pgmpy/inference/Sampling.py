@@ -286,9 +286,9 @@ class GibbsSampling(MarkovChain):
                 factors_dict[var].append(factor)
 
         # Take factor product
-        factors_dict = {var: Factor.product(*factors) if len(factors) > 1 else factors[0]
+        factors_dict = {var: factor_product(*factors) if len(factors) > 1 else factors[0]
                         for var, factors in factors_dict.items()}
-        self.cardinalities = {var: factors_dict[var].get_cardinality(var) for var in self.variables}
+        self.cardinalities = {var: factors_dict[var].get_cardinality(var)[var] for var in self.variables}
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
