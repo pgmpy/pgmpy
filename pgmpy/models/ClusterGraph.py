@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import numpy as np
 
-# from pgmpy.extern.six.moves import filter
+from pgmpy.extern.six.moves import filter
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product
