@@ -1,10 +1,13 @@
+import copy
+import itertools as it
+
+import numpy as np
+import networkx as nx
+
+from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovModel
-import networkx as nx
 from pgmpy.factors import Factor
-import numpy as np
-import itertools as it
-import copy
 
 
 class Mplp(Inference):

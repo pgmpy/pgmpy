@@ -9,6 +9,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
+from pgmpy.extern.six.moves import map, range, zip
 
 
 class MarkovModel(UndirectedGraph):

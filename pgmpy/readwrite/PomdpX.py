@@ -2,6 +2,8 @@
 # -*- coding: UTF-8 -*-
 from collections import defaultdict
 
+from pgmpy.extern.six.moves import range
+
 try:
     from lxml import etree
 except ImportError:

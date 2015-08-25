@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from functools import reduce
 
+from pgmpy.extern.six.moves import filter, reduce
 from pgmpy.factors import Factor
 
 

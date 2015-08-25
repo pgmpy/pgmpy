@@ -6,6 +6,7 @@ from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors import TabularCPD, Factor
+from pgmpy.extern.six.moves import map, range
 
 
 class UAIReader(object):

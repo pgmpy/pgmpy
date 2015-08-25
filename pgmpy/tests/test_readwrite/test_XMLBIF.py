@@ -5,6 +5,8 @@ import numpy.testing as np_test
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map
+
 try:
     from lxml import etree
 except ImportError:

@@ -9,6 +9,7 @@ from networkx.algorithms import bipartite
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product
+from pgmpy.extern.six.moves import filter, range, zip
 
 
 class FactorGraph(UndirectedGraph):

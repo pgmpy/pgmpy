@@ -2,6 +2,8 @@ from collections import namedtuple
 
 import numpy as np
 
+from pgmpy.extern.six.moves import map
+
 
 State = namedtuple('State', ['var', 'state'])
 

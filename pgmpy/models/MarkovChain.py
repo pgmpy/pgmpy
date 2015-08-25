@@ -6,6 +6,7 @@ from pandas import DataFrame
 
 from pgmpy.factors import State
 from pgmpy.utils import sample_discrete
+from pgmpy.extern.six.moves import range, zip
 
 
 class MarkovChain(object):

@@ -122,6 +122,7 @@ import networkx as nx
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")

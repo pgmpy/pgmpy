@@ -11,6 +11,7 @@ except ImportError:
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map, range
 
 
 class XBNReader(object):

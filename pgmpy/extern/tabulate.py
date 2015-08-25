@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 from collections import namedtuple
 from platform import python_version_tuple
 import re
-
+from pgmpy.extern.six.moves import map, range
 
 if python_version_tuple()[0] < "3":
     from itertools import izip_longest

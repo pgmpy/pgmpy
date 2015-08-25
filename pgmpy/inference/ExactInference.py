@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import networkx as nx
 
+from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 from pgmpy.models import JunctionTree

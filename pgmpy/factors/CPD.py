@@ -3,12 +3,12 @@
 
 from itertools import product
 
-import networkx as nx
 import numpy as np
 
 from pgmpy import exceptions
 from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
+from pgmpy.extern.six.moves import range, zip
 
 
 class TabularCPD(Factor, object):

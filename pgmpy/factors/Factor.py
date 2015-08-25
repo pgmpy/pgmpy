@@ -1,6 +1,5 @@
 from __future__ import division
 
-import functools
 from itertools import product
 from collections import namedtuple
 
@@ -10,6 +9,7 @@ from numbers import Number
 import numpy as np
 
 from pgmpy.extern import tabulate
+from pgmpy.extern.six.moves import map, range, reduce, zip
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -229,6 +229,7 @@ class Factor:
         >>> phi.variables
         ['x2']
         """
+        import pdb; pdb.set_trace()
         phi = self if inplace else self.copy()
 
         for var in variables:
@@ -774,7 +775,7 @@ def factor_product(*args):
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Arguments must be factors")
-    return functools.reduce(lambda phi1, phi2: phi1 * phi2, args)
+    return reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
 def factor_divide(phi1, phi2):

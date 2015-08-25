@@ -11,6 +11,7 @@ import pandas as pd
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.extern.six.moves import range
 
 
 class BayesianModel(DirectedGraph):

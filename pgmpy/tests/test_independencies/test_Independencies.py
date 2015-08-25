@@ -1,6 +1,8 @@
 import unittest
+
 from pgmpy import independencies
 from pgmpy import exceptions
+from pgmpy.extern.six.moves import zip
 
 
 class TestIndependenceAssertion(unittest.TestCase):

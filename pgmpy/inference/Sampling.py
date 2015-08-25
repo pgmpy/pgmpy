@@ -7,6 +7,7 @@ from pandas import DataFrame
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel
 from pgmpy.utils.mathext import sample_discrete
+from pgmpy.extern.six.moves import map, range
 
 
 State = namedtuple('State', ['var', 'state'])
