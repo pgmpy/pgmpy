@@ -1,3 +1,5 @@
+from __future__ import division
+
 import functools
 from itertools import product
 from collections import namedtuple
@@ -691,6 +693,8 @@ class Factor:
 
     def __truediv__(self, other):
         return self.divide(other, inplace=False)
+
+    __div__ = __truediv__
 
     def __eq__(self, other):
         if not (isinstance(self, Factor) and isinstance(other, Factor)):

@@ -1,7 +1,7 @@
 from pgmpy import exceptions
 
 
-class Independencies:
+class Independencies(object):
     """
     Base class for independencies.
     independencies class represents a set of Conditional Independence
@@ -113,7 +113,7 @@ class Independencies:
         pass
 
 
-class IndependenceAssertion:
+class IndependenceAssertion(object):
     """
     Represents Conditional Independence or Independence assertion.
 

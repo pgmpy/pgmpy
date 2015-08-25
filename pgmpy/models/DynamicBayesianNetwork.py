@@ -58,7 +58,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         inter_slice
         intra_slice
         """
-        super().__init__()
+        super(DynamicBayesianNetwork, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.cpds = []
@@ -79,7 +79,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn = DBN()
         >>> dbn.add_node('A')
         """
-        super().add_node((node, 0), **attr)
+        super(DynamicBayesianNetwork, self).add_node((node, 0), **attr)
 
     def add_nodes_from(self, nodes, **attr):
         """
@@ -111,7 +111,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.nodes()
         ['B', 'A', 'C']
         """
-        return list(set([node for node, timeslice in super().nodes()]))
+        return list(set([node for node, timeslice in
+                         super(DynamicBayesianNetwork, self).nodes()]))
 
     def add_edge(self, start, end, **kwargs):
         """
@@ -155,14 +156,16 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         if start == end:
             raise ValueError('Self Loops are not allowed')
-        elif start in super().nodes() and end in super().nodes() and nx.has_path(self, end, start):
+        elif start in super(DynamicBayesianNetwork, self).nodes() and end \
+                in super(DynamicBayesianNetwork, self).nodes() and \
+                nx.has_path(self, end, start):
             raise ValueError(
                  'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (str(end), str(start)))
 
-        super().add_edge(start, end, **kwargs)
+        super(DynamicBayesianNetwork, self).add_edge(start, end, **kwargs)
 
         if start[1] == end[1]:
-            super().add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
+            super(DynamicBayesianNetwork, self).add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -298,7 +301,8 @@ class DynamicBayesianNetwork(DirectedGraph):
             if not isinstance(cpd, TabularCPD):
                 raise ValueError('cpds should be an instances of TabularCPD, TreeCPD or RuleCPD')
 
-            if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
+            if set(cpd.variables) - set(cpd.variables).intersection(set(
+                                super(DynamicBayesianNetwork, self).nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
             self.cpds.append(cpd)
@@ -331,7 +335,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.get_cpds()
         """
         if node:
-            if node not in super().nodes():
+            if node not in super(DynamicBayesianNetwork, self).nodes():
                 raise ValueError('Node not present in the model.')
             else:
                 for cpd in self.cpds:
@@ -353,7 +357,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         check: boolean
         True if all the checks are passed
         """
-        for node in super().nodes():
+        for node in super(DynamicBayesianNetwork, self).nodes():
             cpd = self.get_cpds(node=node)
             if isinstance(cpd, TabularCPD):
                 evidence = cpd.evidence
@@ -430,7 +434,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         moral_graph = UndirectedGraph(self.to_undirected().edges())
 
-        for node in super().nodes():
+        for node in super(DynamicBayesianNetwork, self).nodes():
             moral_graph.add_edges_from(itertools.combinations(
                 self.get_parents(node), 2))
 

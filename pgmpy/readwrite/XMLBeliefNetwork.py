@@ -13,7 +13,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 
 
-class XBNReader:
+class XBNReader(object):
     """
     Base class for reading XML Belief Network File Format.
     """
@@ -202,7 +202,7 @@ class XBNReader:
         return model
 
 
-class XBNWriter:
+class XBNWriter(object):
     """
     Base class for writing XML Belief Network file format.
     """

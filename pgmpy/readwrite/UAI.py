@@ -8,7 +8,7 @@ from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors import TabularCPD, Factor
 
 
-class UAIReader:
+class UAIReader(object):
     """
     Class for reading UAI file format from files or strings.
     """
@@ -246,7 +246,7 @@ class UAIReader:
             return model
 
 
-class UAIWriter:
+class UAIWriter(object):
     """
     Class for writing models in UAI.
     """

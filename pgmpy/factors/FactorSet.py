@@ -4,7 +4,7 @@ from functools import reduce
 from pgmpy.factors import Factor
 
 
-class FactorSet:
+class FactorSet(object):
     r"""
     Base class of *Factor Sets*.
 

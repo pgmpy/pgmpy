@@ -80,7 +80,7 @@ class BayesianModel(DirectedGraph):
     3
     """
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(BayesianModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.cpds = []

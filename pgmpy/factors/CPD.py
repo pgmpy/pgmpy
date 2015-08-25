@@ -11,7 +11,7 @@ from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 
 
-class TabularCPD(Factor):
+class TabularCPD(Factor, object):
     """
     Defines the conditional probability distribution table (cpd table)
 
@@ -117,7 +117,7 @@ class TabularCPD(Factor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super().__init__(variables, cardinality, values.flatten('C'))
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(

@@ -80,7 +80,7 @@ class MarkovModel(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(MarkovModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -107,7 +107,7 @@ class MarkovModel(UndirectedGraph):
         """
         # check that there is no self loop.
         if u != v:
-            super().add_edge(u, v, **kwargs)
+            super(MarkovModel, self).add_edge(u, v, **kwargs)
         else:
             raise ValueError('Self loops are not allowed')
 

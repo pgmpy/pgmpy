@@ -52,7 +52,7 @@ class TestIndependenceAssertion(unittest.TestCase):
         del self.assertion
 
 
-class IndependenciesTestCase:
+class IndependenciesTestCase(object):
     def assertIndependenceAssertionEqual(self, assertion1, assertion2):
         if not (assertion1.event1 == assertion2.event1):
             raise AssertionError(str(assertion1.event1) + "is not equal to" + str(assertion2.event1))

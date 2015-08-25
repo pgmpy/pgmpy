@@ -31,7 +31,7 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         if not isinstance(model, BayesianModel):
             raise NotImplementedError("Maximum Likelihood Estimate is only implemented of BayesianModel")
 
-        super().__init__(model, data)
+        super(MaximumLikelihoodEstimator, self).__init__(model, data)
 
     def get_parameters(self):
         """

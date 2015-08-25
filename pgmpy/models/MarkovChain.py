@@ -8,7 +8,7 @@ from pgmpy.factors import State
 from pgmpy.utils import sample_discrete
 
 
-class MarkovChain:
+class MarkovChain(object):
     """
     Class to represent a Markov Chain with multiple kernels for factored state space,
     along with methods to simulate a run.

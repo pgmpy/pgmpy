@@ -29,7 +29,7 @@ class BayesianModelSampling(Inference):
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
             raise TypeError("model must an instance of BayesianModel")
-        super().__init__(model)
+        super(BayesianModelSampling, self).__init__(model)
         self.topological_order = nx.topological_sort(model)
         self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 

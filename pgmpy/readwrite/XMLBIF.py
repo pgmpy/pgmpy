@@ -16,7 +16,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD, State
 
 
-class XMLBIFReader:
+class XMLBIFReader(object):
     """
     Base class for reading network file in XMLBIF format.
     """
@@ -186,7 +186,7 @@ class XMLBIFReader:
         return model
 
 
-class XMLBIFWriter:
+class XMLBIFWriter(object):
     """
     Base class for writing XMLBIF network file format.
     """
