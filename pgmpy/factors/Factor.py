@@ -229,7 +229,6 @@ class Factor:
         >>> phi.variables
         ['x2']
         """
-        import pdb; pdb.set_trace()
         phi = self if inplace else self.copy()
 
         for var in variables:
