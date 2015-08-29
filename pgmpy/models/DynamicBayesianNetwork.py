@@ -192,36 +192,51 @@ class DynamicBayesianNetwork(DirectedGraph):
     def add_edges_from(self, ebunch, **kwargs):
         """
         Add all the edges in ebunch.
+
         If nodes referred in the ebunch are not already present, they
-        will be automatically added. Node names should be strings.
+        will be automatically added. Node names can be any hashable python object.
+
         Parameters
         ----------
-        ebunch : container of edges
-            Each edge given in the container will be added to the graph.
-            The edges must be given as 2-tuples (u, v).
+        ebunch : list, array-like
+                List of edges to add. Each edge must be of the form of
+                ((start, time_slice), (end, time_slice)).
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0), ('G',0)), (('I',0), ('G',0))])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))])
+        >>> dbn.nodes()
+        ['G', 'I', 'D']
+        >>> dbn.edges()
+        [(('D', 1), ('G', 1)),
+         (('I', 1), ('G', 1)),
+         (('D', 0), ('G', 0)),
+         (('I', 0), ('G', 0))]
         """
         for edge in ebunch:
             self.add_edge(edge[0], edge[1])
 
     def get_intra_edges(self, time_slice=0):
         """
-        returns the intra slice edges present in the 2-TBN.
+        Returns the intra slice edges present in the 2-TBN.
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice: int (whole number)
+                The time slice for which to get intra edges. The timeslice
+                should be a positive value or zero.
 
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
@@ -232,60 +247,69 @@ class DynamicBayesianNetwork(DirectedGraph):
 
     def get_inter_edges(self):
         """
-        returns the inter-slice edges present in the 2-TBN
+        Returns the inter-slice edges present in the 2-TBN.
+
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1)))])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
         >>> dbn.get_inter_edges()
-        [(('D', 0), ('D', 1)), (('I', 0), ('I', 1))]
+        [(('D', 0), ('D', 1)),
+         (('G', 0), ('G', 1)),
+         (('G', 0), ('L', 1)),
+         (('I', 0), ('I', 1)),
+         (('L', 0), ('L', 1))]
         """
         return [edge for edge in self.edges() if edge[0][1] != edge[1][1]]
 
     def get_interface_nodes(self, time_slice=0):
-    	"""
-    	returns the nodes in the first timeslice whose children are present in the first timeslice.
+        """
+        Returns the nodes in the first timeslice whose children are present in the first timeslice.
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice:int
+                The timeslice should be a positive value greater than or equal to zero
 
-    	Examples:
-    	-------
-    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
-    	>>> dbn = DBN()
-    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
-    	>>> dbn.get_interface_nodes()
-    	[('D', 0)]
-    	"""
-    	if not isinstance(time_slice, int) or time_slice < 0:
+        Examples:
+        -------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> dbn = DBN()
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+        >>> dbn.get_interface_nodes()
+        [('D', 0)]
+        """
+        if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-    	return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
+        return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
     def get_slice_nodes(self, time_slice=0):
-    	"""
-    	returns the nodes present in a particular timeslice
+        """
+        Returns the nodes present in a particular timeslice
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice:int
+                The timeslice should be a positive value greater than or equal to zero
 
-    	Examples:
-    	-------
-    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
-    	>>> dbn = DBN()
-    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
-    	>>> dbn.get_slice_nodes()
-    	"""
-    	if not isinstance(time_slice, int) or time_slice < 0:
+        Examples:
+        -------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> dbn = DBN()
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('G', 0),('L', 0)),(('D', 0),('D', 1))])
+        >>> dbn.get_slice_nodes()
+        """
+        if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-    	return [(node, time_slice) for node in self.nodes()]
+        return [(node, time_slice) for node in self.nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -299,34 +323,47 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Parameter
         ---------
-        cpds  :  list, set, tuple (array-like)
-            List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
-            which will be associated with the model
+        cpds : list, set, tuple (array-like)
+            List of CPDs which are to be associated with the model. Each CPD
+            should be an instance of `TabularCPD`.
 
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                     [0.4,0.25,0.8,0.03],
-        ...                                     [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
+        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[('I', 0),('D', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D',1), 2, [[0.6, 0.3],
+        ...                                   [0.4, 0.7]],
+        ...                      evidence=[('D',0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
         >>> dbn.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
-        >>> dbn.cpds
+        >>> dbn.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7ff7f27b0cf8>,
+         <TabularCPD representing P(('D', 1):2 | ('D', 0):2) at 0x7ff810b9c2e8>,
+         <TabularCPD representing P(('D', 0):2) at 0x7ff7f27e6f98>,
+         <TabularCPD representing P(('I', 0):2) at 0x7ff7f27e6ba8>,
+         <TabularCPD representing P(('I', 1):2 | ('I', 0):2) at 0x7ff7f27e6668>]
         """
         for cpd in cpds:
             if not isinstance(cpd, TabularCPD):
-                raise ValueError('cpds should be an instances of TabularCPD, TreeCPD or RuleCPD')
+                raise ValueError('cpd should be an instances of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            self.cpds.append(cpd)
+        self.cpds.extend(cpds)
 
     def get_cpds(self, node=None, time_slice=0):
         """
