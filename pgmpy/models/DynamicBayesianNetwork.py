@@ -13,9 +13,9 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Base class for Dynamic Bayesian Network
 
-        This model is a time variant of the static Bayesian model, where each
+        This is a time variant model of the static Bayesian model, where each
         time-slice has some static nodes and is then replicated over a certain
-        time-slice.
+        time period.
 
         The nodes can be any hashable python objects.
 
@@ -27,7 +27,7 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Examples:
         --------
-        Create an empty Dynamic Bayesian Network with no nodes and no edges
+        Create an empty Dynamic Bayesian Network with no nodes and no edges:
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
 
@@ -35,25 +35,41 @@ class DynamicBayesianNetwork(DirectedGraph):
         node can be added using the method below. For adding edges we need to
         specify the time slice since edges can be across different time slices.
 
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0))])
+        For example for a network as [image](http://s8.postimg.org/aaybw4x2t/Blank_Flowchart_New_Page_1.png),
+        we will need to add all the edges in the 2-TBN as:
 
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+
+        We can query the edges and nodes in the network as:
         >>> dbn.nodes()
-        ['L', 'G', 'S', 'I', 'D']
+        ['G', 'D', 'I', 'L']
         >>> dbn.edges()
-        [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))]
+        [(('D', 1), ('G', 1)), (('I', 0), ('G', 0)), (('I', 0), ('I', 1)),
+         (('I', 1), ('G', 1)), (('G', 0), ('L', 0)), (('G', 0), ('G', 1)),
+         (('G', 0), ('L', 1)), (('D', 0), ('G', 0)), (('D', 0), ('D', 1)),
+         (('L', 0), ('L', 1)), (('G', 1), ('L', 1))]
 
         If any variable is not present in the network while adding an edge,
         pgmpy will automatically add that variable to the network.
 
+        But for adding nodes to the model we don't need to specify the time
+        slice as it is common in all the time slices. And therefore pgmpy
+        automatically replicated it all the time slices. For example, for
+        adding a new variable `S` in the above network we can simply do:
+        >>> dbn.add_node('S')
+        >>> dbn.nodes()
+        ['S', 'G', 'D', 'I', 'L']
 
         Public Methods:
         ---------------
-        add_cpds
-        add_edge
-        add_edges_from
         add_node
         add_nodes_from
+        add_edges
+        add_edges_from
+        add_cpds
         initialize_initial_state
         inter_slice
         intra_slice
@@ -78,6 +94,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_node('A')
+        ['A']
         """
         super().add_node((node, 0), **attr)
 
@@ -121,10 +138,17 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Parameters
         ----------
-        start, end: The start, end nodes should contain the (node_name, time_slice)
-                    Here, node_name can be a hashable python object while the
-                    time_slice is an integer value, which denotes the index of the
-                    time_slice that the node belongs to.
+        start: tuple
+               Both the start and end nodes should specify the time slice as
+               (node_name, time_slice). Here, node_name can be any hashable
+               python object while the time_slice is an integer value,
+               which denotes the time slice that the node belongs to.
+
+        end: tuple
+               Both the start and end nodes should specify the time slice as
+               (node_name, time_slice). Here, node_name can be any hashable
+               python object while the time_slice is an integer value,
+               which denotes the time slice that the node belongs to.
 
         Examples
         --------
@@ -146,8 +170,8 @@ class DynamicBayesianNetwork(DirectedGraph):
             elif start[1] == end[1] - 1:
                 start = (start[0], 0)
                 end = (end[0], 1)
-            elif start[1] == end[1] + 1:
-                raise ValueError('Edges in backward direction are not allowed.')
+            elif start[1] > end[1]:
+                raise NotImplementedError('Edges in backward direction are not allowed.')
             elif start[1] != end[1]:
                 raise ValueError("Edges over multiple time slices is not currently supported")
         except TypeError:
@@ -157,7 +181,8 @@ class DynamicBayesianNetwork(DirectedGraph):
             raise ValueError('Self Loops are not allowed')
         elif start in super().nodes() and end in super().nodes() and nx.has_path(self, end, start):
             raise ValueError(
-                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (str(end), str(start)))
+                 'Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
+                     start=str(start), end=str(end)))
 
         super().add_edge(start, end, **kwargs)
 

@@ -28,7 +28,7 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
         self.assertListEqual(sorted(self.network.edges()), [(('a', 0), ('b', 0)), (('a', 1), ('b', 1))])
 
     def test_add_edge_going_backward(self):
-        self.assertRaises(ValueError, self.network.add_edge, ('a', 1), ('b', 0))
+        self.assertRaises(NotImplementedError, self.network.add_edge, ('a', 1), ('b', 0))
 
     def test_add_edge_with_farther_timeslice(self):
         self.assertRaises(ValueError, self.network.add_edge, ('a', 2), ('b', 4))
