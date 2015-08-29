@@ -367,18 +367,18 @@ class DynamicBayesianNetwork(DirectedGraph):
 
     def get_cpds(self, node=None, time_slice=0):
         """
-        Returns the cpds that have been added till now to the graph
+        Returns the CPDs that have been associated with the network.
 
         Parameter
         ---------
-        node: The node should be be of the following form
-        (node_name, time_slice)
-        Here, node_name is the node that is inserted
-        while the time_slice is an integer value, which denotes
-        the index of the time_slice that the node belongs to.
+        node: tuple (node_name, time_slice)
+            The node should be in the following form (node_name, time_slice).
+            Here, node_name is the node that is inserted while the time_slice is
+            an integer value, which denotes the index of the time_slice that the
+            node belongs to.
 
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice: int
+            The time_slice should be a positive integer greater than or equal to zero.
 
         Examples:
         -------
@@ -392,6 +392,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
+        # TODO: fix bugs in this
         if node:
             if node not in super().nodes():
                 raise ValueError('Node not present in the model.')
@@ -407,13 +408,14 @@ class DynamicBayesianNetwork(DirectedGraph):
         Check the model for various errors. This method checks for the following
         errors.
 
-        * Checks if the sum of the probabilities for each state is equal to 1 (tol=0.01).
+        * Checks if the sum of the probabilities in each associated CPD for each
+            state is equal to 1 (tol=0.01).
         * Checks if the CPDs associated with nodes are consistent with their parents.
 
         Returns
         -------
-        check: boolean
-        True if all the checks are passed
+        boolean: True if everything seems to be order. Otherwise raises error
+            according to the problem.
         """
         for node in super().nodes():
             cpd = self.get_cpds(node=node)
@@ -421,8 +423,8 @@ class DynamicBayesianNetwork(DirectedGraph):
                 evidence = cpd.evidence
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
-                    raise ValueError("CPD associated with %s doesn't have "
-                                     "proper parents associated with it." % node)
+                    raise ValueError("CPD associated with {node} doesn't have "
+                                     "proper parents associated with it.".format(node=node))
                 if not np.allclose(cpd.marginalize([node], inplace=False).values,
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
@@ -443,15 +445,23 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors import TabularCPD
         >>> student = DBN()
-        >>> student.add_nodes_from(['D','G','I','S','L'])
-        >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                                 [0.4,0.25,0.8,0.03],
-        ...                                                 [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
+        >>> student.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> student.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[('I', 0),('D', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I',0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
         >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> student.initialize_initial_state()
         """
@@ -490,7 +500,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         (('I', 0), ('D', 0)),
         (('G', 1), ('I', 1))]
         """
-        moral_graph = UndirectedGraph(self.to_undirected().edges())
+        moral_graph = self.to_undirected()
 
         for node in super().nodes():
             moral_graph.add_edges_from(itertools.combinations(
