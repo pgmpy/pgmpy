@@ -2,7 +2,6 @@ import copy
 from itertools import tee, chain, combinations
 from collections import defaultdict
 
-from pgmpy.models import BayesianModel, DynamicBayesianNetwork
 from pgmpy.factors import Factor
 from pgmpy.factors.Factor import factor_product
 from pgmpy.inference import Inference, BeliefPropagation
@@ -18,22 +17,31 @@ class DBNInference(Inference):
         Parameters
         ----------
         model: Dynamic Bayesian Network
-        model for which inference is to performed
+            Model for which inference is to performed
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel as bm
-        >>> from pgmpy.models import DynamicBayesianNetwork as dbn
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
-        >>> dbnet = dbn()
+        >>> dbnet = DBN()
         >>> grade_cpd = TabularCPD(('G',0),3, [[0.3, 0.05, 0.9, 0.5],
-                                               [0.4, 0.25, 0.08, 0.3],
-                                               [0.3, 0.7, 0.2, 0.2]],[('D',0),('I',0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)), (('D',1),('G',1)), (('I',1), ('G',1))])
+        ...                                    [0.4, 0.25, 0.08, 0.3],
+        ...                                    [0.3, 0.7, 0.2, 0.2]],
+        ...                        evidence=[('D', 0), ('I', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5,0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
+        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
         >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
@@ -45,8 +53,8 @@ class DBNInference(Inference):
         (('I', 1), ('I', 0), ('D', 0))]
         """
         super().__init__(model)
-        self.interface_nodes_0 = model.get_interface_nodes(0)
-        self.interface_nodes_1 = model.get_interface_nodes(1)
+        self.interface_nodes_0 = model.get_interface_nodes(time_slice=0)
+        self.interface_nodes_1 = model.get_interface_nodes(time_slice=1)
 
         start_markov_model = self.start_bayesian_model.to_markov_model()
         one_and_half_markov_model = self.one_and_half_model.to_markov_model()
@@ -70,8 +78,12 @@ class DBNInference(Inference):
 
         Parameters
         ----------
+        nodes: list, array-like
+            List of node names.
+            nodes that are to be shifted to some other time slice.
+
         shift: int
-            shifting the evidence corresponding to the given time slice.
+            time slice where to shift the nodes.
         """
         return [(node[0], time) for node in nodes]
 
@@ -84,6 +96,7 @@ class DBNInference(Inference):
         ----------
         junction_tree: Junction tree
             from which the nodes are to be extracted.
+
         nodes: iterable container
             A container of nodes (list, dict, set, etc.).
         """
@@ -99,8 +112,10 @@ class DBNInference(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
         time: int
             the evidence corresponding to the time slice
+
         shift: int
             shifting the evidence corresponding to the given time slice.
         """
@@ -113,14 +128,14 @@ class DBNInference(Inference):
 
         Parameters
         ----------
-        nodes: iterable container
+        nodes: list, array-like
             A container of nodes (list, dict, set, etc.).
+
         factor: factor
             factor which is to be marginalized.
         """
         marginalizing_nodes = list(set(factor.scope()).difference(nodes))
-        new_factor = factor.marginalize(marginalizing_nodes, inplace=False)
-        return new_factor
+        return factor.marginalize(marginalizing_nodes, inplace=False)
 
     def _update_belief(self, belief_prop, clique, clique_potential, message=None):
         """
@@ -130,8 +145,10 @@ class DBNInference(Inference):
         ----------
         belief_prop: Belief Propagation
             Belief Propagation which needs to be updated.
+
         in_clique: clique
             The factor which needs to be updated corresponding to the input clique.
+
         out_clique_potential: factor
             Multiplying factor which will be multiplied to the factor corresponding to the clique.
         """
@@ -139,12 +156,12 @@ class DBNInference(Inference):
         belief_prop.junction_tree.remove_factors(old_factor)
         if message:
             if message.scope() and clique_potential.scope():
-                new_factor = old_factor*message
-                new_factor = new_factor/clique_potential
+                new_factor = old_factor * message
+                new_factor = new_factor / clique_potential
             else:
                 new_factor = old_factor
         else:
-            new_factor = old_factor*clique_potential
+            new_factor = old_factor * clique_potential
         belief_prop.junction_tree.add_factors(new_factor)
         belief_prop.calibrate()
 
@@ -156,10 +173,11 @@ class DBNInference(Inference):
         ----------
         belief_prop: Belief Propagation
             Belief Propagation which needs to be updated.
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
         """
-        final_factor = copy.deepcopy(factor_product(*belief_prop.junction_tree.get_factors()))
+        final_factor = factor_product(*belief_prop.junction_tree.get_factors())
         if evidence:
             for var in evidence:
                 if var in final_factor.scope():
@@ -174,6 +192,7 @@ class DBNInference(Inference):
         ----------
         factor: Factor
            The factor which needs to be shifted.
+
         shift: int
            The new timeslice to which the factor should belong to.
         """
@@ -188,52 +207,67 @@ class DBNInference(Inference):
         ----------
         variables: list
             list of variables for which you want to compute the probability
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel as bm
+        >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as dbn
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = dbn()
-        >>> grade_cpd = TabularCPD(('G',0),3, [[0.3, 0.05, 0.9, 0.5],
-                                               [0.4, 0.25, 0.08, 0.3],
-                                               [0.3, 0.7, 0.2, 0.2]],[('D',0),('I',0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)), (('D',1),('G',1)), (('I',1), ('G',1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.08, 0.3],
+        ...                                      [0.3, 0.7, 0.2, 0.2]],
+        ...                        evidence=[('D', 0),('I', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2,[[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I', 0), 2,[[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
+        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
         >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
-        >>> dbn_inf.forward_inference([('G',1)], evidence={('D',0):0})[('G, 1)].values
+        >>> dbn_inf.forward_inference([('G', 1)], evidence={('D', 0): 0})[('G', 1)].values
         array([ 0.43260694,  0.24140023,  0.32599284])
         """
         variable_dict = defaultdict(list)
         for var in variables:
             variable_dict[var[1]].append(var)
+
         time_range = max(variable_dict)
         if evidence:
             evid_time_range = max([time for var, time in evidence.keys()])
             time_range = max(time_range, evid_time_range)
+
         start_bp = BeliefPropagation(self.start_junction_tree)
         mid_bp = BeliefPropagation(self.one_and_half_junction_tree)
         evidence_0 = self._get_evidence(evidence, 0, 0)
         interface_nodes_dict = {}
         potential_dict = {}
+
         if evidence:
             interface_nodes_dict = {k: v for k, v in evidence_0.items() if k in self.interface_nodes_0}
         initial_factor = self._get_factor(start_bp, evidence_0)
         marginalized_factor = self._marginalize_factor(self.interface_nodes_0, initial_factor)
         potential_dict[0] = marginalized_factor
         self._update_belief(mid_bp, self.in_clique, marginalized_factor)
+
         if variable_dict[0]:
             factor_values = start_bp.query(variable_dict[0], evidence=evidence_0)
         else:
             factor_values = {}
+
         for time in range(1, time_range + 1):
             evidence_time = self._get_evidence(evidence, time, 1)
             if interface_nodes_dict:
@@ -255,10 +289,12 @@ class DBNInference(Inference):
             potential_dict[time] = new_factor
             mid_bp = BeliefPropagation(self.one_and_half_junction_tree)
             self._update_belief(mid_bp, self.in_clique, new_factor)
+
             if evidence_time:
                 interface_nodes_dict = {(k[0], 0): v for k, v in evidence_time.items() if k in self.interface_nodes_1}
             else:
                 interface_nodes_dict = {}
+
         if args == 'potential':
             return potential_dict
 
@@ -350,28 +386,38 @@ class DBNInference(Inference):
         ----------
         variables: list
             list of variables for which you want to compute the probability
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel as bm
+        >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as dbn
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = dbn()
-        >>> grade_cpd = TabularCPD(('G',0),3, [[0.3, 0.05, 0.9, 0.5],
-                                               [0.4, 0.25, 0.08, 0.3],
-                                               [0.3, 0.7, 0.2, 0.2]],[('D',0),('I',0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)), (('D',1),('G',1)), (('I',1), ('G',1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.08, 0.3],
+        ...                                      [0.3, 0.7, 0.2, 0.2]],
+        ...                        evidence=[('D', 0), ('I', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2,[[0.6, 0.3],
+        ...                                   [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
+        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
         >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
-        >>> dbn_inf.query([('G',2)], evidence={('D',1):0,('I',1):0,('D',3):0})[('G', 2)].values
+        >>> dbn_inf.query([('G', 2)], evidence={('D', 1): 0,('I', 1): 0,('D', 3): 0})[('G', 2)].values
         array([ 0.34809809,  0.26516343,  0.38673848])
         """
         if args == 'exact':

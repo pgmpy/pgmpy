@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DirectedGraph
-from pgmpy.factors import TabularCPD, TreeCPD, RuleCPD
+from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
 
 
@@ -120,8 +120,7 @@ class BayesianModel(DirectedGraph):
         Parameters
         ----------
         cpds  :  list, set, tuple (array-like)
-            List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
-            which will be associated with the model
+            List of CPDs which will be associated with the model
 
         EXAMPLE
         -------
@@ -147,9 +146,8 @@ class BayesianModel(DirectedGraph):
         +------+------+------+---------+------+------+-------+
         """
         for cpd in cpds:
-            if not isinstance(cpd, (TabularCPD, TreeCPD, RuleCPD)):
-                raise ValueError('Only TabularCPD, TreeCPD or RuleCPD can be'
-                                 ' added.')
+            if not isinstance(cpd, TabularCPD):
+                raise ValueError('Only TabularCPD can be added.')
 
             if set(cpd.variables) - set(cpd.variables).intersection(
                     set(self.nodes())):

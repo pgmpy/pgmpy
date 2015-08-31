@@ -4,6 +4,8 @@ import itertools
 
 import networkx as nx
 
+from pgmpy.base import UndirectedGraph
+
 
 class DirectedGraph(nx.DiGraph):
     """
@@ -181,11 +183,9 @@ class DirectedGraph(nx.DiGraph):
         >>> moral_graph.edges()
         [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
         """
-        from pgmpy.base import UndirectedGraph
         moral_graph = UndirectedGraph(self.to_undirected().edges())
 
         for node in self.nodes():
-            moral_graph.add_edges_from(itertools.combinations(
-                self.get_parents(node), 2))
+            moral_graph.add_edges_from(itertools.combinations(self.get_parents(node), 2))
 
         return moral_graph

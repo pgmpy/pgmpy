@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from collections import namedtuple
 
 import networkx as nx
@@ -69,7 +68,7 @@ class BayesianModelSampling(Inference):
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for node in self.topological_order:
             cpd = self.cpds[node]
-            states = [st for var, st in cpd.variables[node]]
+            states = [state for state in range(cpd.get_cardinality(node)[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 evidence = sampled.values[:, [indices]].tolist()
@@ -164,7 +163,7 @@ class BayesianModelSampling(Inference):
         ...         ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> evidence = {'diff': State(var='diff',state=0)}
+        >>> evidence = [State('diff', 0)]
         >>> inference.likelihood_weighted_sample(evidence, 2)
                 intel       diff       grade  _weight
         0  (intel, 0)  (diff, 0)  (grade, 1)      0.6
@@ -175,7 +174,7 @@ class BayesianModelSampling(Inference):
         evidence_dict = {var: st for var, st in evidence}
         for node in self.topological_order:
             cpd = self.cpds[node]
-            states = [st for var, st in cpd.variables[node]]
+            states = [state for state in range(cpd.get_cardinality(node)[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 evidence = sampled.values[:, [indices]].tolist()

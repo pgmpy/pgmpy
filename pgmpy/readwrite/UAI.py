@@ -239,7 +239,7 @@ class UAIReader:
                 variables = table[0]
                 cardinality = [int(self.domain[var]) for var in variables]
                 value = list(map(float, table[1]))
-                factor = Factor(variables=variables, cardinality=cardinality, value=value)
+                factor = Factor(variables=variables, cardinality=cardinality, values=value)
                 factors.append(factor)
 
             model.add_factors(*factors)
@@ -324,7 +324,7 @@ class UAIWriter:
                 variables = factor.variables
                 for var in variables:
                     if var not in domain:
-                        domain[var] = str(len(variables[var]))
+                        domain[var] = str(factor.get_cardinality([var])[var])
             return domain
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
@@ -376,14 +376,14 @@ class UAIWriter:
             cpds.sort(key=lambda x: x.variable)
             tables = []
             for cpd in cpds:
-                values = list(map(str, cpd.values))
+                values = list(map(str, cpd.values.ravel()))
                 tables.append(values)
             return tables
         elif isinstance(self.model, MarkovModel):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:
-                values = list(map(str, factor.values))
+                values = list(map(str, factor.values.ravel()))
                 tables.append(values)
             return tables
         else:

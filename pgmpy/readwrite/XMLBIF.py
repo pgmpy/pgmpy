@@ -13,7 +13,7 @@ except ImportError:
 import numpy as np
 
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors import TabularCPD, State
 
 
 class XMLBIFReader:
@@ -299,7 +299,8 @@ class XMLBIFWriter:
         for cpd in cpds:
             var = cpd.variable
             outcome_tag[var] = []
-            for state in cpd.variables[var]:
+            for state in [State(var, state) for state in range(cpd.get_cardinality([var])[var])]:
+            # for state in [cpd.variables[var]:
                 state_tag = etree.SubElement(self.variables[var], "OUTCOME")
                 state_tag.text = str(state.state)
                 outcome_tag[var].append(state_tag)
@@ -385,7 +386,7 @@ class XMLBIFWriter:
         for cpd in cpds:
             table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
             table_tag[cpd.variable].text = ''
-            for val in cpd.values:
+            for val in cpd.values.ravel():
                 table_tag[cpd.variable].text += str(val) + ' '
 
         return table_tag

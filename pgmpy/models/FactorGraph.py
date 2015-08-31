@@ -8,6 +8,7 @@ from networkx.algorithms import bipartite
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
+from pgmpy.factors import factor_product
 
 
 class FactorGraph(UndirectedGraph):
@@ -351,8 +352,8 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_partition_function()
         """
         factor = self.factors[0]
-        factor = factor.product(*[self.factors[i] for i in
-                                  range(1, len(self.factors))])
+        factor = factor_product(factor, *[self.factors[i] for i in
+                                          range(1, len(self.factors))])
         if set(factor.scope()) != set(self.get_variable_nodes()):
             raise ValueError('Factor for all the random variables not defined.')
 
