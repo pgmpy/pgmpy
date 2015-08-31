@@ -255,6 +255,7 @@ class GibbsSampling(MarkovChain):
         """
         self.variables = np.array(model.nodes())
         self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
+
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
@@ -289,6 +290,7 @@ class GibbsSampling(MarkovChain):
         factors_dict = {var: factor_product(*factors) if len(factors) > 1 else factors[0]
                         for var, factors in factors_dict.items()}
         self.cardinalities = {var: factors_dict[var].get_cardinality(var)[var] for var in self.variables}
+
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
@@ -340,6 +342,7 @@ class GibbsSampling(MarkovChain):
 
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
+
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
