@@ -177,8 +177,7 @@ class DBNInference(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
         """
-        # TODO: try without using deepcopy
-        final_factor = copy.deepcopy(factor_product(*belief_prop.junction_tree.get_factors()))
+        final_factor = factor_product(*belief_prop.junction_tree.get_factors())
         if evidence:
             for var in evidence:
                 if var in final_factor.scope():
