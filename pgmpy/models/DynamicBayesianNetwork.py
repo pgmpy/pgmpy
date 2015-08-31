@@ -1,4 +1,4 @@
-import itertools
+from itertools import combinations
 from collections import defaultdict
 
 import numpy as np
@@ -503,7 +503,6 @@ class DynamicBayesianNetwork(DirectedGraph):
         moral_graph = self.to_undirected()
 
         for node in super().nodes():
-            moral_graph.add_edges_from(itertools.combinations(
-                self.get_parents(node), 2))
+            moral_graph.add_edges_from(combinations(self.get_parents(node), 2))
 
         return moral_graph
