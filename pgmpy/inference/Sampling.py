@@ -1,11 +1,13 @@
 from collections import namedtuple
+import itertools
 
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
 
+from pgmpy.factors.Factor import Factor, factor_product
 from pgmpy.inference import Inference
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 
 
@@ -194,3 +196,194 @@ class BayesianModelSampling(Inference):
                     sampled[node] = list(map(lambda t: State(node, t),
                                          sample_discrete(states, cpd.values, size)))
         return sampled
+
+
+class GibbsSampling(MarkovChain):
+    """
+    Class for performing Gibbs sampling.
+
+    Parameters:
+    -----------
+    model: BayesianModel or MarkovModel
+        Model from which variables are inherited and transition probabilites computed.
+
+    Public Methods:
+    ---------------
+    set_start_state(state)
+    sample(start_state, size)
+    generate_sample(start_state, size)
+
+    Examples:
+    ---------
+    Initialization from a BayesianModel object:
+    >>> from pgmpy.factors import TabularCPD
+    >>> from pgmpy.models import BayesianModel
+    >>> intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
+    >>> sat_cpd = TabularCPD('sat', 2, [[0.95, 0.2], [0.05, 0.8]], evidence=['intel'], evidence_card=[2])
+    >>> student = BayesianModel()
+    >>> student.add_nodes_from(['intel', 'sat'])
+    >>> student.add_edge('intel', 'sat')
+    >>> student.add_cpds(intel_cpd, sat_cpd)
+
+    >>> from pgmpy.inference import GibbsSampling
+    >>> gibbs_chain = GibbsSampling(student)
+
+    Sample from it:
+    >>> gibbs_chain.sample(size=3)
+       intel  sat
+    0      0    0
+    1      0    0
+    2      1    1
+    """
+    def __init__(self, model=None):
+        super().__init__()
+        if isinstance(model, BayesianModel):
+            self._get_kernel_from_bayesian_model(model)
+        elif isinstance(model, MarkovModel):
+            self._get_kernel_from_markov_model(model)
+
+    def _get_kernel_from_bayesian_model(self, model):
+        """
+        Computes the Gibbs transition models from a Bayesian Network.
+        'Probabilistic Graphical Model Principles and Techniques', Koller and
+        Friedman, Section 12.3.3 pp 512-513.
+
+        Parameters:
+        -----------
+        model: BayesianModel
+            The model from which probabilities will be computed.
+        """
+        self.variables = np.array(model.nodes())
+        self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
+
+        for var in self.variables:
+            other_vars = [v for v in self.variables if var != v]
+            other_cards = [self.cardinalities[v] for v in other_vars]
+            cpds = [cpd for cpd in model.cpds if var in cpd.scope()]
+            prod_cpd = factor_product(*cpds)
+            kernel = {}
+            scope = set(prod_cpd.scope())
+            for tup in itertools.product(*[range(card) for card in other_cards]):
+                states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
+                prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
+                kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
+            self.transition_models[var] = kernel
+
+    def _get_kernel_from_markov_model(self, model):
+        """
+        Computes the Gibbs transition models from a Markov Network.
+        'Probabilistic Graphical Model Principles and Techniques', Koller and
+        Friedman, Section 12.3.3 pp 512-513.
+
+        Parameters:
+        -----------
+        model: MarkovModel
+            The model from which probabilities will be computed.
+        """
+        self.variables = np.array(model.nodes())
+        factors_dict = {var: [] for var in self.variables}
+        for factor in model.get_factors():
+            for var in factor.scope():
+                factors_dict[var].append(factor)
+
+        # Take factor product
+        factors_dict = {var: factor_product(*factors) if len(factors) > 1 else factors[0]
+                        for var, factors in factors_dict.items()}
+        self.cardinalities = {var: factors_dict[var].get_cardinality(var)[var] for var in self.variables}
+
+        for var in self.variables:
+            other_vars = [v for v in self.variables if var != v]
+            other_cards = [self.cardinalities[v] for v in other_vars]
+            kernel = {}
+            factor = factors_dict[var]
+            scope = set(factor.scope())
+            for tup in itertools.product(*[range(card) for card in other_cards]):
+                states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
+                reduced_factor = factor.reduce(states, inplace=False)
+                kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
+            self.transition_models[var] = kernel
+
+    def sample(self, start_state=None, size=1):
+        """
+        Sample from the Markov Chain.
+
+        Parameters:
+        -----------
+        start_state: dict or array-like iterable
+            Representing the starting states of the variables. If None is passed, a random start_state is chosen.
+        size: int
+            Number of samples to be generated.
+
+        Return Type:
+        ------------
+        pandas.DataFrame
+
+        Examples:
+        ---------
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.inference import GibbsSampling
+        >>> from pgmpy.models import MarkovModel
+        >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
+        >>> factor_ab = Factor(['A', 'B'], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = Factor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> model.add_factors(factor_ab, factor_cb)
+        >>> gibbs = GibbsSampling(model)
+        >>> gibbs.sample(size=4)
+           A  B  C
+        0  0  1  1
+        1  1  0  0
+        2  1  1  0
+        3  1  1  1
+        """
+        if start_state is None and self.state is None:
+            self.state = self.random_state()
+        else:
+            self.set_start_state(start_state)
+
+        sampled = DataFrame(index=range(size), columns=self.variables)
+        sampled.loc[0] = [st for var, st in self.state]
+
+        for i in range(size - 1):
+            for j, (var, st) in enumerate(self.state):
+                other_st = tuple(st for v, st in self.state if var != v)
+                next_st = sample_discrete(list(range(self.cardinalities[var])),
+                                          self.transition_models[var][other_st])[0]
+                self.state[j] = State(var, next_st)
+            sampled.loc[i + 1] = [st for var, st in self.state]
+        return sampled
+
+    def generate_sample(self, start_state=None, size=1):
+        """
+        Generator version of self.sample
+
+        Return Type:
+        ------------
+        List of State namedtuples, representing the assignment to all variables of the model.
+
+        Examples:
+        ---------
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.inference import GibbsSampling
+        >>> from pgmpy.models import MarkovModel
+        >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
+        >>> factor_ab = Factor(['A', 'B'], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = Factor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> model.add_factors(factor_ab, factor_cb)
+        >>> gibbs = GibbsSampling(model)
+        >>> gen = gibbs.generate_sample(size=2)
+        >>> [sample for sample in gen]
+        [[State(var='C', state=1), State(var='B', state=1), State(var='A', state=0)],
+         [State(var='C', state=0), State(var='B', state=1), State(var='A', state=1)]]
+        """
+        if start_state is None and self.state is None:
+            self.state = self.random_state()
+        else:
+            self.set_start_state(start_state)
+
+        for i in range(size):
+            for j, (var, st) in enumerate(self.state):
+                other_st = tuple(st for v, st in self.state if var != v)
+                next_st = sample_discrete(list(range(self.cardinalities[var])),
+                                          self.transition_models[var][other_st])[0]
+                self.state[j] = State(var, next_st)
+            yield self.state[:]
