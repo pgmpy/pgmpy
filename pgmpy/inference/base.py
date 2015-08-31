@@ -7,6 +7,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
+from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.exceptions import ModelError
 
 
@@ -80,3 +81,11 @@ class Inference:
             for factor in model.get_factors():
                 for var in factor.variables:
                     self.factors[var].append(factor)
+
+        elif isinstance(model, DynamicBayesianNetwork):
+            self.start_bayesian_model = BayesianModel(model.get_intra_edges(0))
+            self.start_bayesian_model.add_cpds(*model.get_cpds(time_slice=0))
+            cpd_inter = [model.get_cpds(node) for node in model.get_interface_nodes(1)]
+            self.interface_nodes = model.get_interface_nodes(0)
+            self.one_and_half_model = BayesianModel(model.get_inter_edges() + model.get_intra_edges(1))
+            self.one_and_half_model.add_cpds(*(model.get_cpds(time_slice=1) + cpd_inter))
