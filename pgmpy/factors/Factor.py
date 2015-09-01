@@ -375,7 +375,7 @@ class Factor:
             var_index_to_del.append(var_index)
 
         var_index_to_keep = list(set(range(len(phi.variables))) - set(var_index_to_del))
-        phi.variables = np.array(phi.variables)[var_index_to_keep].tolist()
+        phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
         phi.values = phi.values[tuple(slice_)]
 
