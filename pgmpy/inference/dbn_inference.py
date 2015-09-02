@@ -181,7 +181,7 @@ class DBNInference(Inference):
         if evidence:
             for var in evidence:
                 if var in final_factor.scope():
-                    final_factor.reduce((var, evidence[var]))
+                    final_factor.reduce([(var, evidence[var])])
         return final_factor
 
     def _shift_factor(self, factor, shift):
