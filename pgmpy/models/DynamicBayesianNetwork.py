@@ -1,4 +1,4 @@
-import itertools
+from itertools import combinations
 from collections import defaultdict
 
 import numpy as np
@@ -13,9 +13,9 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Base class for Dynamic Bayesian Network
 
-        This model is a time variant of the static Bayesian model, where each
+        This is a time variant model of the static Bayesian model, where each
         time-slice has some static nodes and is then replicated over a certain
-        time-slice.
+        time period.
 
         The nodes can be any hashable python objects.
 
@@ -27,7 +27,7 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Examples:
         --------
-        Create an empty Dynamic Bayesian Network with no nodes and no edges
+        Create an empty Dynamic Bayesian Network with no nodes and no edges:
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
 
@@ -35,25 +35,41 @@ class DynamicBayesianNetwork(DirectedGraph):
         node can be added using the method below. For adding edges we need to
         specify the time slice since edges can be across different time slices.
 
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0))])
+        For example for a network as [image](http://s8.postimg.org/aaybw4x2t/Blank_Flowchart_New_Page_1.png),
+        we will need to add all the edges in the 2-TBN as:
 
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+
+        We can query the edges and nodes in the network as:
         >>> dbn.nodes()
-        ['L', 'G', 'S', 'I', 'D']
+        ['G', 'D', 'I', 'L']
         >>> dbn.edges()
-        [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))]
+        [(('D', 1), ('G', 1)), (('I', 0), ('G', 0)), (('I', 0), ('I', 1)),
+         (('I', 1), ('G', 1)), (('G', 0), ('L', 0)), (('G', 0), ('G', 1)),
+         (('G', 0), ('L', 1)), (('D', 0), ('G', 0)), (('D', 0), ('D', 1)),
+         (('L', 0), ('L', 1)), (('G', 1), ('L', 1))]
 
         If any variable is not present in the network while adding an edge,
         pgmpy will automatically add that variable to the network.
 
+        But for adding nodes to the model we don't need to specify the time
+        slice as it is common in all the time slices. And therefore pgmpy
+        automatically replicated it all the time slices. For example, for
+        adding a new variable `S` in the above network we can simply do:
+        >>> dbn.add_node('S')
+        >>> dbn.nodes()
+        ['S', 'G', 'D', 'I', 'L']
 
         Public Methods:
         ---------------
-        add_cpds
-        add_edge
-        add_edges_from
         add_node
         add_nodes_from
+        add_edges
+        add_edges_from
+        add_cpds
         initialize_initial_state
         inter_slice
         intra_slice
@@ -78,6 +94,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_node('A')
+        ['A']
         """
         super().add_node((node, 0), **attr)
 
@@ -121,10 +138,17 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Parameters
         ----------
-        start, end: The start, end nodes should contain the (node_name, time_slice)
-                    Here, node_name can be a hashable python object while the
-                    time_slice is an integer value, which denotes the index of the
-                    time_slice that the node belongs to.
+        start: tuple
+               Both the start and end nodes should specify the time slice as
+               (node_name, time_slice). Here, node_name can be any hashable
+               python object while the time_slice is an integer value,
+               which denotes the time slice that the node belongs to.
+
+        end: tuple
+               Both the start and end nodes should specify the time slice as
+               (node_name, time_slice). Here, node_name can be any hashable
+               python object while the time_slice is an integer value,
+               which denotes the time slice that the node belongs to.
 
         Examples
         --------
@@ -146,8 +170,8 @@ class DynamicBayesianNetwork(DirectedGraph):
             elif start[1] == end[1] - 1:
                 start = (start[0], 0)
                 end = (end[0], 1)
-            elif start[1] == end[1] + 1:
-                raise ValueError('Edges in backward direction are not allowed.')
+            elif start[1] > end[1]:
+                raise NotImplementedError('Edges in backward direction are not allowed.')
             elif start[1] != end[1]:
                 raise ValueError("Edges over multiple time slices is not currently supported")
         except TypeError:
@@ -157,7 +181,8 @@ class DynamicBayesianNetwork(DirectedGraph):
             raise ValueError('Self Loops are not allowed')
         elif start in super().nodes() and end in super().nodes() and nx.has_path(self, end, start):
             raise ValueError(
-                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (str(end), str(start)))
+                 'Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
+                     start=str(start), end=str(end)))
 
         super().add_edge(start, end, **kwargs)
 
@@ -167,36 +192,51 @@ class DynamicBayesianNetwork(DirectedGraph):
     def add_edges_from(self, ebunch, **kwargs):
         """
         Add all the edges in ebunch.
+
         If nodes referred in the ebunch are not already present, they
-        will be automatically added. Node names should be strings.
+        will be automatically added. Node names can be any hashable python object.
+
         Parameters
         ----------
-        ebunch : container of edges
-            Each edge given in the container will be added to the graph.
-            The edges must be given as 2-tuples (u, v).
+        ebunch : list, array-like
+                List of edges to add. Each edge must be of the form of
+                ((start, time_slice), (end, time_slice)).
+
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0), ('G',0)), (('I',0), ('G',0))])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))])
+        >>> dbn.nodes()
+        ['G', 'I', 'D']
+        >>> dbn.edges()
+        [(('D', 1), ('G', 1)),
+         (('I', 1), ('G', 1)),
+         (('D', 0), ('G', 0)),
+         (('I', 0), ('G', 0))]
         """
         for edge in ebunch:
             self.add_edge(edge[0], edge[1])
 
     def get_intra_edges(self, time_slice=0):
         """
-        returns the intra slice edges present in the 2-TBN.
+        Returns the intra slice edges present in the 2-TBN.
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice: int (whole number)
+                The time slice for which to get intra edges. The timeslice
+                should be a positive value or zero.
 
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
         >>> dbn.get_intra_edges()
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
@@ -207,60 +247,69 @@ class DynamicBayesianNetwork(DirectedGraph):
 
     def get_inter_edges(self):
         """
-        returns the inter-slice edges present in the 2-TBN
+        Returns the inter-slice edges present in the 2-TBN.
+
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
-        >>> dbn.add_nodes_from(['D','G','I','S','L'])
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1)))])
+        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
         >>> dbn.get_inter_edges()
-        [(('D', 0), ('D', 1)), (('I', 0), ('I', 1))]
+        [(('D', 0), ('D', 1)),
+         (('G', 0), ('G', 1)),
+         (('G', 0), ('L', 1)),
+         (('I', 0), ('I', 1)),
+         (('L', 0), ('L', 1))]
         """
         return [edge for edge in self.edges() if edge[0][1] != edge[1][1]]
 
     def get_interface_nodes(self, time_slice=0):
-    	"""
-    	returns the nodes in the first timeslice whose children are present in the first timeslice.
+        """
+        Returns the nodes in the first timeslice whose children are present in the first timeslice.
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice:int
+                The timeslice should be a positive value greater than or equal to zero
 
-    	Examples:
-    	-------
-    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
-    	>>> dbn = DBN()
-    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
-    	>>> dbn.get_interface_nodes()
-    	[('D', 0)]
-    	"""
-    	if not isinstance(time_slice, int) or time_slice < 0:
+        Examples:
+        -------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> dbn = DBN()
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
+        >>> dbn.get_interface_nodes()
+        [('D', 0)]
+        """
+        if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-    	return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
+        return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
     def get_slice_nodes(self, time_slice=0):
-    	"""
-    	returns the nodes present in a particular timeslice
+        """
+        Returns the nodes present in a particular timeslice
+
         Parameter
         ---------
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice:int
+                The timeslice should be a positive value greater than or equal to zero
 
-    	Examples:
-    	-------
-    	>>> from pgmpy.models import DynamicBayesianNetwork as DBN
-    	>>> dbn = DBN()
-    	>>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
-    	>>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('G',0),('L',0)),(('D',0),('D',1))])
-    	>>> dbn.get_slice_nodes()
-    	"""
-    	if not isinstance(time_slice, int) or time_slice < 0:
+        Examples:
+        -------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> dbn = DBN()
+        >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('G', 0),('L', 0)),(('D', 0),('D', 1))])
+        >>> dbn.get_slice_nodes()
+        """
+        if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-    	return [(node, time_slice) for node in self.nodes()]
+        return [(node, time_slice) for node in self.nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -274,49 +323,62 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         Parameter
         ---------
-        cpds  :  list, set, tuple (array-like)
-            List of cpds (TabularCPD, TreeCPD, RuleCPD, Factor)
-            which will be associated with the model
+        cpds : list, set, tuple (array-like)
+            List of CPDs which are to be associated with the model. Each CPD
+            should be an instance of `TabularCPD`.
 
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors import TabularCPD
         >>> dbn = DBN()
-        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                     [0.4,0.25,0.8,0.03],
-        ...                                     [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
+        >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[('I', 0),('D', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D',1), 2, [[0.6, 0.3],
+        ...                                   [0.4, 0.7]],
+        ...                      evidence=[('D',0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
         >>> dbn.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
-        >>> dbn.cpds
+        >>> dbn.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7ff7f27b0cf8>,
+         <TabularCPD representing P(('D', 1):2 | ('D', 0):2) at 0x7ff810b9c2e8>,
+         <TabularCPD representing P(('D', 0):2) at 0x7ff7f27e6f98>,
+         <TabularCPD representing P(('I', 0):2) at 0x7ff7f27e6ba8>,
+         <TabularCPD representing P(('I', 1):2 | ('I', 0):2) at 0x7ff7f27e6668>]
         """
         for cpd in cpds:
             if not isinstance(cpd, TabularCPD):
-                raise ValueError('cpds should be an instances of TabularCPD, TreeCPD or RuleCPD')
+                raise ValueError('cpd should be an instances of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            self.cpds.append(cpd)
+        self.cpds.extend(cpds)
 
     def get_cpds(self, node=None, time_slice=0):
         """
-        Returns the cpds that have been added till now to the graph
+        Returns the CPDs that have been associated with the network.
 
         Parameter
         ---------
-        node: The node should be be of the following form
-        (node_name, time_slice)
-        Here, node_name is the node that is inserted
-        while the time_slice is an integer value, which denotes
-        the index of the time_slice that the node belongs to.
+        node: tuple (node_name, time_slice)
+            The node should be in the following form (node_name, time_slice).
+            Here, node_name is the node that is inserted while the time_slice is
+            an integer value, which denotes the index of the time_slice that the
+            node belongs to.
 
-        time_slice:int 
-                   The timeslice should be a positive value greater than or equal to zero
+        time_slice: int
+            The time_slice should be a positive integer greater than or equal to zero.
 
         Examples:
         -------
@@ -330,6 +392,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
+        # TODO: fix bugs in this
         if node:
             if node not in super().nodes():
                 raise ValueError('Node not present in the model.')
@@ -345,13 +408,14 @@ class DynamicBayesianNetwork(DirectedGraph):
         Check the model for various errors. This method checks for the following
         errors.
 
-        * Checks if the sum of the probabilities for each state is equal to 1 (tol=0.01).
+        * Checks if the sum of the probabilities in each associated CPD for each
+            state is equal to 1 (tol=0.01).
         * Checks if the CPDs associated with nodes are consistent with their parents.
 
         Returns
         -------
-        check: boolean
-        True if all the checks are passed
+        boolean: True if everything seems to be order. Otherwise raises error
+            according to the problem.
         """
         for node in super().nodes():
             cpd = self.get_cpds(node=node)
@@ -359,8 +423,8 @@ class DynamicBayesianNetwork(DirectedGraph):
                 evidence = cpd.evidence
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
-                    raise ValueError("CPD associated with %s doesn't have "
-                                     "proper parents associated with it." % node)
+                    raise ValueError("CPD associated with {node} doesn't have "
+                                     "proper parents associated with it.".format(node=node))
                 if not np.allclose(cpd.marginalize([node], inplace=False).values,
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
@@ -381,15 +445,23 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors import TabularCPD
         >>> student = DBN()
-        >>> student.add_nodes_from(['D','G','I','S','L'])
-        >>> student.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
-        >>> grade_cpd = TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                                 [0.4,0.25,0.8,0.03],
-        ...                                                 [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
+        >>> student.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> student.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[('I', 0),('D', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I',0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
         >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> student.initialize_initial_state()
         """
@@ -428,10 +500,9 @@ class DynamicBayesianNetwork(DirectedGraph):
         (('I', 0), ('D', 0)),
         (('G', 1), ('I', 1))]
         """
-        moral_graph = UndirectedGraph(self.to_undirected().edges())
+        moral_graph = self.to_undirected()
 
         for node in super().nodes():
-            moral_graph.add_edges_from(itertools.combinations(
-                self.get_parents(node), 2))
+            moral_graph.add_edges_from(combinations(self.get_parents(node), 2))
 
         return moral_graph
