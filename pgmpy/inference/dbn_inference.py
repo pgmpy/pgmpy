@@ -8,7 +8,6 @@ from pgmpy.inference import Inference, BeliefPropagation
 
 
 class DBNInference(Inference):
-
     def __init__(self, model):
         """
         Class for performing inference using Belief Propagation method
@@ -25,32 +24,30 @@ class DBNInference(Inference):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = DBN()
-        >>> grade_cpd = TabularCPD(('G',0),3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                    [0.4, 0.25, 0.08, 0.3],
-        ...                                    [0.3, 0.7, 0.2, 0.2]],
-        ...                        evidence=[('D', 0), ('I', 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
-        ...                                    [0.4, 0.7]],
-        ...                      evidence=[('D', 0)],
+        >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
+        ...                       (('Z', 0), ('Z', 1))])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
+        ...                                    [0.4, 0.1]],
+        ...                      evidence=[('Z', 0)],
         ...                      evidence_card=2)
-        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
-        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
-        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
-        ...                                    [0.5,0.6]],
-        ...                      evidence=[('I', 0)],
+        >>> y_i_cpd = TabularCPD(('Y', 0), 2, [[0.2, 0.3],
+        ...                                    [0.8, 0.7]],
+        ...                      evidence=[('X', 0)],
         ...                      evidence_card=2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
-        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
-        >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
+        >>> z_trans_cpd = TabularCPD(('Z', 1), 2, [[0.4, 0.7],
+        ...                                        [0.6, 0.3]],
+        ...                      evidence=[('Z', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.start_junction_tree.nodes()
-        [(('I', 0), ('G', 0), ('D', 0))]
+        [(('X', 0), ('Z', 0)), (('X', 0), ('Y', 0))]
         >>> dbn_inf.one_and_half_junction_tree.nodes()
-        [(('I', 1), ('D', 1), ('D', 0)),
-        (('I', 1), ('D', 1), ('G', 1)),
-        (('I', 1), ('I', 0), ('D', 0))]
+        [(('Z', 1), ('Z', 0)),
+         (('Y', 1), ('X', 1)),
+         (('Z', 1), ('X', 1))]
         """
         super().__init__(model)
         self.interface_nodes_0 = model.get_interface_nodes(time_slice=0)
@@ -215,31 +212,29 @@ class DBNInference(Inference):
         Examples
         --------
         >>> from pgmpy.factors import TabularCPD
-        >>> from pgmpy.models import DynamicBayesianNetwork as dbn
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
-        >>> dbnet = dbn()
-        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                      [0.4, 0.25, 0.08, 0.3],
-        ...                                      [0.3, 0.7, 0.2, 0.2]],
-        ...                        evidence=[('D', 0),('I', 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
-        ...                                    [0.4, 0.7]],
-        ...                      evidence=[('D', 0)],
+        >>> dbnet = DBN()
+        >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
+        ...                       (('Z', 0), ('Z', 1))])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
+        ...                                    [0.4, 0.1]],
+        ...                      evidence=[('Z', 0)],
         ...                      evidence_card=2)
-        >>> diff_cpd = TabularCPD(('D', 0), 2,[[0.6, 0.4]])
-        >>> intel_cpd = TabularCPD(('I', 0), 2,[[0.7, 0.3]])
-        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
-        ...                                    [0.5, 0.6]],
-        ...                      evidence=[('I', 0)],
+        >>> y_i_cpd = TabularCPD(('Y', 0), 2, [[0.2, 0.3],
+        ...                                    [0.8, 0.7]],
+        ...                      evidence=[('X', 0)],
         ...                      evidence_card=2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
-        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
-        >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
+        >>> z_trans_cpd = TabularCPD(('Z', 1), 2, [[0.4, 0.7],
+        ...                                        [0.6, 0.3]],
+        ...                      evidence=[('Z', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
-        >>> dbn_inf.forward_inference([('G', 1)], evidence={('D', 0): 0})[('G', 1)].values
-        array([ 0.43260694,  0.24140023,  0.32599284])
+        >>> dbn_inf.forward_inference([('X', 2)], {('Y', 0):1, ('Y', 1):0, ('Y', 2):1})[('X', 2)].values
+        array([ 0.76738736,  0.23261264])
         """
         variable_dict = defaultdict(list)
         for var in variables:
@@ -314,23 +309,30 @@ class DBNInference(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel as bm
-        >>> from pgmpy.models import DynamicBayesianNetwork as dbn
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
-        >>> dbnet = dbn()
-        >>> grade_cpd = TabularCPD(('G',0),3, [[0.3, 0.05, 0.9, 0.5],
-                                               [0.4, 0.25, 0.08, 0.3],
-                                               [0.3, 0.7, 0.2, 0.2]],[('D',0),('I',0)],[2,2])
-        >>> d_i_cpd = TabularCPD(('D',1),2,[[0.6,0.3],[0.4,0.7]],[('D',0)],2)
-        >>> diff_cpd = TabularCPD(('D',0),2,[[0.6,0.4]])
-        >>> intel_cpd = TabularCPD(('I',0),2,[[0.7,0.3]])
-        >>> i_i_cpd = TabularCPD(('I',1),2,[[0.5,0.4],[0.5,0.6]],[('I',0)],2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)), (('D',1),('G',1)), (('I',1), ('G',1))])
-        >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
+        >>> dbnet = DBN()
+        >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
+        ...                       (('Z', 0), ('Z', 1))])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
+        ...                                    [0.4, 0.1]],
+        ...                      evidence=[('Z', 0)],
+        ...                      evidence_card=2)
+        >>> y_i_cpd = TabularCPD(('Y', 0), 2, [[0.2, 0.3],
+        ...                                    [0.8, 0.7]],
+        ...                      evidence=[('X', 0)],
+        ...                      evidence_card=2)
+        >>> z_trans_cpd = TabularCPD(('Z', 1), 2, [[0.4, 0.7],
+        ...                                        [0.6, 0.3]],
+        ...                      evidence=[('Z', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
-        >>> dbn_inf.backward_inference([('G',0)], evidence={('D',1):0})
-        array([ 0.39043729,  0.28279673,  0.32676598])
+        >>> dbn_inf.backward_inference([('X', 0)], {('Y', 0):0, ('Y', 1):1, ('Y', 2):1})[('X', 0)].values
+        array([ 0.66594382,  0.33405618])
         """
         variable_dict = defaultdict(list)
         for var in variables:
@@ -394,31 +396,29 @@ class DBNInference(Inference):
         Examples
         --------
         >>> from pgmpy.factors import TabularCPD
-        >>> from pgmpy.models import DynamicBayesianNetwork as dbn
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
-        >>> dbnet = dbn()
-        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                      [0.4, 0.25, 0.08, 0.3],
-        ...                                      [0.3, 0.7, 0.2, 0.2]],
-        ...                        evidence=[('D', 0), ('I', 0)],
-        ...                        evidence_card=[2, 2])
-        >>> d_i_cpd = TabularCPD(('D', 1), 2,[[0.6, 0.3],
-        ...                                   [0.4, 0.7]],
-        ...                      evidence=[('D', 0)],
+        >>> dbnet = DBN()
+        >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
+        ...                       (('Z', 0), ('Z', 1))])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
+        ...                                    [0.4, 0.1]],
+        ...                      evidence=[('Z', 0)],
         ...                      evidence_card=2)
-        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
-        >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
-        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
-        ...                                    [0.5, 0.6]],
-        ...                      evidence=[('I', 0)],
+        >>> y_i_cpd = TabularCPD(('Y', 0), 2, [[0.2, 0.3],
+        ...                                    [0.8, 0.7]],
+        ...                      evidence=[('X', 0)],
         ...                      evidence_card=2)
-        >>> dbnet.add_edges_from([(('D', 0), ('D', 1)), (('I', 0), ('I', 1)),
-        ...                       (('D', 1), ('G', 1)), (('I', 1), ('G', 1))])
-        >>> dbnet.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
+        >>> z_trans_cpd = TabularCPD(('Z', 1), 2, [[0.4, 0.7],
+        ...                                        [0.6, 0.3]],
+        ...                      evidence=[('Z', 0)],
+        ...                      evidence_card=2)
+        >>> dbnet.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
-        >>> dbn_inf.query([('G', 2)], evidence={('D', 1): 0,('I', 1): 0,('D', 3): 0})[('G', 2)].values
-        array([ 0.34809809,  0.26516343,  0.38673848])
+        >>> dbn_inf.query([('X', 0)], {('Y', 0):0, ('Y', 1):1, ('Y', 2):1})[('X', 0)].values
+        array([ 0.66594382,  0.33405618])
         """
         if args == 'exact':
             return self.backward_inference(variables, evidence)
