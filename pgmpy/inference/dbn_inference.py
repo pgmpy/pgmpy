@@ -1,4 +1,3 @@
-import copy
 from itertools import tee, chain, combinations
 from collections import defaultdict
 
@@ -295,7 +294,7 @@ class DBNInference(Inference):
 
         return factor_values
 
-    def backward_inference(self, variables, evidence=None, args=None):
+    def backward_inference(self, variables, evidence=None):
         """
         Backward inference method using belief propagation.
 
