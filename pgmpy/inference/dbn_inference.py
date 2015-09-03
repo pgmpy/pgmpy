@@ -13,12 +13,15 @@ class DBNInference(Inference):
         Class for performing inference using Belief Propagation method
         for the input Dynamic Bayesian Network.
 
-        Parameters
+        For the exact inference implementation, the interface algorithm
+        is used which is adapted from [1].
+
+        Parameters:
         ----------
         model: Dynamic Bayesian Network
             Model for which inference is to performed
 
-        Examples
+        Examples:
         --------
         >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -48,6 +51,18 @@ class DBNInference(Inference):
         [(('Z', 1), ('Z', 0)),
          (('Y', 1), ('X', 1)),
          (('Z', 1), ('X', 1))]
+
+       References:
+       ----------
+       [1] Dynamic Bayesian Networks: Representation, Inference and Learning
+           by Kevin Patrick Murphy 
+           http://www.cs.ubc.ca/~murphyk/Thesis/thesis.pdf
+
+       Public Methods:
+       --------------
+       forward_inference
+       backward_inference
+       query
         """
         super().__init__(model)
         self.interface_nodes_0 = model.get_interface_nodes(time_slice=0)
@@ -73,7 +88,7 @@ class DBNInference(Inference):
         """
         Shifting the nodes to a certain required timeslice.
 
-        Parameters
+        Parameters:
         ----------
         nodes: list, array-like
             List of node names.
@@ -89,7 +104,7 @@ class DBNInference(Inference):
         Extracting the cliques from the junction tree which are a subset of
         the given nodes.
 
-        Parameters
+        Parameters:
         ----------
         junction_tree: Junction tree
             from which the nodes are to be extracted.
@@ -104,7 +119,7 @@ class DBNInference(Inference):
         """
         Getting the evidence belonging to a particular timeslice.
 
-        Parameters
+        Parameters:
         ----------
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
@@ -123,7 +138,7 @@ class DBNInference(Inference):
         """
         Marginalizing the factor selectively for a set of variables.
 
-        Parameters
+        Parameters:
         ----------
         nodes: list, array-like
             A container of nodes (list, dict, set, etc.).
@@ -138,7 +153,7 @@ class DBNInference(Inference):
         """
         Method for updating the belief.
 
-        Parameters
+        Parameters:
         ----------
         belief_prop: Belief Propagation
             Belief Propagation which needs to be updated.
@@ -166,7 +181,7 @@ class DBNInference(Inference):
         """
         Extracts the required factor from the junction tree.
 
-        Parameters
+        Parameters:
         ----------
         belief_prop: Belief Propagation
             Belief Propagation which needs to be updated.
@@ -185,7 +200,7 @@ class DBNInference(Inference):
         """
         Shifting the factor to a certain required time slice.
 
-        Parameters
+        Parameters:
         ----------
         factor: Factor
            The factor which needs to be shifted.
@@ -200,7 +215,7 @@ class DBNInference(Inference):
         """
         Forward inference method using belief propagation.
 
-        Parameters
+        Parameters:
         ----------
         variables: list
             list of variables for which you want to compute the probability
@@ -209,7 +224,7 @@ class DBNInference(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
-        Examples
+        Examples:
         --------
         >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -299,7 +314,7 @@ class DBNInference(Inference):
         """
         Backward inference method using belief propagation.
 
-        Parameters
+        Parameters:
         ----------
         variables: list
             list of variables for which you want to compute the probability
@@ -307,7 +322,7 @@ class DBNInference(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
-        Examples
+        Examples:
         --------
         >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -384,7 +399,7 @@ class DBNInference(Inference):
         """
         Query method for Dynamic Bayesian Network using Interface Algorithm.
 
-        Parameters
+        Parameters:
         ----------
         variables: list
             list of variables for which you want to compute the probability
@@ -393,7 +408,7 @@ class DBNInference(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
-        Examples
+        Examples:
         --------
         >>> from pgmpy.factors import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
