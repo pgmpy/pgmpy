@@ -205,6 +205,18 @@ class MarkovModel(UndirectedGraph):
 
         return True
 
+    def get_error(self):
+
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                if ((self.cardinalities[variable]) and
+                        (self.cardinalities[variable] != cardinality)):
+                    return ('Cardinality of variable %s not matching among factors' % variable)
+            for var1, var2 in itertools.combinations(factor.variables, 2):
+                if var2 not in self.neighbors(var1):
+                    return ("Factor inconsistent with the model.")
+
+
     def to_factor_graph(self):
         """
         Converts the markov model into factor graph.

@@ -245,6 +245,23 @@ class BayesianModel(DirectedGraph):
                                      ' is not equal to 1.' % node)
         return True
 
+    def get_error(self):
+        
+        for node in self.nodes():
+            cpd = self.get_cpds(node=node)
+            if isinstance(cpd, TabularCPD):
+                evidence = cpd.evidence
+                parents = self.get_parents(node)
+                if set(evidence if evidence else []) != set(parents if parents else []):
+                    return ("CPD associated with %s doesn't have "
+                            "proper parents associated with it." % node)
+                if not np.allclose(cpd.marginalize([node], inplace=False).values,
+                                   np.ones(np.product(cpd.evidence_card)),
+                                   atol=0.01):
+                    return ('Sum of probabilites of states for node %s'
+                            ' is not equal to 1.' % node)
+                    
+
     def _get_ancestors_of(self, obs_nodes_list):
         """
         Returns a list of all ancestors of all the observed nodes.
