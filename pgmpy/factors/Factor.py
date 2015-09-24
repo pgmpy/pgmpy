@@ -127,6 +127,9 @@ class Factor:
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
         """
+        if isinstance(variables, str):
+            raise TypeError("variables: Expected type list or array-like, got type str")
+
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope")
 
@@ -227,6 +230,10 @@ class Factor:
         >>> phi.variables
         ['x2']
         """
+
+        if isinstance(variables, str):
+            raise TypeError("variables: Expected type list or array-like, got type str")
+
         phi = self if inplace else self.copy()
 
         for var in variables:
@@ -277,6 +284,9 @@ class Factor:
                [ 0.05,  0.07],
                [ 0.15,  0.21]]
         """
+        if isinstance(variables, str):
+            raise TypeError("variables: Expected type list or array-like, got type str")
+
         phi = self if inplace else self.copy()
 
         for var in variables:
@@ -365,6 +375,10 @@ class Factor:
         >>> phi.values
         array([0., 1.])
         """
+
+        if isinstance(values, str):
+            raise TypeError("values: Expected type list or array-like, got type str")
+
         phi = self if inplace else self.copy()
 
         var_index_to_del = []
