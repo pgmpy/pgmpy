@@ -379,6 +379,10 @@ class Factor:
         if isinstance(values, str):
             raise TypeError("values: Expected type list or array-like, got type str")
 
+        if any(isinstance(value, str) for value in values) or \
+               not all(isinstance(var, str) and isinstance(state, int) for var,state in values):
+            raise TypeError("values: must contain tuples or array-like elements of the form (type str, type int)")
+
         phi = self if inplace else self.copy()
 
         var_index_to_del = []
