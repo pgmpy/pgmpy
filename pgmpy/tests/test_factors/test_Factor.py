@@ -12,9 +12,6 @@ from pgmpy.factors.CPD import TabularCPD
 from pgmpy import exceptions
 
 
-State = namedtuple('State', ['var', 'state'])
-
-
 class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
@@ -45,21 +42,21 @@ class TestFactorMethods(unittest.TestCase):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
 
-#    def test_assignment(self):
-#        self.assertListEqual(self.phi.assignment([0]), [[State('x1', 0), State('x2', 0), State('x3', 0)]])
-#        self.assertListEqual(self.phi.assignment([4, 5, 6]), [[State('x1', 1), State('x2', 0), State('x3', 0)],
-#                                                              [State('x1', 1), State('x2', 0), State('x3', 1)],
-#                                                              [State('x1', 1), State('x2', 1), State('x3', 0)]])
+    def test_assignment(self):
+        self.assertListEqual(self.phi.assignment([0]), [[('x1', 0), ('x2', 0), ('x3', 0)]])
+        self.assertListEqual(self.phi.assignment([4, 5, 6]), [[('x1', 1), ('x2', 0), ('x3', 0)],
+                                                             [('x1', 1), ('x2', 0), ('x3', 1)],
+                                                             [('x1', 1), ('x2', 1), ('x3', 0)]])
 
-#        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])),
-#                             [[State('x1', 0), State('x2', 2), State('x3', 0)],
-#                              [State('x1', 0), State('x2', 2), State('x3', 1)],
-#                              [State('x1', 1), State('x2', 0), State('x3', 0)]])
+        self.assertListEqual(self.phi1.assignment(np.array([4, 5, 6])),
+                             [[('x1', 0), ('x2', 2), ('x3', 0)],
+                              [('x1', 0), ('x2', 2), ('x3', 1)],
+                              [('x1', 1), ('x2', 0), ('x3', 0)]])
 
-#    def test_assignment_indexerror(self):
-#        self.assertRaises(IndexError, self.phi.assignment, [10])
-#        self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
-#        self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
+    def test_assignment_indexerror(self):
+        self.assertRaises(IndexError, self.phi.assignment, [10])
+        self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
+        self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
 
     def test_get_cardinality(self):
         self.assertEqual(self.phi.get_cardinality(['x1']), {'x1': 2})
