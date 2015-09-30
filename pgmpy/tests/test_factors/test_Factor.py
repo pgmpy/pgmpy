@@ -70,7 +70,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi.get_cardinality(['x1', 'x2', 'x3']), {'x1': 2, 'x2': 2, 'x3': 2})
 
     def test_get_cardinality_scopeerror(self):
-        self.assertRaises(ValueError, self.phi.get_cardinality, 'x4')
+        self.assertRaises(ValueError, self.phi.get_cardinality, ['x4'])
+
+    def test_get_cardinality_typeerror(self):
+        self.assertRaises(TypeError, self.phi.get_cardinality, 'x1')
 
     def test_marginalize(self):
         self.phi1.marginalize(['x1'])
@@ -87,7 +90,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.phi.marginalize, ['x4'])
 
         self.phi.marginalize(['x1'])
-        self.assertRaises(ValueError, self.phi.marginalize, 'x1')
+        self.assertRaises(ValueError, self.phi.marginalize, ['x1'])
+
+    def test_marginalize_typeerror(self):
+        self.assertRaises(TypeError, self.phi.marginalize, 'x1')
 
     def test_normalize(self):
         self.phi1.normalize()
@@ -119,8 +125,14 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
 
     def test_reduce_typeerror(self):
-        self.assertRaises(ValueError, self.phi1.reduce, 'x10')
-        self.assertRaises(ValueError, self.phi1.reduce, ['x10'])
+        self.assertRaises(TypeError, self.phi1.reduce, 'x10')
+        self.assertRaises(TypeError, self.phi1.reduce, ['x10'])
+        self.assertRaises(TypeError, self.phi1.reduce, [('x1', 'x2')])
+        self.assertRaises(TypeError, self.phi1.reduce, [(0, 0)])
+        self.assertRaises(TypeError, self.phi1.reduce, [(0, 'x1')])
+        self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 'x1')])
+        self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 0.1)])
+        self.assertRaises(TypeError, self.phi1.reduce, [('x1', 0.1)])
 
     def test_reduce_scopeerror(self):
         self.assertRaises(ValueError, self.phi1.reduce, [('x4', 1)])
@@ -130,7 +142,7 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
-        self.assertEquals(list(identity_factor.variables), ['x1', 'x2', 'x3'])
+        self.assertEqual(list(identity_factor.variables), ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
         np_test.assert_array_equal(identity_factor.values, np.ones(8).reshape(2, 2, 2))
 
@@ -250,6 +262,12 @@ class TestFactorMethods(unittest.TestCase):
         self.phi2.maximize(['x2'])
         self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
                                                                   0.07, 0.15, 0.21]))
+
+    def test_maximize_scopeerror(self):
+        self.assertRaises(ValueError, self.phi.maximize, ['x10'])
+
+    def test_maximize_typeerror(self):
+        self.assertRaises(TypeError, self.phi.maximize, 'x1')
 
     def tearDown(self):
         del self.phi
@@ -391,7 +409,6 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.cpd
-
 
 # class TestJointProbabilityDistributionInit(unittest.TestCase):
 #     def test_jpd_init(self):
