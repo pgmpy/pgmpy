@@ -99,7 +99,7 @@ class Factor:
         Examples
         --------
         >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8))
+        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -154,7 +154,7 @@ class Factor:
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
-        [['diff_0', 'intel_1'], ['diff_1', 'intel_0']]
+        [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
         index = np.array(index)
 
