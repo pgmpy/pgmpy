@@ -110,9 +110,12 @@ class TabularCPD(Factor):
                                     " of strings.")
             self.evidence = evidence
             variables.extend(evidence[::-1])
-            if not len(evidence_card) == len(evidence):
+            if len(evidence_card) < len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
+            if len(evidence_card) > len(evidence):
+                raise exceptions.CardinalityError("Cardinality of more than the given "
+                                                  "evidences specified")
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
