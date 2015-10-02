@@ -44,7 +44,7 @@ class TabularCPD(Factor):
     >>> cpd.values
     array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
     >>> cpd.variables
-    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    ['grade', 'evi1']
     >>> cpd.variable
     'grade'
 
