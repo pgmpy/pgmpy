@@ -11,7 +11,7 @@ from pgmpy.extern import tabulate
 from pgmpy.extern.six.moves import range, zip
 
 
-class TabularCPD(Factor, object):
+class TabularCPD(Factor):
     """
     Defines the conditional probability distribution table (cpd table)
 

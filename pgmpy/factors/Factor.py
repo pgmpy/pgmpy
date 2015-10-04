@@ -15,7 +15,7 @@ from pgmpy.extern.six.moves import map, range, reduce, zip
 State = namedtuple('State', ['var', 'state'])
 
 
-class Factor:
+class Factor(object):
     """
     Base class for Factor.
 
