@@ -28,6 +28,21 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init_sizeerror(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
+    def test_class_init_typeerror(self):
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 'val2'])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, 'val2'])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 1])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, 'val2'])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 0.1])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], ['val2']])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, ['val2']])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 1])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, ['val2']])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 0.1])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', ['val2']])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 'val2'])
+
+
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
 
