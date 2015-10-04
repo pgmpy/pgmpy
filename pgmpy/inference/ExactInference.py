@@ -67,7 +67,7 @@ class VariableElimination(Inference):
             factors = [factor for factor in working_factors[var]
                        if not set(factor.variables).intersection(eliminated_variables)]
             phi = factor_product(*factors)
-            phi = getattr(phi, operation)(var, inplace=False)
+            phi = getattr(phi, operation)([var], inplace=False)
             del working_factors[var]
             for variable in phi.variables:
                 working_factors[variable].add(phi)

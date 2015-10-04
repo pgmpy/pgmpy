@@ -238,7 +238,7 @@ class Factor(object):
         var_indexes = [phi.variables.index(var) for var in variables]
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
-        phi.variables = (np.array(phi.variables)[index_to_keep]).tolist()
+        phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
         phi.values = np.sum(phi.values, axis=tuple(var_indexes))
@@ -288,7 +288,7 @@ class Factor(object):
         var_indexes = [phi.variables.index(var) for var in variables]
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
-        phi.variables = list(np.array(phi.variables)[index_to_keep])
+        phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
         phi.values = np.max(phi.values, axis=tuple(var_indexes))
@@ -377,7 +377,7 @@ class Factor(object):
             var_index_to_del.append(var_index)
 
         var_index_to_keep = list(set(range(len(phi.variables))) - set(var_index_to_del))
-        phi.variables = np.array(phi.variables)[var_index_to_keep].tolist()
+        phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
         phi.values = phi.values[tuple(slice_)]
 
