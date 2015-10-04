@@ -44,7 +44,7 @@ class TabularCPD(Factor):
     >>> cpd.values
     array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
     >>> cpd.variables
-    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    ['grade', 'evi1']
     >>> cpd.variable
     'grade'
 
@@ -110,9 +110,12 @@ class TabularCPD(Factor):
                                     " of strings.")
             self.evidence = evidence
             variables.extend(evidence[::-1])
-            if not len(evidence_card) == len(evidence):
+            if len(evidence_card) < len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
+            if len(evidence_card) > len(evidence):
+                raise exceptions.CardinalityError("Cardinality of more than the given "
+                                                  "evidences specified")
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
