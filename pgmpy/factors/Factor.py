@@ -76,7 +76,11 @@ class Factor:
         >>> phi
         <Factor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
         """
+
         values = np.array(values)
+        
+        if values.dtype != int and values.dtype != float:
+            raise TypeError("Values: Expected type int or type float elements only")
 
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
