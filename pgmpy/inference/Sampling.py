@@ -70,7 +70,7 @@ class BayesianModelSampling(Inference):
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for node in self.topological_order:
             cpd = self.cpds[node]
-            states = [state for state in range(cpd.get_cardinality(node)[node])]
+            states = [state for state in range(cpd.get_cardinality([node])[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 evidence = sampled.values[:, [indices]].tolist()
@@ -176,7 +176,7 @@ class BayesianModelSampling(Inference):
         evidence_dict = {var: st for var, st in evidence}
         for node in self.topological_order:
             cpd = self.cpds[node]
-            states = [state for state in range(cpd.get_cardinality(node)[node])]
+            states = [state for state in range(cpd.get_cardinality([node])[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 evidence = sampled.values[:, [indices]].tolist()
@@ -289,7 +289,7 @@ class GibbsSampling(MarkovChain):
         # Take factor product
         factors_dict = {var: factor_product(*factors) if len(factors) > 1 else factors[0]
                         for var, factors in factors_dict.items()}
-        self.cardinalities = {var: factors_dict[var].get_cardinality(var)[var] for var in self.variables}
+        self.cardinalities = {var: factors_dict[var].get_cardinality([var])[var] for var in self.variables}
 
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]

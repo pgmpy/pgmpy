@@ -30,17 +30,10 @@ class TestFactorInit(unittest.TestCase):
 
     def test_class_init_typeerror(self):
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 'val2'])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, 'val2'])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, 'val1'])
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 1])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, 'val2'])
+        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, 'val1'])
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 0.1])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], ['val2']])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, ['val2']])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 1])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, ['val2']])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 0.1])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', ['val2']])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [['val1'], 'val2'])
 
 
     def test_init_size_var_card_not_equal(self):
@@ -124,10 +117,6 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce1(self):
         self.phi1.reduce([('x2', 0), ('x1', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
-
-    def test_reduce2(self):
-        self.phi2.reduce([(('x2', 0), 0), (('x1', 0), 0)])
-        np_test.assert_array_equal(self.phi2.values, np.array([0, 1]))
 
     @unittest.skip
     def test_complete_reduce(self):
