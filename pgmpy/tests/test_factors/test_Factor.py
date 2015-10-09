@@ -129,7 +129,6 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.phi1.reduce, 'x10')
         self.assertRaises(TypeError, self.phi1.reduce, ['x10'])
         self.assertRaises(TypeError, self.phi1.reduce, [('x1', 'x2')])
-        self.assertRaises(TypeError, self.phi1.reduce, [(0, 0)])
         self.assertRaises(TypeError, self.phi1.reduce, [(0, 'x1')])
         self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 'x1')])
         self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 0.1)])
