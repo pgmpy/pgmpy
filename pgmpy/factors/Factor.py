@@ -80,7 +80,7 @@ class Factor:
         values = np.array(values)
         
         if values.dtype != int and values.dtype != float:
-            raise TypeError("Values: Expected type int or type float elements only")
+            raise TypeError("Values: Expected type int or type float, got ", values.dtype)
 
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
@@ -379,13 +379,12 @@ class Factor:
         >>> phi.values
         array([0., 1.])
         """
-
         if isinstance(values, str):
             raise TypeError("values: Expected type list or array-like, got type str")
 
-        if any(isinstance(value, str) for value in values) or \
-               not all(isinstance(var, str) and isinstance(state, int) for var,state in values):
-            raise TypeError("values: must contain tuples or array-like elements of the form (type str, type int)")
+        if (any(isinstance(value, str) for value in values) or
+                not all(isinstance(state, (int, np.integer)) for var, state in values)):
+            raise TypeError("values: must contain tuples or array-like elements of the form (hashable object, type int)")
 
         phi = self if inplace else self.copy()
 
