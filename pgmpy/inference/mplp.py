@@ -203,7 +203,6 @@ class Mplp(Inference):
         # The current assignment of the single node factors is stored in the form of a dictionary
         decoded_result_assignment = {node: np.argmax(self.objective[node].values)
                                      for node in self.objective if len(node) == 1}
-
         # Use the original cluster_potentials of each factor to find the primal integral value.
         # 1. For single node factors
         integer_value = sum([self.factors[variable][0].values[decoded_result_assignment[frozenset([variable])]]

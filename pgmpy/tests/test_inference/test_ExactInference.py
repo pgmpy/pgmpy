@@ -139,9 +139,9 @@ class TestBeliefPropagation(unittest.TestCase):
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
 
-        b_A_B = phi1 * (phi3.marginalize('D', inplace=False) * phi2).marginalize('C', inplace=False)
-        b_B_C = phi2 * (phi1.marginalize('A', inplace=False) * phi3.marginalize('D', inplace=False))
-        b_C_D = phi3 * (phi1.marginalize('A', inplace=False) * phi2).marginalize('B', inplace=False)
+        b_A_B = phi1 * (phi3.marginalize(['D'], inplace=False) * phi2).marginalize(['C'], inplace=False)
+        b_B_C = phi2 * (phi1.marginalize(['A'], inplace=False) * phi3.marginalize(['D'], inplace=False))
+        b_C_D = phi3 * (phi1.marginalize(['A'], inplace=False) * phi2).marginalize(['B'], inplace=False)
 
         np_test.assert_array_almost_equal(clique_belief[('A', 'B')].values, b_A_B.values)
         np_test.assert_array_almost_equal(clique_belief[('B', 'C')].values, b_B_C.values)
@@ -156,11 +156,11 @@ class TestBeliefPropagation(unittest.TestCase):
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
 
-        b_B = (phi1 * (phi3.marginalize('D', inplace=False) *
-                       phi2).marginalize('C', inplace=False)).marginalize('A', inplace=False)
+        b_B = (phi1 * (phi3.marginalize(['D'], inplace=False) *
+                       phi2).marginalize(['C'], inplace=False)).marginalize(['A'], inplace=False)
 
-        b_C = (phi2 * (phi1.marginalize('A', inplace=False) *
-                       phi3.marginalize('D', inplace=False))).marginalize('B', inplace=False)
+        b_C = (phi2 * (phi1.marginalize(['A'], inplace=False) *
+                       phi3.marginalize(['D'], inplace=False))).marginalize(['B'], inplace=False)
 
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
@@ -174,9 +174,9 @@ class TestBeliefPropagation(unittest.TestCase):
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
 
-        b_A_B = phi1 * (phi3.maximize('D', inplace=False) * phi2).maximize('C', inplace=False)
-        b_B_C = phi2 * (phi1.maximize('A', inplace=False) * phi3.maximize('D', inplace=False))
-        b_C_D = phi3 * (phi1.maximize('A', inplace=False) * phi2).maximize('B', inplace=False)
+        b_A_B = phi1 * (phi3.maximize(['D'], inplace=False) * phi2).maximize(['C'], inplace=False)
+        b_B_C = phi2 * (phi1.maximize(['A'], inplace=False) * phi3.maximize(['D'], inplace=False))
+        b_C_D = phi3 * (phi1.maximize(['A'], inplace=False) * phi2).maximize(['B'], inplace=False)
 
         np_test.assert_array_almost_equal(clique_belief[('A', 'B')].values, b_A_B.values)
         np_test.assert_array_almost_equal(clique_belief[('B', 'C')].values, b_B_C.values)
@@ -191,11 +191,11 @@ class TestBeliefPropagation(unittest.TestCase):
         phi2 = Factor(['B', 'C'], [3, 2], range(6))
         phi3 = Factor(['C', 'D'], [2, 2], range(4))
 
-        b_B = (phi1 * (phi3.maximize('D', inplace=False) *
-                       phi2).maximize('C', inplace=False)).maximize('A', inplace=False)
+        b_B = (phi1 * (phi3.maximize(['D'], inplace=False) *
+                       phi2).maximize(['C'], inplace=False)).maximize(['A'], inplace=False)
 
-        b_C = (phi2 * (phi1.maximize('A', inplace=False) *
-                       phi3.maximize('D', inplace=False))).maximize('B', inplace=False)
+        b_C = (phi2 * (phi1.maximize(['A'], inplace=False) *
+                       phi3.maximize(['D'], inplace=False))).maximize(['B'], inplace=False)
 
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('A', 'B'), ('B', 'C')))].values, b_B.values)
         np_test.assert_array_almost_equal(sepset_belief[frozenset((('B', 'C'), ('C', 'D')))].values, b_C.values)
