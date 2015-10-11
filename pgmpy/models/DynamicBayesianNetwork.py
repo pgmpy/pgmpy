@@ -157,7 +157,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> model.add_nodes_from(['D', 'I'])
         >>> model.add_edge(('D',0), ('I',0))
         >>> model.edges()
-        [(('D', 1), ('G', 1)), (('D', 0), ('G', 0))]
+        [(('D', 1), ('I', 1)), (('D', 0), ('I', 0))]
         """
         try:
             if len(start) != 2 or len(end) !=2:
@@ -425,7 +425,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with {node} doesn't have "
                                      "proper parents associated with it.".format(node=node))
-                if not np.allclose(cpd.marginalize([node], inplace=False).values,
+                if not np.allclose(cpd.to_factor().marginalize([node], inplace=False).values.flatten('C'),
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilities of states for node {node}'
