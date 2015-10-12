@@ -157,7 +157,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> model.add_nodes_from(['D', 'I'])
         >>> model.add_edge(('D',0), ('I',0))
         >>> model.edges()
-        [(('D', 1), ('G', 1)), (('D', 0), ('G', 0))]
+        [(('D', 1), ('I', 1)), (('D', 0), ('I', 0))]
         """
         try:
             if len(start) != 2 or len(end) !=2:
@@ -358,7 +358,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         for cpd in cpds:
             if not isinstance(cpd, TabularCPD):
-                raise ValueError('cpd should be an instances of TabularCPD')
+                raise ValueError('cpd should be an instance of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(super().nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
@@ -403,6 +403,37 @@ class DynamicBayesianNetwork(DirectedGraph):
         else:
             return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
 
+    def remove_cpds(self, *cpds):
+        """
+        Removes the cpds that are provided in the argument.
+
+        Parameters
+        ----------
+        *cpds : list, set, tuple (array-like)
+            List of CPDs which are to be associated with the model. Each CPD
+            should be an instance of `TabularCPD`.
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors import TabularCPD
+        >>> dbn = DBN()
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
+        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
+        ...                                      [0.4,0.25,0.8,0.03],
+        ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_cpds(grade_cpd)
+        >>> dbn.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x3348ab0>]
+        >>> dbn.remove_cpds(grade_cpd)
+        >>> dbn.get_cpds()
+        []
+        """
+        for cpd in cpds:
+            if isinstance(cpd, (tuple, list)):
+                cpd = self.get_cpds(cpd)
+            self.cpds.remove(cpd)
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
@@ -425,7 +456,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with {node} doesn't have "
                                      "proper parents associated with it.".format(node=node))
-                if not np.allclose(cpd.marginalize([node], inplace=False).values,
+                if not np.allclose(cpd.to_factor().marginalize([node], inplace=False).values.flatten('C'),
                                    np.ones(np.product(cpd.evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilities of states for node {node}'
