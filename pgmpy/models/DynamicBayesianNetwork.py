@@ -430,7 +430,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         []
         """
         for cpd in cpds:
-            if isinstance(cpd, tuple):
+            if isinstance(cpd, (tuple, list)):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
