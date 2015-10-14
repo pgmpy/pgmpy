@@ -84,7 +84,6 @@ class MarkovModel(UndirectedGraph):
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
-        self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -170,7 +169,7 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 value=np.random.rand(4))
+        ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
@@ -180,8 +179,7 @@ class MarkovModel(UndirectedGraph):
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
-        errors. In the same time also updates the cardinalities of all the random
-        variables.
+        errors - 
 
         * Checks if the cardinalities of all the variables are consistent across all the factors.
         * Factors are defined for all the random variables.
@@ -191,18 +189,15 @@ class MarkovModel(UndirectedGraph):
         check: boolean
             True if all the checks are passed
         """
+        cardinalities = self.get_cardinality()
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                if ((self.cardinalities[variable]) and
-                        (self.cardinalities[variable] != cardinality)):
+                if cardinalities[variable] != cardinality:
                     raise CardinalityError(
                         'Cardinality of variable %s not matching among factors' % variable)
-                else:
-                    self.cardinalities[variable] = cardinality
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
                     raise ValueError("Factor inconsistent with the model.")
-
         return True
 
     def to_factor_graph(self):
