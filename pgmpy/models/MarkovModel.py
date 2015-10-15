@@ -176,6 +176,28 @@ class MarkovModel(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
+    def get_cardinality(self):
+        """
+        Returns a dictionary with the given factors as keys and their respective
+        cardinality as values.
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        ...                 values=np.random.rand(4))
+        >>> student.add_factors(factor)
+        >>> student.get_cardinality()
+        defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+        
+        """
+        cardinalities = defaultdict(int)
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                cardinalities[variable] = cardinality
+        return cardinalities
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
