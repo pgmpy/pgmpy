@@ -63,7 +63,6 @@ class FactorGraph(UndirectedGraph):
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
-        self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -142,6 +141,28 @@ class FactorGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
+    def get_cardinality(self):
+        """
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_nodes_from(['phi1', 'phi2'])
+        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+        ...                   ('b', 'phi2'), ('c', 'phi2')])
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.get_cardinality()
+            defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
+        
+        """
+        cardinalities = defaultdict(int)
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                cardinalities[variable] = cardinality
+        return cardinalities
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
@@ -164,14 +185,12 @@ class FactorGraph(UndirectedGraph):
         if len(factor_nodes) != len(self.factors):
             raise ValueError('Factors not associated with all the factor nodes.')
 
+        cardinalities = self.get_cardinality()
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                if ((self.cardinalities[variable]) and
-                        (self.cardinalities[variable] != cardinality)):
+                if (cardinalities[variable] != cardinality):
                     raise CardinalityError(
                         'Cardinality of variable %s not matching among factors' % variable)
-                else:
-                    self.cardinalities[variable] = cardinality
 
         return True
 
