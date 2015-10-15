@@ -377,11 +377,11 @@ class MarkovModel(UndirectedGraph):
                     clique_dict, clique_dict_removed = _get_cliques_dict(node)
                     S[node] = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict_removed.values())),
-                        self.cardinalities
+                        self.get_cardinality()
                     )[0]
                     common_clique_size = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict.values())),
-                        self.cardinalities
+                        self.get_cardinality()
                     )
                     M[node] = np.max(common_clique_size)
                     C[node] = np.sum(common_clique_size)
@@ -390,7 +390,7 @@ class MarkovModel(UndirectedGraph):
                     node_to_delete = min(S, key=S.get)
 
                 elif heuristic == 'H2':
-                    S_by_E = {key: S[key] / self.cardinalities[key] for key in S}
+                    S_by_E = {key: S[key] / self.get_cardinality()[key] for key in S}
                     node_to_delete = min(S_by_E, key=S_by_E.get)
 
                 elif heuristic == 'H3':
@@ -503,7 +503,7 @@ class MarkovModel(UndirectedGraph):
                     is_used[factor] = True
 
             # To compute clique potential, initially set it as unity factor
-            var_card = [self.cardinalities[x] for x in node]
+            var_card = [self.get_cardinality()[x] for x in node]
             clique_potential = Factor(node, var_card, np.ones(np.product(var_card)))
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
