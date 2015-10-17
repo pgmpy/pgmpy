@@ -185,7 +185,7 @@ class ClusterGraph(UndirectedGraph):
         if node is None:
             return self.factors
         else:
-            nodes = [set(node) for node in self.nodes()]
+            nodes = [set(n) for n in self.nodes()]
 
             if set(node) not in nodes:
                 raise ValueError('Node not present in Cluster Graph')
