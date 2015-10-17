@@ -20,6 +20,7 @@ except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Unicode issues with tests")
 class TestXBNReader(unittest.TestCase):
     def setUp(self):
@@ -292,6 +293,7 @@ class TestXBNWriter(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
+    # TODO: fix this
     @unittest.skipIf(six.PY2, "Temporary error with python 2")
     def test_file(self):
         self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>

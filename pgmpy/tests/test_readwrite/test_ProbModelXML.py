@@ -27,6 +27,7 @@ except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Temporary error for python 2")
 class TestProbModelXMLReaderString(unittest.TestCase):
     def setUp(self):
@@ -607,6 +608,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Temporary error with python 2")
 class TestProbModelXMLWriter(unittest.TestCase):
     def setUp(self):
@@ -1054,6 +1056,7 @@ class TestProbModelXMLWriter(unittest.TestCase):
         self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Temporary error with python 2")
 class TestProbModelXMLmethods(unittest.TestCase):
     def setUp(self):

@@ -33,6 +33,7 @@ except ImportError:
                     print("Failed to import ElementTree from any known place")
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Temporary error with python 2")
 class TestPomdpXReaderString(unittest.TestCase):
     def setUp(self):
@@ -809,6 +810,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         del self.reader_string
 
 
+# TODO: fix this
 @unittest.skipIf(six.PY2, "Temporary error with python 2")
 class TestPomdpXWriter(unittest.TestCase):
     def setUp(self):

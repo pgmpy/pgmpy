@@ -150,7 +150,8 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertListEqual(list(gibbs.variables), self.markov_model.nodes())
         self.assertDictEqual(gibbs.cardinalities, {'A': 2, 'B': 3, 'C': 4, 'D': 2})
 
-    @unittest.skipIf(six.PY2, "Gibbs Sampling Not supported in python 2")
+    # TODO: fix this
+    @unittest.skipIf(six.PY2, "Temporary error in python 2")
     def test_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]
         sample = self.gibbs.sample(start_state, 2)
@@ -163,7 +164,8 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertTrue(set(sample['intel']).issubset({0, 1}))
         self.assertTrue(set(sample['grade']).issubset({0, 1, 2}))
 
-    @unittest.skipIf(six.PY2, "Gibbs Sampling not supported in python2")
+    # TODO: fix this
+    @unittest.skipIf(six.PY2, "Temporary error in python2")
     @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         self.gibbs.state = None
@@ -172,7 +174,8 @@ class TestGibbsSampling(unittest.TestCase):
         random_state.assert_called_once_with(self.gibbs)
         self.assertEqual(len(sample), 2)
 
-    @unittest.skipIf(six.PY2, "Gibbs Sampling not supported in python2")
+    # TODO: fix this
+    @unittest.skipIf(six.PY2, "Temporary error in python2")
     def test_generate_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]
         gen = self.gibbs.generate_sample(start_state, 2)
@@ -181,7 +184,8 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertEqual({samples[0][0].var, samples[0][1].var, samples[0][2].var}, {'diff', 'intel', 'grade'})
         self.assertEqual({samples[1][0].var, samples[1][1].var, samples[1][2].var}, {'diff', 'intel', 'grade'})
 
-    @unittest.skipIf(six.PY2, "Gibbs Sampling not supported in python2")
+    # TODO: fix this
+    @unittest.skipIf(six.PY2, "Temporary error in python2")
     @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state):
         self.gibbs.state = None

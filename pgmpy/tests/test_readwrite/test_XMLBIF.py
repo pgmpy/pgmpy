@@ -362,6 +362,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
 
         self.writer = XMLBIFWriter(model=self.model)
 
+    # TODO: fix this
     @unittest.skipIf(six.PY2, "Temporary error with python 2")
     def test_file(self):
         self.expected_xml = etree.XML("""<BIF version="0.3">
