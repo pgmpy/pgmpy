@@ -8,6 +8,7 @@ env:
     - DISTRIB="conda" PYTHON_VERSION="2.7" COVERAGE="true"
 
 before_install:
+    - pip install mock
     - uname -a
     - free -m
     - df -h
