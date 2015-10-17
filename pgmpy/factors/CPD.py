@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
+from __future__ import division
 
 from itertools import product
 
