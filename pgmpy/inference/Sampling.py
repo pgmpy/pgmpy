@@ -237,7 +237,7 @@ class GibbsSampling(MarkovChain):
     2      1    1
     """
     def __init__(self, model=None):
-        super().__init__()
+        super(GibbsSampling, self).__init__()
         if isinstance(model, BayesianModel):
             self._get_kernel_from_bayesian_model(model)
         elif isinstance(model, MarkovModel):

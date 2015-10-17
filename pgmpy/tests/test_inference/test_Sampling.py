@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import MagicMock, patch
+
+from mock import MagicMock, patch
 
 from pgmpy.factors import Factor, TabularCPD, State
 from pgmpy.inference.Sampling import BayesianModelSampling, GibbsSampling
