@@ -1,10 +1,13 @@
 import unittest
 from io import StringIO
+
 import numpy as np
 import numpy.testing as np_test
+
 from pgmpy.readwrite import XMLBeliefNetwork
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern import six
 try:
     from lxml import etree
 except ImportError:
@@ -17,6 +20,7 @@ except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
 
 
+@unittest.skipIf(six.PY2, "Unicode issues with tests")
 class TestXBNReader(unittest.TestCase):
     def setUp(self):
         string = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan" ROOT="Cancer">
