@@ -95,6 +95,32 @@ class TestFactorGraphMethods(unittest.TestCase):
     def setUp(self):
         self.graph = FactorGraph()
 
+    def test_get_cardinality(self):
+
+        self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
+                                   ('c', 'phi2'), ('d', 'phi2'),
+                                   ('a', 'phi3'), ('d', 'phi3')])
+
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2})
+        self.graph.remove_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['c', 'd'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1, phi2)
+        self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'a': 2, 'b': 2, 'c': 1})
+
+        phi3 = Factor(['d', 'a'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {'d': 1, 'c': 1, 'b': 2, 'a': 2})
+
+        self.graph.remove_factors(phi1, phi2, phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
     def test_get_factor_nodes(self):
         self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
                                    ('b', 'phi2'), ('c', 'phi2')])

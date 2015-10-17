@@ -70,3 +70,36 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
         phi2 = Factor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_partition_function(), 22.0)
+
+
+class TestClusterGraphMethods(unittest.TestCase):
+    def setUp(self):
+        self.graph = ClusterGraph()
+
+    def test_get_cardinality(self):
+
+        self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
+                                   (('a', 'b', 'c'), ('a', 'c'))])
+
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b', 'c'], [1, 2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c':2})
+        self.graph.remove_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1, phi2)
+        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c': 2})
+
+        phi3 = Factor(['a', 'c'], [1, 1], np.random.rand(1))
+        self.graph.add_factors(phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {'c': 1, 'b': 2, 'a': 1})
+
+        self.graph.remove_factors(phi1, phi2, phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+    def tearDown(self):
+        del self.graph
