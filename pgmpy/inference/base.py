@@ -76,7 +76,7 @@ class Inference:
                     self.factors[var].append(cpd_as_factor)
 
         elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
-            self.cardinality = model.cardinalities
+            self.cardinality = model.get_cardinality()
 
             for factor in model.get_factors():
                 for var in factor.variables:
