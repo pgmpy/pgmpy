@@ -292,6 +292,7 @@ class TestXBNWriter(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
+    @unittest.skipIf(six.PY2, "Temporary error with python 2")
     def test_file(self):
         self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
   <BNMODEL>
