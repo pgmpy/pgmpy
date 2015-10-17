@@ -113,11 +113,10 @@ class MarkovChain(object):
         if not hasattr(state, '__iter__') or isinstance(state, str):
             raise ValueError('Start state must be a non-string iterable object.')
         state_vars = {s.var for s in state}
-        model_vars = set(self.transition_models.keys())
-        if not state_vars == model_vars:
+        if not state_vars == set(self.variables):
             raise ValueError('Start state must represent a complete assignment to all variables.'
                              'Expected variables in state: {svar}, Got: {mvar}.'.format(svar=state_vars,
-                                                                                        mvar=model_vars))
+                                                                                        mvar=set(self.variables)))
         for var, val in state:
             if val >= self.cardinalities[var]:
                 raise ValueError('Assignment {val} to {var} invalid.'.format(val=val, var=var))

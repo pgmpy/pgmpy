@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 from pandas import DataFrame
 
-from pgmpy.factors.Factor import Factor, factor_product
+from pgmpy.factors.Factor import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
