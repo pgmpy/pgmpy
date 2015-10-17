@@ -739,11 +739,8 @@ class Factor:
                 return True
 
     def __hash__(self):
-        """
-        Returns the hash of the factor object based on the scope of the factor.
-        """
-        return hash(' '.join(map(str, self.variables)) + ' '.join(map(str, self.cardinality)) +
-                    ' '.join(list(map(str, self.values.astype('float')))))
+        return hash(str(self.variables) + str(self.cardinality.tolist()) +
+                    str(self.values.astype('float').tolist()))
 
 
 def factor_product(*args):
