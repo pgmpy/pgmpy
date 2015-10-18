@@ -33,8 +33,5 @@ if [[ "$COVERAGE" == "true" ]]; then
 	pip install coverage coveralls
 fi
 
-# Installing mock here because conda installs 1.0
-pip install mock
-
 # Build pgmpy
 python setup.py develop
