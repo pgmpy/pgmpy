@@ -9,6 +9,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
+from pgmpy.extern.six.moves import map, range, zip
 
 
 class MarkovModel(UndirectedGraph):
@@ -80,7 +81,7 @@ class MarkovModel(UndirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(MarkovModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -107,7 +108,7 @@ class MarkovModel(UndirectedGraph):
         """
         # check that there is no self loop.
         if u != v:
-            super().add_edge(u, v, **kwargs)
+            super(MarkovModel, self).add_edge(u, v, **kwargs)
         else:
             raise ValueError('Self loops are not allowed')
 

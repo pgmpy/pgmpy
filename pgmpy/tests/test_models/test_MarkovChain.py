@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import sys
 import unittest
-from unittest.mock import patch, call
 
 from pandas import DataFrame
+from mock import patch, call
 
 from pgmpy.factors import State
 from pgmpy.models import MarkovChain as MC
+from pgmpy.extern.six.moves import range, zip
 
 
 class TestMarkovChain(unittest.TestCase):

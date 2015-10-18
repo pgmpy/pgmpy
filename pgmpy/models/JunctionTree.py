@@ -47,7 +47,7 @@ class JunctionTree(ClusterGraph):
     """
 
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(JunctionTree, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
 
@@ -74,7 +74,7 @@ class JunctionTree(ClusterGraph):
             raise ValueError('Addition of edge between {u} and {v} forms a cycle breaking the '
                              'properties of Junction Tree'.format(u=str(u), v=str(v)))
 
-        super().add_edge(u, v, **kwargs)
+        super(JunctionTree, self).add_edge(u, v, **kwargs)
 
     def check_model(self):
         """
@@ -96,4 +96,4 @@ class JunctionTree(ClusterGraph):
         if not nx.is_connected(self):
             raise ValueError('The Junction Tree defined is not fully connected.')
 
-        return super().check_model()
+        return super(JunctionTree, self).check_model()

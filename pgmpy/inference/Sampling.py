@@ -5,10 +5,11 @@ import networkx as nx
 import numpy as np
 from pandas import DataFrame
 
-from pgmpy.factors.Factor import Factor, factor_product
+from pgmpy.factors.Factor import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
+from pgmpy.extern.six.moves import map, range
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -31,7 +32,7 @@ class BayesianModelSampling(Inference):
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
             raise TypeError("model must an instance of BayesianModel")
-        super().__init__(model)
+        super(BayesianModelSampling, self).__init__(model)
         self.topological_order = nx.topological_sort(model)
         self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 
@@ -236,7 +237,7 @@ class GibbsSampling(MarkovChain):
     2      1    1
     """
     def __init__(self, model=None):
-        super().__init__()
+        super(GibbsSampling, self).__init__()
         if isinstance(model, BayesianModel):
             self._get_kernel_from_bayesian_model(model)
         elif isinstance(model, MarkovModel):

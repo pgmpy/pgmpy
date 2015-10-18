@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import networkx as nx
 
+from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 from pgmpy.models import JunctionTree
@@ -307,7 +308,7 @@ class BeliefPropagation(Inference):
     def __init__(self, model):
         from pgmpy.models import JunctionTree
 
-        super().__init__(model)
+        super(BeliefPropagation, self).__init__(model)
 
         if not isinstance(model, JunctionTree):
             self.junction_tree = model.to_junction_tree()

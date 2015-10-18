@@ -8,6 +8,7 @@ import numpy as np
 
 from pgmpy.factors import Factor
 from pgmpy.independencies import Independencies
+from pgmpy.extern.six.moves import range, zip
 
 
 class JointProbabilityDistribution(Factor):

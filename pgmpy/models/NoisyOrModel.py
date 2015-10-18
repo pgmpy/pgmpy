@@ -4,6 +4,8 @@ from itertools import chain
 import numpy as np
 import networkx as nx
 
+from pgmpy.extern.six.moves import zip
+
 
 class NoisyOrModel(nx.DiGraph):
     """
