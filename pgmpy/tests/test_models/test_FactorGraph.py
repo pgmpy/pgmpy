@@ -168,5 +168,85 @@ class TestFactorGraphMethods(unittest.TestCase):
                              [['a', 'b'], ['b', 'c']])
         self.assertEqual(len(jt.edges()), 1)
 
+    def test_check_model(self):
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2)
+        self.assertTrue(self.graph.check_model())
+
+        self.graph.remove_factors(phi1)
+        self.graph.remove_node(phi1)
+        phi1 = Factor(['a', 'b'], [4, 2], np.random.rand(8))
+        self.graph.add_factors(phi1)
+        self.graph.add_edges_from([('a', phi1)])
+        self.assertTrue(self.graph.check_model())
+
+    def test_check_model1(self):
+        self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2)
+        self.assertRaises(ValueError, self.graph.check_model)
+
+        self.graph.remove_node('d')
+        self.assertTrue(self.graph.check_model())
+
+    def test_check_model2(self):
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2)
+
+        self.graph.add_edges_from([('a', 'b')])
+        self.assertRaises(ValueError, self.graph.check_model)
+
+        self.graph.add_edges_from([(phi1, phi2)])
+        self.assertRaises(ValueError, self.graph.check_model)
+
+        self.graph.remove_edges_from([('a', 'b'), (phi1, phi2)])
+        self.assertTrue(self.graph.check_model())
+
+    def test_check_model3(self):
+        
+        
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi3 = Factor(['a', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2, phi3)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi3)
+        self.assertTrue(self.graph.check_model())
+
+    def test_check_model4(self):
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [3, 2], np.random.rand(6))
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2)
+        self.assertRaises(CardinalityError, self.graph.check_model)
+
+        self.graph.remove_factors(phi2)
+        self.graph.remove_node(phi2)
+        phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
+        self.graph.add_factors(phi3)
+        self.graph.add_edges_from([('a', phi3), ('c', phi3)])
+        self.assertRaises(CardinalityError, self.graph.check_model)
+
     def tearDown(self):
         del self.graph
