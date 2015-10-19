@@ -3,6 +3,7 @@
 import itertools
 from collections import defaultdict
 
+from pgmpy.factors import Factor
 import numpy as np
 from networkx.algorithms import bipartite
 
@@ -46,16 +47,19 @@ class FactorGraph(UndirectedGraph):
 
     >>> G.add_node('a')
     >>> G.add_nodes_from(['a', 'b'])
+    >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+    >>> G.add_factors(phi1)
+    >>> G.add_nodes_from([phi1])
 
     **Edges:**
 
     G can also be grown by adding edges.
 
-    >>> G.add_edge('a', 'phi1')
+    >>> G.add_edge('a', phi1)
 
     or a list of edges
 
-    >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1')])
+    >>> G.add_edges_from([('a', phi1), ('b', phi1)])
     """
 
     def __init__(self, ebunch=None):
@@ -78,17 +82,14 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.models import FactorGraph
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edge('a', 'phi1')
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edge('a', phi1)
         """
         if u != v:
             super().add_edge(u, v, **kwargs)
         else:
             raise ValueError('Self loops are not allowed')
-
-        if not bipartite.is_bipartite(self):
-            self.remove_edge(u, v)
-            raise ValueError('Edges can only be between variables and factors')
 
     def add_factors(self, *factors):
         """
@@ -107,11 +108,11 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> G.add_factors(phi1)
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         """
         for factor in factors:
             if set(factor.variables) - set(factor.variables).intersection(
@@ -131,11 +132,8 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> G.add_factors(phi1)
+         >>> G.add_factors(phi1)
         >>> G.remove_factors(phi1)
         """
         for factor in factors:
@@ -147,11 +145,11 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         >>> G.add_factors(phi1, phi2)
         >>> G.get_cardinality()
             defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
@@ -170,18 +168,23 @@ class FactorGraph(UndirectedGraph):
         random variables.
 
         * Check whether bipartite property of factor graph is still maintained
-        or not. (This check is not done explicitly here as it done in add_edges() method)
+        or not.
         * Check whether factors are associated for all the random variables or not.
-        * Check if factors are defined for each factor node of not.
+        * Check if factors are defined for each factor node or not.
         * Check if cardinality of random variable remains same across all the
         factors.
         """
         variable_nodes = set([x for factor in self.factors for x in factor.scope()])
-        if not bipartite.is_bipartite_node_set(self, variable_nodes):
-            raise ValueError('Factors not associated for all the random'
-                             'variables.')
+        factor_nodes = set(self.nodes()) - variable_nodes
 
-        factor_nodes = set(self.nodes()) - set(variable_nodes)
+        if not all(isinstance(factor_node, Factor) for factor_node in factor_nodes):
+            raise ValueError('Factors not associated for all the random variables')
+
+        if (not (bipartite.is_bipartite(self)) or 
+           not (bipartite.is_bipartite_node_set(self, variable_nodes) or 
+                bipartite.is_bipartite_node_set(self, variable_nodes))):
+            raise ValueError('Edges can only be between variables and factors')
+
         if len(factor_nodes) != len(self.factors):
             raise ValueError('Factors not associated with all the factor nodes.')
 
@@ -207,12 +210,12 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([phi1, phi2])
         >>> G.add_factors(phi1, phi2)
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         >>> G.get_variable_nodes()
         ['a', 'b']
         """
@@ -234,14 +237,15 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_nodes_from([phi1, phi2])
         >>> G.add_factors(phi1, phi2)
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         >>> G.get_factor_nodes()
-        ['phi1', 'phi2']
+        [<Factor representing phi(b:2, c:2) at 0x4b8c7f0>,
+         <Factor representing phi(a:2, b:2) at 0x4b8c5b0>]
         """
         self.check_model()
 
@@ -262,12 +266,12 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         >>> mm = G.to_markov_model()
         """
         from pgmpy.models import MarkovModel
@@ -301,13 +305,13 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
-        >>> junction_tree = G.to_junction_tree()
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
+        >>> mm = G.to_markov_model()
         """
         mm = self.to_markov_model()
         return mm.to_junction_tree()
@@ -325,14 +329,14 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
         >>> G.get_factors()
-        >>> G.get_factors(node='phi1')
+        >>> G.get_factors(node = phi1)
         """
         if node is None:
             return self.factors
@@ -362,12 +366,13 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
-        >>> G.add_nodes_from(['phi1', 'phi2'])
-        >>> G.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
-        ...                   ('b', 'phi2'), ('c', 'phi2')])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
+        >>> G.get_factors()
         >>> G.get_partition_function()
         """
         factor = self.factors[0]
