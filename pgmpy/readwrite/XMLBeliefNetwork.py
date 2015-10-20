@@ -11,9 +11,10 @@ except ImportError:
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map, range
 
 
-class XBNReader:
+class XBNReader(object):
     """
     Base class for reading XML Belief Network File Format.
     """
@@ -202,7 +203,7 @@ class XBNReader:
         return model
 
 
-class XBNWriter:
+class XBNWriter(object):
     """
     Base class for writing XML Belief Network file format.
     """

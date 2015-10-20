@@ -11,6 +11,7 @@ import pandas as pd
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.extern.six.moves import range
 
 
 class BayesianModel(DirectedGraph):
@@ -80,7 +81,7 @@ class BayesianModel(DirectedGraph):
     3
     """
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(BayesianModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.cpds = []

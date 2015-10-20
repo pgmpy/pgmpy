@@ -1,10 +1,13 @@
+import copy
+import itertools as it
+
+import numpy as np
+import networkx as nx
+
+from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovModel
-import networkx as nx
 from pgmpy.factors import Factor
-import numpy as np
-import itertools as it
-import copy
 
 
 class Mplp(Inference):
@@ -42,7 +45,7 @@ class Mplp(Inference):
         if not isinstance(model, MarkovModel):
             raise TypeError('Only MarkovModel is supported')
 
-        super().__init__(model)
+        super(Mplp, self).__init__(model)
         self.model = model
 
         # S = \{c \cap c^{'} : c, c^{'} \in C, c \cap c^{'} \neq \emptyset\}
@@ -84,7 +87,7 @@ class Mplp(Inference):
         # Default value = 0.0002. This can be changed in the map_query() method.
         self.integrality_gap_threshold = 0.0002
 
-    class Cluster:
+    class Cluster(object):
         """
         Inner class for representing a cluster.
         A cluster is a subset of variables.

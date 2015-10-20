@@ -1,4 +1,5 @@
-import functools
+from __future__ import division
+
 from itertools import product
 from collections import namedtuple
 
@@ -8,12 +9,13 @@ from numbers import Number
 import numpy as np
 
 from pgmpy.extern import tabulate
+from pgmpy.extern.six.moves import map, range, reduce, zip
 
 
 State = namedtuple('State', ['var', 'state'])
 
 
-class Factor:
+class Factor(object):
     """
     Base class for Factor.
 
@@ -713,6 +715,8 @@ class Factor:
     def __truediv__(self, other):
         return self.divide(other, inplace=False)
 
+    __div__ = __truediv__
+
     def __eq__(self, other):
         if not (isinstance(self, Factor) and isinstance(other, Factor)):
             return False
@@ -739,11 +743,8 @@ class Factor:
                 return True
 
     def __hash__(self):
-        """
-        Returns the hash of the factor object based on the scope of the factor.
-        """
-        return hash(' '.join(map(str, self.variables)) + ' '.join(map(str, self.cardinality)) +
-                    ' '.join(list(map(str, self.values.astype('float')))))
+        return hash(str(self.variables) + str(self.cardinality.tolist()) +
+                    str(self.values.astype('float').tolist()))
 
 
 def factor_product(*args):
@@ -791,7 +792,7 @@ def factor_product(*args):
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Arguments must be factors")
-    return functools.reduce(lambda phi1, phi2: phi1 * phi2, args)
+    return reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
 def factor_divide(phi1, phi2):

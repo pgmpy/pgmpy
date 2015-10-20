@@ -1,8 +1,10 @@
+import unittest
+import numpy as np
+
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
 from pgmpy.factors import Factor
-import unittest
-import numpy as np
+from pgmpy.extern.six.moves import range
 
 
 class TestClusterGraphCreation(unittest.TestCase):

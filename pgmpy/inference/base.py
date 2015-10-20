@@ -11,7 +11,7 @@ from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.exceptions import ModelError
 
 
-class Inference:
+class Inference(object):
     """
     Base class for all inference algorithms.
 

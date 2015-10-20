@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 from collections import defaultdict
+
+from pgmpy.extern.six.moves import range
 
 try:
     from lxml import etree
@@ -13,7 +16,7 @@ except ImportError:
             print("Failed to import ElementTree from any known place")
 
 
-class PomdpXReader:
+class PomdpXReader(object):
     """
     Class for reading PomdpX file format from files or strings
     """
@@ -367,7 +370,7 @@ class PomdpXReader:
         return dag
 
 
-class PomdpXWriter():
+class PomdpXWriter(object):
     """
     Class for writing models in PomdpX
     """

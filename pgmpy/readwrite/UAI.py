@@ -6,9 +6,10 @@ from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors import TabularCPD, Factor
+from pgmpy.extern.six.moves import map, range
 
 
-class UAIReader:
+class UAIReader(object):
     """
     Class for reading UAI file format from files or strings.
     """
@@ -246,7 +247,7 @@ class UAIReader:
             return model
 
 
-class UAIWriter:
+class UAIWriter(object):
     """
     Class for writing models in UAI.
     """

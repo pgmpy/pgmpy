@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
+from __future__ import division
 
 from itertools import product
 
-import networkx as nx
 import numpy as np
 
 from pgmpy import exceptions
 from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
+from pgmpy.extern.six.moves import range, zip
 
 
 class TabularCPD(Factor):
@@ -117,7 +118,7 @@ class TabularCPD(Factor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super().__init__(variables, cardinality, values.flatten('C'))
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(

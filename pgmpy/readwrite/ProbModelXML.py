@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 """
 For the student example the ProbModelXML file should be:
 
@@ -121,6 +122,7 @@ import networkx as nx
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -277,7 +279,7 @@ def get_probmodel_data(model):
     return model_data
 
 
-class ProbModelXMLWriter:
+class ProbModelXMLWriter(object):
     """
     Class for writing models in ProbModelXML format.
     """
@@ -630,7 +632,7 @@ class ProbModelXMLWriter:
             fout.write(writer)
 
 
-class ProbModelXMLReader:
+class ProbModelXMLReader(object):
     """
     Class for reading ProbModelXML format from files or strings.
     """

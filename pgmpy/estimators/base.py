@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-class BaseEstimator:
+class BaseEstimator(object):
     """
     Base class for estimator class in pgmpy. Estimator class is used for parameter estimation as well
     as structure estimation

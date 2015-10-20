@@ -1,12 +1,14 @@
 import unittest
 import numpy as np
 import numpy.testing as np_test
+
 from pgmpy.inference import VariableElimination
 from pgmpy.inference import BeliefPropagation
 from pgmpy.models import BayesianModel
 from pgmpy.models import JunctionTree
 from pgmpy.factors import TabularCPD
 from pgmpy.factors import Factor
+from pgmpy.extern.six.moves import range
 
 
 class TestVariableElimination(unittest.TestCase):

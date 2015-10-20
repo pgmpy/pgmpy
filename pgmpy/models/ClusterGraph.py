@@ -7,6 +7,7 @@ import numpy as np
 from pgmpy.base import UndirectedGraph
 from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product
+from pgmpy.extern.six.moves import filter, range, zip
 
 
 class ClusterGraph(UndirectedGraph):
@@ -55,7 +56,7 @@ class ClusterGraph(UndirectedGraph):
     ...                   (('a', 'b', 'c'), ('a', 'c'))])
     """
     def __init__(self, ebunch=None):
-        super().__init__()
+        super(ClusterGraph, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
@@ -80,7 +81,7 @@ class ClusterGraph(UndirectedGraph):
             raise TypeError('Node can only be a list, set or tuple of nodes forming a clique')
 
         node = tuple(node)
-        super().add_node(node, **kwargs)
+        super(ClusterGraph, self).add_node(node, **kwargs)
 
     def add_nodes_from(self, nodes, **kwargs):
         """
@@ -122,7 +123,7 @@ class ClusterGraph(UndirectedGraph):
         if set_u.isdisjoint(set_v):
             raise ValueError('No sepset found between these two edges.')
 
-        super().add_edge(u, v)
+        super(ClusterGraph, self).add_edge(u, v)
 
     def add_factors(self, *factors):
         """
@@ -183,7 +184,7 @@ class ClusterGraph(UndirectedGraph):
         if node is None:
             return self.factors
         else:
-            nodes = [set(node) for node in self.nodes()]
+            nodes = [set(n) for n in self.nodes()]
 
             if set(node) not in nodes:
                 raise ValueError('Node not present in Cluster Graph')

@@ -10,6 +10,7 @@ from pgmpy.factors import factor_product
 from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD
 from pgmpy import exceptions
+from pgmpy.extern.six.moves import range
 
 
 class TestFactorInit(unittest.TestCase):
