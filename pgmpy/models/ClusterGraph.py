@@ -265,12 +265,13 @@ class ClusterGraph(UndirectedGraph):
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
-        errors. In the same time also updates the cardinalities of all the random
-        variables.
+        errors.
 
-        * Checks if clique potentials are defined for all the cliques or not.
+        * Checks if factors are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
         here as it done in the add_edges method.
+        * Check if cardinality of random variable remains same across all the
+        factors.
 
         Returns
         -------
@@ -278,15 +279,10 @@ class ClusterGraph(UndirectedGraph):
             True if all the checks are passed
         """
         for clique in self.nodes():
-            if self.get_factors(clique):
-                pass
-            else:
-                raise ValueError('Factors for all the cliques or clusters not'
+            factors = filter(lambda x: set(x.scope()) == set(clique), self.factors)
+            if not any(factors):
+                raise ValueError('Factors for all the cliques or clusters not '
                                  'defined.')
-
-        if len(self.factors) != len(self.nodes()):
-            raise ValueError('One to one mapping of factor to clique or cluster'
-                             'is not there.')
 
         cardinalities = self.get_cardinality()
         for factor in self.factors:
