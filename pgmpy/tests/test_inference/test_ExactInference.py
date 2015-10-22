@@ -64,6 +64,40 @@ class TestVariableElimination(unittest.TestCase):
         np_test.assert_array_almost_equal(query_result['Q'].values,
                                           np.array([0.772727, 0.227273]))
 
+    def test_query_multiple_times(self):
+        # This just tests that the models are not getting modified while querying them
+        query_result = self.bayesian_inference.query(['J'])
+        query_result = self.bayesian_inference.query(['J'])
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.416, 0.584]))
+
+        query_result = self.bayesian_inference.query(['Q', 'J'])
+        query_result = self.bayesian_inference.query(['Q', 'J'])
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.416, 0.584]))
+        np_test.assert_array_almost_equal(query_result['Q'].values,
+                                          np.array([0.4912, 0.5088]))
+
+        query_result = self.bayesian_inference.query(variables=['J'],
+                                                     evidence={'A': 0, 'R': 1})
+        query_result = self.bayesian_inference.query(variables=['J'],
+                                                     evidence={'A': 0, 'R': 1})
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.60, 0.40]))
+
+        query_result = self.bayesian_inference.query(variables=['J', 'Q'],
+                                                     evidence={'A': 0, 'R': 0,
+                                                               'G': 0, 'L': 1})
+        query_result = self.bayesian_inference.query(variables=['J', 'Q'],
+                                                     evidence={'A': 0, 'R': 0,
+                                                               'G': 0, 'L': 1})
+        np_test.assert_array_almost_equal(query_result['J'].values,
+                                          np.array([0.818182, 0.181818]))
+        np_test.assert_array_almost_equal(query_result['Q'].values,
+                                          np.array([0.772727, 0.227273]))
+
+
+
     def test_max_marginal(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
 
