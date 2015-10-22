@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import map, range, zip
@@ -216,7 +215,7 @@ class MarkovModel(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
-                    raise CardinalityError(
+                    raise ValueError(
                         'Cardinality of variable %s not matching among factors' % variable)
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):

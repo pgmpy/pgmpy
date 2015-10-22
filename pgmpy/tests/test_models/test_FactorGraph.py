@@ -9,7 +9,6 @@ from pgmpy.tests import help_functions as hf
 import numpy as np
 import unittest
 from pgmpy.extern.six.moves import range
-from pgmpy.exceptions import CardinalityError
 
 class TestFactorGraphCreation(unittest.TestCase):
     def setUp(self):
@@ -243,14 +242,14 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', phi1), ('b', phi1), 
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
 
         self.graph.remove_factors(phi2)
         self.graph.remove_node(phi2)
         phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
         self.graph.add_edges_from([('a', phi3), ('c', phi3)])
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
 
     def tearDown(self):
         del self.graph

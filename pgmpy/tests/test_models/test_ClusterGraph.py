@@ -4,7 +4,6 @@ import numpy as np
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
 from pgmpy.factors import Factor
-from pgmpy.exceptions import CardinalityError
 from pgmpy.extern.six.moves import range
 
 
@@ -134,12 +133,12 @@ class TestClusterGraphMethods(unittest.TestCase):
         phi2 = Factor(['a', 'c'], [3, 3], np.random.rand(9))
         phi3 = Factor(['a', 'd'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi1, phi2, phi3)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
         
         phi2 = Factor(['a', 'c'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi2)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi3)
 
         phi3 = Factor(['a', 'd'], [1, 4], np.random.rand(4))

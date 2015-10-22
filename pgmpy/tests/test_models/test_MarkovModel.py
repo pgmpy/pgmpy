@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import Factor
 from pgmpy.models import MarkovModel
 from pgmpy.tests import help_functions as hf
@@ -138,24 +137,24 @@ class TestMarkovModelMethods(unittest.TestCase):
 
         phi2 = Factor(['b', 'c'], [3, 3], np.random.rand(9))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
         
         phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi3)
 
         phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
         phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
         phi4 = Factor(['d', 'a'], [4, 3], np.random.rand(12))
         self.graph.add_factors(phi2, phi3, phi4)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2, phi3, phi4)
 
         phi2 = Factor(['a', 'b'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(CardinalityError, self.graph.check_model)
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
 
     def test_check_model2(self):
@@ -439,7 +438,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
                        self.graph.edges()]
         self.graph.add_factors(*factor_list)
         self.graph.add_factors(Factor(['a', 'b'], [2, 3], np.random.rand(6)))
-        self.assertRaises(CardinalityError, self.graph.triangulate)
+        self.assertRaises(ValueError, self.graph.triangulate)
 
     def test_triangulation_h1_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),

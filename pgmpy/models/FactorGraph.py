@@ -8,7 +8,6 @@ import numpy as np
 from networkx.algorithms import bipartite
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product
 from pgmpy.extern.six.moves import filter, range, zip
 
@@ -193,7 +192,7 @@ class FactorGraph(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if (cardinalities[variable] != cardinality):
-                    raise CardinalityError(
+                    raise ValueError(
                         'Cardinality of variable %s not matching among factors' % variable)
 
         return True
@@ -337,7 +336,7 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_edges_from([('a', phi1), ('b', phi1),
         ...                   ('b', phi2), ('c', phi2)])
         >>> G.get_factors()
-        >>> G.get_factors(node = phi1)
+        >>> G.get_factors(node=phi1)
         """
         if node is None:
             return self.factors

@@ -5,7 +5,6 @@ from collections import defaultdict
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product
 from pgmpy.extern.six.moves import filter, range, zip
 
@@ -288,7 +287,7 @@ class ClusterGraph(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if (cardinalities[variable] != cardinality):
-                    raise CardinalityError(
+                    raise ValueError(
                         'Cardinality of variable %s not matching among factors' % variable)
         return True
 
