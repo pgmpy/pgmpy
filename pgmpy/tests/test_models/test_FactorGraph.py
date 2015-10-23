@@ -120,6 +120,26 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
+    
+    def test_get_cardinality_check_cardinality(self):
+
+        self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
+        
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1)
+        self.graph.add_edges_from([('a', phi1), ('b', phi1)])
+        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+
+        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi2)
+        self.graph.add_edges_from([('a', phi2), ('c', phi2)])
+        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+
+        phi3 = Factor(['d', 'a'], [1, 1], np.random.rand(1))
+        self.graph.add_factors(phi3)
+        self.graph.add_edges_from([('d', phi3), ('a', phi3)])
+        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 1, 'c': 2, 'b': 2, 'a': 1})
+
     # def test_get_factor_nodes(self):
     #     phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
     #     phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
