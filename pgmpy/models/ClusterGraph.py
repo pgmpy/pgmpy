@@ -208,10 +208,17 @@ class ClusterGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self):
+    def get_cardinality(self, check_cardinality=False):
         """
         Returns a dictionary with the given factors as keys and their respective
         cardinality as values.
+        
+        Parameters
+        ----------
+        check_cardinality: boolean, optional
+            If, check_cardinality=True it checks if cardinality information
+            for all the variables is availble or not. If not it raises an error.
+
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
@@ -229,6 +236,8 @@ class ClusterGraph(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 cardinalities[variable] = cardinality
+        if check_cardinality and len(set((x for clique in self.nodes() for x in clique))) != len(cardinalities):
+            raise ValueError('Factors for all the variables not defined.')
         return cardinalities
 
     def get_partition_function(self):
