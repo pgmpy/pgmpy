@@ -225,7 +225,7 @@ class MarkovModel(UndirectedGraph):
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
                     raise ValueError(
-                        'Cardinality of variable %s not matching among factors' % variable)
+                        'Cardinality of variable {var} not matching among factors'.format(var=variable))
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
                     raise ValueError("Factor inconsistent with the model.")
