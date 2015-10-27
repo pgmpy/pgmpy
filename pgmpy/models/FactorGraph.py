@@ -133,7 +133,7 @@ class FactorGraph(UndirectedGraph):
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-         >>> G.add_factors(phi1)
+        >>> G.add_factors(phi1)
         >>> G.remove_factors(phi1)
         """
         for factor in factors:
@@ -192,8 +192,8 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('Factors not associated for all the random variables')
 
         if (not (bipartite.is_bipartite(self)) or 
-           not (bipartite.is_bipartite_node_set(self, variable_nodes) or 
-                bipartite.is_bipartite_node_set(self, variable_nodes))):
+            not (bipartite.is_bipartite_node_set(self, variable_nodes) or
+                 bipartite.is_bipartite_node_set(self, variable_nodes))):
             raise ValueError('Edges can only be between variables and factors')
 
         if len(factor_nodes) != len(self.factors):
@@ -203,8 +203,7 @@ class FactorGraph(UndirectedGraph):
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if (cardinalities[variable] != cardinality):
-                    raise ValueError(
-                        'Cardinality of variable {var} not matching among factors'.format(var=variable))
+                    raise ValueError('Cardinality of variable {var} not matching among factors'.format(var=variable))
 
         return True
 

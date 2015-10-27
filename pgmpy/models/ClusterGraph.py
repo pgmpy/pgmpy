@@ -289,8 +289,7 @@ class ClusterGraph(UndirectedGraph):
         for clique in self.nodes():
             factors = filter(lambda x: set(x.scope()) == set(clique), self.factors)
             if not any(factors):
-                raise ValueError('Factors for all the cliques or clusters not '
-                                 'defined.')
+                raise ValueError('Factors for all the cliques or clusters not defined.')
 
         cardinalities = self.get_cardinality()
         for factor in self.factors:
