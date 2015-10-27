@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import Factor
 from pgmpy.models import MarkovModel
 from pgmpy.tests import help_functions as hf
@@ -87,11 +86,128 @@ class TestMarkovModelMethods(unittest.TestCase):
     def setUp(self):
         self.graph = MarkovModel()
 
+    def test_get_cardinality(self):
+
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2})
+        self.graph.remove_factors(phi1)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['c', 'd'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1, phi2)
+        self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'a': 2, 'b': 2, 'c': 1})
+
+        phi3 = Factor(['d', 'a'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {'d': 1, 'c': 1, 'b': 2, 'a': 2})
+
+        self.graph.remove_factors(phi1, phi2, phi3)
+        self.assertDictEqual(self.graph.get_cardinality(), {})
+
+
+    def test_get_cardinality_check_cardinality(self):
+
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1)
+        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+
+        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi2)
+        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+
+        phi3 = Factor(['c', 'd'], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi3)
+        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
+
+
+    def test_check_model(self):
+
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = Factor(['c', 'b'], [3, 2], np.random.rand(6))
+        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = Factor(['d', 'a'], [4, 1], np.random.rand(4))
+
+        self.graph.add_factors(phi1, phi2, phi3, phi4)
+        self.assertTrue(self.graph.check_model())
+
+        self.graph.remove_factors(phi1, phi4)
+        phi1 = Factor(['a', 'b'], [4, 2], np.random.rand(8))
+        self.graph.add_factors(phi1)
+        self.assertTrue(self.graph.check_model())
+
+    def test_check_model1(self):
+    
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+
+        phi2 = Factor(['b', 'c'], [3, 3], np.random.rand(9))
+        self.graph.add_factors(phi1, phi2)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi2)
+        
+        phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
+        self.graph.add_factors(phi3)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi3)
+
+        phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
+        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = Factor(['d', 'a'], [4, 3], np.random.rand(12))
+        self.graph.add_factors(phi2, phi3, phi4)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi2, phi3, phi4)
+
+        phi2 = Factor(['a', 'b'], [1, 3], np.random.rand(3))
+        self.graph.add_factors(phi1, phi2)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi2)
+
+    def test_check_model2(self):
+    
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+
+        phi1 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi1)
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1, phi2)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi1, phi2)
+
+
+        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
+        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = Factor(['d', 'a'], [4, 1], np.random.rand(4))
+        phi5 = Factor(['d', 'b'], [4, 2], np.random.rand(8))
+        self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
+        self.assertRaises(ValueError, self.graph.check_model)
+        self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
+
+
     def test_factor_graph(self):
         from pgmpy.models import FactorGraph
 
         phi1 = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
-        phi2 = Factor(['Bob', 'Charles'], [3, 2], np.random.rand(6))
+        phi2 = Factor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
         self.graph.add_factors(phi1, phi2)
 
@@ -341,7 +457,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
                        self.graph.edges()]
         self.graph.add_factors(*factor_list)
         self.graph.add_factors(Factor(['a', 'b'], [2, 3], np.random.rand(6)))
-        self.assertRaises(CardinalityError, self.graph.triangulate)
+        self.assertRaises(ValueError, self.graph.triangulate)
 
     def test_triangulation_h1_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),

@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.exceptions import CardinalityError
 from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import map, range, zip
@@ -85,7 +84,6 @@ class MarkovModel(UndirectedGraph):
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
-        self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
         """
@@ -171,18 +169,48 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors import Factor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 value=np.random.rand(4))
+        ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
         for factor in factors:
             self.factors.remove(factor)
 
+    def get_cardinality(self, check_cardinality=False):
+        """
+        Returns a dictionary with the given factors as keys and their respective
+        cardinality as values.
+        
+        Parameters
+        ----------
+        check_cardinality: boolean, optional
+            If, check_cardinality=True it checks if cardinality information
+            for all the variables is availble or not. If not it raises an error.
+
+        Examples
+        --------
+        >>> from pgmpy.models import MarkovModel
+        >>> from pgmpy.factors import Factor
+        >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        ...                 values=np.random.rand(4))
+        >>> student.add_factors(factor)
+        >>> student.get_cardinality()
+        defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+        
+        """
+        cardinalities = defaultdict(int)
+        for factor in self.factors:
+            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                cardinalities[variable] = cardinality
+        if check_cardinality and len(self.nodes()) != len(cardinalities):
+            raise ValueError('Factors for all the variables not defined')
+        return cardinalities
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
-        errors. In the same time also updates the cardinalities of all the random
-        variables.
+        errors - 
 
         * Checks if the cardinalities of all the variables are consistent across all the factors.
         * Factors are defined for all the random variables.
@@ -192,18 +220,15 @@ class MarkovModel(UndirectedGraph):
         check: boolean
             True if all the checks are passed
         """
+        cardinalities = self.get_cardinality()
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                if ((self.cardinalities[variable]) and
-                        (self.cardinalities[variable] != cardinality)):
-                    raise CardinalityError(
-                        'Cardinality of variable %s not matching among factors' % variable)
-                else:
-                    self.cardinalities[variable] = cardinality
+                if cardinalities[variable] != cardinality:
+                    raise ValueError(
+                        'Cardinality of variable {var} not matching among factors'.format(var=variable))
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
                     raise ValueError("Factor inconsistent with the model.")
-
         return True
 
     def to_factor_graph(self):
@@ -361,11 +386,11 @@ class MarkovModel(UndirectedGraph):
                     clique_dict, clique_dict_removed = _get_cliques_dict(node)
                     S[node] = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict_removed.values())),
-                        self.cardinalities
+                        self.get_cardinality()
                     )[0]
                     common_clique_size = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict.values())),
-                        self.cardinalities
+                        self.get_cardinality()
                     )
                     M[node] = np.max(common_clique_size)
                     C[node] = np.sum(common_clique_size)
@@ -374,7 +399,7 @@ class MarkovModel(UndirectedGraph):
                     node_to_delete = min(S, key=S.get)
 
                 elif heuristic == 'H2':
-                    S_by_E = {key: S[key] / self.cardinalities[key] for key in S}
+                    S_by_E = {key: S[key] / self.get_cardinality()[key] for key in S}
                     node_to_delete = min(S_by_E, key=S_by_E.get)
 
                 elif heuristic == 'H3':
@@ -487,7 +512,7 @@ class MarkovModel(UndirectedGraph):
                     is_used[factor] = True
 
             # To compute clique potential, initially set it as unity factor
-            var_card = [self.cardinalities[x] for x in node]
+            var_card = [self.get_cardinality()[x] for x in node]
             clique_potential = Factor(node, var_card, np.ones(np.product(var_card)))
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
