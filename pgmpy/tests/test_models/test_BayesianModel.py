@@ -118,6 +118,11 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
+    
+    def test_local_independencies(self):
+        from pgmpy.independencies import Independencies
+        self.assertEqual(self.G.local_independencies('a'),Independencies(['a',['b','c']]))
+
     def tearDown(self):
         del self.G
 
