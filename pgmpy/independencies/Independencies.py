@@ -49,6 +49,9 @@ class Independencies(object):
         return string
 
     __repr__ = __str__
+    
+    def __eq__(self, other):
+        return self.__str__()==other.__str__()
 
     def get_assertions(self):
         """
