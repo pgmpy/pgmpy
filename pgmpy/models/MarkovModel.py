@@ -372,6 +372,7 @@ class MarkovModel(UndirectedGraph):
         if not order:
             order = []
 
+            cardinalities = self.get_cardinality()
             for index in range(self.number_of_nodes()):
                 # S represents the size of clique created by deleting the
                 # node from the graph
@@ -386,11 +387,11 @@ class MarkovModel(UndirectedGraph):
                     clique_dict, clique_dict_removed = _get_cliques_dict(node)
                     S[node] = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict_removed.values())),
-                        self.get_cardinality()
+                        cardinalities
                     )[0]
                     common_clique_size = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict.values())),
-                        self.get_cardinality()
+                        cardinalities
                     )
                     M[node] = np.max(common_clique_size)
                     C[node] = np.sum(common_clique_size)
@@ -399,7 +400,7 @@ class MarkovModel(UndirectedGraph):
                     node_to_delete = min(S, key=S.get)
 
                 elif heuristic == 'H2':
-                    S_by_E = {key: S[key] / self.get_cardinality()[key] for key in S}
+                    S_by_E = {key: S[key] / cardinalities[key] for key in S}
                     node_to_delete = min(S_by_E, key=S_by_E.get)
 
                 elif heuristic == 'H3':
