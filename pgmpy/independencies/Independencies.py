@@ -194,6 +194,9 @@ class IndependenceAssertion(object):
 
     __repr__ = __str__
 
+    def __eq__(self, other):
+    	return self.get_assertion() == other.get_assertion()
+
     @staticmethod
     def _return_list_if_str(event):
         """
