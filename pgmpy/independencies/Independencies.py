@@ -51,7 +51,9 @@ class Independencies(object):
     __repr__ = __str__
     
     def __eq__(self, other):
-        return self.__str__()==other.__str__()
+        other_assertions = other.get_assertions() 
+        return all(self_independency in other_assertions for self_independency in self.get_assertions
+        	())
 
     def get_assertions(self):
         """
