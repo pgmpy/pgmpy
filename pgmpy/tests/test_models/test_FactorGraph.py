@@ -8,7 +8,9 @@ from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
 import numpy as np
 import unittest
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
+
 
 class TestFactorGraphCreation(unittest.TestCase):
     def setUp(self):
@@ -58,7 +60,7 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1')])
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi1])
+        six.assertCountEqual(self, self.graph.factors, [phi1])
 
     def test_add_multiple_factors(self):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -66,8 +68,24 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
+        six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
+    
+    def test_get_factors(self):
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
+                                   ('b', phi2), ('c', phi2)])
+
+        six.assertCountEqual(self, self.graph.get_factors(), [])
+
+        self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_factors(node=phi1), phi1)
         self.assertEqual(self.graph.get_factors(node=phi2), phi2)
+        six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
+
+        self.graph.remove_factors(phi1)
+        self.assertRaises(ValueError, self.graph.get_factors, node=phi1)
+
 
     def test_remove_factors(self):
         self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
@@ -76,7 +94,7 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi2])
+        six.assertCountEqual(self, self.graph.factors, [phi2])
 
     def test_get_partition_function(self):
         phi1 = Factor(['a', 'b'], [2, 2], range(4))
@@ -140,15 +158,14 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([('d', phi3), ('a', phi3)])
         self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 1, 'c': 2, 'b': 2, 'a': 1})
 
-    # def test_get_factor_nodes(self):
-    #     phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-    #     phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+    def test_get_factor_nodes(self):
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
 
-    #     self.graph.add_edges_from([('a', phi1), ('b', phi1),
-    #                                ('b', phi2), ('c', phi2)])
-    #     self.graph.add_factors(phi1, phi2)
-    #     self.assertListEqual(sorted(self.graph.get_factor_nodes()),
-    #                          ([phi1, phi2]))
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.add_factors(phi1, phi2)
+        six.assertCountEqual(self, self.graph.get_factor_nodes(), [phi1, phi2])
 
     def test_get_variable_nodes(self):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -156,8 +173,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
-        self.assertListEqual(sorted(self.graph.get_variable_nodes()),
-                             ['a', 'b', 'c'])
+        six.assertCountEqual(self, self.graph.get_variable_nodes(), ['a', 'b', 'c'])
 
     def test_get_variable_nodes_raises_error(self):
         self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
