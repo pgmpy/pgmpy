@@ -4,7 +4,9 @@ import numpy as np
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
 from pgmpy.factors import Factor
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
+
 
 
 class TestClusterGraphCreation(unittest.TestCase):
@@ -43,7 +45,7 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
         self.graph.add_node(('a', 'b'))
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi1])
+        six.assertCountEqual(self, self.graph.factors, [phi1])
 
     def test_add_single_factor_raises_error(self):
         self.graph.add_node(('a', 'b'))
@@ -55,8 +57,17 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
+        six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
+
+    def test_get_factors(self):
+        self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        six.assertCountEqual(self, self.graph.get_factors(), [])
+        self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_factors(node=('b', 'a')), phi1)
         self.assertEqual(self.graph.get_factors(node=('b', 'c')), phi2)
+        six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
 
     def test_remove_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
@@ -64,7 +75,7 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        self.assertListEqual(self.graph.get_factors(), [phi2])
+        six.assertCountEqual(self, self.graph.factors, [phi2])
 
     def test_get_partition_function(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
