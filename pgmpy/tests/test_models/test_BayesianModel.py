@@ -6,7 +6,8 @@ import numpy.testing as np_test
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD
-from pgmpy.independencies import Independencies 
+from pgmpy.independencies import Independencies
+
 
 class TestBaseModelCreation(unittest.TestCase):
     def setUp(self):
@@ -118,9 +119,8 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
-    
     def test_local_independencies(self):
-        self.assertEqual(self.G.local_independencies('a'),Independencies(['a',['b','c']]))
+        self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
 
     def tearDown(self):
         del self.G
