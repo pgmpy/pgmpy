@@ -49,6 +49,11 @@ class Independencies(object):
         return string
 
     __repr__ = __str__
+    
+    def __eq__(self, other):
+        other_assertions = other.get_assertions() 
+        return all(self_independency in other_assertions for self_independency in self.get_assertions
+        	())
 
     def get_assertions(self):
         """
@@ -188,6 +193,9 @@ class IndependenceAssertion(object):
                                                     event2=', '.join(self.event2)))
 
     __repr__ = __str__
+
+    def __eq__(self, other):
+    	return self.get_assertion() == other.get_assertion()
 
     @staticmethod
     def _return_list_if_str(event):
