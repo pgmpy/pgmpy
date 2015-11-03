@@ -1,6 +1,7 @@
 import unittest
-from io import StringIO
-
+#from io import StringIO
+#Use StringIO.StringIO in python2.
+#six.StringIO is used because it uses StringIO.StringIO in py2 and io.StringIO in py3
 import numpy as np
 import numpy.testing as np_test
 
@@ -8,6 +9,7 @@ from pgmpy.readwrite import XMLBeliefNetwork
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 from pgmpy.extern import six
+
 try:
     from lxml import etree
 except ImportError:
@@ -20,8 +22,6 @@ except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
 
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "Unicode issues with tests")
 class TestXBNReader(unittest.TestCase):
     def setUp(self):
         string = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan" ROOT="Cancer">
@@ -120,7 +120,7 @@ class TestXBNReader(unittest.TestCase):
                     </ANALYSISNOTEBOOK>"""
 
         self.reader_string = XMLBeliefNetwork.XBNReader(string=string)
-        self.reader_file = XMLBeliefNetwork.XBNReader(path=StringIO(string))
+        self.reader_file = XMLBeliefNetwork.XBNReader(path=six.StringIO(string))
 
     def test_init_exception(self):
         self.assertRaises(ValueError, XMLBeliefNetwork.XBNReader)
@@ -293,8 +293,6 @@ class TestXBNWriter(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
-    # TODO: fix this
-    @unittest.skipIf(six.PY2, "Temporary error with python 2")
     def test_file(self):
         self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
   <BNMODEL>
@@ -386,3 +384,4 @@ class TestXBNWriter(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>""")
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+

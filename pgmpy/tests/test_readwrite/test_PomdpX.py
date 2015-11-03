@@ -12,13 +12,14 @@ try:
 except ImportError:
     try:
         # Python 2.5
-        import xml.etree.ElementTree as etree
+        import xml.etree.cElementTree as etree
         six.print_("running with cElementTree on Python 2.5+")
     except ImportError:
-        # import xml.etree.cElementTree as etree
-        # print("running with cElementTree on Python 2.5+")
-        # Commented out because behaviour is different from expected
-        warnings.warn("Failed to import ElementTree from any known place")
+        try:
+            import xml.etree.ElementTree as etree
+            print("running with ElementTree on Python 2.5+")
+        except ImportError:
+            warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestPomdpXReaderString(unittest.TestCase):
