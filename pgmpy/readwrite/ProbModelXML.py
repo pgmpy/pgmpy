@@ -111,12 +111,9 @@ try:
     from lxml import etree
 except ImportError:
     try:
-        import xml.etree.cElementTree as etree
+        import xml.etree.ElementTree as etree
     except ImportError:
-        try:
-            import xml.etree.ElementTree as etree
-        except ImportError:
-            print("Failed to import ElementTree from any known place")
+        print("Failed to import ElementTree from any known place")
 
 import networkx as nx
 import numpy as np
