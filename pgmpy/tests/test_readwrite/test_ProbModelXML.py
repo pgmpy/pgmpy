@@ -20,6 +20,10 @@ except ImportError:
     try:
         import xml.etree.ElementTree as etree
     except ImportError:
+        # import xml.etree.cElementTree as etree
+        # print("running with cElementTree on Python 2.5+")
+        # Commented out because behaviour is different from expected
+        
         warnings.warn("Failed to import ElementTree from any known place")
 
 

@@ -2,6 +2,8 @@
 # -*- coding: UTF-8 -*-
 from collections import defaultdict
 
+import warnings
+
 from pgmpy.extern.six.moves import range
 
 try:
@@ -10,7 +12,11 @@ except ImportError:
     try:
         import xml.etree.ElementTree as etree
     except ImportError:
-        print("Failed to import ElementTree from any known place")
+        # import xml.etree.cElementTree as etree
+        # print("running with cElementTree on Python 2.5+")
+        # Commented out because behaviour is different from expected
+        
+        warnings.warn("Failed to import ElementTree from any known place")
 
 
 class PomdpXReader(object):

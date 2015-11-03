@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import warnings
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
 from pgmpy.extern import six
@@ -12,9 +13,12 @@ except ImportError:
     try:
         # Python 2.5
         import xml.etree.ElementTree as etree
-        print("running with cElementTree on Python 2.5+")
+        six.print_("running with cElementTree on Python 2.5+")
     except ImportError:
-        print("Failed to import ElementTree from any known place")
+        # import xml.etree.cElementTree as etree
+        # print("running with cElementTree on Python 2.5+")
+        # Commented out because behaviour is different from expected
+        warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestPomdpXReaderString(unittest.TestCase):
