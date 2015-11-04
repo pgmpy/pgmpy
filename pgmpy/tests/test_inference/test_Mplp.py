@@ -6,8 +6,7 @@ from pgmpy.inference.mplp import Mplp
 from pgmpy.readwrite import UAIReader
 from pgmpy.extern import six
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "MPLP not supported for python2")
+
 class TestMplp(unittest.TestCase):
     def setUp(self):
 
@@ -19,8 +18,6 @@ class TestMplp(unittest.TestCase):
         self.mplp = Mplp(self.markov_model)
 
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "MPLP not supported for python2")
 class TightenTripletOff(TestMplp):
 
     # Query when tighten triplet is OFF
@@ -56,8 +53,7 @@ class TightenTripletOff(TestMplp):
         self.assertAlmostEqual(64.59, int_gap, places=1)
 
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "MPLP not supported for python2")
+
 class TightenTripletOn(TestMplp):
 
     # Query when tighten triplet is ON
