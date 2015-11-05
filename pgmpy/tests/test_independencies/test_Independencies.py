@@ -71,7 +71,7 @@ class TestIndependencies(unittest.TestCase):
         self.assertEqual(self.Independencies1.independencies, self.Independencies1.get_assertions())
 
     def tearUp(self):
-        del self.Independencies
+        del self.Independencies1
 
 
 if __name__ == '__main__':
