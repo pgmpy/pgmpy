@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 
 import numpy as np
 import numpy.testing as np_test
@@ -8,7 +9,6 @@ from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 from pgmpy.extern.six.moves import map
-from pgmpy.extern import six
 
 try:
     from lxml import etree
@@ -362,8 +362,6 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
 
         self.writer = XMLBIFWriter(model=self.model)
 
-    # TODO: fix this
-    @unittest.skipIf(six.PY2, "Temporary error with python 2")
     def test_file(self):
         self.expected_xml = etree.XML("""<BIF version="0.3">
   <NETWORK>
@@ -429,3 +427,4 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             data = myfile.read()
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
         self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))
+        

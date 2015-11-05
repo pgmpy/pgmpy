@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from io import StringIO
+import warnings
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
 from pgmpy.extern import six
@@ -13,28 +13,15 @@ except ImportError:
     try:
         # Python 2.5
         import xml.etree.cElementTree as etree
-        print("running with cElementTree on Python 2.5+")
+        six.print_("running with cElementTree on Python 2.5+")
     except ImportError:
         try:
-            # Python 2.5
             import xml.etree.ElementTree as etree
             print("running with ElementTree on Python 2.5+")
         except ImportError:
-            try:
-                # normal cElementTree install
-                import cElementTree as etree
-                print("running with cElementTree")
-            except ImportError:
-                try:
-                    # normal ElementTree install
-                    import elementtree.ElementTree as etree
-                    print("running with ElementTree")
-                except ImportError:
-                    print("Failed to import ElementTree from any known place")
+            warnings.warn("Failed to import ElementTree from any known place")
 
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "Temporary error with python 2")
 class TestPomdpXReaderString(unittest.TestCase):
     def setUp(self):
         string = """<pomdpx version="1.0" id="rockSample"
@@ -216,7 +203,7 @@ class TestPomdpXReaderString(unittest.TestCase):
  </pomdpx>
  """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
 
     def test_get_variables(self):
         var_expected = {'StateVar': [
@@ -378,7 +365,7 @@ class TestPomdpXReaderString(unittest.TestCase):
   </pomdpx>
  """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
         expected_dd_parameter = [{
             'Var': 'rover_0',
             'Parent': ['null'],
@@ -427,7 +414,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
     """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
         expected_belief_dd = [{
             'Var': 'rover_0',
             'Parent': ['null'],
@@ -516,7 +503,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
         expected_reward_function_dd =\
             [{'Var': 'reward_rover',
               'Parent': ['action_rover', 'rover_0', 'rock_0'],
@@ -637,7 +624,7 @@ class TestPomdpXReaderString(unittest.TestCase):
 </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
         expected_state_transition_function = \
             [{'Var': 'rover_1',
               'Parent': ['action_rover', 'rover_0'],
@@ -772,7 +759,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=StringIO(string))
+        self.reader_file = PomdpXReader(path=six.StringIO(string))
         expected_obs_function = \
             [{'Var': 'obs_sensor',
               'Parent': ['action_rover', 'rover_1', 'rock_1'],
@@ -810,8 +797,7 @@ class TestPomdpXReaderString(unittest.TestCase):
         del self.reader_string
 
 
-# TODO: fix this
-@unittest.skipIf(six.PY2, "Temporary error with python 2")
+
 class TestPomdpXWriter(unittest.TestCase):
     def setUp(self):
         self.model_data = {'discription': '',

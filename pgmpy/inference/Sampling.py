@@ -265,7 +265,7 @@ class GibbsSampling(MarkovChain):
             kernel = {}
             scope = set(prod_cpd.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
-                states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
+                states = [State(v, s) for v, s in zip(other_vars, tup) if v in scope]
                 prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
                 kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
             self.transition_models[var] = kernel
@@ -343,7 +343,6 @@ class GibbsSampling(MarkovChain):
 
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
-
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
