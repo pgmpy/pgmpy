@@ -1,7 +1,6 @@
 import unittest
-#from io import StringIO
-#Use StringIO.StringIO in python2.
-#six.StringIO is used because it uses StringIO.StringIO in py2 and io.StringIO in py3
+import warnings
+
 import numpy as np
 import numpy.testing as np_test
 

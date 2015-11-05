@@ -257,18 +257,18 @@ class GibbsSampling(MarkovChain):
         self.variables = np.array(model.nodes())
         self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
 
-        for Var in self.variables:
-            other_vars = [v for v in self.variables if Var != v]
+        for var in self.variables:
+            other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
-            cpds = [cpd for cpd in model.cpds if Var in cpd.scope()]
+            cpds = [cpd for cpd in model.cpds if var in cpd.scope()]
             prod_cpd = factor_product(*cpds)
             kernel = {}
             scope = set(prod_cpd.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
-                states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
+                states = [State(v, s) for v, s in zip(other_vars, tup) if v in scope]
                 prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
                 kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
-            self.transition_models[Var] = kernel
+            self.transition_models[var] = kernel
 
     def _get_kernel_from_markov_model(self, model):
         """

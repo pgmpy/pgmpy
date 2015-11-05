@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 
 import numpy as np
 import numpy.testing as np_test
@@ -8,7 +9,6 @@ from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 from pgmpy.extern.six.moves import map
-from pgmpy.extern import six
 
 try:
     from lxml import etree
