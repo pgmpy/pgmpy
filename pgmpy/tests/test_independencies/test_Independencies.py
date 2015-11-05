@@ -54,46 +54,21 @@ class TestIndependenceAssertion(unittest.TestCase):
         del self.assertion
 
 
-class IndependenciesTestCase(object):
-    def assertIndependenceAssertionEqual(self, assertion1, assertion2):
-        if not (assertion1.event1 == assertion2.event1):
-            raise AssertionError(str(assertion1.event1) + "is not equal to" + str(assertion2.event1))
-        if not (assertion1.event2 == assertion2.event2):
-            raise AssertionError(str(assertion1.event2) + "is not equal to" + str(assertion2.event2))
-        if not (assertion1.event3 == assertion2.event3):
-            raise AssertionError(str(assertion1.event3) + "is not equal to" + str(assertion2.event3))
-
-    def assertIndependenciesEqual(self, Independencies1, Independencies2):
-        if len(Independencies1) == len(Independencies2):
-            for map1, map2 in zip(Independencies1, Independencies2):
-                self.assertIndependenceAssertionEqual(map1, map2)
-
-
-class TestIndependencies(unittest.TestCase, IndependenciesTestCase):
+class TestIndependencies(unittest.TestCase):
     def setUp(self):
         self.Independencies1 = independencies.Independencies()
 
     def test_init(self):
-        self.Independencies2 = independencies.Independencies(['X', 'Y'])
-        #self.assertIndependenceAssertionEqual(self.Independencies2.independencies.pop, independencies.IndependenceAssertion('X', 'Y'))
-        #self.Independencies2 = independencies.IMap(['X', 'Y', 'Z'])
-        #self.assertIndependenceAssertionEqual(self.Independencies2.independencies.pop, independencies.IndependenceAssertion('X', 'Y', 'Z'))
-        #self.Independencies2 = independencies.IMap(['X', 'Y'], ['A', 'B', 'C'], [['L'], ['M', 'N'], 'O'])
-        #self.assertIndependenciesEqual(self.Independencies2.independencies, {independencies.IndependenceAssertion('X', 'Y'),
-        #                                       independencies.IndependenceAssertion('A', 'B', 'C'),
-        #                                       independencies.IndependenceAssertion(['L'], ['M', 'N'], 'O')})
+        self.Independencies1 = independencies.Independencies(['X', 'Y', 'Z'])
+        self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
 
     def test_add_assertions(self):
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
-        #self.assertIndependenceAssertionEqual(self.Independencies1.independencies.pop, independencies.IndependenceAssertion(['X', 'Y', 'Z']))
+        self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
 
-    def test_get_Independencies(self):
+    def test_get_assertions(self):
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
-        self.assertIndependenciesEqual(self.Independencies1.independencies,
-                                       {independencies.IndependenceAssertion('X', 'Y', 'Z')})
-        self.Independencies1.add_assertions([['A', 'B'], ['C', 'D'], ['E', 'F']])
-        #self.assertIndependenciesEqual(self.Independencies1.independencies, {independencies.IndependenceAssertion('X', 'Y', 'Z'),
-        #                                       independencies.IndependenceAssertion(['A', 'B'], ['C', 'D'], ['E', 'F'])})
+        self.assertEqual(self.Independencies1.independencies, self.Independencies1.get_assertions())
 
     def tearUp(self):
         del self.Independencies
