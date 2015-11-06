@@ -6,6 +6,7 @@ import numpy.testing as np_test
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD
+from pgmpy.independencies import Independencies
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -118,6 +119,9 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
+    def test_local_independencies(self):
+        self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
+
     def tearDown(self):
         del self.G
 
@@ -180,13 +184,11 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.model.get_cpds('AB').variable, 'AB')
 
     def test_add_single_cpd(self):
-        from pgmpy.factors import TabularCPD
         cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
         self.G.add_cpds(cpd_s)
         self.assertListEqual(self.G.get_cpds(), [cpd_s])
 
     def test_add_multiple_cpds(self):
-        from pgmpy.factors import TabularCPD
         cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
         cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
         cpd_g = TabularCPD('g', 2, np.random.rand(2, 4), ['d', 'i'], [2, 2])
@@ -201,8 +203,6 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds('s'), cpd_s)
 
     def test_check_model(self):
-        from pgmpy.factors import TabularCPD
-
         cpd_g = TabularCPD('g', 2, 
                             np.array([[0.2, 0.3, 0.4, 0.6],
                                       [0.8, 0.7, 0.6, 0.4]]),
@@ -223,8 +223,6 @@ class TestBayesianModelCPD(unittest.TestCase):
 
 
     def test_check_model1(self):
-        from pgmpy.factors import TabularCPD
-
         cpd_g = TabularCPD('g', 2, 
                             np.array([[0.2, 0.3],
                                       [0.8, 0.7]]),
@@ -274,8 +272,6 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.G.remove_cpds(cpd_l)
 
     def test_check_model2(self):
-        from pgmpy.factors import TabularCPD
-
         cpd_s = TabularCPD('s', 2, 
                             np.array([[0.5, 0.3],
                                       [0.8, 0.7]]),
