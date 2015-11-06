@@ -56,19 +56,28 @@ class TestIndependenceAssertion(unittest.TestCase):
 
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
-        self.Independencies1 = independencies.Independencies()
+        self.Independencies = independencies.Independencies()
 
     def test_init(self):
         self.Independencies1 = independencies.Independencies(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
+        self.Independencies2 = independencies.Independencies()
+        self.assertEqual(self.Independencies2, independencies.Independencies())
 
     def test_add_assertions(self):
+        self.Independencies1 = independencies.Independencies()
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
+        self.Independencies2 = independencies.Independencies()
+        self.Independencies2.add_assertions(['A', 'B', 'C'], ['D', 'E', 'F'])
+        self.assertEqual(self.Independencies2, independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F']))
 
     def test_get_assertions(self):
+        self.Independencies1 = independencies.Independencies()
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1.independencies, self.Independencies1.get_assertions())
+        self.Independencies2 = independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
+        self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
 
     def tearUp(self):
         del self.Independencies
