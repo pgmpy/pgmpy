@@ -194,16 +194,16 @@ class BifReader(object):
         --------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.get_cpd()
-        {'bowel-problem': array([[ 0.01],
-                                 [ 0.99]]),
-         'dog-out': array([[ 0.99,  0.01,  0.97,  0.03],
-                           [ 0.9 ,  0.1 ,  0.3 ,  0.7 ]]),
-         'family-out': array([[ 0.15],
-                              [ 0.85]]),
-         'hear-bark': array([[ 0.7 ,  0.3 ],
-                             [ 0.01,  0.99]]),
-         'light-on': array([[ 0.6 ,  0.4 ],
-                            [ 0.05,  0.95]])}
+        {'bowel-problem': np.array([[0.01],
+                                   [0.99]]),
+         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
+                              [0.01, 0.03, 0.1, 0.7]]),
+         'family-out': np.array([[0.15],
+                                 [0.85]]),
+         'hear-bark': np.array([[0.7, 0.01],
+                                [0.3, 0.99]]),
+         'light-on': np.array([[0.6, 0.05],
+                               [0.4, 0.95]])}
         """
         probability_starts = [x.end()+1 for x in re.finditer('probability',self.network)]
         probability_block = []
