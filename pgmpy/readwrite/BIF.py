@@ -4,16 +4,19 @@ from pgmpy.factors import TabularCPD, State
 from pgmpy.extern.six.moves import range
 import re
 
-#Defining some regular expressions
+# Defining some regular expressions
 
-block_comment_regex = re.compile('/\*[^/]*/')  #A regular expression to check for block comments
-line_comment_regex = re.compile(r'//[^"\n"]*') #A regular expression to check for line comments
+block_comment_regex = re.compile('/\*[^/]*/')   # A regular expression to check for block comments
+line_comment_regex = re.compile(r'//[^"\n"]*')  # A regular expression to check for line comments
 
 class BifReader(object):
+    
+    
     """
     Base class for reading network file in bif format
     """
-    def __init__(self,path=None,string=None):
+    def __init__(self, path = None, string = None):
+        
         """
         Initialisation of BifReader object
 
@@ -31,56 +34,77 @@ class BifReader(object):
         """
         if path:
 
-            FILE = open(path,'r').read().replace('"','') #Opening the file and replacing qoutes by null string
+            path = open(path, 'r').read().replace('"', '')  # Opening the file and replacing qoutes by null string
+            
             if '/*' or '//' in FILE:
-                FILE = block_comment_regex.sub('',FILE)
-                FILE = line_comment_regex.sub('',FILE) # Striping comments off
-            self.network = FILE
+                
+                path = block_comment_regex.sub('', path)
+                path = line_comment_regex.sub('', path)      # Striping comments off
+            
+            self.network = path
 
         elif string:
 
-            string = string.replace('"','')
+            string = string.replace('"', '')
+            
             if '/*' or '//' in string:
-                string = block_comment_regex.sub('',string)
-                string = line_comment_regex.sub('',string) #Striping comments off
+                
+                string = block_comment_regex.sub('', string)
+                string = line_comment_regex.sub('', string) #Striping comments off
+            
             self.network = string
 
         else:
+            
             raise ValueError("Must specify either path or string")
+        
         self.get_variables_info()
+    
+    
     def get_variables_info(self):
+        
         """
         Functions gets all type of variable information
         """
-        variable_block_starts = [x.end()+1 for x in re.finditer('variable',self.network)]
+        variable_block_starts = [x.end()+1 for x in re.finditer('variable', self.network)]
         variable_block = []
+        
         for i in variable_block_starts:
-            variable_block_end = self.network.find('}\n',i)
+            
+            variable_block_end = self.network.find('}\n', i)
             variable_block.append( self.network[ i : variable_block_end ] )
+        
         self.network = self.network[ variable_block_end:]
         variable_names = []
         variable_states = {}
         variable_properties = {}
         state_pattern = re.compile('[\{\};,]*')
+        
         for block in variable_block:
+            
             block = block.split('\n')
             name = block[0].split()[0]
             variable_names.append(name)
             block = block[1:]
+            
             for line in block:
 
                 if 'type' in line:
+                    
                     k = line.find('{')
-                    line = state_pattern.sub('',line[k:])
+                    line = state_pattern.sub('', line[k:])
                     variable_states[name] = [x for x in line.split() if x!= '']
 
                 elif 'property' in line :
-                    variable_properties[name] = line[9:-1].replace(' ','')
+                    
+                    variable_properties[name] = line[9:-1].replace(' ', '')
+        
         self.variable_names = variable_names
         self.variable_states = variable_states
         self.variable_properties = variable_properties
 
     def network_name(self):
+        
         """
         Retruns the name of the network
 
@@ -90,7 +114,9 @@ class BifReader(object):
         >>> reader.network_name()
         'Dog-Problem'
         """
+    
     def get_variables(self):
+        
         """
         Returns list of variables of the network
 
@@ -103,6 +129,7 @@ class BifReader(object):
         return self.variable_names
 
     def get_edges(self):
+        
         """
         Returns the edges of the network
 
@@ -117,6 +144,7 @@ class BifReader(object):
         """
     
     def get_states(self):
+        
         """
         Returns the states of variables present in the network
 
@@ -130,8 +158,11 @@ class BifReader(object):
          'hear-bark': ['true','false'],
          'light-on': ['true','false']}
         """
+        
         return self.variable_states
+    
     def get_property(self):
+        
         """
         Returns the property of the variable
 
@@ -145,8 +176,11 @@ class BifReader(object):
          'hear-bark': ['position = (154, 241)'],
          'light-on': ['position = (73, 165)']}
         """
+        
         return self.variable_properties
+    
     def get_cpd(self):
+        
         """
         Returns the CPD of the variables present in the network
 
