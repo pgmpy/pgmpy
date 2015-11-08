@@ -1,4 +1,4 @@
-#import numpy as np
+import numpy as np
 #from pgmpy.models import BayesianModel
 #from pgmpy.factors import TabularCPD, State
 #from pgmpy.extern.six.moves import range
@@ -8,7 +8,7 @@ import re
 
 block_comment_regex = re.compile('/\*[^/]*/')   # A regular expression to check for block comments
 line_comment_regex = re.compile(r'//[^"\n"]*')  # A regular expression to check for line comments
-
+remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')
 class BifReader(object):
     
     
@@ -35,7 +35,7 @@ class BifReader(object):
         if path:
 
             path = open(path, 'r').read().replace('"', '')  # Opening the file and replacing qoutes by null string
-            
+            path = remove_multipule_spaces.sub(' ', path)
             if '/*' or '//' in FILE:
                 
                 path = block_comment_regex.sub('', path)
@@ -46,11 +46,11 @@ class BifReader(object):
         elif string:
 
             string = string.replace('"', '')
-            
+            string = remove_multipule_spaces.sub(' ', string)
             if '/*' or '//' in string:
                 
                 string = block_comment_regex.sub('', string)
-                string = line_comment_regex.sub('', string) #Striping comments off
+                string = line_comment_regex.sub('', string)     #Striping comments off
             
             self.network = string
 
@@ -58,9 +58,26 @@ class BifReader(object):
             
             raise ValueError("Must specify either path or string")
         
+        self.network_name()
         self.get_variables_info()
+        self.get_cpd()
     
-    
+    def network_name(self):
+        
+        """
+        Retruns the name of the network
+
+        Examples
+        ---------------
+        >>> reader = BIF.BifReader("bif_test.bif")
+        >>> reader.network_name()
+        'Dog-Problem'
+        """
+        start = self.network.find('network')
+        end = self.network.find('{',start)
+        self.network_name = self.network[start+8:end].strip()
+        return self.network_name
+
     def get_variables_info(self):
         
         """
@@ -103,17 +120,6 @@ class BifReader(object):
         self.variable_states = variable_states
         self.variable_properties = variable_properties
 
-    def network_name(self):
-        
-        """
-        Retruns the name of the network
-
-        Examples
-        ---------------
-        >>> reader = BIF.BifReader("bif_test.bif")
-        >>> reader.network_name()
-        'Dog-Problem'
-        """
     
     def get_variables(self):
         
@@ -199,3 +205,34 @@ class BifReader(object):
          'light-on': array([[ 0.6 ,  0.4 ],
                             [ 0.05,  0.95]])}
         """
+        probability_starts = [x.end()+1 for x in re.finditer('probability',self.network)]
+        probability_block = []
+        strip_parenthesis = re.compile('[\(\)\|]*')
+        strip_characters = re.compile(r'[a-zA-Z\(\);,]*')
+
+        for i in probability_starts:
+            probability_end = self.network.find('}\n',i)
+            probability_block.append(self.network[i:probability_end])
+
+        variable_cpds = {}
+
+        for block in probability_block :
+            block = block.split('\n')
+            block[0] = strip_parenthesis.sub('', block[0])
+            block[0] = block[0].strip()
+            name = block[0].split()[0]
+            block = block[1:]
+            cpd = []
+
+            for line in block:
+                line = line.strip()
+                line = strip_characters.sub('', line)
+                cpd.extend([float(x) for x in line.split() if x!= ''])
+
+            arr = np.array(cpd)
+            arr = arr.reshape(len(self.variable_states[name])
+                            ,arr.size//len(self.variable_states[name]))
+            variable_cpds[name] = arr
+
+        self.variable_cpds = variable_cpds
+        return variable_cpds
