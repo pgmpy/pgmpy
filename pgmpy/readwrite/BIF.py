@@ -1,8 +1,7 @@
-# import numpy as np
-# from pgmpy.models import BayesianModel
-# from pgmpy.factors import TabularCPD, State
-# from pgmpy.extern.six.moves import range
-# commented because not in use now will uncomment when will you use them
+#import numpy as np
+#from pgmpy.models import BayesianModel
+#from pgmpy.factors import TabularCPD, State
+#from pgmpy.extern.six.moves import range
 import re
 
 # Defining some regular expressions
@@ -69,7 +68,7 @@ class BifReader(object):
         """
         variable_block_starts = [x.end()+1 for x in re.finditer('variable', self.network)]
         variable_block = []
-        
+
         for i in variable_block_starts:
             
             variable_block_end = self.network.find('}\n', i)
@@ -87,7 +86,7 @@ class BifReader(object):
             name = block[0].split()[0]
             variable_names.append(name)
             block = block[1:]
-            
+            variable_properties[name] = []
             for line in block:
 
                 if 'type' in line:
@@ -97,8 +96,8 @@ class BifReader(object):
                     variable_states[name] = [x for x in line.split() if x!= '']
 
                 elif 'property' in line :
-                    
-                    variable_properties[name] = line[9:-1].replace(' ', '')
+                    k = line.find('property')
+                    variable_properties[name].append(line[k+8:-1].strip())
         
         self.variable_names = variable_names
         self.variable_states = variable_states
