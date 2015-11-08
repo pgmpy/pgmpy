@@ -170,11 +170,11 @@ class BifReader(object):
         -------------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.get_property()
-        {'bowel-problem': ['position = (190, 69)'],
-         'dog-out': ['position = (155, 165)'],
-         'family-out': ['position = (112, 69)'],
-         'hear-bark': ['position = (154, 241)'],
-         'light-on': ['position = (73, 165)']}
+        {{'bowel-problem': ['position = (335, 99)'],
+          'dog-out': ['position = (300, 195)'],
+          'family-out': ['position = (257, 99)'],
+          'hear-bark': ['position = (296, 268)'],
+          'light-on': ['position = (218, 195)']}
         """
         
         return self.variable_properties
