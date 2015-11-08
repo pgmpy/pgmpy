@@ -1,7 +1,8 @@
-import numpy as np
-from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD, State
-from pgmpy.extern.six.moves import range
+# import numpy as np
+# from pgmpy.models import BayesianModel
+# from pgmpy.factors import TabularCPD, State
+# from pgmpy.extern.six.moves import range
+# commented because not in use now will uncomment when will you use them
 import re
 
 # Defining some regular expressions
