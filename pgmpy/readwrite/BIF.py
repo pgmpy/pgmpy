@@ -72,7 +72,7 @@ class BifReader(object):
 
         """
         Retruns the name of the network
-        
+
         network attributes are of the format
             network <name_of_network> {
                 attirbutes
@@ -82,7 +82,7 @@ class BifReader(object):
         network "Dog-Problem" { //5 variables and 5 probability distributions
 	        property "credal-set constant-density-bounded 1.1" ;
         }
-        
+
         Sample run
         ---------------
         >>> reader = BIF.BifReader("bif_test.bif")
@@ -125,10 +125,10 @@ class BifReader(object):
         variable_properties = {}                                                            # Creating an empty dictionary for variable prop   
         word_expr = Word(alphanums+'_'+'-')                                                 # Defining a expression for valid word
         name_expr = Suppress('variable')+ word_expr + Suppress('{')                         # Creating a expression for finding variable name
-        state_expr= ZeroOrMore( word_expr + Optional( Suppress(",") ) )
+        state_expr = ZeroOrMore( word_expr + Optional( Suppress(",") ) )
 
         # Defining a variable state expression
-        variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums))+\
+        variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums)) + \
         Suppress(']') + Suppress('{') + Group(state_expr) + Suppress('}') + Suppress(';')
         # variable states is of the form type description [args] { val1, val2 }; (comma may or may not be present)
 
@@ -183,7 +183,7 @@ class BifReader(object):
 
         """
         Returns the property of the variable
-            
+
         Sample run
         -------------
         >>> reader = BIF.BifReader("bif_test.bif")
@@ -196,11 +196,12 @@ class BifReader(object):
         """
 
         return self.variable_properties
+
     def get_cpd(self):
 
         """
         Returns the CPD of the variables present in the network
-        
+
         probability attribute is of the form
         probability (<args>){
             Optional(table) probabilities1
@@ -235,7 +236,7 @@ class BifReader(object):
             probability_block_end = self.network.find('}\n',i)
             probability_block.append(self.network[i:probability_block_end])
 
-        word_expr = Word(alphanums + '-' + '_') + Optional("|") + Optional(",")
+        word_expr = Word(alphanums + '-' + '_') + Suppress(Optional("|")) + Suppress(Optional(","))
         num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.')+ Suppress(Optional(","))
         probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
         cpd_expr = Suppress( Optional('('))+ Suppress(Group( OneOrMore( word_expr))) + Suppress( Optional(')')) + OneOrMore( num_expr)
@@ -277,6 +278,7 @@ class BifReader(object):
         return self.variable_parents
 
     def get_edges(self):
+
         """
         Returns the edges of the network
 
@@ -294,6 +296,7 @@ class BifReader(object):
         return self.edges
 
     def get_model(self):
+
         """
         Returns the fitted bayesian model
         """
