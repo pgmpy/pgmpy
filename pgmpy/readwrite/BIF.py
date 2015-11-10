@@ -1,5 +1,5 @@
 import numpy as np
-from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore
+from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD, State
 import re
@@ -27,10 +27,6 @@ class BifReader(object):
         # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
         >>> reader = BifReader("bif_test.bif")
         """
-        # Defining some regular expressions
-
-        cpp_comment_regex = re.compile('/\*[^/]*/')                                     # A regular expression to check for block comments
-        line_comment_regex = re.compile(r'//[^"\n"]*')                                  # A regular expression to check for line comments
         remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')    # A regular expression to check for multiple spaces
 
         if path:
@@ -45,8 +41,7 @@ class BifReader(object):
                 """
             path = remove_multipule_spaces.sub(' ', path)                               # replacing multiple spaces or tabs by one space
             if '/*' or '//' in path:
-                path = cpp_comment_regex.sub('', path)
-                path = line_comment_regex.sub('', path)                                 # Striping comments off both type of comments
+                path = cppStyleComment.suppress().transformString(path)                 # removing comments from the file
 
             self.network = path
         elif string:
@@ -55,8 +50,7 @@ class BifReader(object):
 
             string = remove_multipule_spaces.sub(' ', string)                           # replacing mulitple spaces or tabs by one space
             if '/*' or '//' in string:
-                string = cpp_comment_regex.sub('', string)
-                string = line_comment_regex.sub('', string)                             # Striping comments off both types of comments
+                string = cppStyleComment.suppress().transformString(string)             # removing comments from the file
 
             self.network = string
         else:
@@ -141,7 +135,7 @@ class BifReader(object):
             temp = variable_state_expr.searchString(block)                                  # Finding the variable states
             variable_states[name] = list(temp[0][0])                                        # Assigning the variable states in form of list
             properties = property_expr.searchString(block)                                  # Getting the properties of variable                
-            variable_properties[name] = [ x[0].strip() for x in properties ]
+            variable_properties[name] = [x[0].strip() for x in properties ]
 
         self.variable_names = variable_names
         self.variable_states = variable_states
@@ -239,7 +233,7 @@ class BifReader(object):
         word_expr = Word(alphanums + '-' + '_') + Suppress(Optional("|")) + Suppress(Optional(","))
         num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.')+ Suppress(Optional(","))
         probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
-        cpd_expr = Suppress( Optional('('))+ Suppress(Group( OneOrMore( word_expr))) + Suppress( Optional(')')) + OneOrMore( num_expr)
+        cpd_expr = Suppress(Optional('('))+ Suppress(Group(OneOrMore(word_expr))) + Suppress(Optional(')')) + OneOrMore(num_expr)
 
         variable_parents = {}
         variable_cpds ={}
@@ -251,7 +245,7 @@ class BifReader(object):
             names = names[1:]
             variable_parents[variable] = names
             temp = cpd_expr.searchString( block )
-            arr = [ float(j) for i in temp for j in i ]
+            arr = [float(j) for i in temp for j in i]
             arr = np.array(arr)
             arr = arr.reshape((len(self.variable_states[variable]), arr.size//len(self.variable_states[variable])))
             variable_cpds[variable] = arr
@@ -291,8 +285,8 @@ class BifReader(object):
          ['bowel-problem', 'dog-out'],
          ['dog-out', 'hear-bark']]
         """
-        self.edges = [ [value, key] for key in self.variable_parents.keys()
-                     for value in self.variable_parents[key] ]
+        self.edges = [[value, key] for key in self.variable_parents.keys()
+                     for value in self.variable_parents[key]]
         return self.edges
 
     def get_model(self):
