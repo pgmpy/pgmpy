@@ -1,8 +1,7 @@
 import numpy as np
-from pyparsing import Word,alphanums,Suppress,Optional,CharsNotIn,Group,nums,alphas,ZeroOrMore
-# from pgmpy.models import BayesianModel
-# from pgmpy.factors import TabularCPD, State
-# from pgmpy.extern.six.moves import range
+from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD, State
 import re
 
 class BifReader(object):
@@ -65,6 +64,9 @@ class BifReader(object):
 
         self.network_name()
         self.get_variables_info()
+        self.get_cpd()
+        self.get_edges()
+        self.model = self.get_model()
 
     def network_name(self):
 
@@ -81,7 +83,7 @@ class BifReader(object):
 	        property "credal-set constant-density-bounded 1.1" ;
         }
         
-        Useage
+        Sample run
         ---------------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.network_name()
@@ -151,7 +153,7 @@ class BifReader(object):
         """
         Returns list of variables of the network
 
-        Examples
+        Sample run
         -------------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.get_variables()
@@ -164,7 +166,7 @@ class BifReader(object):
         """
         Returns the states of variables present in the network
 
-        Examples
+        Sample run
         -----------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.get_states()
@@ -181,8 +183,8 @@ class BifReader(object):
 
         """
         Returns the property of the variable
-
-        Examples
+            
+        Sample run
         -------------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.get_property()
@@ -194,3 +196,123 @@ class BifReader(object):
         """
 
         return self.variable_properties
+    def get_cpd(self):
+
+        """
+        Returns the CPD of the variables present in the network
+        
+        probability attribute is of the form
+        probability (<args>){
+            Optional(table) probabilities1
+            probabilities 2
+            ..
+        }
+        Example of probability attribute
+        ---------------------------------
+        probability (  "light-on"  "family-out" ) { //2 variable(s) and 4 values
+	    table 0.6 0.05 0.4 0.95 ;
+        }    
+
+        Sample run
+        --------
+        >>> reader = BIF.BifReader("bif_test.bif")
+        >>> reader.get_cpd()
+        {'bowel-problem': np.array([[0.01],
+                                   [0.99]]),
+         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
+                              [0.01, 0.03, 0.1, 0.7]]),
+         'family-out': np.array([[0.15],
+                                 [0.85]]),
+         'hear-bark': np.array([[0.7, 0.01],
+                                [0.3, 0.99]]),
+         'light-on': np.array([[0.6, 0.05],
+                               [0.4, 0.95]])}
+        """
+
+        probability_block_starts = [x.start() for x in re.finditer('probability', self.network)]
+        probability_block = []
+        for i in probability_block_starts:
+            probability_block_end = self.network.find('}\n',i)
+            probability_block.append(self.network[i:probability_block_end])
+
+        word_expr = Word(alphanums + '-' + '_') + Optional("|") + Optional(",")
+        num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.')+ Suppress(Optional(","))
+        probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
+        cpd_expr = Suppress( Optional('('))+ Suppress(Group( OneOrMore( word_expr))) + Suppress( Optional(')')) + OneOrMore( num_expr)
+
+        variable_parents = {}
+        variable_cpds ={}
+
+        for block in probability_block:
+            names = probability_expr.searchString( block )
+            names = names[0]
+            variable = names[0]
+            names = names[1:]
+            variable_parents[variable] = names
+            temp = cpd_expr.searchString( block )
+            arr = [ float(j) for i in temp for j in i ]
+            arr = np.array(arr)
+            arr = arr.reshape((len(self.variable_states[variable]), arr.size//len(self.variable_states[variable])))
+            variable_cpds[variable] = arr
+
+        self.variable_parents = variable_parents
+        self.variable_cpds = variable_cpds
+        return self.variable_cpds
+
+    def get_parents(self):
+
+        """
+        Returns the parents of the variables present in the network
+
+        Sample run
+        --------
+        >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
+        >>> reader.get_parents()
+        {'bowel-problem': [],
+         'dog-out': ['family-out', 'bowel-problem'],
+         'family-out': [],
+         'hear-bark': ['dog-out'],
+         'light-on': ['family-out']}
+        """
+        return self.variable_parents
+
+    def get_edges(self):
+        """
+        Returns the edges of the network
+
+        Sample run
+        --------
+        >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
+        >>> reader.get_edges()
+        [['family-out', 'light-on'],
+         ['family-out', 'dog-out'],
+         ['bowel-problem', 'dog-out'],
+         ['dog-out', 'hear-bark']]
+        """
+        self.edges = [ [value, key] for key in self.variable_parents.keys()
+                     for value in self.variable_parents[key] ]
+        return self.edges
+
+    def get_model(self):
+        """
+        Returns the fitted bayesian model
+        """
+        model = BayesianModel(self.edges)
+        model.name = self.network_name
+
+        tabular_cpds = []
+        for var, values in self.variable_cpds.items():
+            cpd = TabularCPD(var, len(self.variable_states[var]), values,
+                             evidence = self.variable_parents[var],
+                             evidence_card = [len(self.variable_states[evidence_var])
+                                            for evidence_var in self.variable_parents[var]])
+            tabular_cpds.append(cpd)
+
+        model.add_cpds(*tabular_cpds)
+
+        for node, properties in self.variable_properties.items():
+            for prop in properties:
+                prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                model.node[node][prop_name] = prop_value
+
+        return model
