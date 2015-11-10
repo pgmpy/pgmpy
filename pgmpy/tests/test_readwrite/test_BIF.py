@@ -1,5 +1,5 @@
 import unittest
-# from pgmpy.readwrite import BifReader
+from pgmpy.readwrite import BifReader
 import numpy as np
 import numpy.testing as np_test
 
