@@ -1,22 +1,18 @@
 import numpy as np
-#from pgmpy.models import BayesianModel
-#from pgmpy.factors import TabularCPD, State
-#from pgmpy.extern.six.moves import range
+from pyparsing import Word,alphanums,Suppress,Optional,CharsNotIn,Group,nums,alphas,ZeroOrMore
+# from pgmpy.models import BayesianModel
+# from pgmpy.factors import TabularCPD, State
+# from pgmpy.extern.six.moves import range
 import re
 
-# Defining some regular expressions
-
-block_comment_regex = re.compile('/\*[^/]*/')   # A regular expression to check for block comments
-line_comment_regex = re.compile(r'//[^"\n"]*')  # A regular expression to check for line comments
-remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')
 class BifReader(object):
-    
-    
+
+
     """
     Base class for reading network file in bif format
     """
     def __init__(self, path = None, string = None):
-        
+
         """
         Initialisation of BifReader object
 
@@ -32,95 +28,124 @@ class BifReader(object):
         # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
         >>> reader = BifReader("bif_test.bif")
         """
+        # Defining some regular expressions
+
+        cpp_comment_regex = re.compile('/\*[^/]*/')                                     # A regular expression to check for block comments
+        line_comment_regex = re.compile(r'//[^"\n"]*')                                  # A regular expression to check for line comments
+        remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')    # A regular expression to check for multiple spaces
+
         if path:
+            path = open(path, 'r').read()                                               
 
-            path = open(path, 'r').read().replace('"', '')  # Opening the file and replacing qoutes by null string
-            path = remove_multipule_spaces.sub(' ', path)
-            if '/*' or '//' in FILE:
-                
-                path = block_comment_regex.sub('', path)
-                path = line_comment_regex.sub('', path)      # Striping comments off
-            
+            if '"' in path:
+                path = path.replace('"', ' ')
+                """ 
+                Replacing quotes by spaces to remove case sensitivity like:
+                "Dog-problem" and Dog-problem
+                or "true""false" and "true" "false" and true false
+                """
+            path = remove_multipule_spaces.sub(' ', path)                               # replacing multiple spaces or tabs by one space
+            if '/*' or '//' in path:
+                path = cpp_comment_regex.sub('', path)
+                path = line_comment_regex.sub('', path)                                 # Striping comments off both type of comments
+
             self.network = path
-
         elif string:
+            if '"' in string:                                                           # replacing quotes by white-space
+                string = string.replace('"', ' ')
 
-            string = string.replace('"', '')
-            string = remove_multipule_spaces.sub(' ', string)
+            string = remove_multipule_spaces.sub(' ', string)                           # replacing mulitple spaces or tabs by one space
             if '/*' or '//' in string:
-                
-                string = block_comment_regex.sub('', string)
-                string = line_comment_regex.sub('', string)     #Striping comments off
-            
-            self.network = string
+                string = cpp_comment_regex.sub('', string)
+                string = line_comment_regex.sub('', string)                             # Striping comments off both types of comments
 
+            self.network = string
         else:
-            
             raise ValueError("Must specify either path or string")
-        
+
         self.network_name()
         self.get_variables_info()
-        self.get_cpd()
-    
+
     def network_name(self):
-        
+
         """
         Retruns the name of the network
-
-        Examples
+        
+        network attributes are of the format
+            network <name_of_network> {
+                attirbutes
+            }
+        Example of network attribute
+        ------------------------------
+        network "Dog-Problem" { //5 variables and 5 probability distributions
+	        property "credal-set constant-density-bounded 1.1" ;
+        }
+        
+        Useage
         ---------------
         >>> reader = BIF.BifReader("bif_test.bif")
         >>> reader.network_name()
         'Dog-Problem'
         """
-        start = self.network.find('network')
-        end = self.network.find('{',start)
-        self.network_name = self.network[start+8:end].strip()
+        network_attribute = Suppress('network') +Word(alphanums+'_'+'-') +'{'                            # Creating a network attribute 
+        temp = network_attribute.searchString(self.network)
+        self.network_name = temp[0][0]
         return self.network_name
 
     def get_variables_info(self):
-        
+
         """
         Functions gets all type of variable information
+        
+        variable block is of format
+        
+        variable <name_of_variable> {
+            attribute1
+            attribute2
+            ...
+        }
+        Example of variable attribute
+        ----------
+        variable  "light-on" { //2 values
+	        type discrete[2] {  "true"  "false" };
+	        property "position = (218, 195)" ;
+        }
         """
-        variable_block_starts = [x.end()+1 for x in re.finditer('variable', self.network)]
+        variable_block_starts = [x.start() for x in re.finditer('variable', self.network)]  # Finding the beginning of variable block
         variable_block = []
 
         for i in variable_block_starts:
-            
-            variable_block_end = self.network.find('}\n', i)
-            variable_block.append( self.network[ i : variable_block_end ] )
-        
-        self.network = self.network[ variable_block_end:]
-        variable_names = []
-        variable_states = {}
-        variable_properties = {}
-        state_pattern = re.compile('[\{\};,]*')
-        
+            variable_block_end = self.network.find('}\n', i)                                # Finding the end of variable block
+            variable_block.append( self.network[ i : variable_block_end ] )                 # Appending the complete variable block in a list
+
+        variable_names = []                                                                 # Creating an empty list for variable names
+        variable_states = {}                                                                # Creating an empty dictionary for variable states
+        variable_properties = {}                                                            # Creating an empty dictionary for variable prop   
+        word_expr = Word(alphanums+'_'+'-')                                                 # Defining a expression for valid word
+        name_expr = Suppress('variable')+ word_expr + Suppress('{')                         # Creating a expression for finding variable name
+        state_expr= ZeroOrMore( word_expr + Optional( Suppress(",") ) )
+
+        # Defining a variable state expression
+        variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums))+\
+        Suppress(']') + Suppress('{') + Group(state_expr) + Suppress('}') + Suppress(';')
+        # variable states is of the form type description [args] { val1, val2 }; (comma may or may not be present)
+
+        property_expr = Suppress('property') + CharsNotIn(';') + Suppress(';')              # Creating a expr to find property
+
         for block in variable_block:
-            
-            block = block.split('\n')
-            name = block[0].split()[0]
-            variable_names.append(name)
-            block = block[1:]
-            variable_properties[name] = []
-            for line in block:
+            temp = name_expr.searchString(block)                                            # Finding the string of the format name_expr
+            name = temp[0][0]                                                               # Assigning name the value of variable name
+            variable_names.append(name) 
+            temp = variable_state_expr.searchString(block)                                  # Finding the variable states
+            variable_states[name] = list(temp[0][0])                                        # Assigning the variable states in form of list
+            properties = property_expr.searchString(block)                                  # Getting the properties of variable                
+            variable_properties[name] = [ x[0].strip() for x in properties ]
 
-                if 'type' in line:
-                    
-                    k = line.find('{')
-                    line = state_pattern.sub('', line[k:])
-                    variable_states[name] = [x for x in line.split() if x!= '']
-
-                elif 'property' in line :
-                    k = line.find('property')
-                    variable_properties[name].append(line[k+8:-1].strip())
-        
         self.variable_names = variable_names
         self.variable_states = variable_states
         self.variable_properties = variable_properties
+        return
 
-    
     def get_variables(self):
         
         """
@@ -134,23 +159,8 @@ class BifReader(object):
         """
         return self.variable_names
 
-    def get_edges(self):
-        
-        """
-        Returns the edges of the network
-
-        Examples
-        ------------
-        >>> reader = BIF.BifReader("bif_test.bif")
-        >>> reader.get_edges()
-        [['family-out','light-on'],
-         ['family-out','dog-out'],
-         ['bowel-problem','dog-out'],
-         ['dog-out','hear-bark']]
-        """
-    
     def get_states(self):
-        
+
         """
         Returns the states of variables present in the network
 
@@ -164,11 +174,11 @@ class BifReader(object):
          'hear-bark': ['true','false'],
          'light-on': ['true','false']}
         """
-        
+
         return self.variable_states
-    
+
     def get_property(self):
-        
+
         """
         Returns the property of the variable
 
@@ -182,57 +192,5 @@ class BifReader(object):
           'hear-bark': ['position = (296, 268)'],
           'light-on': ['position = (218, 195)']}
         """
-        
+
         return self.variable_properties
-    
-    def get_cpd(self):
-        
-        """
-        Returns the CPD of the variables present in the network
-
-        Examples
-        --------
-        >>> reader = BIF.BifReader("bif_test.bif")
-        >>> reader.get_cpd()
-        {'bowel-problem': np.array([[0.01],
-                                   [0.99]]),
-         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
-                              [0.01, 0.03, 0.1, 0.7]]),
-         'family-out': np.array([[0.15],
-                                 [0.85]]),
-         'hear-bark': np.array([[0.7, 0.01],
-                                [0.3, 0.99]]),
-         'light-on': np.array([[0.6, 0.05],
-                               [0.4, 0.95]])}
-        """
-        probability_starts = [x.end()+1 for x in re.finditer('probability',self.network)]
-        probability_block = []
-        strip_parenthesis = re.compile('[\(\)\|]*')
-        strip_characters = re.compile(r'[a-zA-Z\(\);,]*')
-
-        for i in probability_starts:
-            probability_end = self.network.find('}\n',i)
-            probability_block.append(self.network[i:probability_end])
-
-        variable_cpds = {}
-
-        for block in probability_block :
-            block = block.split('\n')
-            block[0] = strip_parenthesis.sub('', block[0])
-            block[0] = block[0].strip()
-            name = block[0].split()[0]
-            block = block[1:]
-            cpd = []
-
-            for line in block:
-                line = line.strip()
-                line = strip_characters.sub('', line)
-                cpd.extend([float(x) for x in line.split() if x!= ''])
-
-            arr = np.array(cpd)
-            arr = arr.reshape(len(self.variable_states[name])
-                            ,arr.size//len(self.variable_states[name]))
-            variable_cpds[name] = arr
-
-        self.variable_cpds = variable_cpds
-        return variable_cpds

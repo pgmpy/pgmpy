@@ -1,9 +1,10 @@
 import unittest
-from pgmpy.readwrite import BifReader
+# from pgmpy.readwrite import BifReader
 import numpy as np
 import numpy.testing as np_test
 
 class TestBifReader(unittest.TestCase):
+
 
     def setUp(self):
 
@@ -55,7 +56,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         var_expected = ['light-on', 'bowel-problem', 'dog-out',
                         'hear-bark', 'family-out']
         self.assertListEqual(self.reader.variable_names, var_expected)
-    
+
     def test_network_name(self):
         network_name_expected = 'Dog-Problem'
         self.assertEqual(self.reader.network_name, network_name_expected)
@@ -70,7 +71,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         for variable in states_expected:
             self.assertListEqual(states_expected[variable],
                                 states[variable])
-    
+
     def test_get_property(self):
         property_expected = {'bowel-problem': ['position = (335, 99)'],
                              'dog-out': ['position = (300, 195)'],
@@ -81,18 +82,4 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
-    def test_get_cpd(self):
-        cpd_expected = {'bowel-problem': np.array([[0.01],
-                                                   [0.99]]),
-                        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
-                                             [0.01, 0.03, 0.1, 0.7]]),
-                        'family-out': np.array([[0.15],
-                                                [0.85]]),
-                        'hear-bark': np.array([[0.7, 0.01],
-                                               [0.3, 0.99]]),
-                        'light-on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}
-        cpd = self.reader.variable_cpds
-        for variable in cpd_expected:
-            np_test.assert_array_equal(cpd_expected[variable],
-                                       cpd[variable])
+
