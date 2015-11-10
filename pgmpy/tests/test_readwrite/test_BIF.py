@@ -1,7 +1,7 @@
 import unittest
 from pgmpy.readwrite import BifReader
-import numpy as np
-import numpy.testing as np_test
+# import numpy as np
+# import numpy.testing as np_test
 
 class TestBifReader(unittest.TestCase):
 
