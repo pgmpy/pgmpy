@@ -30,31 +30,26 @@ class BifReader(object):
         remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')    # A regular expression to check for multiple spaces
 
         if path:
-            path = open(path, 'r').read()                                               
+            self.network = open(path, 'r').read()                                               
 
-            if '"' in path:
-                path = path.replace('"', ' ')
-                """ 
-                Replacing quotes by spaces to remove case sensitivity like:
-                "Dog-problem" and Dog-problem
-                or "true""false" and "true" "false" and true false
-                """
-            path = remove_multipule_spaces.sub(' ', path)                               # replacing multiple spaces or tabs by one space
-            if '/*' or '//' in path:
-                path = cppStyleComment.suppress().transformString(path)                 # removing comments from the file
-
-            self.network = path
         elif string:
-            if '"' in string:                                                           # replacing quotes by white-space
-                string = string.replace('"', ' ')
+            self.network = string        
 
-            string = remove_multipule_spaces.sub(' ', string)                           # replacing mulitple spaces or tabs by one space
-            if '/*' or '//' in string:
-                string = cppStyleComment.suppress().transformString(string)             # removing comments from the file
-
-            self.network = string
         else:
             raise ValueError("Must specify either path or string")
+
+        if '"' in self.network:
+            """
+            Replacing quotes by spaces to remove case sensitivity like:
+            "Dog-Problem" and Dog-problem
+            or "true""false" and "true" "false" and true false
+            """
+            self.network = self.network.replace('"', ' ')
+
+        self.network = remove_multipule_spaces.sub(' ', self.network)                # replacing mulitple spaces or tabs by one space
+
+        if '/*' or '//' in self.network:
+            self.network = cppStyleComment.suppress().transformString(self.network)  # removing comments from the file
 
         self.get_network_name()
         self.get_variables_info()

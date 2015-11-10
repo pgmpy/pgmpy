@@ -58,7 +58,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
     def test_get_variables(self):
         var_expected = ['light-on', 'bowel-problem', 'dog-out',
                         'hear-bark', 'family-out']
-        self.assertListEqual(self.reader.variable_names, var_expected)
+        self.assertListEqual(self.reader.get_variables(), var_expected)
 
     def test_states(self):
         states_expected = {'bowel-problem': ['true', 'false'],
@@ -66,7 +66,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                            'family-out': ['true', 'false'],
                            'hear-bark': ['true', 'false'],
                            'light-on': ['true', 'false']}
-        states = self.reader.variable_states
+        states = self.reader.get_states()
         for variable in states_expected:
             self.assertListEqual(states_expected[variable],
                                 states[variable])
@@ -77,7 +77,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                              'family-out': ['position = (257, 99)'],
                              'hear-bark': ['position = (296, 268)'],
                              'light-on': ['position = (218, 195)']}
-        prop = self.reader.variable_properties
+        prop = self.reader.get_property()
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
@@ -104,7 +104,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                             'family-out': [],
                             'hear-bark': ['dog-out'],
                             'light-on': ['family-out']}
-        parents = self.reader.variable_parents
+        parents = self.reader.get_parents()
         for variable in parents_expected:
             self.assertListEqual(parents_expected[variable],
                                  parents[variable])
