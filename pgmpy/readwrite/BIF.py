@@ -1,5 +1,5 @@
 import numpy as np
-from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment
+from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment, Literal
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 import re
@@ -27,7 +27,7 @@ class BifReader(object):
         # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
         >>> reader = BifReader("bif_test.bif")
         """
-        remove_multipule_spaces = re.compile(r'[" ""\t""\r""\f"][" ""\t""\r""\f"]*')    # A regular expression to check for multiple spaces
+        multi_space = OneOrMore(Literal(' ')|'\t'|'\r'|'\f')                                    # An expression for matching multi spaces
 
         if path:
             self.network = open(path, 'r').read()                                               
@@ -46,10 +46,10 @@ class BifReader(object):
             """
             self.network = self.network.replace('"', ' ')
 
-        self.network = remove_multipule_spaces.sub(' ', self.network)                # replacing mulitple spaces or tabs by one space
+        self.network = multi_space.setParseAction(lambda t:' ').transformString(self.network)   # replacing mulitple spaces or tabs by one space
 
         if '/*' or '//' in self.network:
-            self.network = cppStyleComment.suppress().transformString(self.network)  # removing comments from the file
+            self.network = cppStyleComment.suppress().transformString(self.network)             # removing comments from the file
 
         self.get_network_name()
         self.get_variables_info()
