@@ -1,16 +1,16 @@
 import numpy as np
 from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD, State
+from pgmpy.factors import TabularCPD
 import re
 
-class BifReader(object):
 
+class BifReader(object):
 
     """
     Base class for reading network file in bif format
     """
-    def __init__(self, path = None, string = None):
+    def __init__(self, path=None, string=None):
 
         """
         Initialisation of BifReader object
@@ -56,13 +56,13 @@ class BifReader(object):
         else:
             raise ValueError("Must specify either path or string")
 
-        self.network_name()
+        self.get_network_name()
         self.get_variables_info()
         self.get_cpd()
         self.get_edges()
         self.model = self.get_model()
 
-    def network_name(self):
+    def get_network_name(self):
 
         """
         Retruns the name of the network
@@ -74,7 +74,7 @@ class BifReader(object):
         Example of network attribute
         ------------------------------
         network "Dog-Problem" { //5 variables and 5 probability distributions
-	        property "credal-set constant-density-bounded 1.1" ;
+                property "credal-set constant-density-bounded 1.1" ;
         }
 
         Sample run
@@ -83,7 +83,7 @@ class BifReader(object):
         >>> reader.network_name()
         'Dog-Problem'
         """
-        network_attribute = Suppress('network') +Word(alphanums+'_'+'-') +'{'                            # Creating a network attribute 
+        network_attribute = Suppress('network') + Word(alphanums+'_'+'-') + '{'                            # Creating a network attribute 
         temp = network_attribute.searchString(self.network)
         self.network_name = temp[0][0]
         return self.network_name
@@ -92,9 +92,9 @@ class BifReader(object):
 
         """
         Functions gets all type of variable information
-        
+
         variable block is of format
-        
+
         variable <name_of_variable> {
             attribute1
             attribute2
@@ -104,7 +104,7 @@ class BifReader(object):
         ----------
         variable  "light-on" { //2 values
 	        type discrete[2] {  "true"  "false" };
-	        property "position = (218, 195)" ;
+            property "position = (218, 195)" ;
         }
         """
         variable_block_starts = [x.start() for x in re.finditer('variable', self.network)]  # Finding the beginning of variable block
@@ -143,7 +143,7 @@ class BifReader(object):
         return
 
     def get_variables(self):
-        
+
         """
         Returns list of variables of the network
 
@@ -231,20 +231,22 @@ class BifReader(object):
             probability_block.append(self.network[i:probability_block_end])
 
         word_expr = Word(alphanums + '-' + '_') + Suppress(Optional("|")) + Suppress(Optional(","))
-        num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.')+ Suppress(Optional(","))
+        num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.') + Suppress(Optional(","))
         probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
-        cpd_expr = Suppress(Optional('('))+ Suppress(Group(OneOrMore(word_expr))) + Suppress(Optional(')')) + OneOrMore(num_expr)
+        optional_expr = Suppress('(') + Suppress(OneOrMore(word_expr)) + Suppress(')')
+        probab_attributes = optional_expr | Suppress('table')
+        cpd_expr = probab_attributes + OneOrMore( num_expr)
 
         variable_parents = {}
         variable_cpds ={}
 
         for block in probability_block:
-            names = probability_expr.searchString( block )
+            names = probability_expr.searchString(block)
             names = names[0]
             variable = names[0]
             names = names[1:]
             variable_parents[variable] = names
-            temp = cpd_expr.searchString( block )
+            temp = cpd_expr.searchString(block)
             arr = [float(j) for i in temp for j in i]
             arr = np.array(arr)
             arr = arr.reshape((len(self.variable_states[variable]), arr.size//len(self.variable_states[variable])))
