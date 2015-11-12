@@ -63,9 +63,9 @@ class BIFReader(object):
         self.variable_properties = self.get_property()
         self.variable_cpds = self.get_cpd()
         self.variable_parents = self.get_parents()
-        self.variable_edges = self.get_edges()
-        self.model = self.get_model() 
-
+        self.variable_edges = self.get_edges() 
+        self.get_model()
+ 
     def get_network_name(self):
 
         """
@@ -111,7 +111,7 @@ class BIFReader(object):
             variable_properties = {}
             # Defining a expression for valid word
             word_expr = Word(alphanums+'_'+'-')
-            name_expr = Suppress('variable')+ word_expr + Suppress('{')
+            name_expr = Suppress('variable') + word_expr + Suppress('{')
             state_expr = ZeroOrMore(word_expr + Optional(Suppress(",")))
             # Defining a variable state expression
             variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums)) + \
@@ -149,7 +149,7 @@ class BIFReader(object):
             probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
             optional_expr = Suppress('(') + Suppress(OneOrMore(word_expr)) + Suppress(')')
             probab_attributes = optional_expr | Suppress('table')
-            cpd_expr = probab_attributes + OneOrMore( num_expr)
+            cpd_expr = probab_attributes + OneOrMore(num_expr)
 
             variable_parents = {}
             variable_cpds ={}
@@ -310,18 +310,37 @@ class BIFReader(object):
 
         """
         Returns the fitted bayesian model
+        
+        Example
+        ----------
+        >>> from pgmpy.readwrite import BIFReader
+        >>> reader = BIFReader("bif_test.bif")
+        >>> reader.get_model()
+        'Dog-Problem'
         """
         try:
             model = BayesianModel(self.variable_edges)
             model.name = self.network_name
 
             tabular_cpds = []
-            for var, values in self.variable_cpds.items():
-                cpd = TabularCPD(var, len(self.variable_states[var]), values,
-                                evidence = self.variable_parents[var],
-                                evidence_card = [len(self.variable_states[evidence_var])
-                                                for evidence_var in self.variable_parents[var]])
-                tabular_cpds.append(cpd)
+            count_dict={}
+            for var1,var2 in self.variable_edges:
+                if count_dict.get(var1,0) == 0:
+                    values = self.variable_cpds[var1]
+                    cpd = TabularCPD(var1, len(self.variable_states[var1]), values,
+                                    evidence = self.variable_parents[var1],
+                                    evidence_card = [len(self.variable_states[evidence_var])
+                                                    for evidence_var in self.variable_parents[var1]])
+                    count_dict[var1] = 1
+                    tabular_cpds.append(cpd)
+                if count_dict.get(var2,0) == 0:
+                    values = self.variable_cpds[var2]
+                    cpd = TabularCPD(var2, len(self.variable_states[var2]), values,
+                                    evidence = self.variable_parents[var2],
+                                    evidence_card = [len(self.variable_states[evidence_var])
+                                                    for evidence_var in self.variable_parents[var2]])
+                    count_dict[var2] = 1
+                    tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)
 
