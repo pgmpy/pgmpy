@@ -3,7 +3,7 @@ from .XMLBIF import XMLBIFReader, XMLBIFWriter
 from .PomdpX import PomdpXReader, PomdpXWriter
 from .XMLBeliefNetwork import XBNReader, XBNWriter
 from .UAI import UAIReader, UAIWriter
-from .BIF import BifReader
+from .BIF import BIFReader
 
 __all__ = ['ProbModelXMLReader',
            'ProbModelXMLWriter',
@@ -20,4 +20,4 @@ __all__ = ['ProbModelXMLReader',
            'PomdpXWriter',
            'UAIReader',
            'UAIWriter',
-           'BifReader']
+           'BIFReader']

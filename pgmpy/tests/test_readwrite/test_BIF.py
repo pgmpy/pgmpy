@@ -1,13 +1,14 @@
 import unittest
-from pgmpy.readwrite import BifReader
+from pgmpy.readwrite import BIFReader
 import numpy as np
 import numpy.testing as np_test
+
 
 class TestBifReader(unittest.TestCase):
 
     def setUp(self):
 
-        self.reader = BifReader(string = """
+        self.reader = BIFReader(string = """
 // Bayesian Network in the Interchange Format
 // Produced by BayesianNetworks package in JavaBayes
 // Output created Sun Nov 02 17:49:49 GMT+00:00 1997
@@ -52,15 +53,18 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
 }
 """)
     def test_network_name(self):
+
         name_expected = 'Dog-Problem'
         self.assertEqual(self.reader.network_name,name_expected)
 
     def test_get_variables(self):
+
         var_expected = ['light-on', 'bowel-problem', 'dog-out',
                         'hear-bark', 'family-out']
         self.assertListEqual(self.reader.get_variables(), var_expected)
 
     def test_states(self):
+
         states_expected = {'bowel-problem': ['true', 'false'],
                            'dog-out': ['true', 'false'],
                            'family-out': ['true', 'false'],
@@ -72,6 +76,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                 states[variable])
 
     def test_get_property(self):
+
         property_expected = {'bowel-problem': ['position = (335, 99)'],
                              'dog-out': ['position = (300, 195)'],
                              'family-out': ['position = (257, 99)'],
@@ -83,6 +88,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                  prop[variable])
 
     def test_get_cpd(self):
+
         cpd_expected = {'bowel-problem': np.array([[0.01],
                                                    [0.99]]),
                         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
@@ -99,6 +105,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                        cpd[variable])
 
     def test_get_parents(self):
+
         parents_expected = {'bowel-problem': [],
                             'dog-out': ['bowel-problem', 'family-out'],
                             'family-out': [],
@@ -110,10 +117,11 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                  parents[variable])
 
     def test_get_edges(self):
+
         edges_expected = [['family-out', 'dog-out'],
                           ['bowel-problem', 'dog-out'],
                           ['family-out', 'light-on'],
                           ['dog-out', 'hear-bark']]
-        self.assertListEqual(sorted(self.reader.edges),
+        self.assertListEqual(sorted(self.reader.variable_edges),
                              sorted(edges_expected))
 
