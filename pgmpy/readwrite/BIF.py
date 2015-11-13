@@ -31,7 +31,7 @@ class BIFReader(object):
         >>> reader = BIFReader("bif_test.bif")
         <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
         """
-        multi_space = OneOrMore(Literal(' ')|'\t'|'\r'|'\f')    # An pyparsing expression for checking mulitple spaces
+        multi_space = OneOrMore(Literal(' ') | '\t' | '\r' | '\f')    # An pyparsing expression for checking mulitple spaces
 
         if path:
             with open(path, 'r') as network:
@@ -44,19 +44,17 @@ class BIFReader(object):
             raise ValueError("Must specify either path or string")
 
         if '"' in self.network:
-            """
-            Replacing quotes by spaces to remove case sensitivity like:
-            "Dog-Problem" and Dog-problem
-            or "true""false" and "true" "false" and true false
-            """
+            # Replacing quotes by spaces to remove case sensitivity like:
+            # "Dog-Problem" and Dog-problem
+            # or "true""false" and "true" "false" and true false
             self.network = self.network.replace('"', ' ')
 
-        self.network = multi_space.setParseAction(lambda t:' ').transformString(self.network)   # replacing mulitple spaces or tabs by one space
-
+        # replacing mulitple spaces or tabs by one space
+        self.network = multi_space.setParseAction(lambda t: ' ').transformString(self.network)
         if '/*' in self.network or '//' in self.network:
-            self.network = cppStyleComment.suppress().transformString(self.network)             # removing comments from the file
+            self.network = cppStyleComment.suppress().transformString(self.network)  # removing comments from the file
 
-        self.grammar = self.get_grammar(self.network)
+        self.grammar = self.Get_grammar(self.network)
         self.network_name = self.get_network_name()
         self.variable_names = self.get_variables()
         self.variable_states = self.get_states()
@@ -64,7 +62,6 @@ class BIFReader(object):
         self.variable_cpds = self.get_cpd()
         self.variable_parents = self.get_parents()
         self.variable_edges = self.get_edges() 
-        self.get_model()
  
     def get_network_name(self):
 
@@ -78,13 +75,12 @@ class BIFReader(object):
         >>> reader.network_name()
         'Dog-Problem'
         """
-        network_attribute = Suppress('network') + Word(alphanums+'_'+'-') + '{'   # Creating a network attribute 
+        network_attribute = Suppress('network') + Word(alphanums+'_' + '-') + '{'   # Creating a network attribute 
         network_name = network_attribute.searchString(self.network)[0][0]
         return network_name
 
+    class Get_grammar(object):
 
-    class get_grammar(object):
-    
         """
         A class to that finds grammar of the network
         """
@@ -110,12 +106,12 @@ class BIFReader(object):
             variable_states = {}
             variable_properties = {}
             # Defining a expression for valid word
-            word_expr = Word(alphanums+'_'+'-')
+            word_expr = Word(alphanums + '_' + '-')
             name_expr = Suppress('variable') + word_expr + Suppress('{')
             state_expr = ZeroOrMore(word_expr + Optional(Suppress(",")))
             # Defining a variable state expression
             variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums)) + \
-            Suppress(']') + Suppress('{') + Group(state_expr) + Suppress('}') + Suppress(';')
+                                  Suppress(']') + Suppress('{') + Group(state_expr) + Suppress('}') + Suppress(';')
             # variable states is of the form type description [args] { val1, val2 }; (comma may or may not be present)
 
             property_expr = Suppress('property') + CharsNotIn(';') + Suppress(';')  # Creating a expr to find property
@@ -130,7 +126,7 @@ class BIFReader(object):
             return variable_names, variable_states, variable_properties
             
         def get_probability_grammar(self):
-        
+
             """
             A method that returns probability grammar
             """
@@ -152,7 +148,7 @@ class BIFReader(object):
             cpd_expr = probab_attributes + OneOrMore(num_expr)
 
             variable_parents = {}
-            variable_cpds ={}
+            variable_cpds = {}
 
             for block in probability_block:
                 names = probability_expr.searchString(block)
@@ -164,7 +160,7 @@ class BIFReader(object):
                 arr = [float(j) for i in cpds for j in i]
                 arr = numpy.array(arr)
                 arr = arr.reshape((len(self.variable_states[variable]), 
-                                  arr.size//len(self.variable_states[variable])))
+                                  arr.size // len(self.variable_states[variable])))
                 variable_cpds[variable] = arr
 
             return variable_parents, variable_cpds
@@ -184,9 +180,8 @@ class BIFReader(object):
         try:
             self.grammar.variable_names
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         return self.grammar.variable_names
-               
 
     def get_states(self):
 
@@ -208,7 +203,7 @@ class BIFReader(object):
         try:
             self.grammar.variable_states
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         return self.grammar.variable_states
 
     def get_property(self):
@@ -231,7 +226,7 @@ class BIFReader(object):
         try:
             self.grammar.variable_properties
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         return self.grammar.variable_properties
 
     def get_cpd(self):
@@ -258,7 +253,7 @@ class BIFReader(object):
         try:
             self.grammar.variable_cpds
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         return self.grammar.variable_cpds
 
     def get_parents(self):
@@ -280,7 +275,7 @@ class BIFReader(object):
         try:
             self.grammar.variable_parents
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         return self.grammar.variable_parents
 
     def get_edges(self):
@@ -301,7 +296,7 @@ class BIFReader(object):
         try:
             self.grammar.variable_parents
         except AttributeError:
-            self.grammar = self.get_grammar(self.network)
+            self.grammar = self.Get_grammar(self.network)
         edges = [[value, key] for key in self.grammar.variable_parents.keys()
                      for value in self.grammar.variable_parents[key]]
         return edges
@@ -316,7 +311,7 @@ class BIFReader(object):
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
         >>> reader.get_model()
-        'Dog-Problem'
+        <pgmpy.models.BayesianModel.BayesianModel object at 0x7f20af154320>
         """
         try:
             model = BayesianModel(self.variable_edges)
@@ -324,31 +319,24 @@ class BIFReader(object):
 
             tabular_cpds = []
             count_dict={}
-            for var1,var2 in self.variable_edges:
-                if count_dict.get(var1,0) == 0:
-                    values = self.variable_cpds[var1]
-                    cpd = TabularCPD(var1, len(self.variable_states[var1]), values,
-                                    evidence = self.variable_parents[var1],
-                                    evidence_card = [len(self.variable_states[evidence_var])
-                                                    for evidence_var in self.variable_parents[var1]])
-                    count_dict[var1] = 1
-                    tabular_cpds.append(cpd)
-                if count_dict.get(var2,0) == 0:
-                    values = self.variable_cpds[var2]
-                    cpd = TabularCPD(var2, len(self.variable_states[var2]), values,
-                                    evidence = self.variable_parents[var2],
-                                    evidence_card = [len(self.variable_states[evidence_var])
-                                                    for evidence_var in self.variable_parents[var2]])
-                    count_dict[var2] = 1
-                    tabular_cpds.append(cpd)
+            for var in self.variable_edges:
+                for var1 in var:
+                    if count_dict.get(var1, 0) == 0:
+                        values = self.variable_cpds[var1]
+                        cpd = TabularCPD(var1, len(self.variable_states[var1]), values,
+                                        evidence = self.variable_parents[var1],
+                                        evidence_card = [len(self.variable_states[evidence_var])
+                                                        for evidence_var in self.variable_parents[var1]])
+                        count_dict[var1] = 1
+                        tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)
-
             for node, properties in self.variable_properties.items():
                 for prop in properties:
                     prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
                     model.node[node][prop_name] = prop_value
 
             return model
+
         except AttributeError:
             raise AttributeError('First get states of variables, edges, parents and network name')

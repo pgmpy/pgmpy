@@ -52,6 +52,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         table 0.15 0.85 ;
 }
 """)
+        self.reader.get_model()
     def test_network_name(self):
 
         name_expected = 'Dog-Problem'
@@ -125,3 +126,5 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         self.assertListEqual(sorted(self.reader.variable_edges),
                              sorted(edges_expected))
 
+    def tearDown(self):
+        del self.reader
