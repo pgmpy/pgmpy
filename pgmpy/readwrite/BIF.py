@@ -1,5 +1,5 @@
 import numpy
-from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment, Literal
+from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore, cppStyleComment, Literal, printables
 import re
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
@@ -107,8 +107,9 @@ class BIFReader(object):
             variable_properties = {}
             # Defining a expression for valid word
             word_expr = Word(alphanums + '_' + '-')
+            word_expr2 = Word(initChars=printables, excludeChars=['{','}',',',' ']) 
             name_expr = Suppress('variable') + word_expr + Suppress('{')
-            state_expr = ZeroOrMore(word_expr + Optional(Suppress(",")))
+            state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
             # Defining a variable state expression
             variable_state_expr = Suppress('type') + Suppress(word_expr) + Suppress('[') + Suppress(Word(nums)) + \
                                   Suppress(']') + Suppress('{') + Group(state_expr) + Suppress('}') + Suppress(';')
@@ -139,11 +140,12 @@ class BIFReader(object):
             # Creating valid word expression for probability, it is of the format
             # wor1 | var2 , var3 or var1 var2 var3 or simply var 
             word_expr = Word(alphanums + '-' + '_') + Suppress(Optional("|")) + Suppress(Optional(","))
+            word_expr2 = Word(initChars=printables, excludeChars=[',',')',' ','(']) + Suppress(Optional(","))
             # creating an expression for valid numbers, of the format
             # 1.00 or 1 or 1.00. 0.00 or 9.8e-5 etc
             num_expr = Word(nums + '-' + '+' + 'e' +'E' +'.') + Suppress(Optional(","))
             probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
-            optional_expr = Suppress('(') + Suppress(OneOrMore(word_expr)) + Suppress(')')
+            optional_expr = Suppress('(') + Suppress(OneOrMore(word_expr2)) + Suppress(')')
             probab_attributes = optional_expr | Suppress('table')
             cpd_expr = probab_attributes + OneOrMore(num_expr)
 
@@ -316,19 +318,15 @@ class BIFReader(object):
         try:
             model = BayesianModel(self.variable_edges)
             model.name = self.network_name
-
+            model.add_nodes_from(self.variable_names)
+            
             tabular_cpds = []
-            count_dict={}
-            for var in self.variable_edges:
-                for var1 in var:
-                    if count_dict.get(var1, 0) == 0:
-                        values = self.variable_cpds[var1]
-                        cpd = TabularCPD(var1, len(self.variable_states[var1]), values,
-                                        evidence = self.variable_parents[var1],
-                                        evidence_card = [len(self.variable_states[evidence_var])
-                                                        for evidence_var in self.variable_parents[var1]])
-                        count_dict[var1] = 1
-                        tabular_cpds.append(cpd)
+            for var, values in self.variable_cpds.items():
+                cpd = TabularCPD(var, len(self.variable_states[var]), values,
+                                evidence = self.variable_parents[var],
+                                evidence_card = [len(self.variable_states[evidence_var])
+                                                for evidence_var in self.variable_parents[var]])
+                tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)
             for node, properties in self.variable_properties.items():
