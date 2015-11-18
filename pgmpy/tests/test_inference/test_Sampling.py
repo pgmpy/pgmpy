@@ -62,12 +62,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertTrue(set(sample.A).issubset({State('A', 1)}))
-        self.assertTrue(set(sample.J).issubset({State('J', 1)}))
-        self.assertTrue(set(sample.R).issubset({State('R', 1)}))
-        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
-        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
-        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+        self.assertTrue(set(sample.A).issubset({1}))
+        self.assertTrue(set(sample.J).issubset({1}))
+        self.assertTrue(set(sample.R).issubset({1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
 
     @patch("pgmpy.inference.BayesianModelSampling.forward_sample", autospec=True)
     def test_rejection_sample_less_arg(self, forward_sample):

@@ -139,7 +139,7 @@ class BayesianModelSampling(Inference):
             _size = int(((size - len(sampled)) / prob) * 1.5)
             _sampled = self.forward_sample(_size)
             for evid in evidence:
-                _sampled = _sampled[_sampled.ix[:, evid.var] == evid]
+                _sampled = _sampled[_sampled.ix[:, evid[0]] == evid[1]]
             prob = max(len(_sampled) / _size, 0.01)
             sampled = sampled.append(_sampled)
         sampled.reset_index(inplace=True, drop=True)
