@@ -72,7 +72,7 @@ class BayesianModelSampling(Inference):
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
-            states = [state for state in range(cpd.get_cardinality([node])[node])]
+            states = range(self.cardinality[node])
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 cached_values = self.pre_compute_reduce(variable=node)
@@ -128,8 +128,8 @@ class BayesianModelSampling(Inference):
         >>> evidence = [State(var='diff', state=0)]
         >>> inference.rejection_sample(evidence, 2)
                 intel       diff       grade
-        0  (intel, 0)  (diff, 0)  (grade, 1)
-        1  (intel, 0)  (diff, 0)  (grade, 1)
+        0         0          0          1
+        1         0          0          1
         """
         if evidence is None:
             return self.forward_sample(size)
@@ -181,33 +181,33 @@ class BayesianModelSampling(Inference):
         >>> evidence = [State('diff', 0)]
         >>> inference.likelihood_weighted_sample(evidence, 2)
                 intel       diff       grade  _weight
-        0  (intel, 0)  (diff, 0)  (grade, 1)      0.6
-        1  (intel, 1)  (diff, 0)  (grade, 1)      0.6
+        0         0          0          1        0.6
+        1         1          0          1        0.6
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         sampled['_weight'] = np.ones(size)
         evidence_dict = {var: st for var, st in evidence}
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
-            states = [state for state in range(cpd.get_cardinality([node])[node])]
+            states = range(self.cardinality[node])
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
-                evidence = sampled.values[:, [indices]].tolist()
-                weights = list(map(lambda t: cpd.reduce(t[0], inplace=False).values, evidence))
+                evidence = sampled.iloc[:, indices].values
+                cached_values = self.pre_compute_reduce(node)
+                weights = list(map(lambda t: cached_values[tuple(t)], evidence))
                 if node in evidence_dict:
-                    sampled[node] = (State(node, evidence_dict[node]), ) * size
+                    sampled[node] = evidence_dict[node]
                     for i in range(size):
                         sampled.loc[i, '_weight'] *= weights[i][evidence_dict[node]]
                 else:
-                    sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
+                    sampled[node] = sample_discrete(states, weights)
             else:
                 if node in evidence_dict:
-                    sampled[node] = (State(node, evidence_dict[node]), ) * size
+                    sampled[node] = evidence_dict[node]
                     for i in range(size):
                         sampled.loc[i, '_weight'] *= cpd.values[evidence_dict[node]]
                 else:
-                    sampled[node] = list(map(lambda t: State(node, t),
-                                         sample_discrete(states, cpd.values, size)))
+                    sampled[node] = sample_discrete(states, cpd.values, size)
         return sampled
 
 
