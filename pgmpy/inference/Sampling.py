@@ -66,8 +66,8 @@ class BayesianModelSampling(Inference):
         >>> inference = BayesianModelSampling(student)
         >>> inference.forward_sample(2)
                 diff       intel       grade
-        0  (diff, 1)  (intel, 0)  (grade, 1)
-        1  (diff, 1)  (intel, 0)  (grade, 2)
+        0        1           0          1
+        1        1           0          2
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for node in self.topological_order:
@@ -75,14 +75,24 @@ class BayesianModelSampling(Inference):
             states = [state for state in range(cpd.get_cardinality([node])[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
-                evidence = sampled.values[:, [indices]]
-                weights = list(map(lambda t: cpd.reduce(t[0], inplace=False).values, evidence))
+                cached_values = self.pre_compute_reduce(variable=node)
+                evidence = sampled.iloc[:, indices].values
+                weights = list(map(lambda t: cached_values[tuple(t)], evidence))
             else:
                 weights = cpd.values
-
-            sampled[node] = list(map(lambda t: State(node, t),
-                                     sample_discrete(states, weights, size)))
+            sampled[node] = sample_discrete(states, weights, size)
         return sampled
+
+    def pre_compute_reduce(self, variable):
+        variable_cpd = self.model.get_cpds(variable)
+        variable_evid = variable_cpd.evidence
+        cached_values = {}
+
+        for state_combination in itertools.product(*[range(self.cardinality[var]) for var in variable_evid]):
+            states = list(zip(variable_evid, state_combination))
+            cached_values[state_combination] = variable_cpd.reduce(states, inplace=False).values
+
+        return cached_values
 
     def rejection_sample(self, evidence=None, size=1):
         """
