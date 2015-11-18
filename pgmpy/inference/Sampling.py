@@ -35,7 +35,6 @@ class BayesianModelSampling(Inference):
 
         self.topological_order = nx.topological_sort(model)
         super(BayesianModelSampling, self).__init__(model)
-        # self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 
     def forward_sample(self, size=1):
         """
@@ -74,9 +73,8 @@ class BayesianModelSampling(Inference):
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             if cpd.evidence:
-                indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
                 cached_values = self.pre_compute_reduce(variable=node)
-                evidence = sampled.iloc[:, indices].values
+                evidence = sampled.ix[:, cpd.evidence].values
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence))
             else:
                 weights = cpd.values
@@ -191,8 +189,7 @@ class BayesianModelSampling(Inference):
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             if cpd.evidence:
-                indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
-                evidence = sampled.iloc[:, indices].values
+                evidence = sampled.ix[:, cpd.evidence].values
                 cached_values = self.pre_compute_reduce(node)
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence))
                 if node in evidence_dict:
