@@ -55,6 +55,8 @@ class Inference(object):
     """
 
     def __init__(self, model):
+        self.model = model
+
         if not model.check_model():
             raise ModelError("Model of type {!r} not valid".format(type(model).__name__))
 

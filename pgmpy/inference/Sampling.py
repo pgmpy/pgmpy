@@ -31,10 +31,11 @@ class BayesianModelSampling(Inference):
     """
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
-            raise TypeError("model must an instance of BayesianModel")
-        super(BayesianModelSampling, self).__init__(model)
+            raise TypeError("Model expected type: BayesianModel, got type: ", type(model))
+
         self.topological_order = nx.topological_sort(model)
-        self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
+        super(BayesianModelSampling, self).__init__(model)
+        # self.cpds = {node: model.get_cpds(node) for node in model.nodes()}
 
     def forward_sample(self, size=1):
         """
@@ -70,16 +71,17 @@ class BayesianModelSampling(Inference):
         """
         sampled = DataFrame(index=range(size), columns=self.topological_order)
         for node in self.topological_order:
-            cpd = self.cpds[node]
+            cpd = self.model.get_cpds(node)
             states = [state for state in range(cpd.get_cardinality([node])[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
-                evidence = sampled.values[:, [indices]].tolist()
+                evidence = sampled.values[:, [indices]]
                 weights = list(map(lambda t: cpd.reduce(t[0], inplace=False).values, evidence))
-                sampled[node] = list(map(lambda t: State(node, t), sample_discrete(states, weights)))
             else:
-                sampled[node] = list(map(lambda t: State(node, t),
-                                     sample_discrete(states, cpd.values, size)))
+                weights = cpd.values
+
+            sampled[node] = list(map(lambda t: State(node, t),
+                                     sample_discrete(states, weights, size)))
         return sampled
 
     def rejection_sample(self, evidence=None, size=1):
@@ -176,7 +178,7 @@ class BayesianModelSampling(Inference):
         sampled['_weight'] = np.ones(size)
         evidence_dict = {var: st for var, st in evidence}
         for node in self.topological_order:
-            cpd = self.cpds[node]
+            cpd = self.model.get_cpds(node)
             states = [state for state in range(cpd.get_cardinality([node])[node])]
             if cpd.evidence:
                 indices = [i for i, x in enumerate(self.topological_order) if x in cpd.evidence]
