@@ -254,10 +254,20 @@ class MarkovChain(object):
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
 
+        # import pdb; pdb.set_trace()
+        from collections import defaultdict
+        var_states = defaultdict(dict)
+        var_values = defaultdict(dict)
+        samples = defaultdict(dict)
+        for var in self.transition_models.keys():
+            for st in self.transition_models[var]:
+                var_states[var][st] = list(self.transition_models[var][st].keys())
+                var_values[var][st] = list(self.transition_models[var][st].values())
+                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st])[0]
+
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
-                next_st = sample_discrete(list(self.transition_models[var][st].keys()),
-                                          list(self.transition_models[var][st].values()))[0]
+                next_st = samples[var][st]
                 self.state[j] = State(var, next_st)
             sampled.loc[i + 1] = [st for var, st in self.state]
 
