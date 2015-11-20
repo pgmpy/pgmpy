@@ -154,17 +154,15 @@ class TestMarkovChain(unittest.TestCase):
         model.add_transition_model('var', transition_model)
         self.assertDictEqual(model.transition_models['var'], transition_model)
 
-    @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
-    def test_sample(self, sample_discrete):
+    def test_sample(self):
         model = MC(['a', 'b'], [2, 2])
         model.transition_models['a'] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models['b'] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-        sample_discrete.side_effect = [[1], [0]]
         sample = model.sample(start_state=[State('a', 0), State('b', 1)], size=2)
         self.assertEqual(len(sample), 2)
         self.assertEqual(list(sample.columns), ['a', 'b'])
-        self.assertEqual(list(sample.loc[0]), [0, 1])
-        self.assertEqual(list(sample.loc[1]), [1, 0])
+        self.assertTrue(list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
+        self.assertTrue(list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
 
     @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):

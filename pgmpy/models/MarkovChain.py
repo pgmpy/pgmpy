@@ -254,7 +254,6 @@ class MarkovChain(object):
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
 
-        # import pdb; pdb.set_trace()
         from collections import defaultdict
         var_states = defaultdict(dict)
         var_values = defaultdict(dict)

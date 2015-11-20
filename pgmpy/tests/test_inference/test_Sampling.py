@@ -150,7 +150,6 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertListEqual(list(gibbs.variables), self.markov_model.nodes())
         self.assertDictEqual(gibbs.cardinalities, {'A': 2, 'B': 3, 'C': 4, 'D': 2})
 
-
     def test_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]
         sample = self.gibbs.sample(start_state, 2)
