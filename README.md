@@ -8,7 +8,6 @@ pgmpy
 Python Library for Probabilistic Graphical Models  
 Documentation: [pgmpy](http://pgmpy.org/)  
 Mailing List: pgmpy@googlegroups.com  
-irc: #pgmpy on freenode.net
 
 Dependencies:
 =============
