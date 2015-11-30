@@ -72,3 +72,14 @@ class NaiveBayesModel(BayesianModel):
     3
     """
 
+    def __init__(self, ebunch=None):
+        super(NaiveBayesModel, self).__init__(ebunch)
+        self.parent_node = None
+        self.children_nodes = []
+        if ebunch:
+            for parent,child in self.edges():
+                if self.parent_node and parent != self.parent_node:
+                    raise ValueError("Model can have only one parent node.")
+                self.parent_node = parent
+
+            self.children_nodes = list(set(self.nodes()) - set(self.parent_node))
