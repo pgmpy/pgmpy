@@ -5,6 +5,7 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.extern.six.moves import zip
+from pgmpy.extern import six
 
 
 class NoisyOrModel(nx.DiGraph):
@@ -104,7 +105,7 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0. 4]])
         >>> model.del_variables(['x1'])
         """
-        variables = [variables] if isinstance(variables, str) else set(variables)
+        variables = [variables] if isinstance(variables, six.string_types) else set(variables)
         indices = [index for index, variable in enumerate(self.variables) if variable in variables]
         self.variables = np.delete(self.variables, indices, 0)
         self.cardinality = np.delete(self.cardinality, indices, 0)
