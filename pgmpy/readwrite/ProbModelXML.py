@@ -123,6 +123,7 @@ import networkx as nx
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import map
 
 # warnings.warn("Not Complete. Please use only for "
@@ -409,7 +410,7 @@ class ProbModelXMLWriter(object):
         Adds an edge to the ProbModelXML.
         """
         edge_data = self.data['probnet']['edges'][edge]
-        if isinstance(edge, str):
+        if isinstance(edge, six.string_types):
            edge = eval(edge)
         link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
                                                             'directed': edge_data['directed']})

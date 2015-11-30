@@ -11,6 +11,7 @@ import pandas as pd
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 
 
@@ -214,7 +215,7 @@ class BayesianModel(DirectedGraph):
         >>> student.remove_cpds(cpd)
         """
         for cpd in cpds:
-            if isinstance(cpd, str):
+            if isinstance(cpd, six.string_types):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 

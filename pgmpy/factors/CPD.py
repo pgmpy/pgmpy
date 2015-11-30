@@ -9,6 +9,7 @@ import numpy as np
 from pgmpy import exceptions
 from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
 
 
@@ -104,7 +105,7 @@ class TabularCPD(Factor):
             if not isinstance(evidence, (list, set, tuple)):
                 if isinstance(evidence, np.ndarray):
                     evidence = evidence.tolist()
-                elif isinstance(evidence, str):
+                elif isinstance(evidence, six.string_types):
                     evidence = [evidence]
                 else:
                     raise TypeError("Evidence must be list, set, tuple or array"
