@@ -83,3 +83,31 @@ class NaiveBayesModel(BayesianModel):
                 self.parent_node = parent
 
             self.children_nodes = list(set(self.nodes()) - set(self.parent_node))
+
+    
+    def add_edge(self, u, v, *kwargs):
+        """
+        Add an edge between u and v.
+
+        The nodes u and v will be automatically added if they are
+        not already in the graph
+
+        Parameters
+        ----------
+        u,v : nodes
+              Nodes can be any hashable python object.
+
+        EXAMPLE
+        -------
+        >>> from pgmpy.models import NaiveBayesModel
+        >>> G = NaiveBayesModel()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_edge('a', 'b')
+        >>> G.add_edge('a', 'c')
+        """
+
+        if self.parent_node and u != self.parent_node:
+            raise ValueError("Model can have only one parent node.")
+        self.parent_node = u
+        self.children_nodes.append(v)
+        super(NaiveBayesModel, self).add_edge(u, v, *kwargs)
