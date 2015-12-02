@@ -111,3 +111,36 @@ class NaiveBayesModel(BayesianModel):
         self.parent_node = u
         self.children_nodes.append(v)
         super(NaiveBayesModel, self).add_edge(u, v, *kwargs)
+
+
+    def active_trail_nodes(self, start, observed=None):
+        """
+        Returns all the nodes reachable from start via an active trail.
+
+        Parameters
+        ----------
+
+        start: Graph node
+
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+
+        Examples
+        --------
+
+        >>> from pgmpy.models import NaiveBayesModel
+        >>> model = NaiveBayesModel()
+        >>> model.add_nodes_from(['a', 'b', 'c', 'd'])
+        >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
+        >>> model.active_trail_nodes('a')
+        {'a', 'b', 'c', 'd'}
+        >>> model.active_trail_nodes('a', ['b', 'c'])
+        {'a', 'd'}
+        >>> model.active_trail_nodes('b', ['a'])
+        {'b'}
+        """
+
+        if observed and self.parent_node in observed:
+            return set(start)
+        else:
+            return set(self.nodes()) - set(observed if observed else [])
