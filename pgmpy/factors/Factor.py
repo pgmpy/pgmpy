@@ -79,7 +79,7 @@ class Factor(object):
         """
 
         values = np.array(values)
-        
+
         if values.dtype != int and values.dtype != float:
             raise TypeError("Values: Expected type int or type float, got ", values.dtype)
 
@@ -667,9 +667,12 @@ class Factor(object):
         return Factor(self.scope(), self.cardinality, self.values)
 
     def __str__(self):
-        return self._str(phi_or_p='phi')
+        if six.PY2:
+            return self._str(phi_or_p='phi', tablefmt="psql")
+        else:
+            return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid"):
         """
         Generate the string from `__str__` method.
 
@@ -692,7 +695,7 @@ class Factor(object):
             factor_table.append(prob_list)
             value_index += 1
 
-        return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
+        return tabulate(factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f")
 
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
