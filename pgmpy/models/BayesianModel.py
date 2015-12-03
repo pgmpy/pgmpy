@@ -442,6 +442,13 @@ class BayesianModel(DirectedGraph):
                     if independent_variables:
                         independencies.add_assertions([start, independent_variables,
                                                        observed])
+            independencies_list = independencies.get_assertions()
+            local_independencies_list = self.local_independencies(start)
+            assertions_list = local_independencies_list.get_assertions()
+            for assertion in assertions_list:
+                if assertion != None:
+                    if assertion not in independencies_list:
+                        independencies.add_assertions(assertion)
 
         independencies.reduce()
 
