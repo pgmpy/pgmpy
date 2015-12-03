@@ -9,6 +9,7 @@ import pandas as pd
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.independencies import IndependenceAssertion
 from pgmpy.extern.six.moves import range
 from pgmpy.models import BayesianModel
 
@@ -144,3 +145,33 @@ class NaiveBayesModel(BayesianModel):
             return set(start)
         else:
             return set(self.nodes()) - set(observed if observed else [])
+
+    def local_independencies(self, variables):
+        """
+        Returns a list of independencies objects containing the local independencies
+        of each of the variables. If local independencies does not exist for a variable
+        it gives a None for that variable.
+
+
+        Parameters
+        ----------
+        variables: str or array like
+            variables whose local independencies are to found.
+
+        Examples
+        --------
+        >>> from pgmpy.models import NaiveBayesModel
+        >>> model = NaiveBayesModel()
+        >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
+        >>> ind = model.local_independencies('b')
+        >>> ind
+        [(b _|_ d, c | a)]
+        """
+        independencies = []
+        for variable in [variables] if isinstance(variables, str) else variables:
+            if variable != self.parent_node:
+                independencies.append(Independencies([variable, list(set(self.children_nodes)
+                                                                 - set(variable)), self.parent_node])
+            else:
+                independencies.append(None)
+        return independencies
