@@ -107,10 +107,11 @@ class NaiveBayesModel(BayesianModel):
         >>> G.add_edge('a', 'c')
         """
 
-        if self.parent_node and u != self.parent_node:
-            raise ValueError("Model can have only one parent node.")
-        self.parent_node = u
-        self.children_nodes.append(v)
+        if hasattr(self, 'parent_node'):
+            if self.parent_node and u != self.parent_node:
+                raise ValueError("Model can have only one parent node.")
+            self.parent_node = u
+            self.children_nodes.append(v)
         super(NaiveBayesModel, self).add_edge(u, v, *kwargs)
 
 
@@ -171,7 +172,7 @@ class NaiveBayesModel(BayesianModel):
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.parent_node:
                 independencies.append(Independencies([variable, list(set(self.children_nodes)
-                                                                 - set(variable)), self.parent_node])
+                                                                 - set(variable)), self.parent_node]))
             else:
                 independencies.append(None)
         return independencies
