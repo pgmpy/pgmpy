@@ -9,6 +9,7 @@ import numpy as np
 from pgmpy import exceptions
 from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
 
 
@@ -43,11 +44,16 @@ class TabularCPD(Factor):
     ...                               [0.8, 0.8]],
     ...                  evidence='evi1', evidence_card=2)
     >>> cpd.values
-    array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
+    array([[ 0.1,  0.1],
+           [ 0.1,  0.1],
+           [ 0.8,  0.8]])
     >>> cpd.variables
-    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    ['grade', 'evil']
     >>> cpd.variable
     'grade'
+
+    array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
+    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
 
     Parameters
     ----------
@@ -104,7 +110,7 @@ class TabularCPD(Factor):
             if not isinstance(evidence, (list, set, tuple)):
                 if isinstance(evidence, np.ndarray):
                     evidence = evidence.tolist()
-                elif isinstance(evidence, str):
+                elif isinstance(evidence, six.string_types):
                     evidence = [evidence]
                 else:
                     raise TypeError("Evidence must be list, set, tuple or array"
@@ -142,16 +148,30 @@ class TabularCPD(Factor):
             return self.values.reshape(1, np.prod(self.cardinality))
 
     def __str__(self):
-        table_list = []
-        indexes = np.array(list(product(*[range(i) for i in self.cardinality[1:]])))
-        scope = self.scope()
-        for i in range(1, len(self.cardinality)):
-            row = [scope[i]]
-            row.extend(np.array(self.variables[row[0]])[indexes[:, i-1]].tolist())
-            table_list.append(row)
-        variable_array = np.array([str([v.var, v.state]) for v in self.variables[self.variable]])
-        table_list.extend(np.column_stack((variable_array, self.get_cpd())))
-        return tabulate(table_list, tablefmt="fancy_grid")
+        if six.PY2:
+            return self._make_table_str("grid")
+        else:
+            return self._make_table_str("fancy_grid")
+
+    def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
+        return super(self, TabularCPD)._str(phi_or_p, tablefmt)
+
+    def _make_table_str(self, tablefmt="fancy_grid"):
+        headers_list = []
+        # build column headers
+        if self.evidence is not None:
+            col_indexes = np.array(list(product(*[range(i) for i in self.evidence_card])))
+            for i in range(len(self.evidence_card)):
+                column_header = [self.evidence[i]] + ['{s}_{d}'.format(s=self.evidence[i], d=d) for d in col_indexes.T[i]]
+                headers_list.append(column_header)
+
+        # Build row headers
+        variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
+        # Stack with data
+        labeled_rows = np.hstack((np.array(variable_array).T, self.get_cpd())).tolist()
+        # No support for multi-headers in tabulate
+        cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
+        return cdf_str
 
     def _repr_html_(self):
         """

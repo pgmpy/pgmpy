@@ -1,14 +1,13 @@
 from __future__ import division
 
 from itertools import product
-from collections import namedtuple
 
-from collections import OrderedDict, namedtuple
-from numbers import Number
+from collections import namedtuple
 
 import numpy as np
 
 from pgmpy.extern import tabulate
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
 
 
@@ -80,7 +79,7 @@ class Factor(object):
         """
 
         values = np.array(values)
-        
+
         if values.dtype != int and values.dtype != float:
             raise TypeError("Values: Expected type int or type float, got ", values.dtype)
 
@@ -133,7 +132,7 @@ class Factor(object):
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
         """
-        if isinstance(variables, str):
+        if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         if not all([var in self.variables for var in variables]):
@@ -237,7 +236,7 @@ class Factor(object):
         ['x2']
         """
 
-        if isinstance(variables, str):
+        if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         phi = self if inplace else self.copy()
@@ -290,7 +289,7 @@ class Factor(object):
                [ 0.05,  0.07],
                [ 0.15,  0.21]]
         """
-        if isinstance(variables, str):
+        if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         phi = self if inplace else self.copy()
@@ -381,10 +380,10 @@ class Factor(object):
         >>> phi.values
         array([0., 1.])
         """
-        if isinstance(values, str):
+        if isinstance(values, six.string_types):
             raise TypeError("values: Expected type list or array-like, got type str")
 
-        if (any(isinstance(value, str) for value in values) or
+        if (any(isinstance(value, six.string_types) for value in values) or
                 not all(isinstance(state, (int, np.integer)) for var, state in values)):
             raise TypeError("values: must contain tuples or array-like elements of the form (hashable object, type int)")
 
@@ -668,9 +667,12 @@ class Factor(object):
         return Factor(self.scope(), self.cardinality, self.values)
 
     def __str__(self):
-        return self._str(phi_or_p='phi')
+        if six.PY2:
+            return self._str(phi_or_p='phi', tablefmt="psql")
+        else:
+            return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid"):
         """
         Generate the string from `__str__` method.
 
@@ -693,7 +695,7 @@ class Factor(object):
             factor_table.append(prob_list)
             value_index += 1
 
-        return tabulate(factor_table, headers=string_header, tablefmt="fancy_grid", floatfmt=".4f")
+        return tabulate(factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f")
 
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)

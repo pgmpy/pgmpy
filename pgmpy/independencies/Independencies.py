@@ -1,4 +1,5 @@
 from pgmpy import exceptions
+from pgmpy.extern import six
 
 
 class Independencies(object):
@@ -202,7 +203,7 @@ class IndependenceAssertion(object):
         If variable is a string returns a list containing variable.
         Else returns variable itself.
         """
-        if isinstance(event, str):
+        if isinstance(event, six.string_types):
             return [event]
         else:
             return event
