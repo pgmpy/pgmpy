@@ -11,6 +11,8 @@ from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nu
 
 import re
 
+from string import Template
+
 
 class BIFReader(object):
 
@@ -69,7 +71,7 @@ class BIFReader(object):
         self.variable_states = self.get_states()
         self.variable_properties = self.get_property()
         self.variable_parents = self.get_parents()
-        self.variable_cpds = self.get_cpd()
+        self.variable_cpds = self.get_cpds()
         self.variable_edges = self.get_edges()
 
     def get_variable_grammar(self):
@@ -203,7 +205,7 @@ class BIFReader(object):
         for i, name in enumerate(self.variable_names):
             block = self.variable_block[i]
             properties = self.property_expr.searchString(block)
-            variable_properties[name] = [x[0].strip() for x in properties]
+            variable_properties[name] = [y.strip() for x in properties for y in x]
         return variable_properties
 
     def get_parents(self):
@@ -228,7 +230,7 @@ class BIFReader(object):
             variable_parents[names[0]] = names[1:]
         return variable_parents
 
-    def get_cpd(self):
+    def get_cpds(self):
 
         """
         Returns the CPD of the variables present in the network
@@ -237,7 +239,7 @@ class BIFReader(object):
         --------
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_cpd()
+        >>> reader.get_cpds()
         {'bowel-problem': np.array([[0.01],
                                     [0.99]]),
         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
@@ -298,12 +300,13 @@ class BIFReader(object):
             model.add_nodes_from(self.variable_names)
 
             tabular_cpds = []
-            for var, values in self.variable_cpds.items():
+            for var in sorted(self.variable_cpds.keys()):
+                values = self.variable_cpds[var]
                 cpd = TabularCPD(var, len(self.variable_states[var]), values,
                                  evidence=self.variable_parents[var],
                                  evidence_card=[len(self.variable_states[evidence_var])
                                                 for evidence_var in self.variable_parents[var]])
-            tabular_cpds.append(cpd)
+                tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)
             for node, properties in self.variable_properties.items():
@@ -315,3 +318,247 @@ class BIFReader(object):
 
         except AttributeError:
             raise AttributeError('First get states of variables, edges, parents and network name')
+
+
+class BIFWriter(object):
+
+    """
+    Base class for writing BIF network file format
+    """
+
+    def __init__(self, model):
+
+        """
+        Initialise a BIFWriter Object
+
+        Parameters
+        ----------
+        model: BayesianModel Instance
+
+        Examples
+        ---------
+        >>> from pgmpy.readwrite import BIFWriter
+        >>> writer = BIFWriter(model)
+        >>> writer
+        <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+        """
+        if not isinstance(model, BayesianModel):
+            raise TypeError("model must be an instance of BayesianModel")
+        self.model = model
+        if not self.model.name:
+            self.network_name = 'unknown'
+        else:
+            self.network_name = self.model.name
+        self.variable_states = self.get_states()
+        self.property_tag = self.get_properties()
+        self.variable_parents = self.get_parents()
+        self.tables = self.get_cpds()
+
+    def BIF_templates(self):
+
+        """
+        Create template for writing in BIF format
+        """
+        network_template = Template('network $name {\n}\n')
+        # property tag may or may not be present in model,and since no of properties
+        # can be more than one , will replace them accoriding to format otherwise null
+        variable_template = Template("""variable $name {
+    type discrete [ $no_of_states ] { $states };
+$properties}\n""")
+        property_template = Template('    property $prop ;\n')
+        # $variable_ here is name of variable, used underscore for clarity
+        probability_template = Template("""probability ( $variable_$seprator_$parents ) {
+    table $values ;
+}\n""")
+        return network_template, variable_template, property_template, probability_template
+
+    def __str__(self):
+        """
+        Returns the BIF format as string
+        """
+        network_template, variable_template, property_template, probability_template = self.BIF_templates()
+        network = ''
+        network += network_template.substitute(name=self.network_name)
+        variables = self.model.nodes()
+
+        for var in sorted(variables):
+            no_of_states = str(len(self.variable_states[var]))
+            states = ', '.join(self.variable_states[var])
+            if not self.property_tag[var]:
+                properties = ''
+            else:
+                properties = ''
+                for prop_val in self.property_tag[var]:
+                    properties += property_template.substitute(prop=prop_val)
+            network += variable_template.substitute(name=var, no_of_states=no_of_states,
+                                                    states=states, properties=properties)
+
+        for var in sorted(variables):
+            if not self.variable_parents[var]:
+                parents = ''
+                seprator = ''
+            else:
+                parents = ', '.join(self.variable_parents[var])
+                seprator = ' | '
+            cpd = ', '.join(map(str, self.tables[var]))
+            network += probability_template.substitute(variable_=var, seprator_=seprator,
+                                                       parents=parents, values=cpd)
+
+        return network
+
+    def get_variables(self):
+
+        """
+        Add variables to BIF
+
+        Returns
+        -------
+        list: a list containing names of variable
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.get_variables()
+        ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
+        """
+        variables = self.model.nodes()
+        return variables
+
+    def get_states(self):
+
+        """
+        Add states to variable of BIF
+
+        Returns
+        -------
+        dict: dict of type {variable: a list of states}
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.get_states()
+        {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
+         'dog-out': ['dog-out_0', 'dog-out_1'],
+         'family-out': ['family-out_0', 'family-out_1'],
+         'hear-bark': ['hear-bark_0', 'hear-bark_1'],
+         'light-on': ['light-on_0', 'light-on_1']}
+        """
+        variable_states = {}
+        cpds = self.model.get_cpds()
+        for cpd in cpds:
+            variable = cpd.variable
+            variable_states[variable] = []
+            for state in range(cpd.get_cardinality([variable])[variable]):
+                variable_states[variable].append(str(variable)+'_'+str(state))
+        return variable_states
+
+    def get_properties(self):
+
+        """
+        Add property to variables in BIF
+
+        Returns
+        -------
+        dict: dict of type {variable: list of properties }
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.get_properties()
+        {'bowel-problem': ['position = (335, 99)'],
+         'dog-out': ['position = (300, 195)'],
+         'family-out': ['position = (257, 99)'],
+         'hear-bark': ['position = (296, 268)'],
+         'light-on': ['position = (218, 195)']}
+        """
+        variables = self.model.nodes()
+        property_tag = {}
+        for variable in sorted(variables):
+            properties = self.model.node[variable]
+            property_tag[variable] = []
+            for prop, val in properties.items():
+                property_tag[variable].append(str(prop) + " = " + str(val))
+        return property_tag
+
+    def get_parents(self):
+
+        """
+        Add the parents to BIF
+
+        Returns
+        -------
+        dict: dict of type {variable: a list of parents}
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.get_parents()
+        {'bowel-problem': [],
+         'dog-out': ['bowel-problem', 'family-out'],
+         'family-out': [],
+         'hear-bark': ['dog-out'],
+         'light-on': ['family-out']}
+        """
+        cpds = self.model.get_cpds()
+        cpds.sort(key=lambda x: x.variable)
+        variable_parents = {}
+        for cpd in cpds:
+            variable_parents[cpd.variable] = []
+            for parent in sorted([] if cpd.evidence is None else cpd.evidence):
+                variable_parents[cpd.variable].append(parent)
+        return variable_parents
+
+    def get_cpds(self):
+
+        """
+        Adds tables to BIF
+
+        Returns
+        -------
+        dict: dict of type {variable: array}
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.get_cpds()
+        {'bowel-problem': array([ 0.01,  0.99]),
+         'dog-out': array([ 0.99,  0.97,  0.9 ,  0.3 ,  0.01,  0.03,  0.1 ,  0.7 ]),
+         'family-out': array([ 0.15,  0.85]),
+         'hear-bark': array([ 0.7 ,  0.01,  0.3 ,  0.99]),
+         'light-on': array([ 0.6 ,  0.05,  0.4 ,  0.95])}
+        """
+        cpds = self.model.get_cpds()
+        tables = {}
+        for cpd in cpds:
+            tables[cpd.variable] = cpd.values.ravel()
+        return tables
+
+    def write_bif(self, filename):
+
+        """
+        Writes the BIF data into a file
+
+        Parameters
+        ----------
+        filename : Name of the file
+
+        Example
+        -------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> model = BIFReader('dog-problem.bif').get_model()
+        >>> writer = BIFWriter(model)
+        >>> writer.write_bif(filname='test_file.bif')
+        """
+        writer = self.__str__()
+        with open(filename, 'w') as fout:
+            fout.write(writer)
