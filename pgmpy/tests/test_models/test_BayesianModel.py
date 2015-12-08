@@ -122,6 +122,24 @@ class TestBayesianModelMethods(unittest.TestCase):
     def test_local_independencies(self):
         self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
 
+    def test_get_independencies(self):
+        test_indepedencies = Independencies(['a', ['c', 'b'], 'd'], ['a', ['b', 'c', 'd'], 'e'],
+                                            ['a', ['d', 'e'], 'c'], ['a', ['d', 'e'], 'b'],
+                                            ['a', ['c', 'b']], ['b', ['c', 'd', 'e'], 'a'],
+                                            ['b', ['c', 'a'], 'd'], ['b', ['a', 'c', 'd'], 'e'],
+                                            ['b', ['d', 'e'], 'c'], ['b', 'a'], ['c', ['a', 'b'], 'd'],
+                                            ['c', ['b', 'd', 'e'], 'a'], ['c', ['a', 'b', 'd'], 'e'],
+                                            ['c', ['a', 'd', 'e'], 'b'], ['d', ['c', 'e', 'b'], 'a'],
+                                            ['d', ['c', 'a', 'b'], 'e'], ['d', ['a', 'e', 'b'], 'c'],
+                                            ['d', ['a', 'e'], 'b'], ['d', 'c', ['a', 'b']],
+                                            ['e', ['c', 'd', 'b'], 'a'], ['e', ['a', 'b', 'd'], 'c'],
+                                            ['e', ['a', 'd'], 'b'], ['e', ['a', 'c', 'b'], 'd'])
+        self_independencies = self.G.get_independencies()
+        self_independencies_list = self_independencies.get_assertions()
+        for assertion in self_independencies_list:
+            if assertion not in test_indepedencies.get_assertions():
+                self.fail("get_independencies test fails")
+
     def tearDown(self):
         del self.G
 
