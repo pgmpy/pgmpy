@@ -176,3 +176,9 @@ class NaiveBayesModel(BayesianModel):
             else:
                 independencies.append(None)
         return independencies
+
+    def fit(self, data, parent_node, estimator_type=None):
+        for child_node in data.columns:
+            if child_node != parent_node:
+                self.add_edge(parent_node, child_node)
+        super(NaiveBayesModel, self).fit(data, estimator_type)
