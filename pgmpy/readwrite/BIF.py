@@ -1,7 +1,5 @@
 from pgmpy.models import BayesianModel
-
 from pgmpy.factors import TabularCPD
-
 from pgmpy.extern.six.moves import map, range
 
 import numpy
@@ -10,7 +8,6 @@ from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nu
         cppStyleComment, Literal, printables
 
 import re
-
 from string import Template
 
 

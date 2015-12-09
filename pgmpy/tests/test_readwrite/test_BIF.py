@@ -1,28 +1,23 @@
 from pgmpy.readwrite import BIFReader, BIFWriter
-
 from pgmpy.models import BayesianModel
-
 from pgmpy.factors import TabularCPD
-
 from pgmpy.extern.six.moves import map, range
 
 import unittest
 
 import numpy as np
-
 import numpy.testing as np_test
-
 
 
 class TestBIFReader(unittest.TestCase):
 
     def setUp(self):
 
-        self.reader = BIFReader(string = """
+        self.reader = BIFReader(string="""
 // Bayesian Network in the Interchange Format
 // Produced by BayesianNetworks package in JavaBayes
 // Output created Sun Nov 02 17:49:49 GMT+00:00 1997
-// Bayesian network 
+// Bayesian network
 network "Dog-Problem" { //5 variables and 5 probability distributions
         property "credal-set constant-density-bounded 1.1" ;
 }
@@ -66,7 +61,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
     def test_network_name(self):
 
         name_expected = 'Dog-Problem'
-        self.assertEqual(self.reader.network_name,name_expected)
+        self.assertEqual(self.reader.network_name, name_expected)
 
     def test_get_variables(self):
 
@@ -83,8 +78,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                            'light-on': ['true', 'false']}
         states = self.reader.get_states()
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable],
-                                states[variable])
+            self.assertListEqual(states_expected[variable], states[variable])
 
     def test_get_property(self):
 
