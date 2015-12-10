@@ -178,6 +178,40 @@ class NaiveBayesModel(BayesianModel):
         return independencies
 
     def fit(self, data, parent_node, estimator_type=None):
+        """
+        Computes the CPD for each node from a given data in the form of a pandas dataframe.
+        If a variable from the data is not present in the model, it adds that node into the model. 
+
+        Parameters
+        ----------
+        data : pandas DataFrame object
+            A DataFrame object with column names same as the variable names of network
+
+        parent_node: str
+            parent node of the model
+
+        estimator: Estimator class
+            Any pgmpy estimator. If nothing is specified, the default Maximum Likelihood
+            estimator would be used
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import NaiveBayesModel
+        >>> model = NaiveBayesModel()
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model.fit(values, 'A')
+        >>> model.get_cpds()
+        [<TabularCPD representing P(D:2 | A:2) at 0x4b72870>,
+         <TabularCPD representing P(E:2 | A:2) at 0x4bb2150>,
+         <TabularCPD representing P(A:2) at 0x4bb23d0>,
+         <TabularCPD representing P(B:2 | A:2) at 0x4bb24b0>,
+         <TabularCPD representing P(C:2 | A:2) at 0x4bb2750>]
+        >>> model.edges()
+        [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
+        """
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
