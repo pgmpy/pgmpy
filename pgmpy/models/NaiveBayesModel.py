@@ -212,6 +212,8 @@ class NaiveBayesModel(BayesianModel):
         >>> model.edges()
         [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
         """
+        if parent_node not in data.columns:
+            raise ValueError("parent node {node} is not present in the given data".format(node=parent_node))
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
