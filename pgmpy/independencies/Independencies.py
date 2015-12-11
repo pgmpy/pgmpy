@@ -197,6 +197,10 @@ class IndependenceAssertion(object):
     def __eq__(self, other):
         return self.get_assertion() == other.get_assertion()
 
+    def __hash__(self):
+        return hash(str(sorted(self.event1)) + str(sorted(self.event2)) +
+                    str(sorted(self.event3)))
+
     @staticmethod
     def _return_list_if_str(event):
         """
