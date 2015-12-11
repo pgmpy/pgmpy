@@ -206,6 +206,10 @@ class IndependenceAssertion(object):
         return all(sorted(self_event)==sorted(other_event) for self_event,other_event
                     in zip(self_assertions,other_assertions))
 
+    def __hash__(self):
+        return hash(str(sorted(self.event1)) + str(sorted(self.event2)) +
+                    str(sorted(self.event3)))
+
     @staticmethod
     def _return_list_if_str(event):
         """
