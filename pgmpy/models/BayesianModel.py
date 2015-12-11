@@ -214,10 +214,23 @@ class BayesianModel(DirectedGraph):
         >>> student.add_cpds(cpd)
         >>> student.remove_cpds(cpd)
         """
+        # Remove cpds from model and networkx structure
+        cpds = [
+            self.get_cpds(cpd) if isinstance(cpd, six.string_types) else cpd
+            for cpd in cpds
+        ]
         for cpd in cpds:
-            if isinstance(cpd, six.string_types):
-                cpd = self.get_cpds(cpd)
+            if cpd.variable in self.node:
+                del self.node[cpd.variable]
+            if cpd.variable in self.edge:
+                del self.edge[cpd.variable]
+            for edge in self.edge.values():
+                if cpd.variable in edge:
+                    del edge[cpd.variable]
             self.cpds.remove(cpd)
+        empty_edges = [e1 for e1, e2 in self.edge.items() if len(e2) == 0]
+        for e1 in empty_edges:
+            del self.edge[e1]
 
     def check_model(self):
         """
