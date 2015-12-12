@@ -114,7 +114,7 @@ class BayesianModel(DirectedGraph):
                  'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
         else:
             super(BayesianModel, self).add_edge(u, v, **kwargs)
-        
+
     def add_cpds(self, *cpds):
         """
         Add CPD (Conditional Probability Distribution) to the Bayesian Model.
@@ -442,6 +442,10 @@ class BayesianModel(DirectedGraph):
                     if independent_variables:
                         independencies.add_assertions([start, independent_variables,
                                                        observed])
+            local_independence = self.local_independencies(start)
+            for item in set(local_independence.get_assertions()):
+                if item not in set(independencies.get_assertions()):
+                    independencies.add_assertions(item)
 
         independencies.reduce()
 
