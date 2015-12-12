@@ -57,6 +57,9 @@ class Independencies(object):
         other_assertions = other.get_assertions()
         return all(self_independency in other_assertions for self_independency in self.get_assertions())
 
+    def __hash__(self):
+        return sum(hash(assertion) for assertion in self.get_assertions())
+
     def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
