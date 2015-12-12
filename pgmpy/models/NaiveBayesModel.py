@@ -114,6 +114,19 @@ class NaiveBayesModel(BayesianModel):
             self.children_nodes.append(v)
         super(NaiveBayesModel, self).add_edge(u, v, *kwargs)
 
+    def _get_ancestors_of(self, obs_nodes_list):
+        """
+        Returns a list of all ancestors of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+        """
+        if not obs_nodes_list:
+            return set()
+        return set(obs_nodes_list) | set(self.parent_node)
+
 
     def active_trail_nodes(self, start, observed=None):
         """
