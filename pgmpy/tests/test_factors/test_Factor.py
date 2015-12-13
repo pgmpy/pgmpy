@@ -46,6 +46,10 @@ class TestFactorMethods(unittest.TestCase):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         self.phi2 = Factor([('x1', 0), ('x2', 0), ('x3', 0)], [2, 3, 2], range(12))
+        # This larger factor (phi3) caused a bug in reduce
+        card3 = [3, 3, 3, 2, 2, 2, 2, 2, 2]
+        self.phi3 = Factor(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
+                           card3, np.arange(np.prod(card3), dtype=np.float))
 
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
@@ -101,6 +105,12 @@ class TestFactorMethods(unittest.TestCase):
     def test_marginalize_typeerror(self):
         self.assertRaises(TypeError, self.phi.marginalize, 'x1')
 
+    def test_marginalize_shape(self):
+        values = ['A', 'D', 'F', 'H']
+        phi3_max = self.phi3.marginalize(values, inplace=False)
+        # Previously a sorting error caused these to be different
+        np_test.assert_array_equal(phi3_max.values.shape, phi3_max.cardinality)
+
     def test_normalize(self):
         self.phi1.normalize()
         np_test.assert_almost_equal(self.phi1.values,
@@ -118,6 +128,12 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce1(self):
         self.phi1.reduce([('x2', 0), ('x1', 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+
+    def test_reduce_shape(self):
+        values = [('A', 0), ('D', 0), ('F', 0), ('H', 1)]
+        phi3_reduced = self.phi3.reduce(values, inplace=False)
+        # Previously a sorting error caused these to be different
+        np_test.assert_array_equal(phi3_reduced.values.shape, phi3_reduced.cardinality)
 
     @unittest.skip
     def test_complete_reduce(self):
@@ -263,6 +279,12 @@ class TestFactorMethods(unittest.TestCase):
         self.phi2.maximize(['x2'])
         self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
                                                                   0.07, 0.15, 0.21]))
+
+    def test_maximize_shape(self):
+        values = ['A', 'D', 'F', 'H']
+        phi3_max = self.phi3.maximize(values, inplace=False)
+        # Previously a sorting error caused these to be different
+        np_test.assert_array_equal(phi3_max.values.shape, phi3_max.cardinality)
 
     def test_maximize_scopeerror(self):
         self.assertRaises(ValueError, self.phi.maximize, ['x10'])
