@@ -37,9 +37,6 @@ class BIFReader(object):
         >>> reader = BIFReader("bif_test.bif")
         <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
         """
-        # An pyparsing expression for checking mulitple spaces
-        multi_space = OneOrMore(Literal(' '))
-
         if path:
             with open(path, 'r') as network:
                 self.network = network.read()
@@ -56,9 +53,6 @@ class BIFReader(object):
             # or "true""false" and "true" "false" and true false
             self.network = self.network.replace('"', ' ')
 
-        # replacing mulitple spaces or tabs by one space
-        #if '  ' in self.network :
-        #    self.network = multi_space.setParseAction(lambda t: ' ').transformString(self.network)
         if '/*' in self.network or '//' in self.network:
             self.network = cppStyleComment.suppress().transformString(self.network)  # removing comments from the file
 
@@ -113,13 +107,13 @@ class BIFReader(object):
     def variable_block(self):
         start = re.finditer('variable', self.network)
         for index in start:
-            end = self.network.find('}\n',index.start())
+            end = self.network.find('}\n', index.start())
             yield self.network[index.start():end]
 
     def probability_block(self):
         start = re.finditer('probability', self.network)
         for index in start:
-            end = self.network.find('}\n',index.start())
+            end = self.network.find('}\n', index.start())
             yield self.network[index.start():end]
 
     def get_network_name(self):
