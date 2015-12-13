@@ -127,9 +127,11 @@ class BIFReader(object):
         >>> reader.network_name()
         'Dog-Problem'
         """
+        start = self.network.find('network')
+        end = self.network.find('}\n', start)
         # Creating a network attribute
         network_attribute = Suppress('network') + Word(alphanums + '_' + '-') + '{'
-        network_name = network_attribute.searchString(self.network)[0][0]
+        network_name = network_attribute.searchString(self.network[start:end])[0][0]
 
         return network_name
 
