@@ -1,12 +1,12 @@
-from pgmpy.readwrite import BIFReader, BIFWriter
-from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
-from pgmpy.extern.six.moves import map, range
-
 import unittest
 
 import numpy as np
 import numpy.testing as np_test
+
+from pgmpy.readwrite import BIFReader, BIFWriter
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map, range
 
 
 class TestBIFReader(unittest.TestCase):
