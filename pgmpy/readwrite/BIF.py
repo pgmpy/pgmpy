@@ -1,14 +1,13 @@
-from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
-from pgmpy.extern.six.moves import map, range
+import re
+from string import Template
 
 import numpy
-
 from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore,\
         cppStyleComment, Literal, printables
 
-import re
-from string import Template
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
+from pgmpy.extern.six.moves import map, range
 
 
 class BIFReader(object):
