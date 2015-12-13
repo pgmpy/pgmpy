@@ -38,7 +38,7 @@ class BIFReader(object):
         <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
         """
         # An pyparsing expression for checking mulitple spaces
-        multi_space = OneOrMore(Literal(' ') | '\t' | '\r' | '\f')
+        multi_space = OneOrMore(Literal(' '))
 
         if path:
             with open(path, 'r') as network:
@@ -57,18 +57,19 @@ class BIFReader(object):
             self.network = self.network.replace('"', ' ')
 
         # replacing mulitple spaces or tabs by one space
-        self.network = multi_space.setParseAction(lambda t: ' ').transformString(self.network)
+        #if '  ' in self.network :
+        #    self.network = multi_space.setParseAction(lambda t: ' ').transformString(self.network)
         if '/*' in self.network or '//' in self.network:
             self.network = cppStyleComment.suppress().transformString(self.network)  # removing comments from the file
 
-        self.variable_block, self.name_expr, self.state_expr, self.property_expr = self.get_variable_grammar()
-        self.probability_block, self.probability_expr, self.cpd_expr = self.get_probability_grammar()
+        self.name_expr, self.state_expr, self.property_expr = self.get_variable_grammar()
+        self.probability_expr, self.cpd_expr = self.get_probability_grammar()
         self.network_name = self.get_network_name()
         self.variable_names = self.get_variables()
         self.variable_states = self.get_states()
         self.variable_properties = self.get_property()
         self.variable_parents = self.get_parents()
-        self.variable_cpds = self.get_cpds()
+        self.variable_cpds = self.get_cpd()
         self.variable_edges = self.get_edges()
 
     def get_variable_grammar(self):
@@ -76,13 +77,6 @@ class BIFReader(object):
         """
          A method that returns variable grammar
         """
-        variable_block_starts = [x.start() for x in re.finditer('variable', self.network)]
-        variable_block = []
-
-        for i in variable_block_starts:
-            variable_block_end = self.network.find('}\n', i)
-            variable_block.append(self.network[i:variable_block_end])
-
         # Defining a expression for valid word
         word_expr = Word(alphanums + '_' + '-')
         word_expr2 = Word(initChars=printables, excludeChars=['{', '}', ',', ' '])
@@ -95,19 +89,13 @@ class BIFReader(object):
 
         property_expr = Suppress('property') + CharsNotIn(';') + Suppress(';')  # Creating a expr to find property
 
-        return variable_block, name_expr, variable_state_expr, property_expr
+        return name_expr, variable_state_expr, property_expr
 
     def get_probability_grammar(self):
 
         """
         A method that returns probability grammar
         """
-        probability_block_starts = [x.start() for x in re.finditer('probability', self.network)]
-        probability_block = []
-        for i in probability_block_starts:
-            probability_block_end = self.network.find('}\n', i)
-            probability_block.append(self.network[i:probability_block_end])
-
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
         word_expr = Word(alphanums + '-' + '_') + Suppress(Optional("|")) + Suppress(Optional(","))
@@ -120,7 +108,19 @@ class BIFReader(object):
         probab_attributes = optional_expr | Suppress('table')
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 
-        return probability_block, probability_expr, cpd_expr
+        return probability_expr, cpd_expr
+
+    def variable_block(self):
+        start = re.finditer('variable', self.network)
+        for index in start:
+            end = self.network.find('}\n',index.start())
+            yield self.network[index.start():end]
+
+    def probability_block(self):
+        start = re.finditer('probability', self.network)
+        for index in start:
+            end = self.network.find('}\n',index.start())
+            yield self.network[index.start():end]
 
     def get_network_name(self):
 
@@ -153,7 +153,7 @@ class BIFReader(object):
         ['light-on','bowel_problem','dog-out','hear-bark','family-out']
         """
         variable_names = []
-        for block in self.variable_block:
+        for block in self.variable_block():
             name = self.name_expr.searchString(block)[0][0]
             variable_names.append(name)
 
@@ -176,8 +176,8 @@ class BIFReader(object):
         'light-on': ['true','false']}
         """
         variable_states = {}
-        for i, name in enumerate(self.variable_names):
-            block = self.variable_block[i]
+        for block in self.variable_block():
+            name = self.name_expr.searchString(block)[0][0]
             variable_states[name] = list(self.state_expr.searchString(block)[0][0])
 
         return variable_states
@@ -199,8 +199,8 @@ class BIFReader(object):
         'light-on': ['position = (218, 195)']}
         """
         variable_properties = {}
-        for i, name in enumerate(self.variable_names):
-            block = self.variable_block[i]
+        for block in self.variable_block():
+            name = self.name_expr.searchString(block)[0][0]
             properties = self.property_expr.searchString(block)
             variable_properties[name] = [y.strip() for x in properties for y in x]
         return variable_properties
@@ -222,12 +222,12 @@ class BIFReader(object):
         'light-on': ['family-out']}
         """
         variable_parents = {}
-        for block in self.probability_block:
-            names = self.probability_expr.searchString(block)[0]
+        for block in self.probability_block():
+            names = self.probability_expr.searchString(block.split('\n')[0])[0]
             variable_parents[names[0]] = names[1:]
         return variable_parents
 
-    def get_cpds(self):
+    def get_cpd(self):
 
         """
         Returns the CPD of the variables present in the network
@@ -236,7 +236,7 @@ class BIFReader(object):
         --------
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_cpds()
+        >>> reader.get_cpd()
         {'bowel-problem': np.array([[0.01],
                                     [0.99]]),
         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
@@ -249,7 +249,7 @@ class BIFReader(object):
                             [0.4, 0.95]])}
          """
         variable_cpds = {}
-        for block in self.probability_block:
+        for block in self.probability_block():
             name = self.probability_expr.searchString(block)[0][0]
             cpds = self.cpd_expr.searchString(block)
             arr = [float(j) for i in cpds for j in i]
