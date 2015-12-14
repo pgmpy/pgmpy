@@ -98,8 +98,8 @@ class NaiveBayesModel(BayesianModel):
         u,v : nodes
               Nodes can be any hashable python object.
 
-        EXAMPLE
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import NaiveBayesModel
         >>> G = NaiveBayesModel()
         >>> G.add_nodes_from(['a', 'b', 'c'])
@@ -226,7 +226,7 @@ class NaiveBayesModel(BayesianModel):
         [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
         """
         if parent_node not in data.columns:
-            raise ValueError("parent node {node} is not present in the given data".format(node=parent_node))
+            raise ValueError("parent node: {node} is not present in the given data".format(node=parent_node))
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
