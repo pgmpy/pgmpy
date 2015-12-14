@@ -51,19 +51,19 @@ class DBNInference(Inference):
          (('Y', 1), ('X', 1)),
          (('Z', 1), ('X', 1))]
 
-       References:
-       ----------
-       [1] Dynamic Bayesian Networks: Representation, Inference and Learning
-           by Kevin Patrick Murphy 
-           http://www.cs.ubc.ca/~murphyk/Thesis/thesis.pdf
+        References:
+        ----------
+        [1] Dynamic Bayesian Networks: Representation, Inference and Learning
+            by Kevin Patrick Murphy
+            http://www.cs.ubc.ca/~murphyk/Thesis/thesis.pdf
 
-       Public Methods:
-       --------------
-       forward_inference
-       backward_inference
-       query
+        Public Methods:
+        --------------
+        forward_inference
+        backward_inference
+        query
         """
-        super().__init__(model)
+        super(DBNInference, self).__init__(model)
         self.interface_nodes_0 = model.get_interface_nodes(time_slice=0)
         self.interface_nodes_1 = model.get_interface_nodes(time_slice=1)
 
