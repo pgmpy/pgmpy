@@ -248,6 +248,7 @@ class Factor(object):
         var_indexes = [phi.variables.index(var) for var in variables]
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
+        index_to_keep = sorted(index_to_keep)
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
@@ -301,6 +302,7 @@ class Factor(object):
         var_indexes = [phi.variables.index(var) for var in variables]
 
         index_to_keep = list(set(range(len(self.variables))) - set(var_indexes))
+        index_to_keep = sorted(index_to_keep)
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
@@ -397,6 +399,8 @@ class Factor(object):
             var_index_to_del.append(var_index)
 
         var_index_to_keep = list(set(range(len(phi.variables))) - set(var_index_to_del))
+        # set difference is not gaurenteed to maintain ordering
+        var_index_to_keep = sorted(var_index_to_keep)
         phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
         phi.values = phi.values[tuple(slice_)]
