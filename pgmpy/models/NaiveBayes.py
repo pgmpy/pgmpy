@@ -125,7 +125,6 @@ class NaiveBayes(BayesianModel):
 
         Parameters
         ----------
-
         start: Graph node
 
         observed : List of nodes (optional)
@@ -133,7 +132,6 @@ class NaiveBayes(BayesianModel):
 
         Examples
         --------
-
         >>> from pgmpy.models import NaiveBayes
         >>> model = NaiveBayes()
         >>> model.add_nodes_from(['a', 'b', 'c', 'd'])
@@ -191,12 +189,12 @@ class NaiveBayes(BayesianModel):
         data : pandas DataFrame object
             A DataFrame object with column names same as the variable names of network
 
-        parent_node: str
+        parent_node: any hashable python object
             parent node of the model
 
         estimator: Estimator class
-            Any pgmpy estimator. If nothing is specified, the default Maximum Likelihood
-            estimator would be used
+            Any pgmpy estimator. If nothing is specified, the default ``MaximumLikelihoodEstimator``
+            would be used.
 
         Examples
         --------
