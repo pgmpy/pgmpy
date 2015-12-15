@@ -13,7 +13,7 @@ from pgmpy.independencies import IndependenceAssertion
 from pgmpy.extern.six.moves import range
 from pgmpy.models import BayesianModel
 
-class NaiveBayesModel(BayesianModel):
+class NaiveBayes(BayesianModel):
     """
     Class to represent Naive Bayes.
     Subclass of Bayesian Model.
@@ -31,8 +31,8 @@ class NaiveBayesModel(BayesianModel):
     --------
     Create an empty Naive Bayes Model with no nodes and no edges.
 
-    >>> from pgmpy.models import NaiveBayesModel
-    >>> G = NaiveBayesModel()
+    >>> from pgmpy.models import NaiveBayes
+    >>> G = NaiveBayes()
 
     G can be grown in several ways.
 
@@ -76,7 +76,7 @@ class NaiveBayesModel(BayesianModel):
     def __init__(self, ebunch=None):
         self.parent_node = None
         self.children_nodes = []
-        super(NaiveBayesModel, self).__init__(ebunch)
+        super(NaiveBayes, self).__init__(ebunch)
     
     def add_edge(self, u, v, *kwargs):
         """
@@ -92,8 +92,8 @@ class NaiveBayesModel(BayesianModel):
 
         Examples
         --------
-        >>> from pgmpy.models import NaiveBayesModel
-        >>> G = NaiveBayesModel()
+        >>> from pgmpy.models import NaiveBayes
+        >>> G = NaiveBayes()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> G.add_edge('a', 'b')
         >>> G.add_edge('a', 'c')
@@ -103,7 +103,7 @@ class NaiveBayesModel(BayesianModel):
              raise ValueError("Model can have only one parent node.")
         self.parent_node = u
         self.children_nodes.append(v)
-        super(NaiveBayesModel, self).add_edge(u, v, *kwargs)
+        super(NaiveBayes, self).add_edge(u, v, *kwargs)
 
     def _get_ancestors_of(self, obs_nodes_list):
         """
@@ -134,8 +134,8 @@ class NaiveBayesModel(BayesianModel):
         Examples
         --------
 
-        >>> from pgmpy.models import NaiveBayesModel
-        >>> model = NaiveBayesModel()
+        >>> from pgmpy.models import NaiveBayes
+        >>> model = NaiveBayes()
         >>> model.add_nodes_from(['a', 'b', 'c', 'd'])
         >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
         >>> model.active_trail_nodes('a')
@@ -165,8 +165,8 @@ class NaiveBayesModel(BayesianModel):
 
         Examples
         --------
-        >>> from pgmpy.models import NaiveBayesModel
-        >>> model = NaiveBayesModel()
+        >>> from pgmpy.models import NaiveBayes
+        >>> model = NaiveBayes()
         >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
         >>> ind = model.local_independencies('b')
         >>> ind
@@ -202,8 +202,8 @@ class NaiveBayesModel(BayesianModel):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import NaiveBayesModel
-        >>> model = NaiveBayesModel()
+        >>> from pgmpy.models import NaiveBayes
+        >>> model = NaiveBayes()
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> model.fit(values, 'A')
@@ -221,4 +221,4 @@ class NaiveBayesModel(BayesianModel):
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
-        super(NaiveBayesModel, self).fit(data, estimator_type)
+        super(NaiveBayes, self).fit(data, estimator_type)
