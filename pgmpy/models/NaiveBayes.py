@@ -181,7 +181,7 @@ class NaiveBayes(BayesianModel):
                 independencies.append(None)
         return independencies
 
-    def fit(self, data, parent_node, estimator_type=None):
+    def fit(self, data, parent_node=None, estimator_type=None):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.
         If a variable from the data is not present in the model, it adds that node into the model. 
@@ -191,8 +191,9 @@ class NaiveBayes(BayesianModel):
         data : pandas DataFrame object
             A DataFrame object with column names same as the variable names of network
 
-        parent_node: any hashable python object
-            parent node of the model
+        parent_node: any hashable python object (optional)
+            Parent node of the model, if not specified it looks for a previously specified
+            parent node.
 
         estimator: Estimator class
             Any pgmpy estimator. If nothing is specified, the default ``MaximumLikelihoodEstimator``
@@ -216,6 +217,11 @@ class NaiveBayes(BayesianModel):
         >>> model.edges()
         [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
         """
+        if not parent_node:
+            if not self.parent_node:
+                raise ValueError("parent node must be specified for the model")
+            else:
+                parent_node = self.parent_node
         if parent_node not in data.columns:
             raise ValueError("parent node: {node} is not present in the given data".format(node=parent_node))
         for child_node in data.columns:
