@@ -97,6 +97,8 @@ class NaiveBayes(BayesianModel):
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> G.add_edge('a', 'b')
         >>> G.add_edge('a', 'c')
+        >>> G.edges()
+        [('a', 'c'), ('a', 'b')]
         """
 
         if self.parent_node and u != self.parent_node:
