@@ -61,6 +61,7 @@ class MaximumLikelihoodEstimator(BaseEstimator):
             parents = self.model.get_parents(node)
             if not parents:
                 state_counts = self.data.ix[:, node].value_counts()
+                state_counts = state_counts.reindex(sorted(state_counts.index))
                 cpd = TabularCPD(node, self.node_card[node],
                                  state_counts.values[:, np.newaxis])
                 cpd.normalize()
