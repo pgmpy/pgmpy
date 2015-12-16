@@ -119,3 +119,25 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def tearDown(self):
         del self.G
+
+class TestNaiveBayesMethods(unittest.TestCase):
+    def setUp(self):
+        self.G = NaiveBayes([('a', 'b'), ('a', 'c'),
+                             ('a', 'd'), ('a', 'e')])
+
+    def test_local_independencies(self):
+        self.assertListEqual(self.G.local_independencies('a'), [None])
+        self.assertListEqual(self.G.local_independencies('b'), 
+                            [Independencies(['b', ['e','c','d'], 'a'])])
+        self.assertListEqual(self.G.local_independencies('c'), 
+                            [Independencies(['c', ['e','b','d'], 'a'])])
+        six.assertCountEqual(self, self.G.local_independencies(['b','d']),
+                            [Independencies(['b', ['e','c','d'], 'a']),
+                            Independencies(['d', ['b','c','e'], 'a'])])
+        six.assertCountEqual(self, self.G.local_independencies(['a','b','d']),
+                            [None, Independencies(['b', ['e','c','d'], 'a']),
+                            Independencies(['d', ['b','c','e'], 'a'])])
+        
+    def tearDown(self):
+        del self.G
+        
