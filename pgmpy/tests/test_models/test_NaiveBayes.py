@@ -141,3 +141,19 @@ class TestNaiveBayesMethods(unittest.TestCase):
     def tearDown(self):
         del self.G
         
+class TestNaiveBayes_active_trail_nodes(unittest.TestCase):
+    def setUp(self):
+        self.G = BayesianModel([('d', 'g'), ('d', 'l'),
+                                ('d', 's')])
+
+    def test_active_trail_nodes(self):
+        self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('g')), ['d', 'g', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('l')), ['d', 'g', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s')), ['d', 'g', 'l', 's'])
+
+    def test_active_trail_nodes_args(self):
+        self.assertEqual(sorted(self.G.active_trail_nodes('d', observed='g')), ['d', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['l', 'd', 'g'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['g', 'l'])), ['s','d'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
