@@ -8,6 +8,24 @@ from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nu
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 from pgmpy.extern.six.moves import map, range
+from multiprocessing import Pool
+
+
+def search_cpds(probability_expr, cpd_expr, blocks, variable_states):
+    cpds = {}
+    for block in blocks:
+        name = probability_expr.searchString(block)[0][0]
+        cpd = cpd_expr.searchString(block)
+        arr = [float(j) for i in cpd for j in i]
+        arr = numpy.array(arr)
+        arr = arr.reshape((len(variable_states[name]),
+                           arr.size//len(variable_states[name])))
+        cpds[name] = arr
+    return cpds
+
+pool1 = Pool(processes=1)
+pool2 = Pool(processes=1)
+pool3 = Pool(processes=1)
 
 
 class BIFReader(object):
@@ -244,14 +262,19 @@ class BIFReader(object):
                             [0.4, 0.95]])}
          """
         variable_cpds = {}
+        blocks = []
         for block in self.probability_block():
-            name = self.probability_expr.searchString(block)[0][0]
-            cpds = self.cpd_expr.searchString(block)
-            arr = [float(j) for i in cpds for j in i]
-            arr = numpy.array(arr)
-            arr = arr.reshape((len(self.variable_states[name]),
-                              arr.size//len(self.variable_states[name])))
-            variable_cpds[name] = arr
+            blocks.append(block)
+        i = range(0, len(blocks), len(blocks)//3)
+        cpds1 = pool1.apply_async(search_cpds, (self.probability_expr,
+                                                self.cpd_expr, blocks[0:i[0]], self.variable_states)).get()
+        cpds2 = pool2.apply_async(search_cpds, (self.probability_expr,
+                                                self.cpd_expr, blocks[i[0]:i[1]], self.variable_states)).get()
+        cpds3 = pool3.apply_async(search_cpds, (self.probability_expr,
+                                                self.cpd_expr, blocks[i[1]:], self.variable_states)).get()
+        variable_cpds.update(cpds1)
+        variable_cpds.update(cpds2)
+        variable_cpds.update(cpds3)
 
         return variable_cpds
 
