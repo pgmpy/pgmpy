@@ -75,7 +75,7 @@ class NaiveBayes(BayesianModel):
 
     def __init__(self, ebunch=None):
         self.parent_node = None
-        self.children_nodes = []
+        self.children_nodes = set()
         super(NaiveBayes, self).__init__(ebunch)
     
     def add_edge(self, u, v, *kwargs):
@@ -104,7 +104,7 @@ class NaiveBayes(BayesianModel):
         if self.parent_node and u != self.parent_node:
              raise ValueError("Model can have only one parent node.")
         self.parent_node = u
-        self.children_nodes.append(v)
+        self.children_nodes.add(v)
         super(NaiveBayes, self).add_edge(u, v, *kwargs)
 
     def _get_ancestors_of(self, obs_nodes_list):
