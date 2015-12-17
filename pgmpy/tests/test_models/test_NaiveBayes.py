@@ -8,6 +8,7 @@ import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
+import six
 
 class TestBaseModelCreation(unittest.TestCase):
     def setUp(self):
@@ -147,39 +148,39 @@ class TestNaiveBayes_active_trail_nodes(unittest.TestCase):
                                 ('d', 's')])
 
     def test_active_trail_nodes(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('g')), ['d', 'g', 'l', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('l')), ['d', 'g', 'l', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('g')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('l')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('s')), ['d', 'g', 'l', 's'])
 
     def test_active_trail_nodes_args(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes('d', observed='g')), ['d', 'l', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['l', 'd', 'g'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['g', 'l'])), ['s','d'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('d', observed='g')), ['d', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['d', 'l', 's'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('s', observed=['g', 'l'])), ['d','s'])
+        self.assertListEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
 
 class TestNaiveBayesFit(unittest.TestCase):
     def setUp(self):
         self.model1 = NaiveBayes()
-        self.model2 = NaiveBayes(['A','B'])
+        self.model2 = NaiveBayes([('A','B')])
 
     def test_fit_model_creation(self):
         values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
                                             columns=['A', 'B', 'C', 'D', 'E'])
         
-        model1.fit(values, 'A')
+        self.model1.fit(values, 'A')
         six.assertCountEqual(self, self.model1.nodes(), ['A', 'B', 'C', 'D', 'E'])
         six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
                                                     ('A', 'E')])
-        self.assertEqual(self.model.parent_node, 'A')
-        self.assertListEqual(self.model.children_nodes, ['B','C','D','E'])
+        self.assertEqual(self.model1.parent_node, 'A')
+        self.assertListEqual(self.model1.children_nodes, ['B','C','D','E'])
 
-        model2.fit(values)
+        self.model2.fit(values)
         six.assertCountEqual(self, self.model1.nodes(), ['A', 'B', 'C', 'D', 'E'])
         six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
                                                     ('A', 'E')])
-        self.assertEqual(self.model.parent_node, 'A')
-        self.assertListEqual(self.model.children_nodes, ['B','C','D','E'])
+        self.assertEqual(self.model2.parent_node, 'A')
+        self.assertListEqual(self.model2.children_nodes, ['B','C','D','E'])
 
     def test_fit_model_creation_exception(self):
         values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
@@ -187,9 +188,9 @@ class TestNaiveBayesFit(unittest.TestCase):
         values2 = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
                                             columns=['C', 'D', 'E'])
 
-        self.assertRaises(ValueError, model1.fit, values)
-        self.assertRaises(ValueError, model1.fit, values2)
-        self.assertRaises(ValueError, model2.fit, values2, 'A')
+        self.assertRaises(ValueError, self.model1.fit, values)
+        self.assertRaises(ValueError, self.model1.fit, values2)
+        self.assertRaises(ValueError, self.model2.fit, values2, 'A')
 
     def tearDown(self):
         del self.model1
