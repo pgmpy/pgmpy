@@ -143,7 +143,7 @@ class TestNaiveBayesMethods(unittest.TestCase):
         
 class TestNaiveBayes_active_trail_nodes(unittest.TestCase):
     def setUp(self):
-        self.G = BayesianModel([('d', 'g'), ('d', 'l'),
+        self.G = NaiveBayes([('d', 'g'), ('d', 'l'),
                                 ('d', 's')])
 
     def test_active_trail_nodes(self):
@@ -157,3 +157,40 @@ class TestNaiveBayes_active_trail_nodes(unittest.TestCase):
         self.assertEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['l', 'd', 'g'])
         self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['g', 'l'])), ['s','d'])
         self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
+
+class TestNaiveBayesFit(unittest.TestCase):
+    def setUp(self):
+        self.model1 = NaiveBayes()
+        self.model2 = NaiveBayes(['A','B'])
+
+    def test_fit_model_creation(self):
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+                                            columns=['A', 'B', 'C', 'D', 'E'])
+        
+        model1.fit(values, 'A')
+        six.assertCountEqual(self, self.model1.nodes(), ['A', 'B', 'C', 'D', 'E'])
+        six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
+                                                    ('A', 'E')])
+        self.assertEqual(self.model.parent_node, 'A')
+        self.assertListEqual(self.model.children_nodes, ['B','C','D','E'])
+
+        model2.fit(values)
+        six.assertCountEqual(self, self.model1.nodes(), ['A', 'B', 'C', 'D', 'E'])
+        six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
+                                                    ('A', 'E')])
+        self.assertEqual(self.model.parent_node, 'A')
+        self.assertListEqual(self.model.children_nodes, ['B','C','D','E'])
+
+    def test_fit_model_creation_exception(self):
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+                                            columns=['A', 'B', 'C', 'D', 'E'])
+        values2 = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
+                                            columns=['C', 'D', 'E'])
+
+        self.assertRaises(ValueError, model1.fit, values)
+        self.assertRaises(ValueError, model1.fit, values2)
+        self.assertRaises(ValueError, model2.fit, values2, 'A')
+
+    def tearDown(self):
+        del self.model1
+        del self.model2
