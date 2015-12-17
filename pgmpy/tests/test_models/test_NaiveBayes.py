@@ -89,7 +89,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), [1, 2, 3, 4])
         six.assertCountEqual(self, self.G.edges(), [(1, 2), (1, 3), (1, 4)])
         self.assertEqual(self.G.parent_node, 1)
-        self.assertCountEqual(self.G.children_nodes, {2, 3, 4})
+        self.assertSetEqual(self.G.children_nodes, {2, 3, 4})
 
         self.assertRaises(ValueError, self.G.add_edge, 2, 3)
         self.assertRaises(ValueError, self.G.add_edge, 3, 6)
