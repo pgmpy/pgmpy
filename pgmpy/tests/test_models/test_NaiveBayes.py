@@ -22,7 +22,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.g.nodes(), ['a', 'b', 'c'])
         six.assertCountEqual(self, self.g.edges(), [('a', 'b'), ('a', 'c')])
         self.assertEqual(self.g.parent_node, 'a')
-        six.assertCountEqual(self, self.g.children_nodes, ['b', 'c'])
+        self.assertSetEqual(self.g.children_nodes, {'b', 'c'})
 
         self.assertRaises(ValueError, NaiveBayes, [('a', 'b'), ('b', 'c')])
         self.assertRaises(ValueError, NaiveBayes, [('a', 'b'), ('c', 'b')])
@@ -33,7 +33,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.g.nodes(), [1, 2, 3])
         six.assertCountEqual(self, self.g.edges(), [(1, 2), (1, 3)])
         self.assertEqual(self.g.parent_node, 1)
-        six.assertCountEqual(self, self.g.children_nodes, [2, 3])
+        self.assertCountEqual(self.g.children_nodes, {2, 3})
 
         self.assertRaises(ValueError, NaiveBayes, [(1, 2), (2, 3)])
         self.assertRaises(ValueError, NaiveBayes, [(1, 2), (3, 2)])
@@ -60,7 +60,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), ['a', 'b'])
         self.assertListEqual(self.G.edges(), [('a', 'b')])
         self.assertEqual(self.G.parent_node, 'a')
-        six.assertCountEqual(self, self.G.children_nodes, ['b'])
+        self.assertSetEqual(self.G.children_nodes, {'b'})
 
         self.G.add_nodes_from(['c', 'd'])
         self.G.add_edge('a', 'c')
@@ -68,7 +68,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), ['a', 'b', 'c', 'd'])
         six.assertCountEqual(self, self.G.edges(), [('a', 'b'), ('a', 'c'), ('a', 'd')])
         self.assertEqual(self.G.parent_node, 'a')
-        six.assertCountEqual(self, self.G.children_nodes, ['b', 'c', 'd'])
+        self.assertSetEqual(self.G.children_nodes, {'b', 'c', 'd'})
 
         self.assertRaises(ValueError, self.G.add_edge, 'b', 'c')
         self.assertRaises(ValueError, self.G.add_edge, 'd', 'f')
@@ -81,7 +81,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), [1, 2])
         self.assertListEqual(self.G.edges(), [(1, 2)])
         self.assertEqual(self.G.parent_node, 1)
-        six.assertCountEqual(self, self.G.children_nodes, [2])
+        self.assertCountEqual(self.G.children_nodes, {2})
 
         self.G.add_nodes_from([3, 4])
         self.G.add_edge(1, 3)
@@ -89,7 +89,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), [1, 2, 3, 4])
         six.assertCountEqual(self, self.G.edges(), [(1, 2), (1, 3), (1, 4)])
         self.assertEqual(self.G.parent_node, 1)
-        six.assertCountEqual(self, self.G.children_nodes, [2, 3, 4])
+        self.assertCountEqual(self.G.children_nodes, {2, 3, 4})
 
         self.assertRaises(ValueError, self.G.add_edge, 2, 3)
         self.assertRaises(ValueError, self.G.add_edge, 3, 6)
@@ -173,14 +173,14 @@ class TestNaiveBayesFit(unittest.TestCase):
         six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
                                                     ('A', 'E')])
         self.assertEqual(self.model1.parent_node, 'A')
-        self.assertListEqual(self.model1.children_nodes, ['B','C','D','E'])
+        self.assertSetEqual(self.model1.children_nodes, {'B','C','D','E'})
 
         self.model2.fit(values)
         six.assertCountEqual(self, self.model1.nodes(), ['A', 'B', 'C', 'D', 'E'])
         six.assertCountEqual(self, self.model1.edges(), [('A', 'B'), ('A', 'C'), ('A', 'D'),
                                                     ('A', 'E')])
         self.assertEqual(self.model2.parent_node, 'A')
-        self.assertListEqual(self.model2.children_nodes, ['B','C','D','E'])
+        self.assertSetEqual(self.model2.children_nodes, {'B','C','D','E'})
 
     def test_fit_model_creation_exception(self):
         values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
