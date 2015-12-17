@@ -1,4 +1,5 @@
 from pgmpy import exceptions
+from pgmpy.extern import six
 
 
 class Independencies(object):
@@ -194,7 +195,14 @@ class IndependenceAssertion(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        return self.get_assertion() == other.get_assertion()
+        if not isinstance(other, IndependenceAssertion):
+            return False
+        self_assertions = self.get_assertion()
+        other_assertions = other.get_assertion()
+        if len(self_assertions)!=len(other_assertions):
+            return False
+        return all(sorted(self_event)==sorted(other_event) for self_event,other_event
+                    in zip(self_assertions,other_assertions))
 
     @staticmethod
     def _return_list_if_str(event):
@@ -202,7 +210,7 @@ class IndependenceAssertion(object):
         If variable is a string returns a list containing variable.
         Else returns variable itself.
         """
-        if isinstance(event, str):
+        if isinstance(event, six.string_types):
             return [event]
         else:
             return event
