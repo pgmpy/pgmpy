@@ -123,37 +123,35 @@ class TestBaseModelCreation(unittest.TestCase):
 
 class TestNaiveBayesMethods(unittest.TestCase):
     def setUp(self):
-        self.G = NaiveBayes([('a', 'b'), ('a', 'c'),
+        self.G1 = NaiveBayes([('a', 'b'), ('a', 'c'),
                              ('a', 'd'), ('a', 'e')])
-
-    def test_local_independencies(self):
-        self.assertListEqual(self.G.local_independencies('a'), [None])
-        self.assertListEqual(self.G.local_independencies('b'), 
-                            [Independencies(['b', ['e','c','d'], 'a'])])
-        self.assertListEqual(self.G.local_independencies('c'), 
-                            [Independencies(['c', ['e','b','d'], 'a'])])
-        self.assertListEqual(self.G.local_independencies('d'),
-                            [Independencies(['d', ['b','c','e'], 'a'])])
-        
-    def tearDown(self):
-        del self.G
-        
-class TestNaiveBayes_active_trail_nodes(unittest.TestCase):
-    def setUp(self):
-        self.G = NaiveBayes([('d', 'g'), ('d', 'l'),
+        self.G2 = NaiveBayes([('d', 'g'), ('d', 'l'),
                                 ('d', 's')])
 
+    def test_local_independencies(self):
+        self.assertListEqual(self.G1.local_independencies('a'), [None])
+        self.assertListEqual(self.G1.local_independencies('b'), 
+                            [Independencies(['b', ['e','c','d'], 'a'])])
+        self.assertListEqual(self.G1.local_independencies('c'), 
+                            [Independencies(['c', ['e','b','d'], 'a'])])
+        self.assertListEqual(self.G1.local_independencies('d'),
+                            [Independencies(['d', ['b','c','e'], 'a'])])
+
     def test_active_trail_nodes(self):
-        self.assertListEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('g')), ['d', 'g', 'l', 's'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('l')), ['d', 'g', 'l', 's'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('s')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('g')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('l')), ['d', 'g', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('s')), ['d', 'g', 'l', 's'])
 
     def test_active_trail_nodes_args(self):
-        self.assertListEqual(sorted(self.G.active_trail_nodes('d', observed='g')), ['d', 'l', 's'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['d', 'l', 's'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('s', observed=['g', 'l'])), ['d','s'])
-        self.assertListEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('d', observed='g')), ['d', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('l', observed='g')), ['d', 'l', 's'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('s', observed=['g', 'l'])), ['d','s'])
+        self.assertListEqual(sorted(self.G2.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
+        
+    def tearDown(self):
+        del self.G1
+        del self.G2
 
 class TestNaiveBayesFit(unittest.TestCase):
     def setUp(self):
