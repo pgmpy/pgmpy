@@ -33,7 +33,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.g.nodes(), [1, 2, 3])
         six.assertCountEqual(self, self.g.edges(), [(1, 2), (1, 3)])
         self.assertEqual(self.g.parent_node, 1)
-        self.assertCountEqual(self.g.children_nodes, {2, 3})
+        self.assertSetEqual(self.g.children_nodes, {2, 3})
 
         self.assertRaises(ValueError, NaiveBayes, [(1, 2), (2, 3)])
         self.assertRaises(ValueError, NaiveBayes, [(1, 2), (3, 2)])
@@ -81,7 +81,7 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(self, self.G.nodes(), [1, 2])
         self.assertListEqual(self.G.edges(), [(1, 2)])
         self.assertEqual(self.G.parent_node, 1)
-        self.assertCountEqual(self.G.children_nodes, {2})
+        self.assertSetEqual(self.G.children_nodes, {2})
 
         self.G.add_nodes_from([3, 4])
         self.G.add_edge(1, 3)
@@ -132,12 +132,8 @@ class TestNaiveBayesMethods(unittest.TestCase):
                             [Independencies(['b', ['e','c','d'], 'a'])])
         self.assertListEqual(self.G.local_independencies('c'), 
                             [Independencies(['c', ['e','b','d'], 'a'])])
-        six.assertCountEqual(self, self.G.local_independencies(['b','d']),
-                            [Independencies(['b', ['e','c','d'], 'a']),
-                            Independencies(['d', ['b','c','e'], 'a'])])
-        six.assertCountEqual(self, self.G.local_independencies(['a','b','d']),
-                            [None, Independencies(['b', ['e','c','d'], 'a']),
-                            Independencies(['d', ['b','c','e'], 'a'])])
+        self.assertListEqual(self.G.local_independencies('d'),
+                            [Independencies(['d', ['b','c','e'], 'a'])])
         
     def tearDown(self):
         del self.G
