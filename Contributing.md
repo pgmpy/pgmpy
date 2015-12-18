@@ -50,13 +50,13 @@ Summary of our git branching model:
 
 - Write [helpful commit
   messages](http://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message).
-- Anything in the `master` branch should be deployable (no failing tests).
+- Anything in the `dev` branch should be deployable (no failing tests).
 - Never use `git add .`: it can add unwanted files;
 - Avoid using `git commit -a` unless you know what you're doing;
 - Check every change with `git diff` before adding then to the index (stage
   area) and with `git diff --cached` before commiting;
 - If you have push access to the main repository, please do not commit directly
-  to `master`: your access should be used only to accept pull requests; if you
+  to `dev`: your access should be used only to accept pull requests; if you
   want to make a new feature, you should use the same process as other
   developers so you code will be reviewed.
 
@@ -74,7 +74,7 @@ Summary of our git branching model:
   (`'{} = {}'.format(a, b)` instead of `'%s = %s' % (a, b)`);
 - All `#TODO` comments should be turned into issues (use our
   [GitHub issue system](https://github.com/namd/pypln.web/issues));
-- Run all tests before pushing (just execute `tox`) so you will know if your
+- Run all tests before pushing (just execute `nosetests`) so you will know if your
   changes broke something;
 - Try to write both Python 2 and Python3-friendly code so won't be a pain for
   us to support both versions.We use [six](https://pypi.python.org/pypi/six) to help
