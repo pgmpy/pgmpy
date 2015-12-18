@@ -1,7 +1,7 @@
 # Contributing to pgmpy
 
-Hi! Thanks for your interest in contributing to pgmpy DM :D . In this document we'll
-try to summarize everything that you need to know to do a good job.
+Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation) :D . 
+In this document we'll try to summarize everything that you need to know to do a good job.
 
 
 ## Code and Issues
@@ -79,7 +79,6 @@ Summary of our git branching model:
 - Try to write both Python 2 and Python3-friendly code so won't be a pain for
   us to support both versions.We use [six](https://pypi.python.org/pypi/six) to help
   us in integration across various python versions.
-  
 
 
 ### Tests
@@ -102,8 +101,9 @@ the desired feature.
 
 Please feel free to contact us through mail list if
 you have any questions or suggestions.
-Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy)
+Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy). 
 Every contribution is very welcome!
+
 *Mailing list* : pgmpy@googlegroups.com
 
 Happy hacking! ;)
