@@ -7,6 +7,7 @@ from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.independencies import IndependenceAssertion
 import six
 
 
@@ -104,6 +105,7 @@ class TestBayesianModelMethods(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([('a', 'd'), ('b', 'd'),
                                 ('d', 'e'), ('b', 'c')])
+        self.G2 = BayesianModel([('a','b'), ('a','c')])
 
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
@@ -121,15 +123,24 @@ class TestBayesianModelMethods(unittest.TestCase):
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
     def test_local_independencies(self):
-        self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
-        self.assertEqual(self.G.local_independencies('c'), Independencies(['c',['a','d','e'],'b']))
-        self.assertEqual(self.G.local_independencies('d'), Independencies(['d','c',['b','a']]))
-        self.assertEqual(self.G.local_independencies('e'), Independencies(['e',['c','b','a'],'d']))
-        self.assertEqual(self.G.local_independencies('b'), Independencies(['b','a']))
+        self.assertListEqual(self.G.local_independencies('a'), [IndependenceAssertion('a', ['b', 'c'])])
+        self.assertListEqual(self.G.local_independencies('c'), [IndependenceAssertion('c',['a','d','e'],'b')])
+        self.assertListEqual(self.G.local_independencies('d'), [IndependenceAssertion('d','c',['b','a'])])
+        self.assertListEqual(self.G.local_independencies('e'), [IndependenceAssertion('e',['c','b','a'],'d')])
+        self.assertListEqual(self.G.local_independencies('b'), [IndependenceAssertion('b','a')])
+        self.assertListEqual(self.G.local_independencies(['b','c']), [IndependenceAssertion('b','a'),
+                                                                       IndependenceAssertion('c',['a','d','e'],'b')])
+        self.assertListEqual(self.G.local_independencies(['a','d', 'b']), [IndependenceAssertion('a', ['c', 'b']),
+                                                                            IndependenceAssertion('d','c',['b','a']),
+                                                                            IndependenceAssertion('b','a')])
+
+        self.assertListEqual(self.G2.local_independencies('a'), [None])
+        self.assertListEqual(self.G2.local_independencies('b'), [IndependenceAssertion('b', 'c', 'a')])
+        self.assertListEqual(self.G2.local_independencies(['a','c']), [None, IndependenceAssertion('c','b','a')])
 
     def tearDown(self):
         del self.G
-
+        del self.G2
 
 class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):

@@ -11,6 +11,7 @@ import pandas as pd
 from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.independencies import IndependenceAssertion
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 
@@ -348,13 +349,12 @@ class BayesianModel(DirectedGraph):
         >>> student = BayesianModel()
         >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
         >>>                         ('grade', 'letter'), ('intel', 'SAT')])
-        >>> ind = student.local_independencies('grade')
-        >>> ind.event1
-        {'grade'}
-        >>> ind.event2
-        {'SAT'}
-        >>> ind.event3
-        {'diff', 'intel'}
+        >>> ind1 = student.local_independencies('grade')
+        >>> ind1
+        [(grade _|_ SAT | intel, diff)]
+        >>> ind2 = student.local_independencies(['grade', 'letter'])
+        >>> ind2
+        [(grade _|_ SAT | intel, diff), (letter _|_ intel, SAT, diff | grade)]
         """
         def dfs(node):
             """
@@ -373,11 +373,13 @@ class BayesianModel(DirectedGraph):
             return descendents
 
         from pgmpy.independencies import Independencies
-        independencies = Independencies()
+        independencies = []
         for variable in [variables] if isinstance(variables, str) else variables:
-            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) -
-                                           set(self.get_parents(variable)) - {variable},
-                                           set(self.get_parents(variable))])
+            independent_nodes =  set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)) - {variable}
+            if not independent_nodes:
+                independencies.append(None)
+            else:
+                independencies.append(IndependenceAssertion(variable, independent_nodes,set(self.get_parents(variable))))
         return independencies
 
     def is_active_trail(self, start, end, observed=None):
