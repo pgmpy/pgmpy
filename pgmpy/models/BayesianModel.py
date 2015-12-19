@@ -373,11 +373,13 @@ class BayesianModel(DirectedGraph):
             return descendents
 
         from pgmpy.independencies import Independencies
-        independencies = Independencies()
+        independencies = []
         for variable in [variables] if isinstance(variables, str) else variables:
-            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) -
-                                           set(self.get_parents(variable)) - {variable},
-                                           set(self.get_parents(variable))])
+            independent_nodes =  set(self.nodes()) - set(dfs(variable)) - set(self.get_parents(variable)) - {variable}
+            if not independent_nodes:
+                independencies.append(None)
+            else:
+                independencies.append(IndependenceAssertion(variable, independent_nodes,set(self.get_parents(variable))))
         return independencies
 
     def is_active_trail(self, start, end, observed=None):
