@@ -11,7 +11,7 @@ Mailing List: pgmpy@googlegroups.com
 
 Dependencies:
 =============
-- Python 3.3
+- Python 2.7 and higher or Python 3.3 and higher
 - NetworkX 1.9.1
 - Scipy 0.12.1
 - Numpy 1.9.2
