@@ -64,6 +64,7 @@ Summary of our git branching model:
 ### Code Guidelines
 
 - We use [PEP8](http://www.python.org/dev/peps/pep-0008/);
+- Instead of 79 characters in PEP8, we permit 120 characters.
 - Write tests for your new features (please see "Tests" topic below);
 - Always remember that [commented code is dead
   code](http://www.codinghorror.com/blog/2008/07/coding-without-comments.html);
