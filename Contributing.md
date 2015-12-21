@@ -18,7 +18,7 @@ on how to report better issues.
 We use [Git](http://git-scm.com/) as our [version control
 system](http://en.wikipedia.org/wiki/Revision_control), so the best way to
 contribute is to learn how to use it and put your changes on a Git repository.
-There's a plenty of documentation about Git -- you can start with the [Pro Git
+There are plenty of documentation about Git -- you can start with the [Pro Git
 book](http://git-scm.com/book/).
 Or You can go through the [try git tutorial](https://try.github.io/levels/1/challenges/1
 )
@@ -35,14 +35,14 @@ Summary of our git branching model:
   (`git clone git@github.com:your-username:repository-name.git`);
 - Create a new branch off of `develop` with a descriptive name (for example:
   `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can
-  do it switching to `develop` branch (`git checkout develop`) and then
+  do it by switching to `develop` branch (`git checkout develop`) and then
   creating a new branch (`git checkout -b name-of-the-new-branch`);
 - Do many small commits on that branch locally (`git add files-changed`,
   `git commit -m "Add some change"`);
 - Push to your fork on GitHub (with the name as your local branch:
   `git push origin branch-name`);
 - Create a pull request using the GitHub Web interface (asking us to pull the
-  changes from your new branch and add the to our `develop` branch);
+  changes from your new branch and add the changes to our `develop` branch);
 - Wait for comments.
 
 
@@ -58,7 +58,7 @@ Summary of our git branching model:
 - If you have push access to the main repository, please do not commit directly
   to `dev`: your access should be used only to accept pull requests; if you
   want to make a new feature, you should use the same process as other
-  developers so you code will be reviewed.
+  developers so that your code can be reviewed.
 
 
 ### Code Guidelines
