@@ -73,8 +73,10 @@ Summary of our git branching model:
 - When manipulating strings, use [Python's new-style
   formatting](http://docs.python.org/library/string.html#format-string-syntax)
   (`'{} = {}'.format(a, b)` instead of `'%s = %s' % (a, b)`);
+- When working with files use `with open(<filename>, <option>) as f` instead of
+  ` f = open(<filename>, <option>)`;
 - All `#TODO` comments should be turned into issues (use our
-  [GitHub issue system](https://github.com/namd/pypln.web/issues));
+  [GitHub issue system](https://github.com/pgmpy/pgmpy/issues));
 - Run all tests before pushing (just execute `nosetests`) so you will know if your
   changes broke something;
 - Try to write both Python 2 and Python3-friendly code so won't be a pain for
