@@ -8,7 +8,6 @@ from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
 from pgmpy.models import DynamicBayesianNetwork
-from pgmpy.exceptions import ModelError
 
 
 class Inference(object):
@@ -55,8 +54,7 @@ class Inference(object):
     """
 
     def __init__(self, model):
-        if not model.check_model():
-            raise ModelError("Model of type {!r} not valid".format(type(model).__name__))
+        model.check_model()
 
         if isinstance(model, JunctionTree):
             self.variables = set(chain(*model.nodes()))
