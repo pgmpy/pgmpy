@@ -38,11 +38,23 @@ class TabularCPD(Factor):
     [0.1,0.1,0.1,0.1,0.1,0.1],
     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
-    >>> from pgmpy.factors.CPD import TabularCPD
+    >>> from pgmpy.factors import TabularCPD
     >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
     ...                               [0.1, 0.1],
     ...                               [0.8, 0.8]],
     ...                  evidence='evi1', evidence_card=2)
+    >>> cpd
+    <TabularCPD representing P(grade:3 | evi1:2) at 0x7f847a4f2898>
+    >>> print(cpd)
+    +---------+-------+-------+
+    | ev1     | ev1_0 | ev1_1 |
+    +---------+-------+-------+
+    | grade_0 | 0.1   | 0.1   |
+    +---------+-------+-------+
+    | grade_1 | 0.1   | 0.1   |
+    +---------+-------+-------+
+    | grade_2 | 0.8   | 0.8   |
+    +---------+-------+-------+
     >>> cpd.values
     array([[ 0.1,  0.1],
            [ 0.1,  0.1],
@@ -63,7 +75,7 @@ class TabularCPD(Factor):
     variable_card: integer
         cardinality of variable
 
-    values: 2d array, 2d list
+    values: 2d array, 2d list and 2d tuple
         values of the cpd table
 
     evidence: string, array-like
@@ -141,6 +153,16 @@ class TabularCPD(Factor):
     def get_cpd(self):
         """
         Returns the cpd
+        >>> from pgmpy.factors import TabularCPD
+        >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+        ...                               [0.1, 0.1],
+        ...                               [0.8, 0.8]],
+        ...                  evidence='evi1', evidence_card=2)
+        >>> cpd.get_cpd()
+        array([[ 0.1,  0.1],
+               [ 0.1,  0.1],
+               [ 0.8,  0.8]])
+
         """
         if self.variable in self.variables:
             return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
@@ -342,7 +364,7 @@ class TabularCPD(Factor):
         ...                  evidence='evi1', evidence_card=2)
         >>> factor = cpd.to_factor()
         >>> factor
-
+        <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
         return Factor(self.variables, self.cardinality, self.values)
 

@@ -30,6 +30,8 @@ class FactorSet(object):
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set = FactorSet(phi1, phi2)
+        >>> factor_set
+        <pgmpy.factors.FactorSet.FactorSet object at 0x7f12468efa90>
         """
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
@@ -51,9 +53,13 @@ class FactorSet(object):
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set1 = FactorSet(phi1, phi2)
+        >>> factor_set1
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f12468efa20>
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set1.add_factors(phi3, phi4)
+        >>> factor_set1
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f12468efa20>
         """
         self.factors.update(factors)
 
@@ -75,7 +81,11 @@ class FactorSet(object):
         >>> factor_set1 = FactorSet(phi1, phi2)
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> factor_set1.add_factors(phi3)
+        >>> factor_set1
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f1246852a10>
         >>> factor_set1.remove_factors(phi1, phi2)
+        >>> factor_set1
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f1246852a10>
         """
         for factor in factors:
             self.factors.remove(factor)
@@ -122,7 +132,10 @@ class FactorSet(object):
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set2 = FactorSet(phi3, phi4)
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f1246852f90>
         >>> factor_set2.product(factor_set1)
+        >>> factor_set2
+        <pgmpy.factors.FactorSet.FactorSet at 0x7f1246852f90>
         """
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
@@ -156,6 +169,8 @@ class FactorSet(object):
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set2 = FactorSet(phi3, phi4)
         >>> factor_set3 = factor_set2.divide(factor_set1)
+        >>> factor_set3 == factor_set2
+        True
         """
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
