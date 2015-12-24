@@ -628,7 +628,7 @@ class Factor(object):
 
                [[ 3.        ,  1.75      ],
                 [ 4.        ,  2.25      ],
-                [ 5.        ,  2.75      ]]]
+                [ 5.        ,  2.75      ]]])
         """
         phi = self if inplace else self.copy()
         phi1 = phi1.copy()
@@ -685,7 +685,7 @@ class Factor(object):
 
                [[ 9, 10, 11],
                 [12, 13, 14],
-                [15, 16, 17]]]
+                [15, 16, 17]]])
         """
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
@@ -707,7 +707,8 @@ class Factor(object):
                 'phi': When used for Factors.
                   'p': When used for CPDs.
         """
-        string_header = list(self.scope())
+        string_header = map(lambda x : six.text_type(x), self.scope())
+        string_header = list(string_header)
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
 
@@ -815,7 +816,7 @@ def factor_product(*args):
              [45, 63]],
 
             [[10, 30],
-             [55, 77]]]]
+             [55, 77]]]])
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Arguments must be factors")
@@ -855,7 +856,7 @@ def factor_divide(phi1, phi2):
 
            [[ 3.        ,  1.75      ],
             [ 4.        ,  2.25      ],
-            [ 5.        ,  2.75      ]]]
+            [ 5.        ,  2.75      ]]])
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")
