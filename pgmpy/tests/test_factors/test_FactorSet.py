@@ -39,7 +39,7 @@ class TestFactorSet(unittest.TestCase):
         phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(1, 9))
         phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(1, 9))
         factor_set2 = FactorSet(phi3, phi4)
-        factor_set3 = factor_set2.divide(factor_set1)
+        factor_set3 = factor_set2.divide(factor_set1, inplace=False)
         self.assertEqual({phi3, phi4, phi1.identity_factor() / phi1, phi2.identity_factor() / phi2},
                          factor_set3.factors)
 
