@@ -1,5 +1,5 @@
 from .Factor import Factor, factor_product, factor_divide, State
-from .FactorSet import FactorSet
+from .FactorSet import FactorSet, factorset_product, factorset_divide
 from .CPD import TabularCPD
 from .JointProbabilityDistribution import JointProbabilityDistribution
 
@@ -9,4 +9,6 @@ __all__ = ['Factor',
            'factor_divide',
            'TabularCPD',
            'JointProbabilityDistribution',
-           'FactorSet']
+           'FactorSet',
+           'factorset_product',
+           'factorset_divide']

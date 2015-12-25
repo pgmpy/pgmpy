@@ -1,14 +1,14 @@
 """
 Not complete and have no clear idea what to do with this.
 """
-
-from itertools import product
+import itertools
 
 import numpy as np
 
 from pgmpy.factors import Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import range, zip
+from pgmpy.extern import six
 
 
 class JointProbabilityDistribution(Factor):
@@ -66,22 +66,23 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         >>> print(prob)
-            print(prob)
-            x1      x2      x3      P(x1, x2, x3)
-            x1_0    x2_0    x3_0    0.125
-            x1_0    x2_0    x3_1    0.125
-            x1_0    x2_1    x3_0    0.125
-            x1_0    x2_1    x3_1    0.125
-            x1_1    x2_0    x3_0    0.125
-            x1_1    x2_0    x3_1    0.125
-            x1_1    x2_1    x3_0    0.125
-            x1_1    x2_1    x3_1    0.125
-        """
+        x1    x2    x3      P(x1,x2,x3)
+        ----  ----  ----  -------------
+        x1_0  x2_0  x3_0         0.1250
+        x1_0  x2_0  x3_1         0.1250
+        x1_0  x2_1  x3_0         0.1250
+        x1_0  x2_1  x3_1         0.1250
+        x1_1  x2_0  x3_0         0.1250
+        x1_1  x2_0  x3_1         0.1250
+        x1_1  x2_1  x3_0         0.1250
+        x1_1  x2_1  x3_1         0.1250
+       """
         if np.isclose(np.sum(values), 1):
-            Factor.__init__(self, variables, cardinality, values)
+            super(JointProbabilityDistribution, self).__init__(variables, cardinality, values)
         else:
             raise ValueError("The probability values doesn't sum to 1.")
 
@@ -92,7 +93,10 @@ class JointProbabilityDistribution(Factor):
                                                                                      var_card=var_card)
 
     def __str__(self):
-        return self._str(phi_or_p='P')
+        if six.PY2:
+            return self._str(phi_or_p='P', tablefmt='pqsl')
+        else:
+            return self._str(phi_or_p='P')
 
     def marginal_distribution(self, variables, inplace=True):
         """
@@ -106,18 +110,20 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> values = np.random.rand(12)
-        >>> prob = JointProbabilityDistribution(['x1, x2, x3'], [2, 3, 2], values/np.sum(values))
+        >>> prob = JointProbabilityDistribution(['x1','x2','x3'], [2, 3, 2], values/np.sum(values))
         >>> prob.marginal_distribution(['x1', 'x2'])
         >>> print(prob)
-            x1      x2      P(x1, x2)
-            x1_0    x2_0    0.290187723512
-            x1_0    x2_1    0.203569992198
-            x1_0    x2_2    0.00567786144202
-            x1_1    x2_0    0.116553704043
-            x1_1    x2_1    0.108469538521
-            x1_1    x2_2    0.275541180284
+        x1    x2      P(x1,x2)
+        ----  ----  ----------
+        x1_0  x2_0      0.1502
+        x1_0  x2_1      0.1626
+        x1_0  x2_2      0.1197
+        x1_1  x2_0      0.2339
+        x1_1  x2_1      0.1996
+        x1_1  x2_2      0.1340
         """
         return self.marginalize(list(set(list(self.variables)) -
                                      set(variables if isinstance(
@@ -144,6 +150,7 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.check_independence('x1', 'x2')
@@ -152,8 +159,15 @@ class JointProbabilityDistribution(Factor):
         True
         """
         if event3:
+            if isinstance(event3, six.string_types):
+                event3 = [event3]
+            event3 = map(lambda x: (x, 1), event3)
             self.conditional_distribution(event3)
-        for variable_pair in product(event1, event2):
+        if isinstance(event1, six.string_types):
+            event1 = [event1]
+        if isinstance(event2, six.string_types):
+            even2 = [event2]
+        for variable_pair in itertools.product(event1, event2):
             if (self.marginal_distribution(variable_pair, inplace=False) !=
                     self.marginal_distribution(variable_pair[0], inplace=False) *
                         self.marginal_distribution(variable_pair[1], inplace=False)):
@@ -173,19 +187,21 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
-        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(8)/8)
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.get_independencies()
+        (x1 _|_ x2)
+        (x1 _|_ x3)
+        (x2 _|_ x3)
         """
         if condition:
             self.conditional_distribution(condition)
         independencies = Independencies()
-        from itertools import combinations
-        for variable_pair in combinations(list(self.variables), 2):
-            from copy import deepcopy
-            if JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair) == \
-                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[0]) * \
-                    JointProbabilityDistribution.marginal_distribution(deepcopy(self), variable_pair[1]):
+        for variable_pair in itertools.combinations(list(self.variables), 2):
+            if (self.marginal_distribution(variable_pair, inplace=False) ==
+                    self.marginal_distribution(variable_pair[0], inplace=False) *
+                    self.marginal_distribution(variable_pair[1], inplace=False)):
                 independencies.add_assertions(variable_pair)
         return independencies
 
@@ -200,16 +216,18 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
-        >>> prob.conditional_distribution(('x1', 1))
+        >>> prob.conditional_distribution([('x1', 1)])
         >>> print(prob)
-            x2      x3      P(x1, x2)
-            x2_0    x3_0    0.25
-            x2_0    x3_1    0.25
-            x2_1    x3_0    0.25
-            x2_1    x3_1    0.25
-        """
+        x2    x3      P(x2,x3)
+        ----  ----  ----------
+        x2_0  x3_0      0.2500
+        x2_0  x3_1      0.2500
+        x2_1  x3_0      0.2500
+        x2_1  x3_1      0.2500
+       """
         self.reduce(values)
         self.normalize()
 
@@ -225,21 +243,21 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> bayesian_model = prob.minimal_imap(order=['x2', 'x1', 'x3'])
         >>> bayesian_model
         <pgmpy.models.models.models at 0x7fd7440a9320>
         """
-        from pgmpy import models as bm
-        import itertools
+        from pgmpy.models import BayesianModel
 
         def combinations(u):
             for r in range(len(u) + 1):
                 for i in itertools.combinations(u, r):
                     yield i
 
-        G = bm.BayesianModel()
+        G = BayesianModel()
         for variable_index in range(len(order)):
             u = order[:variable_index]
             for subset in combinations(u):
