@@ -75,7 +75,7 @@ class TabularCPD(Factor):
     variable_card: integer
         cardinality of variable
 
-    values: 2d array, 2d list and 2d tuple
+    values: 2d array, 2d list or 2d tuple
         values of the cpd table
 
     evidence: string, array-like

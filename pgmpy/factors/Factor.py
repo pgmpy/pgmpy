@@ -707,8 +707,7 @@ class Factor(object):
                 'phi': When used for Factors.
                   'p': When used for CPDs.
         """
-        string_header = map(lambda x : six.text_type(x), self.scope())
-        string_header = list(string_header)
+        string_header = list(map(lambda x : six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
 

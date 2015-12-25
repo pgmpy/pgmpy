@@ -113,7 +113,7 @@ class JointProbabilityDistribution(Factor):
         >>> import numpy as np
         >>> from pgmpy.factors import JointProbabilityDistribution
         >>> values = np.random.rand(12)
-        >>> prob = JointProbabilityDistribution(['x1','x2','x3'], [2, 3, 2], values/np.sum(values))
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], values/np.sum(values))
         >>> prob.marginal_distribution(['x1', 'x2'])
         >>> print(prob)
         x1    x2      P(x1,x2)
