@@ -769,6 +769,9 @@ class Factor(object):
             else:
                 return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __hash__(self):
         return hash(str(self.variables) + str(self.cardinality.tolist()) +
                     str(self.values.astype('float').tolist()))
