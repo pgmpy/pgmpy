@@ -142,8 +142,9 @@ class JointProbabilityDistribution(Factor):
             random variable whose independence is to be checked.
         event2: list
             random variable from which event1 is independent.
-        values: list or array_like
+        values: list or array_like or string like
             A list of tuples of the form (variable_name, variable_state).
+            String if you want to condition on a random variable
             The values on which to condition the Joint Probability Distribution.
 
         For random variables say X, Y, Z to check if X is independent of Y given Z.
@@ -153,23 +154,38 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> from pgmpy.factors import JointProbabilityDistribution as JPD
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        >>> prob = JPD(['x1','x2','x3'],[2,2,3],[0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
         >>> prob.check_independence(['x1'], ['x2'])
         True
         >>> prob.check_independence(['x1'], ['x2'], [('x3', 1)])
-        True
+        False
+        >>> prob.check_independence(['x1'],['x2'],'x3')
+        False
         """
         JPD = self.copy()
-        if event3:
-            if isinstance(event3, six.string_types):
-                raise TypeError('Event 3 A list of tuples of the form (variable_name, variable_state')
-            JPD.conditional_distribution(event3)
         if isinstance(event1, six.string_types):
             raise TypeError('Event 1 should be a list or array-like structure')
         if isinstance(event2, six.string_types):
             raise TypeError('Event 2 should be a list or array-like structure')
+        if event3:
+            if isinstance(event3, six.string_types):
+                # Using the alternate definition for conditional independence
+                # X and Y are conditional independent if phi(X, Z) * phi(Y, Z) is propotional
+                # to phi(X, Y, Z)
+                for variable_pair in itertools.product(event1, event2):
+                    JPD_ev1_ev3 = JPD.marginal_distribution((variable_pair[0], event3), inplace=False)
+                    JPD_ev2_ev3 = JPD.marginal_distribution((variable_pair[1], event3), inplace=False)
+                    JPD_prod = JPD_ev1_ev3 * JPD_ev2_ev3
+                    phi1 = Factor(JPD_prod.variables, JPD_prod.cardinality, JPD.values)
+                    phi2 = Factor(JPD.variables, JPD.cardinality, JPD.values)
+                    phi = phi1 / phi2
+                    if(np.unique(phi.values).size != 1):
+                        return False
+                return True
+            else:
+                    JPD.conditional_distribution(event3)
         for variable_pair in itertools.product(event1, event2):
             if (JPD.marginal_distribution(variable_pair, inplace=False) !=
                     JPD.marginal_distribution(variable_pair[0], inplace=False) *
