@@ -140,10 +140,7 @@ class TestIndependencies(unittest.TestCase):
 
     def tearUp(self):
         del self.Independencies
-        del self.Independencies3
-        del self.Independencies4
-        del self.Independencies5
-        
+
 
 if __name__ == '__main__':
     unittest.main()
