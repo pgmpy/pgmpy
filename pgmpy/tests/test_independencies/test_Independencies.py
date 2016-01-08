@@ -138,8 +138,11 @@ class TestIndependencies(unittest.TestCase):
         self.assertTrue(self.Independencies3 != self.Independencies5)
         self.assertFalse(self.Independencies4 == self.Independencies5)
 
-    def tearUp(self):
+    def tearDown(self):
         del self.Independencies
+        del self.Independencies3
+        del self.Independencies4
+        del self.Independencies5
 
 
 if __name__ == '__main__':
