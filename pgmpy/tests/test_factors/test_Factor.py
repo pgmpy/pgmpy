@@ -6,11 +6,13 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors import Factor
+from pgmpy.factors import JointProbabilityDistribution as JPD
 from pgmpy.factors import factor_product
 from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD
 from pgmpy import exceptions
 from pgmpy.extern.six.moves import range
+from pgmpy.independencies import Independencies
 
 
 class TestFactorInit(unittest.TestCase):
@@ -433,59 +435,77 @@ class TestTabularCPDMethods(unittest.TestCase):
     def tearDown(self):
         del self.cpd
 
-# class TestJointProbabilityDistributionInit(unittest.TestCase):
-#     def test_jpd_init(self):
-#         jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12) / 12)
-#         np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
-#         np_test.assert_array_equal(jpd.values, np.ones(12) / 12)
-#         dic = {'x1': [('x1', 0), ('x1', 1)], 'x2': [('x2', 0), ('x2', 1), ('x2', 2)], 'x3': [('x3', 0), ('x3', 1)]}
-#         self.assertEqual(jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
-#
-#     def test_jpd_init_exception(self):
-#         self.assertRaises(ValueError, JPD, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-#
-#
-# class TestJointProbabilityDistributionMethods(unittest.TestCase):
-#     def setUp(self):
-#         self.jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
-#
-#     def test_jpd_marginal_distribution_list(self):
-#         self.jpd.marginal_distribution(['x1', 'x2'])
-#         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.16666667, 0.16666667, 0.16666667,
-#                                                                      0.16666667, 0.16666667, 0.16666667]))
-#         np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
-#         dic = {'x1': [('x1', 0), ('x1', 1)], 'x2': [('x2', 0), ('x2', 1), ('x2', 2)]}
-#         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
-#         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-#
-#     def test_marginal_distribution_str(self):
-#         self.jpd.marginal_distribution('x1')
-#         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
-#         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-#         dic = {'x1': [('x1', 0), ('x1', 1)]}
-#         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
-#         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-#
-#     def test_conditional_distribution_list(self):
-#         self.jpd.conditional_distribution([('x1', 1), ('x2', 0)])
-#         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
-#         np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-#         dic = {'x3': [('x3', 0), ('x3', 1)]}
-#         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
-#         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-#
-#     def test_conditional_distribution_str(self):
-#         self.jpd.conditional_distribution(('x1', 1))
-#         np_test.assert_array_almost_equal(self.jpd.values, np.array([0.16666667, 0.16666667,
-#                                                                      0.16666667, 0.16666667,
-#                                                                      0.16666667, 0.16666667]))
-#         np_test.assert_array_equal(self.jpd.cardinality, np.array([3, 2]))
-#         dic = {'x2': [('x2', 0), ('x2', 1), ('x2', 2)], 'x3': [('x3', 0), ('x3', 1)]}
-#         self.assertEqual(self.jpd.variables, OrderedDict(sorted(dic.items(), key=lambda t: t[1])))
-#         np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-#
-#     def tearDown(self):
-#         del self.jpd
+class TestJointProbabilityDistributionInit(unittest.TestCase):
+    def test_jpd_init(self):
+        jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12) / 12)
+        np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
+        np_test.assert_array_equal(jpd.values, np.ones(12).reshape(2, 3, 2) / 12)
+        self.assertEqual(jpd.get_cardinality(['x1', 'x2', 'x3']), {'x1':2, 'x2':3, 'x3':2})
+
+    def test_jpd_init_exception(self):
+        self.assertRaises(ValueError, JPD, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+
+
+class TestJointProbabilityDistributionMethods(unittest.TestCase):
+    def setUp(self):
+        self.jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
+        self.jpd1 = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
+        self.jpd2 = JPD(['x1','x2','x3'],[2,2,3],
+                       [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+
+    def test_jpd_marginal_distribution_list(self):
+        self.jpd.marginal_distribution(['x1', 'x2'])
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([[0.16666667, 0.16666667, 0.16666667],
+                                                                     [0.16666667, 0.16666667, 0.16666667]]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
+        dic = {'x1':2, 'x2':3}
+        self.assertEqual(self.jpd.get_cardinality(['x1','x2']), dic)
+        self.assertEqual(self.jpd.scope(), ['x1', 'x2'])
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        new_jpd = self.jpd1.marginal_distribution(['x1', 'x2'], inplace=False)
+        self.assertTrue(self.jpd1 != self.jpd)
+        self.assertTrue(new_jpd == self.jpd)
+
+    def test_marginal_distribution_str(self):
+        self.jpd.marginal_distribution('x1')
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
+        self.assertEqual(self.jpd.scope(), ['x1'])
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        new_jpd = self.jpd1.marginal_distribution('x1', inplace=False)
+        self.assertTrue(self.jpd1 != self.jpd)
+        self.assertTrue(self.jpd == new_jpd)
+
+    def test_conditional_distribution_list(self):
+        self.jpd = self.jpd1.copy()
+        self.jpd.conditional_distribution([('x1', 1), ('x2', 0)])
+        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
+        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
+        self.assertEqual(self.jpd.scope(), ['x3'])
+        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
+        new_jpd = self.jpd1.conditional_distribution([('x1', 1), ('x2', 0)], inplace=False)
+        self.assertTrue(self.jpd1 != self.jpd)
+        self.assertTrue(self.jpd == new_jpd)
+
+    def test_check_independence(self):
+        self.assertTrue(self.jpd2.check_independence(['x1'], ['x2']))
+        self.assertRaises(TypeError, self.jpd2.check_independence, ('x1', ['x2']))
+        self.assertRaises(TypeError, self.jpd2.check_independence, (['x1'], 'x2'))
+        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], 'x3'))
+        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], [('x3', 0)]))
+
+    def test_get_independencies(self):
+        independencies = Independencies(['x1', 'x2'], ['x2', 'x3'], ['x3', 'x1'])
+        self.assertEqual(self.jpd1.get_independencies(), independencies)
+
+    def test_repr(self):
+        self.assertEqual(repr(self.jpd1),'<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>'
+                         .format(address=hex(id(self.jpd1))))
+
+    def tearDown(self):
+        del self.jpd
+        del self.jpd1
+        del self.jpd2
 
 #
 # class TestTreeCPDInit(unittest.TestCase):

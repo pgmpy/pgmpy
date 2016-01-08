@@ -1,6 +1,3 @@
-"""
-Not complete and have no clear idea what to do with this.
-"""
 import itertools
 
 import numpy as np
@@ -155,13 +152,13 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> from pgmpy.factors import JointProbabilityDistribution as JPD
-        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
-        >>> prob = JPD(['x1','x2','x3'],[2,2,3],[0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
-        >>> prob.check_independence(['x1'], ['x2'])
+        >>> prob = JPD(['I','D','G'],[2,2,3],
+                       [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+        >>> prob.check_independence(['I'], ['D'])
         True
-        >>> prob.check_independence(['x1'], ['x2'], [('x3', 1)])
+        >>> prob.check_independence(['I'], ['D'], [('G', 1)])  # Conditioning over G_1
         False
-        >>> prob.check_independence(['x1'],['x2'],'x3')
+        >>> prob.check_independence(['I'],['D'],'G')  # Conditioning over a random variable.
         False
         """
         JPD = self.copy()
