@@ -104,6 +104,12 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
         self.Independencies = independencies.Independencies()
+        self.Independencies3 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+                                                             ['c', ['d', 'e' ,'f'], ['g' , 'h']])
+        self.Independencies4 = independencies.Independencies([['f', 'd', 'e'], 'c', ['h', 'g']],
+                                                             [['b', 'c', 'd'], 'a', ['f', 'g', 'e']])
+        self.Independencies5 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+                                                             ['c', ['d', 'e', 'f'], 'g'])
 
     def test_init(self):
         self.Independencies1 = independencies.Independencies(['X', 'Y', 'Z'])
@@ -126,9 +132,18 @@ class TestIndependencies(unittest.TestCase):
         self.Independencies2 = independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
 
+    def test_e1(self):
+        self.assertTrue(self.Independencies3 == self.Independencies4)
+        self.assertFalse(self.Independencies3 != self.Independencies4)
+        self.assertTrue(self.Independencies3 != self.Independencies5)
+        self.assertFalse(self.Independencies4 == self.Independencies5)
+
     def tearUp(self):
         del self.Independencies
-
+        del self.Independencies3
+        del self.Independencies4
+        del self.Independencies5
+        
 
 if __name__ == '__main__':
     unittest.main()
