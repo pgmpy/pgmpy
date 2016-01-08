@@ -36,7 +36,7 @@ class Factor(object):
         assignments to the index of the row vector in the value field:
 
         +-----+-----+-----+-------------------+
-        |  x1 |  x2 |  x3 |    phi(x1, x2, x2)|
+        |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
         +-----+-----+-----+-------------------+
         | x1_0| x2_0| x3_0|     phi.value(0)  |
         +-----+-----+-----+-------------------+

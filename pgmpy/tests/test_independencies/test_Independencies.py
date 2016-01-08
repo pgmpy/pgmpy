@@ -66,6 +66,7 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         self.i7 = IndependenceAssertion('a', ['c','d'], ['b','e'])
         self.i8 = IndependenceAssertion('a', ['f','d'], ['b','e'])
         self.i9 = IndependenceAssertion('a', ['d','k','b'], 'e')
+        self.i10 = IndependenceAssertion(['k','b','d'], 'a', 'e')
 
     def test_eq1(self):
         self.assertFalse(self.i1 == 'a')
@@ -85,6 +86,8 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         self.assertFalse(self.i7 == self.i8)
         self.assertFalse(self.i4 == self.i9)
         self.assertFalse(self.i5 == self.i9)
+        self.assertTrue(self.i10 == self.i9)
+        self.assertTrue(self.i10 != self.i8)
 
     def tearDown(self):
         del self.i1
@@ -96,10 +99,17 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         del self.i7
         del self.i8
         del self.i9
+        del self.i10
 
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
         self.Independencies = independencies.Independencies()
+        self.Independencies3 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+                                                             ['c', ['d', 'e' ,'f'], ['g' , 'h']])
+        self.Independencies4 = independencies.Independencies([['f', 'd', 'e'], 'c', ['h', 'g']],
+                                                             [['b', 'c', 'd'], 'a', ['f', 'g', 'e']])
+        self.Independencies5 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+                                                             ['c', ['d', 'e', 'f'], 'g'])
 
     def test_init(self):
         self.Independencies1 = independencies.Independencies(['X', 'Y', 'Z'])
@@ -122,8 +132,17 @@ class TestIndependencies(unittest.TestCase):
         self.Independencies2 = independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
 
-    def tearUp(self):
+    def test_e1(self):
+        self.assertTrue(self.Independencies3 == self.Independencies4)
+        self.assertFalse(self.Independencies3 != self.Independencies4)
+        self.assertTrue(self.Independencies3 != self.Independencies5)
+        self.assertFalse(self.Independencies4 == self.Independencies5)
+
+    def tearDown(self):
         del self.Independencies
+        del self.Independencies3
+        del self.Independencies4
+        del self.Independencies5
 
 
 if __name__ == '__main__':
