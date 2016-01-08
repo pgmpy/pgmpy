@@ -57,6 +57,9 @@ class Independencies(object):
         other_assertions = other.get_assertions()
         return all(self_independency in other_assertions for self_independency in self.get_assertions())
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
@@ -201,10 +204,16 @@ class IndependenceAssertion(object):
             return False
         self_assertions = self.get_assertion()
         other_assertions = other.get_assertion()
-        if len(self_assertions)!=len(other_assertions):
+        if len(self_assertions) != len(other_assertions):
             return False
-        return all(sorted(self_event)==sorted(other_event) for self_event,other_event
-                    in zip(self_assertions,other_assertions))
+        self_assertions = set(six.moves.map(frozenset, self_assertions))
+        other_assertions = set(six.moves.map(frozenset, other_assertions))
+        if self_assertions == other_assertions:
+            return True
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     @staticmethod
     def _return_list_if_str(event):
