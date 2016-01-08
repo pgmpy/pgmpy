@@ -204,11 +204,10 @@ class IndependenceAssertion(object):
             return False
         self_assertions = self.get_assertion()
         other_assertions = other.get_assertion()
-        if len(self_assertions)!=len(other_assertions):
+        if len(self_assertions) != len(other_assertions):
             return False
-        get_list = lambda x : list(x)
-        if (sorted(self_assertions[:2], key=get_list) == sorted(other_assertions[:2], key=get_list) and
-            sorted(self_assertions[2]) == sorted(other_assertions[2])) :
+        if (sorted(self_assertions[:2], key=lambda x: list(x)) == sorted(other_assertions[:2], key=lambda x: list(x))
+                and sorted(self_assertions[2]) == sorted(other_assertions[2])):
             return True
         return False
 
