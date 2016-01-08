@@ -206,8 +206,9 @@ class IndependenceAssertion(object):
         other_assertions = other.get_assertion()
         if len(self_assertions) != len(other_assertions):
             return False
-        if (sorted(self_assertions[:2], key=lambda x: list(x)) == sorted(other_assertions[:2], key=lambda x: list(x))
-                and sorted(self_assertions[2]) == sorted(other_assertions[2])):
+        self_assertions = set(six.moves.map(frozenset, self_assertions))
+        other_assertions = set(six.moves.map(frozenset, other_assertions))
+        if self_assertions == other_assertions:
             return True
         return False
 

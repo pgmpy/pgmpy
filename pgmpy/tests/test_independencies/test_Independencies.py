@@ -66,6 +66,7 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         self.i7 = IndependenceAssertion('a', ['c','d'], ['b','e'])
         self.i8 = IndependenceAssertion('a', ['f','d'], ['b','e'])
         self.i9 = IndependenceAssertion('a', ['d','k','b'], 'e')
+        self.i10 = IndependenceAssertion(['k','b','d'], 'a', 'e')
 
     def test_eq1(self):
         self.assertFalse(self.i1 == 'a')
@@ -85,6 +86,8 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         self.assertFalse(self.i7 == self.i8)
         self.assertFalse(self.i4 == self.i9)
         self.assertFalse(self.i5 == self.i9)
+        self.assertTrue(self.i10 == self.i9)
+        self.assertTrue(self.i10 != self.i8)
 
     def tearDown(self):
         del self.i1
@@ -96,6 +99,7 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         del self.i7
         del self.i8
         del self.i9
+        del self.i10
 
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
