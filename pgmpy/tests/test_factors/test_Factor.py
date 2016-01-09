@@ -37,7 +37,8 @@ class TestFactorInit(unittest.TestCase):
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 1])
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, 'val1'])
         self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 0.1])
-
+        self.assertRaises(TypeError, Factor, 'x1', [3], [1, 2, 3])
+        self.assertRaises(ValueError, Factor, ['x1', 'x1', 'x3'], [2, 3, 2], range(12))
 
     def test_init_size_var_card_not_equal(self):
         self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
@@ -489,14 +490,22 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 
     def test_check_independence(self):
         self.assertTrue(self.jpd2.check_independence(['x1'], ['x2']))
-        self.assertRaises(TypeError, self.jpd2.check_independence, ('x1', ['x2']))
-        self.assertRaises(TypeError, self.jpd2.check_independence, (['x1'], 'x2'))
-        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], 'x3'))
+        self.assertRaises(TypeError, self.jpd2.check_independence, 'x1', ['x2'])
+        self.assertRaises(TypeError, self.jpd2.check_independence, ['x1'], 'x2')
+        self.assertRaises(TypeError, self.jpd2.check_independence,['x1'], ['x2'], 'x3')
+        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
         self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], [('x3', 0)]))
+        self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
+        self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], [('x3', 1)]))
 
     def test_get_independencies(self):
         independencies = Independencies(['x1', 'x2'], ['x2', 'x3'], ['x3', 'x1'])
+        independencies1 = Independencies(['x1', 'x2'])
         self.assertEqual(self.jpd1.get_independencies(), independencies)
+        self.assertEqual(self.jpd2.get_independencies(), independencies1)
+        self.assertEqual(self.jpd1.get_independencies([('x3', 0)]), independencies1)
+        self.assertEqual(self.jpd2.get_independencies([('x3', 0)]), Independencies())
+
 
     def test_repr(self):
         self.assertEqual(repr(self.jpd1),'<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>'

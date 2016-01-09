@@ -129,7 +129,7 @@ class JointProbabilityDistribution(Factor):
                                          variables, (list, set, dict, tuple)) else [variables])),
                                 inplace=inplace)
 
-    def check_independence(self, event1, event2, event3=None):
+    def check_independence(self, event1, event2, event3=None, condition_random_variable=False):
         """
         Check if the Joint Probability Distribution satisfies the given independence condition.
 
@@ -139,10 +139,12 @@ class JointProbabilityDistribution(Factor):
             random variable whose independence is to be checked.
         event2: list
             random variable from which event1 is independent.
-        values: list or array_like or string like
-            A list of tuples of the form (variable_name, variable_state).
-            String if you want to condition on a random variable
+        values: 2D array or list like or 1D array or list like
+            A 2D list of tuples of the form (variable_name, variable_state).
+            A 1D list or array-like to condition over randome variables (condition_random_variable must be True)
             The values on which to condition the Joint Probability Distribution.
+        condition_random_variable: Boolean (Default false)
+            If true and event3 is not None than will check independence condition over random variable.
 
         For random variables say X, Y, Z to check if X is independent of Y given Z.
         event1 should be either X or Y.
@@ -158,31 +160,42 @@ class JointProbabilityDistribution(Factor):
         True
         >>> prob.check_independence(['I'], ['D'], [('G', 1)])  # Conditioning over G_1
         False
-        >>> prob.check_independence(['I'],['D'],'G')  # Conditioning over a random variable.
+        >>> # Conditioning over random variable G
+        >>> prob.check_independence(['I'], ['D'], ('G',), condition_random_variable=True)
         False
         """
         JPD = self.copy()
         if isinstance(event1, six.string_types):
             raise TypeError('Event 1 should be a list or array-like structure')
+
         if isinstance(event2, six.string_types):
             raise TypeError('Event 2 should be a list or array-like structure')
+
         if event3:
             if isinstance(event3, six.string_types):
+                raise TypeError('Event 3 cannot of type string')
+
+            elif condition_random_variable:
+                if not all (isinstance(var, six.string_types) for var in event3):
+                    raise TypeError('Event3 should be a 1d list of strings')
+                event3 = list(event3)
                 # Using the alternate definition for conditional independence
                 # X and Y are conditional independent if phi(X, Z) * phi(Y, Z) is propotional
                 # to phi(X, Y, Z)
                 for variable_pair in itertools.product(event1, event2):
-                    JPD_ev1_ev3 = JPD.marginal_distribution((variable_pair[0], event3), inplace=False)
-                    JPD_ev2_ev3 = JPD.marginal_distribution((variable_pair[1], event3), inplace=False)
-                    JPD_prod = JPD_ev1_ev3 * JPD_ev2_ev3
-                    phi1 = Factor(JPD_prod.variables, JPD_prod.cardinality, JPD.values)
-                    phi2 = Factor(JPD.variables, JPD.cardinality, JPD.values)
+                    JPD_e1_e3 = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False)
+                    JPD_e2_e3 = JPD.marginal_distribution([variable_pair[1]] + event3, inplace=False)
+                    JPD_prod = JPD_e1_e3 * JPD_e2_e3
+                    JPD_e1_e2_e3 = JPD.marginal_distribution(list(variable_pair) + event3, inplace=False)
+                    phi1 = Factor(JPD_prod.variables, JPD_prod.cardinality, JPD_prod.values)
+                    phi2 = Factor(JPD_e1_e2_e3.variables, JPD_e1_e2_e3.cardinality, JPD_e1_e2_e3.values)
                     phi = phi1 / phi2
                     if(np.unique(phi.values).size != 1):
                         return False
                 return True
             else:
                     JPD.conditional_distribution(event3)
+
         for variable_pair in itertools.product(event1, event2):
             if (JPD.marginal_distribution(variable_pair, inplace=False) !=
                     JPD.marginal_distribution(variable_pair[0], inplace=False) *
@@ -215,7 +228,7 @@ class JointProbabilityDistribution(Factor):
         if condition:
             JPD.conditional_distribution(condition)
         independencies = Independencies()
-        for variable_pair in itertools.combinations(list(self.variables), 2):
+        for variable_pair in itertools.combinations(list(JPD.variables), 2):
             if (JPD.marginal_distribution(variable_pair, inplace=False) ==
                     JPD.marginal_distribution(variable_pair[0], inplace=False) *
                     JPD.marginal_distribution(variable_pair[1], inplace=False)):
@@ -278,16 +291,17 @@ class JointProbabilityDistribution(Factor):
         """
         from pgmpy.models import BayesianModel
 
-        def combinations(u):
+        def get_subsets(u):
             for r in range(len(u) + 1):
                 for i in itertools.combinations(u, r):
                     yield i
 
         G = BayesianModel()
         for variable_index in range(len(order)):
-            u = order[:variable_index]
-            for subset in combinations(u):
-                if self.check_independence(order[variable_index], set(u)-set(subset), subset):
+            u = order[:variable_index+1]
+            for subset in get_subsets(u):
+                if (len(subset) < len(u) and
+                    self.check_independence([order[variable_index]], set(u)-set(subset), subset, True)):
                     G.add_edges_from([(variable, order[variable_index]) for variable in subset])
         return G
 
