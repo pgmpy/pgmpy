@@ -6,6 +6,7 @@ from pandas import DataFrame
 
 from pgmpy.factors import State
 from pgmpy.utils import sample_discrete
+from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
 
 
@@ -70,9 +71,9 @@ class MarkovChain(object):
             variables = []
         if card is None:
             card = []
-        if not hasattr(variables, '__iter__') or isinstance(variables, str):
+        if not hasattr(variables, '__iter__') or isinstance(variables, six.string_types):
             raise ValueError('variables must be a non-string iterable.')
-        if not hasattr(card, '__iter__') or isinstance(card, str):
+        if not hasattr(card, '__iter__') or isinstance(card, six.string_types):
             raise ValueError('card must be a non-string iterable.')
         self.variables = variables
         self.cardinalities = {v: c for v, c in zip(variables, card)}
@@ -98,7 +99,7 @@ class MarkovChain(object):
         >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
         if start_state is not None:
-            if not hasattr(start_state, '__iter__') or isinstance(start_state, str):
+            if not hasattr(start_state, '__iter__') or isinstance(start_state, six.string_types):
                 raise ValueError('start_state must be a non-string iterable.')
             # Must be an array-like iterable. Reorder according to self.variables.
             state_dict = {var: st for var, st in start_state}
@@ -110,7 +111,7 @@ class MarkovChain(object):
         """
         Checks if a list representing the state of the variables is valid.
         """
-        if not hasattr(state, '__iter__') or isinstance(state, str):
+        if not hasattr(state, '__iter__') or isinstance(state, six.string_types):
             raise ValueError('Start state must be a non-string iterable object.')
         state_vars = {s.var for s in state}
         if not state_vars == set(self.variables):
