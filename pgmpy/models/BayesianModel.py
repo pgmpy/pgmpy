@@ -3,13 +3,15 @@
 import itertools
 from collections import defaultdict
 import logging
+from operator import mul
+from functools import reduce
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
 from pgmpy.base import DirectedGraph
-from pgmpy.factors import TabularCPD
+from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
@@ -612,5 +614,48 @@ class BayesianModel(DirectedGraph):
     def is_iequivalent(self, model):
         pass
 
-    def is_imap(self, independence):
-        pass
+    def is_imap(self, JPD):
+        """
+        Checks whether the bayesian model is Imap of given JointProbabilityDistribution
+
+        Parameters
+        -----------
+        JPD : An instance of JointProbabilityDistribution Class, for which you want to
+            check the Imap
+
+        Returns
+        --------
+        boolean : True if bayesian model is Imap for given Joint Probability Distribution
+                False otherwise
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD('grade', 3,
+        ...                        [[0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.8,0.8,0.8,0.8,0.8,0.8]],
+        ...                        evidence=['diff', 'intel'],
+        ...                        evidence_card=[2, 3])
+        >>> G.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+        >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
+                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        >>> G.is_imap(JPD)
+        True
+        """
+        if not isinstance(JPD, JointProbabilityDistribution):
+            raise TypeError("JPD must be an instance of JointProbabilityDinstribution")
+        factors = [cpd.to_factor() for cpd in self.get_cpds()]
+        factor_prod = reduce(mul, factors)
+        JPD_fact = Factor(JPD.variables, JPD.cardinality, JPD.values)
+        if JPD_fact == factor_prod:
+            return True
+        else:
+            return False
+
+
