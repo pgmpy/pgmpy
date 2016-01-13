@@ -45,12 +45,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertTrue(set(sample.A).issubset({State('A', 0), State('A', 1)}))
-        self.assertTrue(set(sample.J).issubset({State('J', 0), State('J', 1)}))
-        self.assertTrue(set(sample.R).issubset({State('R', 0), State('R', 1)}))
-        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
-        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
-        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+        self.assertTrue(set(sample.A).issubset({0, 1}))
+        self.assertTrue(set(sample.J).issubset({0, 1}))
+        self.assertTrue(set(sample.R).issubset({0, 1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
 
     def test_rejection_sample_basic(self):
         sample = self.sampling_inference.rejection_sample([State('A', 1), State('J', 1), State('R', 1)], 25)
@@ -62,12 +62,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('Q', sample.columns)
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
-        self.assertTrue(set(sample.A).issubset({State('A', 1)}))
-        self.assertTrue(set(sample.J).issubset({State('J', 1)}))
-        self.assertTrue(set(sample.R).issubset({State('R', 1)}))
-        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
-        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
-        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+        self.assertTrue(set(sample.A).issubset({1}))
+        self.assertTrue(set(sample.J).issubset({1}))
+        self.assertTrue(set(sample.R).issubset({1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
 
     @patch("pgmpy.inference.BayesianModelSampling.forward_sample", autospec=True)
     def test_rejection_sample_less_arg(self, forward_sample):
@@ -86,12 +86,12 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertIn('G', sample.columns)
         self.assertIn('L', sample.columns)
         self.assertIn('_weight', sample.columns)
-        self.assertTrue(set(sample.A).issubset({State('A', 0), State('A', 1)}))
-        self.assertTrue(set(sample.J).issubset({State('J', 0), State('J', 1)}))
-        self.assertTrue(set(sample.R).issubset({State('R', 0), State('R', 1)}))
-        self.assertTrue(set(sample.Q).issubset({State('Q', 0), State('Q', 1)}))
-        self.assertTrue(set(sample.G).issubset({State('G', 0), State('G', 1)}))
-        self.assertTrue(set(sample.L).issubset({State('L', 0), State('L', 1)}))
+        self.assertTrue(set(sample.A).issubset({0, 1}))
+        self.assertTrue(set(sample.J).issubset({0, 1}))
+        self.assertTrue(set(sample.R).issubset({0, 1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
 
     def tearDown(self):
         del self.sampling_inference
@@ -149,7 +149,6 @@ class TestGibbsSampling(unittest.TestCase):
         gibbs._get_kernel_from_markov_model(self.markov_model)
         self.assertListEqual(list(gibbs.variables), self.markov_model.nodes())
         self.assertDictEqual(gibbs.cardinalities, {'A': 2, 'B': 3, 'C': 4, 'D': 2})
-
 
     def test_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]

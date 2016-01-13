@@ -54,6 +54,7 @@ class Inference(object):
     """
 
     def __init__(self, model):
+        self.model = model
         model.check_model()
 
         if isinstance(model, JunctionTree):
