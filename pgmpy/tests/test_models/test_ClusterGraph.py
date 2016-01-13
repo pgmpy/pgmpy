@@ -163,7 +163,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
-        
+
         phi2 = Factor(['a', 'c'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -172,6 +172,19 @@ class TestClusterGraphMethods(unittest.TestCase):
         phi3 = Factor(['a', 'd'], [1, 4], np.random.rand(4))
         self.graph.add_factors(phi3)
         self.assertTrue(self.graph.check_model())
+
+    def test_copy(self):
+        self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
+        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1, phi2)
+        graph_copy = self.graph.copy()
+        self.assertIsNot(self.graph, graph_copy)
+        self.assertEqual(self.graph.nodes(), graph_copy.nodes())
+        self.assertEqual(hf.recursive_sorted(self.graph.edges()), 
+                         hf.recursive_sorted(graph_copy.edges()))
+        self.assertTrue(graph_copy.check_model())
+        self.assertEqual(self.graph.get_factors(), graph_copy.get_factors())
 
     def tearDown(self):
         del self.graph

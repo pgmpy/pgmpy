@@ -299,3 +299,33 @@ class ClusterGraph(UndirectedGraph):
                         'Cardinality of variable {var} not matching among factors'.format(var=variable))
         return True
 
+    def copy(self):
+        """
+        Returns a copy of ClusterGraph.
+
+        Returns
+        -------
+        ClusterGraph: copy of ClusterGraph
+
+        Examples
+        -------
+        >>> G = ClusterGraph()
+        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
+        >>> G.add_edge(('a', 'b'), ('b', 'c'))
+        >>> G_copy = G.copy()
+        >>> G_copy.edges()
+        [(('a', 'b'), ('b', 'c'))]
+        >>> G_copy.nodes()
+        [('a', 'b'), ('b', 'c')]
+
+
+        """
+        copy = ClusterGraph(self.edges())
+        if self.factors:
+            factors_copy = []
+            for factor in self.factors:
+                factors_copy.append(factor.copy())
+
+            copy.add_factors(*factors_copy)
+        return copy
+
