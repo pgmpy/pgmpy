@@ -199,7 +199,7 @@ class JointProbabilityDistribution(Factor):
         for variable_pair in itertools.product(event1, event2):
             if (JPD.marginal_distribution(variable_pair, inplace=False) !=
                     JPD.marginal_distribution(variable_pair[0], inplace=False) *
-                        JPD.marginal_distribution(variable_pair[1], inplace=False)):
+                    JPD.marginal_distribution(variable_pair[1], inplace=False)):
                 return False
         return True
 
@@ -288,6 +288,8 @@ class JointProbabilityDistribution(Factor):
         >>> bayesian_model = prob.minimal_imap(order=['x2', 'x1', 'x3'])
         >>> bayesian_model
         <pgmpy.models.models.models at 0x7fd7440a9320>
+        >>> bayesian_model.edges()
+        [('x1', 'x3'), ('x2', 'x3')]
         """
         from pgmpy.models import BayesianModel
 
@@ -298,7 +300,7 @@ class JointProbabilityDistribution(Factor):
 
         G = BayesianModel()
         for variable_index in range(len(order)):
-            u = order[:variable_index+1]
+            u = order[:variable_index]
             for subset in get_subsets(u):
                 if (len(subset) < len(u) and
                     self.check_independence([order[variable_index]], set(u)-set(subset), subset, True)):

@@ -506,6 +506,15 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertEqual(self.jpd1.get_independencies([('x3', 0)]), independencies1)
         self.assertEqual(self.jpd2.get_independencies([('x3', 0)]), Independencies())
 
+    def test_minimal_imap(self):
+        bm = self.jpd1.minimal_imap(order=['x1','x2','x3'])
+        self.assertEqual(sorted(bm.edges()), sorted([('x1', 'x3'), ('x2', 'x3')]))
+        bm = self.jpd1.minimal_imap(order=['x2','x3','x1'])
+        self.assertEqual(sorted(bm.edges()), sorted([('x2', 'x1'), ('x3', 'x1')]))
+        bm = self.jpd2.minimal_imap(order=['x1','x2','x3'])
+        self.assertEqual(bm.edges(), [])
+        bm = self.jpd2.minimal_imap(order=['x1','x2'])
+        self.assertEqual(bm.edges(), [])
 
     def test_repr(self):
         self.assertEqual(repr(self.jpd1),'<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>'
