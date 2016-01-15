@@ -365,6 +365,10 @@ class TestTabularCPDMethods(unittest.TestCase):
                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                               evidence=['intel', 'diff'], evidence_card=[3, 2])
 
+        self.cpd2 = TabularCPD('J', 2, [[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
+                                        [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]],
+                               evidence=['C', 'B', 'A'], evidence_card= [2, 2, 2] )
+
     def test_marginalize_1(self):
         self.cpd.marginalize(['diff'])
         self.assertEqual(self.cpd.variable, 'grade')
@@ -430,8 +434,31 @@ class TestTabularCPDMethods(unittest.TestCase):
                                                                  [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
 
+
+    # Test that original CPD is modified and correct value is returned
+    def test_reorder_parents_inplace(self):
+        new_vals = self.cpd2.reorder_parents(['B','A','C'], inplace=True)
+        np_test.assert_array_equal(new_vals, np.array([[ 0.9, 0.9, 0.3, 0.3, 0.8, 0.4, 0.8, 0.4],
+                                                       [ 0.1, 0.1, 0.7, 0.7, 0.2, 0.6, 0.2, 0.6]]))
+        np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[ 0.9, 0.9, 0.3, 0.3, 0.8, 0.4, 0.8, 0.4],
+                                                       [ 0.1, 0.1, 0.7, 0.7, 0.2, 0.6, 0.2, 0.6]]))
+
+    def test_reorder_parents(self):
+        new_vals = self.cpd2.reorder_parents(['B','A','C'])
+        np_test.assert_array_equal(new_vals, np.array([[ 0.9, 0.9, 0.3, 0.3, 0.8, 0.4, 0.8, 0.4],
+                                                       [ 0.1, 0.1, 0.7, 0.7, 0.2, 0.6, 0.2, 0.6]]))
+
+    #Test that if inplace is not True then it doesn't affect original CPD
+    def test_reorder_parents_no_effect(self):
+        self.cpd2.reorder_parents(['B','A','C'])
+        np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
+                                                                [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]]))
+
+
     def tearDown(self):
         del self.cpd
+
+
 
 # class TestJointProbabilityDistributionInit(unittest.TestCase):
 #     def test_jpd_init(self):

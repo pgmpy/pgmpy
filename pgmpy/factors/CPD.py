@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
+
 from __future__ import division
 
 from itertools import product
@@ -11,6 +12,7 @@ from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
+from warnings import warn
 
 
 class TabularCPD(Factor):
@@ -367,6 +369,51 @@ class TabularCPD(Factor):
         <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
         return Factor(self.variables, self.cardinality, self.values)
+
+
+    def reorder_parents(self,new_order,inplace = False):
+        '''
+
+        Parameters
+        ----------
+        new_order: list
+            list of new ordering of variables
+        inplace: boolean
+            If inplace == True it will modify the CPD itself
+            otherwise new value will be returned without affecting old values
+
+        Returns
+        -------
+
+        '''
+        if not self.evidence or (set(new_order) - set(self.evidence)) or (set(self.evidence) - set(new_order)):
+            raise ValueError("New order either has missing or extra arguments")
+        else:
+            # No need to do anything if the user provides the same order
+            if new_order != self.evidence[::-1]:
+
+                # Find cardinality mapping of variables
+                card_map = dict(zip(self.evidence, self.evidence_card))
+                # Find old position mapping of variables
+                old_pos_map = dict(zip(self.evidence, range(len(self.evidence))))
+                # Create new ordering of variables based on the given order and previous order
+                trans_ord = [0]+[(old_pos_map[letter]+1) for letter in new_order][::-1]
+                # Find the actual transpose
+                new_values = np.transpose(self.values, trans_ord)
+                # Update old values if it is inplace
+                if inplace:
+                    self.evidence[:] = new_order[::-1]
+                    self.evidence_card = [card_map[var] for var in new_order[::-1]]
+                    variables = [self.variables[0]] + self.evidence
+                    cardinality = [self.variable_card] + self.evidence_card
+                    super(TabularCPD, self).__init__(variables, cardinality, new_values.flatten('C'))
+                    return self.get_cpd()
+                else:
+                    return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order[::-1]]))
+                    #return new_values.reshape(self.variable_card, [card_map[var] for var in new_order[::-1]])
+            else:
+                warn("Same ordering provided as current")
+                return self.get_cpd()
 
 
 # Commenting out because not used anywhere for now and not implemented in a very good way.
