@@ -11,6 +11,7 @@ from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD
 from pgmpy import exceptions
 from pgmpy.extern.six.moves import range
+from pgmpy import factors
 
 
 class TestFactorInit(unittest.TestCase):
@@ -184,7 +185,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3'])
 
     def test_factor_product2(self):
-        from pgmpy import factors
+        
         phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
         phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)

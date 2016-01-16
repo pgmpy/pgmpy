@@ -9,6 +9,7 @@ from pgmpy.factors import Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.extern import six
+from pgmpy.models import BayesianModel
 
 
 class JointProbabilityDistribution(Factor):
@@ -250,7 +251,7 @@ class JointProbabilityDistribution(Factor):
         >>> bayesian_model
         <pgmpy.models.models.models at 0x7fd7440a9320>
         """
-        from pgmpy.models import BayesianModel
+        
 
         def combinations(u):
             for r in range(len(u) + 1):

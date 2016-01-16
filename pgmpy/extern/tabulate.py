@@ -8,6 +8,9 @@ from collections import namedtuple
 from platform import python_version_tuple
 import re
 from pgmpy.extern.six.moves import map, range
+import getopt
+import sys
+import textwrap
 
 if python_version_tuple()[0] < "3":
     from itertools import izip_longest
@@ -1022,9 +1025,7 @@ def _main():
                               rst, mediawiki, html, latex, latex_booktabs, tsv
                               (default: simple)
     """
-    import getopt
-    import sys
-    import textwrap
+    
     usage = textwrap.dedent(_main.__doc__)
     try:
         opts, args = getopt.getopt(sys.argv[1:],

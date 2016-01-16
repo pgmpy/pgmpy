@@ -13,6 +13,7 @@ except ImportError:
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
 from pgmpy.extern.six.moves import map, range
+import numpy as np
 
 
 class XBNReader(object):
@@ -164,7 +165,7 @@ class XBNReader(object):
                  [ 0.7 ,  0.3 ],
                  [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
         """
-        import numpy as np
+        
         distribution = {}
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
             variable_name = dist.find('PRIVATE').get('NAME')

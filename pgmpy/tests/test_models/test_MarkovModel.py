@@ -7,6 +7,11 @@ from pgmpy.models import MarkovModel
 from pgmpy.tests import help_functions as hf
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
+from pgmpy.models import FactorGraph
+from pgmpy.factors import factor_product
+from pgmpy.independencies import Independencies
+from pgmpy.models import BayesianModel
+import networkx as nx
 
 
 class TestMarkovModelCreation(unittest.TestCase):
@@ -205,7 +210,7 @@ class TestMarkovModelMethods(unittest.TestCase):
 
 
     def test_factor_graph(self):
-        from pgmpy.models import FactorGraph
+       
 
         phi1 = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
         phi2 = Factor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
@@ -241,7 +246,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertEqual(len(junction_tree.edges()), 1)
 
     def test_junction_tree_single_clique(self):
-        from pgmpy.factors import factor_product
+        
 
         self.graph.add_edges_from([('x1','x2'), ('x2', 'x3'), ('x1', 'x3')])
         phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
@@ -260,7 +265,7 @@ class TestMarkovModelMethods(unittest.TestCase):
                              ['a', 'c'])
 
     def test_local_independencies(self):
-        from pgmpy.independencies import Independencies
+        
 
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         independencies = self.graph.get_local_independencies()
@@ -276,8 +281,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertEqual(string, '(a _|_ c | b)\n(c _|_ a | b)\n')
 
     def test_bayesian_model(self):
-        from pgmpy.models import BayesianModel
-        import networkx as nx
+        
 
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
