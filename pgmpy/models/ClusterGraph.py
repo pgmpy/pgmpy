@@ -322,10 +322,7 @@ class ClusterGraph(UndirectedGraph):
         """
         copy = ClusterGraph(self.edges())
         if self.factors:
-            factors_copy = []
-            for factor in self.factors:
-                factors_copy.append(factor.copy())
-
+            factors_copy = [factor.copy() for factor in self.factors]
             copy.add_factors(*factors_copy)
         return copy
 
