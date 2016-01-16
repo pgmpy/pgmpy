@@ -4,7 +4,6 @@ import itertools
 from collections import defaultdict
 import logging
 from operator import mul
-from functools import reduce
 
 import networkx as nx
 import numpy as np
@@ -14,7 +13,7 @@ from pgmpy.base import DirectedGraph
 from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
-from pgmpy.extern.six.moves import range
+from pgmpy.extern.six.moves import range, reduce
 
 
 class BayesianModel(DirectedGraph):
