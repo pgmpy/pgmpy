@@ -4,6 +4,10 @@ import itertools
 from collections import defaultdict
 import logging
 from operator import mul
+<<<<<<< HEAD
+=======
+from functools import reduce
+>>>>>>> 9143c44a73cfcaed19c772d471c6125d0f3f14c7
 
 import networkx as nx
 import numpy as np
