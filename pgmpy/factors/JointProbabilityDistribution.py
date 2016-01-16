@@ -1,4 +1,5 @@
 import itertools
+from operator import mul
 
 import numpy as np
 
@@ -306,6 +307,51 @@ class JointProbabilityDistribution(Factor):
                     self.check_independence([order[variable_index]], set(u)-set(subset), subset, True)):
                     G.add_edges_from([(variable, order[variable_index]) for variable in subset])
         return G
+
+    def is_imap(self, model):
+        """
+        Checks whether the given BayesianModel is Imap of JointProbabilityDistribution
+
+        Parameters
+        -----------
+        model : An instance of BayesianModel Class, for which you want to
+            check the Imap
+
+        Returns
+        --------
+        boolean : True if given bayesian model is Imap for Joint Probability Distribution
+                False otherwise
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> bm = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        >>> grade_cpd = TabularCPD('grade', 3,
+        ...                        [[0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                         [0.8,0.8,0.8,0.8,0.8,0.8]],
+        ...                        evidence=['diff', 'intel'],
+        ...                        evidence_card=[2, 3])
+        >>> bm.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+        >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
+                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        >>> JPD.is_imap(bm)
+        True
+        """
+        from pgmpy.models import BayesianModel
+        if not isinstance(model, BayesianModel):
+            raise TypeError("model must be an instance of BayesianModel")
+        factors = [cpd.to_factor() for cpd in model.get_cpds()]
+        factor_prod = six.moves.reduce(mul, factors)
+        JPD_fact = Factor(self.variables, self.cardinality, self.values)
+        if JPD_fact == factor_prod:
+            return True
+        else:
+            return False
 
     def pmap(self):
         pass
