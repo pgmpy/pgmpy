@@ -2,7 +2,7 @@
 """Contains the different formats of CPDs used in PGM"""
 
 from __future__ import division
-
+from warnings import warn
 from itertools import product
 
 import numpy as np
@@ -12,7 +12,6 @@ from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
-from warnings import warn
 
 
 class TabularCPD(Factor):
@@ -370,22 +369,35 @@ class TabularCPD(Factor):
         """
         return Factor(self.variables, self.cardinality, self.values)
 
-
-    def reorder_parents(self,new_order,inplace = False):
-        '''
+    def reorder_parents(self, new_order, inplace=False):
+        """
+        Reorders the parents according to the new given order
 
         Parameters
         ----------
         new_order: list
             list of new ordering of variables
         inplace: boolean
-            If inplace == True it will modify the CPD itself
+            If inplace=True it will modify the CPD itself and return it,
             otherwise new value will be returned without affecting old values
 
         Returns
         -------
+        Returns the new reordered CPD
 
-        '''
+        Examples
+        --------
+        >>>from pgmpy.factors.CPD import TabularCPD
+        >>> cpd = TabularCPD('J', 2, [[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
+        ...                          [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]],
+        ...                  evidence=['C', 'B', 'A'], evidence_card= [2, 2, 2])
+        >>> cpd.get_cpd()
+        array([[ 0.9,  0.3,  0.9,  0.3,  0.8,  0.8,  0.4,  0.4],
+                [ 0.1,  0.7,  0.1,  0.7,  0.2,  0.2,  0.6,  0.6]])
+        >>> cpd.reorder_parents(['B', 'A', 'C'])
+        array([[ 0.9,  0.9,  0.3,  0.3,  0.8,  0.4,  0.8,  0.4],
+               [ 0.1,  0.1,  0.7,  0.7,  0.2,  0.6,  0.2,  0.6]])
+        """
         if not self.evidence or (set(new_order) - set(self.evidence)) or (set(self.evidence) - set(new_order)):
             raise ValueError("New order either has missing or extra arguments")
         else:
@@ -410,7 +422,6 @@ class TabularCPD(Factor):
                     return self.get_cpd()
                 else:
                     return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order[::-1]]))
-                    #return new_values.reshape(self.variable_card, [card_map[var] for var in new_order[::-1]])
             else:
                 warn("Same ordering provided as current")
                 return self.get_cpd()
