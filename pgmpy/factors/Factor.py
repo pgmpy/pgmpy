@@ -91,6 +91,8 @@ class Factor(object):
         | x1_1 | x2_1 | x3_1 |          1.0000 |
         +------+------+------+-----------------+
         """
+        if isinstance(variables, six.string_types):
+            raise TypeError("Variables: Expected type list or array like, got string")
 
         values = np.array(values)
 
@@ -102,6 +104,9 @@ class Factor(object):
 
         if values.size != np.product(cardinality):
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
+
+        if len(set(variables)) != len(variables):
+            raise ValueError("Variable names cannot be same")
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
@@ -768,6 +773,9 @@ class Factor(object):
                 return False
             else:
                 return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __hash__(self):
         return hash(str(self.variables) + str(self.cardinality.tolist()) +
