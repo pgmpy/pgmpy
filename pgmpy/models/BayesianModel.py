@@ -13,6 +13,11 @@ from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
+from pgmpy.independencies import Independencies
+from pgmpy.models import MarkovModel
+from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
+from pgmpy.inference import VariableElimination
+
 
 
 class BayesianModel(DirectedGraph):
@@ -372,7 +377,7 @@ class BayesianModel(DirectedGraph):
                 descendents.extend(neighbors)
             return descendents
 
-        from pgmpy.independencies import Independencies
+        
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) -
@@ -467,7 +472,7 @@ class BayesianModel(DirectedGraph):
         [('diff', 'intel'), ('diff', 'grade'), ('intel', 'grade'),
         ('intel', 'SAT'), ('grade', 'letter')]
         """
-        from pgmpy.models import MarkovModel
+        
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
@@ -544,8 +549,7 @@ class BayesianModel(DirectedGraph):
          <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
         """
 
-        from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
-
+        
         if estimator_type is None:
             estimator_type = MaximumLikelihoodEstimator
         else:
@@ -587,7 +591,7 @@ class BayesianModel(DirectedGraph):
                1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1,
                1, 1, 1, 0, 0, 0, 1, 0])
         """
-        from pgmpy.inference import VariableElimination
+        
 
         if set(data.columns) == set(self.nodes()):
             raise ValueError("No variable missing in data. Nothing to predict")

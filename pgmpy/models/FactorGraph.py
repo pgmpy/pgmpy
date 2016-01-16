@@ -10,6 +10,7 @@ from networkx.algorithms import bipartite
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import factor_product
 from pgmpy.extern.six.moves import filter, range, zip
+from pgmpy.models import MarkovModel
 
 
 class FactorGraph(UndirectedGraph):
@@ -284,7 +285,7 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> mm = G.to_markov_model()
         """
-        from pgmpy.models import MarkovModel
+        
         mm = MarkovModel()
 
         variable_nodes = self.get_variable_nodes()

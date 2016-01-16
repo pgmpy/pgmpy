@@ -9,6 +9,11 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.factors import factor_product, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import map, range, zip
+from pgmpy.models import FactorGraph
+from pgmpy.models import JunctionTree
+from pgmpy.models import JunctionTree
+from pgmpy.exceptions import RequiredError
+from pgmpy.models import BayesianModel
 
 
 class MarkovModel(UndirectedGraph):
@@ -251,7 +256,7 @@ class MarkovModel(UndirectedGraph):
         >>> student.add_factors(factor1, factor2)
         >>> factor_graph = student.to_factor_graph()
         """
-        from pgmpy.models import FactorGraph
+       
         factor_graph = FactorGraph()
 
         if not self.factors:
@@ -461,7 +466,7 @@ class MarkovModel(UndirectedGraph):
         >>> mm.add_factors(*phi)
         >>> junction_tree = mm.to_junction_tree()
         """
-        from pgmpy.models import JunctionTree
+        
 
         # Check whether the model is valid or not
         self.check_model()
@@ -568,7 +573,7 @@ class MarkovModel(UndirectedGraph):
         ...                    ('x4', 'x7'), ('x5', 'x7')])
         >>> mm.get_local_independecies()
         """
-        from pgmpy.exceptions import RequiredError
+        
         local_independencies = Independencies()
 
         all_vars = set(self.nodes())
@@ -608,7 +613,7 @@ class MarkovModel(UndirectedGraph):
         >>> mm.add_factors(*phi)
         >>> bm = mm.to_bayesian_model()
         """
-        from pgmpy.models import BayesianModel
+        
 
         bm = BayesianModel()
         var_clique_dict = defaultdict(tuple)
