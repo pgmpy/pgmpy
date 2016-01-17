@@ -115,7 +115,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertListEqual(hf.recursive_sorted(model.variables), hf.recursive_sorted(copy.variables))
         self.assertDictEqual(model.cardinalities, copy.cardinalities)
         self.assertDictEqual(model.transition_models, copy.transition_models)
-        self.assertListEqual(hf.recursive_sorted(model.state), hf.recursive_sorted(copy.state))
+        self.assertListEqual(model.state, copy.state)
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "warn")
     def test_add_variable_existing(self, warn):
