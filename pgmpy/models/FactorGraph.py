@@ -392,3 +392,42 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('Factor for all the random variables not defined.')
 
         return np.sum(factor.values)
+
+    def copy(self):
+        """
+        Returns a copy of FactorGraph.
+
+        Returns:
+        -------
+        FactorGraph : Copy of FactorGraph
+
+        Example
+        -------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors import Factor
+        >>> import numpy as np
+        >>> G = FactorGraph()
+        >>> phi1 = Factor(['a', 'b'], [2, 2], range(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+                              ('b', phi2), ('c', phi2)])
+        >>> G.add_factors(phi1, phi2)
+        >>> G_copy = G.copy()
+        >>> G_copy.nodes()
+        [<Factor representing phi(b:2, c:2) at 0xb4badd4c>, 'b', 'c',
+          'a', <Factor representing phi(a:2, b:2) at 0xb4badf2c>]
+
+        """
+        edges_copy = []
+        for node1, node2 in self.edges():
+            if isinstance(node1, Factor):
+                edges_copy.append((node1.copy(), node2))
+            elif isinstance(node2, Factor):
+                edges_copy.append((node1, node2.copy()))
+            else:
+                edges_copy.append((node1, node2))
+        copy = FactorGraph(edges_copy)
+        if self.factors:
+            factors_copy = [factor.copy() for factor in self.factors]
+            copy.add_factors(*factors_copy)
+        return copy
