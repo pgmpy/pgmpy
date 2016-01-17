@@ -8,7 +8,7 @@ from mock import patch, call
 from pgmpy.factors import State
 from pgmpy.models import MarkovChain as MC
 from pgmpy.extern.six.moves import range, zip
-
+from pgmpy.tests import help_functions as hf
 
 class TestMarkovChain(unittest.TestCase):
     def setUp(self):
@@ -106,6 +106,16 @@ class TestMarkovChain(unittest.TestCase):
         self.assertIn('p', model.variables)
         self.assertEqual(model.cardinalities['p'], 3)
         self.assertDictEqual(model.transition_models['p'], {})
+
+    def test_copy(self):
+        model = MC(self.variables, self.card, self.start_state)
+        copy = model.copy()
+        self.assertIsInstance(copy, MC)
+        self.assertIsNot(copy, model)
+        self.assertListEqual(hf.recursive_sorted(model.variables), hf.recursive_sorted(copy.variables))
+        self.assertDictEqual(model.cardinalities, copy.cardinalities)
+        self.assertDictEqual(model.transition_models, copy.transition_models)
+        self.assertListEqual(hf.recursive_sorted(model.state), hf.recursive_sorted(copy.state))
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "warn")
     def test_add_variable_existing(self, warn):
