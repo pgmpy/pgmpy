@@ -388,7 +388,7 @@ class MarkovChain(object):
         """
         variable_copy = []
         cardinalities_copy = []
-        for var,card in self.cardinalities.iteritems():
+        for var,card in self.cardinalities.items():
             variable_copy.append(var)
             cardinalities_copy.append(card)
 
