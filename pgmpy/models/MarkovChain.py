@@ -366,15 +366,15 @@ class MarkovChain(object):
 
     def copy(self):
         """
-        Returns copy of Markov Chain
+        Returns a copy of Markov Chain Model.
 
         Return Type:
         ------------
-        MarkovChain : Copy of MarkovChain
+        MarkovChain : Copy of MarkovChain.
 
         Examples:
         ---------
-        >>> from pgmpy.models.MarkovChain import MarkovChain
+        >>> from pgmpy.models import MarkovChain
         >>> from pgmpy.factors import State
         >>> model = MarkovChain()
         >>> model.add_variables_from(['intel', 'diff'], [3, 2])
@@ -382,18 +382,14 @@ class MarkovChain(object):
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
-        >>> from pgmpy.factors import State
         >>> model.set_start_state([State('intel', 0), State('diff', 2)])
         >>> model_copy = model.copy()
+        >>> model_copy.transition_models
+        >>> {'diff': {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}},
+             'intel': {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}}
         """
-        variable_copy = []
-        cardinalities_copy = []
-        for var,card in self.cardinalities.items():
-            variable_copy.append(var)
-            cardinalities_copy.append(card)
-
-        copy = MarkovChain(variables=variable_copy, card=cardinalities_copy, start_state=self.state)
+        markovchain_copy = MarkovChain(variables=list(self.cardinalities.keys()), card=list(self.cardinalities.values()), start_state=self.state)
         if self.transition_models:
-            copy.transition_models = self.transition_models
+            markovchain_copy.transition_models = self.transition_models.copy()
 
-        return copy
+        return markovchain_copy
