@@ -116,6 +116,15 @@ class TestMarkovChain(unittest.TestCase):
         self.assertDictEqual(model.cardinalities, copy.cardinalities)
         self.assertDictEqual(model.transition_models, copy.transition_models)
         self.assertListEqual(model.state, copy.state)
+        model = MC(['a'], [2])
+        self.assertTrue(len(model.variables)<len(copy.variables))
+        self.assertListEqual(hf.recursive_sorted(self.variables),hf.recursive_sorted(copy.variables))
+        self.assertTrue(len(model.cardinalities)<len(copy.cardinalities))
+        self.assertDictEqual(self.cardinalities, self.cardinalities)
+        self.assertTrue(len(model.transition_models)<len(copy.cardinalities))
+        self.assertDictEqual(self.cardinalities, self.cardinalities)
+        self.assertNotEqual(model.state, copy.state)
+        self.assertListEqual(self.start_state, copy.state)
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "warn")
     def test_add_variable_existing(self, warn):
