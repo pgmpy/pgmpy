@@ -4,18 +4,20 @@ People
 Organisation Admins
 ===================
 
-* Ankur Ankan
+* Ankur Ankan <ankurankan@gmail.com>
 
-* Abinash Panda
+* Abinash Panda <mailme.abinashpanda@gmail.com>
 
-Contributors (in order of the date of their first contribution made)
+Contributors
 ============
+
+(in order of the date of their first contribution made)
 
 * Ankur Ankan <ankurankan@gmail.com>
 
 * Shikhar Nigam <snigam3112@gmail.com>
 
-* Abinash Panda <abinash.panda.ece10@itbhu.ac.in>
+* Abinash Panda <mailme.abinashpanda@gmail.com>
 
 * William Lyon <wlyon@quantpost.com>
 
