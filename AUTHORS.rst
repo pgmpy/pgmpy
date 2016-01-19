@@ -33,8 +33,6 @@ Contributors
 
 * palashahuja <abhor902@gmail.com>
 
-* The Gitter Badger <badger@gitter.im>
-
 * Saket Choudhary <saketkc@gmail.com>
 
 * all3fox <all3fox@gmail.com>
@@ -48,8 +46,6 @@ Contributors
 * Pratyaksh Sharma <pratyaksh@me.com>
 
 * Aleksandar Dimitriev <dimitriev_a@yahoo.com>
-
-* vivek425ster <vivek425ster@gmail.com>
 
 * Demyanov <artyom.demyanov96@gmail.com>
 
