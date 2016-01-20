@@ -49,16 +49,17 @@ Installation
 To install pgmpy first you have to install the dependencies.
 To install the dependencies first go to the pgmpy directory and then run the following commands
 ```
-cd /path/to/pgmpy
+$ cd /path/to/pgmpy
 ```
 In the directory run either of the following
+
 Using pip
 ```
-pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 or conda
 ```
-conda intall --file requirements.txt
+$ conda intall --file requirements.txt
 ```
 pgmpy is installed using `distutils`. If you have the tools installed
 to build a python extension module:
