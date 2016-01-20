@@ -112,15 +112,18 @@ class TestMarkovChain(unittest.TestCase):
         model.add_transition_model('a',{0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}})
         model.add_transition_model('b',{0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}})
         copy = model.copy()
+
         self.assertIsInstance(copy, MC)
         self.assertIsNot(copy, model)
         self.assertEqual(model.variables, copy.variables)
         self.assertEqual(model.cardinalities, copy.cardinalities)
         self.assertEqual(model.transition_models, copy.transition_models)
         self.assertEqual(model.state, copy.state)
+
         model.add_variable('p', 1)
         model.set_start_state([State('a', 0), State('b', 1), State('p', 0)])
         model.add_transition_model('p',{0: {0: 1}})
+
         self.assertNotEqual(model.variables, copy.variables)
         self.assertEqual(['a', 'b'],copy.variables)
         self.assertNotEqual(model.cardinalities, copy.cardinalities)
