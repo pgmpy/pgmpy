@@ -9,6 +9,7 @@ from pgmpy.factors import State
 from pgmpy.models import MarkovChain as MC
 from pgmpy.extern.six.moves import range, zip
 
+
 class TestMarkovChain(unittest.TestCase):
     def setUp(self):
         self.variables = ['intel', 'diff', 'grade']
