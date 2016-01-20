@@ -16,24 +16,12 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy). We have a
 Dependencies
 =============
 Pgmpy has following non optional dependencies
-- Python 2.7 or higher versions, Python 3 or higher versions
-- NetworkX 1.9.1 or higher
-- Scipy 0.12.1 or higher
-- Numpy 1.9.2 or higher
-- Cython 0.21 or higher
-- Pandas 0.15.1 or higher ( except 0.17.0 )
-
-To install all the depedencies 
-
-- Either using `pip`, use
-```bash
-pip install -r requirements.txt
-```
-
-- Else using `conda`, use
-```bash
-conda install --file requirements.txt
-```
+- Python 2.7 , Python 3 
+- NetworkX 1.9.1 
+- Scipy 0.12.1 
+- Numpy 1.9.2 
+- Cython 0.21 
+- Pandas 0.15.1 
 
 Download
 =========
@@ -68,7 +56,7 @@ to build a python extension module:
 sudo python3 setup.py install
 ```
 
-If you face any problems don't open an issue, reach us at our mailing list or gitter channel (mentioned above)
+If you face any problems during installation let us know, via issues, mail or at our gitter channel
 
 Development
 ============
@@ -85,12 +73,18 @@ Contributing
 ------------
 We accept contribution in terms of issues and pull requests.
 
-Before opening a issue, please have a look that if we already have that issue opened. If not than open a new issue.
+Issues can be reported at our [issues section](https://github.com/pgmpy/pgmpy/issues) or via mail, or gitter.
+Since our developers are working and studying you might not get fast replies , but we will try our best
 
 Before opening a pull request , have look at our [contributing guide](
 https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
 
-please adhere to the points mentioned here, it makes review process difficult if you don't follow them.
+Contributing guide contains good points that can help in getting you PR merged ;), and help us out.
+
+If you face any problems in pull request, feel free to ask them at mail or gitter. We have a very helpful community.
+
+If you have any new features , we will be obliged to have them. Talk about it on mailing list or gitter
+or just directly send a pull requests.
 
 Testing
 -------
