@@ -5,22 +5,27 @@ pgmpy
 [![Code Health](https://landscape.io/github/pgmpy/pgmpy/dev/landscape.svg?style=flat)](https://landscape.io/github/pgmpy/pgmpy/dev)
 [![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Python Library for Probabilistic Graphical Models  
-Documentation: [pgmpy](http://pgmpy.org/)  
-Mailing List: pgmpy@googlegroups.com  
+pgmpy is a python library for working with Probabilistic Graphical Models.
 
-Dependencies:
+Documentation  and list of algorithms we support is at our official site http://pgmpy.org/
+
+Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
+
+We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy). We have a very welcoming and helpful community.
+
+Dependencies
 =============
-- Python 3.3
-- NetworkX 1.9.1
-- Scipy 0.12.1
-- Numpy 1.9.2
-- Cython 0.21
-- Pandas 0.15.1
+Pgmpy has following non optional dependencies
+- Python 2.7 or higher versions, Python 3 or higher versions
+- NetworkX 1.9.1 or higher
+- Scipy 0.12.1 or higher
+- Numpy 1.9.2 or higher
+- Cython 0.21 or higher
+- Pandas 0.15.1 or higher ( except 0.17.0 )
 
 To install all the depedencies 
 
-- Either using <code>pip</code>, use
+- Either using `pip`, use
 ```bash
 pip install -r requirements.txt
 ```
@@ -30,8 +35,31 @@ pip install -r requirements.txt
 conda install --file requirements.txt
 ```
 
-Installation:
+Download
+=========
+Currently pgmpy is not hosted on pypi or conda, but we are working on it.
+Do download the pgmpy you have to either use git or download zip file at [here](https://github.com/pgmpy/pgmpy/archive/dev.zip).
+To download from git use
+```
+git clone https://github.com/pgmpy/pgmpy
+```
+
+Installation
 =============
+To install pgmpy first you have to install the dependencies.
+To install the dependencies first go to the pgmpy directory and then run the following commands
+```
+cd /path/to/pgmpy
+```
+In the directory run either of the following
+Using pip
+```
+pip install -r requirements.txt
+```
+or conda
+```
+conda intall --file requirements.txt
+```
 pgmpy is installed using `distutils`. If you have the tools installed
 to build a python extension module:
 
@@ -39,104 +67,135 @@ to build a python extension module:
 sudo python3 setup.py install
 ```
 
-Development:
+If you face any problems don't open an issue, reach us at our mailing list or gitter channel (mentioned above)
+
+Development
 ============
 
 Code
 ----
 
-You can check the latest sources with the command::
+You can check the latest sources from our github repository 
+use the command:
 
     git clone https://github.com/pgmpy/pgmpy
 
 Contributing
 ------------
+We accept contribution in terms of issues and pull requests.
 
-Before opening a Pull Request, have a look at the
-full Contributing page to make sure your code complies
-with our guidelines - 
-https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md
+Before opening a issue, please have a look that if we already have that issue opened. If not than open a new issue.
+
+Before opening a pull request , have look at our [contributing guide](
+https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
+
+please adhere to the points mentioned here, it makes review process difficult if you don't follow them.
 
 Testing
 -------
 
-After installation, you can launch the test suite from outside the
-source directory (you will need to have the ``nose`` package installed)::
+After installation, you can launch the test form pgmpy
+source directory (you will need to have the ``nose`` package installed):
 ```bash
 $ nosetests -v
 ```
+to see the coverage of existing code use following command
+```
+$ nosetests --with-coverage --cover-package=pgmpy
+```
+
+Documentation and usage
+=======================
+
+Everything is at:
+http://pgmpy.org/
+
+You can also build the documentation in your local system. We use sphinx to help us building documentation from our code.
+```
+$ cd /path/to/pgmpy/docs
+$ make html
+```
+Then the docs will be in _build/html
 
 Example:
 ========
-```python3
-from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
-student = BayesianModel()
-# instantiates a new Bayesian Model called 'student'
-
-student.add_nodes_from(['diff', 'intel', 'grade'])
-# adds nodes labelled 'diff', 'intel', 'grade' to student
-
-student.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
-# adds directed edges from 'diff' to 'grade' and 'intel' to 'grade'
-
-"""
-diff cpd:
-
-+-------+--------+
-|diff:  |        |
-+-------+--------+
-|easy	|	0.2	 |
-+-------+--------+
-|hard	|	0.8	 |
-+-------+--------+
-"""
-diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-
-"""
-intel cpd:
-
-+-------+--------+
-|intel: |        |
-+-------+--------+
-|dumb	|	0.5	 |
-+-------+--------+
-|avg	|	0.3	 |
-+-------+--------+
-|smart	|	0.2	 |
-+-------+--------+
-"""
-intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-
-"""
-grade cpd:
-
-+------+-----------------------+---------------------+
-|diff: |          easy         |         hard        |
-+------+------+------+---------+------+------+-------+
-|intel:| dumb |  avg |  smart  | dumb | avg  | smart |
-+------+------+------+---------+------+------+-------+
-|gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-+------+------+------+---------+------+------+-------+
-|gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-+------+------+------+---------+------+------+-------+
-|gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
-+------+------+------+---------+------+------+-------+
-"""
-grade_cpd = TabularCPD('grade', 3,
-					   [[0.1,0.1,0.1,0.1,0.1,0.1],
-                        [0.1,0.1,0.1,0.1,0.1,0.1], 
-                        [0.8,0.8,0.8,0.8,0.8,0.8]],
-					   evidence=['intel', 'diff'],
-					   evidence_card=[3, 2])
-
-student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
-
-# Finding active trail
-student.active_trail_nodes('diff')
-
-# Finding active trail with observation
-student.active_trail_nodes('diff', observed='grade')
+Here is a small snippet of pgmpy API
 ```
+python3
+>>> from pgmpy.models import BayesianModel
+>>> from pgmpy.factors import TabularCPD
+>>> student = BayesianModel()
+>>> # instantiates a new Bayesian Model called 'student'
 
+>>> student.add_nodes_from(['diff', 'intel', 'grade'])
+>>> # adds nodes labelled 'diff', 'intel', 'grade' to student
+
+>>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
+>>> # adds directed edges from 'diff' to 'grade' and 'intel' to 'grade'
+
+>>> """
+... diff cpd:
+...
+... +-------+--------+
+... |diff:  |        |
+... +-------+--------+
+... |easy	|	0.2	 |
+... +-------+--------+
+... |hard	|	0.8	 |
+... +-------+--------+
+... """
+
+>>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+
+>>> """
+... intel cpd:
+...
+... +-------+--------+
+... |intel: |        |
+... +-------+--------+
+... |dumb	|	0.5	 |
+... +-------+--------+
+... |avg	|	0.3	 |
+... +-------+--------+
+... |smart	|	0.2	 |
+... +-------+--------+
+... """
+
+>>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+
+>>> """
+... grade cpd:
+...
+... +------+-----------------------+---------------------+
+... |diff: |          easy         |         hard        |
+... +------+------+------+---------+------+------+-------+
+... |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
+... +------+------+------+---------+------+------+-------+
+... |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+... +------+------+------+---------+------+------+-------+
+... |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
+... +------+------+------+---------+------+------+-------+
+... |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
+... +------+------+------+---------+------+------+-------+
+... """
+
+>>> grade_cpd = TabularCPD('grade', 3,
+					     [[0.1,0.1,0.1,0.1,0.1,0.1],
+                         [0.1,0.1,0.1,0.1,0.1,0.1], 
+                         [0.8,0.8,0.8,0.8,0.8,0.8]],
+					     evidence=['intel', 'diff'],
+					     evidence_card=[3, 2])
+
+>>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+
+>>> # Finding active trail
+>>> student.active_trail_nodes('diff')
+
+>>> # Finding active trail with observation
+>>> student.active_trail_nodes('diff', observed='grade')
+
+```
+Lisence
+=======
+pgmpy is released under MIT License. You can read about our lisence at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 
