@@ -25,13 +25,13 @@ Contributors
 
 * Jaspreet Singh <jaspreetsingh112@gmail.com>
 
-* nehasoni <neha.soni.ece10@itbhu.ac.in>
+* Neha Soni <neha.soni.ece10@itbhu.ac.in>
 
 * Jaidev Deshpande <deshpande.jaidev@gmail.com>
 
 * Abhijeet Kislay <abhijeetkislay@gmail.com>
 
-* palashahuja <abhor902@gmail.com>
+* Palash Ahuja <abhor902@gmail.com>
 
 * Saket Choudhary <saketkc@gmail.com>
 
