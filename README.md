@@ -63,7 +63,7 @@ Testing
 After installation, you can launch the test suite from outside the
 source directory (you will need to have the ``nose`` package installed)::
 ```bash
-$ nosetests -v pgmpy
+$ nosetests -v
 ```
 
 Example:
