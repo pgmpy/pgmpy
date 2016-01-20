@@ -185,9 +185,11 @@ python3
 
 >>> # Finding active trail
 >>> student.active_trail_nodes('diff')
+{'diff', 'grade'}
 
 >>> # Finding active trail with observation
 >>> student.active_trail_nodes('diff', observed='grade')
+{'diff', 'intel'}
 
 ```
 Lisence
