@@ -8,7 +8,6 @@ from mock import patch, call
 from pgmpy.factors import State
 from pgmpy.models import MarkovChain as MC
 from pgmpy.extern.six.moves import range, zip
-from pgmpy.tests import help_functions as hf
 
 class TestMarkovChain(unittest.TestCase):
     def setUp(self):
