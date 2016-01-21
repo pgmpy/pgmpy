@@ -29,7 +29,7 @@ Currently pgmpy is not hosted on pypi or conda, but we are working on it.
 Do download the pgmpy you have to either use git or download zip file at [here](https://github.com/pgmpy/pgmpy/archive/dev.zip).
 To download from git use
 ```
-git clone https://github.com/pgmpy/pgmpy
+git clone https://github.com/pgmpy/pgmpy.git
 ```
 
 Installation
@@ -67,7 +67,7 @@ Code
 You can check the latest sources from our github repository 
 use the command:
 
-    git clone https://github.com/pgmpy/pgmpy
+    git clone https://github.com/pgmpy/pgmpy.git
 
 Contributing
 ------------
