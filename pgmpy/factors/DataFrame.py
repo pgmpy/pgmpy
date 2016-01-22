@@ -1,6 +1,7 @@
 import numpy as np
 
 from pgmpy.extern import six
+from pgmpy.extern import tabulate
 
 class DataFrame(object):
 
@@ -71,3 +72,6 @@ class DataFrame(object):
                [1, 0, 1]])
         """
         return self.values
+
+    def __str__(self):
+        return(tabulate(self.get_values(), headers=self.get_variables()))
