@@ -114,7 +114,7 @@ class TestMarkovChain(unittest.TestCase):
         copy = model.copy()
 
         self.assertIsInstance(copy, MC)
-        self.assertEqual(model.variables, copy.variables)
+        self.assertEqual(sorted(model.variables), sorted(copy.variables))
         self.assertEqual(model.cardinalities, copy.cardinalities)
         self.assertEqual(model.transition_models, copy.transition_models)
         self.assertEqual(model.state, copy.state)
@@ -123,7 +123,7 @@ class TestMarkovChain(unittest.TestCase):
         model.set_start_state([State('a', 0), State('b', 1), State('p', 0)])
         model.add_transition_model('p', {0: {0: 1}})
 
-        self.assertNotEqual(model.variables, copy.variables)
+        self.assertNotEqual(sorted(model.variables), sorted(copy.variables))
         self.assertEqual(['a', 'b'], copy.variables)
         self.assertNotEqual(model.cardinalities, copy.cardinalities)
         self.assertEqual({'a': 2, 'b': 2}, copy.cardinalities)
