@@ -783,9 +783,9 @@ class Factor(object):
         for axis in range(phi.values.ndim):
             exchange_index = phi.variables.index(variables[axis])
             phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
-                                                                    phi.variables[axis])
+                                                                  phi.variables[axis])
             phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
-                                                                        phi.cardinality[axis])
+                                                                      phi.cardinality[axis])
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(str(phi.variables) + str(phi.values) + str(phi.cardinality))
 
