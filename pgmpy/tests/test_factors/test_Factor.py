@@ -528,6 +528,24 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(repr(self.jpd1),'<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>'
                          .format(address=hex(id(self.jpd1))))
+    def test_is_imap(self):
+        from pgmpy.models import BayesianModel
+        from pgmpy.models import MarkovModel
+        G1 = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        grade_cpd = TabularCPD('grade', 3,
+                               [[0.1,0.1,0.1,0.1,0.1,0.1],
+                                [0.1,0.1,0.1,0.1,0.1,0.1],
+                                [0.8,0.8,0.8,0.8,0.8,0.8]],
+                                evidence=['diff', 'intel'],
+                                evidence_card=[2, 3])
+        G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+        val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
+               0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        jpd = JPD(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        self.assertTrue(jpd.is_imap(G1))
+        self.assertRaises(TypeError, jpd.is_imap, MarkovModel())
 
     def tearDown(self):
         del self.jpd

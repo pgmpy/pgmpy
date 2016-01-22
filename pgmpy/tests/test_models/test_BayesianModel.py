@@ -1,13 +1,15 @@
 import unittest
+
 import networkx as nx
 import pandas as pd
 import numpy as np
 import numpy.testing as np_test
+
 from pgmpy.models import BayesianModel
 import pgmpy.tests.help_functions as hf
-from pgmpy.factors import TabularCPD
+from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
-import six
+from pgmpy.extern import six
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -104,6 +106,16 @@ class TestBayesianModelMethods(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([('a', 'd'), ('b', 'd'),
                                 ('d', 'e'), ('b', 'c')])
+        self.G1 = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
+        grade_cpd = TabularCPD('grade', 3,
+                               [[0.1,0.1,0.1,0.1,0.1,0.1],
+                                [0.1,0.1,0.1,0.1,0.1,0.1],
+                                [0.8,0.8,0.8,0.8,0.8,0.8]],
+                                evidence=['diff', 'intel'],
+                                evidence_card=[2, 3])
+        self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
@@ -127,8 +139,17 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(self.G.local_independencies('e'), Independencies(['e',['c','b','a'],'d']))
         self.assertEqual(self.G.local_independencies('b'), Independencies(['b','a']))
 
+    def test_is_imap(self):
+        val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
+               0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        fac = Factor(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        self.assertTrue(self.G1.is_imap(JPD))
+        self.assertRaises(TypeError, self.G1.is_imap, fac)
+
     def tearDown(self):
         del self.G
+        del self.G1
 
 
 class TestBayesianModelCPD(unittest.TestCase):
