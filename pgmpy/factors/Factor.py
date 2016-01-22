@@ -190,7 +190,7 @@ class Factor(object):
         rev_card = self.cardinality[::-1]
         for i, card in enumerate(rev_card):
             assignments[:, i] = index % card
-            index = index//card
+            index = index // card
 
         assignments = assignments[:, ::-1]
 
@@ -510,7 +510,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values + phi1.values
@@ -594,7 +594,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values * phi1.values
@@ -712,7 +712,7 @@ class Factor(object):
                 'phi': When used for Factors.
                   'p': When used for CPDs.
         """
-        string_header = list(map(lambda x : six.text_type(x), self.scope()))
+        string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
 
@@ -778,8 +778,16 @@ class Factor(object):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(str(self.variables) + str(self.cardinality.tolist()) +
-                    str(self.values.astype('float').tolist()))
+        variables = sorted(self.variables)
+        phi = self.copy()
+        for axis in range(phi.values.ndim):
+            exchange_index = phi.variables.index(variables[axis])
+            phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
+                                                                  phi.variables[axis])
+            phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                      phi.cardinality[axis])
+            phi.values = phi.values.swapaxes(axis, exchange_index)
+        return hash(str(phi.variables) + str(phi.values) + str(phi.cardinality))
 
 
 def factor_product(*args):

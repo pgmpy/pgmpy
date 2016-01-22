@@ -266,6 +266,15 @@ class TestFactorMethods(unittest.TestCase):
                                                       21, 22, 23])
         self.assertTrue(phi1, phi2)
 
+    def test_hash(self):
+        phi = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi1 = Factor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
+        self.assertEqual(hash(phi), hash(phi1))
+
+        phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
+        phi1 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
+        self.assertEqual(hash(phi), hash(phi1))
+
     def test_maximize1(self):
         self.phi1.maximize(['x1'])
         self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
