@@ -5,8 +5,59 @@ from pgmpy.extern import tabulate
 
 
 class DataFrame(object):
+    """
+    Base class for DataFrame objects.
+    A DataFrame object comprises a list of variables and a
+    2D numpy array whose columns represent values of the corresponding
+    variables and rows represent samples.
 
-    # TODO: add docstring with examples
+    Public Methods
+    --------------
+    get_variables()
+    get_values()
+    get_num_of_samples()
+
+    Examples
+    --------
+    >>> from pgmpy.factors import DataFrame
+    >>> df1 = DataFrame(['A', 'B', 'C'], [0, 1, 2, 1, 1, 1, 2, 3, 0])
+    >>> df2 = DataFrame(['A', 'B', 'C'], np.array([[0, 0, 0],
+                                                   [0, 1, 1],
+                                                   [0, 1, 1],
+                                                   [1, 2, 3],
+                                                   [0, 2, 1]]))
+    >>> df1.get_values()
+    array([[0, 1, 2],
+           [1, 1, 1],
+           [2, 3, 0]])
+
+    >>> df1.get_variables()
+    ['A', 'B', 'C']
+
+    >>> df2.get_values()
+    array([[0, 0, 0],
+           [0, 1, 1],
+           [0, 1, 1],
+           [1, 2, 3],
+           [0, 2, 1]])
+
+    >>> df1.get_num_of_samples()
+    3
+
+    >>> print(df1)
+       A    B    C
+     ---  ---  ---
+       0    1    2
+       1    1    1
+       2    3    0
+
+    >>> df1==df2
+    False
+
+    >>> df1!=df2
+    True
+
+    """
     def __init__(self, variables=[], values=[]):
         """
         Initializes a DataFrame Class.
