@@ -388,7 +388,8 @@ class MarkovChain(object):
         >>> {'diff': {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}},
              'intel': {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}}
         """
-        markovchain_copy = MarkovChain(variables=list(self.cardinalities.keys()), card=list(self.cardinalities.values()), start_state=self.state)
+        markovchain_copy = MarkovChain(variables=list(self.cardinalities.keys()),
+                                       card=list(self.cardinalities.values()), start_state=self.state)
         if self.transition_models:
             markovchain_copy.transition_models = self.transition_models.copy()
 
