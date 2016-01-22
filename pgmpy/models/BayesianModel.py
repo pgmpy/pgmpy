@@ -249,12 +249,23 @@ class BayesianModel(DirectedGraph):
 
     def _get_ancestors_of(self, obs_nodes_list):
         """
-        Returns a list of all ancestors of all the observed nodes.
+        Returns a list of all ancestors of all the observed nodes including the
+        node itself.
 
         Parameters
         ----------
         obs_nodes_list: string, list-type
             name of all the observed nodes
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> model = BayesianModel([('D', 'G'), ('I', 'G'), ('G', 'L'),
+        ...                        ('I', 'L')])
+        >>> model._get_ancestors_of('G')
+        {'D', 'G', 'I'}
+        >>> model._get_ancestors_of(['G', 'I'])
+        {'D', 'G', 'I'}
         """
         if not isinstance(obs_nodes_list, (list, tuple)):
             obs_nodes_list = [obs_nodes_list]
