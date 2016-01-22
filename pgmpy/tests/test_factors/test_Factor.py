@@ -271,8 +271,8 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = Factor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
         self.assertEqual(hash(phi), hash(phi1))
 
-        phi = Factor(['x1','x2','x3'],[2,2,2],range(8))
-        phi1 = Factor(['x3','x1','x2'],[2,2,2],[0,2,4,6,1,3,5,7])
+        phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
+        phi1 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi), hash(phi1))
 
     def test_maximize1(self):
