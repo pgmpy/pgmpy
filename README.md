@@ -11,12 +11,12 @@ Documentation  and list of algorithms we support is at our official site http://
 
 Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
 
-We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy). We have a very welcoming and helpful community.
+We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 
 Dependencies
 =============
-Pgmpy has following non optional dependencies
-- Python 2.7 , Python 3 
+pgmpy has following non optional dependencies:
+- Python 2.7 or Python 3
 - NetworkX 1.9.1 
 - Scipy 0.12.1 
 - Numpy 1.9.2 
@@ -25,21 +25,20 @@ Pgmpy has following non optional dependencies
 
 Download
 =========
-Currently pgmpy is not hosted on pypi or conda, but we are working on it.
-Do download the pgmpy you have to either use git or download zip file at [here](https://github.com/pgmpy/pgmpy/archive/dev.zip).
-To download from git use
+Currently pgmpy is not hosted on pypi or conda.
+You can either clone the git repo with:
 ```
-git clone https://github.com/pgmpy/pgmpy.git
+git clone https://github.com/pgmpy/pgmpy
 ```
+or download a zip from: https://github.com/pgmpy/pgmpy/archive/dev.zip
 
 Installation
 =============
-To install pgmpy first you have to install the dependencies.
-To install the dependencies first go to the pgmpy directory and then run the following commands
+To install the dependencies switch to the pgmpy directory using:
 ```
 $ cd /path/to/pgmpy
 ```
-In the directory run either of the following
+In the directory run either of the following:
 
 Using pip
 ```
@@ -49,14 +48,14 @@ or conda
 ```
 $ conda intall --file requirements.txt
 ```
-pgmpy is installed using `distutils`. If you have the tools installed
-to build a python extension module:
+
+Then install using:
 
 ```bash
 sudo python3 setup.py install
 ```
 
-If you face any problems during installation let us know, via issues, mail or at our gitter channel
+If you face any problems during installation let us know, via issues, mail or at our gitter channel.
 
 Development
 ============
@@ -71,20 +70,18 @@ use the command:
 
 Contributing
 ------------
-We accept contribution in terms of issues and pull requests.
-
 Issues can be reported at our [issues section](https://github.com/pgmpy/pgmpy/issues) or via mail, or gitter.
-Since our developers are working and studying you might not get fast replies , but we will try our best
+We will try our best to solve the issue at the earliest.
 
 Before opening a pull request , have look at our [contributing guide](
 https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
 
-Contributing guide contains good points that can help in getting you PR merged ;), and help us out.
+Contributing guide contains some points that will make our life's easier in reviewing and merging your PR.
 
-If you face any problems in pull request, feel free to ask them at mail or gitter. We have a very helpful community.
+If you face any problems in pull request, feel free to ask them at mail or gitter.
 
-If you have any new features , we will be obliged to have them. Talk about it on mailing list or gitter
-or just directly send a pull requests.
+If you have any new features, please have a discussion on the issue tracker or the mailing
+list before working on it.
 
 Testing
 -------
