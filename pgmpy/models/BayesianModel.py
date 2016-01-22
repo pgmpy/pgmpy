@@ -114,7 +114,7 @@ class BayesianModel(DirectedGraph):
                  'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
         else:
             super(BayesianModel, self).add_edge(u, v, **kwargs)
-        
+
     def add_cpds(self, *cpds):
         """
         Add CPD (Conditional Probability Distribution) to the Bayesian Model.
@@ -342,6 +342,32 @@ class BayesianModel(DirectedGraph):
                         for parent in self.predecessors(node):
                             visit_list.add((parent, 'up'))
         return active_nodes
+
+    def get_ancestors_of(self, obs_nodes_list):
+        """
+        Returns a dictionary of all ancestors of all the observed nodes.
+
+        Parameters
+        ----------
+        obs_nodes_list: string, list-type
+            name of all the observed nodes
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> G = BayesianModel([('D', 'G'), ('I', 'G'), ('I', 'S'), ('G', 'L')])
+        >>> G.get_ancestors_of('I')
+        {'I': set()}
+        >>> G.get_ancestors_of('G')
+        {'G': {'D', 'I'}}
+        >>> G.get_ancestors_of(['I', 'G'])
+        {'G': {'D', 'I'}, 'I': set()}
+        """
+        ancestors = {}
+        for node in obs_nodes_list:
+            nodal_ancestors = self._get_ancestors_of(node)
+            ancestors[node] = nodal_ancestors - set(node)
+        return ancestors
 
     def local_independencies(self, variables):
         """
