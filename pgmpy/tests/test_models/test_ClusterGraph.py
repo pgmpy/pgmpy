@@ -166,7 +166,6 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
-
         phi2 = Factor(['a', 'c'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -183,7 +182,6 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         graph_copy = self.graph.copy()
         self.assertIsInstance(graph_copy, ClusterGraph)
-        self.assertIsNot(self.graph, graph_copy)
         self.assertEqual(hf.recursive_sorted(self.graph.nodes()), 
                          hf.recursive_sorted(graph_copy.nodes()))
         self.assertEqual(hf.recursive_sorted(self.graph.edges()), 
@@ -193,6 +191,10 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2)
         self.assertTrue(phi1 not in self.graph.factors and phi2 not in self.graph.factors)
         self.assertTrue(phi1 in graph_copy.factors and phi2 in graph_copy.factors)
+        self.graph.add_factors(phi1, phi2)
+        self.graph.factors[0] = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
+        self.assertNotEqual(self.graph.factors, graph_copy.factors)
 
     def test_copy1(self):
         self.graph.add_nodes_from([('a', 'b', 'c'), ('a', 'b') ,('a', 'c')])
