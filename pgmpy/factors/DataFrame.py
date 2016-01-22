@@ -3,9 +3,10 @@ import numpy as np
 from pgmpy.extern import six
 from pgmpy.extern import tabulate
 
+
 class DataFrame(object):
 
-	#TODO: add docstring with examples
+    # TODO: add docstring with examples
     def __init__(self, variables=[], values=[]):
         """
         Initializes a DataFrame Class.
@@ -22,13 +23,13 @@ class DataFrame(object):
 
         if isinstance(variables, six.string_types):
             raise TypeError("Variables: Expected type list or array like, got string")
-        
+
         self.values = values
 
         if values.dtype != int:
             raise TypeError("Values: Expected type int, got ", values.dtype)
 
-        if values.size%len(variables):
+        if values.size % len(variables):
             raise ValueError("Values: Number of samples for each variable should be same.")
 
         self.variables = list(variables)
@@ -58,7 +59,7 @@ class DataFrame(object):
         Returns
         -------
         ndarray: 2-D Array of values with number of columns equal to the
-        number of variables and number of rows equal to the number of 
+        number of variables and number of rows equal to the number of
         samples.
 
         Examples
@@ -80,7 +81,7 @@ class DataFrame(object):
         if not(isinstance(other, DataFrame)):
             return False
 
-        if set(other.get_variables())!=set(self.get_variables()):
+        if set(other.get_variables()) != set(self.get_variables()):
             return False
 
         #re-arrange other_values columns according to self.values columns
