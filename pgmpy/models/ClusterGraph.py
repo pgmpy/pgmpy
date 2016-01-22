@@ -312,13 +312,16 @@ class ClusterGraph(UndirectedGraph):
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> G.add_edge(('a', 'b'), ('b', 'c'))
-        >>> G_copy = G.copy()
-        >>> G_copy.edges()
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> graphCopy = G.copy()
+        >>> graphCopy.factors
+        [<Factor representing phi(a:2, b:2) at 0xb71b19cc>, <Factor representing phi(b:2, c:2) at 0xb4eaf3ac>]
+        >>> graphCopy.edges()
         [(('a', 'b'), ('b', 'c'))]
-        >>> G_copy.nodes()
+        >>> graphCopy.nodes()
         [('a', 'b'), ('b', 'c')]
-
-
         """
         copy = ClusterGraph(self.edges())
         if self.factors:
