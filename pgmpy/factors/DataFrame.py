@@ -75,3 +75,24 @@ class DataFrame(object):
 
     def __str__(self):
         return(tabulate(self.get_values(), headers=self.get_variables()))
+
+    def __eq__(self, other):
+        if not(isinstance(other, DataFrame)):
+            return False
+
+        if set(other.get_variables())!=set(self.get_variables()):
+            return False
+
+        #re-arrange other_values columns according to self.values columns
+        other_values = other.get_values()[:, list(other.get_variables().index(var)
+                                            for var in self.get_variables())]
+        other_values.sort(axis=0)
+        self_values = self.get_values()
+        self.values.sort(axis=0)
+        if not np.array_equal(other_values, self_values):
+            return False
+
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
