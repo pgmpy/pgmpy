@@ -82,7 +82,7 @@ class DataFrame(object):
 
         if values.size % len(variables):
             raise ValueError("Values: Number of samples for each variable should be same.")
-
+ 
         self.variables = list(variables)
         self.values = values.reshape(-1, len(variables))
 
@@ -124,6 +124,23 @@ class DataFrame(object):
                [1, 0, 1]])
         """
         return self.values
+
+    def get_num_of_samples(self):
+        """
+        Returns the number of samples in the DataFrame
+
+        Returns
+        -------
+        integer: number of samples
+
+        Examples
+        --------
+        >>> from pgmpy.factors import DataFrame
+        >>> df = DataFrame(['A', 'B', 'C'], [1,1,1,0,0,1,1,1,0,1,0,1])
+        >>> df.get_num_of_samples()
+        4
+        """
+        return self.values.shape[0]
 
     def __str__(self):
         return(tabulate(self.get_values(), headers=self.get_variables()))
