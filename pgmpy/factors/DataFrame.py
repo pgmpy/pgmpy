@@ -82,7 +82,7 @@ class DataFrame(object):
 
         if values.size % len(variables):
             raise ValueError("Values: Number of samples for each variable should be same.")
- 
+
         self.variables = list(variables)
         self.values = values.reshape(-1, len(variables))
 
@@ -152,9 +152,9 @@ class DataFrame(object):
         if set(other.get_variables()) != set(self.get_variables()):
             return False
 
-        #re-arrange other_values columns according to self.values columns
+        # re-arrange other_values columns according to self.values columns
         other_values = other.get_values()[:, list(other.get_variables().index(var)
-                                            for var in self.get_variables())]
+                                          for var in self.get_variables())]
         other_values.sort(axis=0)
         self_values = self.get_values()
         self.values.sort(axis=0)
