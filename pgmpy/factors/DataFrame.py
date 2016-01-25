@@ -157,7 +157,7 @@ class DataFrame(object):
                                           for var in self.get_variables())]
         other_values.sort(axis=0)
         self_values = self.get_values()
-        self.values.sort(axis=0)
+        self_values.sort(axis=0)
         if not np.array_equal(other_values, self_values):
             return False
 
