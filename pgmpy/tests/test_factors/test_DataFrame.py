@@ -52,6 +52,33 @@ class TestDataFrameMethods1(unittest.TestCase):
         self.assertEqual(self.phi1.get_num_of_samples(), 4)
         self.assertEqual(self.phi2.get_num_of_samples(), 5)
 
+    def test_add_samples(self):
+        self.phi1.add_samples(list(range(12, 18)))
+        np_test.assert_array_equal(self.phi1.values, np.arange(18).reshape(-1, 3))
+
+        self.phi1.add_samples(list(range(18, 24)))
+        np_test.assert_array_equal(self.phi1.values, np.arange(24).reshape(-1, 3))
+
+        self.phi2.add_samples(np.array([[20, 21, 22, 23],
+                                        [24, 25, 26, 27],
+                                        [28, 29, 30, 31]]))
+        np_test.assert_array_equal(self.phi2.values, np.arange(32).reshape(-1, 4))
+
+        self.phi2.add_samples(list(range(32, 40)))
+        np_test.assert_array_equal(self.phi2.values, np.arange(40).reshape(-1, 4))
+
+    def test_add_samples_error(self):
+        self.assertRaises(TypeError, self.phi1.add_samples, ['a', 'b', 'c'])
+        self.assertRaises(TypeError, self.phi2.add_samples, ['a', 'b', 'c'])
+        self.assertRaises(TypeError, self.phi1.add_samples, 'A')
+        self.assertRaises(TypeError, self.phi2.add_samples, 'A')
+        self.assertRaises(ValueError, self.phi1.add_samples, np.arange(13))
+        self.assertRaises(ValueError, self.phi2.add_samples, np.arange(13))
+
+    def tearDown(self):
+        del self.phi1
+        del self.phi2
+
 
 class TestDataFrameMethods2(unittest.TestCase):
     def setUp(self):
@@ -106,3 +133,10 @@ class TestDataFrameMethods2(unittest.TestCase):
         self.assertEqual(self.phi3, self.phi4)
         self.assertEqual(self.phi4, self.phi5)
         self.assertEqual(self.phi2, self.phi5)
+
+    def tearDown(self):
+        del self.phi1
+        del self.phi2
+        del self.phi3
+        del self.phi4
+        del self.phi5
