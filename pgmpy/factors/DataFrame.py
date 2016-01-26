@@ -142,6 +142,44 @@ class DataFrame(object):
         """
         return self.values.shape[0]
 
+    def add_samples(self, values):
+        """
+        Adds samples in the DataFrame.
+
+        Parameters
+        ----------
+        values: list, array-like
+        List of values in the samples.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import DataFrame
+        >>> df = DataFrame(['A', 'B', 'C'], [1,1,1,0,0,1,1,1,0,1,0,1])
+        >>> df.get_values()
+        array([[1, 1, 1],
+               [0, 0, 1],
+               [1, 1, 0],
+               [1, 0, 1]])
+        >>> df.add_samples([1,1,0,2,2,2])
+        >>> df.get_values()
+        array([[1, 1, 1],
+               [0, 0, 1],
+               [1, 1, 0],
+               [1, 0, 1],
+               [1, 1, 0],
+               [2, 2, 2]])
+        """
+        values = np.asarray(values)
+
+        if values.dtype != int:
+            raise TypeError("Values: Expected type int, got ", values.dtype)
+
+        if values.size % len(self.get_variables()):
+            raise ValueError("Values: Number of samples for each variable should be same.")
+
+        values = values.reshape(-1, len(self.get_variables()))
+        self.values = np.concatenate((self.values, values))
+
     def __str__(self):
         return(tabulate(self.get_values(), headers=self.get_variables()))
 
