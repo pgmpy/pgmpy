@@ -123,7 +123,7 @@ class DataFrame(object):
                [1, 1, 0],
                [1, 0, 1]])
         """
-        return self.values
+        return self.values.copy()
 
     def get_num_of_samples(self):
         """
