@@ -134,6 +134,38 @@ class TestDataFrameMethods2(unittest.TestCase):
         self.assertEqual(self.phi4, self.phi5)
         self.assertEqual(self.phi2, self.phi5)
 
+        # Tests to ensure that the attribtues remain constant after comparisons.
+        self.assertEqual(self.phi1.variables, ['x1', 'x2', 'x3'])
+        np_test.assert_array_equal(self.phi1.values, np.arange(12).reshape(-1, 3))
+
+        self.assertEqual(self.phi2.variables, ['x1', 'x2', 5, (1, 2)])
+        np_test.assert_array_equal(self.phi2.values, np.array([[0,  1,  2,  3],
+                                                             [4,  5,  6,  7],
+                                                             [8,  9, 10, 11],
+                                                             [12, 13, 14, 15],
+                                                             [16, 17, 18, 19]]))
+
+        self.assertEqual(self.phi3.variables, ['x2', 5, (1, 2), 'x1'])
+        np_test.assert_array_equal(self.phi3.values, np.array([[1,  2,  3,  0],
+                                                               [5,  6,  7,  4],
+                                                               [9, 10, 11,  8],
+                                                               [13, 14, 15, 12],
+                                                               [17, 18, 19, 16]]))
+
+        self.assertEqual(self.phi4.variables, ['x1', 'x2', 5, (1, 2)])
+        np_test.assert_array_equal(self.phi4.values, np.array([[4,  5,  6,  7],
+                                                               [8,  9, 10, 11],
+                                                               [0,  1,  2,  3],
+                                                               [16, 17, 18, 19],
+                                                               [12, 13, 14, 15]]))
+
+        self.assertEqual(self.phi5.variables, ['x2', 5, (1, 2), 'x1'])
+        np_test.assert_array_equal(self.phi5.values, np.array([[17, 18, 19, 16],
+                                                               [1,  2,  3,  0],
+                                                               [9, 10, 11,  8],
+                                                               [5,  6,  7,  4],
+                                                               [13, 14, 15, 12]]))
+
     def tearDown(self):
         del self.phi1
         del self.phi2
