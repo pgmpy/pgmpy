@@ -462,6 +462,8 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.jpd1 = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
         self.jpd2 = JPD(['x1','x2','x3'],[2,2,3],
                        [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+        self.jpd3 = JPD(['x1', 'x2', 'x3'], [2, 2, 2],
+                        [5.0e-04, 5.225e-04, 0.00, 8.9775e-03, 9.9e-03, 5.39055e-02, 0.00, 9.261945e-01])
 
     def test_jpd_marginal_distribution_list(self):
         self.jpd.marginal_distribution(['x1', 'x2'])
@@ -506,6 +508,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], [('x3', 0)]))
         self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
         self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], [('x3', 1)]))
+        self.assertTrue(self.jpd3.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
 
     def test_get_independencies(self):
         independencies = Independencies(['x1', 'x2'], ['x2', 'x3'], ['x3', 'x1'])
@@ -551,6 +554,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         del self.jpd
         del self.jpd1
         del self.jpd2
+        del self.jpd3
 
 #
 # class TestTreeCPDInit(unittest.TestCase):
