@@ -58,7 +58,7 @@ class DataFrame(object):
     True
 
     """
-    def __init__(self, variables=[], values=[]):
+    def __init__(self, variables, values=None):
         """
         Initializes a DataFrame Class.
 
@@ -70,21 +70,13 @@ class DataFrame(object):
         values: list, array-like
         List of values in the sample.
         """
-        values = np.asarray(values)
-
         if isinstance(variables, six.string_types):
             raise TypeError("Variables: Expected type list or array like, got string")
-
-        self.values = values
-
-        if values.dtype != int:
-            raise TypeError("Values: Expected type int, got ", values.dtype)
-
-        if values.size % len(variables):
-            raise ValueError("Values: Number of samples for each variable should be same.")
-
         self.variables = list(variables)
-        self.values = values.reshape(-1, len(variables))
+
+        self.values = np.empty([0, len(variables)], dtype=int)
+        if values is not None:
+            self.add_samples(values)
 
     def get_variables(self):
         """

@@ -21,7 +21,12 @@ class TestDataFrameInit(unittest.TestCase):
         self.assertListEqual(phi2.variables, ['x1', 'x2', 5, (1, 2)])
         np_test.assert_array_equal(phi2.values, np.arange(20).reshape(-1, 4))
 
+        phi3 = DataFrame(['x1', 'x2', 'x3'])
+        self.assertListEqual(phi3.variables, ['x1', 'x2', 'x3'])
+        np_test.assert_array_equal(phi3.values, np.empty([0, 3], dtype=int))
+
     def test_class_init_error(self):
+        self.assertRaises(TypeError, DataFrame)
         self.assertRaises(TypeError, DataFrame, 'x1', np.arange(12))
         self.assertRaises(TypeError, DataFrame, 2, np.arange(12))
         self.assertRaises(TypeError, DataFrame, ['x1', 'x2', 'x3'], ['a', 'b', 'c'])
@@ -39,18 +44,22 @@ class TestDataFrameMethods1(unittest.TestCase):
                                        [8,  9, 10, 11],
                                        [12, 13, 14, 15],
                                        [16, 17, 18, 19]]))
+        self.phi3 = DataFrame(['x1', 'x2', 'x3'])
 
     def test_get_variables(self):
         self.assertListEqual(self.phi1.get_variables(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi2.get_variables(), ['x1', 'x2', 5, (1, 2)])
+        self.assertListEqual(self.phi3.get_variables(), ['x1', 'x2', 'x3'])
 
     def test_get_values(self):
         np_test.assert_array_equal(self.phi1.get_values(), np.arange(12).reshape(-1, 3))
         np_test.assert_array_equal(self.phi2.get_values(), np.arange(20).reshape(-1, 4))
+        np_test.assert_array_equal(self.phi3.get_values(), np.empty([0, 3], dtype=int))
 
     def test_get_num_of_samples(self):
         self.assertEqual(self.phi1.get_num_of_samples(), 4)
         self.assertEqual(self.phi2.get_num_of_samples(), 5)
+        self.assertEqual(self.phi3.get_num_of_samples(), 0)
 
     def test_add_samples(self):
         self.phi1.add_samples(list(range(12, 18)))
@@ -67,6 +76,9 @@ class TestDataFrameMethods1(unittest.TestCase):
         self.phi2.add_samples(list(range(32, 40)))
         np_test.assert_array_equal(self.phi2.values, np.arange(40).reshape(-1, 4))
 
+        self.phi3.add_samples(list(range(9)))
+        np_test.assert_array_equal(self.phi3.values, np.arange(9).reshape(-1, 3))
+
     def test_add_samples_error(self):
         self.assertRaises(TypeError, self.phi1.add_samples, ['a', 'b', 'c'])
         self.assertRaises(TypeError, self.phi2.add_samples, ['a', 'b', 'c'])
@@ -78,6 +90,7 @@ class TestDataFrameMethods1(unittest.TestCase):
     def tearDown(self):
         del self.phi1
         del self.phi2
+        del self.phi3
 
 
 class TestDataFrameMethods2(unittest.TestCase):
@@ -112,21 +125,27 @@ class TestDataFrameMethods2(unittest.TestCase):
                                        [5,  6,  7,  4],
                                        [13, 14, 15, 12]]))
 
+        self.phi6 = DataFrame(['x2', 5, (1, 2), 'x1'])
+
     def test_str(self):
         str1 = '  x1    x2    x3\n----  ----  ----\n   0     1     2\n   3     4     '\
                '5\n   6     7     8\n   9    10    11'
         str2 = '  x1    x2    5    (1, 2)\n----  ----  ---  --------\n   0     1    2'\
                '         3\n   4     5    6         7\n   8     9   10        11\n  12'\
                '    13   14        15\n  16    17   18        19'
+        str6 = 'x2    5    (1, 2)    x1\n----  ---  --------  ----'
 
         self.assertEqual(self.phi1.__str__(), str1)
         self.assertEqual(self.phi2.__str__(), str2)
+        self.assertEqual(self.phi6.__str__(), str6)
 
     def test_eq(self):
         self.assertNotEqual(self.phi1, self.phi2)
         self.assertNotEqual(self.phi1, 'abcd')
         self.assertNotEqual(self.phi1, 123)
         self.assertNotEqual(self.phi2, ('x1', 123))
+        self.assertNotEqual(self.phi6, self.phi1)
+        self.assertNotEqual(self.phi6, self.phi2)
 
         self.assertEqual(self.phi2, self.phi3)
         self.assertEqual(self.phi2, self.phi4)
@@ -166,9 +185,13 @@ class TestDataFrameMethods2(unittest.TestCase):
                                                                [5,  6,  7,  4],
                                                                [13, 14, 15, 12]]))
 
+        self.assertEqual(self.phi6.variables, ['x2', 5, (1, 2), 'x1'])
+        np_test.assert_array_equal(self.phi6.values, np.empty([0, 4], dtype=int))
+
     def tearDown(self):
         del self.phi1
         del self.phi2
         del self.phi3
         del self.phi4
         del self.phi5
+        del self.phi6
