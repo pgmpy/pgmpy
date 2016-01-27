@@ -410,7 +410,7 @@ class JointProbabilityDistribution(Factor):
         skeleton = UndirectedGraph()
         skeleton.add_edges_from(S)
         K = {}
-        K['un-directed'] = skeleton.edges()
+        K['un-directed'] = set(skeleton.edges())
         K['directed'] = []
         for node in skeleton.nodes():
             for parents in itertools.combinations(skeleton.neighbors_iter(node), 2):
@@ -418,6 +418,8 @@ class JointProbabilityDistribution(Factor):
                     if node not in Uij[parents]:
                         K['directed'].append((parents[0], node))
                         K['directed'].append((parents[1], node))
+        K['un-directed'] -=set(K['directed'])
+        K['un-directed'] = list(K['un-directed'])
         return K
 
     def pmap(self):
