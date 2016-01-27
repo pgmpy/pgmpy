@@ -182,18 +182,15 @@ class JointProbabilityDistribution(Factor):
                 if not all(isinstance(var, six.string_types) for var in event3):
                     raise TypeError('Event3 should be a 1d list of strings')
                 event3 = list(event3)
-                # Using the alternate definition for conditional independence
-                # X and Y are conditional independent if phi(X, Z) * phi(Y, Z) is propotional
-                # to phi(X, Y, Z)
+                # Using the definition of conditional independence
+                # If P(X,Y|Z) = P(X|Z)*P(Y|Z)
+                # This can be expanded to P(X,Y,Z)*P(Z) == P(X,Z)*P(Y,Z)
+                jpd_z = JPD.marginal_distribution(event3, inplace=False)
                 for variable_pair in itertools.product(event1, event2):
-                    JPD_e1_e3 = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False)
-                    JPD_e2_e3 = JPD.marginal_distribution([variable_pair[1]] + event3, inplace=False)
-                    JPD_prod = JPD_e1_e3 * JPD_e2_e3
-                    JPD_e1_e2_e3 = JPD.marginal_distribution(list(variable_pair) + event3, inplace=False)
-                    phi1 = Factor(JPD_prod.variables, JPD_prod.cardinality, JPD_prod.values)
-                    phi2 = Factor(JPD_e1_e2_e3.variables, JPD_e1_e2_e3.cardinality, JPD_e1_e2_e3.values)
-                    phi = phi1 / phi2
-                    if(np.unique(phi.values).size != 1):
+                    jpd_xyz = JPD.marginal_distribution(event3 + list(variable_pair), inplace=False)
+                    jpd_xz = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False)
+                    jpd_yz = JPD.marginal_distribution(event3 + [variable_pair[1]], inplace=False)
+                    if jpd_xyz * jpd_z != jpd_xz * jpd_yz:
                         return False
                 return True
             else:
@@ -271,6 +268,23 @@ class JointProbabilityDistribution(Factor):
             return JPD
 
     def copy(self):
+        """
+        Returns A copy of JointProbabilityDistribution object
+        
+        Examples
+        ---------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        >>> prob_copy = prob.copy()
+        >>> prob_copy.values == prob.values
+        True
+        >>> prob_copy.variables == prob.variables
+        True
+        >>> prob_copy.variables[1] = 'y'
+        >>> prob_copy.variables == prob.variables
+        False
+        """
         return JointProbabilityDistribution(self.scope(), self.cardinality, self.values)
 
     def minimal_imap(self, order):
