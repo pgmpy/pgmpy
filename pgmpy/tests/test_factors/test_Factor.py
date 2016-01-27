@@ -462,6 +462,14 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.jpd1 = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
         self.jpd2 = JPD(['x1','x2','x3'],[2,2,3],
                        [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+        # Constructed using cancer.bif at http://www.bnlearn.com/bnrepository/cancer/cancer.bif.gz
+        self.cancer_jpd = JPD(['Cancer', 'Smoker', 'Pollution', 'Dyspnoea', 'Xray'],[2, 2, 2, 2, 2],
+                            [4.738500e-03, 5.265000e-04, 2.551500e-03, 2.835000e-04, 8.775000e-04, 9.750000e-05,
+                             4.725000e-04, 5.250000e-05, 3.685500e-04, 4.095000e-05, 1.984500e-04, 2.205000e-05,
+                             8.190000e-04, 9.100000e-05, 4.410000e-04, 4.900000e-05, 1.571400e-02, 6.285600e-02,
+                             3.666600e-02, 1.466640e-01, 1.710000e-03, 6.840000e-03, 3.990000e-03, 1.596000e-02,
+                             3.776220e-02, 1.510488e-01, 8.811180e-02, 3.524472e-01, 4.116000e-03, 1.646400e-02,
+                             9.604000e-03, 3.841600e-02])
 
     def test_jpd_marginal_distribution_list(self):
         self.jpd.marginal_distribution(['x1', 'x2'])
@@ -547,10 +555,24 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertTrue(jpd.is_imap(G1))
         self.assertRaises(TypeError, jpd.is_imap, MarkovModel())
 
+        def test_pmap_skeleton(self):
+            skeleton, witness = self.cancer_jpd._pmap_skeleton()
+            graph = [('Pollution', 'Cancer'), ('Cancer', 'Dyspnoea'), ('Cancer', 'Xray'),
+                    ('Smoker', 'Cancer')]
+            self.assertEqual(sorted(graph), sorted(skeleton))
+
+        def test_mark_immoralities(self):
+            K = self.cancer_jpd._mark_immoralities()
+            directed = [('Pollution', 'Cancer'), ('Smoker', 'Cancer')]
+            un_directed = [('Cancer', 'Dyspnoea'), ('Cancer', 'Xray')]
+            self.assertEqual(sorted(directed), sorted(K['directed']))
+            self.assertEqual(sorted(un_directed), sorted(K['un-directed']))
+
     def tearDown(self):
         del self.jpd
         del self.jpd1
         del self.jpd2
+        del self.cancer_jpd
 
 #
 # class TestTreeCPDInit(unittest.TestCase):
