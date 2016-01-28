@@ -542,3 +542,62 @@ class DynamicBayesianNetwork(DirectedGraph):
                 self.get_parents(node), 2))
 
         return moral_graph
+        
+    def copy(self):
+        """
+        Returns the copy of DynamicBayesianNetwork object
+        
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors import TabularCPD
+        >>> student = DBN()
+        >>> student.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
+        >>> student.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
+        >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
+        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[('I', 0),('D', 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        >>> intel_cpd = TabularCPD(('I',0), 2, [[0.7, 0.3]])
+        >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
+        ...                                    [0.5, 0.6]],
+        ...                      evidence=[('I', 0)],
+        ...                      evidence_card=2)
+        >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
+        >>> student.initialize_initial_state()
+        >>> student_copy = student.copy()
+        >>>
+        >>> student_copy.nodes()
+        ['G', 'D', 'I', 'L', 'S']
+        >>> student.nodes()
+        ['G', 'D', 'I', 'L', 'S']
+        >>> student_copy.add_node('Z') 
+        >>> student.add_node('A')
+        >>> student_copy.nodes()
+        ['I', 'Z', 'D', 'L', 'S', 'G']
+        >>> student.nodes()
+        ['I', 'A', 'D', 'L', 'S', 'G']
+        >>> 
+        >>> student_copy.edges()
+        [(('I', 0), ('I', 1)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('D', 0), ('G', 0)), (('I', 1), ('G', 1)), (('D', 1), ('G', 1))]
+        >>> student.edges()
+        [(('I', 0), ('I', 1)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('D', 0), ('G', 0)), (('I', 1), ('G', 1)), (('D', 1), ('G', 1))]
+        >>> student_copy.add_edge(('Z', 0), ('D', 0))
+        >>> student.add_edge(('A', 0), ('D', 0))
+        >>> student_copy.edges()
+        [(('Z', 1), ('D', 1)), (('I', 0), ('I', 1)), (('I', 0), ('G', 0)), (('Z', 0), ('D', 0)), (('D', 0), ('D', 1)), (('D', 0), ('G', 0)),           			(('I',   1), ('G', 1)), (('D', 1), ('G', 1))]
+        >>> student.edges()
+        [(('A', 0), ('D', 0)), (('I', 0), ('I', 1)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('D', 0), ('G', 0)), (('I', 1), ('G', 1)), (('A', 		1), ('D', 1)), (('D', 1), ('G', 1))]
+        """
+        dbn = DynamicBayesianNetwork()
+        dbn.add_nodes_from(self.nodes())
+        dbn.add_edges_from(self.edges())
+        cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
+        dbm.add_cpd(*cpd_copy)
+        return dbn
