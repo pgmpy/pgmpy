@@ -599,5 +599,5 @@ class DynamicBayesianNetwork(DirectedGraph):
         dbn.add_nodes_from(self.nodes())
         dbn.add_edges_from(self.edges())
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
-        dbm.add_cpd(*cpd_copy)
+        dbn.add_cpd(*cpd_copy)
         return dbn
