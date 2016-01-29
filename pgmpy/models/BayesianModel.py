@@ -402,11 +402,11 @@ class BayesianModel(DirectedGraph):
         >>> from pgmpy.models import BayesianModel
         >>> student = BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grade', 'letter'),
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
         ...                         ('intel', 'sat')])
         >>> student.is_active_trail('diff', 'intel')
         False
-        >>> student.is_active_trail('grade', 'sat')
+        >>> student.is_active_trail('grades', 'sat')
         True
         """
         if end in self.active_trail_nodes(start, observed):
@@ -429,7 +429,7 @@ class BayesianModel(DirectedGraph):
         >>> from pgmpy.models import BayesianModel
         >>> student = BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grade', 'letter'),
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
         ...                         ('intel', 'sat')])
         >>> student.get_independencies()
         """
