@@ -137,6 +137,12 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                               [('D', 1), ('G', 1)], [('D', 1), ('I', 1)],
                               [('G', 0), ('I', 0)], [('G', 1), ('I', 1)]])
 
+    def test_copy(self):
+        self.network_copy = self.network.copy()
+        self.assertListEqual(self.network.nodes(), self.network_copy.nodes())
+        self.assertListEqual(self.network.edges(), self.network_copy.edges())
+        self.assertListEqual(self.network.get_cpds(), self.network_copy.get_cpds())
+       
     def tearDown(self):
         del self.network
 
@@ -255,3 +261,5 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 
     def tearDown(self):
         del self.G
+        
+        
