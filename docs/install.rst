@@ -18,12 +18,12 @@ Installing from source requires you to have installed
 You can install all these requirements by issuing ::
 
     $ [sudo] apt-get install build-essential python3-dev python3-pip
-    $ [sudo] pip3 install -r requirements.txt
+    $ [sudo] pip3 install -r requirements.txt       # use requirements-dev.txt if you want to run tests
 
 On Red Hat and clones (e.g CentOS), install the dependencies using::
 
     $ [sudo] yum -y install gcc gcc-c++ python3-devel python3-pip
-    $ [sudo] pip3 install -r requirements.txt
+    $ [sudo] pip3 install -r requirements.txt       # use requirements-dev.txt if you want to run tests
 
 Or  use some cross-platform binary package manager such as conda_ (it is
 recommended as well as the most easiest and hastle-free way)
@@ -37,7 +37,7 @@ Setup a virtual environment in :code:`conda` by ::
 
 Once you have the virtual environment setup, install the depenedencies using::
 
-    $ conda install -f requirements.txt
+    $ conda install -f requirements.txt     # use requirements-dev.txt if you want to run tests
 
 .. note::
 
