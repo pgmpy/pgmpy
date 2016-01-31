@@ -1,5 +1,6 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 
 from pgmpy.factors import Factor
@@ -546,5 +547,66 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
                              [['a', 'b'], ['a', 'd'], ['b', 'c'],
                               ['b', 'd'], ['c', 'd']])
 
+    def test_copy(self):
+        # Setup the original graph
+        self.graph.add_nodes_from(['a', 'b'])
+        self.graph.add_edges_from([('a', 'b')])
+
+        # Generate the copy
+        copy = self.graph.copy()
+
+        # Ensure the copied model is correct
+        self.assertTrue(copy.check_model())
+
+        # Basic sanity checks to ensure the graphy was copied correctly
+        self.assertEqual(len(copy.nodes()), 2)
+        self.assertListEqual(copy.neighbors('a'), ['b'])
+        self.assertListEqual(copy.neighbors('b'), ['a'])
+
+        # Modify the original graph ...
+        self.graph.add_nodes_from(['c'])
+        self.graph.add_edges_from([('c', 'b') ])
+
+        # ... and ensure none of those changes get propagated
+        self.assertEqual(len(copy.nodes()), 2)
+        self.assertListEqual(copy.neighbors('a'), ['b'])
+        self.assertListEqual(copy.neighbors('b'), ['a'])
+        with self.assertRaises(nx.NetworkXError):
+            copy.neighbors('c')
+
+        # Ensure the copy has no factors at this point
+        self.assertEqual(len(copy.get_factors()), 0)
+
+        # Add factors to the original graph
+        phi1 = Factor(['a', 'b'], [2, 2], [[0.3, 0.7], [0.9, 0.1]])
+        self.graph.add_factors(phi1)
+
+        # The factors should not get copied over
+        with self.assertRaises(AssertionError):
+            self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+
+        # Create a fresh copy
+        del copy
+        copy = self.graph.copy()
+        self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+
+        # If we change factors in the original, it should not be passed to the clone
+        phi1.values = np.array([[0.5, 0.5], [0.5, 0.5]])
+        self.assertNotEqual(self.graph.get_factors(), copy.get_factors())
+
+        # Start with a fresh copy
+        del copy
+        self.graph.add_nodes_from(['d'])
+        copy = self.graph.copy()
+
+        # Ensure an unconnected node gets copied over as well
+        self.assertEqual(len(copy.nodes()), 4)
+        self.assertListEqual(self.graph.neighbors('a'), ['b'])
+        self.assertTrue('a' in self.graph.neighbors('b'))
+        self.assertTrue('c' in self.graph.neighbors('b'))
+        self.assertListEqual(self.graph.neighbors('c'), ['b'])
+        self.assertListEqual(self.graph.neighbors('d'), [])
+
     def tearDown(self):
         del self.graph
+
