@@ -558,7 +558,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         # Ensure the copied model is correct
         self.assertTrue(copy.check_model())
 
-        # Basic sanity checks to ensure the graphy was copied correctly
+        # Basic sanity checks to ensure the graph was copied correctly
         self.assertEqual(len(copy.nodes()), 2)
         self.assertListEqual(copy.neighbors('a'), ['b'])
         self.assertListEqual(copy.neighbors('b'), ['a'])
@@ -606,6 +606,28 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.assertTrue('c' in self.graph.neighbors('b'))
         self.assertListEqual(self.graph.neighbors('c'), ['b'])
         self.assertListEqual(self.graph.neighbors('d'), [])
+
+        # Verify that changing the copied model should not update the original
+        copy.add_nodes_from(['e'])
+        self.assertListEqual(copy.neighbors('e'), [])
+        with self.assertRaises(nx.NetworkXError):
+            self.graph.neighbors('e')
+
+        # Verify that changing edges in the copy doesn't create edges in the original
+        copy.add_edges_from([('d', 'b')])
+
+        self.assertTrue('a' in copy.neighbors('b'))
+        self.assertTrue('c' in copy.neighbors('b'))
+        self.assertTrue('d' in copy.neighbors('b'))
+
+        self.assertTrue('a' in self.graph.neighbors('b'))
+        self.assertTrue('c' in self.graph.neighbors('b'))
+        self.assertFalse('d' in self.graph.neighbors('b'))
+
+        # If we remove factors from the copied model, it should not reflect in the original
+        copy.remove_factors(phi1)
+        self.assertEqual(len(self.graph.get_factors()), 1)
+        self.assertEqual(len(copy.get_factors()), 0)
 
     def tearDown(self):
         del self.graph
