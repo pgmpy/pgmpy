@@ -687,6 +687,8 @@ class MarkovModel(UndirectedGraph):
  
         Examples
         -------
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.models import MarkovModel
         >>> G = MarkovModel()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> G.add_edge(('a', 'b'), ('b', 'c'))
@@ -695,6 +697,13 @@ class MarkovModel(UndirectedGraph):
         [(('a', 'b'), ('b', 'c'))]
         >>> G_copy.nodes()
         [('a', 'b'), ('b', 'c')]
+        >>> factor = Factor([('a', 'b')], cardinality=[3],
+        ...                 values=np.random.rand(3))
+        >>> G.add_factors(factor)
+        >>> G.get_factors()
+        [<Factor representing phi(('a', 'b'):3) at 0x...>]
+        >>> G_copy.get_factors()
+        []
         """
         clone_graph = MarkovModel()
 
