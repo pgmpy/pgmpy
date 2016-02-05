@@ -147,6 +147,24 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G1.is_imap(JPD))
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 
+    def test_get_immoralities(self):
+        G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
+        self.assertEqual(G.get_immoralities(), {('w', 'x'), ('w', 'z')})
+        G1 = BayesianModel([('x', 'y'), ('z', 'y'), ('z', 'x'), ('w', 'y')])
+        self.assertEqual(G1.get_immoralities(), {('w', 'x'), ('w', 'z')})
+        G2 = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y'), ('w', 'x')])
+        self.assertEqual(G2.get_immoralities(), {('w', 'z')})
+
+    def test_is_iequivalent(self):
+        from pgmpy.models import MarkovModel
+        G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
+        self.assertRaises(TypeError, G.is_iequivalent, MarkovModel())
+        G1 = BayesianModel([('V', 'W'), ('W', 'X'), ('X', 'Y'), ('Z', 'Y')])
+        G2 = BayesianModel([('W', 'V'), ('X', 'W'), ('X', 'Y'), ('Z', 'Y')])
+        self.assertTrue(G1.is_iequivalent(G2))
+        G3 = BayesianModel([('W', 'V'), ('W', 'X'), ('Y', 'X'), ('Z', 'Y')])
+        self.assertFalse(G3.is_iequivalent(G2))
+
     def tearDown(self):
         del self.G
         del self.G1
@@ -246,7 +264,6 @@ class TestBayesianModelCPD(unittest.TestCase):
 
         self.G.add_cpds(cpd_g, cpd_s, cpd_l)
         self.assertTrue(self.G.check_model())
-
 
     def test_check_model1(self):
         cpd_g = TabularCPD('g', 2, 
