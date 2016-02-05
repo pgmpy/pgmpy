@@ -642,14 +642,14 @@ class BayesianModel(DirectedGraph):
         """
         immoralities = set()
         for node in self.nodes():
-            for parents in itertools.combinations(self.predecessors(node),2):
+            for parents in itertools.combinations(self.predecessors(node), 2):
                 if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
                     immoralities.add(tuple(sorted(parents)))
         return immoralities
 
     def is_iequivalent(self, model):
         """
-        Checks wether the given model is I-equivalent
+        Checks whether the given model is I-equivalent
 
         Two graphs G1 and G2 are said to be I-equivalent if they have same skeleton
         and have same set of immoralities.
@@ -670,7 +670,7 @@ class BayesianModel(DirectedGraph):
         >>> from pgmpy.models import BayesianModel
         >>> G = BayesianModel()
         >>> G.add_edges_from([('V', 'W'), ('W', 'X'),
-        ...                  ('X', 'Y'), ('Z', 'Y')])
+        ...                   ('X', 'Y'), ('Z', 'Y')])
         >>> G1 = BayesianModel()
         >>> G1.add_edges_from([('W', 'V'), ('X', 'W'),
         ...                    ('X', 'Y'), ('Z', 'Y')])
