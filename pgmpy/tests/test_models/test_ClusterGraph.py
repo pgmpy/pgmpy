@@ -175,7 +175,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi3)
         self.assertTrue(self.graph.check_model())
 
-    def test_copy(self):
+    def test_copy_with_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
@@ -196,8 +196,8 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
         self.assertNotEqual(self.graph.factors, graph_copy.factors)
 
-    def test_copy1(self):
-        self.graph.add_nodes_from([('a', 'b', 'c'), ('a', 'b') ,('a', 'c')])
+    def test_copy_without_factors(self):
+        self.graph.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
                                    (('a', 'b', 'c'), ('a', 'c'))])
         graph_copy = self.graph.copy()
