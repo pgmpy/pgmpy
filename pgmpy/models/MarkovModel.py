@@ -676,3 +676,41 @@ class MarkovModel(UndirectedGraph):
             raise ValueError('Factor for all the random variables not defined.')
 
         return np.sum(factor.values)
+
+    def copy(self):
+        """
+        Returns a copy of this Markov Model.
+ 
+        Returns
+        -------
+        MarkovModel: Copy of this Markov model.
+ 
+        Examples
+        -------
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.models import MarkovModel
+        >>> G = MarkovModel()
+        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
+        >>> G.add_edge(('a', 'b'), ('b', 'c'))
+        >>> G_copy = G.copy()
+        >>> G_copy.edges()
+        [(('a', 'b'), ('b', 'c'))]
+        >>> G_copy.nodes()
+        [('a', 'b'), ('b', 'c')]
+        >>> factor = Factor([('a', 'b')], cardinality=[3],
+        ...                 values=np.random.rand(3))
+        >>> G.add_factors(factor)
+        >>> G.get_factors()
+        [<Factor representing phi(('a', 'b'):3) at 0x...>]
+        >>> G_copy.get_factors()
+        []
+        """
+        clone_graph = MarkovModel(self.edges())
+        clone_graph.add_nodes_from(self.nodes())
+
+        if self.factors:
+            factors_copy = [factor.copy() for factor in self.factors]
+            clone_graph.add_factors(*factors_copy)
+
+        return clone_graph
+
