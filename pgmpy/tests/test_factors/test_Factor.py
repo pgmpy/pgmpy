@@ -264,7 +264,8 @@ class TestFactorMethods(unittest.TestCase):
                                                       4, 5, 15, 16, 17, 6, 7,
                                                       8, 18, 19, 20, 9, 10, 11,
                                                       21, 22, 23])
-        self.assertTrue(phi1, phi2)
+        self.assertTrue(phi1 == phi2)
+        self.assertEqual(phi2.variables,['x2', 'x1', 'x3'] )
 
     def test_hash(self):
         phi = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
