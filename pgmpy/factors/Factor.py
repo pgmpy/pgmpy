@@ -757,19 +757,20 @@ class Factor(object):
             return False
 
         else:
+            phi = other.copy()
             for axis in range(self.values.ndim):
-                exchange_index = other.variables.index(self.variables[axis])
-                other.variables[axis], other.variables[exchange_index] = (other.variables[exchange_index],
-                                                                          other.variables[axis])
-                other.cardinality[axis], other.cardinality[exchange_index] = (other.cardinality[exchange_index],
-                                                                              other.cardinality[axis])
-                other.values = other.values.swapaxes(axis, exchange_index)
+                exchange_index = phi.variables.index(self.variables[axis])
+                phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
+                                                                          phi.variables[axis])
+                phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                              phi.cardinality[axis])
+                phi.values = phi.values.swapaxes(axis, exchange_index)
 
-            if other.values.shape != self.values.shape:
+            if phi.values.shape != self.values.shape:
                 return False
-            elif not np.allclose(other.values, self.values):
+            elif not np.allclose(phi.values, self.values):
                 return False
-            elif not all(self.cardinality == other.cardinality):
+            elif not all(self.cardinality == phi.cardinality):
                 return False
             else:
                 return True

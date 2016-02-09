@@ -185,12 +185,12 @@ class JointProbabilityDistribution(Factor):
                 # Using the definition of conditional independence
                 # If P(X,Y|Z) = P(X|Z)*P(Y|Z)
                 # This can be expanded to P(X,Y,Z)*P(Z) == P(X,Z)*P(Y,Z)
-                jpd_z = JPD.marginal_distribution(event3, inplace=False)
+                phi_z = JPD.marginal_distribution(event3, inplace=False).to_factor()
                 for variable_pair in itertools.product(event1, event2):
-                    jpd_xyz = JPD.marginal_distribution(event3 + list(variable_pair), inplace=False)
-                    jpd_xz = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False)
-                    jpd_yz = JPD.marginal_distribution(event3 + [variable_pair[1]], inplace=False)
-                    if jpd_xyz * jpd_z != jpd_xz * jpd_yz:
+                    phi_xyz = JPD.marginal_distribution(event3 + list(variable_pair), inplace=False).to_factor()
+                    phi_xz = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False).to_factor()
+                    phi_yz = JPD.marginal_distribution(event3 + [variable_pair[1]], inplace=False).to_factor()
+                    if phi_xyz * phi_z != phi_xz * phi_yz:
                         return False
                 return True
             else:
@@ -270,7 +270,7 @@ class JointProbabilityDistribution(Factor):
     def copy(self):
         """
         Returns A copy of JointProbabilityDistribution object
-        
+
         Examples
         ---------
         >>> import numpy as np
@@ -368,6 +368,21 @@ class JointProbabilityDistribution(Factor):
             return True
         else:
             return False
+
+    def to_factor(self):
+        """
+        Returns JointProbabilityDistribution as a Factor object
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        >>> phi = prob.to_factor()
+        >>> type(phi)
+        pgmpy.factors.Factor.Factor
+        """
+        return Factor(self.variables, self.cardinality, self.values)
 
     def pmap(self):
         pass
