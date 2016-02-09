@@ -143,10 +143,10 @@ class TestJunctionTreeCopy(unittest.TestCase):
 
         self.graph.factors[0].reduce([('a', 0)])
         self.assertNotEqual(self.graph.factors[0].scope(), graph_copy.factors[0].scope())
-        self.assertNotEqual(self.graph.factors[0].values, graph_copy.factors[0].values)
+        self.assertNotEqual(self.graph, graph_copy)
         self.graph.factors[1].marginalize(['b'])
         self.assertNotEqual(self.graph.factors[1].scope(), graph_copy.factors[1].scope())
-        self.assertNotEqual(self.graph.factors[1].values, graph_copy.factors[1].values)
+        self.assertNotEqual(self.graph, graph_copy)
 
     def tearDown(self):
         del self.graph
