@@ -189,7 +189,7 @@ python3
 {'diff', 'intel'}
 
 ```
-Lisence
+License
 =======
 pgmpy is released under MIT License. You can read about our lisence at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 
