@@ -25,13 +25,13 @@ class Independencies(object):
     Creating an independencies object with one independence assertion:
     Random Variable X is independent of Y
 
-    >>> independencies = independencies(['X', 'Y'])
+    >>> independencies = Independencies(['X', 'Y'])
 
     Creating an independencies object with three conditional
     independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
-    >>> independencies = independencies(['X', 'Y', 'Z'],
+    >>> independencies = Independencies(['X', 'Y', 'Z'],
     ...             ['a', ['b', 'c'], 'd'],
     ...             ['l', ['m', 'n'], 'o'])
 
@@ -66,9 +66,9 @@ class Independencies(object):
 
         Examples
         --------
-        >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies(['X', 'Y', 'Z'])
         >>> independencies.get_assertions()
+        [(X _|_ Y | Z)]
         """
         return self.independencies
 
@@ -83,7 +83,6 @@ class Independencies(object):
 
         Examples
         --------
-        >>> from pgmpy.independencies import Independencies
         >>> independencies = Independencies()
         >>> independencies.add_assertions(['X', 'Y', 'Z'])
         >>> independencies.add_assertions(['a', ['b', 'c'], 'd'])
@@ -235,6 +234,7 @@ class IndependenceAssertion(object):
         >>> from pgmpy.independencies import IndependenceAssertion
         >>> asser = IndependenceAssertion('X', 'Y', 'Z')
         >>> asser.get_assertion()
+        (set(['X']), set(['Y']), set(['Z']))
         """
         return self.event1, self.event2, self.event3
 

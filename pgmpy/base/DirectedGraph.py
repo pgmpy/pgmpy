@@ -25,7 +25,6 @@ class DirectedGraph(nx.DiGraph):
     --------
     Create an empty DirectedGraph with no nodes and no edges
 
-    >>> from pgmpy.base import DirectedGraph
     >>> G = DirectedGraph()
 
     G can be grown in several ways
@@ -81,7 +80,6 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_node('A')
         """
@@ -98,7 +96,6 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['A', 'B', 'C'])
         """
@@ -119,7 +116,6 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
@@ -141,7 +137,6 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
@@ -160,9 +155,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
-        >>> G.parents('grade')
+        >>> G.get_parents('grade')
         ['diff', 'intel']
         """
         return self.predecessors(node)
@@ -177,12 +171,11 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
         >>> moral_graph = G.moralize()
-        >>> moral_graph.edges()
+        >>> moral_graph.edges() # doctest: +IGNORE_RESULT
         [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         moral_graph = UndirectedGraph(self.to_undirected().edges())
 
         for node in self.nodes():

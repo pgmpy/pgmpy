@@ -42,19 +42,19 @@ class TabularCPD(Factor):
     >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
     ...                               [0.1, 0.1],
     ...                               [0.8, 0.8]],
-    ...                  evidence='evi1', evidence_card=2)
-    >>> cpd
-    <TabularCPD representing P(grade:3 | evi1:2) at 0x7f847a4f2898>
+    ...                  evidence='evil', evidence_card=2)
+    >>> cpd # doctest: +IGNORE_RESULT
+    <TabularCPD representing P(grade:3 | evil:2) at 0x7f847a4f2898>
     >>> print(cpd)
-    +---------+-------+-------+
-    | ev1     | ev1_0 | ev1_1 |
-    +---------+-------+-------+
-    | grade_0 | 0.1   | 0.1   |
-    +---------+-------+-------+
-    | grade_1 | 0.1   | 0.1   |
-    +---------+-------+-------+
-    | grade_2 | 0.8   | 0.8   |
-    +---------+-------+-------+
+    +---------+--------+--------+
+    | evil    | evil_0 | evil_1 |
+    +---------+--------+--------+
+    | grade_0 | 0.1    | 0.1    |
+    +---------+--------+--------+
+    | grade_1 | 0.1    | 0.1    |
+    +---------+--------+--------+
+    | grade_2 | 0.8    | 0.8    |
+    +---------+--------+--------+
     >>> cpd.values
     array([[ 0.1,  0.1],
            [ 0.1,  0.1],
@@ -65,7 +65,7 @@ class TabularCPD(Factor):
     'grade'
 
     array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
-    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evil', ['evil_0', 'evil_1'])])
 
     Parameters
     ----------
@@ -90,7 +90,7 @@ class TabularCPD(Factor):
     marginalize([variables_list])
     normalize()
     reduce([values_list])
-    """
+    """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
     def __init__(self, variable, variable_card, values,
                  evidence=None, evidence_card=None):
 
@@ -297,10 +297,10 @@ class TabularCPD(Factor):
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.marginalize('diff')
+        >>> cpd_table.marginalize(['diff'])
         >>> cpd_table.get_cpd()
-        array([[ 0.48484848,  0.4       ],
-               [ 0.51515152,  0.6       ]])
+        array([[ 0.65,  0.4 ],
+               [ 0.35,  0.6 ]])
         """
         if inplace:
             tabular_cpd = self
@@ -333,7 +333,7 @@ class TabularCPD(Factor):
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.reduce('diff_0')
+        >>> cpd_table.reduce([('diff', 0)])
         >>> cpd_table.get_cpd()
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
@@ -363,9 +363,9 @@ class TabularCPD(Factor):
         ...                               [0.8, 0.8]],
         ...                  evidence='evi1', evidence_card=2)
         >>> factor = cpd.to_factor()
-        >>> factor
+        >>> factor # doctest: +IGNORE_RESULT
         <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         return Factor(self.variables, self.cardinality, self.values)
 
 

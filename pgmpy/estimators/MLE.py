@@ -53,8 +53,8 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
-        >>> estimator.get_parameters()
-        """
+        >>> estimator.get_parameters() # doctest: +IGNORE_RESULT
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         parameters = []
 
         for node in self.model.nodes():

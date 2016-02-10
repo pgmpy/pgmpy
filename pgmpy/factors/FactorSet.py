@@ -26,17 +26,16 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set = FactorSet(phi1, phi2)
         >>> factor_set
         <pgmpy.factors.FactorSet.FactorSet at 0x7f8e32af6d50>
-        >>> print(factor_set)
+        >>> print(factor_set) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4c2d0>,
              <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4c710>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         if not all(isinstance(phi, Factor) for phi in factors_list):
             raise TypeError("Input parameters must be all factors")
         self.factors = set([factor.copy() for factor in factors_list])
@@ -52,7 +51,6 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
@@ -60,12 +58,12 @@ class FactorSet(object):
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set1.add_factors(phi3, phi4)
-        >>> print(factor_set1)
+        >>> print(factor_set1) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4ca10>,
              <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f8e4c393690>,
              <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b4c750>,
              <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4cb50>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         self.factors.update(factors)
 
     def remove_factors(self, *factors):
@@ -79,21 +77,20 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set1 = FactorSet(phi1, phi2)
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> factor_set1.add_factors(phi3)
-        >>> print(factor_set1)
+        >>> print(factor_set1) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b5b050>,
              <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b250>,
              <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5b150>])
         >>> factor_set1.remove_factors(phi1, phi2)
-        >>> print(factor_set1)
+        >>> print(factor_set1) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b4cb10>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         for factor in factors:
             self.factors.remove(factor)
 
@@ -103,18 +100,17 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set1 = FactorSet(phi1, phi2)
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> factor_set1.add_factors(phi3)
-        >>> factor_set1.get_factors()
+        >>> factor_set1.get_factors() # doctest: +IGNORE_RESULT
         {<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f827c0a23c8>,
          <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f827c0a2358>,
          <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f825243f9e8>}
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         return self.factors
 
     def product(self, factorset, inplace=True):
@@ -139,7 +135,6 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
@@ -147,21 +142,21 @@ class FactorSet(object):
         >>> phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set2 = FactorSet(phi3, phi4)
-        >>> print(factor_set2)
+        >>> print(factor_set2) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b050>,
              <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b690>])
         >>> factor_set2.product(factor_set1)
-        >>> print(factor_set2)
+        >>> print(factor_set2) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4c910>,
              <Factor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4cc50>,
              <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b050>,
              <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b690>])
         >>> factor_set2 = FactorSet(phi3, phi4)
         >>> factor_set3 = factor_set2.product(factor_set1, inplace=False)
-        >>> print(factor_set2)
+        >>> print(factor_set2) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b060>,
              <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b790>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
 
@@ -194,7 +189,6 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
@@ -203,12 +197,12 @@ class FactorSet(object):
         >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
         >>> factor_set2 = FactorSet(phi3, phi4)
         >>> factor_set3 = factor_set2.divide(factor_set1)
-        >>> print(factor_set3)
+        >>> print(factor_set3) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5ba10>,
              <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b650>,
              <Factor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b5b050>,
              <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f8e32b5b8d0>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
 
@@ -235,16 +229,15 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set1 = FactorSet(phi1, phi2)
         >>> factor_set1.marginalize('x1')
-        >>> print(factor_set1)
+        >>> print(factor_set1) # doctest: +IGNORE_RESULT
         set([<Factor representing phi(x2:3, x3:2) at 0x7f8e32b4cc10>,
              <Factor representing phi(x3:2, x4:2) at 0x7f8e32b4cf90>])
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         if isinstance(variables, six.string_types):
             raise TypeError('Expected list or array-like type got type str')
 
@@ -279,17 +272,16 @@ class FactorSet(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import FactorSet
         >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> factor_set = FactorSet(phi1, phi2)
-        >>> factor_set
+        >>> factor_set # doctest: +IGNORE_RESULT
         <pgmpy.factors.FactorSet.FactorSet at 0x7fa68f390320>
         >>> factor_set_copy = factor_set.copy()
-        >>> factor_set_copy
+        >>> factor_set_copy # doctest: +IGNORE_RESULT
         <pgmpy.factors.FactorSet.FactorSet at 0x7f91a0031160>
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         # No need to have copies of factors as argument because __init__ method creates copies.
         return FactorSet(*self.factors)
 
@@ -312,9 +304,7 @@ def factorset_product(*factorsets_list):
 
     Examples
     --------
-    >>> from pgmpy.factors import FactorSet
     >>> from pgmpy.factors import Factor
-    >>> from pgmpy.factors import factorset_product
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
     >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> factor_set1 = FactorSet(phi1, phi2)
@@ -322,13 +312,13 @@ def factorset_product(*factorsets_list):
     >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
     >>> factor_set2 = FactorSet(phi3, phi4)
     >>> factor_set3 = factorset_product(factor_set1, factor_set2)
-    >>> print(factor_set3)
+    >>> print(factor_set3) # doctest: +IGNORE_RESULT
     set([<Factor representing phi(x1:2, x2:3, x3:2) at 0x7fb3a1933e90>,
          <Factor representing phi(x5:2, x7:2, x8:2) at 0x7fb3a1933f10>,
          <Factor representing phi(x5:2, x6:2, x7:2) at 0x7fb3a1933f90>,
          <Factor representing phi(x3:2, x4:2, x1:2) at 0x7fb3a1933e10>])
 
-    """
+    """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
     if not all(isinstance(factorset, FactorSet) for factorset in factorsets_list):
         raise TypeError("Input parameters must be FactorSet instances")
     return reduce(lambda x, y: x.product(y, inplace=False), factorsets_list)
@@ -355,9 +345,7 @@ def factorset_divide(factorset1, factorset2):
 
     Examples
     --------
-    >>> from pgmpy.factors import FactorSet
     >>> from pgmpy.factors import Factor
-    >>> from pgmpy.factors import factorset_divide
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
     >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> factor_set1 = FactorSet(phi1, phi2)
@@ -365,13 +353,13 @@ def factorset_divide(factorset1, factorset2):
     >>> phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
     >>> factor_set2 = FactorSet(phi3, phi4)
     >>> factor_set3 = factorset_divide(factor_set2, factor_set1)
-    >>> print(factor_set3)
+    >>> print(factor_set3) # doctest: +IGNORE_RESULT
     set([<Factor representing phi(x3:2, x4:2, x1:2) at 0x7f119ad78f90>,
          <Factor representing phi(x5:2, x6:2, x7:2) at 0x7f119ad78e50>,
          <Factor representing phi(x1:2, x2:3, x3:2) at 0x7f119ad78ed0>,
          <Factor representing phi(x5:2, x7:2, x8:2) at 0x7f119ad78e90>])
 
-    """
+    """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
     if not isinstance(factorset1, FactorSet) or not isinstance(factorset2, FactorSet):
         raise TypeError("factorset1 and factorset2 must be FactorSet instances")
     return factorset1.divide(factorset2, inplace=False)

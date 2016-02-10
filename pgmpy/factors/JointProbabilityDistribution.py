@@ -67,7 +67,6 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         >>> print(prob)
         x1    x2    x3      P(x1,x2,x3)
@@ -113,11 +112,10 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> values = np.random.rand(12)
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], values/np.sum(values))
         >>> prob.marginal_distribution(['x1', 'x2'])
-        >>> print(prob)
+        >>> print(prob) # doctest: +IGNORE_RESULT
         x1    x2      P(x1,x2)
         ----  ----  ----------
         x1_0  x2_0      0.1502
@@ -126,7 +124,7 @@ class JointProbabilityDistribution(Factor):
         x1_1  x2_0      0.2339
         x1_1  x2_1      0.1996
         x1_1  x2_2      0.1340
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         return self.marginalize(list(set(list(self.variables)) -
                                      set(variables if isinstance(
                                          variables, (list, set, dict, tuple)) else [variables])),
@@ -156,9 +154,8 @@ class JointProbabilityDistribution(Factor):
 
         Examples
         --------
-        >>> from pgmpy.factors import JointProbabilityDistribution as JPD
-        >>> prob = JPD(['I','D','G'],[2,2,3],
-                       [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+        >>> prob = JointProbabilityDistribution(['I','D','G'],[2,2,3],
+        ...               [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
         >>> prob.check_independence(['I'], ['D'])
         True
         >>> prob.check_independence(['I'], ['D'], [('G', 1)])  # Conditioning over G_1
@@ -217,7 +214,6 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob.get_independencies()
         (x1 _|_ x2)
@@ -250,7 +246,6 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8)/8)
         >>> prob.conditional_distribution([('x1', 1)])
         >>> print(prob)
@@ -274,11 +269,16 @@ class JointProbabilityDistribution(Factor):
         Examples
         ---------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> prob_copy = prob.copy()
         >>> prob_copy.values == prob.values
-        True
+        array([[[ True,  True],
+                [ True,  True],
+                [ True,  True]],
+        <BLANKLINE>
+               [[ True,  True],
+                [ True,  True],
+                [ True,  True]]], dtype=bool)
         >>> prob_copy.variables == prob.variables
         True
         >>> prob_copy.variables[1] = 'y'
@@ -300,14 +300,13 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> bayesian_model = prob.minimal_imap(order=['x2', 'x1', 'x3'])
         >>> bayesian_model
         <pgmpy.models.models.models at 0x7fd7440a9320>
-        >>> bayesian_model.edges()
+        >>> bayesian_model.edges() # doctest: +IGNORE_RESULT
         [('x1', 'x3'), ('x2', 'x3')]
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         from pgmpy.models import BayesianModel
 
         def get_subsets(u):
@@ -341,7 +340,6 @@ class JointProbabilityDistribution(Factor):
         --------
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors import TabularCPD
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> bm = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
@@ -353,7 +351,7 @@ class JointProbabilityDistribution(Factor):
         ...                        evidence_card=[2, 3])
         >>> bm.add_cpds(diff_cpd, intel_cpd, grade_cpd)
         >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
-                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        ...           0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
         >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
         >>> JPD.is_imap(bm)
         True
@@ -376,11 +374,10 @@ class JointProbabilityDistribution(Factor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> phi = prob.to_factor()
         >>> type(phi)
-        pgmpy.factors.Factor.Factor
+        <class 'pgmpy.factors.Factor.Factor'>
         """
         return Factor(self.variables, self.cardinality, self.values)
 
