@@ -19,7 +19,7 @@ Getting Started
 
 1. Install dependencies::
 
-   $ sudo pip3 install -r requirements.txt
+   $ sudo pip3 install -r requirements.txt  # use requirements-dev.txt if you want to run tests
 
 2. Clone the repo:: 
 

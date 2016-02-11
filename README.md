@@ -42,11 +42,11 @@ In the directory run either of the following:
 
 Using pip
 ```
-$ pip install -r requirements.txt
+$ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
 ```
 or conda
 ```
-$ conda intall --file requirements.txt
+$ conda intall --file requirements.txt  # or requirements-dev.txt
 ```
 
 Then install using:
