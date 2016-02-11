@@ -25,7 +25,7 @@ if [[ "$DISTRIB" == "conda" ]]; then
 	conda update conda
 	conda info -a
 
-	conda create -n testenv python=$PYTHON_VERSION --file requirements.txt
+	conda create -n testenv python=$PYTHON_VERSION --file requirements-dev.txt
     source activate testenv
 fi
 
