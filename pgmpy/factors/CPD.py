@@ -214,12 +214,9 @@ class TabularCPD(Factor):
         evidence_card = self.cardinality[1:]
 
         if evidence:
-            #evidence_card.reverse()
             evidence_card.insert(0, 1)
             cum_card = np.cumprod(evidence_card)
             max_card = cum_card[-1]
-
-            #evidence.reverse()
 
             for i in range(len(evidence)):
                 var = str(evidence[i])
