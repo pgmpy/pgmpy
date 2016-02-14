@@ -3,7 +3,7 @@ from string import Template
 
 import numpy
 from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore,\
-        cppStyleComment, Literal, printables
+    cppStyleComment, Literal, printables
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD
@@ -17,7 +17,6 @@ class BIFReader(object):
     """
 
     def __init__(self, path=None, string=None):
-
         """
         Initialisation of BifReader object
 
@@ -66,7 +65,6 @@ class BIFReader(object):
         self.variable_edges = self.get_edges()
 
     def get_variable_grammar(self):
-
         """
          A method that returns variable grammar
         """
@@ -85,7 +83,6 @@ class BIFReader(object):
         return name_expr, variable_state_expr, property_expr
 
     def get_probability_grammar(self):
-
         """
         A method that returns probability grammar
         """
@@ -116,7 +113,6 @@ class BIFReader(object):
             yield self.network[index.start():end]
 
     def get_network_name(self):
-
         """
         Retruns the name of the network
 
@@ -136,7 +132,6 @@ class BIFReader(object):
         return network_name
 
     def get_variables(self):
-
         """
         Returns list of variables of the network
 
@@ -155,7 +150,6 @@ class BIFReader(object):
         return variable_names
 
     def get_states(self):
-
         """
         Returns the states of variables present in the network
 
@@ -178,7 +172,6 @@ class BIFReader(object):
         return variable_states
 
     def get_property(self):
-
         """
         Returns the property of the variable
 
@@ -201,7 +194,6 @@ class BIFReader(object):
         return variable_properties
 
     def get_parents(self):
-
         """
         Returns the parents of the variables present in the network
 
@@ -223,7 +215,6 @@ class BIFReader(object):
         return variable_parents
 
     def get_cpd(self):
-
         """
         Returns the CPD of the variables present in the network
 
@@ -248,15 +239,22 @@ class BIFReader(object):
             name = self.probability_expr.searchString(block)[0][0]
             cpds = self.cpd_expr.searchString(block)
             arr = [float(j) for i in cpds for j in i]
-            arr = numpy.array(arr)
-            arr = arr.reshape((len(self.variable_states[name]),
-                              arr.size//len(self.variable_states[name])))
+            if 'table' in block:
+                arr = numpy.array(arr)
+                arr = arr.reshape((len(self.variable_states[name]),
+                                   arr.size // len(self.variable_states[name])))
+            else:
+                length = len(self.variable_states[name])
+                reshape_arr = [[] for i in range(length)]
+                for i, val in enumerate(arr):
+                    reshape_arr[i % length].append(val)
+                arr = reshape_arr
+                arr = numpy.array(arr)
             variable_cpds[name] = arr
 
         return variable_cpds
 
     def get_edges(self):
-
         """
         Returns the edges of the network
 
@@ -275,7 +273,6 @@ class BIFReader(object):
         return edges
 
     def get_model(self):
-
         """
         Returns the fitted bayesian model
 
@@ -319,7 +316,6 @@ class BIFWriter(object):
     """
 
     def __init__(self, model):
-
         """
         Initialise a BIFWriter Object
 
@@ -347,7 +343,6 @@ class BIFWriter(object):
         self.tables = self.get_cpds()
 
     def BIF_templates(self):
-
         """
         Create template for writing in BIF format
         """
@@ -399,7 +394,6 @@ $properties}\n""")
         return network
 
     def get_variables(self):
-
         """
         Add variables to BIF
 
@@ -419,7 +413,6 @@ $properties}\n""")
         return variables
 
     def get_states(self):
-
         """
         Add states to variable of BIF
 
@@ -445,11 +438,10 @@ $properties}\n""")
             variable = cpd.variable
             variable_states[variable] = []
             for state in range(cpd.get_cardinality([variable])[variable]):
-                variable_states[variable].append(str(variable)+'_'+str(state))
+                variable_states[variable].append(str(variable) + '_' + str(state))
         return variable_states
 
     def get_properties(self):
-
         """
         Add property to variables in BIF
 
@@ -479,7 +471,6 @@ $properties}\n""")
         return property_tag
 
     def get_parents(self):
-
         """
         Add the parents to BIF
 
@@ -509,7 +500,6 @@ $properties}\n""")
         return variable_parents
 
     def get_cpds(self):
-
         """
         Adds tables to BIF
 
@@ -536,7 +526,6 @@ $properties}\n""")
         return tables
 
     def write_bif(self, filename):
-
         """
         Writes the BIF data into a file
 

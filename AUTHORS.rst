@@ -1,25 +1,60 @@
 People
 ------
    
-Core Contributors
-=================
+Organisation Admins
+===================
 
-* Ankur Ankan
+* Ankur Ankan <ankurankan@gmail.com>
 
-* Abinash Panda
+* Abinash Panda <mailme.abinashpanda@gmail.com>
 
-Other Contributors
-==================
+Contributors
+============
 
-* Shashank Garg
+(in order of the date of their first contribution made)
 
-* Shikhar Nigam
+* Ankur Ankan <ankurankan@gmail.com>
 
-* Pranjal Mittal
+* Shikhar Nigam <snigam3112@gmail.com>
 
-GSoC 2014 Students
-==================
+* Abinash Panda <mailme.abinashpanda@gmail.com>
 
-* Navin Chandak
+* William Lyon <wlyon@quantpost.com>
 
-* Jaspreet
+* Navin Chandak <navinchandak92@gmail.com>
+
+* Jaspreet Singh <jaspreetsingh112@gmail.com>
+
+* Neha Soni <neha.soni.ece10@itbhu.ac.in>
+
+* Jaidev Deshpande <deshpande.jaidev@gmail.com>
+
+* Abhijeet Kislay <abhijeetkislay@gmail.com>
+
+* Palash Ahuja <abhor902@gmail.com>
+
+* Saket Choudhary <saketkc@gmail.com>
+
+* all3fox <all3fox@gmail.com>
+
+* Vivek Jain <vivek425ster@gmail.com>
+
+* Ashwini Chaudhary <monty.sinngh@gmail.com>
+
+* Sitesh Ranjan <siteshjaiswal@gmail.com>
+
+* Pratyaksh Sharma <pratyaksh@me.com>
+
+* Aleksandar Dimitriev <dimitriev_a@yahoo.com>
+
+* Demyanov <artyom.demyanov96@gmail.com>
+
+* Yashu Seth <yashuseth2503@gmail.com>
+
+* Utkarsh Gupta <utkarsh.gupta550@gmail.com>
+
+* Kshitij Saraogi <KshitijSaraogi@gmail.com>
+
+* joncrall <erotemic@gmail.com>
+
+* elkbrsathuji <elkana.baris@mail.huji.ac.il>

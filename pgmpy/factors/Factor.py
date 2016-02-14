@@ -91,6 +91,8 @@ class Factor(object):
         | x1_1 | x2_1 | x3_1 |          1.0000 |
         +------+------+------+-----------------+
         """
+        if isinstance(variables, six.string_types):
+            raise TypeError("Variables: Expected type list or array like, got string")
 
         values = np.array(values)
 
@@ -102,6 +104,9 @@ class Factor(object):
 
         if values.size != np.product(cardinality):
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
+
+        if len(set(variables)) != len(variables):
+            raise ValueError("Variable names cannot be same")
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
@@ -185,7 +190,7 @@ class Factor(object):
         rev_card = self.cardinality[::-1]
         for i, card in enumerate(rev_card):
             assignments[:, i] = index % card
-            index = index//card
+            index = index // card
 
         assignments = assignments[:, ::-1]
 
@@ -505,7 +510,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values + phi1.values
@@ -589,7 +594,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values * phi1.values
@@ -707,7 +712,7 @@ class Factor(object):
                 'phi': When used for Factors.
                   'p': When used for CPDs.
         """
-        string_header = list(map(lambda x : six.text_type(x), self.scope()))
+        string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
 
@@ -752,26 +757,38 @@ class Factor(object):
             return False
 
         else:
+            phi = other.copy()
             for axis in range(self.values.ndim):
-                exchange_index = other.variables.index(self.variables[axis])
-                other.variables[axis], other.variables[exchange_index] = (other.variables[exchange_index],
-                                                                          other.variables[axis])
-                other.cardinality[axis], other.cardinality[exchange_index] = (other.cardinality[exchange_index],
-                                                                              other.cardinality[axis])
-                other.values = other.values.swapaxes(axis, exchange_index)
+                exchange_index = phi.variables.index(self.variables[axis])
+                phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
+                                                                          phi.variables[axis])
+                phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                              phi.cardinality[axis])
+                phi.values = phi.values.swapaxes(axis, exchange_index)
 
-            if other.values.shape != self.values.shape:
+            if phi.values.shape != self.values.shape:
                 return False
-            elif not np.allclose(other.values, self.values):
+            elif not np.allclose(phi.values, self.values):
                 return False
-            elif not all(self.cardinality == other.cardinality):
+            elif not all(self.cardinality == phi.cardinality):
                 return False
             else:
                 return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __hash__(self):
-        return hash(str(self.variables) + str(self.cardinality.tolist()) +
-                    str(self.values.astype('float').tolist()))
+        variables = sorted(self.variables)
+        phi = self.copy()
+        for axis in range(phi.values.ndim):
+            exchange_index = phi.variables.index(variables[axis])
+            phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
+                                                                  phi.variables[axis])
+            phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                      phi.cardinality[axis])
+            phi.values = phi.values.swapaxes(axis, exchange_index)
+        return hash(str(phi.variables) + str(phi.values) + str(phi.cardinality))
 
 
 def factor_product(*args):
