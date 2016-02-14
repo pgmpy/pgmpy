@@ -97,43 +97,43 @@ class TestVariableElimination(unittest.TestCase):
                                           np.array([0.772727, 0.227273]))
 
     def test_max_marginal(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(), 0.1659, decimal=4)
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
 
     def test_max_marginal_var(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(['G']), 0.5714, decimal=4)
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G']), 0.5714, decimal=4)
 
     def test_max_marginal_var1(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(['G', 'R']),
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G', 'R']),
                                     0.4055, decimal=4)
 
     def test_max_marginal_var2(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(['G', 'R', 'A']),
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G', 'R', 'A']),
                                     0.3260, decimal=4)
 
     def test_map_query(self):
-        map_query = self.markov_inference.map_query()
+        map_query = self.bayesian_inference.map_query()
         self.assertDictEqual(map_query, {'A': 1, 'R': 1, 'J': 1, 'Q': 1, 'G': 0,
                                          'L': 0})
 
     def test_map_query_with_evidence(self):
-        map_query = self.markov_inference.map_query(['A', 'R', 'L'],
+        map_query = self.bayesian_inference.map_query(['A', 'R', 'L'],
                                                       {'J': 0, 'Q': 1, 'G': 0})
         self.assertDictEqual(map_query, {'A': 1, 'R': 0, 'L': 0})
 
     def test_induced_graph(self):
-        induced_graph = self.markov_inference.induced_graph(['G', 'Q', 'A', 'J', 'L', 'R'])
+        induced_graph = self.bayesian_inference.induced_graph(['G', 'Q', 'A', 'J', 'L', 'R'])
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
         self.assertEqual([['A', 'J'], ['A', 'R'], ['G', 'J'], ['G', 'L'],
                           ['J', 'L'], ['J', 'Q'], ['J', 'R'], ['L', 'R']],
                          result_edges)
 
     def test_induced_width(self):
-        result_width = self.markov_inference.induced_width(['G', 'Q', 'A', 'J', 'L', 'R'])
+        result_width = self.bayesian_inference.induced_width(['G', 'Q', 'A', 'J', 'L', 'R'])
         self.assertEqual(2, result_width)
 
     def tearDown(self):
-        del self.markov_inference
-        del self.markov_model
+        del self.bayesian_inference
+        del self.bayesian_model
 
 
 class TestVariableEliminationMarkov(unittest.TestCase):

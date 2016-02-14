@@ -72,9 +72,10 @@ class BayesianModelSampling(Inference):
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
-            if cpd.evidence:
+            evidence = cpd.variables[:0:-1]
+            if evidence:
                 cached_values = self.pre_compute_reduce(variable=node)
-                evidence = sampled.ix[:, cpd.evidence].values
+                evidence = sampled.ix[:, evidence].values
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence))
             else:
                 weights = cpd.values
@@ -83,7 +84,7 @@ class BayesianModelSampling(Inference):
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
-        variable_evid = variable_cpd.evidence
+        variable_evid = variable_cpd.variables[:0:-1]
         cached_values = {}
 
         for state_combination in itertools.product(*[range(self.cardinality[var]) for var in variable_evid]):
@@ -188,8 +189,8 @@ class BayesianModelSampling(Inference):
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
-            if cpd.evidence:
-                evidence = sampled.ix[:, cpd.evidence].values
+            if cpd.variables[:0:-1]:
+                evidence = sampled.ix[:, cpd.variables[:0:-1]].values
                 cached_values = self.pre_compute_reduce(node)
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence))
                 if node in evidence_dict:

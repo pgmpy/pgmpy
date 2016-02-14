@@ -346,7 +346,7 @@ class UAIWriter(object):
             functions = []
             for cpd in cpds:
                 child_var = cpd.variable
-                evidence = cpd.evidence
+                evidence = cpd.variables[:0:-1]
                 function = [str(variables.index((var, self.domain[var]))) for var in evidence]
                 function.append(str(variables.index((child_var, self.domain[child_var]))))
                 functions.append(function)
