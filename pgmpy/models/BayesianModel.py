@@ -353,7 +353,7 @@ class BayesianModel(DirectedGraph):
         Parameters
         ----------
         variables: str or array like
-            variables whose local independencies are to found.
+            variables whose local independencies are to be found.
 
         Examples
         --------
@@ -373,8 +373,8 @@ class BayesianModel(DirectedGraph):
             """
             Returns the descendents of node.
 
-            Since there can't be any cycles in the Bayesian Network. This is a
-            very simple dfs which doen't remember which nodes it has visited.
+            Since Bayesian Networks are acyclic, this is a very simple dfs
+            which does not remember which nodes it has visited.
             """
             descendents = []
             visit = [node]
@@ -388,9 +388,10 @@ class BayesianModel(DirectedGraph):
         from pgmpy.independencies import Independencies
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
-            independencies.add_assertions([variable, set(self.nodes()) - set(dfs(variable)) -
-                                           set(self.get_parents(variable)) - {variable},
-                                           set(self.get_parents(variable))])
+            non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
+            parents = set(self.get_parents(variable))
+            if non_descendents - parents:
+                independencies.add_assertions([variable, non_descendents - parents, parents])
         return independencies
 
     def is_active_trail(self, start, end, observed=None):
