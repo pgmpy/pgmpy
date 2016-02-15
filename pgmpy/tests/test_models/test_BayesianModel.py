@@ -138,6 +138,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(self.G.local_independencies('d'), Independencies(['d','c',['b','a']]))
         self.assertEqual(self.G.local_independencies('e'), Independencies(['e',['c','b','a'],'d']))
         self.assertEqual(self.G.local_independencies('b'), Independencies(['b','a']))
+        self.assertEqual(self.G1.local_independencies('grade'), Independencies())
 
     def test_is_imap(self):
         val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
