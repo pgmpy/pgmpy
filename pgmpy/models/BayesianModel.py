@@ -430,7 +430,7 @@ class BayesianModel(DirectedGraph):
 
     def get_independencies(self, latex=False):
         """
-        Compute independencies in Bayesian Network.
+        Computes independencies in the Bayesian Network, by checking d-seperation.
 
         Parameters
         ----------
@@ -441,21 +441,19 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.get_independencies()
+        >>> chain = BayesianModel([('X', 'Y'), ('Y', 'Z')])
+        >>> chain.get_independencies()
+        (X _|_ Z | Y)
+        (Z _|_ X | Y)
         """
         independencies = Independencies()
         for start in (self.nodes()):
-            for r in (1, len(self.nodes())):
-                for observed in itertools.combinations(self.nodes(), r):
-                    independent_variables = self.active_trail_nodes(start, observed=observed)
-                    independent_variables = set(independent_variables) - {start}
-                    if independent_variables:
-                        independencies.add_assertions([start, independent_variables,
-                                                       observed])
+            rest = set(self.nodes()) - {start}
+            for r in range(len(rest)):
+                for observed in itertools.combinations(rest, r):
+                    d_seperated_variables = rest - set(observed) - set(self.active_trail_nodes(start, observed=observed))
+                    if d_seperated_variables:
+                        independencies.add_assertions([start, d_seperated_variables, observed])
 
         independencies.reduce()
 
