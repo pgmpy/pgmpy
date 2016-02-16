@@ -96,8 +96,6 @@ class TabularCPD(Factor):
 
         self.variable = variable
         self.variable_card = None
-        self.evidence = None
-        self.evidence_card = None
 
         variables = [variable]
 
@@ -107,27 +105,25 @@ class TabularCPD(Factor):
 
         cardinality = [variable_card]
         if evidence_card is not None:
-            if not isinstance(evidence_card, (list, set, tuple)):
+            if not isinstance(evidence_card, (list, tuple)):
                 if isinstance(evidence_card, np.ndarray):
                     evidence_card = evidence_card.tolist()
                 elif isinstance(evidence_card, (int, float)):
                     evidence_card = [evidence_card]
                 else:
-                    raise TypeError("Evidence cardinality must be list, set, "
+                    raise TypeError("Evidence cardinality must be list, "
                                     "tuple, numpy ndarray or simply a number.")
-            self.evidence_card = evidence_card
             cardinality.extend(evidence_card[::-1])
 
         if evidence is not None:
-            if not isinstance(evidence, (list, set, tuple)):
+            if not isinstance(evidence, (list, tuple)):
                 if isinstance(evidence, np.ndarray):
                     evidence = evidence.tolist()
                 elif isinstance(evidence, six.string_types):
                     evidence = [evidence]
                 else:
-                    raise TypeError("Evidence must be list, set, tuple or array"
+                    raise TypeError("Evidence must be list, tuple or array"
                                     " of strings.")
-            self.evidence = evidence
             variables.extend(evidence[::-1])
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
@@ -142,9 +138,11 @@ class TabularCPD(Factor):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
                             var=self.variable, card=self.variable_card)
 
-        if self.evidence:
+        evidence = self.variables[:0:-1]
+        evidence_card = self.cardinality[:0:-1]
+        if evidence:
             evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
-                                              for var, card in zip(self.evidence, self.evidence_card)])
+                                              for var, card in zip(evidence, evidence_card)])
         else:
             evidence_str = ''
 
@@ -181,10 +179,13 @@ class TabularCPD(Factor):
     def _make_table_str(self, tablefmt="fancy_grid"):
         headers_list = []
         # build column headers
-        if self.evidence is not None:
-            col_indexes = np.array(list(product(*[range(i) for i in self.evidence_card])))
-            for i in range(len(self.evidence_card)):
-                column_header = [self.evidence[i]] + ['{s}_{d}'.format(s=self.evidence[i], d=d) for d in col_indexes.T[i]]
+
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
+        if evidence:
+            col_indexes = np.array(list(product(*[range(i) for i in evidence_card])))
+            for i in range(len(evidence_card)):
+                column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
                 headers_list.append(column_header)
 
         # Build row headers
@@ -207,19 +208,20 @@ class TabularCPD(Factor):
             """<table><caption>TabularCPD for <b>%s</b></caption>""" % str(self.variable))
         string_list.append(html_string_header)
 
-        if self.evidence:
-            cpd_evidence_card = [card for card in self.evidence_card]
-            cpd_evidence_card = cpd_evidence_card[::-1]
-            cpd_evidence_card.insert(0, 1)
-            cum_card = np.cumprod(cpd_evidence_card)
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
+
+        if evidence:
+            #evidence_card.reverse()
+            evidence_card.insert(0, 1)
+            cum_card = np.cumprod(evidence_card)
             max_card = cum_card[-1]
 
-            evidence = [var for var in self.evidence]
-            evidence = evidence[::-1]
+            #evidence.reverse()
 
             for i in range(len(evidence)):
                 var = str(evidence[i])
-                card = cpd_evidence_card[i + 1]
+                card = evidence_card[i + 1]
                 num_repeat = cum_card[i]
                 col_span = max_card / (num_repeat * card)
 
@@ -270,9 +272,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
         cpd = tabular_cpd.get_cpd()
         tabular_cpd.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
@@ -305,9 +309,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
 
         super(TabularCPD, tabular_cpd).marginalize(variables)
         tabular_cpd.normalize()
@@ -341,9 +347,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
 
         super(TabularCPD, tabular_cpd).reduce(values)
         tabular_cpd.normalize()
