@@ -441,11 +441,10 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.get_independencies()
+        >>> chain = BayesianModel([('X', 'Y'), ('Y', 'Z')])
+        >>> chain.get_independencies()
+        (X _|_ Z | Y)
+        (Z _|_ X | Y)
         """
         independencies = Independencies()
         for start in (self.nodes()):
