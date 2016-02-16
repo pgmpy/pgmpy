@@ -140,6 +140,14 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(self.G.local_independencies('b'), Independencies(['b','a']))
         self.assertEqual(self.G1.local_independencies('grade'), Independencies())
 
+    def test_get_independencies(self):
+        chain = BayesianModel([('X','Y'), ('Y','Z')])
+        self.assertEqual(chain.get_independencies(), Independencies(('X', 'Z', 'Y'), ('Z', 'X', 'Y')))
+        fork = BayesianModel([('Y','X'), ('Y','Z')])
+        self.assertEqual(fork.get_independencies(), Independencies(('X', 'Z', 'Y'), ('Z', 'X', 'Y')))
+        collider = BayesianModel([('X','Y'), ('Z','Y')])
+        self.assertEqual(collider.get_independencies(), Independencies(('X', 'Z'), ('Z', 'X')))
+
     def test_is_imap(self):
         val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
                0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
