@@ -237,13 +237,13 @@ class BayesianModel(DirectedGraph):
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
             if isinstance(cpd, TabularCPD):
-                evidence = cpd.evidence
+                evidence = cpd.variables[:0:-1]
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError("CPD associated with %s doesn't have "
                                      "proper parents associated with it." % node)
                 if not np.allclose(cpd.to_factor().marginalize([node], inplace=False).values.flatten('C'),
-                                   np.ones(np.product(cpd.evidence_card)),
+                                   np.ones(np.product(cpd.cardinality[:0:-1])),
                                    atol=0.01):
                     raise ValueError('Sum of probabilites of states for node %s'
                                      ' is not equal to 1.' % node)

@@ -359,7 +359,7 @@ class XMLBIFWriter(object):
         for cpd in cpds:
             definition_tag[cpd.variable] = etree.SubElement(self.network, "DEFINITION")
             etree.SubElement(definition_tag[cpd.variable], "FOR").text = cpd.variable
-            for child in sorted([] if cpd.evidence is None else cpd.evidence):
+            for child in sorted(cpd.variables[:0:-1]):
                 etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = child
 
         return definition_tag
