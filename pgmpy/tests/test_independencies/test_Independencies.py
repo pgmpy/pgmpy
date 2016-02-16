@@ -132,11 +132,14 @@ class TestIndependencies(unittest.TestCase):
         self.Independencies2 = independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
 
-    def test_e1(self):
+    def test_eq(self):
         self.assertTrue(self.Independencies3 == self.Independencies4)
         self.assertFalse(self.Independencies3 != self.Independencies4)
         self.assertTrue(self.Independencies3 != self.Independencies5)
         self.assertFalse(self.Independencies4 == self.Independencies5)
+        self.assertFalse(independencies.Independencies() == independencies.Independencies(['A','B','C']))
+        self.assertFalse(independencies.Independencies(['A','B','C']) == independencies.Independencies())
+        self.assertTrue(independencies.Independencies() == independencies.Independencies())
 
     def tearDown(self):
         del self.Independencies
