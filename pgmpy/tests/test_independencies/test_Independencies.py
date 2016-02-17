@@ -1,14 +1,13 @@
 import unittest
 
-from pgmpy import independencies
 from pgmpy import exceptions
 from pgmpy.extern.six.moves import zip
-from pgmpy.independencies import IndependenceAssertion
+from pgmpy.independencies import Independencies, IndependenceAssertion
 
 
 class TestIndependenceAssertion(unittest.TestCase):
     def setUp(self):
-        self.assertion = independencies.IndependenceAssertion()
+        self.assertion = IndependenceAssertion()
 
     def test_return_list_if_str(self):
         self.assertListEqual(self.assertion._return_list_if_str('U'), ['U'])
@@ -35,21 +34,21 @@ class TestIndependenceAssertion(unittest.TestCase):
         self.assertTupleEqual(self.assertion.get_assertion(), ({'U'}, {'V'}, set()))
 
     def test_init(self):
-        self.assertion1 = independencies.IndependenceAssertion('U', 'V', 'Z')
+        self.assertion1 = IndependenceAssertion('U', 'V', 'Z')
         self.assertSetEqual(self.assertion1.event1, {'U'})
         self.assertSetEqual(self.assertion1.event2, {'V'})
         self.assertSetEqual(self.assertion1.event3, {'Z'})
-        self.assertion1 = independencies.IndependenceAssertion(['U', 'V'], ['Y', 'Z'], ['A', 'B'])
+        self.assertion1 = IndependenceAssertion(['U', 'V'], ['Y', 'Z'], ['A', 'B'])
         self.assertSetEqual(self.assertion1.event1, {'U', 'V'})
         self.assertSetEqual(self.assertion1.event2, {'Y', 'Z'})
         self.assertSetEqual(self.assertion1.event3, {'A', 'B'})
 
     def test_init_exceptions(self):
-        self.assertRaises(exceptions.RequiredError, independencies.IndependenceAssertion, event2=['U'], event3='V')
-        self.assertRaises(exceptions.RequiredError, independencies.IndependenceAssertion, event2=['U'])
-        self.assertRaises(exceptions.RequiredError, independencies.IndependenceAssertion, event3=['Z'])
-        self.assertRaises(exceptions.RequiredError, independencies.IndependenceAssertion, event1=['U'])
-        self.assertRaises(exceptions.RequiredError, independencies.IndependenceAssertion, event1=['U'], event3=['Z'])        
+        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'], event3='V')
+        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'])
+        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event3=['Z'])
+        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'])
+        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'], event3=['Z'])
 
     def tearDown(self):
         del self.assertion
@@ -103,40 +102,43 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
 
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
-        self.Independencies = independencies.Independencies()
-        self.Independencies3 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+        self.Independencies = Independencies()
+        self.Independencies3 = Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
                                                              ['c', ['d', 'e' ,'f'], ['g' , 'h']])
-        self.Independencies4 = independencies.Independencies([['f', 'd', 'e'], 'c', ['h', 'g']],
+        self.Independencies4 = Independencies([['f', 'd', 'e'], 'c', ['h', 'g']],
                                                              [['b', 'c', 'd'], 'a', ['f', 'g', 'e']])
-        self.Independencies5 = independencies.Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
+        self.Independencies5 = Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
                                                              ['c', ['d', 'e', 'f'], 'g'])
 
     def test_init(self):
-        self.Independencies1 = independencies.Independencies(['X', 'Y', 'Z'])
-        self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
-        self.Independencies2 = independencies.Independencies()
-        self.assertEqual(self.Independencies2, independencies.Independencies())
+        self.Independencies1 = Independencies(['X', 'Y', 'Z'])
+        self.assertEqual(self.Independencies1, Independencies(['X', 'Y', 'Z']))
+        self.Independencies2 = Independencies()
+        self.assertEqual(self.Independencies2, Independencies())
 
     def test_add_assertions(self):
-        self.Independencies1 = independencies.Independencies()
+        self.Independencies1 = Independencies()
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
-        self.assertEqual(self.Independencies1, independencies.Independencies(['X', 'Y', 'Z']))
-        self.Independencies2 = independencies.Independencies()
+        self.assertEqual(self.Independencies1, Independencies(['X', 'Y', 'Z']))
+        self.Independencies2 = Independencies()
         self.Independencies2.add_assertions(['A', 'B', 'C'], ['D', 'E', 'F'])
-        self.assertEqual(self.Independencies2, independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F']))
+        self.assertEqual(self.Independencies2, Independencies(['A', 'B', 'C'], ['D', 'E', 'F']))
 
     def test_get_assertions(self):
-        self.Independencies1 = independencies.Independencies()
+        self.Independencies1 = Independencies()
         self.Independencies1.add_assertions(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1.independencies, self.Independencies1.get_assertions())
-        self.Independencies2 = independencies.Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
+        self.Independencies2 = Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
 
-    def test_e1(self):
+    def test_eq(self):
         self.assertTrue(self.Independencies3 == self.Independencies4)
         self.assertFalse(self.Independencies3 != self.Independencies4)
         self.assertTrue(self.Independencies3 != self.Independencies5)
         self.assertFalse(self.Independencies4 == self.Independencies5)
+        self.assertFalse(Independencies() == Independencies(['A','B','C']))
+        self.assertFalse(Independencies(['A','B','C']) == Independencies())
+        self.assertTrue(Independencies() == Independencies())
 
     def tearDown(self):
         del self.Independencies

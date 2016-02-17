@@ -54,8 +54,8 @@ class Independencies(object):
     def __eq__(self, other):
         if not isinstance(other, Independencies):
             return False
-        other_assertions = other.get_assertions()
-        return all(self_independency in other_assertions for self_independency in self.get_assertions())
+        return (all(independency in other.get_assertions() for independency in self.get_assertions()) and
+                all(independency in self.get_assertions() for independency in other.get_assertions()))
 
     def __ne__(self, other):
         return not self.__eq__(other)
