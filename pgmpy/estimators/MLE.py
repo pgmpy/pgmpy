@@ -62,7 +62,6 @@ class MaximumLikelihoodEstimator(BaseEstimator):
             if not parents:
                 state_counts = self.data.ix[:, node].value_counts()
                 state_counts = state_counts.reindex(sorted(state_counts.index))
-                state_counts = state_counts.astype(np.int, copy=False)
                 cpd = TabularCPD(node, self.node_card[node],
                                  state_counts.values[:, np.newaxis])
                 cpd.normalize()
@@ -71,7 +70,6 @@ class MaximumLikelihoodEstimator(BaseEstimator):
                 parent_card = np.array([self.node_card[parent] for parent in parents])
                 var_card = self.node_card[node]
                 values = self.data.groupby([node] + parents).size().unstack(parents).fillna(0)
-                values = values.astype(np.int, copy=False)
                 cpd = TabularCPD(node, var_card, np.array(values),
                                  evidence=parents,
                                  evidence_card=parent_card.astype('int'))

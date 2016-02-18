@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import numpy as np
 
 
 class BaseEstimator(object):
@@ -16,7 +17,7 @@ class BaseEstimator(object):
     """
     def __init__(self, model, data):
         self.model = model
-        self.data = data
+        self.data = data.astype(np.int)
 
         get_node_card = lambda _node, _data: _data.ix[:, _node].value_counts().shape[0]
         self.node_card = {_node: get_node_card(_node, data) for _node in self.model.nodes()}
