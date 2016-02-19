@@ -42,7 +42,7 @@ class Independencies(object):
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies =set()
+        self.independencies =[]
         self.add_assertions(*assertions)
 
     def __str__(self):
@@ -90,12 +90,16 @@ class Independencies(object):
         """
         for assertion in assertions:
             if isinstance(assertion, IndependenceAssertion):
-                self.independencies.add(assertion)
+                self.independencies.append(assertion)
             else:
                 try:
-                    self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
                 except IndexError:
-                    self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
+
+        #Removes ant duplications inside independencies
+    def reduce(self):
+        self.independencies=set(self.independencies)
 
     def latex_string(self):
         """
