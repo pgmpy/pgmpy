@@ -42,7 +42,7 @@ class Independencies(object):
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies = set()
+        self.independencies =set()
         self.add_assertions(*assertions)
 
     def __str__(self):
@@ -209,7 +209,7 @@ class IndependenceAssertion(object):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(frozenset(self.event1))^hash(frozenset(self.event2))^hash(frozenset(self.event3))
+        return (hash(frozenset(self.event1))<<1)^(hash(frozenset(self.event2))>>1)^hash(frozenset(self.event3))
 
     @staticmethod
     def _return_list_if_str(event):
