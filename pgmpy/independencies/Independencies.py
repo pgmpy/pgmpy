@@ -42,7 +42,7 @@ class Independencies(object):
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies = []
+        self.independencies = set()
         self.add_assertions(*assertions)
 
     def __str__(self):
@@ -90,19 +90,12 @@ class Independencies(object):
         """
         for assertion in assertions:
             if isinstance(assertion, IndependenceAssertion):
-                self.independencies.append(assertion)
+                self.independencies.add(assertion)
             else:
                 try:
-                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
+                    self.independencies.add(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
                 except IndexError:
-                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
-
-        # TODO: write reduce function.
-    def reduce(self):
-        """
-        Add function to remove duplicate Independence Assertions
-        """
-        pass
+                    self.independencies.add(IndependenceAssertion(assertion[0], assertion[1]))
 
     def latex_string(self):
         """
@@ -214,6 +207,9 @@ class IndependenceAssertion(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(frozenset(self.event1))^hash(frozenset(self.event2))^hash(frozenset(self.event3))
 
     @staticmethod
     def _return_list_if_str(event):
