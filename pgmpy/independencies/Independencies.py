@@ -42,7 +42,7 @@ class Independencies(object):
     get_factorized_product
     """
     def __init__(self, *assertions):
-        self.independencies = []
+        self.independencies =[]
         self.add_assertions(*assertions)
 
     def __str__(self):
@@ -97,12 +97,9 @@ class Independencies(object):
                 except IndexError:
                     self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
 
-        # TODO: write reduce function.
+        #Removes ant duplications inside independencies
     def reduce(self):
-        """
-        Add function to remove duplicate Independence Assertions
-        """
-        pass
+        self.independencies=set(self.independencies)
 
     def latex_string(self):
         """
@@ -214,6 +211,9 @@ class IndependenceAssertion(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self):
+        return (hash(frozenset(self.event1))<<1)^(hash(frozenset(self.event2))>>1)^hash(frozenset(self.event3))
 
     @staticmethod
     def _return_list_if_str(event):
