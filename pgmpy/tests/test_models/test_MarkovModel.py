@@ -265,16 +265,8 @@ class TestMarkovModelMethods(unittest.TestCase):
 
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         independencies = self.graph.get_local_independencies()
-
         self.assertIsInstance(independencies, Independencies)
-        self.assertEqual(len(independencies.get_assertions()), 2)
-
-        string = ''
-        for assertion in sorted(independencies.get_assertions(),
-                                key=lambda x: list(x.event1)):
-            string += str(assertion) + '\n'
-
-        self.assertEqual(string, '(a _|_ c | b)\n(c _|_ a | b)\n')
+        self.assertEqual(independencies, Independencies(['a','c','b']))
 
     def test_bayesian_model(self):
         from pgmpy.models import BayesianModel
