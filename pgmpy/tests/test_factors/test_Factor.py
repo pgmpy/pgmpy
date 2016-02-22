@@ -378,6 +378,10 @@ class TestTabularCPDMethods(unittest.TestCase):
                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                               evidence=['intel', 'diff'], evidence_card=[3, 2])
 
+        self.cpd2 = TabularCPD('J', 2, [[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
+                                        [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]],
+                               evidence=['C', 'B', 'A'], evidence_card= [2, 2, 2])
+
     def test_marginalize_1(self):
         self.cpd.marginalize(['diff'])
         self.assertEqual(self.cpd.variable, 'grade')
@@ -445,6 +449,7 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.cpd
+
 
 class TestJointProbabilityDistributionInit(unittest.TestCase):
     def test_jpd_init(self):

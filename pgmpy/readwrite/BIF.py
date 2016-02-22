@@ -495,7 +495,7 @@ $properties}\n""")
         variable_parents = {}
         for cpd in cpds:
             variable_parents[cpd.variable] = []
-            for parent in sorted([] if cpd.evidence is None else cpd.evidence):
+            for parent in sorted(cpd.variables[:0:-1]):
                 variable_parents[cpd.variable].append(parent)
         return variable_parents
 
