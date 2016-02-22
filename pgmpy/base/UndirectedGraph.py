@@ -23,7 +23,6 @@ class UndirectedGraph(nx.Graph):
     --------
     Create an empty UndirectedGraph with no nodes and no edges
 
-    >>> from pgmpy.base import UndirectedGraph
     >>> G = UndirectedGraph()
 
     G can be grown in several ways
@@ -79,7 +78,6 @@ class UndirectedGraph(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
         >>> G.add_node('A')
         """
@@ -96,7 +94,6 @@ class UndirectedGraph(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
         >>> G.add_nodes_from(['A', 'B', 'C'])
         """
@@ -117,7 +114,6 @@ class UndirectedGraph(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
@@ -139,7 +135,6 @@ class UndirectedGraph(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
@@ -167,7 +162,6 @@ class UndirectedGraph(nx.Graph):
 
         Examples
         --------
-        >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
         >>> G.add_edges_from([('x1', 'x2'), ('x1', 'x3'), ('x1', 'x4'),
         ...                   ('x2', 'x4'), ('x3', 'x4')])

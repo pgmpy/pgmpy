@@ -73,9 +73,8 @@ class Factor(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-        >>> phi
+        >>> phi # doctest: +IGNORE_RESULT
         <Factor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
         >>> print(phi)
         +------+------+------+-----------------+
@@ -90,7 +89,7 @@ class Factor(object):
         | x1_1 | x2_1 | x3_0 |          1.0000 |
         | x1_1 | x2_1 | x3_1 |          1.0000 |
         +------+------+------+-----------------+
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         if isinstance(variables, six.string_types):
             raise TypeError("Variables: Expected type list or array like, got string")
 
@@ -122,7 +121,6 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
@@ -144,13 +142,12 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality(['x1'])
         {'x1': 2}
-        >>> phi.get_cardinality(['x1', 'x2'])
+        >>> phi.get_cardinality(['x1', 'x2']) # doctest: +IGNORE_RESULT
         {'x1': 2, 'x2': 3}
-        """
+        """.replace('+IGNORE_RESULT', '+ELLIPSIS\n<...>')
         if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
@@ -175,7 +172,6 @@ class Factor(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
@@ -210,7 +206,6 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi_identity = phi.identity_factor()
         >>> phi_identity.variables
@@ -219,7 +214,7 @@ class Factor(object):
         array([[[ 1.,  1.],
                 [ 1.,  1.],
                 [ 1.,  1.]],
-
+        <BLANKLINE>
                [[ 1.,  1.],
                 [ 1.,  1.],
                 [ 1.,  1.]]])
@@ -246,11 +241,10 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
-        array([ 14.,  22.,  30.])
+        array([14, 22, 30])
         >>> phi.variables
         ['x2']
         """
@@ -295,11 +289,10 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
         ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
         >>> phi.variables
-        ['x1','x2','x3']
+        ['x1', 'x2', 'x3']
         >>> phi.maximize(['x2'])
         >>> phi.variables
         ['x1', 'x3']
@@ -347,13 +340,12 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.values
         array([[[ 0,  1],
                 [ 2,  3],
                 [ 4,  5]],
-
+        <BLANKLINE>
                [[ 6,  7],
                 [ 8,  9],
                 [10, 11]]])
@@ -366,7 +358,7 @@ class Factor(object):
         array([[[ 0.        ,  0.01515152],
                 [ 0.03030303,  0.04545455],
                 [ 0.06060606,  0.07575758]],
-
+        <BLANKLINE>
                [[ 0.09090909,  0.10606061],
                 [ 0.12121212,  0.13636364],
                 [ 0.15151515,  0.16666667]]])
@@ -399,7 +391,6 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce([('x1', 0), ('x2', 0)])
         >>> phi.variables
@@ -407,7 +398,7 @@ class Factor(object):
         >>> phi.cardinality
         array([2])
         >>> phi.values
-        array([0., 1.])
+        array([0, 1])
         """
         if isinstance(values, six.string_types):
             raise TypeError("values: Expected type list or array-like, got type str")
@@ -450,7 +441,6 @@ class Factor(object):
 
         Example
         -------
-        >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi1.sum(phi2, inplace=True)
@@ -459,24 +449,25 @@ class Factor(object):
         >>> phi1.cardinality
         array([2, 3, 2, 2])
         >>> phi1.values
-        array([[[[ 0,  0],
-                 [ 4,  6]],
+        array([[[[ 0,  2],
+                 [ 5,  7]],
+        <BLANKLINE>
+                [[ 2,  4],
+                 [ 7,  9]],
+        <BLANKLINE>
+                [[ 4,  6],
+                 [ 9, 11]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 7,  9],
+                 [12, 14]],
+        <BLANKLINE>
+                [[ 9, 11],
+                 [14, 16]],
+        <BLANKLINE>
+                [[11, 13],
+                 [16, 18]]]])
 
-                [[ 0,  4],
-                 [12, 18]],
-
-                [[ 0,  8],
-                 [20, 30]]],
-
-
-               [[[ 6, 18],
-                 [35, 49]],
-
-                [[ 8, 24],
-                 [45, 63]],
-
-                [[10, 30],
-                 [55, 77]]]])
         """
         phi = self if inplace else self.copy()
         if isinstance(phi1, (int, float)):
@@ -534,7 +525,6 @@ class Factor(object):
 
         Example
         -------
-        >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi1.product(phi2, inplace=True)
@@ -545,22 +535,22 @@ class Factor(object):
         >>> phi1.values
         array([[[[ 0,  0],
                  [ 4,  6]],
-
+        <BLANKLINE>
                 [[ 0,  4],
                  [12, 18]],
-
+        <BLANKLINE>
                 [[ 0,  8],
                  [20, 30]]],
-
-
+        <BLANKLINE>
+        <BLANKLINE>
                [[[ 6, 18],
                  [35, 49]],
-
+        <BLANKLINE>
                 [[ 8, 24],
                  [45, 63]],
-
+        <BLANKLINE>
                 [[10, 30],
-                 [55, 77]]]]
+                 [55, 77]]]])
         """
         phi = self if inplace else self.copy()
         if isinstance(phi1, (int, float)):
@@ -618,9 +608,8 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
         >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5)])
+        >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5))
         >>> phi1.divide(phi2)
         >>> phi1.variables
         ['x1', 'x2', 'x3']
@@ -630,7 +619,7 @@ class Factor(object):
         array([[[ 0.        ,  0.33333333],
                 [ 2.        ,  1.        ],
                 [ 4.        ,  1.66666667]],
-
+        <BLANKLINE>
                [[ 3.        ,  1.75      ],
                 [ 4.        ,  2.25      ],
                 [ 5.        ,  2.75      ]]])
@@ -676,7 +665,6 @@ class Factor(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
         >>> phi_copy = phi.copy()
         >>> phi_copy.variables
@@ -687,7 +675,7 @@ class Factor(object):
         array([[[ 0,  1,  2],
                 [ 3,  4,  5],
                 [ 6,  7,  8]],
-
+        <BLANKLINE>
                [[ 9, 10, 11],
                 [12, 13, 14],
                 [15, 16, 17]]])
@@ -806,7 +794,6 @@ def factor_product(*args):
 
     Examples
     --------
-    >>> from pgmpy.factors import Factor, factor_product
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
     >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> phi = factor_product(phi1, phi2)
@@ -817,20 +804,20 @@ def factor_product(*args):
     >>> phi.values
     array([[[[ 0,  0],
              [ 4,  6]],
-
+    <BLANKLINE>
             [[ 0,  4],
              [12, 18]],
-
+    <BLANKLINE>
             [[ 0,  8],
              [20, 30]]],
-
-
+    <BLANKLINE>
+    <BLANKLINE>
            [[[ 6, 18],
              [35, 49]],
-
+    <BLANKLINE>
             [[ 8, 24],
              [45, 63]],
-
+    <BLANKLINE>
             [[10, 30],
              [55, 77]]]])
     """
@@ -857,7 +844,6 @@ def factor_divide(phi1, phi2):
 
     Examples
     --------
-    >>> from pgmpy.factors import Factor, factor_divide
     >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
     >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5))
     >>> phi = factor_divide(phi1, phi2)
@@ -869,7 +855,7 @@ def factor_divide(phi1, phi2):
     array([[[ 0.        ,  0.33333333],
             [ 2.        ,  1.        ],
             [ 4.        ,  1.66666667]],
-
+    <BLANKLINE>
            [[ 3.        ,  1.75      ],
             [ 4.        ,  2.25      ],
             [ 5.        ,  2.75      ]]])
