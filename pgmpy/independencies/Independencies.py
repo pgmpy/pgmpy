@@ -163,7 +163,6 @@ class IndependenceAssertion(object):
     Public Methods
     --------------
     get_assertion
-    set_assertion
     """
     def __init__(self, event1=[], event2=[], event3=[]):
         """
@@ -184,9 +183,9 @@ class IndependenceAssertion(object):
         if event3 and not all([event1, event2]):
             raise exceptions.RequiredError('event1' if not event1 else 'event2')
 
-        self.event1 = set(self._return_list_if_str(event1))
-        self.event2 = set(self._return_list_if_str(event2))
-        self.event3 = set(self._return_list_if_str(event3))
+        self.event1 = frozenset(self._return_list_if_str(event1))
+        self.event2 = frozenset(self._return_list_if_str(event2))
+        self.event3 = frozenset(self._return_list_if_str(event3))
 
     def __str__(self):
         if self.event3:
@@ -202,18 +201,14 @@ class IndependenceAssertion(object):
     def __eq__(self, other):
         if not isinstance(other, IndependenceAssertion):
             return False
-        self_assertions = self.get_assertion()
-        other_assertions = other.get_assertion()
-        if len(self_assertions) != len(other_assertions):
-            return False
-        self_assertions = set(six.moves.map(frozenset, self_assertions))
-        other_assertions = set(six.moves.map(frozenset, other_assertions))
-        if self_assertions == other_assertions:
-            return True
-        return False
+        return ((self.event1, self.event2, self.event3) == other.get_assertion() or
+                (self.event2, self.event1, self.event3) == other.get_assertion())
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((frozenset((self.event1, self.event2)), self.event3))
 
     @staticmethod
     def _return_list_if_str(event):
@@ -237,39 +232,6 @@ class IndependenceAssertion(object):
         >>> asser.get_assertion()
         """
         return self.event1, self.event2, self.event3
-
-    def set_assertion(self, event1, event2, event3=[]):
-        """
-        Sets the attributes event1, event2 and event3.
-
-        .. math:: U \perp X, Y | Z
-
-        event1 = {U}
-
-        event2 = {X, Y}
-
-        event3 = {Z}
-
-        Parameters
-        ----------
-        event1: String or List
-                Random Variable which is independent.
-
-        event2: String or list of strings.
-                Random Variables from which event1 is independent
-
-        event3: String or list of strings.
-                Random Variables given which event1 is independent of event2.
-
-        Example
-        -------
-        For a random variable U independent of X and Y given Z, the function should be called as
-        >>> from pgmpy.independencies import IndependenceAssertion
-        >>> asser = IndependenceAssertion()
-        >>> asser.set_assertion('U', ['X', 'Y'], 'Z')
-        >>> asser.set_assertion('U', ['X', 'Y'], ['Z', 'A'])
-        """
-        self.__init__(event1, event2, event3)
 
     def latex_string(self):
         return ('%s \perp %s \mid %s' % (', '.join(self.event1), ', '.join(self.event2),

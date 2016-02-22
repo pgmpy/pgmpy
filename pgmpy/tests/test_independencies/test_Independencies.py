@@ -13,25 +13,9 @@ class TestIndependenceAssertion(unittest.TestCase):
         self.assertListEqual(self.assertion._return_list_if_str('U'), ['U'])
         self.assertListEqual(self.assertion._return_list_if_str(['U', 'V']), ['U', 'V'])
 
-    def test_set_assertion(self):
-        self.assertion.set_assertion('U', 'V', 'Z')
-        self.assertSetEqual(self.assertion.event1, {'U'})
-        self.assertSetEqual(self.assertion.event2, {'V'})
-        self.assertSetEqual(self.assertion.event3, {'Z'})
-        self.assertion.set_assertion(['U', 'V'], ['Y', 'Z'], ['A', 'B'])
-        self.assertSetEqual(self.assertion.event1, {'U', 'V'})
-        self.assertSetEqual(self.assertion.event2, {'Y', 'Z'})
-        self.assertSetEqual(self.assertion.event3, {'A', 'B'})
-        self.assertion.set_assertion(['U', 'V'], ['Y', 'Z'])
-        self.assertSetEqual(self.assertion.event1, {'U', 'V'})
-        self.assertSetEqual(self.assertion.event2, {'Y', 'Z'})
-        self.assertFalse(self.assertion.event3, {})
-
     def test_get_assertion(self):
-        self.assertion.set_assertion('U', 'V', 'Z')
-        self.assertTupleEqual(self.assertion.get_assertion(), ({'U'}, {'V'}, {'Z'}))
-        self.assertion.set_assertion('U', 'V')
-        self.assertTupleEqual(self.assertion.get_assertion(), ({'U'}, {'V'}, set()))
+        self.assertTupleEqual(IndependenceAssertion('U', 'V', 'Z').get_assertion(), ({'U'}, {'V'}, {'Z'}))
+        self.assertTupleEqual(IndependenceAssertion('U', 'V').get_assertion(), ({'U'}, {'V'}, set()))
 
     def test_init(self):
         self.assertion1 = IndependenceAssertion('U', 'V', 'Z')
