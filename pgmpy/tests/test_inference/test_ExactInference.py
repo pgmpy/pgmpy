@@ -20,7 +20,7 @@ class TestVariableElimination(unittest.TestCase):
         cpd_j = TabularCPD('J', 2,
                            [[0.9, 0.6, 0.7, 0.1],
                             [0.1, 0.4, 0.3, 0.9]],
-                           ['R', 'A'], [2, 2])
+                           ['A', 'R'], [2, 2])
         cpd_q = TabularCPD('Q', 2,
                            [[0.9, 0.2],
                             [0.1, 0.8]],
@@ -28,7 +28,7 @@ class TestVariableElimination(unittest.TestCase):
         cpd_l = TabularCPD('L', 2,
                            [[0.9, 0.45, 0.8, 0.1],
                             [0.1, 0.55, 0.2, 0.9]],
-                           ['G', 'J'], [2, 2])
+                           ['J', 'G'], [2, 2])
         cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
 
@@ -147,7 +147,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         factor_j = TabularCPD('J', 2,
                            [[0.9, 0.6, 0.7, 0.1],
                             [0.1, 0.4, 0.3, 0.9]],
-                           ['R', 'A'], [2, 2]).to_factor()
+                           ['A', 'R'], [2, 2]).to_factor()
         factor_q = TabularCPD('Q', 2,
                            [[0.9, 0.2],
                             [0.1, 0.8]],
@@ -155,7 +155,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         factor_l = TabularCPD('L', 2,
                            [[0.9, 0.45, 0.8, 0.1],
                             [0.1, 0.55, 0.2, 0.9]],
-                           ['G', 'J'], [2, 2]).to_factor()
+                           ['J', 'G'], [2, 2]).to_factor()
         factor_g = TabularCPD('G', 2, [[0.6], [0.4]]).to_factor()
 
         self.markov_model.add_factors(factor_a, factor_r, factor_j, factor_q, factor_l, factor_g)
@@ -278,7 +278,7 @@ class TestBeliefPropagation(unittest.TestCase):
         cpd_j = TabularCPD('J', 2,
                            [[0.9, 0.6, 0.7, 0.1],
                             [0.1, 0.4, 0.3, 0.9]],
-                           ['R', 'A'], [2, 2])
+                           ['A', 'R'], [2, 2])
         cpd_q = TabularCPD('Q', 2,
                            [[0.9, 0.2],
                             [0.1, 0.8]],
@@ -286,7 +286,7 @@ class TestBeliefPropagation(unittest.TestCase):
         cpd_l = TabularCPD('L', 2,
                            [[0.9, 0.45, 0.8, 0.1],
                             [0.1, 0.55, 0.2, 0.9]],
-                           ['G', 'J'], [2, 2])
+                           ['J', 'G'], [2, 2])
         cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
 
