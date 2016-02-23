@@ -111,8 +111,8 @@ class TabularCPD(Factor):
                 elif isinstance(evidence_card, (int, float)):
                     evidence_card = [evidence_card]
                 else:
-                    raise TypeError("Evidence cardinality must be list, "
-                                    "tuple, numpy ndarray or simply a number.")
+                    raise TypeError("Must be a list, tuple or array of variable names ",
+                                    "and variable name can be any hashable python object")
             cardinality.extend(evidence_card)
 
         if evidence is not None:
