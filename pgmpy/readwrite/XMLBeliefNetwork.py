@@ -393,9 +393,10 @@ class XBNWriter(object):
             dist = etree.SubElement(distributions, 'DIST', attrib={'TYPE': self.model.node[var]['TYPE']})
             etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
             dpis = etree.SubElement(dist, 'DPIS')
-            if len(cpd.evidence):
+            evidence = cpd.variables[:0:-1]
+            if evidence:
                 condset = etree.SubElement(dist, 'CONDSET')
-                for condelem in sorted(cpd.evidence):
+                for condelem in sorted(evidence):
                     etree.SubElement(condset, 'CONDELEM', attrib={'NAME': condelem})
                 # TODO: Get Index value.
                 for val in range(0, len(cpd_values), 2):

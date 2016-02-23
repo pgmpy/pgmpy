@@ -269,10 +269,11 @@ def get_probmodel_data(model):
     for cpd in cpds:
         potential_dict = {}
         potential_dict['Variables'] = {}
-        if cpd.evidence is None:
-            potential_dict['Variables'][cpd.variable] = []
+        evidence = cpd.variables[:0:-1]
+        if evidence:
+            potential_dict['Variables'][cpd.variable] = evidence
         else:
-            potential_dict['Variables'][cpd.variable] = cpd.evidence
+            potential_dict['Variables'][cpd.variable] = []
         potential_dict['type'] = "Table"
         potential_dict['role'] = "conditionalProbability"
         potential_dict['Values'] = " ".join([str(val) for val in cpd.values.ravel().astype(float)]) + " "

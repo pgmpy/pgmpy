@@ -96,7 +96,7 @@ class TestUAIWriter(unittest.TestCase):
                   'hear-bark': ['true', 'false'],
                   'light-on': ['true', 'false']}
         parents = {'bowel-problem': [],
-                   'dog-out': ['family-out', 'bowel-problem'],
+                   'dog-out': ['bowel-problem', 'family-out'],
                    'family-out': [],
                    'hear-bark': ['dog-out'],
                    'light-on': ['family-out']}
