@@ -325,11 +325,11 @@ class TestTabularCPDInit(unittest.TestCase):
                          evidence=['intel', 'diff'], evidence_card=[3, 2])
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variable_card, 3)
-        np_test.assert_array_equal(cpd.cardinality, np.array([3, 2, 3]))
-        self.assertListEqual(list(cpd.variables), ['grade', 'diff', 'intel'])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
+        self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
         np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                                                          0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 2, 3))
+                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 3, 2))
 
         cpd = TabularCPD('grade', 3, [[0.1, 0.1],
                                       [0.1, 0.1],
@@ -392,8 +392,8 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_marginalize_2(self):
         self.cpd.marginalize(['grade'])
         self.assertEqual(self.cpd.variable, 'grade')
-        self.assertListEqual(list(self.cpd.variables), ['diff', 'intel'])
-        np_test.assert_array_equal(self.cpd.cardinality, np.array([2, 3]))
+        self.assertListEqual(list(self.cpd.variables), ['intel', 'diff'])
+        np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 2]))
         np_test.assert_array_equal(self.cpd.values.ravel(), np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
     def test_normalize(self):
