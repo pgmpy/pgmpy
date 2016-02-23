@@ -38,34 +38,39 @@ class TabularCPD(Factor):
     [0.1,0.1,0.1,0.1,0.1,0.1],
     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
-    >>> from pgmpy.factors import TabularCPD
-    >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
-    ...                               [0.1, 0.1],
-    ...                               [0.8, 0.8]],
-    ...                  evidence='evi1', evidence_card=2)
-    >>> cpd
-    <TabularCPD representing P(grade:3 | evi1:2) at 0x7f847a4f2898>
+    >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
+                                    [0.1,0.1,0.1,0.1,0.1,0.1],
+                                    [0.8,0.8,0.8,0.8,0.8,0.8]],
+                                    evidence=['diff', 'intel'], evidence_card=[2,3])
     >>> print(cpd)
-    +---------+-------+-------+
-    | ev1     | ev1_0 | ev1_1 |
-    +---------+-------+-------+
-    | grade_0 | 0.1   | 0.1   |
-    +---------+-------+-------+
-    | grade_1 | 0.1   | 0.1   |
-    +---------+-------+-------+
-    | grade_2 | 0.8   | 0.8   |
-    +---------+-------+-------+
+    +---------+---------+---------+---------+---------+---------+---------+
+    | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
+    +---------+---------+---------+---------+---------+---------+---------+
+    | intel   | intel_0 | intel_1 | intel_2 | intel_0 | intel_1 | intel_2 |
+    +---------+---------+---------+---------+---------+---------+---------+
+    | grade_0 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
+    +---------+---------+---------+---------+---------+---------+---------+
+    | grade_1 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
+    +---------+---------+---------+---------+---------+---------+---------+
+    | grade_2 | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     |
+    +---------+---------+---------+---------+---------+---------+---------+
     >>> cpd.values
-    array([[ 0.1,  0.1],
-           [ 0.1,  0.1],
-           [ 0.8,  0.8]])
+    array([[[ 0.1,  0.1,  0.1],
+            [ 0.1,  0.1,  0.1]],
+
+           [[ 0.1,  0.1,  0.1],
+            [ 0.1,  0.1,  0.1]],
+
+           [[ 0.8,  0.8,  0.8],
+            [ 0.8,  0.8,  0.8]]])
     >>> cpd.variables
-    ['grade', 'evil']
+    ['grade', 'diff', 'intel']
+    >>> cpd.cardinality
+    array([3, 2, 3])
     >>> cpd.variable
     'grade'
-
-    array([ 0.1,  0.1,  0.1,  0.1,  0.8,  0.8])
-    OrderedDict([('grade', ['grade_0', 'grade_1', 'grade_2']), ('evi1', ['evi1_0', 'evi1_1'])])
+    >>> cpd.variable_card
+    3
 
     Parameters
     ----------
@@ -96,8 +101,6 @@ class TabularCPD(Factor):
 
         self.variable = variable
         self.variable_card = None
-        self.evidence = None
-        self.evidence_card = None
 
         variables = [variable]
 
@@ -107,28 +110,26 @@ class TabularCPD(Factor):
 
         cardinality = [variable_card]
         if evidence_card is not None:
-            if not isinstance(evidence_card, (list, set, tuple)):
+            if not isinstance(evidence_card, (list, tuple)):
                 if isinstance(evidence_card, np.ndarray):
                     evidence_card = evidence_card.tolist()
                 elif isinstance(evidence_card, (int, float)):
                     evidence_card = [evidence_card]
                 else:
-                    raise TypeError("Evidence cardinality must be list, set, "
-                                    "tuple, numpy ndarray or simply a number.")
-            self.evidence_card = evidence_card
-            cardinality.extend(evidence_card[::-1])
+                    raise TypeError("Must be a list, tuple or array of variable names ",
+                                    "and variable name can be any hashable python object")
+            cardinality.extend(evidence_card)
 
         if evidence is not None:
-            if not isinstance(evidence, (list, set, tuple)):
+            if not isinstance(evidence, (list, tuple)):
                 if isinstance(evidence, np.ndarray):
                     evidence = evidence.tolist()
                 elif isinstance(evidence, six.string_types):
                     evidence = [evidence]
                 else:
-                    raise TypeError("Evidence must be list, set, tuple or array"
+                    raise TypeError("Evidence must be list, tuple or array"
                                     " of strings.")
-            self.evidence = evidence
-            variables.extend(evidence[::-1])
+            variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
@@ -142,9 +143,11 @@ class TabularCPD(Factor):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
                             var=self.variable, card=self.variable_card)
 
-        if self.evidence:
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
+        if evidence:
             evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
-                                              for var, card in zip(self.evidence, self.evidence_card)])
+                                              for var, card in zip(evidence, evidence_card)])
         else:
             evidence_str = ''
 
@@ -181,10 +184,13 @@ class TabularCPD(Factor):
     def _make_table_str(self, tablefmt="fancy_grid"):
         headers_list = []
         # build column headers
-        if self.evidence is not None:
-            col_indexes = np.array(list(product(*[range(i) for i in self.evidence_card])))
-            for i in range(len(self.evidence_card)):
-                column_header = [self.evidence[i]] + ['{s}_{d}'.format(s=self.evidence[i], d=d) for d in col_indexes.T[i]]
+
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
+        if evidence:
+            col_indexes = np.array(list(product(*[range(i) for i in evidence_card])))
+            for i in range(len(evidence_card)):
+                column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
                 headers_list.append(column_header)
 
         # Build row headers
@@ -207,19 +213,19 @@ class TabularCPD(Factor):
             """<table><caption>TabularCPD for <b>%s</b></caption>""" % str(self.variable))
         string_list.append(html_string_header)
 
-        if self.evidence:
-            cpd_evidence_card = [card for card in self.evidence_card]
-            cpd_evidence_card = cpd_evidence_card[::-1]
-            cpd_evidence_card.insert(0, 1)
-            cum_card = np.cumprod(cpd_evidence_card)
-            max_card = cum_card[-1]
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
 
-            evidence = [var for var in self.evidence]
-            evidence = evidence[::-1]
+        if evidence:
+            evidence_card.reverse()
+            evidence_card.insert(0, 1)
+            cum_card = np.cumprod(evidence_card)
+            max_card = cum_card[-1]
+            evidence.reverse()
 
             for i in range(len(evidence)):
                 var = str(evidence[i])
-                card = cpd_evidence_card[i + 1]
+                card = evidence_card[i + 1]
                 num_repeat = cum_card[i]
                 col_span = max_card / (num_repeat * card)
 
@@ -270,9 +276,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
         cpd = tabular_cpd.get_cpd()
         tabular_cpd.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
@@ -305,9 +313,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
 
         super(TabularCPD, tabular_cpd).marginalize(variables)
         tabular_cpd.normalize()
@@ -341,9 +351,11 @@ class TabularCPD(Factor):
         if inplace:
             tabular_cpd = self
         else:
+            evidence = self.variables[1:]
+            evidence_card = self.cardinality[1:]
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), self.evidence,
-                                     self.evidence_card)
+                                     self.get_cpd(), evidence,
+                                     evidence_card)
 
         super(TabularCPD, tabular_cpd).reduce(values)
         tabular_cpd.normalize()
