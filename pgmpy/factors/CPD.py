@@ -113,7 +113,7 @@ class TabularCPD(Factor):
                 else:
                     raise TypeError("Evidence cardinality must be list, "
                                     "tuple, numpy ndarray or simply a number.")
-            cardinality.extend(evidence_card[::-1])
+            cardinality.extend(evidence_card)
 
         if evidence is not None:
             if not isinstance(evidence, (list, tuple)):
@@ -124,7 +124,7 @@ class TabularCPD(Factor):
                 else:
                     raise TypeError("Evidence must be list, tuple or array"
                                     " of strings.")
-            variables.extend(evidence[::-1])
+            variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
                 raise exceptions.CardinalityError("Cardinality of all "
                                                   "evidences not specified")
@@ -138,8 +138,8 @@ class TabularCPD(Factor):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
                             var=self.variable, card=self.variable_card)
 
-        evidence = self.variables[:0:-1]
-        evidence_card = self.cardinality[:0:-1]
+        evidence = self.variables[1:]
+        evidence_card = self.cardinality[1:]
         if evidence:
             evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
                                               for var, card in zip(evidence, evidence_card)])
@@ -212,12 +212,11 @@ class TabularCPD(Factor):
         evidence_card = self.cardinality[1:]
 
         if evidence:
-            #evidence_card.reverse()
+            evidence_card.reverse()
             evidence_card.insert(0, 1)
             cum_card = np.cumprod(evidence_card)
             max_card = cum_card[-1]
-
-            #evidence.reverse()
+            evidence.reverse()
 
             for i in range(len(evidence)):
                 var = str(evidence[i])
