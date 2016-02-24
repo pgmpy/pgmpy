@@ -311,11 +311,13 @@ class TabularCPD(Factor):
             tabular_cpd = TabularCPD(self.variable, self.variable_card,
                                      self.get_cpd(), evidence,
                                      evidence_card)
-        cpd = tabular_cpd.get_cpd()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).flatten('C')
 
+        cpd = tabular_cpd.get_cpd()
         if not inplace:
+            tabular_cpd.values = (cpd / cpd.sum(axis=0))
             return tabular_cpd
+        else:
+            tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tabular_cpd.cardinality)
 
     def marginalize(self, variables, inplace=True):
         """
