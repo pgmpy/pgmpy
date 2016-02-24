@@ -401,12 +401,36 @@ class TestTabularCPDMethods(unittest.TestCase):
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 2]))
         np_test.assert_array_equal(self.cpd.values.ravel(), np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
+    def test_marginalize_3(self):
+        copy_cpd = self.cpd.copy()
+        copy_cpd.marginalize(['intel', 'diff'])
+        self.cpd.marginalize(['intel'])
+        self.cpd.marginalize(['diff'])
+        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
+
     def test_normalize(self):
         cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
                                        ['intel', 'diff'], [2, 2])
         cpd_un_normalized.normalize()
-        np_test.assert_array_almost_equal(cpd_un_normalized.values.ravel(), np.array([0.63636364, 0.33333333, 0.6, 0.2,
-                                                                                      0.36363636, 0.66666667, 0.4, 0.8]))
+        np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([[[0.63636364, 0.33333333],
+                                                                               [0.6, 0.2]],
+                                                                                [[0.36363636, 0.66666667],
+                                                                                [0.4, 0.8]]]))
+
+    def test_normalize_not_in_place(self):
+        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
+                                       ['intel', 'diff'], [2, 2])
+        np_test.assert_array_almost_equal(cpd_un_normalized.normalize(inplace=False).values,
+                                          np.array([[0.63636364, 0.33333333, 0.6, 0.2],
+                                                    [0.36363636, 0.66666667, 0.4, 0.8]]))
+
+    def test_normalize_original_safe(self):
+        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
+                                       ['intel', 'diff'], [2, 2])
+        cpd_un_normalized.normalize(inplace=False)
+        np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([[[0.7, 0.2], [0.6, 0.2]],
+                                                                              [[0.4, 0.4], [0.4, 0.8]]]))
+
 
     def test__repr__(self):
         grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -454,6 +478,13 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_reduce_4(self):
         self.cpd.reduce([('grade', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[1, 1, 1, 1, 1, 1]]))
+
+    def test_reduce_5(self):
+        copy_cpd = self.cpd.copy()
+        copy_cpd.reduce([('intel',2), ('diff', 1)])
+        self.cpd.reduce([('intel',2)])
+        self.cpd.reduce([('diff', 1)])
+        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
     def test_get_cpd(self):
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
