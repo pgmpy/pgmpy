@@ -3,6 +3,7 @@
 from __future__ import division
 
 from itertools import product
+from warnings import warn
 
 import numpy as np
 
@@ -485,7 +486,7 @@ class TabularCPD(Factor):
                     super(TabularCPD, self).__init__(variables, cardinality, new_values.flatten('C'))
                     return self.get_cpd()
                 else:
-                    return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order[::-1]]))
+                    return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order]))
             else:
                 warn("Same ordering provided as current")
                 return self.get_cpd()

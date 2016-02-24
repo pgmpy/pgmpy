@@ -1,5 +1,6 @@
 import unittest
 import itertools
+import warnings
 from collections import OrderedDict, namedtuple
 
 import numpy as np
@@ -464,6 +465,14 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.cpd2.reorder_parents(['C','A','B'], inplace=False)
         np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
                                                                   [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]]))
+    def test_reorder_parents_warning(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            self.cpd2.reorder_parents(['A','B','C'], inplace=False)
+            assert("Same ordering provided as current" in str(w[-1].message))
+            np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9,0.3,0.9,0.3,0.8,0.8,0.4,0.4],
+                                                                  [0.1,0.7,0.1,0.7,0.2,0.2,0.6,0.6]]))
+
 
     def tearDown(self):
         del self.cpd
