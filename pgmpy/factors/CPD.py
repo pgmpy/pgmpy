@@ -19,7 +19,7 @@ class TabularCPD(Factor):
 
     Example
     -------
-    For a distribution of P(grade|intel, diff)
+    For a distribution of P(grade|diff, intel)
 
     +-------+--------------------+------------------+
     |diff   |      easy          |    hard          |
@@ -379,7 +379,116 @@ class TabularCPD(Factor):
         <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
         return Factor(self.variables, self.cardinality, self.values)
+    
+    def reorder_parents(self, new_order, inplace=True):
+        '''
+        Returns a new cpd table according to provided order
 
+        Parameters
+        ----------
+        new_order: list
+            list of new ordering of variables
+        inplace: boolean
+            If inplace == True it will modify the CPD itself
+            otherwise new value will be returned without affecting old values
+
+        Examples
+        --------
+        Consider a CPD P(grade| diff, intel)
+        >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
+                                        [0.1,0.1,0.1,0.1,0.1,0.1],
+                                        [0.8,0.8,0.8,0.8,0.8,0.8]],
+                                    evidence=['diff', 'intel'], evidence_card=[2,3])
+        >>> print(cpd)
+        +---------+---------+---------+---------+---------+---------+---------+
+        | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | intel   | intel_0 | intel_1 | intel_2 | intel_0 | intel_1 | intel_2 |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_0 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_1 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_2 | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     |
+        +---------+---------+---------+---------+---------+---------+---------+
+        >>> cpd.values
+        array([[[ 0.1,  0.1,  0.1],
+                [ 0.1,  0.1,  0.1]],
+
+               [[ 0.1,  0.1,  0.1],
+                [ 0.1,  0.1,  0.1]],
+
+               [[ 0.8,  0.8,  0.8],
+                [ 0.8,  0.8,  0.8]]])
+        >>> cpd.variables
+        ['grade', 'diff', 'intel']
+        >>> cpd.cardinality
+        array([3, 2, 3])
+        >>> cpd.variable
+        'grade'
+        >>> cpd.variable_card
+        3
+
+        >>> cpd.reorder_parents(['intel', 'diff'])
+        array([[ 0.1,  0.1,  0.2,  0.2,  0.1,  0.1],
+               [ 0.1,  0.1,  0.1,  0.1,  0.1,  0.1],
+               [ 0.8,  0.8,  0.7,  0.7,  0.8,  0.8]])
+        >>> print(cpd)
+        +---------+---------+---------+---------+---------+---------+---------+
+        | intel   | intel_0 | intel_0 | intel_1 | intel_1 | intel_2 | intel_2 |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | diff    | diff_0  | diff_1  | diff_0  | diff_1  | diff_0  | diff_1  |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_0 | 0.1     | 0.1     | 0.2     | 0.2     | 0.1     | 0.1     |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_1 | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     | 0.1     |
+        +---------+---------+---------+---------+---------+---------+---------+
+        | grade_2 | 0.8     | 0.8     | 0.7     | 0.7     | 0.8     | 0.8     |
+        +---------+---------+---------+---------+---------+---------+---------+
+
+        >>> cpd.values
+        array([[[ 0.1,  0.1],
+                [ 0.2,  0.2],
+                [ 0.1,  0.1]],
+
+               [[ 0.1,  0.1],
+                [ 0.1,  0.1],
+                [ 0.1,  0.1]],
+
+               [[ 0.8,  0.8],
+                [ 0.7,  0.7],
+                [ 0.8,  0.8]]])
+
+        >>> cpd.variables
+        ['grade', 'intel', 'diff']
+        >>> cpd.cardinality
+        array([3, 3, 2])
+        >>> cpd.variable
+        'grade'
+        >>> cpd.variable_card
+        3
+        '''
+        if  len(self.variables) <= 1 or (set(new_order) - set(self.variables)) or (set(self.variables[1:]) - set(new_order)):
+            raise ValueError("New order either has missing or extra arguments")
+        else:
+            if new_order != self.variables[1:]:
+                evidence = self.variables[1:]
+                evidence_card = self.cardinality[1:]
+                card_map = dict(zip(evidence, evidence_card))
+                old_pos_map = dict(zip(evidence, range(len(evidence))))
+                trans_ord = [0]+[(old_pos_map[letter]+1) for letter in new_order]
+                new_values = np.transpose(self.values, trans_ord)
+
+                if inplace:
+                    variables = [self.variables[0]] + new_order
+                    cardinality = [self.variable_card] + [card_map[var] for var in new_order]
+                    super(TabularCPD, self).__init__(variables, cardinality, new_values.flatten('C'))
+                    return self.get_cpd()
+                else:
+                    return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order[::-1]]))
+            else:
+                warn("Same ordering provided as current")
+                return self.get_cpd()
 
 # Commenting out because not used anywhere for now and not implemented in a very good way.
 # class TreeCPD(nx.DiGraph):
