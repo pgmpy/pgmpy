@@ -2,12 +2,13 @@ import itertools
 from operator import mul
 
 import numpy as np
+import networkx
 
 from pgmpy.factors import Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.extern import six
-
+from pgmpy.base import UndirectedGraph, DirectedGraph
 
 class JointProbabilityDistribution(Factor):
     """
@@ -384,5 +385,95 @@ class JointProbabilityDistribution(Factor):
         """
         return Factor(self.variables, self.cardinality, self.values)
 
+    def _pmap_skeleton(self):
+        """
+        A method to build P-map skeleton for a Joint Probability Distribution
+
+        Returns
+        -------
+        set: A set of edges in the skeleton formed
+        dict: A dictionary of witnesses
+
+        Reference
+        ----------
+        Daphne Koller, Nir Friedman - Probabilistic Graphical Models: Principle and Techniques
+            (Algorithm 3.3: Recovering the undirected skeleton for a distribution P that has a P-map )
+        """
+        d = len(self.variables) - 2     # Bound Witness set (cannot be larger than this)
+        complete_graph = []
+        X = set(self.variables)         # A set of random variables
+        for node_pair in itertools.combinations(X, 2):
+            complete_graph.append(tuple(sorted(node_pair)))
+
+        complete_graph = set(complete_graph)
+        Uij = {}
+        for Xi,Xj in itertools.combinations(X, 2):
+            Uij[(Xi,Xj)] = set()
+            Uij[(Xj,Xi)] = set()
+            for bound in range(d+1):
+                # U is subset of the witness set
+                for U in itertools.combinations(X -{Xi,Xj}, bound):
+                    if self.check_independence([Xi], [Xj], event3=U, condition_random_variable=True):
+                        # Remove the pair Xi,Xj from the graph
+                        complete_graph -= {tuple(sorted((Xi,Xj)))}
+                        Uij[(Xi,Xj)] = set(U)
+                        Uij[(Xj,Xi)] = set(U)
+                        break
+                break
+        return complete_graph,Uij
+
+    def _mark_immoralities(self):
+        """
+        Marks immoralities in the construction of P-map
+
+        Returns
+        -------
+        dict: A dictonary which contains list of directed edges and un-directed edges
+
+        Reference
+        ----------
+        Daphne Koller, Nir Friedman - Probabilistic Graphical Models: Principle and Techniques
+            (Algorithm 3.4: Marking immoralities in theconstruction of P-map )
+        """
+        S,Uij = self._pmap_skeleton()
+        skeleton = UndirectedGraph()
+        skeleton.add_edges_from(S)
+        K = {}
+        K['un-directed'] = skeleton.edges()
+        K['directed'] = []
+        for node in skeleton.nodes():
+            for parents in itertools.combinations(skeleton.neighbors_iter(node), 2):
+                if not skeleton.has_edge(parents[0],parents[1]):
+                    if node not in Uij[parents]:
+                        K['directed'].append((parents[0], node))
+                        K['directed'].append((parents[1], node))
+        return K
+
     def pmap(self):
-        pass
+        """
+        A method for finding the class PDAG characterizing the P-map of the distribution
+
+        Returns
+        --------
+        A directed graph
+
+        Examples
+        ---------
+        >>> from pgmpy.factors import JointProbabilityDistribution as JPD
+        >>> prob = JPD(['I', 'D', 'G'], [2,2,3],
+                       [0.126,0.168,0.126,0.009,0.045,0.126,0.252,0.0224,0.0056,0.06,0.036,0.024])
+        >>> G = prob.pmap()
+        >>> G.edges()
+        [('I', 'G'), ('D', 'G')]
+        """
+        K = self._mark_immoralities()
+        DAG = DirectedGraph()
+        DAG.add_edges_from(K['directed'])
+        UG = UndirectedGraph()
+        UG.add_edges_from(K['un-directed'])
+        for X,Y in UG.edges():
+            if DAG.has_edge(X,Y) or DAG.has_edge(Y,X):
+                continue
+            X_neighbors = UG.neighbors(X)
+            Y_neighbors = UG.neighbors(Y)
+
