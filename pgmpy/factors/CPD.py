@@ -253,6 +253,35 @@ class TabularCPD(Factor):
 
         return ''.join(string_list)
 
+    def copy(self):
+         """
+         Returns a copy of the TabularCPD object.
+
+         Examples
+         --------
+         >>> from pgmpy.factors import TabularCPD
+         >>> cpd = TabularCPD('grade', 2,
+         ...                  [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
+         ...                  ['intel', 'diff'], [2, 2])
+         >>> copy = cpd.copy()
+         >>> copy.variable
+         'grade'
+         >>> copy.variable_card
+         2
+         >>> copy.evidence
+         ['intel', 'diff']
+         >>> copy.values
+        array([[[ 0.7,  0.6],
+                [ 0.6,  0.2]],
+
+               [[ 0.3,  0.4],
+                [ 0.4,  0.8]]])
+         """
+         evidence = self.variables[1:] if len(self.variables) > 1 else None
+         evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
+         return TabularCPD(self.variable, self.variable_card, self.get_cpd(),
+                           evidence, evidence_card)
+
     def normalize(self, inplace=True):
         """
         Normalizes the cpd table.
