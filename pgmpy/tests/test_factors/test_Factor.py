@@ -422,6 +422,17 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 | diff:2) at {address}>'
                          .format(address=hex(id(diff_cpd))))
 
+    def test_copy(self):
+        copy_cpd = self.cpd.copy()
+        np_test.assert_array_equal(self.cpd.get_cpd(), copy_cpd.get_cpd())
+
+    def test_copy_original_safe(self):
+        copy_cpd = self.cpd.copy()
+        copy_cpd.reorder_parents(['diff', 'intel'])
+        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+
     def test_reduce_1(self):
         self.cpd.reduce([('diff', 0)])
         np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
