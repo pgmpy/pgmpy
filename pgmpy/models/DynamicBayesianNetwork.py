@@ -543,3 +543,42 @@ class DynamicBayesianNetwork(DirectedGraph):
                 self.get_parents(node), 2))
 
         return moral_graph
+
+    def copy(self):
+        """
+        Returns the copy of DynamicBayesianNetwork object
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors import TabularCPD
+        >>> dbn = DBN()
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
+        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
+        ...                                      [0.4,0.25,0.8,0.03],
+        ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_cpds(grade_cpd)
+        >>> dbn_copy = dbn.copy()
+        >>> dbn.edges()
+        [(('I', 1), ('G', 1)),
+         (('I', 0), ('G', 0)),
+         (('I', 0), ('I', 1)),
+         (('D', 1), ('G', 1)),
+         (('D', 0), ('G', 0)),
+         (('D', 0), ('D', 1))]
+        >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
+        ...                                    [0.4, 0.7]],
+        ...                      evidence=[('D', 0)],
+        ...                      evidence_card=2)
+        >>> dbn_copy.add_cpds(diff_cpd)
+        >>> dbn_copy.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7ff7f27b0cf8>,
+         <TabularCPD representing P(('D', 1):2 | ('D', 0):2) at 0x7ff810b9c2e8>]
+        """
+        dbn = DynamicBayesianNetwork()
+        dbn.add_nodes_from(self.nodes())
+        dbn.add_edges_from(self.edges())
+        cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
+        dbn.add_cpds(*cpd_copy)
+        return dbn
+
