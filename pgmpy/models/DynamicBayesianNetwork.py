@@ -161,7 +161,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         [(('D', 1), ('I', 1)), (('D', 0), ('I', 0))]
         """
         try:
-            if len(start) != 2 or len(end) !=2:
+            if len(start) != 2 or len(end) != 2:
                 raise ValueError('Nodes must be of type (node, time_slice).')
             elif not isinstance(start[1], int) or not isinstance(end[1], int):
                 raise ValueError('Nodes must be of type (node, time_slice).')
@@ -183,9 +183,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         elif start in super(DynamicBayesianNetwork, self).nodes() and end \
                 in super(DynamicBayesianNetwork, self).nodes() and \
                 nx.has_path(self, end, start):
-            raise ValueError(
-                 'Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
-                     start=str(start), end=str(end)))
+            raise ValueError('Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
+                start=str(start), end=str(end)))
 
         super(DynamicBayesianNetwork, self).add_edge(start, end, **kwargs)
 
@@ -364,7 +363,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 raise ValueError('cpd should be an instance of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(
-                                super(DynamicBayesianNetwork, self).nodes())):
+                    super(DynamicBayesianNetwork, self).nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
         self.cpds.extend(cpds)

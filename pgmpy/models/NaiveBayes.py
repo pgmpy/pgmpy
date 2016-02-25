@@ -1,17 +1,6 @@
-import itertools
-from collections import defaultdict
-import logging
-
-import networkx as nx
-import numpy as np
-import pandas as pd
-
-from pgmpy.base import DirectedGraph
-from pgmpy.factors import TabularCPD
 from pgmpy.independencies import Independencies
-from pgmpy.independencies import IndependenceAssertion
-from pgmpy.extern.six.moves import range
 from pgmpy.models import BayesianModel
+
 
 class NaiveBayes(BayesianModel):
     """
@@ -77,7 +66,7 @@ class NaiveBayes(BayesianModel):
         self.parent_node = None
         self.children_nodes = set()
         super(NaiveBayes, self).__init__(ebunch)
-    
+
     def add_edge(self, u, v, *kwargs):
         """
         Add an edge between u and v.
@@ -102,7 +91,7 @@ class NaiveBayes(BayesianModel):
         """
 
         if self.parent_node and u != self.parent_node:
-             raise ValueError("Model can have only one parent node.")
+            raise ValueError("Model can have only one parent node.")
         self.parent_node = u
         self.children_nodes.add(v)
         super(NaiveBayes, self).add_edge(u, v, *kwargs)
@@ -119,7 +108,6 @@ class NaiveBayes(BayesianModel):
         if not obs_nodes_list:
             return set()
         return set(obs_nodes_list) | set(self.parent_node)
-
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -176,7 +164,7 @@ class NaiveBayes(BayesianModel):
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.parent_node:
                 independencies.append(Independencies([variable, list(set(self.children_nodes)
-                                                                 - set(variable)), self.parent_node]))
+                                                                     - set(variable)), self.parent_node]))
             else:
                 independencies.append(None)
         return independencies
@@ -184,7 +172,7 @@ class NaiveBayes(BayesianModel):
     def fit(self, data, parent_node=None, estimator_type=None):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.
-        If a variable from the data is not present in the model, it adds that node into the model. 
+        If a variable from the data is not present in the model, it adds that node into the model.
 
         Parameters
         ----------

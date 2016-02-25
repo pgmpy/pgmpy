@@ -606,7 +606,6 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
 
-
 class TestProbModelXMLWriter(unittest.TestCase):
     def setUp(self):
         self.model_data = {'probnet':

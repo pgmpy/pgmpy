@@ -142,7 +142,7 @@ class TabularCPD(Factor):
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
-                            var=self.variable, card=self.variable_card)
+            var=self.variable, card=self.variable_card)
 
         evidence = self.variables[1:]
         evidence_card = self.cardinality[1:]
@@ -254,33 +254,33 @@ class TabularCPD(Factor):
         return ''.join(string_list)
 
     def copy(self):
-         """
-         Returns a copy of the TabularCPD object.
+        """
+        Returns a copy of the TabularCPD object.
 
-         Examples
-         --------
-         >>> from pgmpy.factors import TabularCPD
-         >>> cpd = TabularCPD('grade', 2,
-         ...                  [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
-         ...                  ['intel', 'diff'], [2, 2])
-         >>> copy = cpd.copy()
-         >>> copy.variable
-         'grade'
-         >>> copy.variable_card
-         2
-         >>> copy.evidence
-         ['intel', 'diff']
-         >>> copy.values
+        Examples
+        --------
+        >>> from pgmpy.factors import TabularCPD
+        >>> cpd = TabularCPD('grade', 2,
+        ...                  [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> copy = cpd.copy()
+        >>> copy.variable
+        'grade'
+        >>> copy.variable_card
+        2
+        >>> copy.evidence
+        ['intel', 'diff']
+        >>> copy.values
         array([[[ 0.7,  0.6],
                 [ 0.6,  0.2]],
 
                [[ 0.3,  0.4],
                 [ 0.4,  0.8]]])
-         """
-         evidence = self.variables[1:] if len(self.variables) > 1 else None
-         evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
-         return TabularCPD(self.variable, self.variable_card, self.get_cpd(),
-                           evidence, evidence_card)
+        """
+        evidence = self.variables[1:] if len(self.variables) > 1 else None
+        evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
+        return TabularCPD(self.variable, self.variable_card, self.get_cpd(),
+                          evidence, evidence_card)
 
     def normalize(self, inplace=True):
         """
@@ -401,9 +401,9 @@ class TabularCPD(Factor):
         <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
         return Factor(self.variables, self.cardinality, self.values)
-    
+
     def reorder_parents(self, new_order, inplace=True):
-        '''
+        """
         Returns a new cpd table according to provided order
 
         Parameters
@@ -489,8 +489,9 @@ class TabularCPD(Factor):
         'grade'
         >>> cpd.variable_card
         3
-        '''
-        if  len(self.variables) <= 1 or (set(new_order) - set(self.variables)) or (set(self.variables[1:]) - set(new_order)):
+        """
+        if (len(self.variables) <= 1 or (set(new_order) - set(self.variables)) or
+                (set(self.variables[1:]) - set(new_order))):
             raise ValueError("New order either has missing or extra arguments")
         else:
             if new_order != self.variables[1:]:
