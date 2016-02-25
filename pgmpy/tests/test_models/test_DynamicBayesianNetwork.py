@@ -1,5 +1,4 @@
 import unittest
-import numpy as np
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
@@ -62,16 +61,20 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
 class TestDynamicBayesianNetworkMethods(unittest.TestCase):
     def setUp(self):
         self.network = DynamicBayesianNetwork()
-        self.grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.8, 0.5],
-                                             [0.4, 0.25, 0.1, 0.3],
-                                             [0.3, 0.7, 0.1, 0.2]], [('D', 0), ('I', 0)], [2, 2])
-        self.d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3], [0.4, 0.7]], [('D', 0)], 2)
-        self.diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
-        self.intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
-        self.i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4], [0.5, 0.6]], [('I', 0)], 2)
-        self.grade_1_cpd = TabularCPD(('G', 1), 3, [[0.3, 0.05, 0.8, 0.5],
-                                             [0.4, 0.25, 0.1, 0.3],
-                                             [0.3, 0.7, 0.1, 0.2]], [('D', 1), ('I', 1)], [2, 2])
+        self.grade_cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                         [0.4, 0.25, 0.1, 0.3],
+                                                         [0.3, 0.7, 0.1, 0.2]],
+                                    evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
+        self.d_i_cpd = TabularCPD(('D', 1), 2, values=[[0.6, 0.3], [0.4, 0.7]],
+                                  evidence=[('D', 0)], evidence_card=2)
+        self.diff_cpd = TabularCPD(('D', 0), 2, values=[[0.6, 0.4]])
+        self.intel_cpd = TabularCPD(('I', 0), 2, values=[[0.7, 0.3]])
+        self.i_i_cpd = TabularCPD(('I', 1), 2, values=[[0.5, 0.4], [0.5, 0.6]],
+                                  evidence=[('I', 0)], evidence_card=[2])
+        self.grade_1_cpd = TabularCPD(('G', 1), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                           [0.4, 0.25, 0.1, 0.3],
+                                                           [0.3, 0.7, 0.1, 0.2]],
+                                      evidence=[('D', 1), ('I', 1)], evidence_card=[2, 2])
 
     def test_get_intra_and_inter_edges(self):
         self.network.add_edges_from([(('a', 0), ('b', 0)), (('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
@@ -84,7 +87,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
     def test_get_interface_nodes(self):
         self.network.add_edges_from(
             [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
-        self.assertListEqual(sorted(self.network.get_interface_nodes()), [('D', 0), ('I',0)])
+        self.assertListEqual(sorted(self.network.get_interface_nodes()), [('D', 0), ('I', 0)])
         self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
         self.assertRaises(ValueError, self.network.get_interface_nodes, '-')
 
@@ -130,7 +133,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(('G', 1)).variable, ('G', 1))
 
     def test_moralize(self):
-        self.network.add_edges_from(([(('D',0), ('G',0)), (('I',0), ('G',0))]))
+        self.network.add_edges_from(([(('D', 0), ('G', 0)), (('I', 0), ('G', 0))]))
         moral_graph = self.network.moralize()
         self.assertListEqual(hf.recursive_sorted(moral_graph.edges()),
                              [[('D', 0), ('G', 0)], [('D', 0), ('I', 0)],
@@ -140,37 +143,41 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
     def tearDown(self):
         del self.network
 
-class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 
+class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
     def setUp(self):
         self.G = DynamicBayesianNetwork()
         self.G.add_edges_from(
-            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), 
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
              (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
         """
         G.edges()
-        [(('I', 0), ('G', 0)), (('I', 0), ('I', 1)), 
-         (('D', 1), ('G', 1)), (('D', 0), ('G', 0)), 
+        [(('I', 0), ('G', 0)), (('I', 0), ('I', 1)),
+         (('D', 1), ('G', 1)), (('D', 0), ('G', 0)),
          (('D', 0), ('D', 1)), (('I', 1), ('G', 1))]
 
         """
     def test_check_model(self):
 
-        grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.7, 0.5],
-                                             [0.4, 0.25, 0.1, 0.3],
-                                             [0.3, 0.7, 0.2, 0.2]], [('D', 0), ('I', 0)], [2, 2])
+        grade_cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.7, 0.5],
+                                                    [0.4, 0.25, 0.1, 0.3],
+                                                    [0.3, 0.7, 0.2, 0.2]],
+                               evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
 
-        d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3], [0.4, 0.7]], [('D', 0)], 2)
+        d_i_cpd = TabularCPD(('D', 1), 2, values=[[0.6, 0.3], [0.4, 0.7]],
+                             evidence=[('D', 0)], evidence_card=[2])
 
-        diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
+        diff_cpd = TabularCPD(('D', 0), 2, values=[[0.6, 0.4]])
 
-        intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
+        intel_cpd = TabularCPD(('I', 0), 2, values=[[0.7, 0.3]])
 
-        i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4], [0.5, 0.6]], [('I', 0)], 2)
+        i_i_cpd = TabularCPD(('I', 1), 2, values=[[0.5, 0.4], [0.5, 0.6]],
+                             evidence=[('I', 0)], evidence_card=[2])
 
-        grade_1_cpd = TabularCPD(('G', 1), 3, [[0.3, 0.05, 0.8, 0.5],
-                                               [0.4, 0.25, 0.1, 0.3],
-                                               [0.3, 0.7, 0.1, 0.2]], [('D', 1), ('I', 1)], [2, 2])
+        grade_1_cpd = TabularCPD(('G', 1), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                      [0.4, 0.25, 0.1, 0.3],
+                                                      [0.3, 0.7, 0.1, 0.2]],
+                                 evidence=[('D', 1), ('I', 1)], evidence_card=[2, 2])
 
         self.G.add_cpds(grade_cpd, d_i_cpd, i_i_cpd)
         self.assertTrue(self.G.check_model())
@@ -181,74 +188,84 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 
     def test_check_model1(self):
 
-        diff_cpd = TabularCPD(('D', 0), 3, [[0.3, 0.05, 0.7, 0.5],
-                                             [0.4, 0.25, 0.1, 0.3],
-                                             [0.3, 0.7, 0.2, 0.2]], [('G', 0), ('I', 0)], [2, 2])
+        diff_cpd = TabularCPD(('D', 0), 3, values=[[0.3, 0.05, 0.7, 0.5],
+                                                   [0.4, 0.25, 0.1, 0.3],
+                                                   [0.3, 0.7, 0.2, 0.2]],
+                              evidence=[('G', 0), ('I', 0)], evidence_card=[2, 2])
         self.G.add_cpds(diff_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(diff_cpd)
 
-        grade_cpd = TabularCPD(('G', 0), 2, [[0.6, 0.3], [0.4, 0.7]], [('D', 0)], 2)
+        grade_cpd = TabularCPD(('G', 0), 2, values=[[0.6, 0.3], [0.4, 0.7]],
+                               evidence=[('D', 0)], evidence_card=[2])
         self.G.add_cpds(grade_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_cpd)
 
-        diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.3], [0.4, 0.7]], [('D', 1)], 2)
+        diff_cpd = TabularCPD(('D', 0), 2, values=[[0.6, 0.3], [0.4, 0.7]],
+                              evidence=[('D', 1)], evidence_card=[2])
         self.G.add_cpds(diff_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(diff_cpd)
 
-        grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.8, 0.5],
-                                               [0.4, 0.25, 0.1, 0.3],
-                                               [0.3, 0.7, 0.1, 0.2]], [('D', 1), ('I', 1)], [2, 2])
+        grade_cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                    [0.4, 0.25, 0.1, 0.3],
+                                                    [0.3, 0.7, 0.1, 0.2]],
+                               evidence=[('D', 1), ('I', 1)], evidence_card=[2, 2])
         self.G.add_cpds(grade_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_cpd)
 
-        grade_cpd = TabularCPD(('G', 1), 3, [[0.3, 0.05, 0.8, 0.5],
-                                               [0.4, 0.25, 0.1, 0.3],
-                                               [0.3, 0.7, 0.1, 0.2]], [('D', 0), ('I', 0)], [2, 2])
+        grade_cpd = TabularCPD(('G', 1), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                    [0.4, 0.25, 0.1, 0.3],
+                                                    [0.3, 0.7, 0.1, 0.2]],
+                               evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
         self.G.add_cpds(grade_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_cpd)
 
-        grade_cpd = TabularCPD(('G', 0), 2, [[0.6, 0.3], [0.4, 0.7]], [('D', 1)], 2)
+        grade_cpd = TabularCPD(('G', 0), 2, values=[[0.6, 0.3], [0.4, 0.7]],
+                               evidence=[('D', 1)], evidence_card=[2])
         self.G.add_cpds(grade_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_cpd)
 
     def test_check_model2(self):
 
-        grade_cpd = TabularCPD(('G', 0), 3, [[0.9, 0.05, 0.7, 0.5],
-                                             [0.4, 0.25, 0.1, 0.3],
-                                             [0.3, 0.7, 0.2, 0.2]], [('D', 0), ('I', 0)], [2, 2])
+        grade_cpd = TabularCPD(('G', 0), 3, values=[[0.9, 0.05, 0.7, 0.5],
+                                                    [0.4, 0.25, 0.1, 0.3],
+                                                    [0.3, 0.7, 0.2, 0.2]],
+                               evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
         self.G.add_cpds(grade_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_cpd)
 
-        d_i_cpd = TabularCPD(('D', 1), 2, [[0.1, 0.3], [0.4, 0.7]], [('D', 0)], 2)
+        d_i_cpd = TabularCPD(('D', 1), 2, values=[[0.1, 0.3], [0.4, 0.7]],
+                             evidence=[('D', 0)], evidence_card=[2])
         self.G.add_cpds(d_i_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(d_i_cpd)
 
-        diff_cpd = TabularCPD(('D', 0), 2, [[0.7, 0.4]])
+        diff_cpd = TabularCPD(('D', 0), 2, values=[[0.7, 0.4]])
         self.G.add_cpds(diff_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(diff_cpd)
 
-        intel_cpd = TabularCPD(('I', 0), 2, [[1.7, 0.3]])
+        intel_cpd = TabularCPD(('I', 0), 2, values=[[1.7, 0.3]])
         self.G.add_cpds(intel_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(intel_cpd)
 
-        i_i_cpd = TabularCPD(('I', 1), 2, [[0.9, 0.4], [0.5, 0.6]], [('I', 0)], 2)
+        i_i_cpd = TabularCPD(('I', 1), 2, values=[[0.9, 0.4], [0.5, 0.6]],
+                             evidence=[('I', 0)], evidence_card=[2])
         self.G.add_cpds(i_i_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(i_i_cpd)
 
-        grade_1_cpd = TabularCPD(('G', 1), 3, [[0.3, 0.05, 0.8, 0.5],
-                                               [0.4, 0.5, 0.1, 0.3],
-                                               [0.3, 0.7, 0.1, 0.2]], [('D', 1), ('I', 1)], [2, 2])
+        grade_1_cpd = TabularCPD(('G', 1), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                                      [0.4, 0.5, 0.1, 0.3],
+                                                      [0.3, 0.7, 0.1, 0.2]],
+                                 evidence=[('D', 1), ('I', 1)], evidence_card=[2, 2])
         self.G.add_cpds(grade_1_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(grade_1_cpd)

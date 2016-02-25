@@ -15,21 +15,17 @@ class TestVariableElimination(unittest.TestCase):
     def setUp(self):
         self.bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
                                              ('J', 'L'), ('G', 'L')])
-        cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
-        cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
-        cpd_j = TabularCPD('J', 2,
-                           [[0.9, 0.6, 0.7, 0.1],
-                            [0.1, 0.4, 0.3, 0.9]],
-                           ['A', 'R'], [2, 2])
-        cpd_q = TabularCPD('Q', 2,
-                           [[0.9, 0.2],
-                            [0.1, 0.8]],
-                           ['J'], [2])
-        cpd_l = TabularCPD('L', 2,
-                           [[0.9, 0.45, 0.8, 0.1],
-                            [0.1, 0.55, 0.2, 0.9]],
-                           ['J', 'G'], [2, 2])
-        cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        cpd_a = TabularCPD('A', 2, values=[[0.2], [0.8]])
+        cpd_r = TabularCPD('R', 2, values=[[0.4], [0.6]])
+        cpd_j = TabularCPD('J', 2, values=[[0.9, 0.6, 0.7, 0.1],
+                                           [0.1, 0.4, 0.3, 0.9]],
+                           evidence=['A', 'R'], evidence_card=[2, 2])
+        cpd_q = TabularCPD('Q', 2, values=[[0.9, 0.2], [0.1, 0.8]],
+                           evidence=['J'], evidence_card=[2])
+        cpd_l = TabularCPD('L', 2, values=[[0.9, 0.45, 0.8, 0.1],
+                                           [0.1, 0.55, 0.2, 0.9]],
+                           evidence=['J', 'G'], evidence_card=[2, 2])
+        cpd_g = TabularCPD('G', 2, values=[[0.6], [0.4]])
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
 
         self.bayesian_inference = VariableElimination(self.bayesian_model)
@@ -138,24 +134,21 @@ class TestVariableElimination(unittest.TestCase):
 
 class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
-        ## It is just a moralised version of the above Bayesian network so all the results are same. Only factors are under
-        ## consideration for inference so this should be fine.
-        self.markov_model = MarkovModel([('A', 'J'), ('R', 'J'), ('J', 'Q'), ('J', 'L'), ('G', 'L'), ('A', 'R'), ('J', 'G')])
+        # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
+        # are under consideration for inference so this should be fine.
+        self.markov_model = MarkovModel([('A', 'J'), ('R', 'J'), ('J', 'Q'), ('J', 'L'),
+                                         ('G', 'L'), ('A', 'R'), ('J', 'G')])
 
-        factor_a = TabularCPD('A', 2, [[0.2], [0.8]]).to_factor()
-        factor_r = TabularCPD('R', 2, [[0.4], [0.6]]).to_factor()
-        factor_j = TabularCPD('J', 2,
-                           [[0.9, 0.6, 0.7, 0.1],
-                            [0.1, 0.4, 0.3, 0.9]],
-                           ['A', 'R'], [2, 2]).to_factor()
-        factor_q = TabularCPD('Q', 2,
-                           [[0.9, 0.2],
-                            [0.1, 0.8]],
-                           ['J'], [2]).to_factor()
-        factor_l = TabularCPD('L', 2,
-                           [[0.9, 0.45, 0.8, 0.1],
-                            [0.1, 0.55, 0.2, 0.9]],
-                           ['J', 'G'], [2, 2]).to_factor()
+        factor_a = TabularCPD('A', 2, values=[[0.2], [0.8]]).to_factor()
+        factor_r = TabularCPD('R', 2, values=[[0.4], [0.6]]).to_factor()
+        factor_j = TabularCPD('J', 2, values=[[0.9, 0.6, 0.7, 0.1],
+                                              [0.1, 0.4, 0.3, 0.9]],
+                              evidence=['A', 'R'], evidence_card=[2, 2]).to_factor()
+        factor_q = TabularCPD('Q', 2, values=[[0.9, 0.2], [0.1, 0.8]],
+                              evidence=['J'], evidence_card=[2]).to_factor()
+        factor_l = TabularCPD('L', 2, values=[[0.9, 0.45, 0.8, 0.1],
+                                              [0.1, 0.55, 0.2, 0.9]],
+                              evidence=['J', 'G'], evidence_card=[2, 2]).to_factor()
         factor_g = TabularCPD('G', 2, [[0.6], [0.4]]).to_factor()
 
         self.markov_model.add_factors(factor_a, factor_r, factor_j, factor_q, factor_l, factor_g)
@@ -243,7 +236,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_map_query_with_evidence(self):
         map_query = self.markov_inference.map_query(['A', 'R', 'L'],
-                                                      {'J': 0, 'Q': 1, 'G': 0})
+                                                    {'J': 0, 'Q': 1, 'G': 0})
         self.assertDictEqual(map_query, {'A': 1, 'R': 0, 'L': 0})
 
     def test_induced_graph(self):
@@ -273,21 +266,17 @@ class TestBeliefPropagation(unittest.TestCase):
 
         self.bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
                                              ('J', 'L'), ('G', 'L')])
-        cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
-        cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
-        cpd_j = TabularCPD('J', 2,
-                           [[0.9, 0.6, 0.7, 0.1],
-                            [0.1, 0.4, 0.3, 0.9]],
-                           ['A', 'R'], [2, 2])
-        cpd_q = TabularCPD('Q', 2,
-                           [[0.9, 0.2],
-                            [0.1, 0.8]],
-                           ['J'], [2])
-        cpd_l = TabularCPD('L', 2,
-                           [[0.9, 0.45, 0.8, 0.1],
-                            [0.1, 0.55, 0.2, 0.9]],
-                           ['J', 'G'], [2, 2])
-        cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        cpd_a = TabularCPD('A', 2, values=[[0.2], [0.8]])
+        cpd_r = TabularCPD('R', 2, values=[[0.4], [0.6]])
+        cpd_j = TabularCPD('J', 2, values=[[0.9, 0.6, 0.7, 0.1],
+                                           [0.1, 0.4, 0.3, 0.9]],
+                           evidence=['A', 'R'], evidence_card=[2, 2])
+        cpd_q = TabularCPD('Q', 2, values=[[0.9, 0.2], [0.1, 0.8]],
+                           evidence=['J'], evidence_card=[2])
+        cpd_l = TabularCPD('L', 2, values=[[0.9, 0.45, 0.8, 0.1],
+                                           [0.1, 0.55, 0.2, 0.9]],
+                           evidence=['J', 'G'], evidence_card=[2, 2])
+        cpd_g = TabularCPD('G', 2, values=[[0.6], [0.4]])
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
 
     def test_calibrate_clique_belief(self):

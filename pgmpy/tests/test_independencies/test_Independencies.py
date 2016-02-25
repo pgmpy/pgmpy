@@ -54,7 +54,7 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
     def test_eq1(self):
         self.assertFalse(self.i1 == 'a')
         self.assertFalse(self.i2 == 1)
-        self.assertFalse(self.i4 == [2,'a'])
+        self.assertFalse(self.i4 == [2, 'a'])
         self.assertFalse(self.i6 == 'c')
 
     def test_eq2(self):

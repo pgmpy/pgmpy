@@ -230,7 +230,8 @@ class TestXBNReader(unittest.TestCase):
                                         [0.7, 0.3, 0.05, 0.95]])}
         for cpd in model.get_cpds():
             np_test.assert_array_equal(cpd.get_cpd(), cpds_expected[cpd.variable])
-        self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')]))
+        self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'),
+                                                            ('c', 'd'), ('c', 'e')]))
         self.assertDictEqual(model.node, node_expected)
 
 
@@ -262,17 +263,30 @@ class TestXBNWriter(unittest.TestCase):
                        'XPOS': '13960',
                        'TYPE': 'discrete'}}
         model = BayesianModel([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')])
-        cpd_distribution = {'a': {'TYPE': 'discrete', 'DPIS': np.array([[0.2, 0.8]])},
-                            'e': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
-                                                                        [0.6, 0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
-                            'b': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
-                                                                        [0.2, 0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-                            'c': {'TYPE': 'discrete', 'DPIS': np.array([[0.2, 0.8],
-                                                                        [0.05, 0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-                            'd': {'TYPE': 'discrete', 'DPIS': np.array([[0.8, 0.2],
-                                                                        [0.9, 0.1],
-                                                                        [0.7, 0.3],
-                                                                        [0.05, 0.95]]), 'CONDSET': ['b', 'c'], 'CARDINALITY': [2, 2]}}
+        cpd_distribution = {'a': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.2, 0.8]])},
+                            'e': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.8, 0.2],
+                                                    [0.6, 0.4]]),
+                                  'CONDSET': ['c'],
+                                  'CARDINALITY': [2]},
+                            'b': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.8, 0.2],
+                                                    [0.2, 0.8]]),
+                                  'CONDSET': ['a'],
+                                  'CARDINALITY': [2]},
+                            'c': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.2, 0.8],
+                                                    [0.05, 0.95]]),
+                                  'CONDSET': ['a'],
+                                  'CARDINALITY': [2]},
+                            'd': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.8, 0.2],
+                                                    [0.9, 0.1],
+                                                    [0.7, 0.3],
+                                                    [0.05, 0.95]]),
+                                  'CONDSET': ['b', 'c'],
+                                  'CARDINALITY': [2, 2]}}
 
         tabular_cpds = []
         for var, values in cpd_distribution.items():
@@ -383,4 +397,3 @@ class TestXBNWriter(unittest.TestCase):
   </BNMODEL>
 </ANALYSISNOTEBOOK>""")
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
-

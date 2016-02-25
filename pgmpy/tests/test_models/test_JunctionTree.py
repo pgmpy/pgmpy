@@ -87,12 +87,13 @@ class TestJunctionTreeMethods(unittest.TestCase):
         del self.graph3
         del self.graph4
 
+
 class TestJunctionTreeCopy(unittest.TestCase):
     def setUp(self):
         self.graph = JunctionTree()
 
     def test_copy_with_nodes(self):
-        self.graph.add_nodes_from([('a', 'b', 'c'), ('a', 'b') ,('a', 'c')])
+        self.graph.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
                                    (('a', 'b', 'c'), ('a', 'c'))])
         graph_copy = self.graph.copy()
@@ -118,9 +119,9 @@ class TestJunctionTreeCopy(unittest.TestCase):
 
         self.assertIsInstance(graph_copy, JunctionTree)
         self.assertIsNot(self.graph, graph_copy)
-        self.assertEqual(hf.recursive_sorted(self.graph.nodes()), 
+        self.assertEqual(hf.recursive_sorted(self.graph.nodes()),
                          hf.recursive_sorted(graph_copy.nodes()))
-        self.assertEqual(hf.recursive_sorted(self.graph.edges()), 
+        self.assertEqual(hf.recursive_sorted(self.graph.edges()),
                          hf.recursive_sorted(graph_copy.edges()))
         self.assertTrue(graph_copy.check_model())
         self.assertEqual(self.graph.get_factors(), graph_copy.get_factors())
@@ -150,4 +151,3 @@ class TestJunctionTreeCopy(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
-
