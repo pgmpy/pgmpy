@@ -256,99 +256,85 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds('s'), cpd_s)
 
     def test_check_model(self):
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                            ['d', 'i'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
 
-        cpd_s = TabularCPD('s', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['i'], 2)
+        cpd_s = TabularCPD('s', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=[2])
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['g'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['g'], evidence_card=[2])
 
         self.G.add_cpds(cpd_g, cpd_s, cpd_l)
         self.assertTrue(self.G.check_model())
 
     def test_check_model1(self):
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['i'], 2)
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=[2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                            ['d', 's'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 's'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['l'], 2)
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['l'], evidence_card=[2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['d'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['d'], evidence_card=[2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                           ['d', 'i'], [2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6, 0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4, 0.8, 0.7, 0.6, 0.4]]),
-                                                            ['g', 'd', 'i'], [2, 2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3, 0.4, 0.6, 0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4, 0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['g', 'd', 'i'], evidence_card=[2, 2, 2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
     def test_check_model2(self):
-        cpd_s = TabularCPD('s', 2, 
-                            np.array([[0.5, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['i'], 2)
+        cpd_s = TabularCPD('s', 2, values=np.array([[0.5, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=2)
         self.G.add_cpds(cpd_s)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_s)
 
-
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.3, 0.7, 0.6, 0.4]]),
-                                                            ['d', 'i'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.3, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.1, 0.7]]),
-                                                ['g'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.1, 0.7]]),
+                           evidence=['g'], evidence_card=[2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
-
 
     def tearDown(self):
         del self.G

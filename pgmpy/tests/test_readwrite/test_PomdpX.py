@@ -797,7 +797,6 @@ class TestPomdpXReaderString(unittest.TestCase):
         del self.reader_string
 
 
-
 class TestPomdpXWriter(unittest.TestCase):
     def setUp(self):
         self.model_data = {'discription': '',
@@ -807,16 +806,16 @@ class TestPomdpXWriter(unittest.TestCase):
                                              'vnameCurr': 'rover_1',
                                              'ValueEnum': ['s0', 's1', 's2'],
                                              'fullyObs': True},
-                          {'vnamePrev': 'rock_0',
-                           'vnameCurr': 'rock_1',
-                           'fullyObs': False,
-                           'ValueEnum': ['good', 'bad']}],
+                                            {'vnamePrev': 'rock_0',
+                                             'vnameCurr': 'rock_1',
+                                             'fullyObs': False,
+                                             'ValueEnum': ['good', 'bad']}],
                                'ObsVar': [{'vname': 'obs_sensor',
                                            'ValueEnum': ['ogood', 'obad']}],
                                'RewardVar': [{'vname': 'reward_rover'}],
                                'ActionVar': [{'vname': 'action_rover',
-                                                       'ValueEnum': ['amw', 'ame',
-                                                                     'ac', 'as']}]},
+                                              'ValueEnum': ['amw', 'ame',
+                                                            'ac', 'as']}]},
                            'initial_state_belief': [{'Var': 'rover_0',
                                                      'Parent': ['null'],
                                                      'Type': 'TBL',
@@ -890,6 +889,7 @@ class TestPomdpXWriter(unittest.TestCase):
                                                                'ValueTable': ['10']},
                                                               {'Instance': ['as', 's0', 'bad'],
                                                                'ValueTable': ['-10']}]}]}
+
         self.writer = PomdpXWriter(model_data=self.model_data)
 
     def test_variables(self):
@@ -1126,56 +1126,61 @@ class TestPomdpXWriter(unittest.TestCase):
                          etree.tostring(expected_xml))
 
     def test_state_transition_function_dd(self):
-        self.model_data = {'state_transition_function':
-            [{'Var': 'rover_1',
-              'Parent': ['action_rover', 'rover_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 's1': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's0'},
-                                                                 's2': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'}}},
-                                             'ame': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's1'},
-                                                                 's1': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 's2': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 }},
-                                             'ac': {'type': 'persistent',
-                                                    'var': 'rover_1'},
-                                             'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's0'},
-                                                                's1': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's2'},
-                                                                's2': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's2'}}}}}},
-             {'Var': 'rock_1',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'type': 'persistent',
-                                                     'var': 'rock_1'},
-                                             'ame': {'type': 'persistent',
-                                                     'var': 'rock_1'},
-                                             'ac': {'type': 'persistent',
-                                                    'var': 'rock_1'},
-                                             'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                       'var': 'rock_1',
-                                                                       'val': 'bad'},
-                                                                's1': {'type': 'persistent',
-                                                                       'var': 'rock_1'},
-                                                                's2': {'type': 'persistent',
-                                                                       'var': 'rock_1'}}}}}}]}
+        self.model_data = {
+            'state_transition_function': [{
+                'Var': 'rover_1',
+                'Parent': ['action_rover', 'rover_0'],
+                'Type': 'DD',
+                'Parameter': {'action_rover': {
+                    'amw': {'rover_0': {'s0': {
+                        'type': 'deterministic',
+                        'var': 'rover_1',
+                        'val': 's2'},
+                        's1': {'type': 'deterministic',
+                               'var': 'rover_1',
+                               'val': 's0'},
+                        's2': {'type': 'deterministic',
+                               'var': 'rover_1',
+                               'val': 's2'}}},
+                    'ame': {'rover_0': {'s0': {'type': 'deterministic',
+                                               'var': 'rover_1',
+                                               'val': 's1'},
+                                        's1': {'type': 'deterministic',
+                                               'var': 'rover_1',
+                                               'val': 's2'},
+                                        's2': {'type': 'deterministic',
+                                               'var': 'rover_1',
+                                               'val': 's2'},
+                                        }},
+                    'ac': {'type': 'persistent',
+                           'var': 'rover_1'},
+                    'as': {'rover_0': {'s0': {'type': 'deterministic',
+                                              'var': 'rover_1',
+                                              'val': 's0'},
+                                       's1': {'type': 'deterministic',
+                                              'var': 'rover_1',
+                                              'val': 's2'},
+                                       's2': {'type': 'deterministic',
+                                              'var': 'rover_1',
+                                              'val': 's2'}}}}}},
+                {'Var': 'rock_1',
+                 'Parent': ['action_rover', 'rover_0', 'rock_0'],
+                 'Type': 'DD',
+                 'Parameter': {'action_rover': {
+                     'amw': {'type': 'persistent',
+                             'var': 'rock_1'},
+                     'ame': {'type': 'persistent',
+                             'var': 'rock_1'},
+                     'ac': {'type': 'persistent',
+                            'var': 'rock_1'},
+                     'as': {'rover_0': {'s0': {'type': 'deterministic',
+                                               'var': 'rock_1',
+                                               'val': 'bad'},
+                                        's1': {'type': 'persistent',
+                                               'var': 'rock_1'},
+                                        's2': {'type': 'persistent',
+                                               'var': 'rock_1'}}}}}}]}
+
         self.writer = PomdpXWriter(model_data=self.model_data)
         expected_xml = etree.XML("""
 <StateTransitionFunction>
@@ -1269,34 +1274,40 @@ class TestPomdpXWriter(unittest.TestCase):
                          str(etree.tostring(expected_xml)))
 
     def test_obs_function_dd(self):
-        self.model_data = {'obs_function':
-            [{'Var': 'obs_sensor',
-              'Parent': ['action_rover', 'rover_1', 'rock_1'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'type': 'deterministic',
-                                                     'var': 'obs_sensor',
-                                                     'val': 'ogood'},
-                                             'ame': {'type': 'deterministic',
-                                                     'var': 'obs_sensor',
-                                                     'val': 'ogood'},
-                                             'ac': {'rover_1': {'s0': {'rock_1': {'good': {'type': 'deterministic',
-                                                                                           'var': 'obs_sensor',
-                                                                                           'val': 'ogood'},
-                                                                                  'bad': {'type': 'deterministic',
-                                                                                          'var': 'obs_sensor',
-                                                                                          'val': 'obad'}}},
-                                                                's1': {'type': 'template',
-                                                                       'idref': 'obs_rock'},
-                                                                's2': {'type': 'template',
-                                                                       'idref': 'obs_rock'}}},
-                                             'as': {'type': 'deterministic',
-                                                    'var': 'obs_sensor',
-                                                    'val': 'ogood'}},
-                            'SubDAGTemplate': {'rock_1': {'good': {'obs_sensor': {'ogood': '0.8',
-                                                                                  'obad': '0.2'}},
-                                                          'bad': {'obs_sensor': {'ogood': '0.2',
-                                                                                 'obad': '0.8'}}}},
-                            'id': 'obs_rock'}}]}
+        self.model_data = {
+            'obs_function': [{
+                'Var': 'obs_sensor',
+                'Parent': ['action_rover', 'rover_1', 'rock_1'],
+                'Type': 'DD',
+                'Parameter': {'action_rover': {
+                    'amw': {'type': 'deterministic',
+                            'var': 'obs_sensor',
+                            'val': 'ogood'},
+                    'ame': {'type': 'deterministic',
+                            'var': 'obs_sensor',
+                            'val': 'ogood'},
+                    'ac': {'rover_1': {'s0': {'rock_1': {'good': {
+                        'type': 'deterministic',
+                        'var': 'obs_sensor',
+                        'val': 'ogood'},
+                        'bad': {'type': 'deterministic',
+                                'var': 'obs_sensor',
+                                'val': 'obad'}}},
+                        's1': {'type': 'template',
+                               'idref': 'obs_rock'},
+                        's2': {'type': 'template',
+                               'idref': 'obs_rock'}}},
+                    'as': {'type': 'deterministic',
+                           'var': 'obs_sensor',
+                           'val': 'ogood'}},
+                    'SubDAGTemplate': {'rock_1': {'good': {'obs_sensor': {
+                        'ogood': '0.8',
+                        'obad': '0.2'}},
+                        'bad': {'obs_sensor': {
+                            'ogood': '0.2',
+                            'obad': '0.8'}}}},
+                    'id': 'obs_rock'}}]}
+
         self.writer = PomdpXWriter(model_data=self.model_data)
         expected_xml = etree.XML("""
 <ObsFunction>
@@ -1369,21 +1380,25 @@ class TestPomdpXWriter(unittest.TestCase):
                          str(etree.tostring(expected_xml)))
 
     def test_reward_function_dd(self):
-        self.model_data = {'reward_function':
-            [{'Var': 'reward_rover',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'rover_0': {'s0': '-100.0',
-                                                                 's1': '0.0',
-                                                                 's2': '0.0'}},
-                                             'ame': {'rover_0': {'s0': '0.0',
-                                                                 's1': '10.0',
-                                                                 's2': '0.0'}},
-                                             'ac': '0.0',
-                                             'as': {'rover_0': {'s0': {'rock_0': {'good': '10',
-                                                                                  'bad': '-10'}},
-                                                                's1': '-100',
-                                                                's2': '-100'}}}}}]}
+        self.model_data = {
+            'reward_function': [{
+                'Var': 'reward_rover',
+                'Parent': ['action_rover', 'rover_0', 'rock_0'],
+                'Type': 'DD',
+                'Parameter': {
+                    'action_rover': {
+                        'amw': {'rover_0': {'s0': '-100.0',
+                                            's1': '0.0',
+                                            's2': '0.0'}},
+                        'ame': {'rover_0': {'s0': '0.0',
+                                            's1': '10.0',
+                                            's2': '0.0'}},
+                        'ac': '0.0',
+                        'as': {'rover_0': {'s0': {'rock_0': {'good': '10',
+                                                             'bad': '-10'}},
+                                           's1': '-100',
+                                           's2': '-100'}}}}}]}
+
         self.writer = PomdpXWriter(model_data=self.model_data)
         expected_xml = etree.XML("""
 <RewardFunction>

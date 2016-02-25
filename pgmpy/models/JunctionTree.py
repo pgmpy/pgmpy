@@ -2,6 +2,7 @@
 
 from pgmpy.models import ClusterGraph
 
+
 class JunctionTree(ClusterGraph):
     """
     Class for representing Junction Tree.
@@ -130,5 +131,3 @@ class JunctionTree(ClusterGraph):
             factors_copy = [factor.copy() for factor in self.factors]
             copy.add_factors(*factors_copy)
         return copy
-
-

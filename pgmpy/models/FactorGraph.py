@@ -162,7 +162,6 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_factors(phi1, phi2)
         >>> G.get_cardinality()
             defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
-        
         """
         cardinalities = defaultdict(int)
         for factor in self.factors:
@@ -191,7 +190,7 @@ class FactorGraph(UndirectedGraph):
         if not all(isinstance(factor_node, Factor) for factor_node in factor_nodes):
             raise ValueError('Factors not associated for all the random variables')
 
-        if (not (bipartite.is_bipartite(self)) or 
+        if (not (bipartite.is_bipartite(self)) or
             not (bipartite.is_bipartite_node_set(self, variable_nodes) or
                  bipartite.is_bipartite_node_set(self, variable_nodes))):
             raise ValueError('Edges can only be between variables and factors')

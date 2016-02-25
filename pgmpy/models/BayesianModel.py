@@ -451,7 +451,8 @@ class BayesianModel(DirectedGraph):
             rest = set(self.nodes()) - {start}
             for r in range(len(rest)):
                 for observed in itertools.combinations(rest, r):
-                    d_seperated_variables = rest - set(observed) - set(self.active_trail_nodes(start, observed=observed))
+                    d_seperated_variables = rest - set(observed) - set(
+                        self.active_trail_nodes(start, observed=observed))
                     if d_seperated_variables:
                         independencies.add_assertions([start, d_seperated_variables, observed])
 
@@ -727,4 +728,3 @@ class BayesianModel(DirectedGraph):
             return True
         else:
             return False
-
