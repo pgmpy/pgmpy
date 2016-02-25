@@ -162,7 +162,6 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertTrue(set(sample['intel']).issubset({0, 1}))
         self.assertTrue(set(sample['grade']).issubset({0, 1, 2}))
 
-
     @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         self.gibbs.state = None
@@ -171,7 +170,6 @@ class TestGibbsSampling(unittest.TestCase):
         random_state.assert_called_once_with(self.gibbs)
         self.assertEqual(len(sample), 2)
 
-
     def test_generate_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]
         gen = self.gibbs.generate_sample(start_state, 2)
@@ -179,7 +177,6 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertEqual(len(samples), 2)
         self.assertEqual({samples[0][0].var, samples[0][1].var, samples[0][2].var}, {'diff', 'intel', 'grade'})
         self.assertEqual({samples[1][0].var, samples[1][1].var, samples[1][2].var}, {'diff', 'intel', 'grade'})
-
 
     @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state):

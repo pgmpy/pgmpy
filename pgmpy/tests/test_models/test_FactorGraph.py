@@ -1,13 +1,11 @@
-import unittest
 import numpy as np
+import unittest
 
 from pgmpy.factors import Factor
 from pgmpy.models import FactorGraph
 from pgmpy.models import MarkovModel
 from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
-import numpy as np
-import unittest
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 
@@ -69,7 +67,7 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
-    
+
     def test_get_factors(self):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
@@ -85,7 +83,6 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
 
         self.graph.remove_factors(phi1)
         self.assertRaises(ValueError, self.graph.get_factors, node=phi1)
-
 
     def test_remove_factors(self):
         self.graph.add_edges_from([('a', 'phi1'), ('b', 'phi1'),
@@ -138,11 +135,9 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-    
     def test_get_cardinality_check_cardinality(self):
-
         self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
-        
+
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.graph.add_edges_from([('a', phi1), ('b', phi1)])
@@ -199,7 +194,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
-        
+
         self.graph.add_factors(phi1, phi2)
         jt = self.graph.to_junction_tree()
         self.assertIsInstance(jt, JunctionTree)
@@ -212,7 +207,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
         self.assertTrue(self.graph.check_model())
@@ -229,7 +224,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -242,7 +237,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
 
@@ -256,14 +251,12 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertTrue(self.graph.check_model())
 
     def test_check_model3(self):
-        
-        
         self.graph.add_nodes_from(['a', 'b', 'c'])
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
         phi3 = Factor(['a', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2, phi3)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -275,7 +268,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
         phi2 = Factor(['b', 'c'], [3, 2], np.random.rand(6))
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)

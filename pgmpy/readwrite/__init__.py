@@ -1,4 +1,5 @@
-from .ProbModelXML import ProbModelXMLReader, ProbModelXMLWriter, generate_probmodelxml, get_probmodel_data, parse_probmodelxml, write_probmodelxml, read_probmodelxml
+from .ProbModelXML import (ProbModelXMLReader, ProbModelXMLWriter, generate_probmodelxml,
+                           get_probmodel_data, parse_probmodelxml, write_probmodelxml, read_probmodelxml)
 from .XMLBIF import XMLBIFReader, XMLBIFWriter
 from .PomdpX import PomdpXReader, PomdpXWriter
 from .XMLBeliefNetwork import XBNReader, XBNWriter

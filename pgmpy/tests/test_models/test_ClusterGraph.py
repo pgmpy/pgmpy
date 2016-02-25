@@ -8,7 +8,6 @@ from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 
 
-
 class TestClusterGraphCreation(unittest.TestCase):
     def setUp(self):
         self.graph = ClusterGraph()
@@ -101,7 +100,7 @@ class TestClusterGraphMethods(unittest.TestCase):
 
         phi1 = Factor(['a', 'b', 'c'], [1, 2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
-        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c':2})
+        self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c': 2})
         self.graph.remove_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
@@ -117,9 +116,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-
     def test_get_cardinality_check_cardinality(self):
-
         self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
                                    (('a', 'b', 'c'), ('a', 'c'))])
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
@@ -147,7 +144,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.assertTrue(self.graph.check_model())
 
     def test_check_model1(self):
-        self.graph.add_edges_from([(('a', 'b'), ('a', 'c')), 
+        self.graph.add_edges_from([(('a', 'b'), ('a', 'c')),
                                    (('a', 'c'), ('a', 'd'))])
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
@@ -157,7 +154,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
 
     def test_check_model2(self):
-        self.graph.add_edges_from([(('a', 'b'), ('a', 'c')), 
+        self.graph.add_edges_from([(('a', 'b'), ('a', 'c')),
                                    (('a', 'c'), ('a', 'd'))])
 
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
@@ -182,9 +179,9 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         graph_copy = self.graph.copy()
         self.assertIsInstance(graph_copy, ClusterGraph)
-        self.assertEqual(hf.recursive_sorted(self.graph.nodes()), 
+        self.assertEqual(hf.recursive_sorted(self.graph.nodes()),
                          hf.recursive_sorted(graph_copy.nodes()))
-        self.assertEqual(hf.recursive_sorted(self.graph.edges()), 
+        self.assertEqual(hf.recursive_sorted(self.graph.edges()),
                          hf.recursive_sorted(graph_copy.edges()))
         self.assertTrue(graph_copy.check_model())
         self.assertEqual(self.graph.get_factors(), graph_copy.get_factors())

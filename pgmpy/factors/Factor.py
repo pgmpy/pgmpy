@@ -414,7 +414,8 @@ class Factor(object):
 
         if (any(isinstance(value, six.string_types) for value in values) or
                 not all(isinstance(state, (int, np.integer)) for var, state in values)):
-            raise TypeError("values: must contain tuples or array-like elements of the form (hashable object, type int)")
+            raise TypeError("values: must contain tuples or array-like elements of the form "
+                            "(hashable object, type int)")
 
         phi = self if inplace else self.copy()
 
@@ -761,9 +762,9 @@ class Factor(object):
             for axis in range(self.values.ndim):
                 exchange_index = phi.variables.index(self.variables[axis])
                 phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
-                                                                          phi.variables[axis])
+                                                                      phi.variables[axis])
                 phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
-                                                                              phi.cardinality[axis])
+                                                                          phi.cardinality[axis])
                 phi.values = phi.values.swapaxes(axis, exchange_index)
 
             if phi.values.shape != self.values.shape:

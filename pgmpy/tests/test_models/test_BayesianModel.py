@@ -107,14 +107,12 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G = BayesianModel([('a', 'd'), ('b', 'd'),
                                 ('d', 'e'), ('b', 'c')])
         self.G1 = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
-        diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        grade_cpd = TabularCPD('grade', 3,
-                               [[0.1,0.1,0.1,0.1,0.1,0.1],
-                                [0.1,0.1,0.1,0.1,0.1,0.1],
-                                [0.8,0.8,0.8,0.8,0.8,0.8]],
-                                evidence=['diff', 'intel'],
-                                evidence_card=[2, 3])
+        diff_cpd = TabularCPD('diff', 2, values=[[0.2], [0.8]])
+        intel_cpd = TabularCPD('intel', 3, values=[[0.5], [0.3], [0.2]])
+        grade_cpd = TabularCPD('grade', 3, values=[[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                   [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                   [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+                               evidence=['diff', 'intel'], evidence_card=[2, 3])
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
     def test_moral_graph(self):
@@ -134,18 +132,18 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_local_independencies(self):
         self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
-        self.assertEqual(self.G.local_independencies('c'), Independencies(['c',['a','d','e'],'b']))
-        self.assertEqual(self.G.local_independencies('d'), Independencies(['d','c',['b','a']]))
-        self.assertEqual(self.G.local_independencies('e'), Independencies(['e',['c','b','a'],'d']))
-        self.assertEqual(self.G.local_independencies('b'), Independencies(['b','a']))
+        self.assertEqual(self.G.local_independencies('c'), Independencies(['c', ['a', 'd', 'e'], 'b']))
+        self.assertEqual(self.G.local_independencies('d'), Independencies(['d', 'c', ['b', 'a']]))
+        self.assertEqual(self.G.local_independencies('e'), Independencies(['e', ['c', 'b', 'a'], 'd']))
+        self.assertEqual(self.G.local_independencies('b'), Independencies(['b', 'a']))
         self.assertEqual(self.G1.local_independencies('grade'), Independencies())
 
     def test_get_independencies(self):
-        chain = BayesianModel([('X','Y'), ('Y','Z')])
+        chain = BayesianModel([('X', 'Y'), ('Y', 'Z')])
         self.assertEqual(chain.get_independencies(), Independencies(('X', 'Z', 'Y'), ('Z', 'X', 'Y')))
-        fork = BayesianModel([('Y','X'), ('Y','Z')])
+        fork = BayesianModel([('Y', 'X'), ('Y', 'Z')])
         self.assertEqual(fork.get_independencies(), Independencies(('X', 'Z', 'Y'), ('Z', 'X', 'Y')))
-        collider = BayesianModel([('X','Y'), ('Z','Y')])
+        collider = BayesianModel([('X', 'Y'), ('Z', 'Y')])
         self.assertEqual(collider.get_independencies(), Independencies(('X', 'Z'), ('Z', 'X')))
 
     def test_is_imap(self):
@@ -217,20 +215,23 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertFalse(self.G.is_active_trail('d', 's', ['i', 'l']))
 
     def test_get_cpds(self):
-        cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
-        cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
-        cpd_g = TabularCPD('g', 2, np.random.rand(2, 4), ['d', 'i'], [2, 2])
-        cpd_l = TabularCPD('l', 2, np.random.rand(2, 2), ['g'], 2)
-        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        cpd_d = TabularCPD('d', 2, values=np.random.rand(2, 1))
+        cpd_i = TabularCPD('i', 2, values=np.random.rand(2, 1))
+        cpd_g = TabularCPD('g', 2, values=np.random.rand(2, 4),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.random.rand(2, 2),
+                           evidence=['g'], evidence_card=[2])
+        cpd_s = TabularCPD('s', 2, values=np.random.rand(2, 2),
+                           evidence=['i'], evidence_card=[2])
         self.G.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l, cpd_s)
 
         self.assertEqual(self.G.get_cpds('d').variable, 'd')
 
     def test_get_cpds1(self):
         self.model = BayesianModel([('A', 'AB')])
-        cpd_a = TabularCPD('A', 2, np.random.rand(2, 1))
-        cpd_ab = TabularCPD('AB', 2, np.random.rand(2, 2), evidence=['A'],
-                            evidence_card=[2])
+        cpd_a = TabularCPD('A', 2, values=np.random.rand(2, 1))
+        cpd_ab = TabularCPD('AB', 2, values=np.random.rand(2, 2),
+                            evidence=['A'], evidence_card=[2])
 
         self.model.add_cpds(cpd_a, cpd_ab)
         self.assertEqual(self.model.get_cpds('A').variable, 'A')
@@ -242,11 +243,14 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertListEqual(self.G.get_cpds(), [cpd_s])
 
     def test_add_multiple_cpds(self):
-        cpd_d = TabularCPD('d', 2, np.random.rand(2, 1))
-        cpd_i = TabularCPD('i', 2, np.random.rand(2, 1))
-        cpd_g = TabularCPD('g', 2, np.random.rand(2, 4), ['d', 'i'], [2, 2])
-        cpd_l = TabularCPD('l', 2, np.random.rand(2, 2), ['g'], 2)
-        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        cpd_d = TabularCPD('d', 2, values=np.random.rand(2, 1))
+        cpd_i = TabularCPD('i', 2, values=np.random.rand(2, 1))
+        cpd_g = TabularCPD('g', 2, values=np.random.rand(2, 4),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.random.rand(2, 2),
+                           evidence=['g'], evidence_card=[2])
+        cpd_s = TabularCPD('s', 2, values=np.random.rand(2, 2),
+                           evidence=['i'], evidence_card=[2])
 
         self.G.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l, cpd_s)
         self.assertEqual(self.G.get_cpds('d'), cpd_d)
@@ -256,99 +260,85 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds('s'), cpd_s)
 
     def test_check_model(self):
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                            ['d', 'i'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
 
-        cpd_s = TabularCPD('s', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['i'], 2)
+        cpd_s = TabularCPD('s', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=[2])
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['g'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['g'], evidence_card=[2])
 
         self.G.add_cpds(cpd_g, cpd_s, cpd_l)
         self.assertTrue(self.G.check_model())
 
     def test_check_model1(self):
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['i'], 2)
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=[2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                            ['d', 's'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 's'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['l'], 2)
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['l'], evidence_card=[2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.8, 0.7]]),
-                                                 ['d'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['d'], evidence_card=[2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4]]),
-                                                           ['d', 'i'], [2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6, 0.2, 0.3, 0.4, 0.6],
-                                      [0.8, 0.7, 0.6, 0.4, 0.8, 0.7, 0.6, 0.4]]),
-                                                            ['g', 'd', 'i'], [2, 2, 2])
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3, 0.4, 0.6, 0.2, 0.3, 0.4, 0.6],
+                                                    [0.8, 0.7, 0.6, 0.4, 0.8, 0.7, 0.6, 0.4]]),
+                           evidence=['g', 'd', 'i'], evidence_card=[2, 2, 2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
     def test_check_model2(self):
-        cpd_s = TabularCPD('s', 2, 
-                            np.array([[0.5, 0.3],
-                                      [0.8, 0.7]]),
-                                                ['i'], 2)
+        cpd_s = TabularCPD('s', 2, values=np.array([[0.5, 0.3],
+                                                    [0.8, 0.7]]),
+                           evidence=['i'], evidence_card=2)
         self.G.add_cpds(cpd_s)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_s)
 
-
-        cpd_g = TabularCPD('g', 2, 
-                            np.array([[0.2, 0.3, 0.4, 0.6],
-                                      [0.3, 0.7, 0.6, 0.4]]),
-                                                            ['d', 'i'], [2, 2])
+        cpd_g = TabularCPD('g', 2, values=np.array([[0.2, 0.3, 0.4, 0.6],
+                                                    [0.3, 0.7, 0.6, 0.4]]),
+                           evidence=['d', 'i'], evidence_card=[2, 2])
         self.G.add_cpds(cpd_g)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_g)
 
-        cpd_l = TabularCPD('l', 2, 
-                            np.array([[0.2, 0.3],
-                                      [0.1, 0.7]]),
-                                                ['g'], 2)
+        cpd_l = TabularCPD('l', 2, values=np.array([[0.2, 0.3],
+                                                    [0.1, 0.7]]),
+                           evidence=['g'], evidence_card=[2])
         self.G.add_cpds(cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
-
 
     def tearDown(self):
         del self.G
@@ -412,66 +402,66 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.graph = BayesianModel()
 
     def test_add_single_cpd(self):
-        cpd = TabularCPD('grade', 2, np.random.rand(2, 4),
-                         ['diff', 'intel'], [2, 2])
+        cpd = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                         evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd)
         self.assertListEqual(self.graph.get_cpds(), [cpd])
 
     def test_add_multiple_cpds(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.assertListEqual(self.graph.get_cpds(), [cpd1, cpd2, cpd3])
 
     def test_remove_single_cpd(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.graph.remove_cpds(cpd1)
         self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
 
     def test_remove_multiple_cpds(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.graph.remove_cpds(cpd1, cpd3)
         self.assertListEqual(self.graph.get_cpds(), [cpd2])
 
     def test_remove_single_cpd_string(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.graph.remove_cpds('diff')
         self.assertListEqual(self.graph.get_cpds(), [cpd2, cpd3])
 
     def test_remove_multiple_cpds_string(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.graph.remove_cpds('diff', 'grade')
         self.assertListEqual(self.graph.get_cpds(), [cpd2])
 
     def test_get_cpd_for_node(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.assertEqual(self.graph.get_cpds('diff'), cpd1)
@@ -479,10 +469,10 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.assertEqual(self.graph.get_cpds('grade'), cpd3)
 
     def test_get_cpd_raises_error(self):
-        cpd1 = TabularCPD('diff', 2, np.random.rand(2, 1))
-        cpd2 = TabularCPD('intel', 2, np.random.rand(2, 1))
-        cpd3 = TabularCPD('grade', 2, np.random.rand(2, 4),
-                          ['diff', 'intel'], [2, 2])
+        cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
+        cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
+        cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
+                          evidence=['diff', 'intel'], evidence_card=[2, 2])
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.graph.add_cpds(cpd1, cpd2, cpd3)
         self.assertRaises(ValueError, self.graph.get_cpds, 'sat')

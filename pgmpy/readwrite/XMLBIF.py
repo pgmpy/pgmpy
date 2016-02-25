@@ -6,11 +6,11 @@ except ImportError:
     try:
         import xml.etree.ElementTree as etree
     except ImportError:
-        #try:
+        # try:
         #    import xml.etree.cElementTree as etree
         #    commented out because xml.etree.cElementTree is giving errors with dictionary attributes
         print("Failed to import ElementTree from any known place")
-        
+
 import numpy as np
 
 from pgmpy.models import BayesianModel
@@ -302,7 +302,6 @@ class XMLBIFWriter(object):
             var = cpd.variable
             outcome_tag[var] = []
             for state in [State(var, state) for state in range(cpd.get_cardinality([var])[var])]:
-            # for state in [cpd.variables[var]:
                 state_tag = etree.SubElement(self.variables[var], "OUTCOME")
                 state_tag.text = str(state.state)
                 outcome_tag[var].append(state_tag)

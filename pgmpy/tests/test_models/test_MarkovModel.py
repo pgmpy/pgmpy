@@ -113,9 +113,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-
     def test_get_cardinality_check_cardinality(self):
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -131,9 +129,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
 
-
     def test_check_model(self):
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
@@ -150,7 +146,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertTrue(self.graph.check_model())
 
     def test_check_model1(self):
-    
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -160,7 +155,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
-        
+
         phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -179,7 +174,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi2)
 
     def test_check_model2(self):
-    
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -194,7 +188,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2)
 
-
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
         phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
         phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
@@ -203,7 +196,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
-
 
     def test_factor_graph(self):
         from pgmpy.models import FactorGraph
@@ -244,7 +236,7 @@ class TestMarkovModelMethods(unittest.TestCase):
     def test_junction_tree_single_clique(self):
         from pgmpy.factors import factor_product
 
-        self.graph.add_edges_from([('x1','x2'), ('x2', 'x3'), ('x1', 'x3')])
+        self.graph.add_edges_from([('x1', 'x2'), ('x2', 'x3'), ('x1', 'x3')])
         phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*phi)
 
@@ -266,7 +258,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         independencies = self.graph.get_local_independencies()
         self.assertIsInstance(independencies, Independencies)
-        self.assertEqual(independencies, Independencies(['a','c','b']))
+        self.assertEqual(independencies, Independencies(['a', 'c', 'b']))
 
     def test_bayesian_model(self):
         from pgmpy.models import BayesianModel
@@ -557,7 +549,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
         # Modify the original graph ...
         self.graph.add_nodes_from(['c'])
-        self.graph.add_edges_from([('c', 'b') ])
+        self.graph.add_edges_from([('c', 'b')])
 
         # ... and ensure none of those changes get propagated
         self.assertEqual(len(copy.nodes()), 2)
@@ -623,4 +615,3 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
-

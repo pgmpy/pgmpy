@@ -53,7 +53,6 @@ class TightenTripletOff(TestMplp):
         self.assertAlmostEqual(64.59, int_gap, places=1)
 
 
-
 class TightenTripletOn(TestMplp):
 
     # Query when tighten triplet is ON

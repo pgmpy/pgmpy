@@ -42,19 +42,19 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
     def setUp(self):
         self.i1 = IndependenceAssertion('a', 'b', 'c')
         self.i2 = IndependenceAssertion('a', 'b')
-        self.i3 = IndependenceAssertion('a', ['b','c','d'])
-        self.i4 = IndependenceAssertion('a', ['b','c','d'], 'e')
-        self.i5 = IndependenceAssertion('a', ['d','c','b'], 'e')
-        self.i6 = IndependenceAssertion('a', ['d','c'], ['e','b'])
-        self.i7 = IndependenceAssertion('a', ['c','d'], ['b','e'])
-        self.i8 = IndependenceAssertion('a', ['f','d'], ['b','e'])
-        self.i9 = IndependenceAssertion('a', ['d','k','b'], 'e')
-        self.i10 = IndependenceAssertion(['k','b','d'], 'a', 'e')
+        self.i3 = IndependenceAssertion('a', ['b', 'c', 'd'])
+        self.i4 = IndependenceAssertion('a', ['b', 'c', 'd'], 'e')
+        self.i5 = IndependenceAssertion('a', ['d', 'c', 'b'], 'e')
+        self.i6 = IndependenceAssertion('a', ['d', 'c'], ['e', 'b'])
+        self.i7 = IndependenceAssertion('a', ['c', 'd'], ['b', 'e'])
+        self.i8 = IndependenceAssertion('a', ['f', 'd'], ['b', 'e'])
+        self.i9 = IndependenceAssertion('a', ['d', 'k', 'b'], 'e')
+        self.i10 = IndependenceAssertion(['k', 'b', 'd'], 'a', 'e')
 
     def test_eq1(self):
         self.assertFalse(self.i1 == 'a')
         self.assertFalse(self.i2 == 1)
-        self.assertFalse(self.i4 == [2,'a'])
+        self.assertFalse(self.i4 == [2, 'a'])
         self.assertFalse(self.i6 == 'c')
 
     def test_eq2(self):
@@ -84,15 +84,16 @@ class TestIndependeciesAssertionEq(unittest.TestCase):
         del self.i9
         del self.i10
 
+
 class TestIndependencies(unittest.TestCase):
     def setUp(self):
         self.Independencies = Independencies()
         self.Independencies3 = Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
-                                                             ['c', ['d', 'e' ,'f'], ['g' , 'h']])
+                                              ['c', ['d', 'e', 'f'], ['g', 'h']])
         self.Independencies4 = Independencies([['f', 'd', 'e'], 'c', ['h', 'g']],
-                                                             [['b', 'c', 'd'], 'a', ['f', 'g', 'e']])
+                                              [['b', 'c', 'd'], 'a', ['f', 'g', 'e']])
         self.Independencies5 = Independencies(['a', ['b', 'c', 'd'], ['e', 'f', 'g']],
-                                                             ['c', ['d', 'e', 'f'], 'g'])
+                                              ['c', ['d', 'e', 'f'], 'g'])
 
     def test_init(self):
         self.Independencies1 = Independencies(['X', 'Y', 'Z'])
@@ -120,8 +121,8 @@ class TestIndependencies(unittest.TestCase):
         self.assertFalse(self.Independencies3 != self.Independencies4)
         self.assertTrue(self.Independencies3 != self.Independencies5)
         self.assertFalse(self.Independencies4 == self.Independencies5)
-        self.assertFalse(Independencies() == Independencies(['A','B','C']))
-        self.assertFalse(Independencies(['A','B','C']) == Independencies())
+        self.assertFalse(Independencies() == Independencies(['A', 'B', 'C']))
+        self.assertFalse(Independencies(['A', 'B', 'C']) == Independencies())
         self.assertTrue(Independencies() == Independencies())
 
     def tearDown(self):

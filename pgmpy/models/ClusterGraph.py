@@ -212,7 +212,7 @@ class ClusterGraph(UndirectedGraph):
         """
         Returns a dictionary with the given factors as keys and their respective
         cardinality as values.
-        
+
         Parameters
         ----------
         check_cardinality: boolean, optional
@@ -230,7 +230,6 @@ class ClusterGraph(UndirectedGraph):
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
-        
         """
         cardinalities = defaultdict(int)
         for factor in self.factors:
@@ -328,4 +327,3 @@ class ClusterGraph(UndirectedGraph):
             factors_copy = [factor.copy() for factor in self.factors]
             copy.add_factors(*factors_copy)
         return copy
-
