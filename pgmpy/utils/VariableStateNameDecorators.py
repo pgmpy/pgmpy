@@ -14,5 +14,24 @@ class stateNameInit():
     {'x1': ['on', 'off']}
     where, 'x1' is a variable and 'on', 'off' are its correspinding
     states.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from pgmpy.factors import Factor
+    >>> sn = {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}
+    >>> phi = Factor(['speed', 'switch', 'time'], [3, 2, 2], np.ones(12), state_names=sn)
+    >>> print(phi.state_names)
+    {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}
     """
-    pass
+    def __call__(self, f):
+        def wrapper(*args, **kwargs): 
+            # Case, when no state names dict is provided.
+            if not 'state_names' in kwargs:
+                # args[0] represents the self parameter of the __init__ method
+                args[0].state_names = None
+            else:
+                args[0].state_names = kwargs['state_names']
+                del kwargs['state_names']
+            f(*args, **kwargs)
+        return wrapper

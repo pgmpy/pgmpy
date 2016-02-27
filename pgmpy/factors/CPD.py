@@ -12,6 +12,7 @@ from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
+from pgmpy.utils import stateNameInit
 
 
 class TabularCPD(Factor):
@@ -97,6 +98,7 @@ class TabularCPD(Factor):
     normalize()
     reduce([values_list])
     """
+    @stateNameInit()
     def __init__(self, variable, variable_card, values,
                  evidence=None, evidence_card=None):
 

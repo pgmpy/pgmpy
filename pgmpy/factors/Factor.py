@@ -9,6 +9,7 @@ import numpy as np
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
+from pgmpy.utils import stateNameInit
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -28,6 +29,7 @@ class Factor(object):
     reduce([variable_values_list])
     """
 
+    @stateNameInit()
     def __init__(self, variables, cardinality, values):
         """
         Initialize a factor class.
