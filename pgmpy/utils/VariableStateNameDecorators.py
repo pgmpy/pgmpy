@@ -35,3 +35,24 @@ class stateNameInit():
                 del kwargs['state_names']
             f(*args, **kwargs)
         return wrapper
+
+
+class stateNameDecorator():
+    """
+    This class behaves as a decorator for the various methods
+    that can use variable state names either in input parameters
+    or in return values.
+
+    Parameters
+    ----------
+    argument: string or None
+        The parameter that needs to be wrapped. None,
+        if no parameter is to be wrapped.
+    return_val: boolean
+        True if the return value needs to be wrapped else
+        False.
+    """
+    def __init__(self, argument, return_val):
+        self.arg = argument
+        self.return_val = return_val
+
