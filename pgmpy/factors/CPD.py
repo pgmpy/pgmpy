@@ -327,19 +327,15 @@ class TabularCPD(Factor):
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.marginalize('diff')
+        >>> cpd_table.marginalize(['diff'])
         >>> cpd_table.get_cpd()
-        array([[ 0.48484848,  0.4       ],
-               [ 0.51515152,  0.6       ]])
+        array([[ 0.65,  0.4 ],
+                [ 0.35,  0.6 ]])
         """
-        if inplace:
-            tabular_cpd = self
-        else:
-            evidence = self.variables[1:]
-            evidence_card = self.cardinality[1:]
-            tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), evidence,
-                                     evidence_card)
+        if inplace and self.variable in variables:
+            raise ValueError("Inplace Marginalization not allowed on the variable on which CPD is defined")
+
+        tabular_cpd = self if inplace else self.copy()
 
         super(TabularCPD, tabular_cpd).marginalize(variables)
         tabular_cpd.normalize()
@@ -365,19 +361,15 @@ class TabularCPD(Factor):
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
-        >>> cpd_table.reduce('diff_0')
+        >>> cpd_table.reduce([('diff', 0)])
         >>> cpd_table.get_cpd()
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
         """
-        if inplace:
-            tabular_cpd = self
-        else:
-            evidence = self.variables[1:]
-            evidence_card = self.cardinality[1:]
-            tabular_cpd = TabularCPD(self.variable, self.variable_card,
-                                     self.get_cpd(), evidence,
-                                     evidence_card)
+        if inplace and self.variable in (value[0] for value in values):
+            raise ValueError("Inplace Reduce not allowed on the variable on which CPD is defined")
+
+        tabular_cpd = self if inplace else self.copy()
 
         super(TabularCPD, tabular_cpd).reduce(values)
         tabular_cpd.normalize()
