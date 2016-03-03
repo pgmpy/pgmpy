@@ -332,8 +332,8 @@ class TabularCPD(Factor):
         array([[ 0.65,  0.4 ],
                 [ 0.35,  0.6 ]])
         """
-        if inplace and self.variable in variables:
-            raise ValueError("Inplace Marginalization not allowed on the variable on which CPD is defined")
+        if self.variable in variables:
+            raise ValueError("Marginalization not allowed on the variable on which CPD is defined")
 
         tabular_cpd = self if inplace else self.copy()
 
@@ -366,8 +366,8 @@ class TabularCPD(Factor):
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
         """
-        if inplace and self.variable in (value[0] for value in values):
-            raise ValueError("Inplace Reduce not allowed on the variable on which CPD is defined")
+        if self.variable in (value[0] for value in values):
+            raise ValueError("Reduce not allowed on the variable on which CPD is defined")
 
         tabular_cpd = self if inplace else self.copy()
 
