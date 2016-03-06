@@ -505,6 +505,9 @@ class TabularCPD(Factor):
                 warn("Same ordering provided as current")
                 return self.get_cpd()
 
+    def get_evidence(self):
+        return self.variables[:0:-1]
+
 # Commenting out because not used anywhere for now and not implemented in a very good way.
 # class TreeCPD(nx.DiGraph):
 #     """
