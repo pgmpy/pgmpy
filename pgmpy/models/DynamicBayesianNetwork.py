@@ -73,6 +73,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         initialize_initial_state
         inter_slice
         intra_slice
+        copy
         """
         super(DynamicBayesianNetwork, self).__init__()
         if ebunch:
@@ -543,3 +544,41 @@ class DynamicBayesianNetwork(DirectedGraph):
                 self.get_parents(node), 2))
 
         return moral_graph
+
+    def copy(self):
+        """
+        Returns a copy of the dynamic bayesian network.
+
+        Returns
+        -------
+        DynamicBayesianNetwork: copy of the dynamic bayesian network
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors import TabularCPD
+        >>> dbn = DBN()
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
+        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
+                                        [0.4,0.25,0.8,0.03],
+                                        [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_cpds(grade_cpd)
+        >>> dbn_copy = dbn.copy()
+        >>> dbn_copy.nodes()
+        ['Z', 'G', 'I', 'D']
+        >>> dbn_copy.edges()
+        [(('I', 1), ('G', 1)),
+        (('I', 0), ('I', 1)),
+        (('I', 0), ('G', 0)),
+        (('D', 1), ('G', 1)),
+        (('D', 0), ('G', 0)),
+        (('D', 0), ('D', 1))]
+        >> dbn_copy.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7f13961a3320>]
+        """
+        dbn = DynamicBayesianNetwork()
+        dbn.add_nodes_from(self.nodes())
+        dbn.add_edges_from(self.edges())
+        cpd_copy = [cpd.copy() for cpd in self.get_cpds()] 
+        dbn.add_cpds(*cpd_copy)
+        return dbn
