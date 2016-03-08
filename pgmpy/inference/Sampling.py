@@ -348,7 +348,7 @@ class GibbsSampling(MarkovChain):
         """
         if start_state is None and self.state is None:
             self.state = self.random_state()
-        else:
+        elif start_state is not None:
             self.set_start_state(start_state)
 
         sampled = DataFrame(index=range(size), columns=self.variables)
