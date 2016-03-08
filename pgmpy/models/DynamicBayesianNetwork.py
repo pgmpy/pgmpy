@@ -191,6 +191,8 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         if start[1] == end[1]:
             super(DynamicBayesianNetwork, self).add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
+        else:
+            super(DynamicBayesianNetwork,self).add_node((end[0], 1 - end[1]))
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -512,7 +514,11 @@ class DynamicBayesianNetwork(DirectedGraph):
                                              cpd.values.reshape(cpd.variable_card, np.prod(evidence_card)),
                                              parents, evidence_card)
                     else:
-                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card))
+                        if cpd.get_evidence():
+                            initial_cpd=cpd.marginalize(cpd.get_evidence(),inplace=False)
+                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(initial_cpd.values, (-1, 2)))
+                        else:
+                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(cpd.values, (-1, 2)))
                     self.add_cpds(new_cpd)
             self.check_model()
 
@@ -579,6 +585,6 @@ class DynamicBayesianNetwork(DirectedGraph):
         dbn = DynamicBayesianNetwork()
         dbn.add_nodes_from(self.nodes())
         dbn.add_edges_from(self.edges())
-        cpd_copy = [cpd.copy() for cpd in self.get_cpds()] 
+        cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)
         return dbn
