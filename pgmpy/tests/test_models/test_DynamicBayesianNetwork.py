@@ -3,6 +3,7 @@ import unittest
 import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.factors import TabularCPD
+import numpy as np
 
 
 class TestDynamicBayesianNetworkCreation(unittest.TestCase):
@@ -139,6 +140,43 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                              [[('D', 0), ('G', 0)], [('D', 0), ('I', 0)],
                               [('D', 1), ('G', 1)], [('D', 1), ('I', 1)],
                               [('G', 0), ('I', 0)], [('G', 1), ('I', 1)]])
+
+    def test_copy(self):
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.8, 0.5],
+                                             [0.4, 0.25, 0.1, 0.3],
+                                             [0.3, 0.7, 0.1, 0.2]],
+                         evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
+        self.network.add_cpds(cpd)
+        copy = self.network.copy()
+        self.assertIsInstance(copy, DynamicBayesianNetwork)
+        self.assertListEqual(sorted(self.network.nodes()), sorted(copy.nodes()))
+        self.assertListEqual(sorted(self.network.edges()), sorted(copy.edges()))
+        self.assertListEqual(self.network.get_cpds(), copy.get_cpds())
+        self.assertListEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
+        self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
+        self.assertListEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
+
+        copy.cpds[0].values = np.array([[0.4, 0.05, 0.3, 0.5], [0.3, 0.25, 0.5, 0.3], [0.3, 0.7, 0.2, 0.2]])
+        self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
+        self.network.add_cpds(self.i_i_cpd, self.d_i_cpd)
+
+        copy.add_cpds(self.diff_cpd, self.intel_cpd)
+        self.network.add_node('A')
+        copy.add_node('Z')
+        self.network.add_edge(('A', 0), ('D', 0))
+        copy.add_edge(('Z', 0), ('D', 0))
+        self.assertNotEqual(sorted(self.network.nodes()), sorted(copy.nodes()))
+        self.assertNotEqual(sorted(self.network.edges()), sorted(copy.edges()))
+        self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
+        self.assertNotEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
+        self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
+        self.assertNotEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
+
+        self.network.add_edge(('A', 0), ('D', 1))
+        copy.add_edge(('Z', 0), ('D', 1))
+        self.assertNotEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
 
     def tearDown(self):
         del self.network
