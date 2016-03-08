@@ -157,9 +157,11 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertListEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
         self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
         self.assertListEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
+
         copy.cpds[0].values = np.array([[0.4, 0.05, 0.3, 0.5], [0.3, 0.25, 0.5, 0.3], [0.3, 0.7, 0.2, 0.2]])
         self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
         self.network.add_cpds(self.i_i_cpd, self.d_i_cpd)
+
         copy.add_cpds(self.diff_cpd, self.intel_cpd)
         self.network.add_node('A')
         copy.add_node('Z')
@@ -171,6 +173,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
         self.assertListEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
         self.assertNotEqual(sorted(self.network.get_slice_nodes()), sorted(copy.get_slice_nodes()))
+
         self.network.add_edge(('A', 0), ('D', 1))
         copy.add_edge(('Z', 0), ('D', 1))
         self.assertNotEqual(sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges()))
