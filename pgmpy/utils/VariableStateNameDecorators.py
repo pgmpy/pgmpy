@@ -56,6 +56,8 @@ class stateNameDecorator():
         self.arg = argument
         self.return_val = return_val
         self.state_names = None
+        self.arg_formats = [self.is_list_of_states, self.is_list_of_list_of_states,
+                            self.is_dict_of_states]
 
     def is_list_of_states(self, arg):
         """
@@ -84,20 +86,25 @@ class stateNameDecorator():
 
     def is_dict_of_states(self, arg):
         """
-        A dict states example - 
-        [[('x1', 'easy'), ('x2', 'hard')], [('x1', 'hard'), ('x2', 'medium')]]
+        A dict of states example - 
+        {'x1': 'easy', 'x2':'hard', 'x3': 'medium'}
 
         Returns
         -------
         True, if arg is dict of states else False.
-        {'x1': 'easy', 'x2':'hard', 'x3': 'medium'}
+        
 
         """
-        if isinstance(arg, dict):
-            # This is to ensure that some other dict does not get mapped.
-            return set(self.state_names.values()) == set(arg.values())
+        return isinstance(arg, dict)
 
-        return False
+    def get_mapped_value(self, arg_val):
+        for arg_format in self.arg_formats:
+            if arg_format(arg_val):
+                return self.map_states(arg_val, arg_format)
+        return None
+
+    def map_states(self, arg_val, arg_format):
+        pass
 
     def __call__(self, f):
         def wrapper(*args, **kwargs):
@@ -108,5 +115,28 @@ class stateNameDecorator():
                 return f(*args, **kwargs)
             else:
                 self.state_names = method_self.state_names
-            # incomplete 
+
+            if self.arg and not self.return_val:
+                # if input parameters are in kwargs format
+                if self.arg in kwargs:
+                    arg_val = kwargs[self.arg]
+                    kwargs[self.arg] = self.get_mapped_value(arg_val)
+                    return f(*args, **kwargs)
+                # if input parameters are in args format
+                else:
+                    for arg_val in args[1:]:
+                        mapped_arg_val = self.get_mapped_value(arg_val)
+                        if mapped_arg_val:
+                            mapped_args = list(args)
+                            mapped_args[args.index(arg_val)] = mapped_arg_val
+                            return f(*mapped_args, **kwargs)
+
+            elif not self.arg and self.return_val:
+                return_val = f(*args, **kwargs)
+                return self.get_mapped_value(return_val)
+
+            else:
+                # TODO: Add wrappers for str methods.
+                pass
+
         return wrapper
