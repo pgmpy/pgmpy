@@ -420,17 +420,27 @@ class TestFactorMethods(unittest.TestCase):
                       21, 22, 23])
         self.assertTrue(phi3 == phi4)
 
-    @unittest.skip
     def test_hash(self):
-        phi = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
-        phi1 = Factor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
-        self.assertEqual(hash(phi), hash(phi1))
+        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = Factor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
+        self.assertEqual(hash(phi1), hash(phi2))
 
-        phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
-        phi1 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
-        self.assertEqual(hash(phi), hash(phi1))
+        phi1 = Factor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
+        phi2 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
+        self.assertEqual(hash(phi1), hash(phi2))
 
-        var1 = 'x1'
+        class TestHash:
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+
+            def __hash__(self):
+                return hash(str(self.x)+str(self.y))
+
+            def __eq__(self, other):
+                return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
+
+        var1 = TestHash(1, 2)
         var2 = ('x2', 1)
         var3 = frozenset(['x1', 'x2'])
         phi3 = Factor([var1, var2, var3], [2, 4, 3], range(24))
@@ -439,6 +449,13 @@ class TestFactorMethods(unittest.TestCase):
                       4, 5, 15, 16, 17, 6, 7,
                       8, 18, 19, 20, 9, 10, 11,
                       21, 22, 23])
+        self.assertEqual(hash(phi3), hash(phi4))
+
+        var1 = TestHash(2, 3)
+        var2 = TestHash('x2', 1)
+        var3 = frozenset(['x2', 3, 4])
+        phi3 = Factor([var1, var2, var3], [2, 2, 2], range(8))
+        phi4 = Factor([var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi3), hash(phi4))
 
     def test_maximize_single(self):
