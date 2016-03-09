@@ -55,4 +55,58 @@ class stateNameDecorator():
     def __init__(self, argument, return_val):
         self.arg = argument
         self.return_val = return_val
+        self.state_names = None
 
+    def is_list_of_states(self, arg):
+        """
+        A list of states example - 
+        [('x1', 'easy'), ('x2', 'hard')]
+
+        Returns
+        -------
+        True, if arg is a list of states else False.
+
+        """
+        return isinstance(arg, list) and all(isinstance(i, tuple) for i in arg)
+
+    def is_list_of_list_of_states(self, arg):
+        """
+        A list of list of states example - 
+        [[('x1', 'easy'), ('x2', 'hard')], [('x1', 'hard'), ('x2', 'medium')]]
+
+        Returns
+        -------
+        True, if arg is a list of list of states else False.
+
+        """
+        return all([isinstance(arg, list), all(isinstance(i, list) for i in arg),
+                        all((isinstance(i, tuple) for i in lst) for lst in arg)])
+
+    def is_dict_of_states(self, arg):
+        """
+        A dict states example - 
+        [[('x1', 'easy'), ('x2', 'hard')], [('x1', 'hard'), ('x2', 'medium')]]
+
+        Returns
+        -------
+        True, if arg is dict of states else False.
+        {'x1': 'easy', 'x2':'hard', 'x3': 'medium'}
+
+        """
+        if isinstance(arg, dict):
+            # This is to ensure that some other dict does not get mapped.
+            return set(self.state_names.values()) == set(arg.values())
+
+        return False
+
+    def __call__(self, f):
+        def wrapper(*args, **kwargs):
+            # args[0] represents the self parameter of the __init__ method
+            method_self = args[0]
+
+            if not method_self.state_names:
+                return f(*args, **kwargs)
+            else:
+                self.state_names = method_self.state_names
+            # incomplete 
+        return wrapper
