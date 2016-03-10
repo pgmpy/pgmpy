@@ -781,7 +781,7 @@ class Factor(object):
 
     def __hash__(self):
         var_with_hashes = map((lambda var: (hash(var), var)), self.variables)
-        var_with_hashes = sorted(var_with_hashes, key=lambda element: element[0])
+        var_with_hashes = sorted(var_with_hashes)
         variables = list(map(lambda var_with_hash: var_with_hash[1], var_with_hashes))
         phi = self.copy()
         for axis in range(phi.values.ndim):
