@@ -780,12 +780,12 @@ class Factor(object):
         return not self.__eq__(other)
 
     def __hash__(self):
-        var_with_hashes = map((lambda var: (hash(var), var)), self.variables)
-        var_with_hashes = sorted(var_with_hashes)
-        variables = list(map(lambda var_with_hash: var_with_hash[1], var_with_hashes))
+        variable_hashes = [hash(variable) for variable in self.variables]
+        sorted_var_hashes = list(sorted(variable_hashes))
         phi = self.copy()
         for axis in range(phi.values.ndim):
-            exchange_index = phi.variables.index(variables[axis])
+            exchange_index = variable_hashes.index(sorted_var_hashes[axis])
+            variable_hashes[axis], variable_hashes[exchange_index] = (variable_hashes[exchange_index], variable_hashes[axis])
             phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
                                                                   phi.variables[axis])
             phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
