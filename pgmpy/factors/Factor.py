@@ -781,7 +781,7 @@ class Factor(object):
 
     def __hash__(self):
         variable_hashes = [hash(variable) for variable in self.variables]
-        sorted_var_hashes = list(sorted(variable_hashes))
+        sorted_var_hashes = sorted(variable_hashes)
         phi = self.copy()
         for axis in range(phi.values.ndim):
             exchange_index = variable_hashes.index(sorted_var_hashes[axis])
