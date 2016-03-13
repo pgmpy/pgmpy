@@ -104,7 +104,36 @@ class stateNameDecorator():
         return None
 
     def map_states(self, arg_val, arg_format):
-        pass
+        if arg_format == self.is_list_of_states:
+            # Case when the input parameter is consistent with the internal
+            # state names architecture
+            if not self.return_val and isinstance(arg_val[0][1], int):
+                return arg_val
+            else:
+                return [(var,self.state_names[var].index(state)) for var,state in arg_val]
+
+        if arg_format == self.is_list_of_list_of_states:
+            # Case when the input parameter is consistent with the internal
+            # state names architecture
+            if not self.return_val and isinstance(arg_val[0][0][1], int):
+                return arg_val
+            else:
+                mapped_arg_val = []
+                for elem in arg_val:
+                    mapped_elem = [(var,self.state_names[var][state])
+                                             for var,state in elem]
+                    mapped_arg_val.append(mapped_elem)
+                return mapped_arg_val
+
+        if arg_format == self.is_dict_of_states:
+            # Case when the input parameter is consistent with the internal
+            # state names architecture
+            if not self.return_val and all([isinstance(i, int) for i in arg_val.values()]):
+                return arg_val
+            else:
+                for var in arg_val:
+                    arg_val[var] = self.state_names[var].index(arg_val[var])
+                return arg_val
 
     def __call__(self, f):
         def wrapper(*args, **kwargs):

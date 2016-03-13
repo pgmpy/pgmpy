@@ -8,6 +8,7 @@ from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
 from pgmpy.models import DynamicBayesianNetwork
+from pgmpy.utils import stateNameInit
 
 
 class Inference(object):
@@ -53,6 +54,7 @@ class Inference(object):
     >>> model = Inference(student)
     """
 
+    @stateNameInit()
     def __init__(self, model):
         self.model = model
         model.check_model()

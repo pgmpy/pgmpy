@@ -9,7 +9,7 @@ import numpy as np
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
-from pgmpy.utils import stateNameInit
+from pgmpy.utils import stateNameInit, stateNameDecorator
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -161,6 +161,7 @@ class Factor(object):
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
+    @stateNameDecorator(argument=None, return_val=True)
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -381,6 +382,7 @@ class Factor(object):
         if not inplace:
             return phi
 
+    @stateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
