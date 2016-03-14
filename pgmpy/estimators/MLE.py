@@ -68,7 +68,14 @@ class MaximumLikelihoodEstimator(BaseEstimator):
             else:
                 parent_card = np.array([self.node_card[parent] for parent in parents])
                 var_card = self.node_card[node]
+
                 values = self.data.groupby([node] + parents).size().unstack(parents).fillna(0)
+                if not len(values.columns) == np.prod(parent_card):
+                    # some columns are missing if for some states of the parents no data was observed.
+                    # reindex to add missing columns and fill in uniform (conditional) probabilities:
+                    full_index = pd.MultiIndex.from_product([range(card) for card in parent_card], names=parents)
+                    values = values.reindex(columns=full_index).fillna(1.0/var_card)
+
                 cpd = TabularCPD(node, var_card, np.array(values),
                                  evidence=parents,
                                  evidence_card=parent_card.astype('int'))
