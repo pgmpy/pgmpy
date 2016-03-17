@@ -780,16 +780,16 @@ class Factor(object):
         return not self.__eq__(other)
 
     def __hash__(self):
-        variables = sorted(self.variables)
+        variable_hashes = [hash(variable) for variable in self.variables]
+        sorted_var_hashes = sorted(variable_hashes)
         phi = self.copy()
         for axis in range(phi.values.ndim):
-            exchange_index = phi.variables.index(variables[axis])
-            phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
-                                                                  phi.variables[axis])
+            exchange_index = variable_hashes.index(sorted_var_hashes[axis])
+            variable_hashes[axis], variable_hashes[exchange_index] = (variable_hashes[exchange_index], variable_hashes[axis])
             phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
                                                                       phi.cardinality[axis])
             phi.values = phi.values.swapaxes(axis, exchange_index)
-        return hash(str(phi.variables) + str(phi.values) + str(phi.cardinality))
+        return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
 
 
 def factor_product(*args):
