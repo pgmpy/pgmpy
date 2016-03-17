@@ -786,12 +786,10 @@ class Factor(object):
         for axis in range(phi.values.ndim):
             exchange_index = variable_hashes.index(sorted_var_hashes[axis])
             variable_hashes[axis], variable_hashes[exchange_index] = (variable_hashes[exchange_index], variable_hashes[axis])
-            phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
-                                                                  phi.variables[axis])
             phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
                                                                       phi.cardinality[axis])
             phi.values = phi.values.swapaxes(axis, exchange_index)
-        return hash(str(phi.variables) + str(phi.values) + str(phi.cardinality))
+        return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
 
 
 def factor_product(*args):
