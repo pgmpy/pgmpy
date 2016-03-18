@@ -47,7 +47,7 @@ $ pip install -r requirements.txt  # or requirements-dev.txt if you want to run 
 ```
 or conda
 ```
-$ conda intall --file requirements.txt  # or requirements-dev.txt
+$ conda install --file requirements.txt  # or requirements-dev.txt
 ```
 
 Then install using:
