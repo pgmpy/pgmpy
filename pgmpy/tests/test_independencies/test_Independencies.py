@@ -102,19 +102,50 @@ class TestIndependencies(unittest.TestCase):
         self.assertEqual(self.Independencies2, Independencies())
 
     def test_add_assertions(self):
-        self.Independencies1 = Independencies()
-        self.Independencies1.add_assertions(['X', 'Y', 'Z'])
+        self.Independencies1 = Independencies(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1, Independencies(['X', 'Y', 'Z']))
-        self.Independencies2 = Independencies()
-        self.Independencies2.add_assertions(['A', 'B', 'C'], ['D', 'E', 'F'])
+        self.Independencies2 = Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2, Independencies(['A', 'B', 'C'], ['D', 'E', 'F']))
 
     def test_get_assertions(self):
-        self.Independencies1 = Independencies()
-        self.Independencies1.add_assertions(['X', 'Y', 'Z'])
+        self.Independencies1 = Independencies(['X', 'Y', 'Z'])
         self.assertEqual(self.Independencies1.independencies, self.Independencies1.get_assertions())
         self.Independencies2 = Independencies(['A', 'B', 'C'], ['D', 'E', 'F'])
         self.assertEqual(self.Independencies2.independencies, self.Independencies2.get_assertions())
+
+    def test_closure(self):
+        ind1 = Independencies(('A', ['B', 'C'], 'D'))
+        self.assertEqual(ind1.closure(), Independencies(('A', ['B', 'C'], 'D'),
+                                                        ('A', 'B', ['C', 'D']),
+                                                        ('A', 'C', ['B', 'D']),
+                                                        ('A', 'B', 'D'),
+                                                        ('A', 'C', 'D')))
+        ind2 = Independencies(('W', ['X', 'Y', 'Z']))
+        self.assertEqual(ind2.closure(),
+                         Independencies(('W','Y'), ('W','Y','X'), ('W','Y','Z'), ('W','Y',['X','Z']),
+                                        ('W',['Y','X']), ('W','X',['Y','Z']), ('W',['X','Z'],'Y'), ('W','X'),
+                                        ('W',['X','Z']), ('W',['Y','Z'],'X'), ('W',['Y','X','Z']), ('W','X','Z'),
+                                        ('W',['Y','Z']), ('W','Z','X'), ('W','Z'), ('W',['Y','X'],'Z'),
+                                        ('W','X','Y'), ('W','Z',['Y','X']), ('W','Z','Y')) )
+        ind3 = Independencies(('c', 'a', ['b','e','d']), (['e','c'], 'b', ['a','d']), (['b','d'], 'e', 'a'),
+                              ('e', ['b','d'], 'c'), ('e', ['b','c'], 'd'), (['e','c'], 'a', 'b'))
+        self.assertEqual(len(ind3.closure().get_assertions()), 78)
+
+    def test_entails(self):
+        ind1 = Independencies([['A', 'B'], ['C', 'D'], 'E'])
+        ind2 = Independencies(['A', 'C', 'E'])
+        self.assertTrue(ind1.entails(ind2))
+        self.assertFalse(ind2.entails(ind1))
+        ind3 = Independencies(('W', ['X', 'Y', 'Z']))
+        self.assertTrue(ind3.entails(ind3.closure()))
+        self.assertTrue(ind3.closure().entails(ind3))
+
+    def test_is_equivalent(self):
+        ind1 = Independencies(['X', ['Y', 'W'], 'Z'])
+        ind2 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'])
+        ind3 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'], ['X', 'Y', ['W','Z']])
+        self.assertFalse(ind1.is_equivalent(ind2))
+        self.assertTrue(ind1.is_equivalent(ind3))
 
     def test_eq(self):
         self.assertTrue(self.Independencies3 == self.Independencies4)
