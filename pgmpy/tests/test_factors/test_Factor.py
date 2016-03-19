@@ -393,17 +393,6 @@ class TestFactorMethods(unittest.TestCase):
         phi2 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi1), hash(phi2))
 
-        class TestHash:
-            def __init__(self, x, y):
-                self.x = x
-                self.y = y
-
-            def __hash__(self):
-                return hash(str(self.x)+str(self.y))
-
-            def __eq__(self, other):
-                return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
-
         var1 = TestHash(1, 2)
         phi3 = Factor([var1, self.var2, self.var3], [2, 4, 3], range(24))
         phi4 = Factor([self.var2, var1, self.var3], [4, 2, 3],
@@ -469,6 +458,19 @@ class TestFactorMethods(unittest.TestCase):
         del self.phi8
         del self.phi9
         del self.phi10
+
+
+class TestHash:
+    # Used to check the hash function of Factor class.
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __hash__(self):
+        return hash(str(self.x)+str(self.y))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
 
 
 class TestTabularCPDInit(unittest.TestCase):
