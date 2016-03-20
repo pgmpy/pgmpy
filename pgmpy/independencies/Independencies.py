@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import itertools
-from pgmpy import exceptions
 from pgmpy.extern import six
 
 
@@ -342,11 +341,11 @@ class IndependenceAssertion(object):
           ---
         """
         if event1 and not event2:
-            raise exceptions.RequiredError('event2 needed')
+            raise ValueError('event2 needed')
         if any([event2, event3]) and not event1:
-            raise exceptions.RequiredError('event1')
+            raise ValueError('event1')
         if event3 and not all([event1, event2]):
-            raise exceptions.RequiredError('event1' if not event1 else 'event2')
+            raise ValueError('event1' if not event1 else 'event2')
 
         self.event1 = frozenset(self._return_list_if_str(event1))
         self.event2 = frozenset(self._return_list_if_str(event2))

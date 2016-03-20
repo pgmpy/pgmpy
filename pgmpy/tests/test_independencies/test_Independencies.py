@@ -1,7 +1,5 @@
 import unittest
 
-from pgmpy import exceptions
-from pgmpy.extern.six.moves import zip
 from pgmpy.independencies import Independencies, IndependenceAssertion
 
 
@@ -28,11 +26,11 @@ class TestIndependenceAssertion(unittest.TestCase):
         self.assertSetEqual(self.assertion1.event3, {'A', 'B'})
 
     def test_init_exceptions(self):
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'], event3='V')
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event3=['Z'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'], event3=['Z'])
+        self.assertRaises(ValueError, IndependenceAssertion, event2=['U'], event3='V')
+        self.assertRaises(ValueError, IndependenceAssertion, event2=['U'])
+        self.assertRaises(ValueError, IndependenceAssertion, event3=['Z'])
+        self.assertRaises(ValueError, IndependenceAssertion, event1=['U'])
+        self.assertRaises(ValueError, IndependenceAssertion, event1=['U'], event3=['Z'])
 
     def tearDown(self):
         del self.assertion
