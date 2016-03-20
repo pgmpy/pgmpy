@@ -201,8 +201,8 @@ class Independencies(object):
                          set(itertools.product(all_independencies, new_inds)))
 
             all_independencies |= new_inds
-            new_inds = set(sum([sg1(ind)   for ind  in new_inds] +
-                               [sg2(ind)   for ind  in new_inds] +
+            new_inds = set(sum([sg1(ind) for ind in new_inds] +
+                               [sg2(ind) for ind in new_inds] +
                                [sg3(*inds) for inds in new_pairs], []))
             new_inds -= all_independencies
 
@@ -341,11 +341,11 @@ class IndependenceAssertion(object):
           ---
         """
         if event1 and not event2:
-            raise ValueError('event2 needed')
+            raise ValueError('event2 needs to be specified')
         if any([event2, event3]) and not event1:
-            raise ValueError('event1')
+            raise ValueError('event1 needs to be specified')
         if event3 and not all([event1, event2]):
-            raise ValueError('event1' if not event1 else 'event2')
+            raise ValueError('event1' if not event1 else 'event2' + ' needs to be specified')
 
         self.event1 = frozenset(self._return_list_if_str(event1))
         self.event2 = frozenset(self._return_list_if_str(event2))
