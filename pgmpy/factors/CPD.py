@@ -7,7 +7,6 @@ from warnings import warn
 
 import numpy as np
 
-from pgmpy import exceptions
 from pgmpy.factors import Factor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
@@ -132,8 +131,7 @@ class TabularCPD(Factor):
                                     " of strings.")
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise exceptions.CardinalityError("Cardinality of all "
-                                                  "evidences not specified")
+                raise ValueError("Cardinality of all evidences not specified")
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
@@ -218,11 +216,11 @@ class TabularCPD(Factor):
         evidence_card = self.cardinality[1:]
 
         if evidence:
-            evidence_card=evidence_card[::-1]
-            evidence_card=np.insert(evidence_card, 0, 1)
+            evidence_card = evidence_card[::-1]
+            evidence_card = np.insert(evidence_card, 0, 1)
             cum_card = np.cumprod(evidence_card)
             max_card = cum_card[-1]
-            evidence=evidence[::-1]
+            evidence = evidence[::-1]
 
             for i in range(len(evidence)):
                 var = str(evidence[i])

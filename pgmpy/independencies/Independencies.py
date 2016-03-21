@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import itertools
-from pgmpy import exceptions
 from pgmpy.extern import six
 
 
@@ -143,7 +142,7 @@ class Independencies(object):
             if not hasattr(var, '__iter__'):
                 return True
             else:
-                return len(var)==1
+                return len(var) == 1
 
         def sg0(ind):
             "Symmetry rule: 'X ⟂ Y | Z' -> 'Y ⟂ X | Z'"
@@ -153,9 +152,9 @@ class Independencies(object):
         # instead we use a decorator for the other axioms to apply them on both sides
         def apply_left_and_right(func):
             def symmetric_func(*args):
-                if len(args)==1:
+                if len(args) == 1:
                     return func(args[0]) + func(sg0(args[0]))
-                if len(args)==2:
+                if len(args) == 2:
                     return (func(*args) + func(args[0], sg0(args[1])) +
                             func(sg0(args[0]), args[1]) + func(sg0(args[0]), sg0(args[1])))
             return symmetric_func
@@ -167,7 +166,7 @@ class Independencies(object):
                 return []
             else:
                 return [IndependenceAssertion(ind.event1, ind.event2 - {elem}, ind.event3)
-                                                               for elem in ind.event2]
+                        for elem in ind.event2]
 
         @apply_left_and_right
         def sg2(ind):
@@ -176,7 +175,7 @@ class Independencies(object):
                 return []
             else:
                 return [IndependenceAssertion(ind.event1, ind.event2 - {elem}, {elem} | ind.event3)
-                                                               for elem in ind.event2]
+                        for elem in ind.event2]
 
         @apply_left_and_right
         def sg3(ind1, ind2):
@@ -188,7 +187,7 @@ class Independencies(object):
             Z = ind2.event3
             Y_Z = ind1.event3
             if Y < Y_Z and Z < Y_Z and Y.isdisjoint(Z):
-                return [IndependenceAssertion(ind1.event1, ind1.event2 | Y, Z),]
+                return [IndependenceAssertion(ind1.event1, ind1.event2 | Y, Z)]
             else:
                 return []
 
@@ -202,8 +201,8 @@ class Independencies(object):
                          set(itertools.product(all_independencies, new_inds)))
 
             all_independencies |= new_inds
-            new_inds = set(sum([sg1(ind)   for ind  in new_inds] +
-                               [sg2(ind)   for ind  in new_inds] +
+            new_inds = set(sum([sg1(ind) for ind in new_inds] +
+                               [sg2(ind) for ind in new_inds] +
                                [sg3(*inds) for inds in new_pairs], []))
             new_inds -= all_independencies
 
@@ -260,7 +259,6 @@ class Independencies(object):
         True
         """
         return self.entails(other) and other.entails(self)
-
 
         # TODO: write reduce function.
     def reduce(self):
@@ -342,11 +340,11 @@ class IndependenceAssertion(object):
           ---
         """
         if event1 and not event2:
-            raise exceptions.RequiredError('event2 needed')
+            raise ValueError('event2 needs to be specified')
         if any([event2, event3]) and not event1:
-            raise exceptions.RequiredError('event1')
+            raise ValueError('event1 needs to be specified')
         if event3 and not all([event1, event2]):
-            raise exceptions.RequiredError('event1' if not event1 else 'event2')
+            raise ValueError('event1' if not event1 else 'event2' + ' needs to be specified')
 
         self.event1 = frozenset(self._return_list_if_str(event1))
         self.event2 = frozenset(self._return_list_if_str(event2))
