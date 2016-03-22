@@ -39,9 +39,6 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(set(mle.get_parameters()), set(cpds))
 
 
-
-
-
     def test_get_parameters_common_cause(self):
         mle = MaximumLikelihoodEstimator(self.m3, self.d2)
         cpds = [ TabularCPD('B', 2, [[0.5],[0.5]]),
@@ -54,15 +51,17 @@ class TestMLE(unittest.TestCase):
 
         self.assertEqual(set(mle.get_parameters()), set(cpds))
 
+
     def test_get_parameters_missing_data(self):
         mle = MaximumLikelihoodEstimator(self.m1, self.d1)
-        cpds = [ TabularCPD('A', 2, [[2.0/3],[1.0/3]]),
-                 TabularCPD('C', 2, [[0.0, 0.0, 1.0, 0.5],
-                                     [1.0, 1.0, 0.0, 0.5]],
-                                     evidence=['A','B'], evidence_card=[2,2]),
-                 TabularCPD('B', 2, [[2.0/3],[1.0/3]]) ]
+        cpds = [TabularCPD('A', 2, [[2.0/3], [1.0/3]]),
+                TabularCPD('C', 2, [[0.0, 0.0, 1.0, 0.5],
+                                    [1.0, 1.0, 0.0, 0.5]],
+                           evidence=['A', 'B'], evidence_card=[2, 2]),
+                TabularCPD('B', 2, [[2.0/3], [1.0/3]])]
 
         self.assertSetEqual(set(mle.get_parameters()), set(cpds))
+
 
     def tearDown(self):
         del self.m1

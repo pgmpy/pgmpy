@@ -11,7 +11,6 @@ from pgmpy.factors import JointProbabilityDistribution as JPD
 from pgmpy.factors import factor_product
 from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD
-from pgmpy import exceptions
 from pgmpy.extern.six.moves import range
 from pgmpy.independencies import Independencies
 
@@ -510,21 +509,21 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertRaises(TypeError, TabularCPD, 'event', '2', [[0.1, 0.9]])
 
     def test_cpd_init_cardinality_not_specified(self):
-        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1', 'evi2'], [5])
-        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1', 'evi2'], 5)
-        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1'], [5, 6])
-        self.assertRaises(exceptions.CardinalityError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           'evi1', [5, 6])
 
     def test_cpd_init_value_not_2d(self):

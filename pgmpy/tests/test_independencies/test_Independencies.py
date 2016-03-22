@@ -1,7 +1,5 @@
 import unittest
 
-from pgmpy import exceptions
-from pgmpy.extern.six.moves import zip
 from pgmpy.independencies import Independencies, IndependenceAssertion
 
 
@@ -28,11 +26,11 @@ class TestIndependenceAssertion(unittest.TestCase):
         self.assertSetEqual(self.assertion1.event3, {'A', 'B'})
 
     def test_init_exceptions(self):
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'], event3='V')
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event2=['U'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event3=['Z'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'])
-        self.assertRaises(exceptions.RequiredError, IndependenceAssertion, event1=['U'], event3=['Z'])
+        self.assertRaises(ValueError, IndependenceAssertion, event2=['U'], event3='V')
+        self.assertRaises(ValueError, IndependenceAssertion, event2=['U'])
+        self.assertRaises(ValueError, IndependenceAssertion, event3=['Z'])
+        self.assertRaises(ValueError, IndependenceAssertion, event1=['U'])
+        self.assertRaises(ValueError, IndependenceAssertion, event1=['U'], event3=['Z'])
 
     def tearDown(self):
         del self.assertion
@@ -122,13 +120,15 @@ class TestIndependencies(unittest.TestCase):
                                                         ('A', 'C', 'D')))
         ind2 = Independencies(('W', ['X', 'Y', 'Z']))
         self.assertEqual(ind2.closure(),
-                         Independencies(('W','Y'), ('W','Y','X'), ('W','Y','Z'), ('W','Y',['X','Z']),
-                                        ('W',['Y','X']), ('W','X',['Y','Z']), ('W',['X','Z'],'Y'), ('W','X'),
-                                        ('W',['X','Z']), ('W',['Y','Z'],'X'), ('W',['Y','X','Z']), ('W','X','Z'),
-                                        ('W',['Y','Z']), ('W','Z','X'), ('W','Z'), ('W',['Y','X'],'Z'),
-                                        ('W','X','Y'), ('W','Z',['Y','X']), ('W','Z','Y')) )
-        ind3 = Independencies(('c', 'a', ['b','e','d']), (['e','c'], 'b', ['a','d']), (['b','d'], 'e', 'a'),
-                              ('e', ['b','d'], 'c'), ('e', ['b','c'], 'd'), (['e','c'], 'a', 'b'))
+                         Independencies(
+                             ('W', 'Y'), ('W', 'Y', 'X'), ('W', 'Y', 'Z'), ('W', 'Y', ['X', 'Z']),
+                             ('W', ['Y', 'X']), ('W', 'X', ['Y', 'Z']), ('W', ['X', 'Z'], 'Y'),
+                             ('W', 'X'), ('W', ['X', 'Z']), ('W', ['Y', 'Z'], 'X'),
+                             ('W', ['Y', 'X', 'Z']), ('W', 'X', 'Z'), ('W', ['Y', 'Z']),
+                             ('W', 'Z', 'X'), ('W', 'Z'), ('W', ['Y', 'X'], 'Z'), ('W', 'X', 'Y'),
+                             ('W', 'Z', ['Y', 'X']), ('W', 'Z', 'Y')))
+        ind3 = Independencies(('c', 'a', ['b', 'e', 'd']), (['e', 'c'], 'b', ['a', 'd']), (['b', 'd'], 'e', 'a'),
+                              ('e', ['b', 'd'], 'c'), ('e', ['b', 'c'], 'd'), (['e', 'c'], 'a', 'b'))
         self.assertEqual(len(ind3.closure().get_assertions()), 78)
 
     def test_entails(self):
@@ -143,7 +143,7 @@ class TestIndependencies(unittest.TestCase):
     def test_is_equivalent(self):
         ind1 = Independencies(['X', ['Y', 'W'], 'Z'])
         ind2 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'])
-        ind3 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'], ['X', 'Y', ['W','Z']])
+        ind3 = Independencies(['X', 'Y', 'Z'], ['X', 'W', 'Z'], ['X', 'Y', ['W', 'Z']])
         self.assertFalse(ind1.is_equivalent(ind2))
         self.assertTrue(ind1.is_equivalent(ind3))
 

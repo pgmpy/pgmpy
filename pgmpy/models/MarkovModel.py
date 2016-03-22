@@ -567,7 +567,6 @@ class MarkovModel(UndirectedGraph):
         ...                    ('x4', 'x7'), ('x5', 'x7')])
         >>> mm.get_local_independecies()
         """
-        from pgmpy.exceptions import RequiredError
         local_independencies = Independencies()
 
         all_vars = set(self.nodes())
@@ -576,7 +575,7 @@ class MarkovModel(UndirectedGraph):
             rest = all_vars - set([node]) - markov_blanket
             try:
                 local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
-            except RequiredError:
+            except ValueError:
                 pass
 
         local_independencies.reduce()
