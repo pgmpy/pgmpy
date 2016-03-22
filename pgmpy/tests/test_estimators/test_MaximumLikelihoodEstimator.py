@@ -66,5 +66,8 @@ class TestMLE(unittest.TestCase):
 
     def tearDown(self):
         del self.m1
-        del self.d1
+        del self.m2
+        del self.m3
 
+        del self.d1
+        del self.d2
