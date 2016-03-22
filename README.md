@@ -23,6 +23,7 @@ pgmpy has following non optional dependencies:
 - Numpy 1.9.2 
 - Cython 0.21 
 - Pandas 0.15.1 
+- pyparsing 2.0.3
 
 Download
 =========
@@ -31,7 +32,9 @@ You can either clone the git repo with:
 ```
 git clone https://github.com/pgmpy/pgmpy
 ```
-or download a zip from: https://github.com/pgmpy/pgmpy/archive/dev.zip
+or download a zip from: [https://github.com/pgmpy/pgmpy/archive/dev.zip](https://github.com/pgmpy/pgmpy/archive/dev.zip)
+
+Alternatively, one can download a .tar.gz file from the PyPI archive [https://pypi.python.org/pypi/pgmpy](https://pypi.python.org/pypi/pgmpy)
 
 Installation
 =============
@@ -56,6 +59,10 @@ Then install using:
 sudo python3 setup.py install
 ```
 
+Alternatively, To install pgmpy, Obtain it from PyPI by using pip
+```
+$ pip install pgmpy
+```
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
 
 Development
