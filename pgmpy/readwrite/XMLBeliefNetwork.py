@@ -1,3 +1,5 @@
+import numpy as np
+
 try:
     from lxml import etree
 except ImportError:
@@ -164,7 +166,6 @@ class XBNReader(object):
                  [ 0.7 ,  0.3 ],
                  [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
         """
-        import numpy as np
         distribution = {}
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
             variable_name = dist.find('PRIVATE').get('NAME')

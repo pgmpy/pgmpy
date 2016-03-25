@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import networkx as nx
+
 from pgmpy.models import ClusterGraph
 
 
@@ -68,8 +70,6 @@ class JunctionTree(ClusterGraph):
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
         ...                   (('a', 'b', 'c'), ('a', 'c'))])
         """
-        import networkx as nx
-
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, u, v):
             raise ValueError('Addition of edge between {u} and {v} forms a cycle breaking the '
                              'properties of Junction Tree'.format(u=str(u), v=str(v)))
@@ -91,8 +91,6 @@ class JunctionTree(ClusterGraph):
         check: boolean
             True if all the checks are passed
         """
-        import networkx as nx
-
         if not nx.is_connected(self):
             raise ValueError('The Junction Tree defined is not fully connected.')
 

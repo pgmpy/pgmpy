@@ -3,11 +3,12 @@
 import itertools
 from collections import defaultdict
 
-from pgmpy.factors import Factor
 import numpy as np
 from networkx.algorithms import bipartite
 
+from pgmpy.models import MarkovModel
 from pgmpy.base import UndirectedGraph
+from pgmpy.factors import Factor
 from pgmpy.factors import factor_product
 from pgmpy.extern.six.moves import filter, range, zip
 
@@ -283,7 +284,6 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> mm = G.to_markov_model()
         """
-        from pgmpy.models import MarkovModel
         mm = MarkovModel()
 
         variable_nodes = self.get_variable_nodes()

@@ -1,7 +1,6 @@
 import unittest
-import itertools
 import warnings
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 import numpy as np
 import numpy.testing as np_test
@@ -13,6 +12,8 @@ from pgmpy.factors import factor_divide
 from pgmpy.factors.CPD import TabularCPD
 from pgmpy.extern.six.moves import range
 from pgmpy.independencies import Independencies
+from pgmpy.models import BayesianModel
+from pgmpy.models import MarkovModel
 
 
 class TestFactorInit(unittest.TestCase):
@@ -275,9 +276,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod.variables, expected_factor.variables)
 
     def test_product(self):
-        from pgmpy import factors
-        phi = factors.Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = factors.Factor(['x3', 'x4'], [2, 2], range(4))
+        phi = Factor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
         expected_factor = Factor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
                                  [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
@@ -764,8 +764,6 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
             address=hex(id(self.jpd1))))
 
     def test_is_imap(self):
-        from pgmpy.models import BayesianModel
-        from pgmpy.models import MarkovModel
         G1 = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])

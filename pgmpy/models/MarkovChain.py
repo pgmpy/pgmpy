@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from collections import defaultdict
 from warnings import warn
 
 import numpy as np
@@ -255,7 +256,6 @@ class MarkovChain(object):
         sampled = DataFrame(index=range(size), columns=self.variables)
         sampled.loc[0] = [st for var, st in self.state]
 
-        from collections import defaultdict
         var_states = defaultdict(dict)
         var_values = defaultdict(dict)
         samples = defaultdict(dict)

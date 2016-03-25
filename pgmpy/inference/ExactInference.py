@@ -306,8 +306,6 @@ class BeliefPropagation(Inference):
         model for which inference is to performed
     """
     def __init__(self, model):
-        from pgmpy.models import JunctionTree
-
         super(BeliefPropagation, self).__init__(model)
 
         if not isinstance(model, JunctionTree):
