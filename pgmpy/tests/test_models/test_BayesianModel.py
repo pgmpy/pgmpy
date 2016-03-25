@@ -5,11 +5,10 @@ import pandas as pd
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianModel, MarkovModel
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
-from pgmpy.extern import six
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -163,7 +162,6 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(G2.get_immoralities(), {('w', 'z')})
 
     def test_is_iequivalent(self):
-        from pgmpy.models import MarkovModel
         G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
         self.assertRaises(TypeError, G.is_iequivalent, MarkovModel())
         G1 = BayesianModel([('V', 'W'), ('W', 'X'), ('X', 'Y'), ('Z', 'Y')])

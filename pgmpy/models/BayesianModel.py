@@ -14,6 +14,7 @@ from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, reduce
+from pgmpy.models.MarkovModel import MarkovModel
 
 
 class BayesianModel(DirectedGraph):
@@ -385,7 +386,6 @@ class BayesianModel(DirectedGraph):
                 descendents.extend(neighbors)
             return descendents
 
-        from pgmpy.independencies import Independencies
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
@@ -480,7 +480,6 @@ class BayesianModel(DirectedGraph):
         [('diff', 'intel'), ('diff', 'grade'), ('intel', 'grade'),
         ('intel', 'SAT'), ('grade', 'letter')]
         """
-        from pgmpy.models import MarkovModel
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
