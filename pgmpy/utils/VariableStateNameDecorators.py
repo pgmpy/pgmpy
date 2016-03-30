@@ -5,7 +5,7 @@ of the varibale states to the user defined state names and
 vice versa.
 """
 
-class stateNameInit():
+class StateNameInit():
     """
     The class behaves as a decorator for __init__ methods.
     It adds a dictionary as an attribute to the various classes
@@ -37,7 +37,7 @@ class stateNameInit():
         return wrapper
 
 
-class stateNameDecorator():
+class StateNameDecorator():
     """
     This class behaves as a decorator for the various methods
     that can use variable state names either in input parameters
@@ -105,31 +105,44 @@ class stateNameDecorator():
 
     def map_states(self, arg_val, arg_format):
         if arg_format == self.is_list_of_states:
-            # Case when the input parameter is consistent with the internal
-            # state names architecture
-            if not self.return_val and isinstance(arg_val[0][1], int):
-                return arg_val
+            if not isinstance(arg_val[0][1], str):
+                # If the input parameter is consistent with the internal
+                # state names architecture
+                if not self.return_val:
+                    return arg_val
+                else:
+                    return [(var,self.state_names[var][state]) for var,state in arg_val]
             else:
                 return [(var,self.state_names[var].index(state)) for var,state in arg_val]
 
         if arg_format == self.is_list_of_list_of_states:
-            # Case when the input parameter is consistent with the internal
-            # state names architecture
-            if not self.return_val and isinstance(arg_val[0][0][1], int):
-                return arg_val
+            if not isinstance(arg_val[0][0][1], str):
+                # If the input parameter is consistent with the internal
+                # state names architecture
+                if not self.return_val:
+                    return arg_val
+                else:
+                    mapped_arg_val = []
+                    for elem in arg_val:
+                        mapped_elem = [(var,self.state_names[var][state])
+                                                 for var,state in elem]
+                        mapped_arg_val.append(mapped_elem)
+                    return mapped_arg_val
             else:
                 mapped_arg_val = []
                 for elem in arg_val:
-                    mapped_elem = [(var,self.state_names[var][state])
-                                             for var,state in elem]
-                    mapped_arg_val.append(mapped_elem)
-                return mapped_arg_val
+                    mapped_elem = [(var,self.state_names[var].index(state))
+                                                 for var,state in elem]
 
         if arg_format == self.is_dict_of_states:
-            # Case when the input parameter is consistent with the internal
-            # state names architecture
-            if not self.return_val and all([isinstance(i, int) for i in arg_val.values()]):
-                return arg_val
+            if not any([isinstance(i, str) for i in arg_val.values()]):
+                # If the input parameter is consistent with the internal
+                # state names architecture
+                if not self.return_val:
+                    return arg_val
+                else:
+                    for var in arg_val:
+                        arg_val[var] = self.state_names[var][arg_val[val]]
             else:
                 for var in arg_val:
                     arg_val[var] = self.state_names[var].index(arg_val[var])
@@ -146,23 +159,34 @@ class stateNameDecorator():
                 self.state_names = method_self.state_names
 
             if self.arg and not self.return_val:
-                # if input parameters are in kwargs format
+                # If input parameters are in kwargs format
                 if self.arg in kwargs:
                     arg_val = kwargs[self.arg]
                     kwargs[self.arg] = self.get_mapped_value(arg_val)
                     return f(*args, **kwargs)
-                # if input parameters are in args format
+                # If input parameters are in args format
                 else:
                     for arg_val in args[1:]:
                         mapped_arg_val = self.get_mapped_value(arg_val)
                         if mapped_arg_val:
                             mapped_args = list(args)
                             mapped_args[args.index(arg_val)] = mapped_arg_val
-                            return f(*mapped_args, **kwargs)
+                    return f(*mapped_args, **kwargs)
 
             elif not self.arg and self.return_val:
                 return_val = f(*args, **kwargs)
-                return self.get_mapped_value(return_val)
+
+                mapped_return_val = self.get_mapped_value(return_val)
+                # If the function returns only one output
+                if mapped_return_val:
+                    return mapped_return_val
+
+                # If the function returns more than one output.
+                for ret_val in list(return_val):
+                    mapped_ret_val = self.get_mapped_value(ret_val)
+                    if ret_val:
+                        return_val[return_val.index(ret_val)] = mapped_ret_val
+                return return_val
 
             else:
                 # TODO: Add wrappers for str methods.
