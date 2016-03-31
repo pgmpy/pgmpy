@@ -718,7 +718,6 @@ class Factor(object):
         print_state_names: boolean
                 If True, the user defined state names are displayed.
         """
-
         string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))

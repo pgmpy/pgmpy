@@ -140,7 +140,9 @@ class TabularCPD(Factor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'))
+        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
+                                                     state_names=self.state_names)
+
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
@@ -184,7 +186,7 @@ class TabularCPD(Factor):
     def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
         return super(self, TabularCPD)._str(phi_or_p, tablefmt)
 
-    def _make_table_str(self, tablefmt="fancy_grid"):
+    def _make_table_str(self, tablefmt="fancy_grid", print_state_names=True):
         headers_list = []
         # build column headers
 
@@ -192,12 +194,23 @@ class TabularCPD(Factor):
         evidence_card = self.cardinality[1:]
         if evidence:
             col_indexes = np.array(list(product(*[range(i) for i in evidence_card])))
-            for i in range(len(evidence_card)):
-                column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
-                headers_list.append(column_header)
+            if self.state_names and print_state_names:
+                for i in range(len(evidence_card)):
+                    column_header = [evidence[i]] + ['{var}({state})'.format
+                                        (var=evidence[i], state=self.state_names[evidence[i]][d])
+                                         for d in col_indexes.T[i]]
+            else:
+                for i in range(len(evidence_card)):
+                    column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
+            headers_list.append(column_header)
 
         # Build row headers
-        variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
+        if self.state_names and print_state_names:
+            variable_array = [['{var}({state})'.format
+                                (var=self.variable, state=self.state_names[self.variable][i])
+                                 for i in range(self.variable_card)]]
+        else:
+            variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
         # Stack with data
         labeled_rows = np.hstack((np.array(variable_array).T, self.get_cpd())).tolist()
         # No support for multi-headers in tabulate
