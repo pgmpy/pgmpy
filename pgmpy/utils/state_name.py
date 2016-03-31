@@ -188,8 +188,4 @@ class StateNameDecorator():
                         return_val[return_val.index(ret_val)] = mapped_ret_val
                 return return_val
 
-            else:
-                # TODO: Add wrappers for str methods.
-                pass
-
         return wrapper

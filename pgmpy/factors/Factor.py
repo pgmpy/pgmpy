@@ -706,7 +706,7 @@ class Factor(object):
         else:
             return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p="phi", tablefmt="fancy_grid"):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
@@ -715,7 +715,10 @@ class Factor(object):
         phi_or_p: 'phi' | 'p'
                 'phi': When used for Factors.
                   'p': When used for CPDs.
+        print_state_names: boolean
+                If True, the user defined state names are displayed.
         """
+
         string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
@@ -723,8 +726,14 @@ class Factor(object):
         value_index = 0
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
-            prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
-                         for i in range(len(self.variables))]
+            if self.state_names and print_state_names:
+                prob_list = ["{var}({state})".format(var=list(self.variables)[i],
+                            state=self.state_names[list(self.variables)[i]][prob[i]])
+                            for i in range(len(self.variables))]
+            else:
+                prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
+                             for i in range(len(self.variables))]
+
             prob_list.append(self.values.ravel()[value_index])
             factor_table.append(prob_list)
             value_index += 1
