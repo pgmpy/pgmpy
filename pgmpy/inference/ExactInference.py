@@ -9,12 +9,12 @@ from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 from pgmpy.models import JunctionTree
-from pgmpy.utils import stateNameDecorator
+from pgmpy.utils import StateNameDecorator
 
 
 class VariableElimination(Inference):
 
-    @stateNameDecorator(argument='evidence', return_val=None)
+    @StateNameDecorator(argument='evidence', return_val=None)
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
