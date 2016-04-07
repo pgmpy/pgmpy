@@ -21,10 +21,10 @@ class StateNameInit():
     >>> import numpy as np
     >>> from pgmpy.factors import Factor
     >>> sn = {'speed': ['low', 'medium', 'high'],
-             'switch': ['on', 'off'],
-             'time': ['day', 'night']}
+    ...       'switch': ['on', 'off'],
+    ...       'time': ['day', 'night']}
     >>> phi = Factor(['speed', 'switch', 'time'],
-                     [3, 2, 2], np.ones(12), state_names=sn)
+    ...              [3, 2, 2], np.ones(12), state_names=sn)
     >>> print(phi.state_names)
     {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}
     """
