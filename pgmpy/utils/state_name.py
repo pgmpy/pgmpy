@@ -86,6 +86,8 @@ class StateNameDecorator():
         True, if arg is a list of list of states else False.
 
         """
+        if arg is None:
+            return False
         return all([isinstance(arg, list),
                    all(isinstance(i, list) for i in arg),
                    all((isinstance(i, tuple) for i in lst) for lst in arg)])
@@ -134,12 +136,13 @@ class StateNameDecorator():
                         mapped_elem = [(var, self.state_names[var][state])
                                        for var, state in elem]
                         mapped_arg_val.append(mapped_elem)
-                    return mapped_arg_val
             else:
                 mapped_arg_val = []
                 for elem in arg_val:
                     mapped_elem = [(var, self.state_names[var].index(state))
                                    for var, state in elem]
+                    mapped_arg_val.append(mapped_elem)
+            return mapped_arg_val
 
         if arg_format == self.is_dict_of_states:
             if not any([isinstance(i, str) for i in arg_val.values()]):
@@ -153,7 +156,7 @@ class StateNameDecorator():
             else:
                 for var in arg_val:
                     arg_val[var] = self.state_names[var].index(arg_val[var])
-                return arg_val
+            return arg_val
 
     def __call__(self, f):
         def wrapper(*args, **kwargs):

@@ -13,6 +13,7 @@ from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.utils import StateNameInit
+from pgmpy.utils import StateNameDecorator
 
 
 class TabularCPD(Factor):
@@ -370,6 +371,7 @@ class TabularCPD(Factor):
         if not inplace:
             return tabular_cpd
 
+    @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the cpd table to the context of given variable values.
