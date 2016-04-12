@@ -12,7 +12,7 @@ from pgmpy.models import JunctionTree
 
 
 class VariableElimination(Inference):
-    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None, marginal_independent=True):
         """
         Implementation of a generalized variable elimination.
 
@@ -28,6 +28,11 @@ class VariableElimination(Inference):
         elimination_order: list, array-like
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
+        marginal_independent: bool,
+            a flag saying whether or not to assume marginal independence on
+            multiple variables. Defaults to True to maintain backwards
+            compatibility, however, should never be true when inferring multiple
+            variables (can always marginalize them later)
         """
         # Dealing with the case when variables is not provided.
         if not variables:
@@ -86,9 +91,12 @@ class VariableElimination(Inference):
             query_var_factor[query_var] = phi.marginalize(list(set(variables) -
                                                                set([query_var])),
                                                           inplace=False).normalize(inplace=False)
-        return query_var_factor
+        if marginal_independent:
+            return query_var_factor
+        else:
+            return phi
 
-    def query(self, variables, evidence=None, elimination_order=None):
+    def query(self, variables, evidence=None, elimination_order=None, marginal_independent=True):
         """
         Parameters
         ----------
@@ -100,6 +108,11 @@ class VariableElimination(Inference):
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
+        marginal_independent: bool,
+            a flag saying whether or not to assume marginal independence on
+            multiple variables. Defaults to True to maintain backwards
+            compatibility, however, should never be true when inferring multiple
+            variables (can always marginalize them later)
 
         Examples
         --------
@@ -115,7 +128,9 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         return self._variable_elimination(variables, 'marginalize',
-                                          evidence=evidence, elimination_order=elimination_order)
+                                          evidence=evidence,
+                                          elimination_order=elimination_order,
+                                          marginal_independent=marginal_independent)
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
