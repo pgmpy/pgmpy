@@ -12,7 +12,7 @@ from pgmpy.models import JunctionTree
 
 
 class VariableElimination(Inference):
-    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None, marginal_independent=True):
         """
         Implementation of a generalized variable elimination.
 
@@ -28,6 +28,11 @@ class VariableElimination(Inference):
         elimination_order: list, array-like
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
+        marginal_independent: bool,
+            a flag saying whether or not to assume marginal independence on
+            multiple variables. Defaults to True to maintain backwards
+            compatibility, however, should never be true when inferring multiple
+            variables (can always marginalize them later)
         """
         # Dealing with the case when variables is not provided.
         if not variables:
@@ -86,9 +91,12 @@ class VariableElimination(Inference):
             query_var_factor[query_var] = phi.marginalize(list(set(variables) -
                                                                set([query_var])),
                                                           inplace=False).normalize(inplace=False)
-        return query_var_factor
+        if marginal_independent:
+            return query_var_factor
+        else:
+            return phi
 
-    def query(self, variables, evidence=None, elimination_order=None):
+    def query(self, variables, evidence=None, elimination_order=None, marginal_independent=True):
         """
         Parameters
         ----------
@@ -100,6 +108,11 @@ class VariableElimination(Inference):
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
+        marginal_independent: bool,
+            a flag saying whether or not to assume marginal independence on
+            multiple variables. Defaults to True to maintain backwards
+            compatibility, however, should never be true when inferring multiple
+            variables (can always marginalize them later)
 
         Examples
         --------
@@ -115,7 +128,9 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         return self._variable_elimination(variables, 'marginalize',
-                                          evidence=evidence, elimination_order=elimination_order)
+                                          evidence=evidence,
+                                          elimination_order=elimination_order,
+                                          marginal_independent=marginal_independent)
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
@@ -157,7 +172,7 @@ class VariableElimination(Inference):
             final_distribution = final_distribution.values()
         return np.max(factor_product(*final_distribution).values)
 
-    def map_query(self, variables=None, evidence=None, elimination_order=None):
+    def map_query(self, variables=None, evidence=None, elimination_order=None, marginal_independent=True):
         """
         Computes the MAP Query over the variables given the evidence.
 
@@ -188,12 +203,16 @@ class VariableElimination(Inference):
         elimination_variables = set(self.variables) - set(evidence.keys()) if evidence else set()
         final_distribution = self._variable_elimination(elimination_variables, 'maximize',
                                                         evidence=evidence,
-                                                        elimination_order=elimination_order)
+                                                        elimination_order=elimination_order,
+                                                        marginal_independent=marginal_independent)
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.
-        if isinstance(final_distribution, dict):
-            final_distribution = final_distribution.values()
-        distribution = factor_product(*final_distribution)
+        if marginal_independent:
+            if isinstance(final_distribution, dict):
+                final_distribution = final_distribution.values()
+            distribution = factor_product(*final_distribution)
+        else:
+            distribution = final_distribution
         argmax = np.argmax(distribution.values)
         assignment = distribution.assignment([argmax])[0]
 
@@ -509,7 +528,7 @@ class BeliefPropagation(Inference):
         """
         self._calibrate_junction_tree(operation='maximize')
 
-    def _query(self, variables, operation, evidence=None):
+    def _query(self, variables, operation, evidence=None, marginal_independent=True):
         """
         This is a generalized query method that can be used for both query and map query.
 
@@ -600,11 +619,11 @@ class BeliefPropagation(Inference):
         # Sum product variable elimination on the subtree
         variable_elimination = VariableElimination(subtree)
         if operation == 'marginalize':
-            return variable_elimination.query(variables=variables, evidence=evidence)
+            return variable_elimination.query(variables=variables, evidence=evidence, marginal_independent=marginal_independent)
         elif operation == 'maximize':
-            return variable_elimination.map_query(variables=variables, evidence=evidence)
+            return variable_elimination.map_query(variables=variables, evidence=evidence, marginal_independent=marginal_independent)
 
-    def query(self, variables, evidence=None):
+    def query(self, variables, evidence=None, marginal_independent=True):
         """
         Query method using belief propagation.
 
@@ -642,9 +661,9 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.query(variables=['J', 'Q'],
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
-        return self._query(variables=variables, operation='marginalize', evidence=evidence)
+        return self._query(variables=variables, operation='marginalize', evidence=evidence, marginal_independent=marginal_independent)
 
-    def map_query(self, variables=None, evidence=None):
+    def map_query(self, variables=None, evidence=None, marginal_independent=True):
         """
         MAP Query method using belief propagation.
 
@@ -686,4 +705,4 @@ class BeliefPropagation(Inference):
         if variables is None:
             variables = set(self.variables)
 
-        return self._query(variables=variables, operation='maximize', evidence=evidence)
+        return self._query(variables=variables, operation='maximize', evidence=evidence, marginal_independent=marginal_independent)
