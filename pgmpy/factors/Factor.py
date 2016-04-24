@@ -9,6 +9,7 @@ import numpy as np
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
+from pgmpy.utils import StateNameInit, StateNameDecorator
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -28,6 +29,7 @@ class Factor(object):
     reduce([variable_values_list])
     """
 
+    @StateNameInit()
     def __init__(self, variables, cardinality, values):
         """
         Initialize a factor class.
@@ -159,6 +161,7 @@ class Factor(object):
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
+    @StateNameDecorator(argument=None, return_val=True)
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -379,6 +382,7 @@ class Factor(object):
         if not inplace:
             return phi
 
+    @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
@@ -703,7 +707,7 @@ class Factor(object):
         else:
             return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p="phi", tablefmt="fancy_grid"):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
@@ -712,6 +716,8 @@ class Factor(object):
         phi_or_p: 'phi' | 'p'
                 'phi': When used for Factors.
                   'p': When used for CPDs.
+        print_state_names: boolean
+                If True, the user defined state names are displayed.
         """
         string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
@@ -720,8 +726,14 @@ class Factor(object):
         value_index = 0
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
-            prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
-                         for i in range(len(self.variables))]
+            if self.state_names and print_state_names:
+                prob_list = ["{var}({state})".format(var=list(self.variables)[i],
+                            state=self.state_names[list(self.variables)[i]][prob[i]])
+                            for i in range(len(self.variables))]
+            else:
+                prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
+                             for i in range(len(self.variables))]
+
             prob_list.append(self.values.ravel()[value_index])
             factor_table.append(prob_list)
             value_index += 1

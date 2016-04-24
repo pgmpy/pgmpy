@@ -9,9 +9,12 @@ from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
 from pgmpy.models import JunctionTree
+from pgmpy.utils import StateNameDecorator
 
 
 class VariableElimination(Inference):
+
+    @StateNameDecorator(argument='evidence', return_val=None)
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
         """
         Implementation of a generalized variable elimination.
@@ -157,6 +160,7 @@ class VariableElimination(Inference):
             final_distribution = final_distribution.values()
         return np.max(factor_product(*final_distribution).values)
 
+    @StateNameDecorator(argument=None, return_val=True)
     def map_query(self, variables=None, evidence=None, elimination_order=None):
         """
         Computes the MAP Query over the variables given the evidence.
@@ -541,6 +545,7 @@ class BeliefPropagation(Inference):
         Algorithm 10.4 Out-of-clique inference in clique tree
         Probabilistic Graphical Models: Principles and Techniques Daphne Koller and Nir Friedman.
         """
+
         is_calibrated = self._is_converged(operation=operation)
         # Calibrate the junction tree if not calibrated
         if not is_calibrated:
