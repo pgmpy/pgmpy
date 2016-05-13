@@ -8,12 +8,17 @@ from pgmpy.factors import Factor
 
 class ContinuousNode(rv_continuous):
 	"""
-	Base class for continuous node representation.
-	It is a subclass of scipy.stats.rv_continuous.
-	It has an extra method to discretize the continuous node into
-	a discrete factor.
+	Class for continuous node representation. This is a subclass of 
+	scipy.stats.rv_continuous.
+	This allows representation of user defined continuous distribution
+	by specifying a function to compute the probability density function
+	of the distribution.
+	All methods of the scipy.stats.rv_continuous class can be used on
+	the objects.
+	This supports an extra method to discretize the continuous distribution
+	into a discrete factor using various methods.
 	"""
-	def __init__(self, pdf, lb=None, ub=None, name=None):
+	def __init__(self, pdf, lb=None, ub=None):
 		"""
 		Parameters
 		----------
@@ -28,10 +33,6 @@ class ContinuousNode(rv_continuous):
 		Upper bound of the support of the distribution, default is plus
 		infinity.
 
-		name : str, optional
-		The name of the instance . This string is used to construct the default
-		example for distributions.
-
 		Examples
 		--------
 		>>> from pgmpy.factors import ContinuousNode
@@ -39,7 +40,7 @@ class ContinuousNode(rv_continuous):
 		>>> node = ContinuousNode(custom_pdf, -3, 3)
 		"""
 		self.pdf = pdf
-		super(ContinuousNode, self).__init__(momtype=0, a=lb, b=ub, name=name)
+		super(ContinuousNode, self).__init__(momtype=0, a=lb, b=ub)
 
 	def _pdf(self, *args):
 		"""
