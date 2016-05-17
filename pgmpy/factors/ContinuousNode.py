@@ -65,11 +65,12 @@ class ContinuousNode(rv_continuous):
         >>> from pgmpy.factors import ContinuousNode
         >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
         >>> std_normal = ContinuousNode(std_normal_pdf)
-        >>> std_normal._discretize(frm=-3, to=3, step=0.5,
+        >>> std_normal.discretize(frm=-3, to=3, step=0.5,
         ...                        method_type='rounding')
-        [0.017309024915641107, 0.065590616803038182, 0.120977578710013,
-         0.17466632194020804, 0.19741265136584729, 0.17466632194020937,
-         0.12097757871001302, 0.065590616803036905]
+        [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
+         0.065590616803038182, 0.120977578710013, 0.17466632194020804,
+         0.19741265136584729, 0.17466632194020937, 0.12097757871001302,
+         0.065590616803036905, 0.027834684208772664, 0.0092447094199902269]
         """
         # for x=[frm]
         factor = [self.cdf(frm+step/2) - self.cdf(frm)]
@@ -112,7 +113,7 @@ class ContinuousNode(rv_continuous):
         # exponential distribution with rate = 2
         >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
         >>> exp_node = ContinuousNode(exp_pdf)
-        >>> exp_node.discretize(frm=0, to=5, step=0.5, method_type='unbiased')
+        >>> exp_node.discretize(frm=0, to=5, step=0.5, method='unbiased')
         [0.36787944117140681, 0.3995764008937992, 0.14699594306754959,
          0.054076785386732107, 0.019893735665399759, 0.0073185009180336547,
          0.0026923231244619927, 0.00099045004496534084, 0.00036436735000289211,
