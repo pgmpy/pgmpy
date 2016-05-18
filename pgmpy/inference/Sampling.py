@@ -33,7 +33,7 @@ class BayesianModelSampling(Inference):
         if not isinstance(model, BayesianModel):
             raise TypeError("Model expected type: BayesianModel, got type: ", type(model))
 
-        self.topological_order = nx.topological_sort(model)
+        self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
     def forward_sample(self, size=1):
