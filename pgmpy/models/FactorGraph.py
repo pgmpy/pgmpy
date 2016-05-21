@@ -180,6 +180,7 @@ class FactorGraph(UndirectedGraph):
 
         * Check whether bipartite property of factor graph is still maintained
         or not.
+        
         * Check whether factors are associated for all the random variables or not.
         * Check if factors are defined for each factor node or not.
         * Check if cardinality of random variable remains same across all the
