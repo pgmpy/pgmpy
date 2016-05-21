@@ -4,7 +4,7 @@ from scipy.stats import rv_continuous
 import numpy as np
 
 
-class ContinuousNode(rv_continuous):
+class ContinuousFactor(rv_continuous):
     """
     Class for continuous node representation. This is a subclass of
     scipy.stats.rv_continuous.
@@ -33,12 +33,12 @@ class ContinuousNode(rv_continuous):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousNode
+        >>> from pgmpy.factors import ContinuousFactor
         >>> custom_pdf = lambda x : 0.5 if x > -1 and x < 1 else 0
-        >>> node = ContinuousNode(custom_pdf, -3, 3)
+        >>> node = ContinuousFactor(custom_pdf, -3, 3)
         """
         self.pdf = pdf
-        super(ContinuousNode, self).__init__(momtype=0, a=lb, b=ub)
+        super(ContinuousFactor, self).__init__(momtype=0, a=lb, b=ub)
 
     def _pdf(self, *args):
         """
@@ -62,9 +62,9 @@ class ContinuousNode(rv_continuous):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousNode
+        >>> from pgmpy.factors import ContinuousFactor
         >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-        >>> std_normal = ContinuousNode(std_normal_pdf)
+        >>> std_normal = ContinuousFactor(std_normal_pdf)
         >>> std_normal.discretize(frm=-3, to=3, step=0.5,
         ...                        method_type='rounding')
         [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
@@ -109,10 +109,10 @@ class ContinuousNode(rv_continuous):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousNode
+        >>> from pgmpy.factors import ContinuousFactor
         # exponential distribution with rate = 2
         >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
-        >>> exp_node = ContinuousNode(exp_pdf)
+        >>> exp_node = ContinuousFactor(exp_pdf)
         >>> exp_node.discretize(frm=0, to=5, step=0.5, method='unbiased')
         [0.36787944117140681, 0.3995764008937992, 0.14699594306754959,
          0.054076785386732107, 0.019893735665399759, 0.0073185009180336547,
@@ -164,7 +164,7 @@ class ContinuousNode(rv_continuous):
         The custom method allows the users to define their own
         discretization technique.
         This can be done by defining a function. This user defined
-        function must take a ContinuousNode object and a float
+        function must take a ContinuousFactor object and a float
         (the point at which the function will be applied) as its first
         two parameters. It can have other arguments but the first two
         argument types are fixed.
@@ -182,7 +182,7 @@ class ContinuousNode(rv_continuous):
 
         # exponential distribution with rate = 1
         >>> exp_pdf = lambda x: np.exp(-x) if x>=0 else 0
-        >>> node = ContinuousNode(exp_pdf)
+        >>> node = ContinuousFactor(exp_pdf)
 
         # using the custom function, custom_discretize
         # with h = 0.5
