@@ -142,7 +142,6 @@ class TabularCPD(Factor):
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
                                                      state_names=self.state_names)
 
-
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
             var=self.variable, card=self.variable_card)
@@ -196,12 +195,14 @@ class TabularCPD(Factor):
             if self.state_names and print_state_names:
                 for i in range(len(evidence_card)):
                     column_header = [evidence[i]] + ['{var}({state})'.format
-                                        (var=evidence[i], state=self.state_names[evidence[i]][d])
-                                         for d in col_indexes.T[i]]
+                                                     (var=evidence[i],
+                                                      state=self.state_names[evidence[i]][d])
+                                                     for d in col_indexes.T[i]]
+                    headers_list.append(column_header)
             else:
                 for i in range(len(evidence_card)):
                     column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
-            headers_list.append(column_header)
+                    headers_list.append(column_header)
 
         # Build row headers
         if self.state_names and print_state_names:
@@ -215,57 +216,6 @@ class TabularCPD(Factor):
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
         return cdf_str
-
-    def _repr_html_(self):
-        """
-        Print TabularCPD in form of a table in IPython Notebook
-        """
-        string_list = []
-
-        cpd_value = self.get_cpd()
-
-        html_string_header = (
-            """<table><caption>TabularCPD for <b>%s</b></caption>""" % str(self.variable))
-        string_list.append(html_string_header)
-
-        evidence = self.variables[1:]
-        evidence_card = self.cardinality[1:]
-
-        if evidence:
-            evidence_card = evidence_card[::-1]
-            evidence_card = np.insert(evidence_card, 0, 1)
-            cum_card = np.cumprod(evidence_card)
-            max_card = cum_card[-1]
-            evidence = evidence[::-1]
-
-            for i in range(len(evidence)):
-                var = str(evidence[i])
-                card = evidence_card[i + 1]
-                num_repeat = cum_card[i]
-                col_span = max_card / (num_repeat * card)
-
-                html_substring_header = """<tr><td><b>%s</b></td>""" % var
-                string_list.append(html_substring_header)
-
-                for j in range(num_repeat):
-                    for k in range(card):
-                        html_substring = ("<td colspan=%d>%s_%d</td>" %
-                                          (col_span, var, k))
-                        string_list.append(html_substring)
-                string_list.append("</tr>")
-
-        m, n = cpd_value.shape
-        for i in range(m):
-            html_substring = """<tr><td><b>%s_%d</b></td>""" % (str(self.variable), i)
-            string_list.append(html_substring)
-            for j in range(n):
-                html_substring = """<td>%4.4f</td>""" % cpd_value[i, j]
-                string_list.append(html_substring)
-            string_list.append("</tr>")
-
-        string_list.append("</table>")
-
-        return ''.join(string_list)
 
     def copy(self):
         """
