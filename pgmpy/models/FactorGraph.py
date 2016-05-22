@@ -180,7 +180,6 @@ class FactorGraph(UndirectedGraph):
 
         * Check whether bipartite property of factor graph is still maintained
         or not.
-        
         * Check whether factors are associated for all the random variables or not.
         * Check if factors are defined for each factor node or not.
         * Check if cardinality of random variable remains same across all the
@@ -392,3 +391,22 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('Factor for all the random variables not defined.')
 
         return np.sum(factor.values)
+        
+    def copy(self):
+        """
+        Returns a copy of FactorGraph.
+
+        Returns
+        -------
+        FactorGraph : copy of FactorGraph
+
+        Examples
+        -------
+
+        """
+        copy = FactorGraph(self.edges())
+        copy.add_nodes_from(self.nodes())
+        if self.factors:
+            factors_copy = [factor.copy() for factor in self.factors]
+            copy.add_factors(*factors_copy)
+        return copy
