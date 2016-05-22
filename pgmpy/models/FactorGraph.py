@@ -391,7 +391,6 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('Factor for all the random variables not defined.')
 
         return np.sum(factor.values)
-        
     def copy(self):
         """
         Returns a copy of FactorGraph.
