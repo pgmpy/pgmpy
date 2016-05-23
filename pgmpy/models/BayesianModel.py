@@ -168,7 +168,8 @@ class BayesianModel(DirectedGraph):
 
     def get_cpds(self, node=None):
         """
-        Returns the cpds that have been added till now to the graph
+        Returns the cpd of the node. If node is not specified returns all the CPDs
+        that have been added till now to the graph
 
         Parameter
         ---------
@@ -193,6 +194,7 @@ class BayesianModel(DirectedGraph):
             for cpd in self.cpds:
                 if cpd.variable == node:
                     return cpd
+            raise ValueError("CPD not added for the node: {node}".format(node=node))
         else:
             return self.cpds
 
@@ -222,6 +224,21 @@ class BayesianModel(DirectedGraph):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
+    def get_cardinality(self, node):
+        """
+        Returns the cardinality of the node. Throws an error if the CPD for the
+        queried node hasn't been added to the network.
+
+        Parameters
+        ----------
+        node: Any hashable python object.
+
+        Returns
+        -------
+        int: The cardinality of the node.
+        """
+        return self.get_cpds(node).cardinality[0]
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following
@@ -237,6 +254,7 @@ class BayesianModel(DirectedGraph):
         """
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
+
             if isinstance(cpd, TabularCPD):
                 evidence = cpd.variables[:0:-1]
                 parents = self.get_parents(node)
