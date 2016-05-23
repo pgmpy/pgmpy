@@ -36,7 +36,7 @@ class BaseEliminationOrder:
         """
         return 0
 
-    def get_elimination_order(self, nodes):
+    def get_elimination_order(self, nodes=None):
         """
         Returns the optimal elimination order.
 
@@ -72,6 +72,9 @@ class BaseEliminationOrder:
         >>> WeightedMinFill(model).get_elimination_order(['c', 'd', 'g', 'l', 's'])
         ['c', 'l', 's', 'd', 'g']
         """
+        if not nodes:
+            nodes = self.bayesian_model.nodes()
+
         ordering = []
         while nodes:
             scores = {node: self.cost(node) for node in nodes}
@@ -89,7 +92,7 @@ class BaseEliminationOrder:
         node: string (any hashable python object)
             Node to be removed from the graph.
         """
-        return combinations(self.bayesian_model.neighbours(node), 2)
+        return combinations(self.bayesian_model.neighbors(node), 2)
 
 
 class WeightedMinFill(BaseEliminationOrder):
@@ -101,8 +104,8 @@ class WeightedMinFill(BaseEliminationOrder):
         product of the weights, domain cardinality, of its constituent vertices.
         """
         edges = combinations(self.moralized_model.neighbors(node), 2)
-        return sum([self.bayesian_model.get_cardinality(edge[0])[edge[0]] *
-                    self.bayesian_model.get_cardinality(edge[1])[edge[1]] for edge in edges])
+        return sum([self.bayesian_model.get_cardinality(edge[0]) *
+                    self.bayesian_model.get_cardinality(edge[1]) for edge in edges])
 
 
 class MinNeighbours(BaseEliminationOrder):
