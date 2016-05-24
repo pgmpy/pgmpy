@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from itertools import combinations
 
 import numpy as np
@@ -23,6 +24,7 @@ class BaseEliminationOrder:
         self.bayesian_model = model
         self.moralized_model = self.bayesian_model.moralize()
 
+    @abstractmethod
     def cost(self, node):
         """
         The cost function to compute the cost of elimination of each node.
@@ -35,6 +37,13 @@ class BaseEliminationOrder:
             The node whose cost is to be computed.
         """
         return 0
+
+    @abstractmethod
+    def get_elimination_order(self, nodes=None):
+        """
+        Returns the elimination of the the given nodes based on the cost function.
+        """
+        pass
 
     def fill_in_edges(self, node):
         """
