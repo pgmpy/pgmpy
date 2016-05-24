@@ -76,3 +76,32 @@ class TestMinNeighbours(BaseEliminationTest):
                              elimination_order[2] in ['diff'],
                              elimination_order[3] in ['grade', 'intel'],
                              elimination_order[4] in ['grade', 'intel']]))
+
+    def test_elimination_order_given_nodes(self):
+        elimination_order = self.elimination_order.get_elimination_order(
+            nodes=['diff', 'grade', 'sat'])
+        self.assertEqual(elimination_order, ['sat', 'diff', 'grade'])
+
+
+class TestMinWeight(BaseEliminationTest):
+    def setUp(self):
+        super(TestMinWeight, self).setUp()
+        self.elimination_order = MinWeight(self.model)
+
+    def test_cost(self):
+        self.assertEqual(self.elimination_order.cost('diff'), 4)
+        self.assertEqual(self.elimination_order.cost('intel'), 8)
+        self.assertEqual(self.elimination_order.cost('reco'), 2)
+
+    def test_elimination_order(self):
+        elimination_order = self.elimination_order.get_elimination_order()
+        self.assertTrue(all([elimination_order[0] in ['sat', 'reco'],
+                             elimination_order[1] in ['sat', 'reco'],
+                             elimination_order[2] in ['diff'],
+                             elimination_order[3] in ['grade', 'intel'],
+                             elimination_order[4] in ['grade', 'intel']]))
+
+    def test_elimination_order_given_nodes(self):
+        elimination_order = self.elimination_order.get_elimination_order(
+            nodes=['diff', 'grade', 'sat'])
+        self.assertEqual(elimination_order, ['sat', 'diff', 'grade'])
