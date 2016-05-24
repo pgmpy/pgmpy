@@ -124,3 +124,10 @@ class TestMinFill(BaseEliminationTest):
                              elimination_order[2] in ['diff', 'grade', 'sat', 'reco'],
                              elimination_order[3] in ['diff', 'grade', 'sat', 'reco'],
                              elimination_order[4] in ['intel']]))
+
+    def test_elimination_order_given_nodes(self):
+        elimination_order = self.elimination_order.get_elimination_order(
+            nodes=['diff', 'grade', 'intel'])
+        self.assertTrue(all([elimination_order[0] in ['diff', 'grade'],
+                             elimination_order[1] in ['diff', 'grade'],
+                             elimination_order[2] in ['intel']]))
