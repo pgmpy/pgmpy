@@ -105,3 +105,22 @@ class TestMinWeight(BaseEliminationTest):
         elimination_order = self.elimination_order.get_elimination_order(
             nodes=['diff', 'grade', 'sat'])
         self.assertEqual(elimination_order, ['sat', 'diff', 'grade'])
+
+
+class TestMinFill(BaseEliminationTest):
+    def setUp(self):
+        super(TestMinFill, self).setUp()
+        self.elimination_order = MinFill(self.model)
+
+    def test_cost(self):
+        self.assertEqual(self.elimination_order.cost('diff'), 0)
+        self.assertEqual(self.elimination_order.cost('intel'), 1)
+        self.assertEqual(self.elimination_order.cost('sat'), 0)
+
+    def test_elimination_order(self):
+        elimination_order = self.elimination_order.get_elimination_order()
+        self.assertTrue(all([elimination_order[0] in ['diff', 'grade', 'sat', 'reco'],
+                             elimination_order[1] in ['diff', 'grade', 'sat', 'reco'],
+                             elimination_order[2] in ['diff', 'grade', 'sat', 'reco'],
+                             elimination_order[3] in ['diff', 'grade', 'sat', 'reco'],
+                             elimination_order[4] in ['intel']]))
