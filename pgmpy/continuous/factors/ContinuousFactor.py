@@ -71,9 +71,12 @@ class ContinuousFactor(rv_continuous):
          0.00013404200890043683, 3.2610438989610913e-05]
 
         (Refer the various Discretization methods, in pgmpy.continuous.discretize
-         for details regarding the parameters.)
+         for details regarding the input parameters.)
 
         """
         from pgmpy.continuous.discretize import BaseDiscretizer
 
-        return method(*args, **kwargs).get_discrete_values()
+        if not issubclass(method, BaseDiscretizer):
+            raise TypeError("{} must be Discretizer class.".format(method))
+
+        return method(self, *args, **kwargs).get_discrete_values()
