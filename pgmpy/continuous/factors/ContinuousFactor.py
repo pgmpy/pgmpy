@@ -7,13 +7,17 @@ class ContinuousFactor(rv_continuous):
     """
     Class for continuous node representation. This is a subclass of
     scipy.stats.rv_continuous.
-    This allows representation of user defined continuous distribution
-    by specifying a function to compute the probability density function
+    
+    This allows representation of user defined continuous random variables
+    by associating these continuous factors.
+    It requires a function to compute the probability density function
     of the distribution.
+    
     All methods of the scipy.stats.rv_continuous class can be used on
     the objects.
     This supports an extra method to discretize the continuous distribution
     into a discrete factor using various methods.
+    
     """
     def __init__(self, pdf, lb=None, ub=None):
         """

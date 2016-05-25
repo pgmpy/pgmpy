@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
-from scipy.stats import gamma,expon
+from scipy.stats import gamma, expon
 
 from pgmpy.factors import ContinuousFactor
 from pgmpy.continuous.discretize import BaseDiscretizer
@@ -12,7 +12,7 @@ from pgmpy.continuous.discretize import UnbiasedDiscretizer
 
 class TestBaseDiscretizer(unittest.TestCase):
     def setUp(self):
-        self.normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
+        self.normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
         gamma_rv = gamma(3)
         self.gamma_pdf = gamma_rv.pdf
         exp_rv = expon(7)
@@ -67,7 +67,7 @@ class TestBaseDiscretizer(unittest.TestCase):
 
 class TestRoundingDiscretizer(unittest.TestCase):
     def setUp(self):
-        self.normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
+        self.normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
         gamma_rv = gamma(3)
         self.gamma_pdf = gamma_rv.pdf
         exp_rv = expon()
@@ -87,9 +87,8 @@ class TestRoundingDiscretizer(unittest.TestCase):
         # The required R commands to reproduce the results have also been added.
 
         # library(actuar);discretize(pnorm(x), method = "rounding", from = -5, to = 5, step = 1)
-        normal_desired_op = np.array([3.111022e-06, 2.292314e-04, 5.977036e-03, 6.059754e-02,
-                              2.417303e-01, 3.829249e-01, 2.417303e-01, 6.059754e-02,
-                              5.977036e-03, 2.292314e-04])
+        normal_desired_op = np.array([3.111022e-06, 2.292314e-04, 5.977036e-03, 6.059754e-02, 2.417303e-01,
+                                      3.829249e-01, 2.417303e-01, 6.059754e-02, 5.977036e-03, 2.292314e-04])
         normal_obtained_op = np.array(self.normal_discretizer.get_discrete_values())
         np_test.assert_almost_equal(normal_desired_op, normal_obtained_op)
 
@@ -99,8 +98,8 @@ class TestRoundingDiscretizer(unittest.TestCase):
         np_test.assert_almost_equal(gamma_desired_op, gamma_obtained_op)
 
         # library(actuar);discretize(pexp(x), method = "rounding", from = 0, to = 5, step = 0.5)
-        exp_desired_op = np.array([0.221199217, 0.306434230, 0.185861756, 0.112730853, 0.068374719, 0.041471363,
-                                    0.025153653, 0.015256462, 0.009253512, 0.005612539])
+        exp_desired_op = np.array([0.221199217, 0.306434230, 0.185861756, 0.112730853, 0.068374719,
+                                   0.041471363, 0.025153653, 0.015256462, 0.009253512, 0.005612539])
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
 
@@ -144,7 +143,7 @@ class TestUnbiasedDiscretizer(unittest.TestCase):
 
         # library(actuar);discretize(pexp(x), method = "unbiased", lev = levexp(x), from = 0, to = 5, step = 0.5)
         exp_desired_op = np.array([0.213061319, 0.309636243, 0.187803875, 0.113908808, 0.069089185, 0.041904709,
-                                    0.025416491, 0.015415881, 0.009350204, 0.005671186, 0.002004152])
+                                   0.025416491, 0.015415881, 0.009350204, 0.005671186, 0.002004152])
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
 

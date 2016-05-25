@@ -36,7 +36,7 @@ class BaseDiscretizer(object):
         Returns a list of strings representing the values about
         which the discretization method calculates the probabilty
         masses.
-        Default value is the points - 
+        Default value is the points -
         [frm, frm+step, frm+2*step, ......... , to-step]
         unless the method is overridden by a subclass.
         """

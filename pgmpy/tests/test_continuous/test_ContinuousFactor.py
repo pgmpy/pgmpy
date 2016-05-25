@@ -12,9 +12,9 @@ from pgmpy.continuous.discretize import UnbiasedDiscretizer
 
 class TestContinuousFactorInit(unittest.TestCase):
     def test_class_init1(self):
-        custom_pdf = lambda x : 0.5 if x > -1 and x < 1 else 0
-        std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-        exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
+        custom_pdf = lambda x: 0.5 if x > -1 and x < 1 else 0
+        std_normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
+        exp_pdf = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
 
         custom_node1 = ContinuousFactor(custom_pdf)
         custom_node2 = ContinuousFactor(custom_pdf, -1, 1)
@@ -34,7 +34,7 @@ class TestContinuousFactorInit(unittest.TestCase):
 
     def test_class_init2(self):
         # A normal random varible with mean=1 and variance=0.5
-        norm_rv = norm(1,0.5)
+        norm_rv = norm(1, 0.5)
         # A t random variable with df=7
         t7_rv = t(7)
         # A gamma random variable with a=3
@@ -51,9 +51,9 @@ class TestContinuousFactorInit(unittest.TestCase):
 
 class TestContinuousFactorDiscretize(unittest.TestCase):
     def setUp(self):
-        self.custom_pdf = lambda x : 0.5 if x > -1 and x < 1 else 0
-        self.std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-        self.exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
+        self.custom_pdf = lambda x: 0.5 if x > -1 and x < 1 else 0
+        self.std_normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
+        self.exp_pdf = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
 
         self.custom_node1 = ContinuousFactor(self.custom_pdf)
         self.custom_node2 = ContinuousFactor(self.custom_pdf, -1, 1)

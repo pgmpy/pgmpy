@@ -49,8 +49,8 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         lev = self._lim_moment
 
         # for x=[frm]
-        discrete_values = [(lev(self.frm) - lev(self.frm+self.step))/self.step +
-                           1 - self.factor.cdf(self.frm)]
+        discrete_values = [(lev(self.frm) - lev(self.frm+self.step))/self.step
+                           + 1 - self.factor.cdf(self.frm)]
 
         # for x=[frm+step, frm+2*step, ........., to-step]
         x = np.arange(self.frm+self.step, self.to, self.step)
@@ -59,7 +59,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
                                     lev(i+self.step))/self.step)
 
         # for x=[to]
-        discrete_values.append((lev(self.to) - lev(self.to-self.step))/
+        discrete_values.append((lev(self.to) - lev(self.to-self.step)) /
                                self.step - 1 + self.factor.cdf(self.to))
 
         return discrete_values
