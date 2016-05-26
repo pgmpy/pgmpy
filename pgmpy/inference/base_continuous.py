@@ -7,14 +7,14 @@ import numpy as np
 
 class AbstractGaussian(object):
     """
-    A container class for gaussian. This class is to avoid cubersome code
-    caused by mean_vec and cov_matrix.
+    A naive gaussian container class.(Depricated)
     Will be removed when Multivariate Distributions will be implemented
 
     Paramters
     ---------
-    mean_vec: A vector (row matrix or 1d array like object)
+    mean_vec: A vector (row matrix or a column matrix or a 1d array type structure)
               Represents the mean of the distribution
+              Will be converted into a column matrix of appropriate shape
 
     cov_matrix: A numpy.matrix of size len(mean_vec) x len(mean_vec),
                 Covariance matrix for the distribution.
@@ -30,7 +30,7 @@ class AbstractGaussian(object):
                 mean_vec = np.reshape(mean_vec, (1, length))
             else:
                 raise TypeError("mean_vec should be a 1d array type object")
-
+        mean_vec = np.reshape(mean_vec, (len(mean_vec), 1))
         if not isinstance(cov_matrix, np.matrix):
             raise TypeError(
                 "cov_matrix must be numpy.matrix type object")
@@ -39,13 +39,39 @@ class AbstractGaussian(object):
             raise ValueError(
                 "cov_matrix must be a square matrix")
 
-        if mean.shape[1] != cov_matrix.shape[0]:
-            raise ValueError("shape of mean vector should be 1 X d and" +
+        if mean_vec.shape[0] != cov_matrix.shape[0]:
+            raise ValueError("shape of mean vector should be d X 1 and" +
                              " shape of covariance matrix should be d X d")
 
         self.mean_vec = mean_vec
         self.cov_matrix = cov_matrix
         self.precision_matrix = np.linalg.inv(cov_matrix)
+
+    def get_val(self, X):
+        """
+        Reutrns the value at the X
+
+        Parameters
+        ----------
+        X : A vector (row matrix or a column matrix or a 1d aaray type structure)
+            Represents the value of the parameters
+            Will be converted into a column matrix of appropriate shape
+
+        Returns
+        --------
+        float : Value of the distribution at X
+        """
+        if not isinstance(X, np.matrix):
+            if isinstance(X, (np.ndarray, list, tuple, set, frozenset)):
+                X = np.matrix(X)
+                X = np.reshape(X, (1, len(X)))
+            else:
+                raise TypeError("mean_vec should be a 1d array type object")
+        X = np.reshape(X, (len(X), 1))
+        sub_vec = X - self.mean_vec
+        n = len(sub_vec)
+        return float(np.exp(-0.5 * sub_vec.transpose() * self.precision_matrix * sub_vec) /
+                     (2 * np.pi) ** (n * 0.5) * np.linalg.det(self.cov_matrix) ** 0.5)
 
 
 class GradientLogPDF(object):
@@ -55,15 +81,32 @@ class GradientLogPDF(object):
     Classes inheriting this base class can be passed as an argument for
     finding gradient log of probability distribution in inference algorithms
 
+    The class should initialize the gradient of log P(X) and log P(X)
+    (Constant terms can be ignored)
+
     Parameters
     ----------
     theta : A 1d array type object or a row matrix of shape 1 X d
+            or d X 1.(Will be converted to d X 1)
             Vector representing values of parameter theta( or X)
 
     model : A AbstractGuassian type model
 
     Examples
     --------
+    >>> # Example shows how to use the container class
+    >>> from pgmpy.inference import AbstractGuassian as AG
+    >>> from pgmpy.inference import GradientLogPDF as GLP
+    >>> import numpy as np
+    >>> class GradientLogGaussian(AG):
+    ...     def __init__(self, X, model):
+    ...         AG.__init__(X, model)
+    ...         self.grad_log_theta, self.log_pdf_theta = self._get_gradient_log_pdf()
+    ...     def _get_gradient_log_pdf(self):
+    ...         sub_vec = self.theta - self.model.mean_vec
+    ...         grad = - self.model.precision_matrix * sub_vec
+    ...         log_pdf = 0.5 * sub_vec.transpose * grad
+    ...         return grad, log_pdf
     """
 
     def __init__(self, theta, model):
@@ -76,6 +119,7 @@ class GradientLogPDF(object):
                 theta = np.reshape(theta, (1, length))
             else:
                 raise TypeError("theta should be a 1d array type object")
+            theta = np.reshape(theta, (len(theta), 1))
 
         if theta.shape[1] != model.precision_matrix.shape[0]:
             raise ValueError("shape of theta vector should be 1 X d if shape" +
@@ -83,12 +127,12 @@ class GradientLogPDF(object):
         self.theta = theta
         self.model = model
         # The gradient of probability distribution at theta
-        self.grad_theta = None
+        self.grad_log_theta = None
         # The gradient log of probability distribution at theta
-        self.log_grad_theta = None
+        self.log_pdf_theta = None
 
     def get_gradient_log_pdf(self):
-        return self.grad_theta, self.log_grad_theta
+        return self.grad_log_theta, self.log_pdf_theta
 
 
 class GradLogPDFGaussian(GradientLogPDF):
@@ -98,17 +142,18 @@ class GradLogPDFGaussian(GradientLogPDF):
     """
 
     def __init__(self, theta, model):
-        GradientLogPDF.__init__(self, theta, model)
-        self.grad_theta, self.log_grad_theta = self._get_gradient_log_pdf()
+        GradientLogPDF.__init__(theta, model)
+        self.grad_log_theta, self.log_pdf_theta = self._get_gradient_log_pdf()
 
     def _get_gradient_log_pdf(self):
         """
         Method that finds gradient and its log at theta
         """
-        grad = - self.theta * self.model.precision_matrix
-        log_grad = 0.5 * grad * self.theta.transpose()
+        sub_vec = self.theta - self.model.mean_vec
+        grad = - self.model.precision_matrix * sub_vec
+        log_pdf = 0.5 * sub_vec.transpose() * grad
 
-        return grad, log_grad
+        return grad, log_pdf
 
 
 class DiscretizeTime(object):
@@ -120,9 +165,9 @@ class DiscretizeTime(object):
 
     Parameters
     ----------
-    theta: A vector (row matrix or 1d array like object) of shape 1 X d
-           Vector representing the proposed value for the
-           distribution parameter theta (position X)
+    theta : A 1d array type object or a row matrix of shape 1 X d
+            or d X 1.(Will be converted to d X 1)
+            Vector representing values of parameter theta( or X)
 
     model : An instance of AbstractGaussian
 
@@ -138,6 +183,21 @@ class DiscretizeTime(object):
 
     Examples
     --------
+    >>> # Example shows how to use the container class
+    >>> from pgmpy.inference import DiscretizeTime
+    >>> from pgmpy.inference import GradLogPDFGaussian
+    >>> class ModifiedEuler(DiscretizeTime):
+    ...     def __init__(self, theta, model, grad_log_pdf, momentum, epsilon):
+    ...         DiscretizeTime.__init__(theta, model, grad_log_pdf, momentum, epsilon)
+    ...         self.theta_bar, self.momentum_bar, self.grad_log_theta,\
+    ...                 self.log_pdf = self._discretize_time()
+    ...     def _discretize_time(self):
+    ...         grad_log_theta, log_pdf_theta =\
+    ...                 self.grad_log_pdf(self.theta,
+    ...                                   self.model).get_gradient_log_pdf()
+    ...         momentum_bar = self.momentum + self.epsilon * grad_log_theta
+    ...         theta_bar = self.theta + self.epsilon * momentum_bar
+    ...        return theta_bar, momentum_bar, grad_log_theta, log_pdf_theta
     """
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
@@ -185,7 +245,7 @@ class DiscretizeTime(object):
         return self.theta_bar, self.momentum_bar
 
 
-class LeapFrog(SplitTime):
+class LeapFrog(DiscretizeTime):
     """
     Class for performing discretization(in time) using leapfrog method
     Inherits pgmpy.inference.base_continuous.DiscretizeTime
@@ -193,31 +253,31 @@ class LeapFrog(SplitTime):
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        SplitTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
+        DiscretizeTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
 
-        self.theta_bar, self.momentum_bar, self.grad_theta,\
-            self.log_grad_theta = self._split_time()
+        self.theta_bar, self.momentum_bar, self.grad_log_theta,\
+            self.log_pdf_theta = self._discretize_time()
 
     def _discretize_time(self):
         """
         Method to perform time splitting using leapfrog
         """
-        grad_theta, log_grad_theta = self.grad_log_pdf(self.theta,
-                                                       self.model).get_gradient_log_pdf()
+        grad_log_theta, log_pdf_theta = self.grad_log_pdf(self.theta,
+                                                          self.model).get_gradient_log_pdf()
         # Take half step in time for updating momentum
-        momentum_bar = self.momentum + 0.5 * self.epsilon * log_grad_theta
+        momentum_bar = self.momentum + 0.5 * self.epsilon * grad_log_theta
         # Take full step in time for updating position theta
         theta_bar = self.theta + self.epsilon * momentum_bar
 
-        grad_theta, log_grad_theta = self.grad_log_pdf(theta_bar,
-                                                       self.model).get_gradient_log_pdf()
+        grad_log_theta, log_pdf_theta = self.grad_log_pdf(theta_bar,
+                                                          self.model).get_gradient_log_pdf()
         # Take remaining half step in time for updating momentum
-        momentum_bar = momentum_bar + 0.5 * self.epsilon * log_grad_theta
+        momentum_bar = momentum_bar + 0.5 * self.epsilon * grad_log_theta
 
-        return theta_bar, momentum_bar, grad_theta, log_grad_theta
+        return theta_bar, momentum_bar, grad_log_theta, log_pdf_theta
 
 
-class EulerMethod(SplitTime):
+class ModifiedEuler(DiscretizeTime):
     """
     Class for performing splitting in time using Modified euler method
     Inherits pgmpy.inference.base_continuous.DiscretizeTime
@@ -225,23 +285,23 @@ class EulerMethod(SplitTime):
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        SplitTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
+        DiscretizeTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
 
-        self.theta_bar, self.momentum_bar, self.grad_theta,\
-            self.log_grad_theta = self._discretize_time()
+        self.theta_bar, self.momentum_bar, self.grad_log_theta,\
+            self.log_pdf_theta = self._discretize_time()
 
     def _discretize_time(self):
         """
         Method to perform time splitting using Modified euler method
         """
-        grad_theta, log_grad_theta = self.grad_log_pdf(self.theta,
-                                                       self.model).get_gradient_log_pdf()
+        grad_log_theta, log_pdf_theta = self.grad_log_pdf(self.theta,
+                                                          self.model).get_gradient_log_pdf()
         # Take full step in time and update momentum
-        momentum_bar = self.momentum + self.epsilon * log_grad_theta
+        momentum_bar = self.momentum + self.epsilon * grad_log_theta
         # Take full step in time and update position
         theta_bar = self.theta + self.epsilon * momentum_bar
 
-        return theta_bar, momentum_bar, grad_theta, log_grad_theta
+        return theta_bar, momentum_bar, grad_log_theta, log_pdf_theta
 
 
 class BaseHMC(object):
@@ -269,9 +329,9 @@ class BaseHMC(object):
             raise TypeError("grad_log_pdf must be an instance of" +
                             "pgmpy.inference.base_continuous.GradientLogPDF")
 
-        if not isinstance(split_time, SplitTime):
+        if not isinstance(split_time, DiscretizeTime):
             raise TypeError("split_time must be an instance of" +
-                            "pgmpy.inference.base_continuous.SplitTime")
+                            "pgmpy.inference.base_continuous.DiscretizeTime")
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
             raise AttributeError(
@@ -281,5 +341,3 @@ class BaseHMC(object):
         self.delta = delta
         self.grad_log_pdf = grad_log_pdf
         self.split_time = split_time
-
-        def prob_distribution(self, )
