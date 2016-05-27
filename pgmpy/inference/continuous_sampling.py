@@ -2,8 +2,8 @@
     A collection of methods for sampling from continuous models in pgmpy
 """
 import numpy as np
-from pgmpy.inference.base_continuous import (LeapFrog,
-                                             DiscretizeTime, GradientLogPDF, BaseHMC, AbstractGaussian)
+from base_continuous import (LeapFrog,
+                             DiscretizeTime, GradientLogPDF, BaseHMC, AbstractGaussian)
 
 
 class HamiltonianMCda(BaseHMC):
@@ -46,7 +46,8 @@ class HamiltonianMCda(BaseHMC):
     def __init__(self, model, Lamda, grad_log_pdf,
                  discretize_time=LeapFrog, delta=0.65):
         # TODO: Use model instead of mean_vec and cov_matrix
-        BaseHMC.__init__(model, grad_log_pdf, discretize_time, delta)
+        BaseHMC.__init__(self, model=model, grad_log_pdf=grad_log_pdf,
+                         discretize_time=discretize_time, delta=delta)
 
         self.Lambda = Lamda
 
@@ -62,36 +63,40 @@ class HamiltonianMCda(BaseHMC):
         Algorithm 4 : Heuristic for choosing an initial value of epsilon
         """
         # momentum = N(0, I)
-        momentum = np.matrix(np.random.randn(len(theta), 1))
+        momentum = np.matrix(np.reshape(np.random.normal(0, 1, len(theta)), (len(theta), 1)))
+
         # Take a single step in time
-        theta_bar, _ = self.discretize_time(self.grad_log_pdf, self.model,
-                                            theta, momentum, epsilon_app).discretize_time()
+        theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model,
+                                                       theta, momentum, epsilon_app).discretize_time()
         # Parameters to help in evaluating P(theta, momentum)
         _, logp = self.grad_log_pdf(theta, self.model).get_gradient_log_pdf()
-        grad_bar, logp_bar = self.grad_log_pdf(
-            theta_bar, self.model).get_gradient_log_pdf()
+        _, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
 
         # acceptance_prob = P(theta_bar, momentum_bar)/ P(theta, momentum)
-        acceptance_prob = np.exp(logp_bar - logp - 0.5 * (
-            grad_bar.transpose() * grad_bar - momentum.transpose() * momentum)).sum()
+        potential_change = logp_bar - logp  # Negative change
+        kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
+
+        acceptance_prob = np.exp(potential_change - kinetic_change)
 
         # a = 2I[acceptance_prob] -1
         a = 2 * (acceptance_prob > 0.5) - 1
 
-        condition = acceptance_prob ** a > 2 ** (-a)
+        condition = (acceptance_prob ** a) > (2 ** (-a))
 
         while condition:
             epsilon_app = (2 ** a) * epsilon_app
 
-            theta_bar, _ = self.discretize_time(self.grad_log_pdf, self.model,
-                                                theta, momentum, epsilon_app).discretize_time()
+            theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model,
+                                                           theta, momentum, epsilon_app).discretize_time()
 
             _, logp = self.grad_log_pdf(theta, self.model).get_gradient_log_pdf()
-            grad_bar, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
+            _, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
 
-            acceptance_prob = np.exp(logp_bar - logp - 0.5 * (
-                                     grad_bar.transpose() * grad_bar - momentum.transpose() * momentum)).sum()
+            potential_change = logp_bar - logp
+            kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
 
-            condition = acceptance_prob ** a > 2 ** (-a)
+            acceptance_prob = np.exp(potential_change - kinetic_change)
+
+            condition = (acceptance_prob ** a) > (2 ** (-a))
 
         return epsilon_app
