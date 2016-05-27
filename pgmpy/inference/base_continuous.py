@@ -23,14 +23,12 @@ class AbstractGaussian(object):
 
     def __init__(self, mean_vec, cov_matrix):
 
-        if not isinstance(mean_vec, np.matrix):
-            if isinstance(mean_vec, (np.ndarray, list, tuple, set, frozenset)):
-                length = len(mean_vec)
-                mean_vec = np.matrix(mean_vec)
-                mean_vec = np.reshape(mean_vec, (1, length))
-            else:
-                raise TypeError("mean_vec should be a 1d array type object")
-        mean_vec = np.reshape(mean_vec, (len(mean_vec), 1))
+        if isinstance(mean_vec, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            mean_vec = np.array(mean_vec).flatten()
+        else:
+            raise TypeError("mean_vec should be a 1d array type object")
+        mean_vec = np.matrix(np.reshape(mean_vec, (len(mean_vec), 1)))
+
         if not isinstance(cov_matrix, np.matrix):
             raise TypeError(
                 "cov_matrix must be numpy.matrix type object")
@@ -53,7 +51,7 @@ class AbstractGaussian(object):
 
         Parameters
         ----------
-        X : A vector (row matrix or a column matrix or a 1d aaray type structure)
+        X : A vector (row matrix or a column matrix or a 1d array type structure)
             Represents the value of the parameters
             Will be converted into a column matrix of appropriate shape
 
@@ -61,17 +59,15 @@ class AbstractGaussian(object):
         --------
         float : Value of the distribution at X
         """
-        if not isinstance(X, np.matrix):
-            if isinstance(X, (np.ndarray, list, tuple, set, frozenset)):
-                X = np.matrix(X)
-                X = np.reshape(X, (1, len(X)))
-            else:
-                raise TypeError("mean_vec should be a 1d array type object")
-        X = np.reshape(X, (len(X), 1))
+        if isinstance(X, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            X = np.array(X).flatten()
+            X = np.matrix(np.reshape(X, (len(X), 1)))
+        else:
+            raise TypeError("X should be a 1d array type object")
         sub_vec = X - self.mean_vec
         n = len(sub_vec)
-        return float(np.exp(-0.5 * sub_vec.transpose() * self.precision_matrix * sub_vec) /
-                     (2 * np.pi) ** (n * 0.5) * np.linalg.det(self.cov_matrix) ** 0.5)
+        return np.float(np.exp(-0.5 * sub_vec.transpose() * self.precision_matrix * sub_vec) /
+                        (2 * np.pi) ** (n * 0.5) * np.linalg.det(self.cov_matrix) ** 0.5)
 
 
 class GradientLogPDF(object):
@@ -112,27 +108,24 @@ class GradientLogPDF(object):
     def __init__(self, theta, model):
         # TODO: Take model as parameter instead of precision_matrix
 
-        if not isinstance(theta, np.matrix):
-            if isinstance(theta, (np.ndarray, list, tuple, set, frozenset)):
-                length = len(theta)
-                theta = np.matrix(theta)
-                theta = np.reshape(theta, (1, length))
-            else:
-                raise TypeError("theta should be a 1d array type object")
-            theta = np.reshape(theta, (len(theta), 1))
+        if isinstance(theta, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            theta = np.array(theta).flatten()
+            theta = np.matrix(np.reshape(theta, (len(theta), 1)))
+        else:
+            raise TypeError("theta should be a 1d array type object")
 
-        if theta.shape[1] != model.precision_matrix.shape[0]:
+        if theta.shape[0] != model.precision_matrix.shape[0]:
             raise ValueError("shape of theta vector should be 1 X d if shape" +
                              " of precision matrix of model is d X d")
         self.theta = theta
         self.model = model
         # The gradient of probability distribution at theta
-        self.grad_log_theta = None
+        self.grad_log = None
         # The gradient log of probability distribution at theta
-        self.log_pdf_theta = None
+        self.log_pdf = None
 
     def get_gradient_log_pdf(self):
-        return self.grad_log_theta, self.log_pdf_theta
+        return self.grad_log, self.log_pdf
 
 
 class GradLogPDFGaussian(GradientLogPDF):
@@ -142,16 +135,16 @@ class GradLogPDFGaussian(GradientLogPDF):
     """
 
     def __init__(self, theta, model):
-        GradientLogPDF.__init__(theta, model)
-        self.grad_log_theta, self.log_pdf_theta = self._get_gradient_log_pdf()
+        GradientLogPDF.__init__(self, theta, model)
+        self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
 
     def _get_gradient_log_pdf(self):
         """
         Method that finds gradient and its log at theta
         """
         sub_vec = self.theta - self.model.mean_vec
-        grad = - self.model.precision_matrix * sub_vec
-        log_pdf = 0.5 * sub_vec.transpose() * grad
+        grad = - np.dot(self.model.precision_matrix, sub_vec)
+        log_pdf = 0.5 * np.float(np.dot(sub_vec.T, grad))
 
         return grad, log_pdf
 
@@ -202,30 +195,26 @@ class DiscretizeTime(object):
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
         # TODO: Take model instead of precision matrix
-        if not isinstance(theta, np.matrix):
-            if isinstance(theta, (np.ndarray, list, tuple, set, frozenset)):
-                length = len(theta)
-                theta = np.matrix(theta)
-                theta = np.reshape(theta, (1, length))
-            else:
-                raise TypeError("theta should be a 1d array type object")
+        if isinstance(theta, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            theta = np.array(theta).flatten()
+            theta = np.matrix(np.reshape(theta, (len(theta), 1)))
+        else:
+            raise TypeError("theta should be a 1d array type object")
 
-        if not isinstance(momentum, np.matrix):
-            if isinstance(momentum, (np.ndarray, list, tuple, set, frozenset)):
-                length = len(momentum)
-                momentum = np.matrix(momentum)
-                momentum = np.reshape(momentum, (1, length))
-            else:
-                raise TypeError("momentum should be a 1d array type object")
+        if isinstance(momentum, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            momentum = np.array(momentum).flatten()
+            momentum = np.matrix(np.reshape(momentum, (len(momentum), 1)))
+        else:
+            raise TypeError("theta should be a 1d array type object")
 
-        if not isinstance(grad_log_pdf, GradientLogPDF):
+        if not issubclass(grad_log_pdf, GradientLogPDF):
             raise TypeError("grad_log_pdf must be an instance" +
                             " of pgmpy.inference.base_continuous.GradientLogPDF")
 
         if theta.shape != momentum.shape:
             raise ValueError("Shape of theta and momentum must be same")
 
-        if theta.shape[1] != model.precision_matrix.shape[0]:
+        if theta.shape[0] != model.precision_matrix.shape[0]:
             raise ValueError("shape of theta vector should be 1 X d if shape" +
                              " of precision matrix of model is d X d")
 
@@ -253,28 +242,28 @@ class LeapFrog(DiscretizeTime):
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        DiscretizeTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
+        DiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
 
-        self.theta_bar, self.momentum_bar, self.grad_log_theta,\
-            self.log_pdf_theta = self._discretize_time()
+        self.theta_bar, self.momentum_bar, self.grad_log,\
+            self.log_pdf = self._discretize_time()
 
     def _discretize_time(self):
         """
         Method to perform time splitting using leapfrog
         """
-        grad_log_theta, log_pdf_theta = self.grad_log_pdf(self.theta,
-                                                          self.model).get_gradient_log_pdf()
+        grad_log, log_pdf = self.grad_log_pdf(self.theta,
+                                              self.model).get_gradient_log_pdf()
         # Take half step in time for updating momentum
-        momentum_bar = self.momentum + 0.5 * self.epsilon * grad_log_theta
+        momentum_bar = self.momentum + 0.5 * self.epsilon * grad_log
         # Take full step in time for updating position theta
         theta_bar = self.theta + self.epsilon * momentum_bar
 
-        grad_log_theta, log_pdf_theta = self.grad_log_pdf(theta_bar,
-                                                          self.model).get_gradient_log_pdf()
+        grad_log, log_pdf = self.grad_log_pdf(theta_bar,
+                                              self.model).get_gradient_log_pdf()
         # Take remaining half step in time for updating momentum
-        momentum_bar = momentum_bar + 0.5 * self.epsilon * grad_log_theta
+        momentum_bar = momentum_bar + 0.5 * self.epsilon * grad_log
 
-        return theta_bar, momentum_bar, grad_log_theta, log_pdf_theta
+        return theta_bar, momentum_bar, grad_log, log_pdf
 
 
 class ModifiedEuler(DiscretizeTime):
@@ -285,23 +274,23 @@ class ModifiedEuler(DiscretizeTime):
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        DiscretizeTime.__init__(grad_log_pdf, model, theta, momentum, epsilon)
+        DiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
 
-        self.theta_bar, self.momentum_bar, self.grad_log_theta,\
-            self.log_pdf_theta = self._discretize_time()
+        self.theta_bar, self.momentum_bar, self.grad_log,\
+            self.log_pdf = self._discretize_time()
 
     def _discretize_time(self):
         """
         Method to perform time splitting using Modified euler method
         """
-        grad_log_theta, log_pdf_theta = self.grad_log_pdf(self.theta,
-                                                          self.model).get_gradient_log_pdf()
+        grad_log, log_pdf = self.grad_log_pdf(self.theta,
+                                              self.model).get_gradient_log_pdf()
         # Take full step in time and update momentum
-        momentum_bar = self.momentum + self.epsilon * grad_log_theta
+        momentum_bar = self.momentum + self.epsilon * grad_log
         # Take full step in time and update position
         theta_bar = self.theta + self.epsilon * momentum_bar
 
-        return theta_bar, momentum_bar, grad_log_theta, log_pdf_theta
+        return theta_bar, momentum_bar, grad_log, log_pdf
 
 
 class BaseHMC(object):
@@ -322,14 +311,14 @@ class BaseHMC(object):
     """
 
     def __init__(self, model, grad_log_pdf,
-                 split_time=LeapFrog, delta=0.65):
+                 discretize_time=LeapFrog, delta=0.65):
         # TODO: Use model instead of mean_vec and cov_matrix
 
-        if not isinstance(grad_log_pdf, GradientLogPDF):
+        if not issubclass(grad_log_pdf, GradientLogPDF):
             raise TypeError("grad_log_pdf must be an instance of" +
                             "pgmpy.inference.base_continuous.GradientLogPDF")
 
-        if not isinstance(split_time, DiscretizeTime):
+        if not issubclass(discretize_time, DiscretizeTime):
             raise TypeError("split_time must be an instance of" +
                             "pgmpy.inference.base_continuous.DiscretizeTime")
 
@@ -340,4 +329,4 @@ class BaseHMC(object):
         self.model = model
         self.delta = delta
         self.grad_log_pdf = grad_log_pdf
-        self.split_time = split_time
+        self.discretize_time = discretize_time
