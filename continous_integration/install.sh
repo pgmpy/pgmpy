@@ -35,3 +35,5 @@ fi
 
 # Build pgmpy
 python setup.py develop
+
+conda install libgfortran
