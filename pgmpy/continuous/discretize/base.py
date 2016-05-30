@@ -23,8 +23,8 @@ class BaseDiscretizer(object):
 
     def __init__(self, factor, frm, to, step):
         if not isinstance(factor, ContinuousFactor):
-            raise ValueError("{} is not a valid ContinuousFactor object."
-                             .format(factor))
+            raise ValueError("{factor} is not a valid ContinuousFactor object."
+                             .format(factor=factor))
 
         self.factor = factor
         self.frm = frm
@@ -39,7 +39,20 @@ class BaseDiscretizer(object):
         Default value is the points -
         [frm, frm+step, frm+2*step, ......... , to-step]
         unless the method is overridden by a subclass.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from pgmpy.continuous.discretize import BaseDiscretizer
+        >>> from scipy.stats import norm
+        >>> node = ContinuousFactor(norm(0))
+        >>> base = BaseDiscretizer(node, -5, 5, 0.5)
+        >>> base.get_labels()
+        ['x=-5.0', 'x=-4.5', 'x=-4.0', 'x=-3.5', 'x=-3.0', 'x=-2.5',
+         'x=-2.0', 'x=-1.5', 'x=-1.0', 'x=-0.5', 'x=0.0', 'x=0.5',
+         'x=1.0', 'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
+
         """
-        x = np.arange(self.frm, self.to, self.step)
-        labels = list('x='+str(i) for i in x)
+        labels = list('x={i}'.format(i=str(i))
+                      for i in np.arange(self.frm, self.to, self.step))
         return labels

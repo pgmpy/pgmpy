@@ -9,10 +9,11 @@ from pgmpy.continuous.discretize import BaseDiscretizer
 
 class UnbiasedDiscretizer(BaseDiscretizer):
     """
-    Class for discretization using the unbiased method.
+    This class uses the rounding method for discretizing the
+    given continuous distribution.
 
     The unbiased method for discretization is the matching of the
-    first moment method. It invovles calculating the first order
+    first moment method. It involves calculating the first order
     limited moment of the distribution which is done by the _lim_moment
     method.
     The method assigns to points the following probability mass,
@@ -51,17 +52,17 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         lev = self._lim_moment
 
         # for x=[frm]
-        discrete_values = [(lev(self.frm) - lev(self.frm+self.step))/self.step
+        discrete_values = [(lev(self.frm) - lev(self.frm + self.step)) / self.step
                            + 1 - self.factor.cdf(self.frm)]
 
         # for x=[frm+step, frm+2*step, ........., to-step]
-        x = np.arange(self.frm+self.step, self.to, self.step)
+        x = np.arange(self.frm + self.step, self.to, self.step)
         for i in x:
             discrete_values.append((2 * lev(i) - lev(i-self.step) -
-                                    lev(i+self.step))/self.step)
+                                    lev(i + self.step))/self.step)
 
         # for x=[to]
-        discrete_values.append((lev(self.to) - lev(self.to-self.step)) /
+        discrete_values.append((lev(self.to) - lev(self.to - self.step)) /
                                self.step - 1 + self.factor.cdf(self.to))
 
         return discrete_values
@@ -89,9 +90,9 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         """
         fun = lambda x: np.power(x, order)*self.factor.pdf(x)
         return (integrate.quad(fun, -np.inf, u)[0] +
-                np.power(u, order)*(1-self.factor.cdf(u)))
+                np.power(u, order)*(1 - self.factor.cdf(u)))
 
     def get_labels(self):
         labels = super(UnbiasedDiscretizer, self).get_labels()
-        labels.append("x="+str(self.to))
+        labels.append("x={to}".format(to=str(self.to)))
         return labels

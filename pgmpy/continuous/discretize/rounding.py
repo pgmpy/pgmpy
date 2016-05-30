@@ -8,7 +8,8 @@ from pgmpy.continuous.discretize import BaseDiscretizer
 
 class RoundingDiscretizer(BaseDiscretizer):
     """
-    Class for discretization using the rounding method.
+    This class uses the rounding method for discretizing the
+    given continuous distribution.
 
     The rounding method for discretization assigns to point the
     following probability mass,
@@ -35,13 +36,13 @@ class RoundingDiscretizer(BaseDiscretizer):
 
     def get_discrete_values(self):
         # for x=[frm]
-        discrete_values = [self.factor.cdf(self.frm+self.step/2)
+        discrete_values = [self.factor.cdf(self.frm + self.step/2)
                            - self.factor.cdf(self.frm)]
 
         # for x=[frm+step, frm+2*step, ........., to-step]
-        x = np.arange(self.frm+self.step, self.to, self.step)
+        x = np.arange(self.frm + self.step, self.to, self.step)
         for i in x:
-            discrete_values.append(self.factor.cdf(i+self.step/2)
-                                   - self.factor.cdf(i-self.step/2))
+            discrete_values.append(self.factor.cdf(i + self.step/2)
+                                   - self.factor.cdf(i - self.step/2))
 
         return discrete_values
