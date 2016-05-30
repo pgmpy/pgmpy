@@ -5,7 +5,7 @@
 import numpy as np
 
 
-class AbstractGaussian(object):
+class JointGaussianDistribution(object):
     """
     A naive gaussian container class.(Depricated)
     Will be removed when Multivariate Distributions will be implemented
@@ -45,30 +45,6 @@ class AbstractGaussian(object):
         self.cov_matrix = cov_matrix
         self.precision_matrix = np.linalg.inv(cov_matrix)
 
-    def get_val(self, X):
-        """
-        Reutrns the value at the X
-
-        Parameters
-        ----------
-        X : A vector (row matrix or a column matrix or a 1d array type structure)
-            Represents the value of the parameters
-            Will be converted into a column matrix of appropriate shape
-
-        Returns
-        --------
-        float : Value of the distribution at X
-        """
-        if isinstance(X, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            X = np.array(X).flatten()
-            X = np.matrix(np.reshape(X, (len(X), 1)))
-        else:
-            raise TypeError("X should be a 1d array type object")
-        sub_vec = X - self.mean_vec
-        n = len(sub_vec)
-        return np.float(np.exp(-0.5 * sub_vec.transpose() * self.precision_matrix * sub_vec) /
-                        (2 * np.pi) ** (n * 0.5) * np.linalg.det(self.cov_matrix) ** 0.5)
-
 
 class GradientLogPDF(object):
     """
@@ -86,17 +62,17 @@ class GradientLogPDF(object):
             or d X 1.(Will be converted to d X 1)
             Vector representing values of parameter theta( or X)
 
-    model : A AbstractGuassian type model
+    model : An instance of pgmpy.models.Continuous
 
     Examples
     --------
     >>> # Example shows how to use the container class
-    >>> from pgmpy.inference import AbstractGuassian as AG
+    >>> from pgmpy.inference import JointGuassianDistribution as JGD
     >>> from pgmpy.inference import GradientLogPDF as GLP
     >>> import numpy as np
-    >>> class GradientLogGaussian(AG):
+    >>> class GradientLogGaussian(GLP):
     ...     def __init__(self, X, model):
-    ...         AG.__init__(X, model)
+    ...         GLP.__init__(self, X, model)
     ...         self.grad_log_theta, self.log_pdf_theta = self._get_gradient_log_pdf()
     ...     def _get_gradient_log_pdf(self):
     ...         sub_vec = self.theta - self.model.mean_vec
@@ -132,6 +108,7 @@ class GradLogPDFGaussian(GradientLogPDF):
     """
     Class for finding gradient and gradient log of distribution
     Inherits pgmpy.inference.base_continuous.GradientLogPDF
+    Here model must be an instance of JointGaussianDistribution
     """
 
     def __init__(self, theta, model):
@@ -162,10 +139,9 @@ class DiscretizeTime(object):
             or d X 1.(Will be converted to d X 1)
             Vector representing values of parameter theta( or X)
 
-    model : An instance of AbstractGaussian
+    model : An instance of pgmpy.models.Continuous
 
-    grad_log_pdf : A callable object, an instance of
-                   pgmpy.inference.base_continuous.GradientLogPDF
+    grad_log_pdf : A subclass of pgmpy.inference.base_continuous.GradientLogPDF
 
     momentum: A vector (row matrix or 1d array like object) of shape 1 X d
               Vector representing the proposed value for momentum
@@ -299,7 +275,7 @@ class BaseHMC(object):
 
     Parameters:
     -----------
-    model: An instance of AbstractGaussian
+    model: An instance of pgmpy.models.Continuous
 
     grad_log_pdf: A instance of pgmpy.inference.base_continuous.GradientLogPDF
 
