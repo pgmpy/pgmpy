@@ -85,7 +85,7 @@ class TestContinuousFactorDiscretize(unittest.TestCase):
         class CustomDiscretizer(BaseDiscretizer):
             def get_discrete_values(self):
                 function = lambda x: self.factor.cdf(x+self.step) - self.factor.cdf(x)
-                x = np.arange(self.frm, self.to, self.step)
+                x = np.arange(self.low, self.high, self.step)
                 discrete_values = [function(i) for i in x]
                 return discrete_values
 

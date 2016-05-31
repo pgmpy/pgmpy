@@ -18,13 +18,13 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     method.
     The method assigns to points the following probability mass,
 
-    for x=[frm],
+    for x=[low],
     (E(x) - E(x + step))/step + 1 - cdf(x)
 
-    for x=[frm+step, frm+2*step, ........., to-step],
+    for x=[low+step, low+2*step, ........., high-step],
     (2 * E(x) - E(x - step) - E(x + step))/step
 
-    for x=[to],
+    for x=[high],
     (E(x) - E(x - step))/step - 1 + cdf(x)
 
     where, E(x) is the first limiting moment of the distribution
@@ -41,7 +41,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
     >>> exp_node = ContinuousFactor(exp_pdf)
-    >>> exp_node.discretize(UnbiasedDiscretizer, frm=0, to=5, step=0.5)
+    >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, step=0.5)
     [0.36787944117140681, 0.3995764008937992, 0.14699594306754959,
      0.054076785386732107, 0.019893735665399759, 0.0073185009180336547,
      0.0026923231244619927, 0.00099045004496534084, 0.00036436735000289211,
@@ -51,19 +51,19 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     def get_discrete_values(self):
         lev = self._lim_moment
 
-        # for x=[frm]
-        discrete_values = [(lev(self.frm) - lev(self.frm + self.step)) / self.step
-                           + 1 - self.factor.cdf(self.frm)]
+        # for x=[low]
+        discrete_values = [(lev(self.low) - lev(self.low + self.step)) / self.step
+                           + 1 - self.factor.cdf(self.low)]
 
-        # for x=[frm+step, frm+2*step, ........., to-step]
-        x = np.arange(self.frm + self.step, self.to, self.step)
+        # for x=[low+step, low+2*step, ........., high-step]
+        x = np.arange(self.low + self.step, self.high, self.step)
         for i in x:
             discrete_values.append((2 * lev(i) - lev(i-self.step) -
                                     lev(i + self.step))/self.step)
 
-        # for x=[to]
-        discrete_values.append((lev(self.to) - lev(self.to - self.step)) /
-                               self.step - 1 + self.factor.cdf(self.to))
+        # for x=[high]
+        discrete_values.append((lev(self.high) - lev(self.high - self.step)) /
+                               self.step - 1 + self.factor.cdf(self.high))
 
         return discrete_values
 
@@ -94,5 +94,5 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
     def get_labels(self):
         labels = super(UnbiasedDiscretizer, self).get_labels()
-        labels.append("x={to}".format(to=str(self.to)))
+        labels.append("x={high}".format(high=str(self.high)))
         return labels

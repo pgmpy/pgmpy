@@ -28,18 +28,18 @@ class TestBaseDiscretizer(unittest.TestCase):
 
     def test_base_init(self):
         self.assertEqual(self.normal_discretizer.factor, self.normal_factor)
-        self.assertEqual(self.normal_discretizer.frm, -10)
-        self.assertEqual(self.normal_discretizer.to, 10)
+        self.assertEqual(self.normal_discretizer.low, -10)
+        self.assertEqual(self.normal_discretizer.high, 10)
         self.assertEqual(self.normal_discretizer.step, 1)
 
         self.assertEqual(self.gamma_discretizer.factor, self.gamma_factor)
-        self.assertEqual(self.gamma_discretizer.frm, 0)
-        self.assertEqual(self.gamma_discretizer.to, 10)
+        self.assertEqual(self.gamma_discretizer.low, 0)
+        self.assertEqual(self.gamma_discretizer.high, 10)
         self.assertEqual(self.gamma_discretizer.step, 1)
 
         self.assertEqual(self.exp_discretizer.factor, self.exp_factor)
-        self.assertEqual(self.exp_discretizer.frm, 0)
-        self.assertEqual(self.exp_discretizer.to, 5)
+        self.assertEqual(self.exp_discretizer.low, 0)
+        self.assertEqual(self.exp_discretizer.high, 5)
         self.assertEqual(self.exp_discretizer.step, 0.5)
 
     def test_get_labels(self):
@@ -103,7 +103,7 @@ class TestRoundingDiscretizer(unittest.TestCase):
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
 
-        # Note, for the cases when step cannot divide the (frm,to) interval into
+        # Note, for the cases when step cannot divide the (low, high) interval into
         # equal bins, the R commands might produce one less probability mass (for the last label).
 
     def tearDown(self):
@@ -147,7 +147,7 @@ class TestUnbiasedDiscretizer(unittest.TestCase):
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
 
-        # Note, for the cases when step cannot divide the (frm,to) interval into
+        # Note, for the cases when step cannot divide the (low, high) interval into
         # equal bins, the R commands might produce one less probability mass (for the last label).
 
     def tearDown(self):

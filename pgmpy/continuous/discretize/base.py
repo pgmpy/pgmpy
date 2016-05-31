@@ -14,21 +14,21 @@ class BaseDiscretizer(object):
     factor: ContinuousFactor
         the continuous factor representing the distribution
         to be discretized.
-    frm, to: float
+    low, high: float
         the range over which the function will be discretized.
     step: float
         the discretization step (or span, or lag)
 
     """
 
-    def __init__(self, factor, frm, to, step):
+    def __init__(self, factor, low, high, step):
         if not isinstance(factor, ContinuousFactor):
             raise ValueError("{factor} is not a valid ContinuousFactor object."
                              .format(factor=factor))
 
         self.factor = factor
-        self.frm = frm
-        self.to = to
+        self.low = low
+        self.high = high
         self.step = step
 
     def get_labels(self):
@@ -37,7 +37,7 @@ class BaseDiscretizer(object):
         which the discretization method calculates the probabilty
         masses.
         Default value is the points -
-        [frm, frm+step, frm+2*step, ......... , to-step]
+        [low, low+step, low+2*step, ......... , high-step]
         unless the method is overridden by a subclass.
 
         Examples
@@ -54,5 +54,5 @@ class BaseDiscretizer(object):
 
         """
         labels = list('x={i}'.format(i=str(i))
-                      for i in np.arange(self.frm, self.to, self.step))
+                      for i in np.arange(self.low, self.high, self.step))
         return labels
