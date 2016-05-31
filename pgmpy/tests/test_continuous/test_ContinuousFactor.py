@@ -1,3 +1,4 @@
+from __future__ import division
 import unittest
 
 import numpy as np
@@ -85,9 +86,9 @@ class TestContinuousFactorDiscretize(unittest.TestCase):
         class CustomDiscretizer(BaseDiscretizer):
             def get_discrete_values(self):
                 step = (self.high - self.low) / self.cardinality
+                print(self.high, self.low, self.cardinality)
                 function = lambda x: self.factor.cdf(x+step) - self.factor.cdf(x)
-                x = np.arange(self.low, self.high, step)
-                discrete_values = [function(i) for i in x]
+                discrete_values = [function(i) for i in np.arange(self.low, self.high, step)]
                 return discrete_values
 
         self.CustomDiscretizer = CustomDiscretizer

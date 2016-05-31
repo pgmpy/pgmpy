@@ -11,13 +11,12 @@ class RoundingDiscretizer(BaseDiscretizer):
     This class uses the rounding method for discretizing the
     given continuous distribution.
 
-    The rounding method for discretization assigns to point the
-    following probability mass,
+    For the rounding method,
 
-    for x=[low],
+    The probability mass in x=[low] is,
     cdf(x+step/2)-cdf(x)
 
-    for x=[low+step, low+2*step, ......... , high-step],
+    The probability mass in x=[low+step, low+2*step, ......... , high-step] is,
     cdf(x+step/2)-cdf(x-step/2)
 
     where, cdf is the cumulative density function of the distribution

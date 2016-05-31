@@ -16,12 +16,13 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     first moment method. It involves calculating the first order
     limited moment of the distribution which is done by the _lim_moment
     method.
-    The method assigns to points the following probability mass,
 
-    for x=[low],
+    For this method,
+
+    The probability mass in x=[low] is,
     (E(x) - E(x + step))/step + 1 - cdf(x)
 
-    for x=[low+step, low+2*step, ........., high-step],
+    The probability mass in x=[low+step, low+2*step, ........., high-step],
     (2 * E(x) - E(x - step) - E(x + step))/step
 
     for x=[high],
