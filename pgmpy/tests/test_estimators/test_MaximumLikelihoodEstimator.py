@@ -25,6 +25,11 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(self.mle1._estimate_cpd('B'), self.cpds[1])
         self.assertEqual(self.mle1._estimate_cpd('C'), self.cpds[2])
 
+    def test_class_init(self):
+        mle2 = MaximumLikelihoodEstimator(self.m1, self.d1,
+                                          node_values={'A': [0, 1], 'B': [0, 1], 'C': [0, 1]})
+        self.assertSetEqual(set(mle2.get_parameters()), set(self.cpds))
+
     def tearDown(self):
         del self.m1
         del self.d1
