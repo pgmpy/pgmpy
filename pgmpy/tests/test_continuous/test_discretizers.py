@@ -22,31 +22,31 @@ class TestBaseDiscretizer(unittest.TestCase):
         self.gamma_factor = ContinuousFactor(self.gamma_pdf, lb=0)
         self.exp_factor = ContinuousFactor(self.exp_pdf, lb=0)
 
-        self.normal_discretizer = BaseDiscretizer(self.normal_factor, -10, 10, 1)
-        self.gamma_discretizer = BaseDiscretizer(self.gamma_factor, 0, 10, 1)
-        self.exp_discretizer = BaseDiscretizer(self.exp_factor, 0, 5, 0.5)
+        self.normal_discretizer = BaseDiscretizer(self.normal_factor, -10, 10, 20)
+        self.gamma_discretizer = BaseDiscretizer(self.gamma_factor, 0, 10, 10)
+        self.exp_discretizer = BaseDiscretizer(self.exp_factor, 0, 5, 10)
 
     def test_base_init(self):
         self.assertEqual(self.normal_discretizer.factor, self.normal_factor)
         self.assertEqual(self.normal_discretizer.low, -10)
         self.assertEqual(self.normal_discretizer.high, 10)
-        self.assertEqual(self.normal_discretizer.step, 1)
+        self.assertEqual(self.normal_discretizer.cardinality, 20)
 
         self.assertEqual(self.gamma_discretizer.factor, self.gamma_factor)
         self.assertEqual(self.gamma_discretizer.low, 0)
         self.assertEqual(self.gamma_discretizer.high, 10)
-        self.assertEqual(self.gamma_discretizer.step, 1)
+        self.assertEqual(self.gamma_discretizer.cardinality, 10)
 
         self.assertEqual(self.exp_discretizer.factor, self.exp_factor)
         self.assertEqual(self.exp_discretizer.low, 0)
         self.assertEqual(self.exp_discretizer.high, 5)
-        self.assertEqual(self.exp_discretizer.step, 0.5)
+        self.assertEqual(self.exp_discretizer.cardinality, 10)
 
     def test_get_labels(self):
-        o1 = ['x=-10', 'x=-9', 'x=-8', 'x=-7', 'x=-6', 'x=-5', 'x=-4', 'x=-3',
-              'x=-2', 'x=-1', 'x=0', 'x=1', 'x=2', 'x=3', 'x=4', 'x=5', 'x=6',
-              'x=7', 'x=8', 'x=9']
-        o2 = ['x=0', 'x=1', 'x=2', 'x=3', 'x=4', 'x=5', 'x=6', 'x=7', 'x=8', 'x=9']
+        o1 = ['x=-10.0', 'x=-9.0', 'x=-8.0', 'x=-7.0', 'x=-6.0', 'x=-5.0', 'x=-4.0', 'x=-3.0',
+              'x=-2.0', 'x=-1.0', 'x=0.0', 'x=1.0', 'x=2.0', 'x=3.0', 'x=4.0', 'x=5.0', 'x=6.0',
+              'x=7.0', 'x=8.0', 'x=9.0']
+        o2 = ['x=0.0', 'x=1.0', 'x=2.0', 'x=3.0', 'x=4.0', 'x=5.0', 'x=6.0', 'x=7.0', 'x=8.0', 'x=9.0']
         o3 = ['x=0.0', 'x=0.5', 'x=1.0', 'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
 
         self.assertListEqual(self.normal_discretizer.get_labels(), o1)
@@ -77,9 +77,9 @@ class TestRoundingDiscretizer(unittest.TestCase):
         self.gamma_factor = ContinuousFactor(self.gamma_pdf, lb=0)
         self.exp_factor = ContinuousFactor(self.exp_pdf, lb=0)
 
-        self.normal_discretizer = RoundingDiscretizer(self.normal_factor, -5, 5, 1)
-        self.gamma_discretizer = RoundingDiscretizer(self.gamma_factor, 0, 5, 1)
-        self.exp_discretizer = RoundingDiscretizer(self.exp_factor, 0, 5, 0.5)
+        self.normal_discretizer = RoundingDiscretizer(self.normal_factor, -5, 5, 10)
+        self.gamma_discretizer = RoundingDiscretizer(self.gamma_factor, 0, 5, 5)
+        self.exp_discretizer = RoundingDiscretizer(self.exp_factor, 0, 5, 10)
 
     def test_get_discrete_values(self):
         # The output for the get_discrete_values method has been cross checked
@@ -103,9 +103,6 @@ class TestRoundingDiscretizer(unittest.TestCase):
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
 
-        # Note, for the cases when step cannot divide the (low, high) interval into
-        # equal bins, the R commands might produce one less probability mass (for the last label).
-
     def tearDown(self):
         del self.normal_pdf
         del self.gamma_pdf
@@ -128,27 +125,24 @@ class TestUnbiasedDiscretizer(unittest.TestCase):
         self.gamma_factor = ContinuousFactor(self.gamma_pdf, lb=0)
         self.exp_factor = ContinuousFactor(self.exp_pdf, lb=0)
 
-        self.gamma_discretizer = UnbiasedDiscretizer(self.gamma_factor, 0, 5, 1)
-        self.exp_discretizer = UnbiasedDiscretizer(self.exp_factor, 0, 5, 0.5)
+        self.gamma_discretizer = UnbiasedDiscretizer(self.gamma_factor, 0, 5, 5)
+        self.exp_discretizer = UnbiasedDiscretizer(self.exp_factor, 0, 5, 10)
 
     def test_get_discrete_values(self):
         # The output for the get_discrete_values method has been cross checked
         # using discretize {actuar} package in R, assuming that it gives correct results.
         # The required R commands to reproduce the results have also been added.
 
-        # library(actuar);discretize(pgamma(x, 3), method = "unbiased", lev = levgamma(x, 3), from = 0, to = 5, step = 1)
-        gamma_desired_op = np.array([0.02333693, 0.17134370, 0.25942725, 0.22176384, 0.14794879, 0.05152747])
+        # library(actuar);discretize(pgamma(x, 3), method = "unbiased", lev = levgamma(x, 3), from = 0, to = 5, step = 5/4)
+        gamma_desired_op = np.array([0.03968660, 0.25118328, 0.30841001, 0.20833784, 0.06773025])
         gamma_obtained_op = np.array(self.gamma_discretizer.get_discrete_values())
         np_test.assert_almost_equal(gamma_desired_op, gamma_obtained_op)
 
-        # library(actuar);discretize(pexp(x), method = "unbiased", lev = levexp(x), from = 0, to = 5, step = 0.5)
-        exp_desired_op = np.array([0.213061319, 0.309636243, 0.187803875, 0.113908808, 0.069089185, 0.041904709,
-                                   0.025416491, 0.015415881, 0.009350204, 0.005671186, 0.002004152])
+        # library(actuar);discretize(pexp(x), method = "unbiased", lev = levexp(x), from = 0, to = 5, step = 5/9)
+        exp_desired_op = np.array([0.232756157, 0.327035063, 0.187637486, 0.107657650, 0.061768945, 0.035440143,
+                                   0.020333903, 0.011666647, 0.006693778, 0.002272280])
         exp_obtained_op = np.array(self.exp_discretizer.get_discrete_values())
         np_test.assert_almost_equal(exp_desired_op, exp_obtained_op)
-
-        # Note, for the cases when step cannot divide the (low, high) interval into
-        # equal bins, the R commands might produce one less probability mass (for the last label).
 
     def tearDown(self):
         del self.gamma_pdf

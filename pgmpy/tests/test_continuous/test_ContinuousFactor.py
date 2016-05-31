@@ -64,78 +64,79 @@ class TestContinuousFactorDiscretize(unittest.TestCase):
         self.exp_node1 = ContinuousFactor(self.exp_pdf)
         self.exp_node2 = ContinuousFactor(self.exp_pdf, lb=0)
 
-        self.discretizer1 = UnbiasedDiscretizer(self.custom_node1, -1, 1, 0.25).get_discrete_values()
-        self.discretizer2 = RoundingDiscretizer(self.custom_node1, -1, 1, 0.25).get_discrete_values()
+        self.discretizer1 = UnbiasedDiscretizer(self.custom_node1, -1, 1, 8).get_discrete_values()
+        self.discretizer2 = RoundingDiscretizer(self.custom_node1, -1, 1, 8).get_discrete_values()
 
-        self.discretizer3 = UnbiasedDiscretizer(self.normal_node1, -5, 5, 1).get_discrete_values()
-        self.discretizer4 = RoundingDiscretizer(self.normal_node1, -5, 5, 1).get_discrete_values()
+        self.discretizer3 = UnbiasedDiscretizer(self.normal_node1, -5, 5, 10).get_discrete_values()
+        self.discretizer4 = RoundingDiscretizer(self.normal_node1, -5, 5, 10).get_discrete_values()
 
-        self.discretizer5 = UnbiasedDiscretizer(self.exp_node2, 0, 5, 1).get_discrete_values()
-        self.discretizer6 = RoundingDiscretizer(self.exp_node2, 0, 5, 1).get_discrete_values()
+        self.discretizer5 = UnbiasedDiscretizer(self.exp_node2, 0, 5, 5).get_discrete_values()
+        self.discretizer6 = RoundingDiscretizer(self.exp_node2, 0, 5, 5).get_discrete_values()
 
-        self.discretizer7 = UnbiasedDiscretizer(self.custom_node2, -1, 1, 0.25).get_discrete_values()
-        self.discretizer8 = RoundingDiscretizer(self.custom_node2, -1, 1, 0.25).get_discrete_values()
+        self.discretizer7 = UnbiasedDiscretizer(self.custom_node2, -1, 1, 8).get_discrete_values()
+        self.discretizer8 = RoundingDiscretizer(self.custom_node2, -1, 1, 8).get_discrete_values()
 
-        self.discretizer9 = UnbiasedDiscretizer(self.normal_node2, -5, 5, 1).get_discrete_values()
-        self.discretizer10 = RoundingDiscretizer(self.normal_node2, -5, 5, 1).get_discrete_values()
+        self.discretizer9 = UnbiasedDiscretizer(self.normal_node2, -5, 5, 10).get_discrete_values()
+        self.discretizer10 = RoundingDiscretizer(self.normal_node2, -5, 5, 10).get_discrete_values()
 
-        self.discretizer11 = UnbiasedDiscretizer(self.exp_node1, 0, 5, 1).get_discrete_values()
-        self.discretizer12 = RoundingDiscretizer(self.exp_node1, 0, 5, 1).get_discrete_values()
+        self.discretizer11 = UnbiasedDiscretizer(self.exp_node1, 0, 5, 5).get_discrete_values()
+        self.discretizer12 = RoundingDiscretizer(self.exp_node1, 0, 5, 5).get_discrete_values()
 
         class CustomDiscretizer(BaseDiscretizer):
             def get_discrete_values(self):
-                function = lambda x: self.factor.cdf(x+self.step) - self.factor.cdf(x)
-                x = np.arange(self.low, self.high, self.step)
+                step = (self.high - self.low) / self.cardinality
+                function = lambda x: self.factor.cdf(x+step) - self.factor.cdf(x)
+                x = np.arange(self.low, self.high, step)
                 discrete_values = [function(i) for i in x]
                 return discrete_values
 
         self.CustomDiscretizer = CustomDiscretizer
 
-        self.discretizer13 = CustomDiscretizer(self.custom_node2, -1, 1, 0.25).get_discrete_values()
-        self.discretizer14 = CustomDiscretizer(self.normal_node1, -5, 5, 1).get_discrete_values()
-        self.discretizer15 = CustomDiscretizer(self.exp_node2, 0, 5, 1).get_discrete_values()
+        self.discretizer13 = CustomDiscretizer(self.custom_node2, -1, 1, 8).get_discrete_values()
+        self.discretizer14 = CustomDiscretizer(self.normal_node1, -5, 5, 10).get_discrete_values()
+        self.discretizer15 = CustomDiscretizer(self.exp_node2, 0, 5, 5).get_discrete_values()
 
     def test_discretize_type_error(self):
-        self.assertRaises(TypeError, self.custom_node1.discretize, 'Unbiased', -1, 1, 0.25)
-        self.assertRaises(TypeError, self.custom_node1.discretize, -1, 1, 0.25)
-        self.assertRaises(TypeError, self.custom_node1.discretize, -1, 1, 0.25)
-        self.assertRaises(TypeError, self.custom_node1.discretize, self.discretizer1, -1, 1, 0.25)
-        self.assertRaises(TypeError, self.custom_node1.discretize, self.discretizer2, -1, 1, 0.25)
+        self.assertRaises(TypeError, self.custom_node1.discretize, 'Unbiased', -1, 1, 8)
+        self.assertRaises(TypeError, self.custom_node1.discretize, -1, 1, 8)
+        self.assertRaises(TypeError, self.custom_node1.discretize, -1, 1, 8)
+        self.assertRaises(TypeError, self.custom_node1.discretize, self.discretizer1, -1, 1, 8)
+        self.assertRaises(TypeError, self.custom_node1.discretize, self.discretizer2, -1, 1, 8)
 
-        self.assertRaises(TypeError, self.normal_node1.discretize, 'Unbiased', -5, 5, 1)
-        self.assertRaises(TypeError, self.normal_node1.discretize, -5, 5, 1)
-        self.assertRaises(TypeError, self.normal_node1.discretize, 1, -5, 5, 1)
-        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer3, -5, 5, 1)
-        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer4, -5, 5, 1)
+        self.assertRaises(TypeError, self.normal_node1.discretize, 'Unbiased', -5, 5, 10)
+        self.assertRaises(TypeError, self.normal_node1.discretize, -5, 5, 10)
+        self.assertRaises(TypeError, self.normal_node1.discretize, 1, -5, 5, 10)
+        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer3, -5, 5, 10)
+        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer4, -5, 5, 10)
 
-        self.assertRaises(TypeError, self.exp_node2.discretize, 'Unbiased', -5, 5, 1)
-        self.assertRaises(TypeError, self.exp_node2.discretize, -5, 5, 1)
-        self.assertRaises(TypeError, self.exp_node2.discretize, 1, -5, 5, 1)
-        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer5, 0, 5, 1)
-        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer6, 0, 5, 1)
+        self.assertRaises(TypeError, self.exp_node2.discretize, 'Unbiased', -5, 5, 10)
+        self.assertRaises(TypeError, self.exp_node2.discretize, -5, 5, 10)
+        self.assertRaises(TypeError, self.exp_node2.discretize, 1, -5, 5, 10)
+        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer5, 0, 5, 5)
+        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer6, 0, 5, 5)
 
-        self.assertRaises(TypeError, self.custom_node2.discretize, self.discretizer13, -1, 1, 0.25)
-        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer14, -5, 5, 1)
-        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer15, 0, 5, 1)
+        self.assertRaises(TypeError, self.custom_node2.discretize, self.discretizer13, -1, 1, 8)
+        self.assertRaises(TypeError, self.normal_node1.discretize, self.discretizer14, -5, 5, 10)
+        self.assertRaises(TypeError, self.exp_node2.discretize, self.discretizer15, 0, 5, 5)
 
     def test_discretize(self):
-        self.assertEqual(self.custom_node1.discretize(UnbiasedDiscretizer, -1, 1, 0.25), self.discretizer1)
-        self.assertEqual(self.custom_node1.discretize(RoundingDiscretizer, -1, 1, 0.25), self.discretizer2)
-        self.assertEqual(self.custom_node2.discretize(self.CustomDiscretizer, -1, 1, 0.25), self.discretizer13)
-        self.assertEqual(self.custom_node2.discretize(UnbiasedDiscretizer, -1, 1, 0.25), self.discretizer7)
-        self.assertEqual(self.custom_node2.discretize(RoundingDiscretizer, -1, 1, 0.25), self.discretizer8)
+        self.assertEqual(self.custom_node1.discretize(UnbiasedDiscretizer, -1, 1, 8), self.discretizer1)
+        self.assertEqual(self.custom_node1.discretize(RoundingDiscretizer, -1, 1, 8), self.discretizer2)
+        self.assertEqual(self.custom_node2.discretize(self.CustomDiscretizer, -1, 1, 8), self.discretizer13)
+        self.assertEqual(self.custom_node2.discretize(UnbiasedDiscretizer, -1, 1, 8), self.discretizer7)
+        self.assertEqual(self.custom_node2.discretize(RoundingDiscretizer, -1, 1, 8), self.discretizer8)
 
-        self.assertEqual(self.normal_node1.discretize(UnbiasedDiscretizer, -5, 5, 1), self.discretizer3)
-        self.assertEqual(self.normal_node1.discretize(RoundingDiscretizer, -5, 5, 1), self.discretizer4)
-        self.assertEqual(self.normal_node1.discretize(self.CustomDiscretizer, -5, 5, 1), self.discretizer14)
-        self.assertEqual(self.normal_node2.discretize(UnbiasedDiscretizer, -5, 5, 1), self.discretizer9)
-        self.assertEqual(self.normal_node2.discretize(RoundingDiscretizer, -5, 5, 1), self.discretizer10)
+        self.assertEqual(self.normal_node1.discretize(UnbiasedDiscretizer, -5, 5, 10), self.discretizer3)
+        self.assertEqual(self.normal_node1.discretize(RoundingDiscretizer, -5, 5, 10), self.discretizer4)
+        self.assertEqual(self.normal_node1.discretize(self.CustomDiscretizer, -5, 5, 10), self.discretizer14)
+        self.assertEqual(self.normal_node2.discretize(UnbiasedDiscretizer, -5, 5, 10), self.discretizer9)
+        self.assertEqual(self.normal_node2.discretize(RoundingDiscretizer, -5, 5, 10), self.discretizer10)
 
-        self.assertEqual(self.exp_node2.discretize(UnbiasedDiscretizer, 0, 5, 1), self.discretizer5)
-        self.assertEqual(self.exp_node2.discretize(RoundingDiscretizer, 0, 5, 1), self.discretizer6)
-        self.assertEqual(self.exp_node2.discretize(self.CustomDiscretizer, 0, 5, 1), self.discretizer15)
-        self.assertEqual(self.exp_node1.discretize(UnbiasedDiscretizer, 0, 5, 1), self.discretizer11)
-        self.assertEqual(self.exp_node1.discretize(RoundingDiscretizer, 0, 5, 1), self.discretizer12)
+        self.assertEqual(self.exp_node2.discretize(UnbiasedDiscretizer, 0, 5, 5), self.discretizer5)
+        self.assertEqual(self.exp_node2.discretize(RoundingDiscretizer, 0, 5, 5), self.discretizer6)
+        self.assertEqual(self.exp_node2.discretize(self.CustomDiscretizer, 0, 5, 5), self.discretizer15)
+        self.assertEqual(self.exp_node1.discretize(UnbiasedDiscretizer, 0, 5, 5), self.discretizer11)
+        self.assertEqual(self.exp_node1.discretize(RoundingDiscretizer, 0, 5, 5), self.discretizer12)
 
     def tearDown(self):
         del self.custom_pdf

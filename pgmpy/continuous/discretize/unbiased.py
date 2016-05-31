@@ -9,7 +9,7 @@ from pgmpy.continuous.discretize import BaseDiscretizer
 
 class UnbiasedDiscretizer(BaseDiscretizer):
     """
-    This class uses the rounding method for discretizing the
+    This class uses the unbiased method for discretizing the
     given continuous distribution.
 
     The unbiased method for discretization is the matching of the
@@ -28,7 +28,8 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     (E(x) - E(x - step))/step - 1 + cdf(x)
 
     where, E(x) is the first limiting moment of the distribution
-    about the point x and cdf is the cumulative density function.
+    about the point x, cdf is the cumulative density function
+    and step = (high-low)/cardinality.
 
     For details, refer Klugman, S. A., Panjer, H. H. and Willmot,
     G. E., Loss Models, From Data to Decisions, Fourth Edition,
@@ -38,32 +39,34 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> from pgmpy.factors import ContinuousFactor
+    >>> from pgmpy.continuous.discretize import UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
     >>> exp_node = ContinuousFactor(exp_pdf)
-    >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, step=0.5)
-    [0.36787944117140681, 0.3995764008937992, 0.14699594306754959,
-     0.054076785386732107, 0.019893735665399759, 0.0073185009180336547,
-     0.0026923231244619927, 0.00099045004496534084, 0.00036436735000289211,
-     0.00013404200890043683, 3.2610438989610913e-05]
+    >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, cardinality=10)
+    [0.39627368905806137, 0.4049838434034298, 0.13331784003148325,
+     0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
+     0.0015656350182896128, 0.00051540201980112557, 0.00016965346326140994,
+     3.7867260839208328e-05]
 
     """
     def get_discrete_values(self):
         lev = self._lim_moment
+        step = (self.high - self.low) / (self.cardinality - 1)
 
         # for x=[low]
-        discrete_values = [(lev(self.low) - lev(self.low + self.step)) / self.step
+        discrete_values = [(lev(self.low) - lev(self.low + step)) / step
                            + 1 - self.factor.cdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
-        x = np.arange(self.low + self.step, self.high, self.step)
+        x = np.linspace(self.low + step, self.high - step, self.cardinality-2)
         for i in x:
-            discrete_values.append((2 * lev(i) - lev(i-self.step) -
-                                    lev(i + self.step))/self.step)
+            discrete_values.append((2 * lev(i) - lev(i - step) -
+                                    lev(i + step)) / step)
 
         # for x=[high]
-        discrete_values.append((lev(self.high) - lev(self.high - self.step)) /
-                               self.step - 1 + self.factor.cdf(self.high))
+        discrete_values.append((lev(self.high) - lev(self.high - step)) /
+                               step - 1 + self.factor.cdf(self.high))
 
         return discrete_values
 
@@ -93,6 +96,6 @@ class UnbiasedDiscretizer(BaseDiscretizer):
                 np.power(u, order)*(1 - self.factor.cdf(u)))
 
     def get_labels(self):
-        labels = super(UnbiasedDiscretizer, self).get_labels()
-        labels.append("x={high}".format(high=str(self.high)))
+        labels = list('x={i}'.format(i=str(i))
+                      for i in np.round(np.linspace(self.low, self.high, self.cardinality), 3))
         return labels

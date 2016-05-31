@@ -68,11 +68,11 @@ class ContinuousFactor(rv_continuous):
         >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
         >>> exp_node = ContinuousFactor(exp_pdf)
         >>> from pgmpy.continuous.discretize import UnbiasedDiscretizer
-        >>> exp_node.discretize(UnbiasedDiscretizer, exp_node, 0, 5, 0.5)
-        [0.36787944117140681, 0.3995764008937992, 0.14699594306754959,
-         0.054076785386732107, 0.019893735665399759, 0.0073185009180336547,
-         0.0026923231244619927, 0.00099045004496534084, 0.00036436735000289211,
-         0.00013404200890043683, 3.2610438989610913e-05]
+        >>> exp_node.discretize(UnbiasedDiscretizer, exp_node, 0, 5, 10)
+        [0.39627368905806137, 0.4049838434034298, 0.13331784003148325,
+         0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
+         0.0015656350182896128, 0.00051540201980112557, 0.00016965346326140994,
+         3.7867260839208328e-05]
 
         (Refer the various Discretization methods, in pgmpy.continuous.discretize
          for details regarding the input parameters.)
