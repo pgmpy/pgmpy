@@ -90,11 +90,11 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
         >>> cpd_A = MaximumLikelihoodEstimator(model, data)._estimate_cpd('A')
         >>> print(str(cpd_A))
-        ╒═════╤══════════╕
-        │ A_0 │ 0.666667 │
-        ├─────┼──────────┤
-        │ A_1 │ 0.333333 │
-        ╘═════╧══════════╛
+        ╒══════╤══════════╕
+        │ A(0) │ 0.666667 │
+        ├──────┼──────────┤
+        │ A(1) │ 0.333333 │
+        ╘══════╧══════════╛
         """
 
         parents = self.model.get_parents(node)
@@ -102,7 +102,8 @@ class MaximumLikelihoodEstimator(BaseEstimator):
             state_counts = self.data.ix[:, node].value_counts()
             state_counts = state_counts.reindex(sorted(state_counts.index))
             cpd = TabularCPD(node, len(self.node_values[node]),
-                             state_counts.values[:, np.newaxis])
+                             state_counts.values[:, np.newaxis],
+                             state_names=self.node_values)
         else:
             parent_cardinalities = np.array([len(self.node_values[parent]) for parent in parents])
             node_cardinality = len(self.node_values[node])
@@ -116,6 +117,7 @@ class MaximumLikelihoodEstimator(BaseEstimator):
 
             cpd = TabularCPD(node, node_cardinality, np.array(values),
                              evidence=parents,
-                             evidence_card=parent_cardinalities.astype('int'))
+                             evidence_card=parent_cardinalities.astype('int'),
+                             state_names=self.node_values)
         cpd.normalize()
         return cpd
