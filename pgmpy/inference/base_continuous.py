@@ -104,7 +104,7 @@ class GradientLogPDF(object):
         return self.grad_log, self.log_pdf
 
 
-class GradLogPDFGaussian(GradientLogPDF):
+class GradientLogPDFGaussian(GradientLogPDF):
     """
     Class for finding gradient and gradient log of distribution
     Inherits pgmpy.inference.base_continuous.GradientLogPDF

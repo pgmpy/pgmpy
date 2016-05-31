@@ -4,6 +4,10 @@ from .ExactInference import BeliefPropagation
 from .Sampling import BayesianModelSampling, GibbsSampling
 from .dbn_inference import DBNInference
 from .mplp import Mplp
+from .base_continuous import (JointGaussianDistribution, LeapFrog, ModifiedEuler,
+                              DiscretizeTime, GradientLogPDF, GradientLogPDFGaussian, BaseHMC)
+from .continuous_sampling import HamiltonianMCda
+
 
 __all__ = ['Inference',
            'VariableElimination',
@@ -11,4 +15,12 @@ __all__ = ['Inference',
            'BeliefPropagation',
            'BayesianModelSampling',
            'GibbsSampling',
-           'Mplp']
+           'Mplp',
+           'JointGaussianDistribution',
+           'LeapFrog',
+           'ModifiedEuler',
+           'DiscretizeTime',
+           'GradientLogPDF',
+           'GradientLogPDFGaussian',
+           'BaseHMC',
+           'HamiltonianMCda']

@@ -1,9 +1,11 @@
 """
     A collection of methods for sampling from continuous models in pgmpy
 """
+from math import sqrt
+
 import numpy as np
-from base_continuous import (LeapFrog,
-                             DiscretizeTime, GradientLogPDF, BaseHMC, JointGaussianDistribution)
+
+from pgmpy.inference import (LeapFrog, BaseHMC)
 
 
 class HamiltonianMCda(BaseHMC):
@@ -22,7 +24,7 @@ class HamiltonianMCda(BaseHMC):
 
     grad_log_pdf: A subclass of pgmpy.inference.base_continuous.GradientLogPDF
 
-    discretize_time: A instance of pgmpy.inference.base_continuous.DiscretizeTime
+    discretize_time: A subclass of pgmpy.inference.base_continuous.DiscretizeTime
 
     delta: float (in between 0 and 1), defaults to 0.65
            The target HMC acceptance probability
@@ -45,7 +47,7 @@ class HamiltonianMCda(BaseHMC):
 
     def __init__(self, model, Lambda, grad_log_pdf,
                  discretize_time=LeapFrog, delta=0.65):
-        # TODO: Use model instead of mean_vec and cov_matrix
+
         BaseHMC.__init__(self, model=model, grad_log_pdf=grad_log_pdf,
                          discretize_time=discretize_time, delta=delta)
 
@@ -101,7 +103,7 @@ class HamiltonianMCda(BaseHMC):
 
         return epsilon_app
 
-    def sample(self, theta0, Madapt, num_samples, epsilon=None):
+    def sample(self, theta0, num_adapt, num_samples, epsilon=None):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -112,7 +114,7 @@ class HamiltonianMCda(BaseHMC):
                 Vector representing values of parameter theta, the starting
                 state in markov chain.
 
-        Madapt: int
+        num_adapt: int
                 The number of interations to run the adaptation of epsilon,
                 after Madapt iterations adaptation will be stopped
 
@@ -143,61 +145,59 @@ class HamiltonianMCda(BaseHMC):
         else:
             raise TypeError("theta should be a 1d array type object")
 
-        epsilon_m_1 = epsilon
+        if epsilon is None:
+            epsilon = self._find_resonable_epsilon(theta0)
 
-        if epsilon_m_1 is None:
-            epsilon_m_1 = self._find_resonable_epsilon(theta0)
-
-        mu = np.log(10 * epsilon_m_1)  # freely chosen point that iterates xt are shrunk towards
+        mu = np.log(10.0 * epsilon)  # freely chosen point, after each iteration xt(/theta) is shrunk towards it
         # log(10 * epsilon) large values to save computation
-        theta_m_1 = theta0
-        epsilon_bar_m_1 = 1
-        hbar_m_1 = 0
-        gamma = 0.005  # free parameter that controls the amount of shrinkage towards mu
-        t0 = 10  # free parameter that stabilizes the initial iterations of the algorithm
+        epsilon_bar = 1.0
+        hbar = 0.0
+        gamma = 0.05  # free parameter that controls the amount of shrinkage towards mu
+        t0 = 10.0  # free parameter that stabilizes the initial iterations of the algorithm
         kappa = 0.75
         # See equation (6) section 3.2.1 for details
-        samples = []
-
-        for i in range(0, num_samples):
+        samples = [theta0.copy()]
+        theta_m = theta0.copy()
+        for i in range(1, num_samples):
             # Genrating sample
             # Resampling momentum
             momentum0 = np.matrix(np.reshape(np.random.normal(0, 1, len(theta0)), (len(theta0), 1)))
-
-            theta_m, theta_bar, momentum_bar = theta_m_1.copy(), theta_m_1.copy(), momentum0.copy()
+            # theta_m here will be the previous sampled value of theta
+            theta_bar, momentum_bar = theta_m.copy(), momentum0.copy()
             # Number of steps L to run discretize time algorithm
-            L = max(1, round(self.Lambda / epsilon_m_1, 0))
-            for i in range(L):
+            lsteps = int(max(1, round(self.Lambda / epsilon, 0)))
+
+            for j in range(lsteps):
                 # Taking L steps in time
-                theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model,
-                                                               self.theta_bar.copy(), self.momentum_bar.copy(), epsilon_m_1)
+                theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model, theta_bar.copy(),
+                                                               momentum_bar.copy(), epsilon).discretize_time()
 
-            _, log_bar = self.grad_log_pdf(theta_bar, self.model)
-            _, log_m_1 = self.grad_log_pdf(theta_m_1)
+            _, log_bar = self.grad_log_pdf(theta_bar.copy(), self.model).get_gradient_log_pdf()
+            # log_m_1 = log(theta_m) or log(theta_m_1)
+            _, log_m_1 = self.grad_log_pdf(theta_m.copy(), self.model).get_gradient_log_pdf()
+
             # Metropolis acceptance probability
-            alpha = min(1, np.exp(log_bar - 0.5 * np.float(momentum_bar.T * momentum_bar)) /
-                        np.exp(log_m_1 - 0.5 * np.float(momentum0.T * momentum0)))
+            alpha = min(1, np.exp(log_bar - log_m_1 - 0.5 *
+                                  np.float(momentum_bar.T * momentum_bar - momentum0.T * momentum0)))
 
+            # Accept or reject the new proposed value of theta, i.e theta_bar
             if np.random.rand() < alpha:
                 theta_m = theta_bar.copy()
-            samples.append(theta_m)
 
-            # Adaptation of epsilon till Madapt iterations
-            if i <= Madapt:
+            samples.append(theta_m.copy())
 
-                hbar_m = (1 - 1 / (i + t0)) * hbar_m_1 + (self.delta - alpha) / (i + t0)
+            # Adaptation of epsilon till num_adapt iterations
+            if i <= num_adapt:
+                # Burn-in updates
+                estimate = 1.0 / (i + t0)
+                hbar = (1 - estimate) * hbar + estimate * (self.delta - alpha)
 
-                epsilon_m = np.exp(mu - (hbar_m * i ** 0.5) / gamma)
-                i_kappa = i ** (- kappa)
-                epsilon_bar_m = np.exp(i_kappa * np.log(epsilon_m) + (1 - i_kappa) * np.log(epsilon_bar_m_1))
-                # Update the values for next iteration
-                epsilon_m_1 = epsilon_m
-                epsilon_bar_m_1 = epsilon_bar_m
-                hbar_m_1 = hbar_m
+                epsilon = np.exp(mu - sqrt(i) / gamma * hbar)
+                i_kappa = i ** (-kappa)
+                epsilon_bar = np.exp(i_kappa * np.log(epsilon) + (1 - i_kappa) * np.log(epsilon_bar))
 
             else:
-                epsilon_m_1 = epsilon_bar_m_1
-            # Updating values for next iteration
-            theta_m_1 = theta_m.copy()
+                # Burn-in finished used the last value
+                epsilon = epsilon_bar
 
         return samples
