@@ -37,7 +37,7 @@ class MaximumLikelihoodEstimator(BaseEstimator):
 
     def get_parameters(self):
         """
-        Method used to get parameters.
+        Method to estimate the model parameters (CPDs).
 
         Returns
         -------
@@ -97,27 +97,33 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         ╘══════╧══════════╛
         """
 
-        parents = self.model.get_parents(node)
+        parents = sorted(self.model.get_parents(node))
+        node_cardinality = len(self.node_values[node])
+        parents_cardinalities = np.array([len(self.node_values[parent]) for parent in parents])
+
         if not parents:
-            state_counts = self.data.ix[:, node].value_counts()
-            state_counts = state_counts.reindex(sorted(state_counts.index))
-            cpd = TabularCPD(node, len(self.node_values[node]),
-                             state_counts.values[:, np.newaxis],
-                             state_names=self.node_values)
+            state_count_data = self.data.ix[:, node].value_counts()
+            state_counts = state_count_data.reindex(sorted(self.node_values[node])).fillna(0).values[:, np.newaxis]
+
         else:
-            parent_cardinalities = np.array([len(self.node_values[parent]) for parent in parents])
-            node_cardinality = len(self.node_values[node])
+            state_count_data = self.data.groupby([node] + parents).size()
+            state_counts = state_count_data.unstack(parents).reindex(sorted(self.node_values[node])).fillna(0)
+            if isinstance(state_counts.index, pd.MultiIndex):
+                state_counts = state_counts.sortlevel(axis=1)
+            else:
+                state_counts = state_counts.sort_index(axis=1)
 
-            values = self.data.groupby([node] + parents).size().unstack(parents).fillna(0)
-            if not len(values.columns) == np.prod(parent_cardinalities):
-                # some columns are missing if for some states of the parents no data was observed.
+            # some columns might be missing if for some states of the parents no data was observed:
+            if not len(state_counts.columns) == np.prod(parents_cardinalities):
+                possible_parents_states = [sorted(self.node_values[parent]) for parent in parents]
                 # reindex to add missing columns and fill in uniform (conditional) probabilities:
-                full_index = pd.MultiIndex.from_product([range(card) for card in parent_cardinalities], names=parents)
-                values = values.reindex(columns=full_index).fillna(1.0/node_cardinality)
+                full_index = pd.MultiIndex.from_product(possible_parents_states, names=parents)
+                state_counts = state_counts.reindex(columns=full_index).fillna(1.0 / node_cardinality)
 
-            cpd = TabularCPD(node, node_cardinality, np.array(values),
-                             evidence=parents,
-                             evidence_card=parent_cardinalities.astype('int'),
-                             state_names=self.node_values)
+        state_names = {var: sorted(states) for var, states in self.node_values.items()}
+        cpd = TabularCPD(node, node_cardinality, np.array(state_counts),
+                         evidence=parents,
+                         evidence_card=parents_cardinalities,
+                         state_names=state_names)
         cpd.normalize()
         return cpd

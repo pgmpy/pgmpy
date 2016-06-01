@@ -17,11 +17,11 @@ class BaseEstimator(object):
     node_values: dict (optional)
         A dict indicating, for each variable, the discrete set of values (realizations)
         that the variable can take. If unspecified, the observed values in the data set
-        are taken as the only possible states.
+        are taken to be the only possible states.
     """
     def __init__(self, model, data, node_values=None):
         self.model = model
-        self.data = data.astype(np.int)
+        self.data = data
         if not isinstance(node_values, dict):
             self.node_values = {node: self._get_node_values(node) for node in model.nodes()}
         else:
