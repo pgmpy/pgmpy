@@ -1,11 +1,14 @@
 from __future__ import division
 
+from six import with_metaclass
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 
 from pgmpy.factors import ContinuousFactor
 
 
-class BaseDiscretizer(object):
+class BaseDiscretizer(with_metaclass(ABCMeta)):
     """
     Base class for the discretizer classes in pgmpy. The discretizer
     classes are used to discretize a continuous random variable
@@ -22,7 +25,6 @@ class BaseDiscretizer(object):
         the number of states required in the discretized output.
 
     """
-
     def __init__(self, factor, low, high, cardinality):
         if not isinstance(factor, ContinuousFactor):
             raise ValueError("{factor} is not a valid ContinuousFactor object."
@@ -32,6 +34,15 @@ class BaseDiscretizer(object):
         self.low = low
         self.high = high
         self.cardinality = cardinality
+
+    @abstractmethod
+    def get_discrete_values(self):
+        """
+        This method implements the algorithm to discretize the given
+        continuous distribution.
+        It must be implemented by all the subclasses of BaseDiscretizer.
+        """
+        pass
 
     def get_labels(self):
         """
