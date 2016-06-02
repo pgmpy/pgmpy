@@ -57,6 +57,21 @@ class JointGaussianDistribution(object):
 
     @property
     def precision_matrix(self):
+        """
+        Returns the precision matrix of the distribution.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]])),
+                        np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis.precision_matrix
+        matrix([[ 0.3125    , -0.125     ,  0.        ],
+                [-0.125     ,  0.58333333,  0.33333333],
+                [ 0.        ,  0.33333333,  0.33333333]])
+        """
+
         if self._precision_matrix is None:
             self._precision_matrix = np.linalg.inv(self.covariance_matrix)
         return self._precision_matrix
