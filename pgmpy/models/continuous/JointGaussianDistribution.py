@@ -23,7 +23,7 @@ class JointGaussianDistribution(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]])),
                         np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -63,7 +63,7 @@ class JointGaussianDistribution(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]])),
                         np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
@@ -172,3 +172,57 @@ class JointGaussianDistribution(object):
                                                       self.covariance_matrix)
         copy_distribution._precision_matrix = self._precision_matrix
         return copy_distribution
+
+    def to_CanonicalFactor(self):
+        """
+        Returns an equivalent CanonicalFactor object.
+
+        The formulas for calculating the cannonical factor parameters
+        for N(μ; Σ) = C(K; h; g) are as follows - 
+
+        K = sigma^(-1)
+        h = sigma^(-1) * mu
+        g = -(0.5) * mu.T * sigma^(-1) * mu -
+            log((2*pi)^(n/2) * det(sigma)^(0.5))
+
+        where,
+        K,h,g are the canonical factor parameters
+        sigma is the covariance_matrix of the distribution,
+        mu is the mean_vector of the distribution,
+        mu.T is the transpose of the matrix mu,
+        and det(sigma) is the determinant of the matrix sigma.
+
+        Example
+        -------
+
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]])),
+                        np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> phi = dis.toCanonicalFactor()
+        >>> phi.variables
+        ['x1', 'x2', 'x3']
+        >>> phi.K
+        matrix([[0.3125, -0.125, 0.],
+                [-0.125, 0.5833, 0.333],
+                [     0., 0.333, 0.333]])
+        >>> phi.h
+        matrix([[  0.6875],
+                [-0.54166],
+                [ 0.33333]]))
+        >>> phi.g
+        -6.51533
+        """
+        # TODO: This method will return a CanonicalFactor object.
+        # Currently this cannot be used until the CanonicalFactor class is
+        # created.
+        mu = self.mean_vector
+        sigma = self.covariance_matrix
+        n = len(self.variables)
+
+        K = self.precision_matrix
+        
+        h = K * mu
+        
+        g = -(0.5) * mu.T * h - np.log(np.power(2 * np.pi, n/2)* np.power(np.linalg.det(sigma), 0.5))
+
+
