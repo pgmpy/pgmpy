@@ -1,3 +1,5 @@
+from __future__ import division
+
 import six
 import numpy as np
 
@@ -45,9 +47,9 @@ class JointGaussianDistribution(object):
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
-        self.mean_vector = np.matrix(np.reshape(mean_vector, (n, 1)))
+        self.mean_vector = np.matrix(np.reshape(mean_vector, (n, 1)), dtype=float)
 
-        self.covariance_matrix = np.matrix(covariance_matrix)
+        self.covariance_matrix = np.matrix(covariance_matrix, dtype=float)
 
         if self.covariance_matrix.shape != (n, n):
             raise ValueError("Each dimension of the covariance matrix must\
@@ -97,6 +99,7 @@ class JointGaussianDistribution(object):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
                         np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
