@@ -2,6 +2,7 @@ from __future__ import division
 
 import six
 import numpy as np
+from scipy.stats import multivariate_normal
 
 
 class JointGaussianDistribution(object):
@@ -230,3 +231,22 @@ class JointGaussianDistribution(object):
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power(2 * np.pi, n/2) * np.power(np.linalg.det(sigma), 0.5))
         
         return K,h,g
+
+    def assignment(self, values):
+        """
+        Returns a list of pdf assignments for the corresponding values.
+        
+        Parameters
+        ----------
+        values: A list of arrays of dimension 1Xn
+            List of values whose assignment is to be computed.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> phi = JGD(['x1', 'x2'], [3, 4], [[5, -5], [-5, 8]])
+        >>> phi.assignment([[2, 3], [1, 7], [0, 0]])
+        array([  1.90904163e-02,   2.33170871e-02,   4.74428969e-06])
+        """
+        return multivariate_normal.pdf(values, 
+                            self.mean.reshape(1, len(self.variables))[0], self.covariance)
