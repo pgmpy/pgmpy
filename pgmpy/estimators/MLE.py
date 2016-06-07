@@ -8,33 +8,33 @@ import pandas as pd
 
 
 class MaximumLikelihoodEstimator(BaseEstimator):
-    """
-    Class used to compute parameters for a model using Maximum Likelihood Estimation.
-
-    Parameters
-    ----------
-    model: A pgmpy.models.BayesianModel instance
-
-    data: pandas DataFrame object
-        DataFrame object with column names identical to the variable names of the network
-
-    state_names: dict (optional)
-        A dict indicating, for each variable, the discrete set of states
-        that the variable can take. If unspecified, the observed values
-        in the data set are taken to be the only possible states.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> from pgmpy.models import BayesianModel
-    >>> from pgmpy.estimators import MaximumLikelihoodEstimator
-    >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-    ...                       columns=['A', 'B', 'C', 'D', 'E'])
-    >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
-    >>> estimator = MaximumLikelihoodEstimator(model, data)
-    """
     def __init__(self, model, data, state_names=None):
+        """
+        Class used to compute parameters for a model using Maximum Likelihood Estimation.
+
+        Parameters
+        ----------
+        model: A pgmpy.models.BayesianModel instance
+
+        data: pandas DataFrame object
+            DataFrame object with column names identical to the variable names of the network
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.estimators import MaximumLikelihoodEstimator
+        >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> estimator = MaximumLikelihoodEstimator(model, data)
+        """
         if not isinstance(model, BayesianModel):
             raise NotImplementedError("Maximum Likelihood Estimate is only implemented for BayesianModel")
 
