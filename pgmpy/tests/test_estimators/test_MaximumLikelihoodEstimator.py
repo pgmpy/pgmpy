@@ -46,12 +46,12 @@ class TestMLE(unittest.TestCase):
 
     def test_class_init(self):
         mle = MaximumLikelihoodEstimator(self.m1, self.d1,
-                                         node_values={'A': [0, 1], 'B': [0, 1], 'C': [0, 1]})
+                                         state_names={'A': [0, 1], 'B': [0, 1], 'C': [0, 1]})
         self.assertSetEqual(set(mle.get_parameters()), set(self.cpds))
 
     def test_nonoccurring_values(self):
         mle = MaximumLikelihoodEstimator(self.m1, self.d1,
-                                         node_values={'A': [0, 1, 23], 'B': [0, 1], 'C': [0, 42, 1], 1: [2]})
+                                         state_names={'A': [0, 1, 23], 'B': [0, 1], 'C': [0, 42, 1], 1: [2]})
         cpds = [TabularCPD('A', 3, [[2.0/3], [1.0/3], [0]]),
                 TabularCPD('B', 2, [[2.0/3], [1.0/3]]),
                 TabularCPD('C', 3, [[0.0, 0.0, 1.0, 1.0/3, 1.0/3, 1.0/3],

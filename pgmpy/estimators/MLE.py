@@ -18,6 +18,11 @@ class MaximumLikelihoodEstimator(BaseEstimator):
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names of the network
 
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states
+        that the variable can take. If unspecified, the observed values
+        in the data set are taken to be the only possible states.
+
     Examples
     --------
     >>> import numpy as np
@@ -29,11 +34,11 @@ class MaximumLikelihoodEstimator(BaseEstimator):
     >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
     >>> estimator = MaximumLikelihoodEstimator(model, data)
     """
-    def __init__(self, model, data, node_values=None):
+    def __init__(self, model, data, state_names=None):
         if not isinstance(model, BayesianModel):
             raise NotImplementedError("Maximum Likelihood Estimate is only implemented for BayesianModel")
 
-        super(MaximumLikelihoodEstimator, self).__init__(model, data, node_values)
+        super(MaximumLikelihoodEstimator, self).__init__(model, data, state_names)
 
     def get_parameters(self):
         """
@@ -89,7 +94,7 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
         >>> cpd_A = MaximumLikelihoodEstimator(model, data)._estimate_cpd('A')
-        >>> print(str(cpd_A))
+        >>> print(cpd_A)
         ╒══════╤══════════╕
         │ A(0) │ 0.666667 │
         ├──────┼──────────┤
@@ -98,16 +103,16 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         """
 
         parents = sorted(self.model.get_parents(node))
-        node_cardinality = len(self.node_values[node])
-        parents_cardinalities = np.array([len(self.node_values[parent]) for parent in parents])
+        node_cardinality = len(self.state_names[node])
+        parents_cardinalities = np.array([len(self.state_names[parent]) for parent in parents])
 
         if not parents:
             state_count_data = self.data.ix[:, node].value_counts()
-            state_counts = state_count_data.reindex(sorted(self.node_values[node])).fillna(0).values[:, np.newaxis]
+            state_counts = state_count_data.reindex(self.state_names[node]).fillna(0).values[:, np.newaxis]
 
         else:
             state_count_data = self.data.groupby([node] + parents).size()
-            state_counts = state_count_data.unstack(parents).reindex(sorted(self.node_values[node])).fillna(0)
+            state_counts = state_count_data.unstack(parents).reindex(self.state_names[node]).fillna(0)
             if isinstance(state_counts.index, pd.MultiIndex):
                 state_counts = state_counts.sortlevel(axis=1)
             else:
@@ -115,15 +120,14 @@ class MaximumLikelihoodEstimator(BaseEstimator):
 
             # some columns might be missing if for some states of the parents no data was observed:
             if not len(state_counts.columns) == np.prod(parents_cardinalities):
-                possible_parents_states = [sorted(self.node_values[parent]) for parent in parents]
+                possible_parents_states = [self.state_names[parent] for parent in parents]
                 # reindex to add missing columns and fill in uniform (conditional) probabilities:
                 full_index = pd.MultiIndex.from_product(possible_parents_states, names=parents)
                 state_counts = state_counts.reindex(columns=full_index).fillna(1.0 / node_cardinality)
 
-        state_names = {var: sorted(states) for var, states in self.node_values.items()}
         cpd = TabularCPD(node, node_cardinality, np.array(state_counts),
                          evidence=parents,
                          evidence_card=parents_cardinalities,
-                         state_names=state_names)
+                         state_names=self.state_names)
         cpd.normalize()
         return cpd
