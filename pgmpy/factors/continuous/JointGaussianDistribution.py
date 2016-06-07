@@ -19,7 +19,7 @@ class JointGaussianDistribution(object):
             The variables for which the distribution is defined.
         mean: nX1, array like 
             n-dimensional vector where n is the number of variables.
-        covariance: nXn, matrix or 2-d array like
+        covariance: nXn, 2-d array like
             nXn dimensional matrix where n is the number of variables.
 
         Examples
@@ -31,13 +31,13 @@ class JointGaussianDistribution(object):
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean
-        np.matrix([[ 1],
-                   [-3],
-                   [4]]))
+        array([[ 1],
+               [-3],
+               [4]]))
         >>> dis.covariance
-        np.matrix([[4, 2, -2],
-                   [2, 5, -5],
-                   [-2, -5, 8]])
+        matrix([[4, 2, -2],
+               [2, 5, -5],
+               [-2, -5, 8]])
         """
         self.variables = variables
         # dimension of the mean vector and covariance matrix
@@ -47,9 +47,9 @@ class JointGaussianDistribution(object):
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
-        self.mean = np.matrix(np.reshape(mean, (n, 1)), dtype=float)
+        self.mean = np.asarray(np.reshape(mean, (n, 1)), dtype=float)
 
-        self.covariance = np.matrix(covariance, dtype=float)
+        self.covariance = np.asarray(covariance, dtype=float)
 
         if self.covariance.shape != (n, n):
             raise ValueError("Each dimension of the covariance matrix must\
@@ -69,7 +69,7 @@ class JointGaussianDistribution(object):
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
-        matrix([[ 0.3125    , -0.125     ,  0.        ],
+        array([[ 0.3125    , -0.125     ,  0.        ],
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
@@ -106,11 +106,11 @@ class JointGaussianDistribution(object):
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean
-        matrix([[ 1],
+        array([[ 1],
                 [-3],
                 [ 4]])
         >>> dis.covariance
-        matrix([[ 4,  2, -2],
+        array([[ 4,  2, -2],
                 [ 2,  5, -5],
                 [-2, -5,  8]])
 
@@ -118,11 +118,11 @@ class JointGaussianDistribution(object):
         dis.variables
         ['x1', 'x2']
         >>> dis.mean
-        matrix([[ 1],
+        array([[ 1],
                 [-3]]))
         >>> dis.covariance
-        np.matrix([[4, 2],
-                   [2, 5]])
+        narray([[4, 2],
+               [2, 5]])
         """
 
         if isinstance(variables, six.string_types):
@@ -159,20 +159,20 @@ class JointGaussianDistribution(object):
         >>> copy_dis.variables
         ['x1', 'x2', 'x3']
         >>> copy_dis.mean
-        matrix([[ 1],
+        array([[ 1],
                 [-3],
                 [ 4]])
         >>> copy_dis.covariance
-        matrix([[ 4,  2, -2],
+        array([[ 4,  2, -2],
                 [ 2,  5, -5],
                 [-2, -5,  8]])
         >>> copy_dis.precision_matrix
-        matrix([[ 0.3125    , -0.125     ,  0.        ],
+        array([[ 0.3125    , -0.125     ,  0.        ],
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = JointGaussianDistribution(self.variables, self.mean,
-                                                      self.covariance)
+        copy_distribution = JointGaussianDistribution(self.variables.copy(), self.mean.copy(),
+                                                      self.covariance.copy())
         copy_distribution._precision_matrix = self._precision_matrix
         return copy_distribution
 
@@ -205,11 +205,11 @@ class JointGaussianDistribution(object):
         >>> phi.variables
         ['x1', 'x2', 'x3']
         >>> phi.K
-        matrix([[0.3125, -0.125, 0.],
+        array([[0.3125, -0.125, 0.],
                 [-0.125, 0.5833, 0.333],
                 [     0., 0.333, 0.333]])
         >>> phi.h
-        matrix([[  0.6875],
+        array([[  0.6875],
                 [-0.54166],
                 [ 0.33333]]))
         >>> phi.g
@@ -217,13 +217,16 @@ class JointGaussianDistribution(object):
         """
         # TODO: This method will return a CanonicalFactor object.
         # Currently this cannot be used until the CanonicalFactor class is
-        # created.
+        # created. For now the method returns a tuple of the CanonicalFactor
+        # parameters - (K, h, g)
         mu = self.mean
         sigma = self.covariance
         n = len(self.variables)
 
         K = self.precision_matrix
         
-        h = K * mu
+        h = np.dot(K, mu)
         
-        g = -(0.5) * mu.T * h - np.log(np.power(2 * np.pi, n/2)* np.power(np.linalg.det(sigma), 0.5))
+        g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power(2 * np.pi, n/2) * np.power(np.linalg.det(sigma), 0.5))
+        
+        return K,h,g
