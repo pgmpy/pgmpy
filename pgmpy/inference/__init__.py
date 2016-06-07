@@ -5,8 +5,8 @@ from .Sampling import BayesianModelSampling, GibbsSampling
 from .dbn_inference import DBNInference
 from .mplp import Mplp
 from .base_continuous import (JointGaussianDistribution, LeapFrog, ModifiedEuler,
-                              DiscretizeTime, GradientLogPDF, GradientLogPDFGaussian, BaseHMC)
-from .continuous_sampling import HamiltonianMCda
+                              BaseDiscretizeTime, BaseGradLogPDF, GradLogPDFGaussian)
+from .continuous_sampling import HamiltonianMCda, HamiltonianMC
 
 
 __all__ = ['Inference',
@@ -19,8 +19,8 @@ __all__ = ['Inference',
            'JointGaussianDistribution',
            'LeapFrog',
            'ModifiedEuler',
-           'DiscretizeTime',
-           'GradientLogPDF',
-           'GradientLogPDFGaussian',
-           'BaseHMC',
+           'BaseDiscretizeTime',
+           'BaseGradLogPDF',
+           'GradLogPDFGaussian',
+           'HamiltonianMC',
            'HamiltonianMCda']

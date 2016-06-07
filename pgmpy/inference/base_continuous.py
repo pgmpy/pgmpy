@@ -16,7 +16,7 @@ class JointGaussianDistribution(object):
               Represents the mean of the distribution
               Will be converted into a column matrix of appropriate shape
 
-    cov_matrix: A numpy.matrix of size len(mean_vec) x len(mean_vec),
+    cov_matrix: A numpy.array or numpy.matrix of size len(mean_vec) x len(mean_vec),
                 Covariance matrix for the distribution.
 
     """
@@ -27,9 +27,9 @@ class JointGaussianDistribution(object):
             mean_vec = np.array(mean_vec).flatten()
         else:
             raise TypeError("mean_vec should be a 1d array type object")
-        mean_vec = np.matrix(np.reshape(mean_vec, (len(mean_vec), 1)))
+        mean_vec = np.reshape(mean_vec, (len(mean_vec), 1))
 
-        if not isinstance(cov_matrix, np.matrix):
+        if not isinstance(cov_matrix, (np.matrix, np.ndarray, list)):
             raise TypeError(
                 "cov_matrix must be numpy.matrix type object")
 
@@ -42,11 +42,11 @@ class JointGaussianDistribution(object):
                              " shape of covariance matrix should be d X d")
 
         self.mean_vec = mean_vec
-        self.cov_matrix = cov_matrix
+        self.cov_matrix = np.array(cov_matrix)
         self.precision_matrix = np.linalg.inv(cov_matrix)
 
 
-class GradientLogPDF(object):
+class BaseGradLogPDF(object):
     """
     Base class for gradient log of probability density function/ distribution
 
@@ -68,11 +68,11 @@ class GradientLogPDF(object):
     --------
     >>> # Example shows how to use the container class
     >>> from pgmpy.inference import JointGuassianDistribution as JGD
-    >>> from pgmpy.inference import GradientLogPDF as GLP
+    >>> from pgmpy.inference import BaseGradLogPDF
     >>> import numpy as np
-    >>> class GradientLogGaussian(GLP):
+    >>> class GradLogGaussian(BaseGradLogPDF):
     ...     def __init__(self, X, model):
-    ...         GLP.__init__(self, X, model)
+    ...         BaseGradLogPDF.__init__(self, X, model)
     ...         self.grad_log_theta, self.log_pdf_theta = self._get_gradient_log_pdf()
     ...     def _get_gradient_log_pdf(self):
     ...         sub_vec = self.theta - self.model.mean_vec
@@ -86,7 +86,7 @@ class GradientLogPDF(object):
 
         if isinstance(theta, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
             theta = np.array(theta).flatten()
-            theta = np.matrix(np.reshape(theta, (len(theta), 1)))
+            theta = np.reshape(theta, (len(theta), 1))
         else:
             raise TypeError("theta should be a 1d array type object")
 
@@ -104,15 +104,15 @@ class GradientLogPDF(object):
         return self.grad_log, self.log_pdf
 
 
-class GradientLogPDFGaussian(GradientLogPDF):
+class GradLogPDFGaussian(BaseGradLogPDF):
     """
     Class for finding gradient and gradient log of distribution
-    Inherits pgmpy.inference.base_continuous.GradientLogPDF
+    Inherits pgmpy.inference.base_continuous.BaseGradLogPDF
     Here model must be an instance of JointGaussianDistribution
     """
 
     def __init__(self, theta, model):
-        GradientLogPDF.__init__(self, theta, model)
+        BaseGradLogPDF.__init__(self, theta, model)
         self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
 
     def _get_gradient_log_pdf(self):
@@ -126,7 +126,7 @@ class GradientLogPDFGaussian(GradientLogPDF):
         return grad, log_pdf
 
 
-class DiscretizeTime(object):
+class BaseDiscretizeTime(object):
     """
     Base class for Discretizing continuous time in sumilatin dynamics
 
@@ -135,13 +135,13 @@ class DiscretizeTime(object):
 
     Parameters
     ----------
-    theta : A 1d array type object or a row matrix of shape 1 X d
-            or d X 1.(Will be converted to d X 1)
-            Vector representing values of parameter theta( or X)
+    grad_log_pdf : A subclass of pgmpy.inference.base_continuous.BaseGradLogPDF
 
     model : An instance of pgmpy.models.Continuous
 
-    grad_log_pdf : A subclass of pgmpy.inference.base_continuous.GradientLogPDF
+    theta : A 1d array type object or a row matrix of shape 1 X d
+            or d X 1.(Will be converted to d X 1)
+            Vector representing values of parameter theta( or X)
 
     momentum: A vector (row matrix or 1d array like object) of shape 1 X d
               Vector representing the proposed value for momentum
@@ -153,11 +153,10 @@ class DiscretizeTime(object):
     Examples
     --------
     >>> # Example shows how to use the container class
-    >>> from pgmpy.inference import DiscretizeTime
-    >>> from pgmpy.inference import GradLogPDFGaussian
-    >>> class ModifiedEuler(DiscretizeTime):
+    >>> from pgmpy.inference import BaseDiscretizeTime
+    >>> class ModifiedEuler(BaseDiscretizeTime):
     ...     def __init__(self, theta, model, grad_log_pdf, momentum, epsilon):
-    ...         DiscretizeTime.__init__(theta, model, grad_log_pdf, momentum, epsilon)
+    ...         BaseDiscretizeTime.__init__(theta, model, grad_log_pdf, momentum, epsilon)
     ...         self.theta_bar, self.momentum_bar, self.grad_log_theta,\
     ...                 self.log_pdf = self._discretize_time()
     ...     def _discretize_time(self):
@@ -173,19 +172,19 @@ class DiscretizeTime(object):
         # TODO: Take model instead of precision matrix
         if isinstance(theta, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
             theta = np.array(theta).flatten()
-            theta = np.matrix(np.reshape(theta, (len(theta), 1)))
+            theta = np.reshape(theta, (len(theta), 1))
         else:
             raise TypeError("theta should be a 1d array type object")
 
         if isinstance(momentum, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
             momentum = np.array(momentum).flatten()
-            momentum = np.matrix(np.reshape(momentum, (len(momentum), 1)))
+            momentum = np.reshape(momentum, (len(momentum), 1))
         else:
             raise TypeError("theta should be a 1d array type object")
 
-        if not issubclass(grad_log_pdf, GradientLogPDF):
+        if not issubclass(grad_log_pdf, BaseGradLogPDF):
             raise TypeError("grad_log_pdf must be an instance" +
-                            " of pgmpy.inference.base_continuous.GradientLogPDF")
+                            " of pgmpy.inference.base_continuous.BaseGradLogPDF")
 
         if theta.shape != momentum.shape:
             raise ValueError("Shape of theta and momentum must be same")
@@ -210,15 +209,15 @@ class DiscretizeTime(object):
         return self.theta_bar, self.momentum_bar
 
 
-class LeapFrog(DiscretizeTime):
+class LeapFrog(BaseDiscretizeTime):
     """
     Class for performing discretization(in time) using leapfrog method
-    Inherits pgmpy.inference.base_continuous.DiscretizeTime
+    Inherits pgmpy.inference.base_continuous.BaseDiscretizeTime
     """
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        DiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
+        BaseDiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
 
         self.theta_bar, self.momentum_bar, self.grad_log,\
             self.log_pdf = self._discretize_time()
@@ -242,15 +241,15 @@ class LeapFrog(DiscretizeTime):
         return theta_bar, momentum_bar, grad_log, log_pdf
 
 
-class ModifiedEuler(DiscretizeTime):
+class ModifiedEuler(BaseDiscretizeTime):
     """
     Class for performing splitting in time using Modified euler method
-    Inherits pgmpy.inference.base_continuous.DiscretizeTime
+    Inherits pgmpy.inference.base_continuous.BaseDiscretizeTime
     """
 
     def __init__(self, grad_log_pdf, model, theta, momentum, epsilon):
 
-        DiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
+        BaseDiscretizeTime.__init__(self, grad_log_pdf, model, theta, momentum, epsilon)
 
         self.theta_bar, self.momentum_bar, self.grad_log,\
             self.log_pdf = self._discretize_time()
@@ -267,42 +266,3 @@ class ModifiedEuler(DiscretizeTime):
         theta_bar = self.theta + self.epsilon * momentum_bar
 
         return theta_bar, momentum_bar, grad_log, log_pdf
-
-
-class BaseHMC(object):
-    """
-    Base Class for HMC type inference
-
-    Parameters:
-    -----------
-    model: An instance of pgmpy.models.Continuous
-
-    grad_log_pdf: A instance of pgmpy.inference.base_continuous.GradientLogPDF
-
-    discretize_time: A instance of pgmpy.inference.base_continuous.DiscretizeTime
-                     Defaults to LeapFrog
-
-    delta: float (in between 0 and 1), defaults to 0.65
-           The target HMC acceptance probability
-    """
-
-    def __init__(self, model, grad_log_pdf,
-                 discretize_time=LeapFrog, delta=0.65):
-        # TODO: Use model instead of mean_vec and cov_matrix
-
-        if not issubclass(grad_log_pdf, GradientLogPDF):
-            raise TypeError("grad_log_pdf must be an instance of" +
-                            "pgmpy.inference.base_continuous.GradientLogPDF")
-
-        if not issubclass(discretize_time, DiscretizeTime):
-            raise TypeError("split_time must be an instance of" +
-                            "pgmpy.inference.base_continuous.DiscretizeTime")
-
-        if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
-            raise AttributeError(
-                "delta should be a floating value in between 0 and 1")
-
-        self.model = model
-        self.delta = delta
-        self.grad_log_pdf = grad_log_pdf
-        self.discretize_time = discretize_time
