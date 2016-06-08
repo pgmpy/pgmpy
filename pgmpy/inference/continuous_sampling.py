@@ -63,7 +63,22 @@ class HamiltonianMC(object):
         self.grad_log_pdf = grad_log_pdf
         self.discretize_time = discretize_time
 
-    def _find_resonable_epsilon(self, theta, epsilon_app=1):
+    def _acceptance_prob(self, theta, theta_bar, momentum, momentum_bar):
+        """
+        Returns the acceptance probability for given new position(theta) and momentum
+        """
+
+        # Parameters to help in evaluating P(theta, momentum)
+        _, logp = self.grad_log_pdf(theta, self.model).get_gradient_log_pdf()
+        _, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
+
+        # acceptance_prob = P(theta_bar, momentum_bar)/ P(theta, momentum)
+        potential_change = logp_bar - logp  # Negative change
+        kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
+
+        return np.exp(potential_change - kinetic_change)  # acceptance probability
+
+    def _find_reasonable_epsilon(self, theta, epsilon_app=1):
         """
         Method for choosing initial value of epsilon
 
@@ -80,15 +95,8 @@ class HamiltonianMC(object):
         # Take a single step in time
         theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model,
                                                        theta, momentum, epsilon_app).discretize_time()
-        # Parameters to help in evaluating P(theta, momentum)
-        _, logp = self.grad_log_pdf(theta, self.model).get_gradient_log_pdf()
-        _, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
 
-        # acceptance_prob = P(theta_bar, momentum_bar)/ P(theta, momentum)
-        potential_change = logp_bar - logp  # Negative change
-        kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
-
-        acceptance_prob = np.exp(potential_change - kinetic_change)
+        acceptance_prob = self._acceptance_prob(theta, theta_bar, momentum, momentum_bar)
 
         # a = 2I[acceptance_prob] -1
         a = 2 * (acceptance_prob > 0.5) - 1
@@ -101,13 +109,7 @@ class HamiltonianMC(object):
             theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model,
                                                            theta, momentum, epsilon_app).discretize_time()
 
-            _, logp = self.grad_log_pdf(theta, self.model).get_gradient_log_pdf()
-            _, logp_bar = self.grad_log_pdf(theta_bar, self.model).get_gradient_log_pdf()
-
-            potential_change = logp_bar - logp
-            kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
-
-            acceptance_prob = np.exp(potential_change - kinetic_change)
+            acceptance_prob = self._acceptance_prob(theta, theta_bar, momentum, momentum_bar)
 
             condition = (acceptance_prob ** a) > (2 ** (-a))
 
@@ -165,7 +167,7 @@ class HamiltonianMC(object):
             raise TypeError("theta should be a 1d array type object")
 
         if epsilon is None:
-            epsilon = self._find_resonable_epsilon(theta0)
+            epsilon = self._find_reasonable_epsilon(theta0)
 
         samples = [theta0.copy()]
         theta_m = theta0.copy()
@@ -184,14 +186,9 @@ class HamiltonianMC(object):
                 theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model, theta_bar.copy(),
                                                                momentum_bar.copy(), epsilon).discretize_time()
 
-            _, log_bar = self.grad_log_pdf(theta_bar.copy(), self.model).get_gradient_log_pdf()
-            # log_m_1 = log(theta_m) or log(theta_m_1)
-            _, log_m_1 = self.grad_log_pdf(theta_m.copy(), self.model).get_gradient_log_pdf()
-
+            acceptance_prob = self._acceptance_prob(theta_m.copy(), theta_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
-            alpha = min(1, np.exp(log_bar - log_m_1 - 0.5 *
-                                  np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum0.T, momentum0))))
-
+            alpha = min(1, acceptance_prob)
             # Accept or reject the new proposed value of theta, i.e theta_bar
             if np.random.rand() < alpha:
                 theta_m = theta_bar.copy()
@@ -255,7 +252,7 @@ class HamiltonianMC(object):
             raise TypeError("theta should be a 1d array type object")
 
         if epsilon is None:
-            epsilon = self._find_resonable_epsilon(theta0)
+            epsilon = self._find_reasonable_epsilon(theta0)
 
         theta_m = theta0.copy()
         for i in range(0, num_samples):
@@ -272,14 +269,9 @@ class HamiltonianMC(object):
                 theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model, theta_bar.copy(),
                                                                momentum_bar.copy(), epsilon).discretize_time()
 
-            _, log_bar = self.grad_log_pdf(theta_bar.copy(), self.model).get_gradient_log_pdf()
-            # log_m_1 = log(theta_m) or log(theta_m_1)
-            _, log_m_1 = self.grad_log_pdf(theta_m.copy(), self.model).get_gradient_log_pdf()
-
+            acceptance_prob = self._acceptance_prob(theta_m.copy(), theta_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
-            alpha = min(1, np.exp(log_bar - log_m_1 - 0.5 *
-                                  np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum0.T, momentum0))))
-
+            alpha = min(1, acceptance_prob)
             # Accept or reject the new proposed value of theta, i.e theta_bar
             if np.random.rand() < alpha:
                 theta_m = theta_bar.copy()
@@ -402,7 +394,7 @@ class HamiltonianMCda(HamiltonianMC):
             raise TypeError("theta should be a 1d array type object")
 
         if epsilon is None:
-            epsilon = self._find_resonable_epsilon(theta0)
+            epsilon = self._find_reasonable_epsilon(theta0)
 
         if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
             return HamiltonianMC.sample(self, theta0, num_samples, epsilon)
@@ -431,13 +423,9 @@ class HamiltonianMCda(HamiltonianMC):
                 theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model, theta_bar.copy(),
                                                                momentum_bar.copy(), epsilon).discretize_time()
 
-            _, log_bar = self.grad_log_pdf(theta_bar.copy(), self.model).get_gradient_log_pdf()
-            # log_m_1 = log(theta_m) or log(theta_m_1)
-            _, log_m_1 = self.grad_log_pdf(theta_m.copy(), self.model).get_gradient_log_pdf()
-
+            acceptance_prob = self._acceptance_prob(theta_m.copy(), theta_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
-            alpha = min(1, np.exp(log_bar - log_m_1 - 0.5 *
-                                  np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum0.T, momentum0))))
+            alpha = min(1, acceptance_prob)
 
             # Accept or reject the new proposed value of theta, i.e theta_bar
             if np.random.rand() < alpha:
@@ -519,7 +507,7 @@ class HamiltonianMCda(HamiltonianMC):
             raise TypeError("theta should be a 1d array type object")
 
         if epsilon is None:
-            epsilon = self._find_resonable_epsilon(theta0)
+            epsilon = self._find_reasonable_epsilon(theta0)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
             for sample in HamiltonianMC.generate_sample(self, theta0, num_samples, epsilon, Lambda):
@@ -550,14 +538,9 @@ class HamiltonianMCda(HamiltonianMC):
                 theta_bar, momentum_bar = self.discretize_time(self.grad_log_pdf, self.model, theta_bar.copy(),
                                                                momentum_bar.copy(), epsilon).discretize_time()
 
-            _, log_bar = self.grad_log_pdf(theta_bar.copy(), self.model).get_gradient_log_pdf()
-            # log_m_1 = log(theta_m) or log(theta_m_1)
-            _, log_m_1 = self.grad_log_pdf(theta_m.copy(), self.model).get_gradient_log_pdf()
-
+            acceptance_prob = self._acceptance_prob(theta_m.copy(), theta_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
-            alpha = min(1, np.exp(log_bar - log_m_1 - 0.5 *
-                                  np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum0.T, momentum0))))
-
+            alpha = min(1, acceptance_prob)
             # Accept or reject the new proposed value of theta, i.e theta_bar
             if np.random.rand() < alpha:
                 theta_m = theta_bar.copy()
@@ -577,3 +560,4 @@ class HamiltonianMCda(HamiltonianMC):
                 epsilon = epsilon_bar
 
             yield theta_m.copy()
+
