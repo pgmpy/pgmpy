@@ -1,6 +1,5 @@
-from .base import BaseDiscretizer
-from .rounding import RoundingDiscretizer
-from .unbiased import UnbiasedDiscretizer
+from .discretize import BaseDiscretizer, RoundingDiscretizer, UnbiasedDiscretizer
+
 
 __all__ = ['BaseDiscretizer',
            'RoundingDiscretizer',
