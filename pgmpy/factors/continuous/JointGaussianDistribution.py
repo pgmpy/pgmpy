@@ -176,7 +176,11 @@ class JointGaussianDistribution(object):
         """
         copy_distribution = JointGaussianDistribution(self.variables.copy(), self.mean.copy(),
                                                       self.covariance.copy())
-        copy_distribution._precision_matrix = self._precision_matrix.copy()
+        if self._precision_matrix is not None:
+            copy_distribution._precision_matrix = self._precision_matrix.copy()
+        else:
+            copy_distribution._precision_matrix = None
+
         return copy_distribution
 
     def to_canonical_factor(self):
