@@ -9,7 +9,7 @@ class JointGaussianDistribution(object):
     """
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
-    and a symmetric nXn covariance matrix Σ.
+    and a symmetric n x n covariance matrix Σ.
     This is the base class for its representation.
     """
     def __init__(self, variables, mean, covariance):
@@ -18,10 +18,10 @@ class JointGaussianDistribution(object):
         ----------
         variables: iterable of any hashable python object
             The variables for which the distribution is defined.
-        mean: nX1, array like 
+        mean: n x 1, array like 
             n-dimensional vector where n is the number of variables.
-        covariance: nXn, 2-d array like
-            nXn dimensional matrix where n is the number of variables.
+        covariance: n x n, 2-d array like
+            n x n dimensional matrix where n is the number of variables.
 
         Examples
         --------
@@ -42,19 +42,21 @@ class JointGaussianDistribution(object):
         """
         self.variables = variables
         # dimension of the mean vector and covariance matrix
-        n = len(self.variables)
+        no_of_var = len(self.variables)
 
-        if len(mean) != n:
+        if len(mean) != no_of_var:
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
-        self.mean = np.asarray(np.reshape(mean, (n, 1)), dtype=float)
+        self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
 
         self.covariance = np.asarray(covariance, dtype=float)
 
-        if self.covariance.shape != (n, n):
-            raise ValueError("Each dimension of the covariance matrix must\
-                                 be equal to the number of variables.")
+        if self.covariance.shape != (no_of_var, no_of_var):
+            raise ValueError("The Covariance matrix should be a square matrix with order equal to\
+                              the number of variables. Got: {got_shape}, Expected: {exp_shape}"
+                              .format(got_shape=self.covariance.shape,
+                              exp_shape=(no_of_var, no_of_var)))
 
         self._precision_matrix = None
 
@@ -174,10 +176,10 @@ class JointGaussianDistribution(object):
         """
         copy_distribution = JointGaussianDistribution(self.variables.copy(), self.mean.copy(),
                                                       self.covariance.copy())
-        copy_distribution._precision_matrix = self._precision_matrix
+        copy_distribution._precision_matrix = self._precision_matrix.copy()
         return copy_distribution
 
-    def to_CanonicalFactor(self):
+    def to_canonical_factor(self):
         """
         Returns an equivalent CanonicalFactor object.
 
@@ -222,13 +224,13 @@ class JointGaussianDistribution(object):
         # parameters - (K, h, g)
         mu = self.mean
         sigma = self.covariance
-        n = len(self.variables)
 
         K = self.precision_matrix
         
         h = np.dot(K, mu)
         
-        g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power(2 * np.pi, n/2) * np.power(np.linalg.det(sigma), 0.5))
+        g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power
+                    (2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
         
         return K,h,g
 
@@ -238,7 +240,7 @@ class JointGaussianDistribution(object):
         
         Parameters
         ----------
-        values: A list of arrays of dimension 1Xn
+        values: A list of arrays of dimension 1 x n
             List of values whose assignment is to be computed.
 
         Examples
