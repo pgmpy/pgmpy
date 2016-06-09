@@ -3,28 +3,29 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+from scipy import integrate
 from scipy.stats import norm, t, gamma
 
-from pgmpy.factors import ContinuousFactor
-from pgmpy.continuous.discretize import BaseDiscretizer
-from pgmpy.continuous.discretize import RoundingDiscretizer
-from pgmpy.continuous.discretize import UnbiasedDiscretizer
+from pgmpy.factors import ContinuousNode
+from pgmpy.discretize import BaseDiscretizer
+from pgmpy.discretize import RoundingDiscretizer
+from pgmpy.discretize import UnbiasedDiscretizer
 
 
-class TestContinuousFactorInit(unittest.TestCase):
+class TestContinuousNodeInit(unittest.TestCase):
     def test_class_init1(self):
         custom_pdf = lambda x: 0.5 if x > -1 and x < 1 else 0
         std_normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
         exp_pdf = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
 
-        custom_node1 = ContinuousFactor(custom_pdf)
-        custom_node2 = ContinuousFactor(custom_pdf, -1, 1)
+        custom_node1 = ContinuousNode(custom_pdf)
+        custom_node2 = ContinuousNode(custom_pdf, -1, 1)
 
-        normal_node1 = ContinuousFactor(std_normal_pdf)
-        normal_node2 = ContinuousFactor(std_normal_pdf, -5, 5)
+        normal_node1 = ContinuousNode(std_normal_pdf)
+        normal_node2 = ContinuousNode(std_normal_pdf, -5, 5)
 
-        exp_node1 = ContinuousFactor(exp_pdf)
-        exp_node2 = ContinuousFactor(exp_pdf, 0, 10)
+        exp_node1 = ContinuousNode(exp_pdf)
+        exp_node2 = ContinuousNode(exp_pdf, 0, 10)
 
         self.assertEqual(custom_node1.pdf, custom_pdf)
         self.assertEqual(custom_node2.pdf, custom_pdf)
@@ -41,29 +42,29 @@ class TestContinuousFactorInit(unittest.TestCase):
         # A gamma random variable with a=3
         gamma_rv = gamma(3)
 
-        normal_node = ContinuousFactor(norm_rv.pdf)
-        t7_node = ContinuousFactor(t7_rv.pdf)
-        gamma_node = ContinuousFactor(gamma_rv.pdf)
+        normal_node = ContinuousNode(norm_rv.pdf)
+        t7_node = ContinuousNode(t7_rv.pdf)
+        gamma_node = ContinuousNode(gamma_rv.pdf)
 
         self.assertEqual(normal_node.pdf, norm_rv.pdf)
         self.assertEqual(t7_node.pdf, t7_rv.pdf)
         self.assertEqual(gamma_node.pdf, gamma_rv.pdf)
 
 
-class TestContinuousFactorDiscretize(unittest.TestCase):
+class TestContinuousNodeDiscretize(unittest.TestCase):
     def setUp(self):
         self.custom_pdf = lambda x: 0.5 if x > -1 and x < 1 else 0
         self.std_normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
         self.exp_pdf = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
 
-        self.custom_node1 = ContinuousFactor(self.custom_pdf)
-        self.custom_node2 = ContinuousFactor(self.custom_pdf, -1, 1)
+        self.custom_node1 = ContinuousNode(self.custom_pdf)
+        self.custom_node2 = ContinuousNode(self.custom_pdf, -1, 1)
 
-        self.normal_node1 = ContinuousFactor(self.std_normal_pdf)
-        self.normal_node2 = ContinuousFactor(self.std_normal_pdf, -5, 5)
+        self.normal_node1 = ContinuousNode(self.std_normal_pdf)
+        self.normal_node2 = ContinuousNode(self.std_normal_pdf, -5, 5)
 
-        self.exp_node1 = ContinuousFactor(self.exp_pdf)
-        self.exp_node2 = ContinuousFactor(self.exp_pdf, lb=0)
+        self.exp_node1 = ContinuousNode(self.exp_pdf)
+        self.exp_node2 = ContinuousNode(self.exp_pdf, lb=0)
 
         self.discretizer1 = UnbiasedDiscretizer(self.custom_node1, -1, 1, 8).get_discrete_values()
         self.discretizer2 = RoundingDiscretizer(self.custom_node1, -1, 1, 8).get_discrete_values()
@@ -86,7 +87,6 @@ class TestContinuousFactorDiscretize(unittest.TestCase):
         class CustomDiscretizer(BaseDiscretizer):
             def get_discrete_values(self):
                 step = (self.high - self.low) / self.cardinality
-                print(self.high, self.low, self.cardinality)
                 function = lambda x: self.factor.cdf(x+step) - self.factor.cdf(x)
                 discrete_values = [function(i) for i in np.arange(self.low, self.high, step)]
                 return discrete_values

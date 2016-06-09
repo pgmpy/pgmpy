@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from scipy import integrate
 
-from pgmpy.factors import ContinuousFactor
+from pgmpy.factors import ContinuousNode
 
 
 class BaseDiscretizer(with_metaclass(ABCMeta)):
@@ -17,8 +17,8 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
     Parameters
     ----------
-    factor: ContinuousFactor
-        the continuous factor representing the distribution
+    factor: A ContinuousNode or a ContinuousFactor object
+        the continuous node or factor representing the distribution
         to be discretized.
     low, high: float
         the range over which the function will be discretized.
@@ -27,10 +27,6 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
     """
     def __init__(self, factor, low, high, cardinality):
-        if not isinstance(factor, ContinuousFactor):
-            raise ValueError("{factor} is not a valid ContinuousFactor object."
-                             .format(factor=factor))
-
         self.factor = factor
         self.low = low
         self.high = high
@@ -42,6 +38,10 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
         This method implements the algorithm to discretize the given
         continuous distribution.
         It must be implemented by all the subclasses of BaseDiscretizer.
+
+        Returns
+        -------
+        A list of discrete values or a Factor object.
         """
         pass
 
@@ -56,12 +56,15 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousFactor
-        >>> from pgmpy.continuous.discretize import BaseDiscretizer
+        >>> from pgmpy.factors import ContinuousNode
+        >>> from pgmpy.discretize import BaseDiscretizer
+        >>> class ChildDiscretizer(BaseDiscretizer):
+        ...     def get_discrete_values(self):
+        ...         pass
         >>> from scipy.stats import norm
-        >>> node = ContinuousFactor(norm(0).pdf)
-        >>> base = BaseDiscretizer(node, -5, 5, 20)
-        >>> base.get_labels()
+        >>> node = ContinuousNode(norm(0).pdf)
+        >>> child = ChildDiscretizer(node, -5, 5, 20)
+        >>> chld.get_labels()
         ['x=-5.0', 'x=-4.5', 'x=-4.0', 'x=-3.5', 'x=-3.0', 'x=-2.5',
          'x=-2.0', 'x=-1.5', 'x=-1.0', 'x=-0.5', 'x=0.0', 'x=0.5',
          'x=1.0', 'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
@@ -92,10 +95,10 @@ class RoundingDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors import ContinuousFactor
-    >>> from pgmpy.continuous.discretize import RoundingDiscretizer
+    >>> from pgmpy.factors import ContinuousNode
+    >>> from pgmpy.discretize import RoundingDiscretizer
     >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-    >>> std_normal = ContinuousFactor(std_normal_pdf)
+    >>> std_normal = ContinuousNode(std_normal_pdf)
     >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3, cardinality=12)
     [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
      0.065590616803038182, 0.120977578710013, 0.17466632194020804,
@@ -151,11 +154,12 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
     Examples
     --------
-    >>> from pgmpy.factors import ContinuousFactor
-    >>> from pgmpy.continuous.discretize import UnbiasedDiscretizer
+    >>> import numpy as np
+    >>> from pgmpy.factors import ContinuousNode
+    >>> from pgmpy.discretize import UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
-    >>> exp_node = ContinuousFactor(exp_pdf)
+    >>> exp_node = ContinuousNode(exp_pdf)
     >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, cardinality=10)
     [0.39627368905806137, 0.4049838434034298, 0.13331784003148325,
      0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
