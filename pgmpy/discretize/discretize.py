@@ -6,8 +6,6 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from scipy import integrate
 
-from pgmpy.factors import ContinuousNode
-
 
 class BaseDiscretizer(with_metaclass(ABCMeta)):
     """
@@ -66,13 +64,13 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
         >>> child = ChildDiscretizer(node, -5, 5, 20)
         >>> chld.get_labels()
         ['x=-5.0', 'x=-4.5', 'x=-4.0', 'x=-3.5', 'x=-3.0', 'x=-2.5',
-         'x=-2.0', 'x=-1.5', 'x=-1.0', 'x=-0.5', 'x=0.0', 'x=0.5',
-         'x=1.0', 'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
+         'x=-2.0', 'x=-1.5', 'x=-1.0', 'x=-0.5', 'x=0.0', 'x=0.5', 'x=1.0',
+         'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
 
         """
         step = (self.high - self.low) / self.cardinality
-        labels = list('x={i}'.format(i=str(i))
-                      for i in np.round(np.arange(self.low, self.high, step), 3))
+        labels = list('x={i}'.format(i=str(i)) for i in np.round
+                                    (np.arange(self.low, self.high, step), 3))
         return labels
 
 
@@ -99,7 +97,8 @@ class RoundingDiscretizer(BaseDiscretizer):
     >>> from pgmpy.discretize import RoundingDiscretizer
     >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
     >>> std_normal = ContinuousNode(std_normal_pdf)
-    >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3, cardinality=12)
+    >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3,
+    ...                       cardinality=12)
     [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
      0.065590616803038182, 0.120977578710013, 0.17466632194020804,
      0.19741265136584729, 0.17466632194020937, 0.12097757871001302,
@@ -213,6 +212,6 @@ class UnbiasedDiscretizer(BaseDiscretizer):
                 np.power(u, order)*(1 - self.factor.cdf(u)))
 
     def get_labels(self):
-        labels = list('x={i}'.format(i=str(i))
-                      for i in np.round(np.linspace(self.low, self.high, self.cardinality), 3))
+        labels = list('x={i}'.format(i=str(i)) for i in np.round
+                      (np.linspace(self.low, self.high, self.cardinality), 3))
         return labels

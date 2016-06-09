@@ -2,8 +2,6 @@ from __future__ import division
 import unittest
 
 import numpy as np
-import numpy.testing as np_test
-from scipy import integrate
 from scipy.stats import norm, t, gamma
 
 from pgmpy.factors import ContinuousNode
@@ -30,7 +28,7 @@ class TestContinuousNodeInit(unittest.TestCase):
         self.assertEqual(custom_node1.pdf, custom_pdf)
         self.assertEqual(custom_node2.pdf, custom_pdf)
         self.assertEqual(normal_node1.pdf, std_normal_pdf)
-        self.assertEqual(normal_node1.pdf, std_normal_pdf)
+        self.assertEqual(normal_node2.pdf, std_normal_pdf)
         self.assertEqual(exp_node1.pdf, exp_pdf)
         self.assertEqual(exp_node2.pdf, exp_pdf)
 
