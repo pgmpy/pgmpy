@@ -13,7 +13,7 @@ class ContinuousFactor(object):
         variables: list or array-like
             The variables for wich the distribution is defined.
         pdf: function
-            The probability density function of the distributions.
+            The probability density function of the distribution.
         mean: list or array-like
             The mean of the distribution.
         covariance: A 2-D array or matrix

@@ -4,8 +4,10 @@ import six
 import numpy as np
 from scipy.stats import multivariate_normal
 
+from pgmpy.factors import ContinuousFactor
 
-class JointGaussianDistribution(object):
+
+class JointGaussianDistribution(ContinuousFactor):
     """
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
@@ -39,24 +41,30 @@ class JointGaussianDistribution(object):
         matrix([[4, 2, -2],
                [2, 5, -5],
                [-2, -5, 8]])
+        >>> dis.pdf([0,0,0])
+        0.0014805631279234139
         """
-        self.variables = variables
         # dimension of the mean vector and covariance matrix
-        no_of_var = len(self.variables)
+        no_of_var = len(variables)
 
         if len(mean) != no_of_var:
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
-        self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
+        mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
 
-        self.covariance = np.asarray(covariance, dtype=float)
+        covariance = np.asarray(covariance, dtype=float)
 
-        if self.covariance.shape != (no_of_var, no_of_var):
+        if covariance.shape != (no_of_var, no_of_var):
             raise ValueError("The Covariance matrix should be a square matrix with order equal to\
                               the number of variables. Got: {got_shape}, Expected: {exp_shape}"
-                              .format(got_shape=self.covariance.shape,
+                              .format(got_shape=covariance.shape,
                               exp_shape=(no_of_var, no_of_var)))
+
+        normal_pdf = lambda x: multivariate_normal.pdf(x, mean.reshape(1,no_of_var)[0], covariance)
+
+        super(JointGaussianDistribution, self).__init__(variables,
+                                                        normal_pdf, mean, covariance)
 
         self._precision_matrix = None
 
@@ -230,29 +238,10 @@ class JointGaussianDistribution(object):
         sigma = self.covariance
 
         K = self.precision_matrix
-        
+
         h = np.dot(K, mu)
-        
+
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power
                     (2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
-        
+
         return K,h,g
-
-    def assignment(self, values):
-        """
-        Returns a list of pdf assignments for the corresponding values.
-        
-        Parameters
-        ----------
-        values: A list of arrays of dimension 1 x n
-            List of values whose assignment is to be computed.
-
-        Examples
-        --------
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
-        >>> phi = JGD(['x1', 'x2'], [3, 4], [[5, -5], [-5, 8]])
-        >>> phi.assignment([[2, 3], [1, 7], [0, 0]])
-        array([  1.90904163e-02,   2.33170871e-02,   4.74428969e-06])
-        """
-        return multivariate_normal.pdf(values, 
-                            self.mean.reshape(1, len(self.variables))[0], self.covariance)
