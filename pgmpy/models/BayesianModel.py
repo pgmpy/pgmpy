@@ -544,47 +544,60 @@ class BayesianModel(DirectedGraph):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator_type=None):
+    def fit(self, data, estimator_type=None, state_names=[], complete_samples_only=True, **kwargs):
         """
-        Computes the CPD for each node from a given data in the form of a pandas dataframe.
+        Estimates the CPD for each variable based on a given data set.
 
         Parameters
         ----------
-        data : pandas DataFrame object
-            A DataFrame object with column names same as the variable names of network
+        data: pandas DataFrame object
+            DataFrame object with column names identical to the variable names of the network.
+            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         estimator: Estimator class
-            Any pgmpy estimator. If nothing is specified, the default Maximum Likelihood
-            estimator would be used
+            One of:
+            - MaximumLikelihoodEstimator (default)
+            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
+                or 'equivalent_sample_size' as additional keyword arguments.
+                See `BayesianEstimator.get_parameters()` for usage.
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states
+            that the variable can take. If unspecified, the observed values
+            in the data set are taken to be the only possible states.
+
+        complete_samples_only: bool (default `True`)
+            Specifies how to deal with missing data, if present. If set to `True` all rows
+            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+            every row where neither the variable nor its parents are `np.NaN` is used.
 
         Examples
         --------
-        >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import BayesianModel
-        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
-        >>> model.fit(values)
+        >>> from pgmpy.estimators import MaximumLikelihoodEstimator
+        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
+        >>> model.fit(data)
         >>> model.get_cpds()
-        [<pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e588>,
-         <pgmpy.factors.CPD.TabularCPD at 0x7fd173cb5e10>,
-         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e470>,
-         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e198>,
-         <pgmpy.factors.CPD.TabularCPD at 0x7fd173b2e2e8>]
+        [<TabularCPD representing P(A:2) at 0x7fb98a7d50f0>,
+        <TabularCPD representing P(B:2) at 0x7fb98a7d5588>,
+        <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
         """
 
-        from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
+        from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, BaseEstimator
 
         if estimator_type is None:
             estimator_type = MaximumLikelihoodEstimator
         else:
-            if not isinstance(estimator_type, BaseEstimator):
+            if not issubclass(estimator_type, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
-        estimator = estimator_type(self, data)
+        estimator = estimator_type(self, data, state_names=state_names,
+                                   complete_samples_only=complete_samples_only)
 
-        cpds_list = estimator.get_parameters()
+        cpds_list = estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
     def predict(self, data):

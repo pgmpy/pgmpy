@@ -9,6 +9,7 @@ from pgmpy.models import BayesianModel, MarkovModel
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
+from pgmpy.estimators import BayesianEstimator, BaseEstimator, MaximumLikelihoodEstimator
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -356,8 +357,28 @@ class TestBayesianModelFitPredict(unittest.TestCase):
     def setUp(self):
         self.model_disconnected = BayesianModel()
         self.model_disconnected.add_nodes_from(['A', 'B', 'C', 'D', 'E'])
-
         self.model_connected = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+
+        self.model2 = BayesianModel([('A', 'C'), ('B', 'C')])
+        self.data1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        self.data2 = pd.DataFrame(data={'A': [0, np.NaN, 1],
+                                        'B': [0, 1, 0],
+                                        'C': [1, 1, np.NaN],
+                                        'D': [np.NaN, 'Y', np.NaN]})
+
+    def test_bayesian_fit(self):
+        print(isinstance(BayesianEstimator, BaseEstimator))
+        print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
+        self.model2.fit(self.data1, estimator_type=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
+        self.assertEqual(self.model2.get_cpds('B'), TabularCPD('B', 2, [[11.0/15], [4.0/15]]))
+
+    def test_fit_missing_data(self):
+        self.model2.fit(self.data2, state_names={'C': [0, 1]}, complete_samples_only=False)
+        cpds = set([TabularCPD('A', 2, [[0.5], [0.5]]),
+                    TabularCPD('B', 2, [[2./3], [1./3]]),
+                    TabularCPD('C', 2, [[0, 0.5, 0.5, 0.5], [1, 0.5, 0.5, 0.5]],
+                               evidence=['A', 'B'], evidence_card=[2, 2])])
+        self.assertSetEqual(cpds, set(self.model2.get_cpds()))
 
     def test_disconnected_fit(self):
         values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
