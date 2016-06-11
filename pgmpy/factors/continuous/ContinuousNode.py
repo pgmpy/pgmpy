@@ -14,6 +14,7 @@ class ContinuousNode(rv_continuous):
 
     All methods of the scipy.stats.rv_continuous class can be used on
     the objects.
+
     This supports an extra method to discretize the continuous distribution
     io a discrete factor using various methods.
 
@@ -61,6 +62,9 @@ class ContinuousNode(rv_continuous):
         *args, **kwargs:
             The parameters to be given to the Discretizer Class.
 
+        (Refer the various Discretization methods, in pgmpy.discretize
+         for details regarding the input parameters.)
+
         Examples
         --------
         >>> import numpy as np
@@ -73,9 +77,6 @@ class ContinuousNode(rv_continuous):
          0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
          0.0015656350182896128, 0.00051540201980112557, 0.00016965346326140994,
          3.7867260839208328e-05]
-
-        (Refer the various Discretization methods, in pgmpy.discretize
-         for details regarding the input parameters.)
 
         """
         if not issubclass(method, BaseDiscretizer):

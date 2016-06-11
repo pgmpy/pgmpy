@@ -18,12 +18,32 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
     factor: A ContinuousNode or a ContinuousFactor object
         the continuous node or factor representing the distribution
         to be discretized.
+
     low, high: float
         the range over which the function will be discretized.
+
     cardinality: int
         the number of states required in the discretized output.
 
+    Examples
+    --------
+    >>> from scipy.stats import norm
+    >>> from pgmpy.factors import ContinuousNode
+    >>> normal = ContinuousNode(norm(0, 1).pdf)
+    >>> from pgmpy.discretize import BaseDiscretizer
+    >>> class ChildDiscretizer(BaseDiscretizer):
+    ...     def get_discrete_values(self):
+    ...         pass
+    >>> discretizer = ChildDiscretizer(normal, -3, 3, 10)
+    >>> discretizer.factor
+    <pgmpy.factors.continuous.ContinuousNode.ContinuousNode object at 0x04C98190>
+    >>> discretizer.cardinality
+    10
+    >>> discretizer.get_labels()
+    ['x=-3.0', 'x=-2.4', 'x=-1.8', 'x=-1.2', 'x=-0.6', 'x=0.0', 'x=0.6', 'x=1.2', 'x=1.8', 'x=2.4']
+
     """
+
     def __init__(self, factor, low, high, cardinality):
         self.factor = factor
         self.low = low
@@ -35,6 +55,7 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
         """
         This method implements the algorithm to discretize the given
         continuous distribution.
+
         It must be implemented by all the subclasses of BaseDiscretizer.
 
         Returns
@@ -48,6 +69,7 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
         Returns a list of strings representing the values about
         which the discretization method calculates the probabilty
         masses.
+
         Default value is the points -
         [low, low+step, low+2*step, ......... , high-step]
         unless the method is overridden by a subclass.
@@ -69,8 +91,8 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         """
         step = (self.high - self.low) / self.cardinality
-        labels = list('x={i}'.format(i=str(i)) for i in np.round
-                                    (np.arange(self.low, self.high, step), 3))
+        labels = ['x={i}'.format(i=str(i)) for i in np.round
+                        (np.arange(self.low, self.high, step), 3)]
         return labels
 
 
@@ -81,11 +103,10 @@ class RoundingDiscretizer(BaseDiscretizer):
 
     For the rounding method,
 
-    The probability mass in x=[low] is,
-    cdf(x+step/2)-cdf(x)
+    The probability mass is,
+    cdf(x+step/2)-cdf(x), for x = low
 
-    The probability mass in x=[low+step, low+2*step, ......... , high-step] is,
-    cdf(x+step/2)-cdf(x-step/2)
+    cdf(x+step/2)-cdf(x-step/2), for low < x <= high
 
     where, cdf is the cumulative density function of the distribution
     and step = (high-low)/cardinality.
@@ -109,14 +130,11 @@ class RoundingDiscretizer(BaseDiscretizer):
         step = (self.high - self.low) / self.cardinality
 
         # for x=[low]
-        discrete_values = [self.factor.cdf(self.low + step/2)
-                           - self.factor.cdf(self.low)]
+        discrete_values = [self.factor.cdf(self.low + step/2) - self.factor.cdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
-        x = np.arange(self.low + step, self.high, step)
-        for i in x:
-            discrete_values.append(self.factor.cdf(i + step/2)
-                                   - self.factor.cdf(i - step/2))
+        points = np.arange(self.low + step, self.high, step)
+        discrete_values.extend([self.factor.cdf(i + step/2) - self.factor.cdf(i - step/2) for i in points])
 
         return discrete_values
 
@@ -133,21 +151,21 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
     For this method,
 
-    The probability mass in x=[low] is,
-    (E(x) - E(x + step))/step + 1 - cdf(x)
+    The probability mass is,
+    (E(x) - E(x + step))/step + 1 - cdf(x), for x = low
 
-    The probability mass in x=[low+step, low+2*step, ........., high-step],
-    (2 * E(x) - E(x - step) - E(x + step))/step
+    (2 * E(x) - E(x - step) - E(x + step))/step, for low < x < high
 
-    for x=[high],
-    (E(x) - E(x - step))/step - 1 + cdf(x)
+    (E(x) - E(x - step))/step - 1 + cdf(x), for x = high
 
     where, E(x) is the first limiting moment of the distribution
     about the point x, cdf is the cumulative density function
     and step = (high-low)/cardinality.
 
-    For details, refer Klugman, S. A., Panjer, H. H. and Willmot,
-    G. E., Loss Models, From Data to Decisions, Fourth Edition,
+    Reference
+    ---------
+    Klugman, S. A., Panjer, H. H. and Willmot, G. E.,
+    Loss Models, From Data to Decisions, Fourth Edition,
     Wiley, section 9.6.5.2 (Method of local monment matching) and
     exercise 9.41.
 
@@ -175,14 +193,11 @@ class UnbiasedDiscretizer(BaseDiscretizer):
                            + 1 - self.factor.cdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
-        x = np.linspace(self.low + step, self.high - step, self.cardinality-2)
-        for i in x:
-            discrete_values.append((2 * lev(i) - lev(i - step) -
-                                    lev(i + step)) / step)
+        points = np.linspace(self.low + step, self.high - step, self.cardinality - 2)
+        discrete_values.extend([(2 * lev(i) - lev(i - step) - lev(i + step)) / step for i in points])
 
         # for x=[high]
-        discrete_values.append((lev(self.high) - lev(self.high - step)) /
-                               step - 1 + self.factor.cdf(self.high))
+        discrete_values.append((lev(self.high) - lev(self.high - step)) / step - 1 + self.factor.cdf(self.high))
 
         return discrete_values
 
@@ -196,14 +211,17 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         where, pdf is the probability density function and cdf is the
         cumulative density function of the distribution.
 
-        For details, refer Klugman, S. A., Panjer, H. H. and Willmot,
-        G. E., Loss Models, From Data to Decisions, Fourth Edition,
+        Reference
+        ---------
+        Klugman, S. A., Panjer, H. H. and Willmot, G. E., 
+        Loss Models, From Data to Decisions, Fourth Edition,
         Wiley, definition 3.5 and equation 3.8.
 
         Parameters
         ----------
         u: float
             The point at which the moment is to be calculated.
+
         order: int
             The order of the moment, default is first order.
         """
