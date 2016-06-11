@@ -82,6 +82,7 @@ class TestRoundingDiscretizer(unittest.TestCase):
         self.exp_factor = ContinuousNode(self.exp_pdf, lb=0)
 
         self.normal_discretizer = RoundingDiscretizer(self.normal_factor, -5, 5, 10)
+        self.normal_discretizer2 = RoundingDiscretizer(self.normal_factor, -3, 3, 10)
         self.gamma_discretizer = RoundingDiscretizer(self.gamma_factor, 0, 5, 5)
         self.exp_discretizer = RoundingDiscretizer(self.exp_factor, 0, 5, 10)
 
@@ -95,6 +96,12 @@ class TestRoundingDiscretizer(unittest.TestCase):
                                       3.829249e-01, 2.417303e-01, 6.059754e-02, 5.977036e-03, 2.292314e-04])
         normal_obtained_op = np.array(self.normal_discretizer.get_discrete_values())
         np_test.assert_almost_equal(normal_desired_op, normal_obtained_op)
+
+        # library(actuar);discretize(pnorm(x), method = "rounding", from = -3, to = 3, step = 6/10)
+        normal_desired_op2 = np.array([0.002117076, 0.014397447, 0.048942781, 0.117252924, 0.198028452,
+                                       0.235822844, 0.198028452, 0.117252924, 0.048942781, 0.014397447])
+        normal_obtained_op2 = np.array(self.normal_discretizer2.get_discrete_values())
+        np_test.assert_almost_equal(normal_desired_op2, normal_obtained_op2)
 
         # library(actuar);discretize(pgamma(x, 3), method = "rounding", from = 0, to = 5, step = 1)
         gamma_desired_op = np.array([0.01438768, 0.17676549, 0.26503371, 0.22296592, 0.14726913])

@@ -133,7 +133,7 @@ class RoundingDiscretizer(BaseDiscretizer):
         discrete_values = [self.factor.cdf(self.low + step/2) - self.factor.cdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
-        points = np.arange(self.low + step, self.high, step)
+        points = np.linspace(self.low + step, self.high - step, self.cardinality - 1)
         discrete_values.extend([self.factor.cdf(i + step/2) - self.factor.cdf(i - step/2) for i in points])
 
         return discrete_values
