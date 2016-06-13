@@ -1,70 +1,64 @@
-"""
-    A collection of base class objects for continuous model
-"""
-
 import numpy as np
 
 
 class JointGaussianDistribution(object):
     """
-    A naive gaussian container class.(Depricated)
+    A naive gaussian container class.
     Will be removed when Multivariate Distributions will be implemented
 
     Paramters
     ---------
-    mean_vec: 1d array type of structure
-              Represents the mean of the distribution
+    mean: 1d array type of structure
+        Represents the mean of the distribution
 
-    cov_matrix: A numpy.array or numpy.matrix of size len(mean_vec) x len(mean_vec),
-                Covariance matrix for the distribution.
+    covariance: A numpy.array or numpy.matrix of size len(mean) x len(mean),
+        Covariance of the distribution.
 
     """
 
-    def __init__(self, mean_vec, cov_matrix):
+    def __init__(self, mean, covariance):
 
-        if isinstance(mean_vec, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            mean_vec = np.array(mean_vec).flatten()
+        if isinstance(mean, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            mean = np.array(mean).flatten()
         else:
-            raise TypeError("mean_vec should be a 1d array type object")
-        mean_vec = np.reshape(mean_vec, (len(mean_vec), 1))
+            raise TypeError("mean should be a 1d array type object")
+        mean = np.reshape(mean, (len(mean), 1))
 
-        if not isinstance(cov_matrix, (np.matrix, np.ndarray, list)):
+        if not isinstance(covariance, (np.matrix, np.ndarray, list)):
             raise TypeError(
-                "cov_matrix must be numpy.matrix type object")
+                "covariance must be numpy.matrix or numpy.array type object")
 
-        if cov_matrix.shape[0] != cov_matrix.shape[1]:
+        if covariance.shape[0] != covariance.shape[1]:
             raise ValueError(
-                "cov_matrix must be a square matrix")
+                "covariance must be a square in shape")
 
-        if mean_vec.shape[0] != cov_matrix.shape[0]:
+        if mean.shape[0] != covariance.shape[0]:
             raise ValueError("shape of mean vector should be d X 1 and" +
                              " shape of covariance matrix should be d X d")
 
-        self.mean_vec = mean_vec
-        self.cov_matrix = np.array(cov_matrix)
-        self.precision_matrix = np.linalg.inv(cov_matrix)
+        self.mean = mean
+        self.covariance = np.array(covariance)
+        self.precision_matrix = np.linalg.inv(covariance)
 
 
 class BaseGradLogPDF(object):
     """
-    Base class for gradient log of probability density function/ distribution
+    Base class for evaluating gradient log of probability density function/ distribution
 
     Classes inheriting this base class can be passed as an argument for
     finding gradient log of probability distribution in inference algorithms
 
-    The class should initialize the gradient of log P(X) and log P(X)
-    (Constant terms can be ignored)
+    The class should initialize  self.grad_log and self.log_pdf
 
     Parameters
     ----------
-    position : A 1d array type object
-               Vector representing values of parameter position(theta or X)
+    distribution_param : A 1d array type object
+        Vector representing values of distribution parameter at which we want to find gradient and log
 
     model : An instance of pgmpy.models.Continuous
 
     Examples
     --------
-    >>> # Example shows how to use the containGer class
     >>> from pgmpy.models import JointGaussianDistribution
     >>> from pgmpy.inference import BaseGradLogPDF
     >>> import numpy as np
@@ -73,15 +67,15 @@ class BaseGradLogPDF(object):
     ...         BaseGradLogPDF.__init__(self, position, model)
     ...         self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
     ...     def _get_gradient_log_pdf(self):
-    ...         sub_vec = self.position - self.model.mean_vec
+    ...         sub_vec = self.position - self.model.mean
     ...         grad = - np.dot(self.model.precision_matrix, sub_vec)
     ...         log_pdf = 0.5 * np.float(np.dot(sub_vec.T, grad))
     ...         return grad, log_pdf
-    >>> mean_vec = np.array([[1], [1]])
-    >>> cov_matrix = np.array([[1, 0.2], [0.2, 7]])
-    >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-    >>> pos = np.array([[0.1], [0.9]])
-    >>> grad_logp, logp = GradLogGaussian(pos, model).get_gradient_log_pdf()
+    >>> mean = np.array([[1], [1]])
+    >>> covariance = np.array([[1, 0.2], [0.2, 7]])
+    >>> model = JointGaussianDistribution(mean, covariance)
+    >>> dist_param = np.array([[0.1], [0.9]])
+    >>> grad_logp, logp = GradLogGaussian(dist_param, model).get_gradient_log_pdf()
     >>> logp
     -0.4054597701149426
     >>> grad_logp
@@ -89,19 +83,15 @@ class BaseGradLogPDF(object):
            [-0.01149425]])
     """
 
-    def __init__(self, position, model):
-        # TODO: Take model as parameter instead of precision_matrix
+    def __init__(self, distribution_param, model):
 
-        if isinstance(position, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            position = np.array(position).flatten()
-            position = np.reshape(position, (len(position), 1))
+        if isinstance(distribution_param, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
+            distribution_param = np.array(distribution_param).flatten()
+            distribution_param = np.reshape(distribution_param, (len(distribution_param), 1))
         else:
-            raise TypeError("position should be a 1d array type object")
+            raise TypeError("distribution_param should be a 1d array type object")
 
-        if position.shape[0] != model.precision_matrix.shape[0]:
-            raise ValueError("shape of position vector should be 1 X d if shape" +
-                             " of precision matrix of model is d X d")
-        self.position = position
+        self.distribution_param = distribution_param
         self.model = model
         # The gradient of probability distribution at position
         self.grad_log = None
@@ -115,6 +105,7 @@ class BaseGradLogPDF(object):
         Returns
         -------
         numpy.array: Representing gradient log of model at given position
+
         float: Representing log of model at given position
 
         Example
@@ -123,11 +114,11 @@ class BaseGradLogPDF(object):
         >>> from pgmpy.inference import GradLogPDFGaussian
         >>> from pgmpy.models import JointGaussianDistribution
         >>> import numpy as np
-        >>> mean_vec = np.array([[1], [1]])
-        >>> cov_matrix = np.array([[1, 0.2], [0.2, 7]])
-        >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-        >>> pos = np.array([[0.1], [0.9]])
-        >>> grad_logp, logp = GradLogPDFGaussian(pos, model).get_gradient_log_pdf()
+        >>> mean = np.array([[1], [1]])
+        >>> covariance = np.array([[1, 0.2], [0.2, 7]])
+        >>> model = JointGaussianDistribution(mean, covariance)
+        >>> dist_param = np.array([[0.1], [0.9]])
+        >>> grad_logp, logp = GradLogPDFGaussian(dist_param, model).get_gradient_log_pdf()
         >>> logp
         -0.4054597701149426
         >>> grad_logp
@@ -139,7 +130,7 @@ class BaseGradLogPDF(object):
 
 class GradLogPDFGaussian(BaseGradLogPDF):
     """
-    Class for finding gradient and gradient log of distribution
+    Class for finding gradient and gradient log of Joint Gaussian Distribution
     Inherits pgmpy.inference.base_continuous.BaseGradLogPDF
     Here model must be an instance of JointGaussianDistribution
 
@@ -148,11 +139,11 @@ class GradLogPDFGaussian(BaseGradLogPDF):
     >>> from pgmpy.inference import GradLogPDFGaussian
     >>> from pgmpy.models import JointGaussianDistribution
     >>> import numpy as np
-    >>> mean_vec = np.array([[1], [1]])
-    >>> cov_matrix = np.array([[1, 0.2], [0.2, 7]])
-    >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-    >>> pos = np.array([[0.1], [0.9]])
-    >>> grad_logp, logp = GradLogPDFGaussian(pos, model).get_gradient_log_pdf()
+    >>> mean = np.array([[1], [1]])
+    >>> covariance = np.array([[1, 0.2], [0.2, 7]])
+    >>> model = JointGaussianDistribution(mean, covariance)
+    >>> dist_param = np.array([[0.1], [0.9]])
+    >>> grad_logp, logp = GradLogPDFGaussian(dist_param, model).get_gradient_log_pdf()
     >>> logp
     -0.4054597701149426
     >>> grad_logp
@@ -160,70 +151,67 @@ class GradLogPDFGaussian(BaseGradLogPDF):
            [-0.01149425]])
     """
 
-    def __init__(self, position, model):
-        BaseGradLogPDF.__init__(self, position, model)
+    def __init__(self, distribution_param, model):
+        BaseGradLogPDF.__init__(self, distribution_param, model)
         self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
 
     def _get_gradient_log_pdf(self):
         """
         Method that finds gradient and its log at position
         """
-        sub_vec = self.position - self.model.mean_vec
+        sub_vec = self.distribution_param - self.model.mean
         grad = - np.dot(self.model.precision_matrix, sub_vec)
         log_pdf = 0.5 * np.float(np.dot(sub_vec.T, grad))
 
         return grad, log_pdf
 
 
-class BaseDiscretizeTime(object):
+class BaseSimulateDynamics(object):
     """
-    Base class for Discretizing continuous time in sumilatin dynamics
+    Base class for proposing new values of position and momentum by simulating Hamiltonian Dynamics.
 
     Classes inheriting this base class can be passed as an argument for
-    discretizing time in inference algorithms
+    simulate_dynamics in inference algorithms.
 
     Parameters
     ----------
     grad_log_pdf : A subclass of pgmpy.inference.base_continuous.BaseGradLogPDF
 
     model : An instance of pgmpy.models.Continuous
-            Model for which DiscretizeTime object is initialized
+        Model for which DiscretizeTime object is initialized
 
     position : A 1d array like object
-               Vector representing values of parameter position( or X)
+        Vector representing values of parameter position( or X)
 
     momentum: A 1d array like object
-              Vector representing the proposed value for momentum
-              (velocity)
+        Vector representing the proposed value for momentum (velocity)
 
-    epsilon: Float
-             step size for the time splitting
+    step_size: Float
+        step size for the simulating dynamics
 
     Examples
     --------
-    >>> # Example shows how to use the container class
-    >>> from pgmpy.inference import BaseDiscretizeTime
+    >>> from pgmpy.inference import BaseSimulateDynamics
     >>> from pgmpy.models import JointGaussianDistribution
     >>> from pgmpy.inference import GradLogPDFGaussian
-    >>> class ModifiedEuler(BaseDiscretizeTime):
-    ...     def __init__(self, grad_log_pdf, model, position, momentum, epsilon):
-    ...         BaseDiscretizeTime.__init__(self, grad_log_pdf, model, position, momentum, epsilon)
-    ...         self.position_bar, self.momentum_bar, self.grad_log_position,\
-    ...                 self.log_pdf = self._discretize_time()
-    ...     def _discretize_time(self):
-    ...         grad_log_position, log_pdf_position =\
-    ...                 self.grad_log_pdf(self.position,
-    ...                                   self.model).get_gradient_log_pdf()
-    ...         momentum_bar = self.momentum + self.epsilon * grad_log_position
-    ...         position_bar = self.position + self.epsilon * momentum_bar
+    >>> # Class should initalize self.position_bar and self.momentum_bar
+    >>> class ModifiedEuler(BaseSimulateDynamics):
+    ...     def __init__(self, grad_log_pdf, model, position, momentum, step_size):
+    ...         BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
+    ...         self.position_bar, self.momentum_bar, self.grad_logp, self.logp = self._get_proposed_values()
+    ...     def _get_proposed_values(self):
+    ...         grad_log_position, log_pdf_position = self.grad_log_pdf(self.position,
+    ...                                                                 self.model).get_gradient_log_pdf()
+    ...         momentum_bar = self.momentum + self.step_size * grad_log_position
+    ...         position_bar = self.position + self.step_size * momentum_bar
     ...         return position_bar, momentum_bar, grad_log_position, log_pdf_position
     >>> import numpy as np
     >>> pos = np.array([[1], [2]])
     >>> momentum = np.array([[0], [0]])
-    >>> mean_vec = np.array([[0], [0]])
-    >>> cov_matrix = np.eye(2)
-    >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-    >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).discretize_time()
+    >>> mean = np.array([[0], [0]])
+    >>> covariance = np.eye(2)
+    >>> model = JointGaussianDistribution(mean, covariance)
+    >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).get_proposed_values()
     >>> new_pos
     array([[ 0.9375],
            [ 1.875 ]])
@@ -232,8 +220,8 @@ class BaseDiscretizeTime(object):
            [-0.5 ]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, epsilon):
-        # TODO: Take model instead of precision matrix
+    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
+
         if isinstance(position, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
             position = np.array(position).flatten()
             position = np.reshape(position, (len(position), 1))
@@ -259,23 +247,24 @@ class BaseDiscretizeTime(object):
 
         self.position = position
         self.momentum = momentum
-        self.epsilon = epsilon
+        self.step_size = step_size
         self.model = model
         self.grad_log_pdf = grad_log_pdf
         # The new proposed value of position after taking
-        # epsilon step size in time
+        # step_size step size in time
         self.position_bar = None
         # The new proposed value of momentum after taking
-        # epsilon step size in time
+        # step_size step size in time
         self.momentum_bar = None
 
-    def discretize_time(self):
+    def get_proposed_values(self):
         """
         Returns the new proposed values of position and momentum
 
         Returns
         -------
         numpy.array: New proposed value of position
+
         numpy.array: New proposed value of momentum
 
         Example
@@ -287,10 +276,10 @@ class BaseDiscretizeTime(object):
         >>> import numpy as np
         >>> pos = np.array([[1], [2]])
         >>> momentum = np.array([[0], [0]])
-        >>> mean_vec = np.array([[0], [0]])
-        >>> cov_matrix = np.eye(2)
-        >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-        >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).discretize_time()
+        >>> mean = np.array([[0], [0]])
+        >>> covariance = np.eye(2)
+        >>> model = JointGaussianDistribution(mean, covariance)
+        >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).get_proposed_values()
         >>> new_pos
         array([[ 0.9375],
                [ 1.875 ]])
@@ -301,10 +290,10 @@ class BaseDiscretizeTime(object):
         return self.position_bar, self.momentum_bar
 
 
-class LeapFrog(BaseDiscretizeTime):
+class LeapFrog(BaseSimulateDynamics):
     """
-    Class for performing discretization(in time) using leapfrog method
-    Inherits pgmpy.inference.base_continuous.BaseDiscretizeTime
+    Class for simulating hamiltonian dynamics using leapfrog method
+    Inherits pgmpy.inference.base_continuous.BaseSimulateDynamics
 
     Example
     --------
@@ -313,10 +302,10 @@ class LeapFrog(BaseDiscretizeTime):
     >>> import numpy as np
     >>> pos = np.array([[2], [1]])
     >>> momentum = np.array([[1], [1]])
-    >>> mean_vec = np.array([[0], [0]])
-    >>> cov_matrix = np.eye(2)
-    >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-    >>> new_pos, new_momentum = LeapFrog(GradLogPDFGaussian, model, pos, momentum, 0.25).discretize_time()
+    >>> mean = np.array([[0], [0]])
+    >>> covariance = np.eye(2)
+    >>> model = JointGaussianDistribution(mean, covariance)
+    >>> new_pos, new_momentum = LeapFrog(GradLogPDFGaussian, model, pos, momentum, 0.25).get_proposed_values()
     >>> new_pos
     array([[ 2.1875 ],
            [ 1.21875]])
@@ -325,48 +314,47 @@ class LeapFrog(BaseDiscretizeTime):
            [ 0.72265625]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, epsilon):
+    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
 
-        BaseDiscretizeTime.__init__(self, grad_log_pdf, model, position, momentum, epsilon)
+        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
 
-        self.position_bar, self.momentum_bar, self.grad_log,\
-            self.log_pdf = self._discretize_time()
+        self.position_bar, self.momentum_bar, self.grad_logp, self.logp = self._get_proposed_values()
 
-    def _discretize_time(self):
+    def _get_proposed_values(self):
         """
         Method to perform time splitting using leapfrog
         """
         grad_log, log_pdf = self.grad_log_pdf(self.position,
                                               self.model).get_gradient_log_pdf()
         # Take half step in time for updating momentum
-        momentum_bar = self.momentum + 0.5 * self.epsilon * grad_log
+        momentum_bar = self.momentum + 0.5 * self.step_size * grad_log
         # Take full step in time for updating position position
-        position_bar = self.position + self.epsilon * momentum_bar
+        position_bar = self.position + self.step_size * momentum_bar
 
         grad_log, log_pdf = self.grad_log_pdf(position_bar,
                                               self.model).get_gradient_log_pdf()
         # Take remaining half step in time for updating momentum
-        momentum_bar = momentum_bar + 0.5 * self.epsilon * grad_log
+        momentum_bar = momentum_bar + 0.5 * self.step_size * grad_log
 
         return position_bar, momentum_bar, grad_log, log_pdf
 
 
-class ModifiedEuler(BaseDiscretizeTime):
+class ModifiedEuler(BaseSimulateDynamics):
     """
-    Class for performing splitting in time using Modified euler method
-    Inherits pgmpy.inference.base_continuous.BaseDiscretizeTime
+    Class for simulating Hamiltonian Dynamics using Modified euler method
+    Inherits pgmpy.inference.base_continuous.BaseSimulateDynamics
 
     Example
     --------
     >>> from pgmpy.models import JointGaussianDistribution
-    >>> from pgmpy.inference import GradLogPDFGaussian, ModifiedEuler
+    >>> from pgmpy.inference.base_continuous import GradLogPDFGaussian, ModifiedEuler
     >>> import numpy as np
     >>> pos = np.array([[2], [1]])
     >>> momentum = np.array([[1], [1]])
-    >>> mean_vec = np.array([[0], [0]])
-    >>> cov_matrix = np.eye(2)
-    >>> model = JointGaussianDistribution(mean_vec, cov_matrix)
-    >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).discretize_time()
+    >>> mean = np.array([[0], [0]])
+    >>> covariance = np.eye(2)
+    >>> model = JointGaussianDistribution(mean, covariance)
+    >>> new_pos, new_momentum = ModifiedEuler(GradLogPDFGaussian, model, pos, momentum, 0.25).get_proposed_values()
     >>> new_pos
     array([[ 2.125 ],
            [ 1.1875]])
@@ -375,22 +363,21 @@ class ModifiedEuler(BaseDiscretizeTime):
            [ 0.75]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, epsilon):
+    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
 
-        BaseDiscretizeTime.__init__(self, grad_log_pdf, model, position, momentum, epsilon)
+        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
 
-        self.position_bar, self.momentum_bar, self.grad_log,\
-            self.log_pdf = self._discretize_time()
+        self.position_bar, self.momentum_bar, self.grad_log, self.log_pdf = self._get_proposed_values()
 
-    def _discretize_time(self):
+    def _get_proposed_values(self):
         """
         Method to perform time splitting using Modified euler method
         """
         grad_log, log_pdf = self.grad_log_pdf(self.position,
                                               self.model).get_gradient_log_pdf()
         # Take full step in time and update momentum
-        momentum_bar = self.momentum + self.epsilon * grad_log
+        momentum_bar = self.momentum + self.step_size * grad_log
         # Take full step in time and update position
-        position_bar = self.position + self.epsilon * momentum_bar
+        position_bar = self.position + self.step_size * momentum_bar
 
         return position_bar, momentum_bar, grad_log, log_pdf
