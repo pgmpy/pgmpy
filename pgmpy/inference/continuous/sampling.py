@@ -5,7 +5,7 @@ from math import sqrt
 
 import numpy as np
 
-from pgmpy.inference.continuous import (LeapFrog, BaseGradLogPDF, BaseSimulateDynamics)
+from pgmpy.inference.continuous import (LeapFrog, BaseGradLogPDF, BaseSimulateHamiltonianDynamics)
 
 
 class HamiltonianMC(object):
@@ -15,13 +15,13 @@ class HamiltonianMC(object):
 
     Parameters:
     -----------
-    model: An instance pgmpy.models.Continuous
+    model: An instance pgmpy.models
         Model from which sampling has to be done
 
-    grad_log_pdf: A subclass of pgmpy.inference.base_continuous.BaseGradLogPDF
+    grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF
         A class to find log and gradient of log distribution
 
-    simulate_dynamics: A subclass of pgmpy.inference.base_continuous.BaseSimulateDynamics
+    simulate_dynamics: A subclass of pgmpy.inference.continuous.BaseSimulateHamiltonianDynamics
         A class to propose future values of momentum and position in time by simulating
         Hamiltonian Dynamics
 
@@ -32,9 +32,8 @@ class HamiltonianMC(object):
 
     Example:
     --------
-    >>> from pgmpy.inference import HamiltonianMC as HMC
-    >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-    >>> from pgmpy.inference import LeapFrog
+    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, LeapFrog
+    >>> from pgmpy.models import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.7], [0.7, 1]])
@@ -59,9 +58,9 @@ class HamiltonianMC(object):
             raise TypeError("grad_log_pdf must be an instance of" +
                             "pgmpy.inference.base_continuous.BaseGradLogPDF")
 
-        if not issubclass(simulate_dynamics, BaseSimulateDynamics):
+        if not issubclass(simulate_dynamics, BaseSimulateHamiltonianDynamics):
             raise TypeError("split_time must be an instance of" +
-                            "pgmpy.inference.base_continuous.BaseSimulateDynamics")
+                            "pgmpy.inference.base_continuous.BaseSimulateHamiltonianDynamics")
 
         self.model = model
         self.grad_log_pdf = grad_log_pdf
@@ -72,7 +71,7 @@ class HamiltonianMC(object):
         Returns the acceptance probability for given new position(position) and momentum
         """
 
-        # Parameters to help in evaluating P(position, momentum)
+        # Parameters to help in evaluating Joint distribution P(position, momentum)
         _, logp = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
         _, logp_bar = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
@@ -97,8 +96,9 @@ class HamiltonianMC(object):
         momentum = np.reshape(np.random.normal(0, 1, len(position)), position.shape)
 
         # Take a single step in time
-        position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model,
-                                                            position, momentum, stepsize_app).get_proposed_values()
+        position_bar, momentum_bar, grad_bar =\
+            self.simulate_dynamics(self.grad_log_pdf, self.model, position,
+                                   momentum, stepsize_app).get_proposed_values()
 
         acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -110,8 +110,9 @@ class HamiltonianMC(object):
         while condition:
             stepsize_app = (2 ** a) * stepsize_app
 
-            position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model,
-                                                                position, momentum, stepsize_app).get_proposed_values()
+            position_bar, momentum_bar, grad_bar =\
+                self.simulate_dynamics(self.grad_log_pdf, self.model, position,
+                                       momentum, stepsize_app, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -148,9 +149,8 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> from pgmpy.inference import HamiltonianMC as HMC
-        >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-        >>> from pgmpy.inference import LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 1]])
@@ -181,13 +181,14 @@ class HamiltonianMC(object):
             momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to run discretize time algorithm
+            # Number of steps L to simulate dynamics
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
             for _ in range(lsteps):
-                # Taking L steps in time
-                position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, stepsize).get_proposed_values()
+                position_bar, momentum_bar, grad_bar =\
+                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
+                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -229,9 +230,8 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> from pgmpy.inference import HamiltonianMC as HMC
-        >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-        >>> from pgmpy.inference import ModifiedEuler
+        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, ModifiedEuler
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 1]])
@@ -263,13 +263,14 @@ class HamiltonianMC(object):
             momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to run discretize time algorithm
+            # Number of steps L to simulate dynamics
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
             for _ in range(lsteps):
-                # Taking L steps in time
-                position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, stepsize).get_proposed_values()
+                position_bar, momentum_bar, grad_bar =\
+                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
+                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -289,13 +290,13 @@ class HamiltonianMCda(HamiltonianMC):
 
     Parameters:
     -----------
-    model: An instance pgmpy.models.Continuous
+    model: An instance pgmpy.models
         Model from which sampling has to be done
 
-    grad_log_pdf: A subclass of pgmpy.inference.base_continuous.GradientLogPDF
+    grad_log_pdf: A subclass of pgmpy.inference.continuous.GradientLogPDF
         Class to compute the log and gradient log of distribution
 
-    simulate_dynamics: A subclass of pgmpy.inference.base_continuous.BaseSimulateDynamics
+    simulate_dynamics: A subclass of pgmpy.inference.continuous.BaseSimulateHamiltonianDynamics
         Class to propose future states of position and momentum in time by simulating
         HamiltonianDynamics
 
@@ -309,9 +310,8 @@ class HamiltonianMCda(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.inference import HamiltonianMCda as HMCda
-    >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-    >>> from pgmpy.inference import LeapFrog
+    >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+    >>> from pgmpy.models import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -392,9 +392,8 @@ class HamiltonianMCda(HamiltonianMC):
 
         Examples
         ---------
-        >>> from pgmpy.inference import HamiltonianMCda as HMCda
-        >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-        >>> from pgmpy.inference import LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -436,13 +435,14 @@ class HamiltonianMCda(HamiltonianMC):
             momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to run discretize time algorithm
+            # Number of steps L to simulate dynamics
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
             for _ in range(lsteps):
-                # Taking L steps in time
-                position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, stepsize).get_proposed_values()
+                position_bar, momentum_bar, grad_bar =\
+                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
+                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -494,9 +494,8 @@ class HamiltonianMCda(HamiltonianMC):
 
         Examples
         --------
-        >>> from pgmpy.inference import HamiltonianMCda as HMCda
-        >>> from pgmpy.inference import JointGaussianDistribution as JGD, GradLogPDFGaussian as GLPG
-        >>> from pgmpy.inference import LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -540,13 +539,14 @@ class HamiltonianMCda(HamiltonianMC):
             momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to run discretize time algorithm
+            # Number of steps L to simulate dynamics
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
             for _ in range(lsteps):
-                # Taking L steps in time
-                position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, stepsize).get_proposed_values()
+                position_bar, momentum_bar, grad_bar =\
+                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
+                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability

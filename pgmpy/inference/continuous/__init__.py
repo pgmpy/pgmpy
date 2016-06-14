@@ -1,12 +1,11 @@
-from .base import (JointGaussianDistribution, LeapFrog, ModifiedEuler,
-                   BaseSimulateDynamics, BaseGradLogPDF, GradLogPDFGaussian)
+from .base import (LeapFrog, ModifiedEuler, BaseSimulateHamiltonianDynamics,
+                   BaseGradLogPDF, GradLogPDFGaussian)
 from .sampling import HamiltonianMCda, HamiltonianMC
 
 
-__all__ = ['JointGaussianDistribution',
-           'LeapFrog',
+__all__ = ['LeapFrog',
            'ModifiedEuler',
-           'BaseSimulateDynamics',
+           'BaseSimulateHamiltonianDynamics',
            'BaseGradLogPDF',
            'GradLogPDFGaussian',
            'HamiltonianMC',
