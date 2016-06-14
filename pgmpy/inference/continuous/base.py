@@ -11,7 +11,7 @@ class JointGaussianDistribution(object):
     mean: 1d array type of structure
         Represents the mean of the distribution
 
-    covariance: A numpy.array or numpy.matrix of size len(mean) x len(mean),
+    covariance: A 2d array type object of size len(mean) x len(mean),
         Covariance of the distribution.
 
     """
@@ -26,8 +26,8 @@ class JointGaussianDistribution(object):
 
         if not isinstance(covariance, (np.matrix, np.ndarray, list)):
             raise TypeError(
-                "covariance must be numpy.matrix or numpy.array type object")
-
+                "covariance must be a 2d array type object")
+        covariance = np.array(covariance)
         if covariance.shape[0] != covariance.shape[1]:
             raise ValueError(
                 "covariance must be a square in shape")
@@ -37,7 +37,7 @@ class JointGaussianDistribution(object):
                              " shape of covariance matrix should be d X d")
 
         self.mean = mean
-        self.covariance = np.array(covariance)
+        self.covariance = covariance
         self.precision_matrix = np.linalg.inv(covariance)
 
 
@@ -186,8 +186,8 @@ class BaseSimulateDynamics(object):
     momentum: A 1d array like object
         Vector representing the proposed value for momentum (velocity)
 
-    step_size: Float
-        step size for the simulating dynamics
+    stepsize: Float
+        stepsize for the simulating dynamics
 
     Examples
     --------
@@ -196,14 +196,14 @@ class BaseSimulateDynamics(object):
     >>> from pgmpy.inference import GradLogPDFGaussian
     >>> # Class should initalize self.position_bar and self.momentum_bar
     >>> class ModifiedEuler(BaseSimulateDynamics):
-    ...     def __init__(self, grad_log_pdf, model, position, momentum, step_size):
-    ...         BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
+    ...     def __init__(self, grad_log_pdf, model, position, momentum, stepsize):
+    ...         BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, stepsize)
     ...         self.position_bar, self.momentum_bar, self.grad_logp, self.logp = self._get_proposed_values()
     ...     def _get_proposed_values(self):
     ...         grad_log_position, log_pdf_position = self.grad_log_pdf(self.position,
     ...                                                                 self.model).get_gradient_log_pdf()
-    ...         momentum_bar = self.momentum + self.step_size * grad_log_position
-    ...         position_bar = self.position + self.step_size * momentum_bar
+    ...         momentum_bar = self.momentum + self.stepsize * grad_log_position
+    ...         position_bar = self.position + self.stepsize * momentum_bar
     ...         return position_bar, momentum_bar, grad_log_position, log_pdf_position
     >>> import numpy as np
     >>> pos = np.array([[1], [2]])
@@ -220,7 +220,7 @@ class BaseSimulateDynamics(object):
            [-0.5 ]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
+    def __init__(self, grad_log_pdf, model, position, momentum, stepsize):
 
         if isinstance(position, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
             position = np.array(position).flatten()
@@ -232,29 +232,25 @@ class BaseSimulateDynamics(object):
             momentum = np.array(momentum).flatten()
             momentum = np.reshape(momentum, (len(momentum), 1))
         else:
-            raise TypeError("position should be a 1d array type object")
+            raise TypeError("momentum should be a 1d array type object")
 
         if not issubclass(grad_log_pdf, BaseGradLogPDF):
             raise TypeError("grad_log_pdf must be an instance" +
-                            " of pgmpy.inference.base_continuous.BaseGradLogPDF")
+                            " of pgmpy.inference.continuous.base.BaseGradLogPDF")
 
         if position.shape != momentum.shape:
             raise ValueError("Shape of position and momentum must be same")
 
-        if position.shape[0] != model.precision_matrix.shape[0]:
-            raise ValueError("shape of position vector should be 1 X d if shape" +
-                             " of precision matrix of model is d X d")
-
         self.position = position
         self.momentum = momentum
-        self.step_size = step_size
+        self.stepsize = stepsize
         self.model = model
         self.grad_log_pdf = grad_log_pdf
         # The new proposed value of position after taking
-        # step_size step size in time
+        # stepsize step size in time
         self.position_bar = None
         # The new proposed value of momentum after taking
-        # step_size step size in time
+        # stepsize step size in time
         self.momentum_bar = None
 
     def get_proposed_values(self):
@@ -314,9 +310,9 @@ class LeapFrog(BaseSimulateDynamics):
            [ 0.72265625]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
+    def __init__(self, grad_log_pdf, model, position, momentum, stepsize):
 
-        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
+        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, stepsize)
 
         self.position_bar, self.momentum_bar, self.grad_logp, self.logp = self._get_proposed_values()
 
@@ -327,14 +323,14 @@ class LeapFrog(BaseSimulateDynamics):
         grad_log, log_pdf = self.grad_log_pdf(self.position,
                                               self.model).get_gradient_log_pdf()
         # Take half step in time for updating momentum
-        momentum_bar = self.momentum + 0.5 * self.step_size * grad_log
+        momentum_bar = self.momentum + 0.5 * self.stepsize * grad_log
         # Take full step in time for updating position position
-        position_bar = self.position + self.step_size * momentum_bar
+        position_bar = self.position + self.stepsize * momentum_bar
 
         grad_log, log_pdf = self.grad_log_pdf(position_bar,
                                               self.model).get_gradient_log_pdf()
         # Take remaining half step in time for updating momentum
-        momentum_bar = momentum_bar + 0.5 * self.step_size * grad_log
+        momentum_bar = momentum_bar + 0.5 * self.stepsize * grad_log
 
         return position_bar, momentum_bar, grad_log, log_pdf
 
@@ -363,9 +359,9 @@ class ModifiedEuler(BaseSimulateDynamics):
            [ 0.75]])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, step_size):
+    def __init__(self, grad_log_pdf, model, position, momentum, stepsize):
 
-        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, step_size)
+        BaseSimulateDynamics.__init__(self, grad_log_pdf, model, position, momentum, stepsize)
 
         self.position_bar, self.momentum_bar, self.grad_log, self.log_pdf = self._get_proposed_values()
 
@@ -376,8 +372,8 @@ class ModifiedEuler(BaseSimulateDynamics):
         grad_log, log_pdf = self.grad_log_pdf(self.position,
                                               self.model).get_gradient_log_pdf()
         # Take full step in time and update momentum
-        momentum_bar = self.momentum + self.step_size * grad_log
+        momentum_bar = self.momentum + self.stepsize * grad_log
         # Take full step in time and update position
-        position_bar = self.position + self.step_size * momentum_bar
+        position_bar = self.position + self.stepsize * momentum_bar
 
         return position_bar, momentum_bar, grad_log, log_pdf
