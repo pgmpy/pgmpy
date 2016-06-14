@@ -6,7 +6,6 @@ from .dbn_inference import DBNInference
 from .mplp import Mplp
 from . import continuous
 
-
 __all__ = ['Inference',
            'VariableElimination',
            'DBNInference',
