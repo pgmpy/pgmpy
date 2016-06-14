@@ -5,7 +5,7 @@ from math import sqrt
 
 import numpy as np
 
-from pgmpy.inference import (LeapFrog, BaseGradLogPDF, BaseSimulateDynamics)
+from pgmpy.inference.continuous import (LeapFrog, BaseGradLogPDF, BaseSimulateDynamics)
 
 
 class HamiltonianMC(object):
@@ -40,7 +40,7 @@ class HamiltonianMC(object):
     >>> covariance = np.array([[1, 0.7], [0.7, 1]])
     >>> model = JGD(mean, covariance)
     >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-    >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, step_size=None)
+    >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, stepsize=None)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
     array([[ 0.64321553,  0.63513749],
@@ -82,9 +82,9 @@ class HamiltonianMC(object):
 
         return np.exp(potential_change - kinetic_change)  # acceptance probability
 
-    def _find_reasonable_step_size(self, position, step_size_app=1):
+    def _find_reasonable_stepsize(self, position, stepsize_app=1):
         """
-        Method for choosing initial value of step_size
+        Method for choosing initial value of stepsize
 
         References
         -----------
@@ -98,7 +98,7 @@ class HamiltonianMC(object):
 
         # Take a single step in time
         position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model,
-                                                            position, momentum, step_size_app).get_proposed_values()
+                                                            position, momentum, stepsize_app).get_proposed_values()
 
         acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -108,18 +108,18 @@ class HamiltonianMC(object):
         condition = (acceptance_prob ** a) > (2 ** (-a))
 
         while condition:
-            step_size_app = (2 ** a) * step_size_app
+            stepsize_app = (2 ** a) * stepsize_app
 
             position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model,
-                                                                position, momentum, step_size_app).get_proposed_values()
+                                                                position, momentum, stepsize_app).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
             condition = (acceptance_prob ** a) > (2 ** (-a))
 
-        return step_size_app
+        return stepsize_app
 
-    def sample(self, position0, num_samples, trajectory_length, step_size=None):
+    def sample(self, position0, num_samples, trajectory_length, stepsize=None):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -133,12 +133,12 @@ class HamiltonianMC(object):
             Number of samples to be generated
 
         trajectory_length: int or float
-            Target trajectory length, step_size * number of steps(L),
+            Target trajectory length, stepsize * number of steps(L),
             where L is the number of steps taken per HMC iteration,
-            and step_size is step size for splitting time method.
+            and stepsize is step size for splitting time method.
 
-        step_size: float , defaults to None
-            The step size for proposing new values of position and momentum in simulate_dynamics
+        stepsize: float , defaults to None
+            The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
 
@@ -156,7 +156,7 @@ class HamiltonianMC(object):
         >>> covariance = np.array([[1, 0.7], [0.7, 1]])
         >>> model = JGD(mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, step_size=None)
+        >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
         array([[ 0.64321553,  0.63513749],
@@ -169,8 +169,8 @@ class HamiltonianMC(object):
         else:
             raise TypeError("position should be a 1d array type object")
 
-        if step_size is None:
-            step_size = self._find_reasonable_step_size(position0)
+        if stepsize is None:
+            stepsize = self._find_reasonable_stepsize(position0)
 
         samples = [position0.copy()]
         position_m = position0.copy()
@@ -182,12 +182,12 @@ class HamiltonianMC(object):
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
             # Number of steps L to run discretize time algorithm
-            lsteps = int(max(1, round(trajectory_length / step_size, 0)))
+            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
             for _ in range(lsteps):
                 # Taking L steps in time
                 position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, step_size).get_proposed_values()
+                                                                    momentum_bar, stepsize).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -200,7 +200,7 @@ class HamiltonianMC(object):
 
         return samples
 
-    def generate_sample(self, position0, num_samples, trajectory_length, step_size=None):
+    def generate_sample(self, position0, num_samples, trajectory_length, stepsize=None):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
@@ -215,12 +215,12 @@ class HamiltonianMC(object):
             Number of samples to be generated
 
         trajectory_length: int or float
-            Target trajectory length, step_size * number of steps(L),
+            Target trajectory length, stepsize * number of steps(L),
             where L is the number of steps taken per HMC iteration,
-            and step_size is step size for splitting time method.
+            and stepsize is step size for splitting time method.
 
-        step_size: float , defaults to None
-            The step size for proposing new values of position and momentum in simulate_dynamics
+        stepsize: float , defaults to None
+            The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
         Returns
@@ -238,7 +238,7 @@ class HamiltonianMC(object):
         >>> model = JGD(mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=ModifiedEuler)
         >>> gen_samples = sampler.generate_sample(np.array([[1], [1]]), num_samples = 10000,
-                                                  trajectory_length=2, step_size=None)
+                                                  trajectory_length=2, stepsize=None)
         >>> samples = [sample for sample in gen_samples]
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
@@ -253,8 +253,8 @@ class HamiltonianMC(object):
         else:
             raise TypeError("position should be a 1d array type object")
 
-        if step_size is None:
-            step_size = self._find_reasonable_step_size(position0)
+        if stepsize is None:
+            stepsize = self._find_reasonable_stepsize(position0)
 
         position_m = position0.copy()
         for i in range(0, num_samples):
@@ -264,12 +264,12 @@ class HamiltonianMC(object):
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
             # Number of steps L to run discretize time algorithm
-            lsteps = int(max(1, round(trajectory_length / step_size, 0)))
+            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
             for _ in range(lsteps):
                 # Taking L steps in time
                 position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, step_size).get_proposed_values()
+                                                                    momentum_bar, stepsize).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -285,7 +285,7 @@ class HamiltonianMCda(HamiltonianMC):
     """
     Class for performing sampling in Continuous model
     using Hamiltonian Monte Carlo with dual averaging for
-    adaptaion of parameter step_size.
+    adaptaion of parameter stepsize.
 
     Parameters:
     -----------
@@ -318,7 +318,7 @@ class HamiltonianMCda(HamiltonianMC):
     >>> model = JGD(mean, covariance)
     >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
     >>> samples = sampler.sample(np.array([[1], [1]]), num_adapt=10000,
-    ...                          num_samples = 10000, trajectory_length=2, step_size=None)
+    ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
     array([[ 0.98432155,  0.66517394],
@@ -343,9 +343,9 @@ class HamiltonianMCda(HamiltonianMC):
         super(HamiltonianMCda, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
                                               simulate_dynamics=simulate_dynamics)
 
-    def _adapt_params(self, step_size, step_size_bar, h_bar, mu, index_i, alpha):
+    def _adapt_params(self, stepsize, stepsize_bar, h_bar, mu, index_i, alpha):
         """
-        Run tha adaptation for step_size for better proposals of position
+        Run tha adaptation for stepsize for better proposals of position
         """
         gamma = 0.05  # free parameter that controls the amount of shrinkage towards mu
         t0 = 10.0  # free parameter that stabilizes the initial iterations of the algorithm
@@ -355,13 +355,13 @@ class HamiltonianMCda(HamiltonianMC):
         estimate = 1.0 / (index_i + t0)
         h_bar = (1 - estimate) * h_bar + estimate * (self.delta - alpha)
 
-        step_size = np.exp(mu - sqrt(index_i) / gamma * h_bar)
+        stepsize = np.exp(mu - sqrt(index_i) / gamma * h_bar)
         i_kappa = index_i ** (-kappa)
-        step_size_bar = np.exp(i_kappa * np.log(step_size) + (1 - i_kappa) * np.log(step_size_bar))
+        stepsize_bar = np.exp(i_kappa * np.log(stepsize) + (1 - i_kappa) * np.log(stepsize_bar))
 
-        return step_size, step_size_bar, h_bar
+        return stepsize, stepsize_bar, h_bar
 
-    def sample(self, position0, num_adapt, num_samples, trajectory_length, step_size=None):
+    def sample(self, position0, num_adapt, num_samples, trajectory_length, stepsize=None):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -372,18 +372,18 @@ class HamiltonianMCda(HamiltonianMC):
             state in markov chain.
 
         num_adapt: int
-            The number of interations to run the adaptation of step_size
+            The number of interations to run the adaptation of stepsize
 
         num_samples: int
             Number of samples to be generated
 
         trajectory_length: int or float
-            Target trajectory length, step_size * number of steps(L),
+            Target trajectory length, stepsize * number of steps(L),
             where L is the number of steps taken per HMC iteration,
-            and step_size is step size for splitting time method.
+            and stepsize is step size for splitting time method.
 
-        step_size: float , defaults to None
-            The step size for proposing new values of position and momentum in simulate_dynamics
+        stepsize: float , defaults to None
+            The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
         Returns
@@ -401,7 +401,7 @@ class HamiltonianMCda(HamiltonianMC):
         >>> model = JGD(mean, covariance)
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
         >>> samples = sampler.sample(np.array([[1], [1]]), num_adapt=10000,
-        ...                          num_samples = 10000, trajectory_length=2, step_size=None)
+        ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
         array([[ 0.98432155,  0.66517394],
@@ -415,17 +415,17 @@ class HamiltonianMCda(HamiltonianMC):
         else:
             raise TypeError("position should be a 1d array type object")
 
-        if step_size is None:
-            step_size = self._find_reasonable_step_size(position0)
+        if stepsize is None:
+            stepsize = self._find_reasonable_stepsize(position0)
 
         if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
-            return HamiltonianMC.sample(self, position0, num_samples, step_size)
+            return HamiltonianMC.sample(self, position0, num_samples, stepsize)
 
-        # step_size is epsilon
-        mu = np.log(10.0 * step_size)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
-        # log(10 * step_size) large values to save computation
-        # step_size_bar is epsilon_bar
-        step_size_bar = 1.0
+        # stepsize is epsilon
+        mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
+        # log(10 * stepsize) large values to save computation
+        # stepsize_bar is epsilon_bar
+        stepsize_bar = 1.0
         h_bar = 0.0
         # See equation (6) section 3.2.1 for details
         samples = [position0.copy()]
@@ -437,12 +437,12 @@ class HamiltonianMCda(HamiltonianMC):
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
             # Number of steps L to run discretize time algorithm
-            lsteps = int(max(1, round(trajectory_length / step_size, 0)))
+            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
             for _ in range(lsteps):
                 # Taking L steps in time
                 position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, step_size).get_proposed_values()
+                                                                    momentum_bar, stepsize).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -454,15 +454,15 @@ class HamiltonianMCda(HamiltonianMC):
 
             samples.append(position_m.copy())
 
-            # Adaptation of step_size till num_adapt iterations
+            # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
-                step_size, step_size_bar, h_bar = self._adapt_params(step_size, step_size_bar, h_bar, mu, i, alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha)
             else:
-                step_size = step_size_bar
+                stepsize = stepsize_bar
 
         return samples
 
-    def generate_sample(self, position0, num_adapt, num_samples, trajectory_length, step_size=None):
+    def generate_sample(self, position0, num_adapt, num_samples, trajectory_length, stepsize=None):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
@@ -474,18 +474,18 @@ class HamiltonianMCda(HamiltonianMC):
             state in markov chain.
 
         num_adapt: int
-            The number of interations to run the adaptation of step_size
+            The number of interations to run the adaptation of stepsize
 
         num_samples: int
             Number of samples to be generated
 
         trajectory_length: int or float
-            Target trajectory length, step_size * number of steps(L),
+            Target trajectory length, stepsize * number of steps(L),
             where L is the number of steps taken to propose new values of position and momentum
-            per HMC iteration and step_size is step size.
+            per HMC iteration and stepsize is step size.
 
-        step_size: float , defaults to None
-            The step size for proposing new values of position and momentum in simulate_dynamics
+        stepsize: float , defaults to None
+            The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
         Returns
@@ -503,7 +503,7 @@ class HamiltonianMCda(HamiltonianMC):
         >>> model = JGD(mean, covariance)
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
         >>> gen_samples = sampler.generate_sample(np.array([[1], [1]]), num_adapt=10000,
-        ...                                       num_samples = 10000, trajectory_length=2, step_size=None)
+        ...                                       num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples = [sample for sample in gen_samples]
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
@@ -517,18 +517,18 @@ class HamiltonianMCda(HamiltonianMC):
         else:
             raise TypeError("position should be a 1d array type object")
 
-        if step_size is None:
-            step_size = self._find_reasonable_step_size(position0)
+        if stepsize is None:
+            stepsize = self._find_reasonable_stepsize(position0)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
-            for sample in HamiltonianMC.generate_sample(self, position0, num_samples, step_size, trajectory_length):
+            for sample in HamiltonianMC.generate_sample(self, position0, num_samples, stepsize, trajectory_length):
                 yield sample
             return
-        # step_size is epsilon
-        mu = np.log(10.0 * step_size)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
-        # log(10 * step_size) large values to save computation
-        # step_size_bar is epsilon_bar
-        step_size_bar = 1.0
+        # stepsize is epsilon
+        mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
+        # log(10 * stepsize) large values to save computation
+        # stepsize_bar is epsilon_bar
+        stepsize_bar = 1.0
         h_bar = 0.0
         # See equation (6) section 3.2.1 for details
         position_m = position0.copy()
@@ -541,12 +541,12 @@ class HamiltonianMCda(HamiltonianMC):
             # position_m here will be the previous sampled value of position
             position_bar, momentum_bar = position_m.copy(), momentum0.copy()
             # Number of steps L to run discretize time algorithm
-            lsteps = int(max(1, round(trajectory_length / step_size, 0)))
+            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
             for _ in range(lsteps):
                 # Taking L steps in time
                 position_bar, momentum_bar = self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                                                    momentum_bar, step_size).get_proposed_values()
+                                                                    momentum_bar, stepsize).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
             # Metropolis acceptance probability
@@ -555,10 +555,10 @@ class HamiltonianMCda(HamiltonianMC):
             if np.random.rand() < alpha:
                 position_m = position_bar.copy()
 
-            # Adaptation of step_size till num_adapt iterations
+            # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
-                step_size, step_size_bar, h_bar = self._adapt_params(step_size, step_size_bar, h_bar, mu, i, alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha)
             else:
-                step_size = step_size_bar
+                stepsize = stepsize_bar
 
             yield position_m.copy()

@@ -4,9 +4,7 @@ from .ExactInference import BeliefPropagation
 from .Sampling import BayesianModelSampling, GibbsSampling
 from .dbn_inference import DBNInference
 from .mplp import Mplp
-from .base_continuous import (JointGaussianDistribution, LeapFrog, ModifiedEuler,
-                              BaseSimulateDynamics, BaseGradLogPDF, GradLogPDFGaussian)
-from .continuous_sampling import HamiltonianMCda, HamiltonianMC
+from . import continuous
 
 
 __all__ = ['Inference',
@@ -16,11 +14,4 @@ __all__ = ['Inference',
            'BayesianModelSampling',
            'GibbsSampling',
            'Mplp',
-           'JointGaussianDistribution',
-           'LeapFrog',
-           'ModifiedEuler',
-           'BaseSimulateDynamics',
-           'BaseGradLogPDF',
-           'GradLogPDFGaussian',
-           'HamiltonianMC',
-           'HamiltonianMCda']
+           'continuous']
