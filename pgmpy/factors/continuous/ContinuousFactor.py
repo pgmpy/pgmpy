@@ -6,24 +6,15 @@ class ContinuousFactor(object):
     Base class for factors representing various multivariate
     representations.
     """
-    def __init__(self, variables, pdf, mean=None, covariance=None, lb=None, ub=None):
+    def __init__(self, variables, pdf):
         """
         Parameters
         ----------
         variables: list or array-like
             The variables for wich the distribution is defined.
+
         pdf: function
             The probability density function of the distribution.
-        mean: list or array-like
-            The mean of the distribution.
-        covariance: A 2-D array or matrix
-            The covariance of the distribution.
-        lb: list or tuple of floats or integers
-            Lower bound of the support of the distribution, for each
-            variable.
-        ub: list or tuple of floats or integers
-            Upper bound of the support of the distribution, for each
-            variable.
 
         Examples
         --------
@@ -44,10 +35,6 @@ class ContinuousFactor(object):
 
         self.variables = variables
         self.pdf = pdf
-        self.mean = mean
-        self.covariance = covariance
-        self.lb = lb
-        self.ub = ub
 
     def scope(self):
         """
@@ -87,7 +74,6 @@ class ContinuousFactor(object):
         0.013064233284684921
         """
         return self.pdf(*args)
-
 
     def discretize(self, method, *args, **kwargs):
         """

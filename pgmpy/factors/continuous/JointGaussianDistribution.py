@@ -44,29 +44,24 @@ class JointGaussianDistribution(ContinuousFactor):
         >>> dis.pdf([0,0,0])
         0.0014805631279234139
         """
-        # dimension of the mean vector and covariance matrix
         no_of_var = len(variables)
 
         if len(mean) != no_of_var:
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
-        mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
+        self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
+        normal_pdf = lambda x: multivariate_normal.pdf(x, self.mean.reshape(1, no_of_var)[0], covariance)
+        self.covariance = np.asarray(covariance, dtype=float)
+        self._precision_matrix = None
 
-        covariance = np.asarray(covariance, dtype=float)
-
-        if covariance.shape != (no_of_var, no_of_var):
+        if self.covariance.shape != (no_of_var, no_of_var):
             raise ValueError("The Covariance matrix should be a square matrix with order equal to\
                               the number of variables. Got: {got_shape}, Expected: {exp_shape}"
-                              .format(got_shape=covariance.shape,
+                              .format(got_shape=self.covariance.shape,
                               exp_shape=(no_of_var, no_of_var)))
 
-        normal_pdf = lambda x: multivariate_normal.pdf(x, mean.reshape(1,no_of_var)[0], covariance)
-
-        super(JointGaussianDistribution, self).__init__(variables,
-                                                        normal_pdf, mean, covariance)
-
-        self._precision_matrix = None
+        super(JointGaussianDistribution, self).__init__(variables, normal_pdf)
 
     @property
     def precision_matrix(self):
