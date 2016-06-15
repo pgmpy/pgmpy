@@ -33,7 +33,5 @@ if [[ "$COVERAGE" == "true" ]]; then
 	pip install coverage coveralls
 fi
 
-conda install libgfortran
-
 # Build pgmpy
 python setup.py develop
