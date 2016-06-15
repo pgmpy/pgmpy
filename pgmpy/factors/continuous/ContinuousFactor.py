@@ -100,6 +100,53 @@ class ContinuousFactor(object):
         """
         return ContinuousFactor(self.variables.copy(), self.pdf)
 
+    def reduce(self, values, inplace=True):
+        """
+        Reduces the factor to the context of the given variable values.
+
+        Parameters
+        ----------
+        values: list, array-like
+            A list of tuples of the form (variable_name, variable_value).
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new ContinuosFactor object.
+
+        Returns
+        -------
+        ContinuousFactor or None: if inplace=True (default) returns None
+                                  if inplace=False returns a new `Factor` instance.
+        """
+        if isinstance(values, six.string_types):
+            raise TypeError("values: Expected type list or array-like, got type str")
+
+        phi = self if inplace else self.copy()
+
+        var_to_remove = [var for var,value in values]
+        var_to_keep = [var for var in self.variables if var not in var_to_remove]
+
+        reduced_var_index = [(self.variables.index(var),value) for var,value in values]
+        pdf = self.pdf
+
+        def reduced_pdf(*args, **kwargs):
+            reduced_args = list(args)
+            reduced_kwargs = kwargs
+
+            if reduced_args:
+                for index,value in reduced_var_index:
+                    reduced_args.insert(index, value)
+            if reduced_kwargs:
+                for var,values in values:
+                    reduced_kwargs[var] = values
+
+            return pdf(*reduced_args, **reduced_kwargs)
+
+        phi.variables = var_to_keep
+        phi.pdf = reduced_pdf
+
+        if not inplace:
+            return phi
 
     def discretize(self, method, *args, **kwargs):
         """
