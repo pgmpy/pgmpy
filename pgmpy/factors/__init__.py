@@ -2,6 +2,7 @@ from .Factor import Factor, factor_product, factor_divide, State
 from .FactorSet import FactorSet, factorset_product, factorset_divide
 from .CPD import TabularCPD
 from .JointProbabilityDistribution import JointProbabilityDistribution
+from .continuous.ContinuousNode import ContinuousNode
 
 __all__ = ['Factor',
            'State',
@@ -11,4 +12,6 @@ __all__ = ['Factor',
            'JointProbabilityDistribution',
            'FactorSet',
            'factorset_product',
-           'factorset_divide']
+           'factorset_divide',
+           'ContinuousNode']
+           
