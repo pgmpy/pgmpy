@@ -75,6 +75,32 @@ class ContinuousFactor(object):
         """
         return self.pdf(*args)
 
+    def copy(self):
+        """
+        Return a copy of the distribution.
+
+        Returns
+        -------
+        ContinuousFactor object: copy of the distribution
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from scipy.special import beta
+        # Two variable drichlet ditribution with alpha = (1,2)
+        >>> def drichlet_pdf(x, y):
+        ...     return (np.power(x, 1)*np.power(y, 2))/beta(x, y)
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> drichlet_factor = ContinuousFactor(['x', 'y'], drichlet_pdf)
+        >>> drichlet_factor.variables
+        ['x', 'y']
+        >>> copy_factor = drichlet_factor.copy()
+        copy_factor.variables
+
+        """
+        return ContinuousFactor(self.variables.copy(), self.pdf)
+
+
     def discretize(self, method, *args, **kwargs):
         """
         Discretizes the continuous distribution into discrete
