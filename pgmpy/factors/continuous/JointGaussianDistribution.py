@@ -137,7 +137,8 @@ class JointGaussianDistribution(ContinuousFactor):
         distribution = self if inplace else self.copy()
 
         var_indexes = [distribution.variables.index(var) for var in variables]
-        index_to_keep = sorted(set(range(len(self.variables))) - set(var_indexes))
+        index_to_keep = [self.variables.index(var) for var in self.variables
+                         if var not in variables]
 
         distribution.variables = [distribution.variables[index] for index in index_to_keep]
         distribution.mean = distribution.mean[index_to_keep]
@@ -146,6 +147,93 @@ class JointGaussianDistribution(ContinuousFactor):
 
         if not inplace:
             return distribution
+
+    def reduce(self, values, inplace=True):
+        """
+        Reduces the distribution to the context of the given variable values.
+
+        The formula for the obtained conditional distribution is given by -
+
+        For, N(X_j | X_i = x_i) ~ MN(mu_j.i, sig_j.i)
+
+        where,
+        mu_j.i = mu_j + sig_j_i * (sig_i_i)^(-1) * (x_i - mu_i)
+        sig_j.i = sig_j_j - sig_j_i * (sig_i_i)^(-1) * sig_i_j
+
+        Parameters
+        ----------
+        values: list, array-like
+            A list of tuples of the form (variable_name, variable_value).
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new ContinuosFactor object.
+
+        Returns
+        -------
+        JointGaussianDistribution or None:
+                if inplace=True (default) returns None
+                if inplace=False returns a new JointGaussianDistribution instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis.variables
+        ['x1', 'x2', 'x3']
+        >>> dis.variables
+        ['x1', 'x2', 'x3']
+        >>> dis.mean
+        array([[ 1.],
+               [-3.],
+               [ 4.]])
+        >>> dis.covariance
+        array([[ 4.,  2., -2.],
+               [ 2.,  5., -5.],
+               [-2., -5.,  8.]])
+        
+        >>> dis.reduce([('x1', 7)])
+        >>> dis.variables
+        ['x2', 'x3']
+        >>> dis.mean
+        array([[ 0.],
+               [ 1.]])
+        >>> dis.covariance
+        array([[ 4., -4.],
+               [-4.,  7.]])
+
+        """
+        if isinstance(values, six.string_types):
+            raise TypeError("values: Expected type list or array-like, got type str")
+
+        phi = self if inplace else self.copy()
+
+        var_to_reduce = [var for var,value in values]
+
+        # index_to_keep -> j vector
+        index_to_keep = [self.variables.index(var) for var in self.variables
+                         if var not in var_to_reduce]
+        # index_to_reduce -> i vector
+        index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
+
+
+        mu_j = self.mean[index_to_keep]
+        mu_i = self.mean[index_to_reduce]
+        x_i = [value for index,value in sorted([(self.variables.index(var),value) for var,value in values])]
+        sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
+        sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
+        sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
+        sig_j_j = self.covariance[np.ix_(index_to_keep, index_to_keep)] 
+
+        phi.variables = [self.variables[index] for index in index_to_keep]
+        phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
+        phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
+        phi._precision_matrix = None
+
+        if not inplace:
+            return phi
 
     def copy(self):
         """
