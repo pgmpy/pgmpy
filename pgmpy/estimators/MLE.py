@@ -8,7 +8,7 @@ import pandas as pd
 
 
 class MaximumLikelihoodEstimator(BaseEstimator):
-    def __init__(self, model, data, state_names=None):
+    def __init__(self, model, data, **kwargs):
         """
         Class used to compute parameters for a model using Maximum Likelihood Estimation.
 
@@ -17,12 +17,19 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         model: A pgmpy.models.BayesianModel instance
 
         data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names of the network
+            DataFrame object with column names identical to the variable names of the network.
+            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states
             that the variable can take. If unspecified, the observed values
             in the data set are taken to be the only possible states.
+
+        complete_samples_only: bool (optional, default `True`)
+            Specifies how to deal with missing data, if present. If set to `True` all rows
+            that contain `np.NaN` somewhere are ignored. If `False` then, for each variable,
+            every row where neither the variable nor its parents are `np.NaN` is used.
 
         Examples
         --------
@@ -35,14 +42,15 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> estimator = MaximumLikelihoodEstimator(model, data)
         """
+
         if not isinstance(model, BayesianModel):
             raise NotImplementedError("Maximum Likelihood Estimate is only implemented for BayesianModel")
 
-        super(MaximumLikelihoodEstimator, self).__init__(model, data, state_names)
+        super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(self):
         """
-        Method to estimate the model parameters (CPDs).
+        Method to estimate the model parameters (CPDs) using Maximum Likelihood Estimation.
 
         Returns
         -------
@@ -67,13 +75,13 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         """
         parameters = []
 
-        for node in self.model.nodes():
-            cpd = self._estimate_cpd(node)
+        for node in sorted(self.model.nodes()):
+            cpd = self.estimate_cpd(node)
             parameters.append(cpd)
 
         return parameters
 
-    def _estimate_cpd(self, node):
+    def estimate_cpd(self, node):
         """
         Method to estimate the CPD for a given variable.
 
@@ -93,37 +101,35 @@ class MaximumLikelihoodEstimator(BaseEstimator):
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
-        >>> cpd_A = MaximumLikelihoodEstimator(model, data)._estimate_cpd('A')
+        >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A')
         >>> print(cpd_A)
         ╒══════╤══════════╕
         │ A(0) │ 0.666667 │
         ├──────┼──────────┤
         │ A(1) │ 0.333333 │
         ╘══════╧══════════╛
+        >>> cpd_C = MaximumLikelihoodEstimator(model, data).estimate_cpd('C')
+        >>> print(cpd_C)
+        ╒══════╤══════╤══════╤══════╤══════╕
+        │ A    │ A(0) │ A(0) │ A(1) │ A(1) │
+        ├──────┼──────┼──────┼──────┼──────┤
+        │ B    │ B(0) │ B(1) │ B(0) │ B(1) │
+        ├──────┼──────┼──────┼──────┼──────┤
+        │ C(0) │ 0.0  │ 0.0  │ 1.0  │ 0.5  │
+        ├──────┼──────┼──────┼──────┼──────┤
+        │ C(1) │ 1.0  │ 1.0  │ 0.0  │ 0.5  │
+        ╘══════╧══════╧══════╧══════╧══════╛
         """
 
+        state_counts = self.state_counts(node)
+
+        # if a column contains only `0`s (no states observed for some configuration
+        # of parents' states) fill that column uniformly instead
+        state_counts.ix[:, (state_counts == 0).all()] = 1
+
         parents = sorted(self.model.get_parents(node))
+        parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
         node_cardinality = len(self.state_names[node])
-        parents_cardinalities = np.array([len(self.state_names[parent]) for parent in parents])
-
-        if not parents:
-            state_count_data = self.data.ix[:, node].value_counts()
-            state_counts = state_count_data.reindex(self.state_names[node]).fillna(0).values[:, np.newaxis]
-
-        else:
-            state_count_data = self.data.groupby([node] + parents).size()
-            state_counts = state_count_data.unstack(parents).reindex(self.state_names[node]).fillna(0)
-            if isinstance(state_counts.index, pd.MultiIndex):
-                state_counts = state_counts.sortlevel(axis=1)
-            else:
-                state_counts = state_counts.sort_index(axis=1)
-
-            # some columns might be missing if for some states of the parents no data was observed:
-            if not len(state_counts.columns) == np.prod(parents_cardinalities):
-                possible_parents_states = [self.state_names[parent] for parent in parents]
-                # reindex to add missing columns and fill in uniform (conditional) probabilities:
-                full_index = pd.MultiIndex.from_product(possible_parents_states, names=parents)
-                state_counts = state_counts.reindex(columns=full_index).fillna(1.0 / node_cardinality)
 
         cpd = TabularCPD(node, node_cardinality, np.array(state_counts),
                          evidence=parents,

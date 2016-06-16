@@ -1,6 +1,7 @@
 import unittest
 
 import pandas as pd
+from numpy import NaN
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.factors import TabularCPD
@@ -10,6 +11,7 @@ class TestMLE(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([('A', 'C'), ('B', 'C')])
         self.d1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        self.d2 = pd.DataFrame(data={'A': [0, NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, NaN], 'D': [NaN, 'Y', NaN]})
         self.cpds = [TabularCPD('A', 2, [[2.0/3], [1.0/3]]),
                      TabularCPD('B', 2, [[2.0/3], [1.0/3]]),
                      TabularCPD('C', 2, [[0.0, 0.0, 1.0, 0.5],
@@ -17,13 +19,13 @@ class TestMLE(unittest.TestCase):
                                 evidence=['A', 'B'], evidence_card=[2, 2])]
         self.mle1 = MaximumLikelihoodEstimator(self.m1, self.d1)
 
-    def test_get_parameters_missing_data(self):
+    def test_get_parameters_incomplete_data(self):
         self.assertSetEqual(set(self.mle1.get_parameters()), set(self.cpds))
 
     def test_estimate_cpd(self):
-        self.assertEqual(self.mle1._estimate_cpd('A'), self.cpds[0])
-        self.assertEqual(self.mle1._estimate_cpd('B'), self.cpds[1])
-        self.assertEqual(self.mle1._estimate_cpd('C'), self.cpds[2])
+        self.assertEqual(self.mle1.estimate_cpd('A'), self.cpds[0])
+        self.assertEqual(self.mle1.estimate_cpd('B'), self.cpds[1])
+        self.assertEqual(self.mle1.estimate_cpd('C'), self.cpds[2])
 
     def test_state_names1(self):
         m = BayesianModel([('A', 'B')])
@@ -31,7 +33,7 @@ class TestMLE(unittest.TestCase):
         cpd_b = TabularCPD('B', 2, [[0, 1, 1.0 / 3], [1, 0, 2.0 / 3]],
                            evidence=['A'], evidence_card=[3])
         mle2 = MaximumLikelihoodEstimator(m, d)
-        self.assertEqual(mle2._estimate_cpd('B'), cpd_b)
+        self.assertEqual(mle2.estimate_cpd('B'), cpd_b)
 
     def test_state_names2(self):
         m = BayesianModel([('Light?', 'Color'), ('Fruit', 'Color')])
@@ -42,7 +44,7 @@ class TestMLE(unittest.TestCase):
                                             [0, 0.5, 0, 0], [0, 0, 0, 1]],
                                evidence=['Fruit', 'Light?'], evidence_card=[2, 2])
         mle2 = MaximumLikelihoodEstimator(m, d)
-        self.assertEqual(mle2._estimate_cpd('Color'), color_cpd)
+        self.assertEqual(mle2.estimate_cpd('Color'), color_cpd)
 
     def test_class_init(self):
         mle = MaximumLikelihoodEstimator(self.m1, self.d1,
@@ -60,6 +62,22 @@ class TestMLE(unittest.TestCase):
                            evidence=['A', 'B'], evidence_card=[3, 2])]
         self.assertSetEqual(set(mle.get_parameters()), set(cpds))
 
+    def test_missing_data(self):
+        e1 = MaximumLikelihoodEstimator(self.m1, self.d2, state_names={'C': [0, 1]}, complete_samples_only=False)
+        cpds1 = set([TabularCPD('A', 2, [[0.5], [0.5]]),
+                     TabularCPD('B', 2, [[2./3], [1./3]]),
+                     TabularCPD('C', 2, [[0, 0.5, 0.5, 0.5], [1, 0.5, 0.5, 0.5]],
+                                evidence=['A', 'B'], evidence_card=[2, 2])])
+        self.assertSetEqual(cpds1, set(e1.get_parameters()))
+
+        e2 = MaximumLikelihoodEstimator(self.m1, self.d2, state_names={'C': [0, 1]}, complete_samples_only=True)
+        cpds2 = set([TabularCPD('A', 2, [[0.5], [0.5]]),
+                     TabularCPD('B', 2, [[0.5], [0.5]]),
+                     TabularCPD('C', 2, [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]],
+                                evidence=['A', 'B'], evidence_card=[2, 2])])
+        self.assertSetEqual(cpds2, set(e2.get_parameters()))
+
     def tearDown(self):
         del self.m1
         del self.d1
+        del self.d2
