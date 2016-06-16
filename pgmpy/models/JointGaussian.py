@@ -1,5 +1,6 @@
 import numpy as np
 
+from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 class JointGaussianDistribution(object):
     """
@@ -8,6 +9,9 @@ class JointGaussianDistribution(object):
 
     Paramters
     ---------
+    variables: iterable of any hashable python object
+        The variables for which the distribution is defined.
+
     mean: 1d array type of structure
         Represents the mean of the distribution
 
@@ -16,13 +20,10 @@ class JointGaussianDistribution(object):
 
     """
 
-    def __init__(self, mean, covariance):
-
-        if isinstance(mean, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            mean = np.array(mean).flatten()
-        else:
-            raise TypeError("mean should be a 1d array type object")
-        mean = np.reshape(mean, (len(mean), 1))
+    def __init__(self, variables, mean, covariance):
+        
+        mean = _check_1d_array_object(mean, 'mean')
+        _check_length_equal(mean, variables, 'mean', 'variables')
 
         if not isinstance(covariance, (np.matrix, np.ndarray, list)):
             raise TypeError(
@@ -35,7 +36,7 @@ class JointGaussianDistribution(object):
         if mean.shape[0] != covariance.shape[0]:
             raise ValueError("shape of mean vector should be d X 1 and" +
                              " shape of covariance matrix should be d X d")
-
+        self.variables = variables
         self.mean = mean
         self.covariance = covariance
         self.precision_matrix = np.linalg.inv(covariance)
