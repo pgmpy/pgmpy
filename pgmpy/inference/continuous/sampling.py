@@ -4,8 +4,10 @@
 from math import sqrt
 
 import numpy as np
+import pandas as pd
 
-from pgmpy.inference.continuous import (LeapFrog, BaseGradLogPDF, BaseSimulateHamiltonianDynamics)
+from pgmpy.inference.continuous import (LeapFrog, BaseGradLogPDF, BaseSimulateHamiltonianDynamics,
+                                        check_1d_array_object)
 
 
 class HamiltonianMC(object):
@@ -37,13 +39,14 @@ class HamiltonianMC(object):
     >>> import numpy as np
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.7], [0.7, 1]])
-    >>> model = JGD(mean, covariance)
+    >>> model = JGD(['x', 'y'], mean, covariance)
     >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-    >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, stepsize=None)
+    >>> samples = sampler.sample(initial_pos=np.array([1, 1]), num_samples = 10000,
+    ...                          trajectory_length=2, stepsize=None)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
-    array([[ 0.64321553,  0.63513749],
-           [ 0.63513749,  0.98544953]])
+    array([[ 1.00028107,  0.64565895],
+           [ 0.64565895,  0.84694746]])
 
     References
     ----------
@@ -65,6 +68,7 @@ class HamiltonianMC(object):
         self.model = model
         self.grad_log_pdf = grad_log_pdf
         self.simulate_dynamics = simulate_dynamics
+        self.acceptance_rate = 0.0
 
     def _acceptance_prob(self, position, position_bar, momentum, momentum_bar):
         """
@@ -120,13 +124,46 @@ class HamiltonianMC(object):
 
         return stepsize_app
 
-    def sample(self, position0, num_samples, trajectory_length, stepsize=None):
+    def _sample(self, position, trajectory_length, stepsize, lsteps=None):
+        """
+        Runs a single sampling iteration to return a sample
+        """
+        # Resampling momentum
+        momentum = np.reshape(np.random.normal(0, 1, len(position)), position.shape)
+
+        # position_m here will be the previous sampled value of position
+        position_bar, momentum_bar = position.copy(), momentum
+
+        # Number of steps L to simulate dynamics
+        if lsteps is None:
+            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+
+        grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
+
+        for _ in range(lsteps):
+            position_bar, momentum_bar, grad_bar =\
+                self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
+                                       momentum_bar, stepsize, grad_bar).get_proposed_values()
+
+        acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
+
+        # Metropolis acceptance probability
+        alpha = min(1, acceptance_prob)
+
+        # Accept or reject the new proposed value of position, i.e position_bar
+        if np.random.rand() < alpha:
+            position = position_bar.copy()
+            self.acceptance_rate += 1.0
+
+        return position, alpha
+
+    def sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
         Parameters
         ----------
-        position0: A 1d array like object
+        initial_pos: A 1d array like object
             Vector representing values of parameter position, the starting
             state in markov chain.
 
@@ -154,61 +191,43 @@ class HamiltonianMC(object):
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 1]])
-        >>> model = JGD(mean, covariance)
+        >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(np.array([[1], [1]]), num_samples = 10000, trajectory_length=2, stepsize=None)
+        >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
         array([[ 0.64321553,  0.63513749],
                [ 0.63513749,  0.98544953]])
         """
 
-        if isinstance(position0, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            position0 = np.array(position0).flatten()
-            position0 = np.matrix(np.reshape(position0, (len(position0), 1)))
-        else:
-            raise TypeError("position should be a 1d array type object")
+        initial_pos = check_1d_array_object(initial_pos, 'initial_pos')
 
         if stepsize is None:
-            stepsize = self._find_reasonable_stepsize(position0)
+            stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        samples = [position0.copy()]
-        position_m = position0.copy()
+        shape = (len(initial_pos), 1)
+        samples = [np.reshape(initial_pos, shape)]
+        position_m = initial_pos.copy()
 
+        lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
         for i in range(1, num_samples):
+
             # Genrating sample
-            # Resampling momentum
-            momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
-            # position_m here will be the previous sampled value of position
-            position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to simulate dynamics
-            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
-            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
+            position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
+            samples.append(np.reshape(position_m, shape))
 
-            for _ in range(lsteps):
-                position_bar, momentum_bar, grad_bar =\
-                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
-
-            acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
-            # Metropolis acceptance probability
-            alpha = min(1, acceptance_prob)
-            # Accept or reject the new proposed value of position, i.e position_bar
-            if np.random.rand() < alpha:
-                position_m = position_bar.copy()
-
-            samples.append(position_m.copy())
+        self.acceptance_rate /= num_samples
 
         return samples
 
-    def generate_sample(self, position0, num_samples, trajectory_length, stepsize=None):
+    def generate_sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
 
         Parameters
         ----------
-        position0: A 1d array like object
+        initial_pos: A 1d array like object
             Vector representing values of parameter position, the starting
             state in markov chain.
 
@@ -235,9 +254,9 @@ class HamiltonianMC(object):
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 1]])
-        >>> model = JGD(mean, covariance)
+        >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=ModifiedEuler)
-        >>> gen_samples = sampler.generate_sample(np.array([[1], [1]]), num_samples = 10000,
+        >>> gen_samples = sampler.generate_sample(np.array([1, 1]), num_samples = 10000,
                                                   trajectory_length=2, stepsize=None)
         >>> samples = [sample for sample in gen_samples]
         >>> samples_array = np.concatenate(samples, axis=1)
@@ -246,40 +265,22 @@ class HamiltonianMC(object):
                [ 0.33513749,  1.98544953]])
         >>> # LeapFrog performs best with HMC algorithm
         """
-
-        if isinstance(position0, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            position0 = np.array(position0).flatten()
-            position0 = np.reshape(position0, (len(position0), 1))
-        else:
-            raise TypeError("position should be a 1d array type object")
+        initial_pos = check_1d_array_object(initial_pos, 'initial_pos')
 
         if stepsize is None:
-            stepsize = self._find_reasonable_stepsize(position0)
+            stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        position_m = position0.copy()
+        shape = (len(initial_pos), 1)
+        lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
+        position_m = initial_pos.copy()
+
         for i in range(0, num_samples):
-            # Genrating sample
-            # Resampling momentum
-            momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
-            # position_m here will be the previous sampled value of position
-            position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to simulate dynamics
-            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
-            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
-            for _ in range(lsteps):
-                position_bar, momentum_bar, grad_bar =\
-                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
+            position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
 
-            acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
-            # Metropolis acceptance probability
-            alpha = min(1, acceptance_prob)
-            # Accept or reject the new proposed value of position, i.e position_bar
-            if np.random.rand() < alpha:
-                position_m = position_bar.copy()
+            yield np.reshape(position_m, shape)
 
-            yield position_m.copy()
+        self.acceptance_rate /= num_samples
 
 
 class HamiltonianMCda(HamiltonianMC):
@@ -315,9 +316,9 @@ class HamiltonianMCda(HamiltonianMC):
     >>> import numpy as np
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.7], [0.7, 3]])
-    >>> model = JGD(mean, covariance)
+    >>> model = JGD(['x', 'y'], mean, covariance)
     >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-    >>> samples = sampler.sample(np.array([[1], [1]]), num_adapt=10000,
+    >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000,
     ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
@@ -361,13 +362,13 @@ class HamiltonianMCda(HamiltonianMC):
 
         return stepsize, stepsize_bar, h_bar
 
-    def sample(self, position0, num_adapt, num_samples, trajectory_length, stepsize=None):
+    def sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
         Parameters
         ----------
-        position0: A 1d array like object
+        initial_pos: A 1d array like object
             Vector representing values of parameter position, the starting
             state in markov chain.
 
@@ -397,9 +398,9 @@ class HamiltonianMCda(HamiltonianMC):
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
-        >>> model = JGD(mean, covariance)
+        >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(np.array([[1], [1]]), num_adapt=10000,
+        >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000,
         ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
@@ -408,17 +409,13 @@ class HamiltonianMCda(HamiltonianMC):
 
         """
 
-        if isinstance(position0, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            position0 = np.array(position0).flatten()
-            position0 = np.reshape(position0, (len(position0), 1))
-        else:
-            raise TypeError("position should be a 1d array type object")
+        initial_pos = check_1d_array_object(initial_pos, 'initial_pos')
 
         if stepsize is None:
-            stepsize = self._find_reasonable_stepsize(position0)
+            stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
-            return HamiltonianMC.sample(self, position0, num_samples, stepsize)
+            return HamiltonianMC.sample(self, initial_pos, num_samples, stepsize)
 
         # stepsize is epsilon
         mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
@@ -427,32 +424,14 @@ class HamiltonianMCda(HamiltonianMC):
         stepsize_bar = 1.0
         h_bar = 0.0
         # See equation (6) section 3.2.1 for details
-        samples = [position0.copy()]
-        position_m = position0.copy()
+        shape = (len(initial_pos), 1)
+        samples = [np.reshape(initial_pos, shape)]
+        position_m = initial_pos.copy()
         for i in range(1, num_samples):
+
             # Genrating sample
-            # Resampling momentum
-            momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
-            # position_m here will be the previous sampled value of position
-            position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to simulate dynamics
-            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
-            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
-
-            for _ in range(lsteps):
-                position_bar, momentum_bar, grad_bar =\
-                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
-
-            acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
-            # Metropolis acceptance probability
-            alpha = min(1, acceptance_prob)
-
-            # Accept or reject the new proposed value of position, i.e position_bar
-            if np.random.rand() < alpha:
-                position_m = position_bar.copy()
-
-            samples.append(position_m.copy())
+            position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
+            samples.append(np.reshape(position_m, shape))
 
             # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
@@ -460,16 +439,17 @@ class HamiltonianMCda(HamiltonianMC):
             else:
                 stepsize = stepsize_bar
 
+        self.acceptance_rate /= num_samples
         return samples
 
-    def generate_sample(self, position0, num_adapt, num_samples, trajectory_length, stepsize=None):
+    def generate_sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
 
         Parameters
         ----------
-        position0: A 1d array like object
+        initial_pos: A 1d array like object
             Vector representing values of parameter position, the starting
             state in markov chain.
 
@@ -499,9 +479,9 @@ class HamiltonianMCda(HamiltonianMC):
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
-        >>> model = JGD(mean, covariance)
+        >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> gen_samples = sampler.generate_sample(np.array([[1], [1]]), num_adapt=10000,
+        >>> gen_samples = sampler.generate_sample(np.array([1, 1]), num_adapt=10000,
         ...                                       num_samples = 10000, trajectory_length=2, stepsize=None)
         >>> samples = [sample for sample in gen_samples]
         >>> samples_array = np.concatenate(samples, axis=1)
@@ -510,55 +490,32 @@ class HamiltonianMCda(HamiltonianMC):
                [ 0.69517394,  2.95449533]])
         """
 
-        if isinstance(position0, (np.matrix, np.ndarray, list, tuple, set, frozenset)):
-            position0 = np.array(position0).flatten()
-            position0 = np.reshape(position0, (len(position0), 1))
-        else:
-            raise TypeError("position should be a 1d array type object")
+        initial_pos = check_1d_array_object(initial_pos, 'initial_pos')
 
         if stepsize is None:
-            stepsize = self._find_reasonable_stepsize(position0)
+            stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
-            for sample in HamiltonianMC.generate_sample(self, position0, num_samples, stepsize, trajectory_length):
+            for sample in HamiltonianMC.generate_sample(self, initial_pos, num_samples, stepsize, trajectory_length):
                 yield sample
             return
-        # stepsize is epsilon
-        mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
-        # log(10 * stepsize) large values to save computation
-        # stepsize_bar is epsilon_bar
+        mu = np.log(10.0 * stepsize)
+
         stepsize_bar = 1.0
         h_bar = 0.0
-        # See equation (6) section 3.2.1 for details
-        position_m = position0.copy()
+
+        position_m = initial_pos.copy()
         num_adapt += 1
-
+        shape = (len(initial_pos), 1)
         for i in range(1, num_samples + 1):
-            # Genrating sample
-            # Resampling momentum
-            momentum0 = np.reshape(np.random.normal(0, 1, len(position0)), position0.shape)
-            # position_m here will be the previous sampled value of position
-            position_bar, momentum_bar = position_m.copy(), momentum0.copy()
-            # Number of steps L to simulate dynamics
-            lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
-            grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
-            for _ in range(lsteps):
-                position_bar, momentum_bar, grad_bar =\
-                    self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                           momentum_bar, stepsize, grad_bar).get_proposed_values()
+            position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
 
-            acceptance_prob = self._acceptance_prob(position_m.copy(), position_bar.copy(), momentum0, momentum_bar)
-            # Metropolis acceptance probability
-            alpha = min(1, acceptance_prob)
-            # Accept or reject the new proposed value of position, i.e position_bar
-            if np.random.rand() < alpha:
-                position_m = position_bar.copy()
-
-            # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
                 stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha)
             else:
                 stepsize = stepsize_bar
 
-            yield position_m.copy()
+            yield np.reshape(position_m, shape)
+
+        self.acceptance_rate /= num_samples
