@@ -17,8 +17,8 @@ class TestHMCInference(unittest.TestCase):
         self.sampler_euler = HMCda(model=self.test_model, grad_log_pdf=GradGaussian,
                                    simulate_dynamics=Euler)
         self.sampler_hmc = HMCda(model=self.test_model, grad_log_pdf=GradGaussian)
-        self.sampler_hmc2 = HMCda(model=self.test_model, grad_log_pdf=GradGaussian)
-        self.sampler_hmc3 = HMCda(model=self.test_model, grad_log_pdf=GradGaussian)
+        self.sampler_hmc2 = HMCda(model=self.test_model)
+        self.sampler_hmc3 = HMCda(model=self.test_model)
 
     def test_errors(self):
         with self.assertRaises(TypeError):

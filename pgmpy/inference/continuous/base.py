@@ -140,8 +140,6 @@ class BaseSimulateHamiltonianDynamics(object):
 
     Parameters
     ----------
-    grad_log_pdf : A subclass of pgmpy.inference.continuous.BaseGradLogPDF
-
     model : An instance of pgmpy.models
         Model for which DiscretizeTime object is initialized
 
@@ -153,6 +151,10 @@ class BaseSimulateHamiltonianDynamics(object):
 
     stepsize: Float
         stepsize for the simulating dynamics
+
+    grad_log_pdf : A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
+        A class for finding gradient log and log of distribution
+        If none, then model.get_gradient_log_pdf will be used
 
     grad_log_position: A 1d array like object, defaults to None
         Vector representing gradient log at given position
@@ -166,13 +168,14 @@ class BaseSimulateHamiltonianDynamics(object):
     >>> # Class should initalize self.new_position, self.new_momentum and self.new_grad_logp
     >>> # self.new_grad_logp represents gradient log at new proposed value of position
     >>> class ModifiedEuler(BaseSimulateHamiltonianDynamics):
-    ...     def __init__(self, grad_log_pdf, model, position, momentum, stepsize, grad_log_position=None):
-    ...         BaseSimulateHamiltonianDynamics.__init__(self, grad_log_pdf, model, position,
-    ...                                                  momentum, stepsize, grad_log_position)
+    ...     def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
+    ...         BaseSimulateHamiltonianDynamics.__init__(self, model, position, momentum,
+    ...                                                  stepsize, grad_log_pdf, grad_log_position)
     ...         self.new_position, self.new_momentum, self.new_grad_logp = self._get_proposed_values()
     ...     def _get_proposed_values(self):
     ...         momentum_bar = self.momentum + self.stepsize * self.grad_log_position
     ...         position_bar = self.position + self.stepsize * momentum_bar
+    ...         grad_log_position, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
     ...         return position_bar, momentum_bar, grad_log_position
     >>> import numpy as np
     >>> pos = np.array([1, 2])
@@ -180,8 +183,8 @@ class BaseSimulateHamiltonianDynamics(object):
     >>> mean = np.array([0, 0])
     >>> covariance = np.eye(2)
     >>> model = JointGaussianDistribution(['x', 'y'], mean, covariance)
-    >>> new_pos, new_momentum, new_grad = ModifiedEuler(GradLogPDFGaussian, model,
-    ...                                                 pos, momentum, 0.25).get_proposed_values()
+    >>> new_pos, new_momentum, new_grad = ModifiedEuler(model, pos, momentum,
+    ...                                                 0.25, GradLogPDFGaussian).get_proposed_values()
     >>> new_pos
     array([0.9375, 1.875])
     >>> new_momentum
@@ -190,13 +193,13 @@ class BaseSimulateHamiltonianDynamics(object):
     array([-0.9375, -1.875])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, stepsize, grad_log_position=None):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf=None, grad_log_position=None):
 
         position = _check_1d_array_object(position, 'position')
 
         momentum = _check_1d_array_object(momentum, 'momentum')
 
-        if not issubclass(grad_log_pdf, BaseGradLogPDF):
+        if grad_log_pdf is not None and not issubclass(grad_log_pdf, BaseGradLogPDF):
             raise TypeError("grad_log_pdf must be an instance" +
                             " of pgmpy.inference.continuous.base.BaseGradLogPDF")
 
@@ -204,7 +207,7 @@ class BaseSimulateHamiltonianDynamics(object):
         _check_length_equal(position, model.variables, 'position', 'model.variables')
 
         if grad_log_position is None:
-            grad_log_position, _ = grad_log_pdf(position, model).get_gradient_log_pdf()
+            grad_log_position, _ = model.get_gradient_log_pdf(position, grad_log_pdf)
 
         self.position = position
         self.momentum = momentum
@@ -223,28 +226,26 @@ class BaseSimulateHamiltonianDynamics(object):
 
         Returns
         -------
-        Returns a tuple of following type
+        Returns a tuple of following type (in order)
 
-        numpy.array: New proposed value of position
+        numpy.array: A 1d numpy.array representing new proposed value of position
 
-        numpy.array: New proposed value of momentum
+        numpy.array: A 1d numpy.array representing new proposed value of momentum
 
-        numpy.array: Gradient of log distribution at new proposed value of position
+        numpy.array: A 1d numpy.array representing gradient of log distribution at new proposed value of position
 
         Example
         -------
         >>> # Using implementation of ModifiedEuler
         >>> from pgmpy.inference.continuous import ModifiedEuler
         >>> from pgmpy.models import JointGaussianDistribution
-        >>> from pgmpy.inference.continuous import GradLogPDFGaussian
         >>> import numpy as np
         >>> pos = np.array([3, 4])
         >>> momentum = np.array([1, 1])
         >>> mean = np.array([-1, 1])
         >>> covariance = 3*np.eye(2)
         >>> model = JointGaussianDistribution(['x', 'y'], mean, covariance)
-        >>> new_pos, new_momentum, new_grad = ModifiedEuler(GradLogPDFGaussian, model, pos,
-        ...                                                 momentum, 0.70).get_proposed_values()
+        >>> new_pos, new_momentum, new_grad = ModifiedEuler(model, pos, momentum, 0.70).get_proposed_values()
         >>> new_pos
         array([ 3.04666667,  4.21      ])
         >>> new_momentum
@@ -262,8 +263,6 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
 
     Parameters
     ----------
-    grad_log_pdf : A subclass of pgmpy.inference.continuous.BaseGradLogPDF
-
     model : An instance of pgmpy.models
         Model for which DiscretizeTime object is initialized
 
@@ -276,6 +275,10 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     stepsize: Float
         stepsize for the simulating dynamics
 
+    grad_log_pdf : A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
+        A class for evaluating gradient log and log of distribution for a given assignment of variables
+        If None, then model.get_gradient_log_pdf will be used
+
     grad_log_position: A 1d array like object, defaults to None
         Vector representing gradient log at given position
         If None, then will be calculated
@@ -283,15 +286,14 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     Example
     --------
     >>> from pgmpy.models import JointGaussianDistribution
-    >>> from pgmpy.inference.continuous import GradLogPDFGaussian, LeapFrog
+    >>> from pgmpy.inference.continuous import LeapFrog
     >>> import numpy as np
     >>> pos = np.array([2, 1])
     >>> momentum = np.array([7, 7])
     >>> mean = np.array([-5, 5])
     >>> covariance = np.array([[1, 2], [2, 1]])
     >>> model = JointGaussianDistribution(['x', 'y'], mean, covariance)
-    >>> new_pos, new_momentum, new_grad = LeapFrog(GradLogPDFGaussian, model, pos,
-    ...                                            momentum, 4.0).get_proposed_values()
+    >>> new_pos, new_momentum, new_grad = LeapFrog(model, pos, momentum, 4.0).get_proposed_values()
     >>> new_pos
     array([ 70., -19.])
     >>> new_momentum
@@ -300,10 +302,10 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     array([ 41., -58.])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, stepsize, grad_log_position=None):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf=None, grad_log_position=None):
 
-        BaseSimulateHamiltonianDynamics.__init__(self, grad_log_pdf, model, position,
-                                                 momentum, stepsize, grad_log_position)
+        BaseSimulateHamiltonianDynamics.__init__(self, model, position, momentum,
+                                                 stepsize, grad_log_pdf, grad_log_position)
 
         self.new_position, self.new_momentum, self.new_grad_logp = self._get_proposed_values()
 
@@ -317,8 +319,7 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
         # Take full step in time for updating position position
         position_bar = self.position + self.stepsize * momentum_bar
 
-        grad_log, _ = self.grad_log_pdf(position_bar,
-                                        self.model).get_gradient_log_pdf()
+        grad_log, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
 
         # Take remaining half step in time for updating momentum
         momentum_bar = momentum_bar + 0.5 * self.stepsize * grad_log
@@ -333,12 +334,10 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
 
     Parameters
     ----------
-    grad_log_pdf : A subclass of pgmpy.inference.continuous.BaseGradLogPDF
-
-    model : An instance of pgmpy.models
+    model: An instance of pgmpy.models
         Model for which DiscretizeTime object is initialized
 
-    position : A 1d array like object (numpy.ndarray or list)
+    position: A 1d array like object (numpy.ndarray or list)
         Vector representing values of parameter position( or X)
 
     momentum: A 1d array like object (numpy.ndarray or list)
@@ -346,6 +345,10 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
 
     stepsize: Float
         stepsize for the simulating dynamics
+
+    grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
+        A class for finding gradient log and log of distribution
+        If None, then will use model.get_gradient_log_pdf
 
     grad_log_position: A 1d array like object, defaults to None
         Vector representing gradient log at given position
@@ -361,8 +364,8 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     >>> mean = np.array([0, 0])
     >>> covariance = np.eye(2)
     >>> model = JointGaussianDistribution(['x', 'y'], mean, covariance)
-    >>> new_pos, new_momentum, new_grad = ModifiedEuler(GradLogPDFGaussian, model, pos,
-    ...                                                 momentum, 0.25).get_proposed_values()
+    >>> new_pos, new_momentum, new_grad = ModifiedEuler(model, pos, momentum,
+    ...                                                 0.25, GradLogPDFGaussian).get_proposed_values()
     >>> new_pos
     array([2.125, 1.1875])
     >>> new_momentum
@@ -371,10 +374,10 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     array([-2.125, -1.1875])
     """
 
-    def __init__(self, grad_log_pdf, model, position, momentum, stepsize, grad_log_position=None):
+    def __init__(self, model, position, momentum, stepsize, grad_log_pdf=None, grad_log_position=None):
 
-        BaseSimulateHamiltonianDynamics.__init__(self, grad_log_pdf, model, position,
-                                                 momentum, stepsize, grad_log_position)
+        BaseSimulateHamiltonianDynamics.__init__(self, model, position, momentum,
+                                                 stepsize, grad_log_pdf, grad_log_position)
 
         self.new_position, self.new_momentum, self.new_grad_logp = self._get_proposed_values()
 
@@ -388,6 +391,6 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
         # Take full step in time and update position
         position_bar = self.position + self.stepsize * momentum_bar
 
-        grad_log, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
+        grad_log, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
 
         return position_bar, momentum_bar, grad_log

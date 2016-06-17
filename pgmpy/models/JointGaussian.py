@@ -1,6 +1,8 @@
 import numpy as np
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
+from pgmpy.inference.continuous import BaseGradLogPDF
+
 
 class JointGaussianDistribution(object):
     """
@@ -21,7 +23,7 @@ class JointGaussianDistribution(object):
     """
 
     def __init__(self, variables, mean, covariance):
-        
+
         mean = _check_1d_array_object(mean, 'mean')
         _check_length_equal(mean, variables, 'mean', 'variables')
 
@@ -40,3 +42,39 @@ class JointGaussianDistribution(object):
         self.mean = mean
         self.covariance = covariance
         self.precision_matrix = np.linalg.inv(covariance)
+
+    def get_gradient_log_pdf(self, distribution_param, grad_log_pdf=None):
+        """
+        A method for finding gradient log and log of distribution for given assignment
+
+        Parameters
+        ----------
+        distribution_param: A 1d array like object
+            Assignment of variables at which gradient is to be computed
+
+        grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
+            A coustom class for finding gradient log and log for given assignment
+            If None, the will be computed
+
+        Example
+        ---------
+
+        Returns
+        --------
+        A tuple of following types (in order)
+
+        numpy.array: A 1d numpy.array representing value of gradient log of JointGaussianDistribution
+
+        float: A floating value representin log of JointGaussianDistribution
+        """
+        if grad_log_pdf is not None:
+            if not issubclass(grad_log_pdf, BaseGradLogPDF):
+                raise TypeError("grad_log_pdf must be an instance" +
+                                " of pgmpy.inference.continuous.base.BaseGradLogPDF")
+            return grad_log_pdf(distribution_param, self).get_gradient_log_pdf()
+
+        sub_vec = distribution_param - self.mean
+        grad = - np.dot(self.precision_matrix, sub_vec)
+        log_pdf = 0.5 * np.dot(sub_vec, grad)
+
+        return grad, log_pdf

@@ -20,8 +20,9 @@ class HamiltonianMC(object):
     model: An instance pgmpy.models
         Model from which sampling has to be done
 
-    grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF
-        A class to find log and gradient of log distribution
+    grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
+        A class to find log and gradient of log distribution for a given assignment
+        If None, then will use model.get_gradient_log_pdf
 
     simulate_dynamics: A subclass of pgmpy.inference.continuous.BaseSimulateHamiltonianDynamics
         A class to propose future values of momentum and position in time by simulating
@@ -34,20 +35,23 @@ class HamiltonianMC(object):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, LeapFrog
+    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, LeapFrog
     >>> from pgmpy.models import JointGaussianDistribution as JGD
     >>> import numpy as np
-    >>> mean = np.array([1, 1])
-    >>> covariance = np.array([[1, 0.7], [0.7, 1]])
+    >>> mean = np.array([-3, 4])
+    >>> covariance = np.array([[3, 0.7], [0.7, 5]])
     >>> model = JGD(['x', 'y'], mean, covariance)
-    >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
+    >>> sampler = HMC(model=model, grad_log_pdf=None, simulate_dynamics=LeapFrog)
     >>> samples = sampler.sample(initial_pos=np.array([1, 1]), num_samples = 10000,
-    ...                          trajectory_length=2, stepsize=None)
+    ...                          trajectory_length=2, stepsize=0.4)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
-    array([[ 1.00028107,  0.64565895],
-           [ 0.64565895,  0.84694746]])
-
+    array([[ 3.0352818 ,  0.71379304],
+           [ 0.71379304,  4.91776713]])
+    >>> sampler.accepted_proposals
+    9932.0
+    >>> sampler.acceptance_rate
+    0.9932
     References
     ----------
     R.Neal. Handbook of Markov Chain Monte Carlo,
@@ -55,20 +59,21 @@ class HamiltonianMC(object):
     CRC Press, 2011.
     """
 
-    def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
+    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog):
 
-        if not issubclass(grad_log_pdf, BaseGradLogPDF):
-            raise TypeError("grad_log_pdf must be an instance of" +
+        if grad_log_pdf is not None and not issubclass(grad_log_pdf, BaseGradLogPDF):
+            raise TypeError("grad_log_pdf must be an instance of " +
                             "pgmpy.inference.base_continuous.BaseGradLogPDF")
 
         if not issubclass(simulate_dynamics, BaseSimulateHamiltonianDynamics):
-            raise TypeError("split_time must be an instance of" +
+            raise TypeError("split_time must be an instance of " +
                             "pgmpy.inference.base_continuous.BaseSimulateHamiltonianDynamics")
 
         self.model = model
         self.grad_log_pdf = grad_log_pdf
         self.simulate_dynamics = simulate_dynamics
-        self.acceptance_rate = 0.0
+        self.accepted_proposals = 0.0
+        self.acceptance_rate = 0
 
     def _acceptance_prob(self, position, position_bar, momentum, momentum_bar):
         """
@@ -76,8 +81,8 @@ class HamiltonianMC(object):
         """
 
         # Parameters to help in evaluating Joint distribution P(position, momentum)
-        _, logp = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
-        _, logp_bar = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
+        _, logp = self.model.get_gradient_log_pdf(position, self.grad_log_pdf)
+        _, logp_bar = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
 
         # acceptance_prob = P(position_bar, momentum_bar)/ P(position, momentum)
         potential_change = logp_bar - logp  # Negative change
@@ -101,8 +106,8 @@ class HamiltonianMC(object):
 
         # Take a single step in time
         position_bar, momentum_bar, grad_bar =\
-            self.simulate_dynamics(self.grad_log_pdf, self.model, position,
-                                   momentum, stepsize_app).get_proposed_values()
+            self.simulate_dynamics(self.model, position, momentum,
+                                   stepsize_app, self.grad_log_pdf).get_proposed_values()
 
         acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -115,8 +120,8 @@ class HamiltonianMC(object):
             stepsize_app = (2 ** a) * stepsize_app
 
             position_bar, momentum_bar, grad_bar =\
-                self.simulate_dynamics(self.grad_log_pdf, self.model, position,
-                                       momentum, stepsize_app, grad_bar).get_proposed_values()
+                self.simulate_dynamics(self.model, position, momentum,
+                                       stepsize_app, self.grad_log_pdf, grad_bar).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -138,12 +143,12 @@ class HamiltonianMC(object):
         if lsteps is None:
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
-        grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
+        grad_bar, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
 
         for _ in range(lsteps):
             position_bar, momentum_bar, grad_bar =\
-                self.simulate_dynamics(self.grad_log_pdf, self.model, position_bar,
-                                       momentum_bar, stepsize, grad_bar).get_proposed_values()
+                self.simulate_dynamics(self.model, position_bar, momentum_bar,
+                                       stepsize, self.grad_log_pdf, grad_bar).get_proposed_values()
 
         acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -153,7 +158,7 @@ class HamiltonianMC(object):
         # Accept or reject the new proposed value of position, i.e position_bar
         if np.random.rand() < alpha:
             position = position_bar.copy()
-            self.acceptance_rate += 1.0
+            self.accepted_proposals += 1.0
 
         return position, alpha
 
@@ -186,20 +191,31 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
         >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
-        >>> mean = np.array([1, 1])
-        >>> covariance = np.array([[1, 0.7], [0.7, 1]])
+        >>> mean = np.array([1, -1])
+        >>> covariance = np.array([[1, 0.2], [0.2, 1]])
         >>> model = JGD(['x', 'y'], mean, covariance)
-        >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000, trajectory_length=2, stepsize=None)
+        >>> sampler = HMC(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=ModifiedEuler)
+        >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000, trajectory_length=6, stepsize=0.25)
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
-        array([[ 0.64321553,  0.63513749],
-               [ 0.63513749,  0.98544953]])
+        array([[ 0.99028889,  0.481084  ],
+               [ 0.481084  ,  0.97855066]])
+        >>> sampler.acceptance_rate
+        0.9147
+        >>> sampler = HMC(model=model, grad_log_pdf=GradLogPDFGaussian)
+        >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000, trajectory_length=6, stepsize=0.25)
+        >>> samples_array = np.concatenate(samples, axis=1)
+        >>> np.cov(samples_array)
+        array([[ 1.05361987,  0.17751792],
+               [ 0.17751792,  1.00778626]])
+        >>> sampler.acceptance_rate
+        0.9959
         """
 
+        self.accepted_proposals = 0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
         _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
 
@@ -217,7 +233,7 @@ class HamiltonianMC(object):
             position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
             samples.append(np.reshape(position_m, shape))
 
-        self.acceptance_rate /= num_samples
+        self.acceptance_rate = self.accepted_proposals / num_samples
 
         return samples
 
@@ -250,22 +266,26 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG, ModifiedEuler
+        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG
         >>> from pgmpy.models import JointGaussianDistribution as JGD
         >>> import numpy as np
-        >>> mean = np.array([1, 1])
-        >>> covariance = np.array([[1, 0.7], [0.7, 1]])
-        >>> model = JGD(['x', 'y'], mean, covariance)
-        >>> sampler = HMC(model=model, grad_log_pdf=GLPG, simulate_dynamics=ModifiedEuler)
-        >>> gen_samples = sampler.generate_sample(np.array([1, 1]), num_samples = 10000,
-                                                  trajectory_length=2, stepsize=None)
+        >>> mean = np.array([4, 1, -1])
+        >>> covariance = np.array([[1, 0.7 , 0.8], [0.7, 1, 0.2], [0.8, 0.2, 1]])
+        >>> model = JGD(['x', 'y', 'z'], mean, covariance)
+        >>> sampler = HMC(model=model, grad_log_pdf=GLPG)
+        >>> gen_samples = sampler.generate_sample(np.array([1, 1, 1]), num_samples = 10000,
+        ...                                       trajectory_length=2, stepsize=None)
         >>> samples = [sample for sample in gen_samples]
         >>> samples_array = np.concatenate(samples, axis=1)
         >>> np.cov(samples_array)
-        array([[ 1.84321553,  0.33513749],
-               [ 0.33513749,  1.98544953]])
-        >>> # LeapFrog performs best with HMC algorithm
+        array([[ 1.00795398,  0.71384233,  0.79802097],
+               [ 0.71384233,  1.00633524,  0.21313767],
+               [ 0.79802097,  0.21313767,  0.98519017]])
+        >>> sampler.acceptance_rate
+        0.9978
         """
+
+        self.accepted_proposals = 0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
         _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
 
@@ -282,8 +302,7 @@ class HamiltonianMC(object):
 
             yield np.reshape(position_m, shape)
 
-        self.acceptance_rate /= num_samples
-
+        self.acceptance_rate = self.accepted_proposals / num_samples
 
 class HamiltonianMCda(HamiltonianMC):
     """
@@ -313,19 +332,20 @@ class HamiltonianMCda(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+    >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, LeapFrog
     >>> from pgmpy.models import JointGaussianDistribution as JGD
     >>> import numpy as np
-    >>> mean = np.array([1, 1])
-    >>> covariance = np.array([[1, 0.7], [0.7, 3]])
-    >>> model = JGD(['x', 'y'], mean, covariance)
-    >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-    >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000,
-    ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
+    >>> mean = np.array([1, 2, 3])
+    >>> covariance = np.array([[2, 0.4, 0.5], [0.4, 3, 0.6], [0.5, 0.6, 4]])
+    >>> model = JGD(['x', 'y', 'z'], mean, covariance)
+    >>> sampler = HMCda(model=model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65)
+    >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000,
+    ...                          num_samples = 10000, trajectory_length=7, stepsize=None)
     >>> samples_array = np.concatenate(samples, axis=1)
     >>> np.cov(samples_array)
-    array([[ 0.98432155,  0.66517394],
-           [ 0.66517394,  2.95449533]])
+    array([[ 1.83023816,  0.40449162,  0.51200707],
+           [ 0.40449162,  2.85863596,  0.76747343],
+           [ 0.51200707,  0.76747343,  3.87020982]])
 
     References
     -----------
@@ -335,7 +355,7 @@ class HamiltonianMCda(HamiltonianMC):
     Algorithm 5 : Hamiltonian Monte Carlo with dual averaging
     """
 
-    def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog, delta=0.65):
+    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
             raise AttributeError(
@@ -411,6 +431,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         """
 
+        self.accepted_proposals = 0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
         _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
 
@@ -442,7 +463,7 @@ class HamiltonianMCda(HamiltonianMC):
             else:
                 stepsize = stepsize_bar
 
-        self.acceptance_rate /= num_samples
+        self.acceptance_rate = self.accepted_proposals / num_samples
         return samples
 
     def generate_sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
@@ -492,7 +513,7 @@ class HamiltonianMCda(HamiltonianMC):
         array([[ 0.98432155,  0.69517394],
                [ 0.69517394,  2.95449533]])
         """
-
+        self.accepted_proposals = 0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
         _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
 
@@ -522,4 +543,4 @@ class HamiltonianMCda(HamiltonianMC):
 
             yield np.reshape(position_m, shape)
 
-        self.acceptance_rate /= num_samples
+        self.acceptance_rate = self.accepted_proposals / num_samples
