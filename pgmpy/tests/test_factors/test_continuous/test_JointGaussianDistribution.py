@@ -192,3 +192,8 @@ class TestJGDMethods(unittest.TestCase):
         self.assertEqual(self.phi1._precision_matrix, None)
 
         self.phi1 = self.phi3
+
+    def tearDown(self):
+        del self.phi1
+        del self.phi2
+        del self.phi3

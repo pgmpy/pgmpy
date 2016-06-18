@@ -59,7 +59,7 @@ class ContinuousFactor(object):
     def assignment(self, *args):
         """
         Returns a list of pdf assignments for the corresponding values.
-        
+
         Parameters
         ----------
         values: A list of arrays of dimension 1 x n
@@ -129,13 +129,13 @@ class ContinuousFactor(object):
         >>> custom_factor = ContinuousFactor(['x', 'y', 'z'], custom_pdf)
         >>> custom_factor.variables
         ['x', 'y', 'z']
-        >>> custom_factor.assignment(1,2,3)
+        >>> custom_factor.assignment(1, 2, 3)
         24.0
 
         >>> custom_factor.reduce([('y', 2)])
         >>> custom_factor.variables
         ['x', 'z']
-        >>> custom_factor.assignment(1,3)
+        >>> custom_factor.assignment(1, 3)
         24.0
         """
         if isinstance(values, six.string_types):
@@ -143,7 +143,7 @@ class ContinuousFactor(object):
 
         phi = self if inplace else self.copy()
 
-        var_to_remove = [var for var,value in values]
+        var_to_remove = [var for var, value in values]
         var_to_keep = [var for var in self.variables if var not in var_to_remove]
 
         reduced_var_index = [(self.variables.index(var), value) for var,value in values]
@@ -151,14 +151,16 @@ class ContinuousFactor(object):
 
         def reduced_pdf(*args, **kwargs):
             reduced_args = list(args)
-            reduced_kwargs = kwargs
+            reduced_kwargs = kwargs.copy()
 
             if reduced_args:
                 for index,value in reduced_var_index:
                     reduced_args.insert(index, value)
             if reduced_kwargs:
-                for var, values in values:
-                    reduced_kwargs[var] = values
+                for var, value in values:
+                    reduced_kwargs[var] = value
+            if reduced_args and reduced_kwargs:
+                reduced_args = [arg for arg in reduced_args if arg not in reduced_kwargs.values()]
 
             return pdf(*reduced_args, **reduced_kwargs)
 
