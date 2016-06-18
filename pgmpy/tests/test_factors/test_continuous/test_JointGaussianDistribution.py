@@ -154,9 +154,41 @@ class TestJGDMethods(unittest.TestCase):
         self.phi1 = self.phi3
 
     def test_assignment(self):
-        np_test.assert_almost_equal(self.phi1.assignment([1, 2, 3]), 2.797826e-05)
-        np_test.assert_almost_equal(self.phi1.assignment([[1, 2, 3], [0, 0, 0]]),
+        np_test.assert_almost_equal(self.phi1.assignment(*[1, 2, 3]), 2.797826e-05)
+        np_test.assert_almost_equal(self.phi1.assignment(*[[1, 2, 3], [0, 0, 0]]),
                                     np.array([2.79782602e-05, 1.48056313e-03]))
         np_test.assert_almost_equal(self.phi2.assignment(0), 0.3989422804)
-        np_test.assert_almost_equal(self.phi2.assignment([0, 1, -1]),
+        np_test.assert_almost_equal(self.phi2.assignment(*[0, 1, -1]),
                                     np.array([0.39894228, 0.24197072, 0.24197072]))
+
+    def test_reduce(self):
+        phi = self.phi1.reduce([('x1', 7)], inplace=False)
+        self.assertEqual(phi.variables, ['x2', 'x3'])
+        np_test.assert_array_equal(phi.mean, np.asarray([[0], [1]], dtype=float))
+        np_test.assert_array_equal(phi.covariance,
+                                   np.asarray([[4, -4], [-4, 7]], dtype=float))
+        self.assertEqual(phi._precision_matrix, None)
+
+        phi = self.phi1.reduce([('x1', 3), ('x2', 1)], inplace=False)
+        self.assertEqual(phi.variables, ['x3'])
+        np_test.assert_array_equal(phi.mean, np.array([[0]], dtype=float))
+        np_test.assert_array_equal(phi.covariance,
+                                   np.asarray([[3]], dtype=float))
+        self.assertEqual(phi._precision_matrix, None)
+
+        self.phi1.reduce([('x1', 7)])
+        self.assertEqual(self.phi1.variables, ['x2', 'x3'])
+        np_test.assert_array_equal(self.phi1.mean, np.asarray([[0], [1]], dtype=float))
+        np_test.assert_array_equal(self.phi1.covariance,
+                                   np.asarray([[4, -4], [-4, 7]], dtype=float))
+        self.assertEqual(self.phi1._precision_matrix, None)
+
+        self.phi1 = self.phi3
+        self.phi1.reduce([('x1', 3), ('x2', 1)])
+        self.assertEqual(self.phi1.variables, ['x3'])
+        np_test.assert_array_equal(self.phi1.mean, np.asarray([[0]], dtype=float))
+        np_test.assert_array_equal(self.phi1.covariance,
+                                   np.asarray([[3]], dtype=float))
+        self.assertEqual(self.phi1._precision_matrix, None)
+
+        self.phi1 = self.phi3

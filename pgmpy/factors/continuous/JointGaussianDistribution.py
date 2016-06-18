@@ -119,8 +119,8 @@ class JointGaussianDistribution(ContinuousFactor):
                 [ 4]])
         >>> dis.covariance
         array([[ 4,  2, -2],
-                [ 2,  5, -5],
-                [-2, -5,  8]])
+               [ 2,  5, -5],
+               [-2, -5,  8]])
 
         >>> dis.marginalize(['x3'])
         dis.variables
@@ -227,7 +227,9 @@ class JointGaussianDistribution(ContinuousFactor):
 
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
-        x_i = [value for index,value in sorted([(self.variables.index(var), value) for var,value in values])]
+        x_i = np.array([value for index,value in 
+                        sorted([(self.variables.index(var), value)
+                        for var,value in values])]).reshape(len(index_to_reduce), 1)
         sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
         sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
         sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
@@ -237,9 +239,9 @@ class JointGaussianDistribution(ContinuousFactor):
         phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
         phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
         phi._precision_matrix = None
-        distribution.pdf = lambda *args: multivariate_normal(args,
-                                     distribution.mean.reshape(1, len(distribution.variables)),
-                                     distribution.covariance)
+        phi.pdf = lambda *args: multivariate_normal(args,
+                                distribution.mean.reshape(1, len(distribution.variables)),
+                                distribution.covariance)
 
         if not inplace:
             return phi
