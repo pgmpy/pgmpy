@@ -1,5 +1,6 @@
 import six
-
+import numpy as np
+import scipy.integrate as integrate
 
 class ContinuousFactor(object):
     """
@@ -98,7 +99,7 @@ class ContinuousFactor(object):
         copy_factor.variables
 
         """
-        return ContinuousFactor(self.variables.copy(), self.pdf)
+        return ContinuousFactor(self.scope(), self.pdf)
 
     def reduce(self, values, inplace=True):
         """
@@ -126,7 +127,7 @@ class ContinuousFactor(object):
         var_to_remove = [var for var,value in values]
         var_to_keep = [var for var in self.variables if var not in var_to_remove]
 
-        reduced_var_index = [(self.variables.index(var),value) for var,value in values]
+        reduced_var_index = [(self.variables.index(var), value) for var,value in values]
         pdf = self.pdf
 
         def reduced_pdf(*args, **kwargs):
@@ -137,7 +138,7 @@ class ContinuousFactor(object):
                 for index,value in reduced_var_index:
                     reduced_args.insert(index, value)
             if reduced_kwargs:
-                for var,values in values:
+                for var, values in values:
                     reduced_kwargs[var] = values
 
             return pdf(*reduced_args, **reduced_kwargs)

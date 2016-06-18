@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import division
 
 import six
@@ -8,7 +10,7 @@ from pgmpy.factors import ContinuousFactor
 
 
 class JointGaussianDistribution(ContinuousFactor):
-    """
+    u"""
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
@@ -38,7 +40,7 @@ class JointGaussianDistribution(ContinuousFactor):
                [-3],
                [4]]))
         >>> dis.covariance
-        matrix([[4, 2, -2],
+        array([[4, 2, -2],
                [2, 5, -5],
                [-2, -5, 8]])
         >>> dis.pdf([0,0,0])
@@ -51,7 +53,7 @@ class JointGaussianDistribution(ContinuousFactor):
                                  number of variables.")
 
         self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
-        normal_pdf = lambda x: multivariate_normal.pdf(x, self.mean.reshape(1, no_of_var)[0], covariance)
+        normal_pdf = lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, no_of_var)[0], covariance)
         self.covariance = np.asarray(covariance, dtype=float)
         self._precision_matrix = None
 
@@ -144,6 +146,9 @@ class JointGaussianDistribution(ContinuousFactor):
         distribution.mean = distribution.mean[index_to_keep]
         distribution.covariance = distribution.covariance[np.ix_(index_to_keep, index_to_keep)]
         distribution._precision_matrix = None
+        distribution.pdf = lambda *args: multivariate_normal(args,
+                                     distribution.mean.reshape(1, len(distribution.variables)),
+                                     distribution.covariance)
 
         if not inplace:
             return distribution
@@ -154,11 +159,12 @@ class JointGaussianDistribution(ContinuousFactor):
 
         The formula for the obtained conditional distribution is given by -
 
-        For, N(X_j | X_i = x_i) ~ MN(mu_j.i, sig_j.i)
+        For, 
+        .. math:: N(X_j | X_i = x_i) ~ MN(mu_{j.i}, sig_{j.i})
 
         where,
-        mu_j.i = mu_j + sig_j_i * (sig_i_i)^(-1) * (x_i - mu_i)
-        sig_j.i = sig_j_j - sig_j_i * (sig_i_i)^(-1) * sig_i_j
+        .. math:: mu_{j.i} = mu_j + sig_{j, i} * {sig_{i, i}^{-1}} * (x_i - mu_i)
+        .. math:: sig_{j.i} = sig_{j, j} - sig_{j, i} * {sig_{i, i}^{-1}} * sig_{i, j}
 
         Parameters
         ----------
@@ -210,7 +216,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
         phi = self if inplace else self.copy()
 
-        var_to_reduce = [var for var,value in values]
+        var_to_reduce = [var for var, value in values]
 
         # index_to_keep -> j vector
         index_to_keep = [self.variables.index(var) for var in self.variables
@@ -221,7 +227,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
-        x_i = [value for index,value in sorted([(self.variables.index(var),value) for var,value in values])]
+        x_i = [value for index,value in sorted([(self.variables.index(var), value) for var,value in values])]
         sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
         sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
         sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
@@ -231,6 +237,9 @@ class JointGaussianDistribution(ContinuousFactor):
         phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
         phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
         phi._precision_matrix = None
+        distribution.pdf = lambda *args: multivariate_normal(args,
+                                     distribution.mean.reshape(1, len(distribution.variables)),
+                                     distribution.covariance)
 
         if not inplace:
             return phi
@@ -265,17 +274,19 @@ class JointGaussianDistribution(ContinuousFactor):
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = JointGaussianDistribution(self.variables.copy(), self.mean.copy(),
+        copy_distribution = JointGaussianDistribution(self.scope(), self.mean.copy(),
                                                       self.covariance.copy())
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
         else:
             copy_distribution._precision_matrix = None
 
+        copy_distribution.pdf = self.pdf
+
         return copy_distribution
 
     def to_canonical_factor(self):
-        """
+        u"""
         Returns an equivalent CanonicalFactor object.
 
         The formulas for calculating the cannonical factor parameters
@@ -299,7 +310,7 @@ class JointGaussianDistribution(ContinuousFactor):
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        >>> phi = dis.toCanonicalFactor()
+        >>> phi = dis.to_canonical_factor()
         >>> phi.variables
         ['x1', 'x2', 'x3']
         >>> phi.K
