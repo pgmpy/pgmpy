@@ -160,7 +160,7 @@ class JointGaussianDistribution(ContinuousFactor):
         The formula for the obtained conditional distribution is given by -
 
         For, 
-        .. math:: N(X_j | X_i = x_i) ~ MN(mu_{j.i}, sig_{j.i})
+        .. math:: N(X_j | X_i = x_i) ~ N(mu_{j.i} ; sig_{j.i})
 
         where,
         .. math:: mu_{j.i} = mu_j + sig_{j, i} * {sig_{i, i}^{-1}} * (x_i - mu_i)
@@ -239,8 +239,8 @@ class JointGaussianDistribution(ContinuousFactor):
         phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
         phi._precision_matrix = None
         phi.pdf = lambda *args: multivariate_normal(args,
-                                distribution.mean.reshape(1, len(distribution.variables)),
-                                distribution.covariance)
+                                phi.mean.reshape(1, len(phi.variables)),
+                                phi.covariance)
 
         if not inplace:
             return phi
@@ -279,10 +279,6 @@ class JointGaussianDistribution(ContinuousFactor):
                                                       self.covariance.copy())
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
-        else:
-            copy_distribution._precision_matrix = None
-
-        copy_distribution.pdf = self.pdf
 
         return copy_distribution
 
