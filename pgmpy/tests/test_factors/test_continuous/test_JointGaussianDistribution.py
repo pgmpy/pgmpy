@@ -9,7 +9,7 @@ from pgmpy.factors import JointGaussianDistribution as JGD
 class TestJGDInit(unittest.TestCase):
     def test_class_init(self):
         phi1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi1.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi1.mean, np.asarray([[1], [-3], [4]], dtype=float))
         np_test.assert_array_equal(phi1.covariance,
@@ -17,7 +17,7 @@ class TestJGDInit(unittest.TestCase):
         self.assertEqual(phi1._precision_matrix, None)
 
         phi2 = JGD(['x1', 'x2', 'x3'], [1, 2, 5],
-                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi2.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi2.mean, np.asarray([[1], [2], [5]], dtype=float))
         np_test.assert_array_equal(phi2.covariance,
@@ -26,12 +26,12 @@ class TestJGDInit(unittest.TestCase):
 
         phi3 = JGD(['x'], [0], [[1]])
         self.assertEqual(phi3.variables, ['x'])
-        np_test.assert_array_equal(phi3.mean, np.asarray([[0],], dtype=float))
+        np_test.assert_array_equal(phi3.mean, np.asarray([[0]], dtype=float))
         np_test.assert_array_equal(phi3.covariance, np.asarray([[1]], dtype=float))
         self.assertEqual(phi3._precision_matrix, None)
 
         phi1 = JGD(['1', 2, (1, 2, 'x')], np.array([[1], [-3], [4]]),
-                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi1.variables, ['1', 2, (1, 2, 'x')])
         np_test.assert_array_equal(phi1.mean, np.asarray([[1], [-3], [4]], dtype=float))
         np_test.assert_array_equal(phi1.covariance,
@@ -39,7 +39,7 @@ class TestJGDInit(unittest.TestCase):
         self.assertEqual(phi1._precision_matrix, None)
 
         phi2 = JGD(['1', 7, (1, 2, 'x')], [1, 2, 5],
-                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi2.variables, ['1', 7, (1, 2, 'x')])
         np_test.assert_array_equal(phi2.mean, np.asarray([[1], [2], [5]], dtype=float))
         np_test.assert_array_equal(phi2.covariance,
@@ -48,7 +48,7 @@ class TestJGDInit(unittest.TestCase):
 
         phi3 = JGD([23], [0], [[1]])
         self.assertEqual(phi3.variables, [23])
-        np_test.assert_array_equal(phi3.mean, np.asarray([[0],], dtype=float))
+        np_test.assert_array_equal(phi3.mean, np.asarray([[0]], dtype=float))
         np_test.assert_array_equal(phi3.covariance, np.asarray([[1]], dtype=float))
         self.assertEqual(phi3._precision_matrix, None)
 
@@ -79,7 +79,7 @@ class TestJGDInit(unittest.TestCase):
 class TestJGDMethods(unittest.TestCase):
     def setUp(self):
         self.phi1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-                         np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+                        np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.phi2 = JGD(['x'], [0], [[1]])
         self.phi3 = self.phi1.copy()
 

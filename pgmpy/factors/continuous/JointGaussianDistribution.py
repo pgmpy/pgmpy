@@ -22,7 +22,7 @@ class JointGaussianDistribution(ContinuousFactor):
         ----------
         variables: iterable of any hashable python object
             The variables for which the distribution is defined.
-        mean: n x 1, array like 
+        mean: n x 1, array like
             n-dimensional vector where n is the number of variables.
         covariance: n x n, 2-d array like
             n x n dimensional matrix where n is the number of variables.
@@ -53,15 +53,15 @@ class JointGaussianDistribution(ContinuousFactor):
                                  number of variables.")
 
         self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
-        normal_pdf = lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, no_of_var)[0], covariance)
+        normal_pdf = lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, no_of_var)[0],
+                                                           covariance)
         self.covariance = np.asarray(covariance, dtype=float)
         self._precision_matrix = None
 
         if self.covariance.shape != (no_of_var, no_of_var):
             raise ValueError("The Covariance matrix should be a square matrix with order equal to\
-                              the number of variables. Got: {got_shape}, Expected: {exp_shape}"
-                              .format(got_shape=self.covariance.shape,
-                              exp_shape=(no_of_var, no_of_var)))
+                              the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
+                             (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
 
         super(JointGaussianDistribution, self).__init__(variables, normal_pdf)
 
@@ -136,22 +136,20 @@ class JointGaussianDistribution(ContinuousFactor):
         if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
-        distribution = self if inplace else self.copy()
+        phi = self if inplace else self.copy()
 
-        var_indexes = [distribution.variables.index(var) for var in variables]
+        var_indexes = [phi.variables.index(var) for var in variables]
         index_to_keep = [self.variables.index(var) for var in self.variables
                          if var not in variables]
 
-        distribution.variables = [distribution.variables[index] for index in index_to_keep]
-        distribution.mean = distribution.mean[index_to_keep]
-        distribution.covariance = distribution.covariance[np.ix_(index_to_keep, index_to_keep)]
-        distribution._precision_matrix = None
-        distribution.pdf = lambda *args: multivariate_normal(args,
-                                     distribution.mean.reshape(1, len(distribution.variables)),
-                                     distribution.covariance)
+        phi.variables = [phi.variables[index] for index in index_to_keep]
+        phi.mean = phi.mean[index_to_keep]
+        phi.covariance = phi.covariance[np.ix_(index_to_keep, index_to_keep)]
+        phi._precision_matrix = None
+        phi.pdf = lambda *args: multivariate_normal(args, phi.mean.reshape(1, len(phi.variables)), phi.covariance)
 
         if not inplace:
-            return distribution
+            return phi
 
     def reduce(self, values, inplace=True):
         """
@@ -159,7 +157,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
         The formula for the obtained conditional distribution is given by -
 
-        For, 
+        For,
         .. math:: N(X_j | X_i = x_i) ~ N(mu_{j.i} ; sig_{j.i})
 
         where,
@@ -199,7 +197,7 @@ class JointGaussianDistribution(ContinuousFactor):
         array([[ 4.,  2., -2.],
                [ 2.,  5., -5.],
                [-2., -5.,  8.]])
-        
+
         >>> dis.reduce([('x1', 7)])
         >>> dis.variables
         ['x2', 'x3']
@@ -226,21 +224,20 @@ class JointGaussianDistribution(ContinuousFactor):
 
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
-        x_i = np.array([value for index,value in 
-                        sorted([(self.variables.index(var), value)
-                        for var,value in values])]).reshape(len(index_to_reduce), 1)
+        x_i = np.array([value for index,
+                        value in sorted([(self.variables.index(var), value) for var,
+                                         value in values])]).reshape(len(index_to_reduce), 1)
         sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
         sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
         sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
-        sig_j_j = self.covariance[np.ix_(index_to_keep, index_to_keep)] 
+        sig_j_j = self.covariance[np.ix_(index_to_keep, index_to_keep)]
 
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
         phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
         phi._precision_matrix = None
-        phi.pdf = lambda *args: multivariate_normal(args,
-                                phi.mean.reshape(1, len(phi.variables)),
-                                phi.covariance)
+        phi.pdf = lambda *args: multivariate_normal(args, phi.mean.reshape(1, len(phi.variables)),
+                                                    phi.covariance)
 
         if not inplace:
             return phi
@@ -332,7 +329,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
         h = np.dot(K, mu)
 
-        g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(np.power
-                    (2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
+        g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
+            np.power(2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
 
-        return K,h,g
+        return K, h, g

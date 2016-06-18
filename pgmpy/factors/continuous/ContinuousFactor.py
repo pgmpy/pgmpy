@@ -2,6 +2,7 @@ import six
 import numpy as np
 import scipy.integrate as integrate
 
+
 class ContinuousFactor(object):
     """
     Base class for factors representing various multivariate
@@ -146,7 +147,7 @@ class ContinuousFactor(object):
         var_to_remove = [var for var, value in values]
         var_to_keep = [var for var in self.variables if var not in var_to_remove]
 
-        reduced_var_index = [(self.variables.index(var), value) for var,value in values]
+        reduced_var_index = [(self.variables.index(var), value) for var, value in values]
         pdf = self.pdf
 
         def reduced_pdf(*args, **kwargs):
@@ -154,7 +155,7 @@ class ContinuousFactor(object):
             reduced_kwargs = kwargs.copy()
 
             if reduced_args:
-                for index,value in reduced_var_index:
+                for index, value in reduced_var_index:
                     reduced_args.insert(index, value)
             if reduced_kwargs:
                 for var, value in values:
@@ -179,11 +180,11 @@ class ContinuousFactor(object):
         -------
         An n-D array or a Factor object according to the discretiztion
         method used.
- 
+
         Parameters
         ----------
         method : A Discretizer Class from pgmpy.continuous.discretize
- 
+
         *args, **kwargs:
             The parameters to be given to the Discretizer Class.
         """
