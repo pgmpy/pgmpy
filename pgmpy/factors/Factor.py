@@ -96,10 +96,7 @@ class Factor(object):
         if isinstance(variables, six.string_types):
             raise TypeError("Variables: Expected type list or array like, got string")
 
-        values = np.array(values)
-
-        if values.dtype != int and values.dtype != float:
-            raise TypeError("Values: Expected type int or type float, got ", values.dtype)
+        values = np.array(values, dtype=float)
 
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")

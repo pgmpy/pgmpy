@@ -33,11 +33,6 @@ class TestFactorInit(unittest.TestCase):
         self.assertRaises(ValueError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
     def test_class_init_typeerror(self):
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 'val2'])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [1, 'val1'])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 1])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], [0.1, 'val1'])
-        self.assertRaises(TypeError, Factor, ['x1', 'x2', 'x3'], [2, 1, 1], ['val1', 0.1])
         self.assertRaises(TypeError, Factor, 'x1', [3], [1, 2, 3])
         self.assertRaises(ValueError, Factor, ['x1', 'x1', 'x3'], [2, 3, 2], range(12))
 
