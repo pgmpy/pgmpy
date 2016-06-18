@@ -43,13 +43,13 @@ class JointGaussianDistribution(object):
         self.covariance = covariance
         self.precision_matrix = np.linalg.inv(covariance)
 
-    def get_gradient_log_pdf(self, distribution_param, grad_log_pdf=None):
+    def get_gradient_log_pdf(self, variable_assignment, grad_log_pdf=None):
         """
         A method for finding gradient log and log of distribution for given assignment
 
         Parameters
         ----------
-        distribution_param: A 1d array like object
+        variable_assignment: A 1d array like object
             Assignment of variables at which gradient is to be computed
 
         grad_log_pdf: A subclass of pgmpy.inference.continuous.BaseGradLogPDF, defaults to None
@@ -67,13 +67,16 @@ class JointGaussianDistribution(object):
 
         float: A floating value representin log of JointGaussianDistribution
         """
+        variable_assignment = _check_1d_array_object(variable_assignment, 'variable_assignment')
+        _check_length_equal(variable_assignment, self.variables, 'variables_assignment', 'variables')
+
         if grad_log_pdf is not None:
             if not issubclass(grad_log_pdf, BaseGradLogPDF):
                 raise TypeError("grad_log_pdf must be an instance" +
                                 " of pgmpy.inference.continuous.base.BaseGradLogPDF")
-            return grad_log_pdf(distribution_param, self).get_gradient_log_pdf()
+            return grad_log_pdf(variable_assignment, self).get_gradient_log_pdf()
 
-        sub_vec = distribution_param - self.mean
+        sub_vec = variable_assignment - self.mean
         grad = - np.dot(self.precision_matrix, sub_vec)
         log_pdf = 0.5 * np.dot(sub_vec, grad)
 

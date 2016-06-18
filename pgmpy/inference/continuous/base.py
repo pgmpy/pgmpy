@@ -14,8 +14,8 @@ class BaseGradLogPDF(object):
 
     Parameters
     ----------
-    distribution_param : A 1d array like object (numpy.ndarray or list)
-        Vector representing values of distribution parameter at which we want to find gradient and log
+    variable_assignments : A 1d array like object (numpy.ndarray or list)
+        Vector representing values(assignments) of variables at which we want to find gradient and log
 
     model : An instance of pgmpy.models
 
@@ -29,9 +29,9 @@ class BaseGradLogPDF(object):
     ...         BaseGradLogPDF.__init__(self, position, model)
     ...         self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
     ...     def _get_gradient_log_pdf(self):
-    ...         sub_vec = self.position - self.model.mean
+    ...         sub_vec = self.position - self.model.mean.flatten()
     ...         grad = - np.dot(self.model.precision_matrix, sub_vec)
-    ...         log_pdf = 0.5 * np.float(np.dot(sub_vec.T, grad))
+    ...         log_pdf = 0.5 * np.float(np.dot(sub_vec, grad))
     ...         return grad, log_pdf
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.2], [0.2, 7]])
@@ -44,10 +44,11 @@ class BaseGradLogPDF(object):
     array([ 0.90229885, -0.01149425])
     """
 
-    def __init__(self, distribution_param, model):
+    def __init__(self, variable_assignments, model):
 
-        self.distribution_param = _check_1d_array_object(distribution_param, 'distribution_param')
-        _check_length_equal(distribution_param, model.variables, 'distribution_param', 'model.variables')
+        self.variable_assignments = _check_1d_array_object(variable_assignments, 'variable_assignments')
+        _check_length_equal(variable_assignments, model.variables, 'variable_assignments', 'model.variables')
+
         self.model = model
 
         # The gradient log of probability distribution at position
@@ -95,8 +96,8 @@ class GradLogPDFGaussian(BaseGradLogPDF):
 
     Parameters
     ----------
-    distribution_param : A 1d array like object (numpy.ndarray or list)
-        Vector representing values of distribution parameter at which we want to find gradient and log
+    variable_assignments : A 1d array like object (numpy.ndarray or list)
+        Vector representing values of variables at which we want to find gradient and log
 
     model : An instance of pgmpy.models.JointGaussianDistribution
 
@@ -116,15 +117,15 @@ class GradLogPDFGaussian(BaseGradLogPDF):
     array([ 2.55555556, -5.44444444])
     """
 
-    def __init__(self, distribution_param, model):
-        BaseGradLogPDF.__init__(self, distribution_param, model)
+    def __init__(self, variable_assignments, model):
+        BaseGradLogPDF.__init__(self, variable_assignments, model)
         self.grad_log, self.log_pdf = self._get_gradient_log_pdf()
 
     def _get_gradient_log_pdf(self):
         """
         Method that finds gradient and its log at position
         """
-        sub_vec = self.distribution_param - self.model.mean
+        sub_vec = self.variable_assignments - self.model.mean.flatten()
         grad = - np.dot(self.model.precision_matrix, sub_vec)
         log_pdf = 0.5 * np.dot(sub_vec, grad)
 
@@ -165,6 +166,7 @@ class BaseSimulateHamiltonianDynamics(object):
     >>> from pgmpy.inference.continuous import BaseSimulateHamiltonianDynamics
     >>> from pgmpy.models import JointGaussianDistribution
     >>> from pgmpy.inference.continuous import GradLogPDFGaussian
+    >>> import numpy as np
     >>> # Class should initalize self.new_position, self.new_momentum and self.new_grad_logp
     >>> # self.new_grad_logp represents gradient log at new proposed value of position
     >>> class ModifiedEuler(BaseSimulateHamiltonianDynamics):
@@ -177,7 +179,6 @@ class BaseSimulateHamiltonianDynamics(object):
     ...         position_bar = self.position + self.stepsize * momentum_bar
     ...         grad_log_position, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
     ...         return position_bar, momentum_bar, grad_log_position
-    >>> import numpy as np
     >>> pos = np.array([1, 2])
     >>> momentum = np.array([0, 0])
     >>> mean = np.array([0, 0])
@@ -208,6 +209,10 @@ class BaseSimulateHamiltonianDynamics(object):
 
         if grad_log_position is None:
             grad_log_position, _ = model.get_gradient_log_pdf(position, grad_log_pdf)
+
+        else:
+            grad_log_positon = _check_1d_array_object(grad_log_position, 'grad_log_position')
+            _check_length_equal(grad_log_position, position, 'grad_log_position', 'position')
 
         self.position = position
         self.momentum = momentum
