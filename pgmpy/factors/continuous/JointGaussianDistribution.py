@@ -224,7 +224,6 @@ class JointGaussianDistribution(ContinuousFactor):
         # index_to_reduce -> i vector
         index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
 
-
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
         x_i = np.array([value for index,value in 

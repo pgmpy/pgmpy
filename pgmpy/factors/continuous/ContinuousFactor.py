@@ -118,6 +118,25 @@ class ContinuousFactor(object):
         -------
         ContinuousFactor or None: if inplace=True (default) returns None
                                   if inplace=False returns a new `Factor` instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from scipy.special import beta
+        >>> def custom_pdf(x, y, z):
+        ...     return z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> custom_factor = ContinuousFactor(['x', 'y', 'z'], custom_pdf)
+        >>> custom_factor.variables
+        ['x', 'y', 'z']
+        >>> custom_factor.assignment(1,2,3)
+        24.0
+
+        >>> custom_factor.reduce([('y', 2)])
+        >>> custom_factor.variables
+        ['x', 'z']
+        >>> custom_factor.assignment(1,3)
+        24.0
         """
         if isinstance(values, six.string_types):
             raise TypeError("values: Expected type list or array-like, got type str")
