@@ -171,6 +171,69 @@ class ContinuousFactor(object):
         if not inplace:
             return phi
 
+    def marginalize(self, variables, inplace=True):
+        """
+        Maximizes the factor with respect to the given variables.
+
+        Parameters
+        ----------
+        variables: list, array-like
+            List of variables with respect to which factor is to be maximized.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new ContinuousFactor instance.
+
+        Returns
+        -------
+        Factor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new ContinuousFactor instance.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from scipy.stats import multivariate_normal
+        >>> std_normal_pdf = lambda x: multivariate_normal.pdf(x, [0, 0], [[1, 0], [0, 1]])
+        >>> std_normal = ContinuousFactor(['x1', 'x2'], std_normal_pdf)
+        >>> std_normal.scope()
+        ['x1', 'x2']
+        >>> std_normal.assignment([1, 1])
+        0.058549831524319168
+        >>> std_normal.marginalize(['x2'])
+        >>> std_normal.scope()
+        ['x1']
+        >>> std_normal.assignment([1])
+
+        """
+        if isinstance(variables, six.string_types):
+            raise TypeError("variables: Expected type list or array-like, got type str")
+
+        phi = self if inplace else self.copy()
+
+        for var in variables:
+            if var not in phi.variables:
+                raise ValueError("{var} not in scope.".format(var=var))
+
+        all_var = [var for var in self.variables]
+        var_to_keep = [var for var in self.variables if var not in variables]
+        reordered_var_index = [all_var.index(var) for var in variables + var_to_keep]
+        pdf = phi.pdf
+        # The arguments need to be reordered because integrate.nquad integrates the first n-arguments
+        # of the function passed.
+        def reordered_pdf(*args):
+            # ordered_args restores the original order as it was in self.variables
+            ordered_args = [args[reordered_var_index.index(index_id)] for index_id in range(len(all_var))]
+            return pdf(*ordered_args)
+
+        def marginalized_pdf(*args):
+            return integrate.nquad(reordered_pdf, [[-np.inf, np.inf] for i in range(len(variables))], args=args)[0]
+
+        phi.pdf = marginalized_pdf
+        phi.variables = var_to_keep
+
+        if not inplace:
+            return phi
+
     def discretize(self, method, *args, **kwargs):
         """
         Discretizes the continuous distribution into discrete
@@ -183,7 +246,7 @@ class ContinuousFactor(object):
 
         Parameters
         ----------
-        method : A Discretizer Class from pgmpy.continuous.discretize
+        method : A Discretizer Class from pgmpy.discretize
 
         *args, **kwargs:
             The parameters to be given to the Discretizer Class.
