@@ -218,8 +218,10 @@ class ContinuousFactor(object):
         var_to_keep = [var for var in self.variables if var not in variables]
         reordered_var_index = [all_var.index(var) for var in variables + var_to_keep]
         pdf = phi.pdf
+
         # The arguments need to be reordered because integrate.nquad integrates the first n-arguments
         # of the function passed.
+
         def reordered_pdf(*args):
             # ordered_args restores the original order as it was in self.variables
             ordered_args = [args[reordered_var_index.index(index_id)] for index_id in range(len(all_var))]

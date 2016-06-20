@@ -50,6 +50,11 @@ class TestContinuousFactorMethods(unittest.TestCase):
         self.pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
         self.phi3 = ContinuousFactor(['x', 'y', 'z'], self.pdf3)
 
+        self.pdf4 = lambda x1, x2, x3: multivariate_normal.pdf([x1, x2, x3], [0, 0, 0],
+                                                               [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        self.phi4 = ContinuousFactor(['x1', 'x2', 'x3'], self.pdf4)
+
+
     def test_scope(self):
         self.assertEqual(self.phi1.scope(), self.phi1.variables)
         self.assertEqual(self.phi2.scope(), self.phi2.variables)
@@ -117,6 +122,41 @@ class TestContinuousFactorMethods(unittest.TestCase):
         for inp in np.random.rand(4):
             self.assertEqual(phi3.pdf(inp), reduced_pdf4(inp))
             self.assertEqual(phi3.pdf(x=inp), reduced_pdf4(inp))
+
+    def test_marginalize(self):
+        phi2 = self.phi2.copy()
+        phi2.marginalize(['x2'])
+        marginalized_pdf2 = lambda x1: multivariate_normal.pdf([x1], [0], [[1]])
+        self.assertEqual(phi2.variables, ['x1'])
+        for inp in np.random.rand(4):
+            np_test.assert_almost_equal(phi2.pdf(inp), marginalized_pdf2(inp))
+
+        phi2 = self.phi2.marginalize(['x2'], inplace=False)
+        self.assertEqual(phi2.variables, ['x1'])
+        for inp in np.random.rand(4):
+            np_test.assert_almost_equal(phi2.pdf(inp), marginalized_pdf2(inp))
+
+        phi4 = self.phi4.copy()
+        phi4.marginalize(['x2'])
+        marginalized_pdf4 = lambda x1, x3: multivariate_normal.pdf([x1, x3], [0, 0], [[1, 0], [0, 1]])
+        self.assertEqual(phi4.variables, ['x1', 'x3'])
+        for inp in np.random.rand(4, 2):
+            np_test.assert_almost_equal(phi4.pdf(inp[0], inp[1]), marginalized_pdf4(inp[0], inp[1]))
+
+        phi4.marginalize(['x3'])
+        self.assertEqual(phi4.variables, ['x1'])
+        for inp in np.random.rand(1):
+            np_test.assert_almost_equal(phi4.pdf(inp), marginalized_pdf2(inp))
+
+        phi4 = self.phi4.marginalize(['x2'], inplace=False)
+        self.assertEqual(phi4.variables, ['x1', 'x3'])
+        for inp in np.random.rand(4, 2):
+            np_test.assert_almost_equal(phi4.pdf(inp[0], inp[1]), marginalized_pdf4(inp[0], inp[1]))
+
+        phi4 = phi4.marginalize(['x3'], inplace=False)
+        self.assertEqual(phi4.variables, ['x1'])
+        for inp in np.random.rand(1):
+            np_test.assert_almost_equal(phi4.pdf(inp), marginalized_pdf2(inp))
 
     def test_copy(self):
         copy1 = self.phi1.copy()
