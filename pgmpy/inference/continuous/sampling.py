@@ -118,7 +118,7 @@ class HamiltonianMC(object):
         momentum = np.reshape(np.random.normal(0, 1, len(position)), position.shape)
 
         # Take a single step in time
-        position_bar, momentum_bar, grad_bar =\
+        position_bar, momentum_bar, _ =\
             self.simulate_dynamics(self.model, position, momentum,
                                    stepsize_app, self.grad_log_pdf).get_proposed_values()
 
@@ -132,9 +132,9 @@ class HamiltonianMC(object):
         while condition:
             stepsize_app = (2 ** a) * stepsize_app
 
-            position_bar, momentum_bar, grad_bar =\
+            position_bar, momentum_bar, _ =\
                 self.simulate_dynamics(self.model, position, momentum,
-                                       stepsize_app, self.grad_log_pdf, grad_bar).get_proposed_values()
+                                       stepsize_app, self.grad_log_pdf).get_proposed_values()
 
             acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
@@ -203,7 +203,7 @@ class HamiltonianMC(object):
         Returns two different types (based on installations)
 
         pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-        
+
         numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
 
         Examples
@@ -220,7 +220,7 @@ class HamiltonianMC(object):
         ...                          trajectory_length=6, stepsize=0.25)
         >>> samples
                        x              y
-        0  4.940656e-324  4.940656e-324
+        0   1.000000e+00   1.000000e+00
         1   1.592133e+00   1.152911e+00
         2   1.608700e+00   1.315349e+00
         3   1.608700e+00   1.315349e+00
@@ -236,9 +236,6 @@ class HamiltonianMC(object):
                [ 0.71384233,  1.00633524,  0.21313767],
                [ 0.79802097,  0.21313767,  0.98519017]])
         """
-        return_type = return_type.lower()
-        if (return_type != 'dataframe' and return_type != 'recarray'):
-            raise TypeError("return_type can be either 'dataframe' or 'recarray'")
 
         self.accepted_proposals = 1.0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
@@ -249,7 +246,10 @@ class HamiltonianMC(object):
 
         types = [(var_name, 'float') for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
-        samples[0] = initial_pos
+
+        # Assigning after converting into tuple because value was being changed after assignment
+        # Reason for this is unknown
+        samples[0] = tuple(initial_pos)
         position_m = initial_pos
 
         lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
@@ -291,7 +291,7 @@ class HamiltonianMC(object):
 
         Returns
         -------
-        genrator: yielding a numpy.array type object for a sample
+        genrator: yielding a 1d numpy.array type object for a sample
 
         Examples
         --------
@@ -300,18 +300,24 @@ class HamiltonianMC(object):
         >>> import numpy as np
         >>> mean = np.array([4, -1])
         >>> covariance = np.array([[3, 0.4], [0.4, 3]])
-        >>> model = JGD(['x', 'y', 'z'], mean, covariance)
+        >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG)
-        >>> gen_samples = sampler.generate_sample(np.array([-1, 1]), num_samples = 10,
-        ...                                       trajectory_length=2, stepsize=None)
-        >>> samples = [sample for sample in gen_samples]
-        >>> samples_array = np.concatenate(samples, axis=1)
-        >>> np.cov(samples_array)
-        array([[ 1.00795398,  0.71384233,  0.79802097],
-               [ 0.71384233,  1.00633524,  0.21313767],
-               [ 0.79802097,  0.21313767,  0.98519017]])
+        >>> gen_samples = sampler.generate_sample(np.array([-1, 1]), num_samples = 10000,
+        ...                                       trajectory_length=2, stepsize=0.25)
+        >>> samples_array = np.array([sample for sample in gen_samples])
+        >>> samples_array
+        array([[ 0.1467264 ,  0.27143857],
+               [ 4.0371448 ,  0.15871274],
+               [ 3.24656208, -1.03742621],
+               ..., 
+               [ 6.45975905,  1.97941306],
+               [ 4.89007171,  0.15413156],
+               [ 5.9528083 ,  1.92983158]])
+        >>> np.cov(samples_array.T)
+        array([[ 2.95692642,  0.4379419 ],
+               [ 0.4379419 ,  3.00939434]])
         >>> sampler.acceptance_rate
-        0.9978
+        0.9969
         """
 
         self.accepted_proposals = 0
@@ -321,7 +327,6 @@ class HamiltonianMC(object):
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        shape = (len(initial_pos), 1)
         lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
         position_m = initial_pos.copy()
 
@@ -329,7 +334,7 @@ class HamiltonianMC(object):
 
             position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
 
-            yield np.reshape(position_m, shape)
+            yield position_m
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
@@ -370,11 +375,13 @@ class HamiltonianMCda(HamiltonianMC):
     >>> model = JGD(['x', 'y', 'z'], mean, covariance)
     >>> sampler = HMCda(model=model)
     >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000, num_samples = 10000, trajectory_length=7)
-    >>> samples_array = np.concatenate(samples, axis=1)
+    >>> samples_array = np.array([samples[var_name] for var_name in model.variables])
     >>> np.cov(samples_array)
     array([[ 1.83023816,  0.40449162,  0.51200707],
            [ 0.40449162,  2.85863596,  0.76747343],
            [ 0.51200707,  0.76747343,  3.87020982]])
+    >>> sampler.acceptance_rate
+    0.9929
 
     References
     -----------
@@ -443,7 +450,7 @@ class HamiltonianMCda(HamiltonianMC):
         Returns two different types (based on installations)
 
         pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-        
+
         numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
 
         Examples
@@ -457,7 +464,7 @@ class HamiltonianMCda(HamiltonianMC):
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
         >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000,
         ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
-        >>> samples_array = np.concatenate(samples, axis=1)
+        >>> samples_array = np.array([samples[var_name] for var_name in model.variables])
         >>> np.cov(samples_array)
         array([[ 0.98432155,  0.66517394],
                [ 0.66517394,  2.95449533]])
@@ -473,7 +480,7 @@ class HamiltonianMCda(HamiltonianMC):
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
-            return HamiltonianMC.sample(self, initial_pos, num_samples, stepsize, return_type=return_type)
+            return HamiltonianMC.sample(self, initial_pos, num_samples, stepsize)
 
         # stepsize is epsilon
         mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
@@ -485,7 +492,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         types = [(var_name, 'float') for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
-        samples[0] = initial_pos
+        samples[0] = tuple(initial_pos)
         position_m = initial_pos
 
         for i in range(1, num_samples):
@@ -548,9 +555,8 @@ class HamiltonianMCda(HamiltonianMC):
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
         >>> gen_samples = sampler.generate_sample(np.array([1, 1]), num_adapt=10000,
         ...                                       num_samples = 10000, trajectory_length=2, stepsize=None)
-        >>> samples = [sample for sample in gen_samples]
-        >>> samples_array = np.concatenate(samples, axis=1)
-        >>> np.cov(samples_array)
+        >>> samples_array = np.array([sample for sample in gen_samples])
+        >>> np.cov(samples_array.T)
         array([[ 0.98432155,  0.69517394],
                [ 0.69517394,  2.95449533]])
         """
@@ -572,7 +578,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         position_m = initial_pos.copy()
         num_adapt += 1
-        shape = (len(initial_pos), 1)
+
         for i in range(1, num_samples + 1):
 
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
@@ -582,6 +588,6 @@ class HamiltonianMCda(HamiltonianMC):
             else:
                 stepsize = stepsize_bar
 
-            yield np.reshape(position_m, shape)
+            yield position_m
 
         self.acceptance_rate = self.accepted_proposals / num_samples
