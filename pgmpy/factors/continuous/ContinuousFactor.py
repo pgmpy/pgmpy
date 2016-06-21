@@ -32,8 +32,9 @@ class ContinuousFactor(object):
         >>> drichlet_factor.assignemnt(5,6)
         226800.0
         """
-        if isinstance(variables, six.string_types):
-            raise TypeError("Variables: Expected type list or array like, got string")
+        if not isinstance(variables, list):
+            raise TypeError("variables: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(variables)))
 
         self.variables = variables
         self.pdf = pdf
@@ -139,8 +140,9 @@ class ContinuousFactor(object):
         >>> custom_factor.assignment(1, 3)
         24.0
         """
-        if isinstance(values, six.string_types):
-            raise TypeError("values: Expected type list or array-like, got type str")
+        if not isinstance(values, list):
+            raise TypeError("values: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(values)))
 
         phi = self if inplace else self.copy()
 
@@ -205,8 +207,9 @@ class ContinuousFactor(object):
         >>> std_normal.assignment([1])
 
         """
-        if isinstance(variables, six.string_types):
-            raise TypeError("variables: Expected type list or array-like, got type str")
+        if not isinstance(variables, list):
+            raise TypeError("variables: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(variables)))
 
         phi = self if inplace else self.copy()
 

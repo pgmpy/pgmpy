@@ -133,8 +133,9 @@ class JointGaussianDistribution(ContinuousFactor):
                [2, 5]])
         """
 
-        if isinstance(variables, six.string_types):
-            raise TypeError("variables: Expected type list or array-like, got type str")
+        if not isinstance(variables, list):
+            raise TypeError("variables: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(variables)))
 
         phi = self if inplace else self.copy()
 
@@ -209,8 +210,9 @@ class JointGaussianDistribution(ContinuousFactor):
                [-4.,  7.]])
 
         """
-        if isinstance(values, six.string_types):
-            raise TypeError("values: Expected type list or array-like, got type str")
+        if not isinstance(values, list):
+            raise TypeError("values: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(values)))
 
         phi = self if inplace else self.copy()
 
