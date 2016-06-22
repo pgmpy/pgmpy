@@ -1,3 +1,5 @@
+from __future__ import division
+
 import six
 import numpy as np
 import scipy.integrate as integrate
@@ -235,6 +237,46 @@ class ContinuousFactor(object):
 
         phi.pdf = marginalized_pdf
         phi.variables = var_to_keep
+
+        if not inplace:
+            return phi
+
+    def normalize(self, inplace=True):
+        """
+        Normalizes the pdf of the continuous factor so that it integrates to
+        1 over all the variables.
+
+        Parameters
+        ----------
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
+
+        Returns
+        -------
+        ContinuousFactor or None:
+             if inplace=True (default) returns None
+             if inplace=False returns a new ContinuousFactor instance.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from scipy.stats import multivariate_normal
+        >>> std_normal_pdf = lambda x: 2 * multivariate_normal.pdf(x, [0, 0], [[1, 0], [0, 1]])
+        >>> std_normal = ContinuousFactor(['x1', 'x2'], std_normal_pdf)
+        >>> std_normal.assignment(1, 1)
+        0.117099663049
+        >>> std_normal.normalize()
+        >>> std_normal.assignment(1, 1)
+        0.0585498315243
+
+        """
+        phi = self if inplace else self.copy()
+        pdf = self.pdf
+
+        pdf_mod = integrate.nquad(pdf, [[-np.inf, np.inf] for var in self.variables])[0]
+
+        phi.pdf = lambda *args: pdf(*args) / pdf_mod
 
         if not inplace:
             return phi
