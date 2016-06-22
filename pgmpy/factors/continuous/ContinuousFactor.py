@@ -281,6 +281,88 @@ class ContinuousFactor(object):
         if not inplace:
             return phi
 
+    def operate(self, other, operation, inplace=True):
+        """
+        Gives the ContinuousFactor product with the other factor.
+
+        Parameters
+        ----------
+        other: ContinuousFactor
+            The ContinuousFactor to be multiplied.
+
+        operation: String
+            'product' for multiplication operation and 'divide' for
+            division operation.
+
+        Returns
+        -------
+        ContinuousFactor or None: 
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
+        Example
+        -------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from scipy.stats import multivariate_normal
+        >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])
+        >>> sn_pdf2 = lambda x1,x2: multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
+        >>> sn1 = ContinuousFactor(['x2'], sn_pdf1)
+        >>> sn2 = ContinuousFactor(['x1', 'x2'], sn_pdf2)
+
+        >>> sn3 = sn1.operate(sn2, 'product', inplace=False)
+        >>> sn3.assignment(0, 0)
+        0.063493635934240983
+        >>> sn4 = sn2.operate(sn1, 'divide', inplace=False)
+        >>> sn4.assignment(0, 0)
+        0.3989422804014327
+
+        >>> sn3 = sn1 * sn2
+        >>> sn3.assignment(0, 0)
+        0.063493635934240983
+        >>> sn4 = sn2 / sn1
+        >>> sn4.assignment(0, 0)
+        0.3989422804014327
+        """
+        if not isinstance(other, ContinuousFactor):
+            raise TypeError("ContinuousFactor object can only be multiplied with an another "
+                             "ContinuousFactor object. Got {other_type}, expected "
+                             "ContinuousFactor.".format(other_type=type(other)))
+
+        phi = self if inplace else self.copy()
+        pdf = self.pdf
+        self_var = [var for var in self.variables]
+
+        modified_pdf_var = self_var + [var for var in other.variables if var not in self_var]
+
+        def modified_pdf(*args):
+            self_pdf_args = list(args[:len(self_var)])
+            other_pdf_args = [args[modified_pdf_var.index(var)] for var in other.variables]
+
+            if operation == 'product':
+                return pdf(*self_pdf_args) * other.pdf(*other_pdf_args)
+            if operation == 'divide':
+                return pdf(*self_pdf_args) / other.pdf(*other_pdf_args)
+
+        phi.variables = modified_pdf_var
+        phi.pdf = modified_pdf
+
+        if not inplace:
+            return phi
+
+    def __mul__(self, other):
+        return self.operate(other, 'product', inplace=False)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if set(other.variables) - set(self.variables):
+            raise ValueError("Scope of divisor should be a subset of dividend")
+
+        return self.operate(other, 'divide', inplace=False)
+
+    __div__ = __truediv__
+
     def discretize(self, method, *args, **kwargs):
         """
         Discretizes the continuous distribution into discrete
