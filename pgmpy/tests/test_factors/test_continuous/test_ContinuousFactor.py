@@ -158,6 +158,146 @@ class TestContinuousFactorMethods(unittest.TestCase):
         for inp in np.random.rand(1):
             np_test.assert_almost_equal(phi4.pdf(inp), marginalized_pdf2(inp))
 
+    def test_normalize(self):
+        pdf2 = lambda x1, x2: 2 * self.pdf2(x1, x2)
+
+        phi2 = ContinuousFactor(['x1', 'x2'], pdf2)
+        phi4 = phi2.copy()
+
+        phi4.normalize()
+        self.assertEqual(phi4.variables, phi2.variables)
+        for inp in np.random.rand(1, 2):
+            np_test.assert_almost_equal(phi4.pdf(inp[0], inp[1]), self.pdf2(inp[0], inp[1]))
+
+        phi4 = phi2.normalize(inplace=False)
+        self.assertEqual(phi4.variables, phi4.variables)
+        for inp in np.random.rand(1, 2):
+            np_test.assert_almost_equal(phi4.pdf(inp[0], inp[1]), self.pdf2(inp[0], inp[1]))
+
+    def test_operate(self):
+        phi1 = self.phi1.copy()
+        phi1.operate(self.phi2, 'product')
+        self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
+        for inp in np.random.rand(4, 4):
+            self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
+
+        phi1 = self.phi1.operate(self.phi2, 'product', inplace=False)
+        self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
+        for inp in np.random.rand(4, 4):
+            self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
+
+        phi1 = self.phi1 * self.phi2
+        self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
+        for inp in np.random.rand(4, 4):
+            self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
+
+        phi3 = self.phi3.copy()
+        phi3.operate(self.phi1, 'product')
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
+
+        phi3 = self.phi3.operate(self.phi1, 'product', inplace=False)
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
+
+        phi3 = self.phi3 * self.phi1
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
+
+        phi3 = self.phi3.copy()
+        phi3.operate(self.phi1, 'divide')
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
+
+        phi3 = self.phi3.operate(self.phi1, 'divide', inplace=False)
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
+
+        phi3 = self.phi3 / self.phi1
+        self.assertEqual(phi3.variables, ['x', 'y', 'z'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4.copy()
+        phi4.operate(self.phi2, 'product')
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4.operate(self.phi2, 'product', inplace=False)
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4 * self.phi2
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4.copy()
+        phi4.operate(self.phi2, 'divide')
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4.operate(self.phi2, 'divide', inplace=False)
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
+
+        phi4 = self.phi4 / self.phi2
+        self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
+        for inp in np.random.rand(4, 3):
+            self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
+
+    def test_operate_error(self):
+        self.assertRaises(TypeError, self.phi1.operate, 1, 'product')
+        self.assertRaises(TypeError, self.phi1.operate, 1, 'divide')
+        self.assertRaises(TypeError, self.phi1.operate, '1', 'product')
+        self.assertRaises(TypeError, self.phi1.operate, '1', 'divide')
+        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'product')
+        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'divide')
+        self.assertRaises(TypeError, self.phi1.operate, [1], 'product')
+        self.assertRaises(TypeError, self.phi1.operate, [1], 'divide')
+
+        self.assertRaises(TypeError, self.phi4.operate, 1, 'product')
+        self.assertRaises(TypeError, self.phi4.operate, 1, 'divide')
+        self.assertRaises(TypeError, self.phi4.operate, '1', 'product')
+        self.assertRaises(TypeError, self.phi4.operate, '1', 'divide')
+        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'product')
+        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'divide')
+        self.assertRaises(TypeError, self.phi4.operate, [1], 'product')
+        self.assertRaises(TypeError, self.phi4.operate, [1], 'divide')
+
+        self.assertRaises(TypeError, self.phi1.operate, 1, 'product', False)
+        self.assertRaises(TypeError, self.phi1.operate, 1, 'divide', False)
+        self.assertRaises(TypeError, self.phi1.operate, '1', 'product', False)
+        self.assertRaises(TypeError, self.phi1.operate, '1', 'divide', False)
+        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'product', False)
+        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'divide', False)
+        self.assertRaises(TypeError, self.phi1.operate, [1], 'product', False)
+        self.assertRaises(TypeError, self.phi1.operate, [1], 'divide', False)
+
+        self.assertRaises(TypeError, self.phi4.operate, 1, 'product', False)
+        self.assertRaises(TypeError, self.phi4.operate, 1, 'divide', False)
+        self.assertRaises(TypeError, self.phi4.operate, '1', 'product', False)
+        self.assertRaises(TypeError, self.phi4.operate, '1', 'divide', False)
+        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'product', False)
+        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'divide', False)
+        self.assertRaises(TypeError, self.phi4.operate, [1], 'product', False)
+        self.assertRaises(TypeError, self.phi4.operate, [1], 'divide', False)
+
+        self.assertRaises(ValueError, self.phi1.__truediv__, self.phi2)
+        self.assertRaises(ValueError, self.phi1.__truediv__, self.phi3)
+        self.assertRaises(ValueError, self.phi1.__truediv__, self.phi4)
+        self.assertRaises(ValueError, self.phi2.__truediv__, self.phi3)
+        self.assertRaises(ValueError, self.phi2.__truediv__, self.phi4)
+
     def test_copy(self):
         copy1 = self.phi1.copy()
         copy2 = self.phi3.copy()

@@ -283,7 +283,8 @@ class ContinuousFactor(object):
 
     def operate(self, other, operation, inplace=True):
         """
-        Gives the ContinuousFactor product with the other factor.
+        Gives the ContinuousFactor operation (product or divide) with
+        the other factor.
 
         Parameters
         ----------
@@ -324,8 +325,8 @@ class ContinuousFactor(object):
         0.3989422804014327
         """
         if not isinstance(other, ContinuousFactor):
-            raise TypeError("ContinuousFactor object can only be multiplied with an another "
-                             "ContinuousFactor object. Got {other_type}, expected "
+            raise TypeError("ContinuousFactor object can only be multiplied or divided with "
+                            "an another ContinuousFactor object. Got {other_type}, expected "
                              "ContinuousFactor.".format(other_type=type(other)))
 
         phi = self if inplace else self.copy()
