@@ -193,6 +193,20 @@ class TestJGDMethods(unittest.TestCase):
 
         self.phi1 = self.phi3
 
+    def test_normalize(self):
+        phi = self.phi1.copy()
+        phi.normalize()
+        self.assertEqual(self.phi1.variables, phi.variables)
+        np_test.assert_array_equal(self.phi1.mean, phi.mean)
+        np_test.assert_array_equal(self.phi1.covariance, phi.covariance)
+        self.assertEqual(self.phi1._precision_matrix, phi._precision_matrix)
+
+        phi = self.phi1.normalize(inplace=False)
+        self.assertEqual(self.phi1.variables, phi.variables)
+        np_test.assert_array_equal(self.phi1.mean, phi.mean)
+        np_test.assert_array_equal(self.phi1.covariance, phi.covariance)
+        self.assertEqual(self.phi1._precision_matrix, phi._precision_matrix)
+
     def tearDown(self):
         del self.phi1
         del self.phi2

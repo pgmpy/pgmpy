@@ -244,6 +244,14 @@ class JointGaussianDistribution(ContinuousFactor):
         if not inplace:
             return phi
 
+    def normalize(self, inplace=True):
+        phi = self if inplace else self.copy()
+        
+        # The pdf of a Joint Gaussian distrinution is always
+        # normalized. Hence, no changes.
+        if not inplace:
+            return phi
+
     def copy(self):
         """
         Return a copy of the distribution.
