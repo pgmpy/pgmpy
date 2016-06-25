@@ -34,11 +34,14 @@ class ContinuousFactor(object):
         >>> drichlet_factor.assignemnt(5,6)
         226800.0
         """
-        if not isinstance(variables, list):
-            raise TypeError("variables: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(variables)))
+        if not isinstance(variables, (list, tuple, np.ndarray)):
+            raise TypeError("variables: Expected type list or array-like, "
+                             "got type {var_type}".format(var_type=type(variables)))
 
-        self.variables = variables
+        if len(set(variables)) != len(variables):
+            raise ValueError("Variable names cannot be same.")
+
+        self.variables = list(variables)
         self.pdf = pdf
 
     def scope(self):
@@ -105,6 +108,25 @@ class ContinuousFactor(object):
         """
         return ContinuousFactor(self.scope(), self.pdf)
 
+    def discretize(self, method, *args, **kwargs):
+        """
+        Discretizes the continuous distribution into discrete
+        probability masses using various methods.
+
+        Returns
+        -------
+        An n-D array or a Factor object according to the discretiztion
+        method used.
+
+        Parameters
+        ----------
+        method : A Discretizer Class from pgmpy.discretize
+
+        *args, **kwargs:
+            The parameters to be given to the Discretizer Class.
+        """
+        return method(self, *args, **kwargs).get_discrete_values()
+
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of the given variable values.
@@ -121,7 +143,7 @@ class ContinuousFactor(object):
         Returns
         -------
         ContinuousFactor or None: if inplace=True (default) returns None
-                                  if inplace=False returns a new `Factor` instance.
+                                  if inplace=False returns a new ContinuousFactor instance.
 
         Examples
         --------
@@ -142,9 +164,12 @@ class ContinuousFactor(object):
         >>> custom_factor.assignment(1, 3)
         24.0
         """
-        if not isinstance(values, list):
-            raise TypeError("values: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(values)))
+        if not isinstance(values, (list, tuple, np.ndarray)):
+            raise TypeError("variables: Expected type list or array-like, "
+                             "got type {var_type}".format(var_type=type(values)))
+
+        if not all([var in self.variables for var,value in values]):
+            raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
 
@@ -197,7 +222,7 @@ class ContinuousFactor(object):
         --------
         >>> from pgmpy.factors import ContinuousFactor
         >>> from scipy.stats import multivariate_normal
-        >>> std_normal_pdf = lambda x: multivariate_normal.pdf(x, [0, 0], [[1, 0], [0, 1]])
+        >>> std_normal_pdf = lambda *x: multivariate_normal.pdf(x, [0, 0], [[1, 0], [0, 1]])
         >>> std_normal = ContinuousFactor(['x1', 'x2'], std_normal_pdf)
         >>> std_normal.scope()
         ['x1', 'x2']
@@ -206,12 +231,15 @@ class ContinuousFactor(object):
         >>> std_normal.marginalize(['x2'])
         >>> std_normal.scope()
         ['x1']
-        >>> std_normal.assignment([1])
+        >>> std_normal.assignment(1)
 
         """
-        if not isinstance(variables, list):
-            raise TypeError("variables: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(variables)))
+        if not isinstance(variables, (list, tuple, np.ndarray)):
+            raise TypeError("variables: Expected type list or array-like, "
+                             "got type {var_type}".format(var_type=type(variables)))
+
+        if not all([var in self.variables for var in variables]):
+            raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
 
@@ -363,22 +391,3 @@ class ContinuousFactor(object):
         return self.operate(other, 'divide', inplace=False)
 
     __div__ = __truediv__
-
-    def discretize(self, method, *args, **kwargs):
-        """
-        Discretizes the continuous distribution into discrete
-        probability masses using various methods.
-
-        Returns
-        -------
-        An n-D array or a Factor object according to the discretiztion
-        method used.
-
-        Parameters
-        ----------
-        method : A Discretizer Class from pgmpy.discretize
-
-        *args, **kwargs:
-            The parameters to be given to the Discretizer Class.
-        """
-        return method(self, *args, **kwargs).get_discrete_values()
