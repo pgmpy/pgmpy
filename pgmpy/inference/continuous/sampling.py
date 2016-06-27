@@ -591,3 +591,56 @@ class HamiltonianMCda(HamiltonianMC):
             yield position_m
 
         self.acceptance_rate = self.accepted_proposals / num_samples
+
+
+class NoUTurnSampler(HamiltonianMCda):
+
+    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog):
+
+        super(NoUTurnSampler, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
+                                             simulate_dynamics=simulate_dynamics)
+
+    def _build_tree(self, position, momentum, slice_var, direction, depth, stepsize):
+        """
+        Recursively builds a tree for proposing new position and momentum
+        """
+        # Parameter names in algorithm (here -> representation in algorithm)
+        # position -> theta, momentum -> r, slice_var -> u, direction -> v, depth ->j, stepsize -> epsilon
+        # candidate_set_size -> n, accept_set_bool -> s
+        if depth == 0:
+            position_bar, momentum_bar, grad_bar = self.simulate_dynamics(self.model, position,
+                                                                          momentum, stepsize, grad_log_pdf)
+
+            _, logp_bar = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
+            log_hamiltonian = logp_bar - 0.5 * np.dot(momentum_bar, momentum_bar)
+            candidate_set_size = slice_var < np.exp(log_hamiltonian)
+            accept_set_bool = log_hamiltonian > np.log(slice_var) - 10000 # delta_max = 10000
+
+            return (position_bar, momentum_bar, position_bar, momentum_bar, position_bar,
+                    candidate_set_size, accept_set_bool)
+
+        else:
+            (position_backward, momentum_backward, position_forward, momentum_forward, position_bar,
+             candidate_set_size, accept_set_bool) = _build_tree(position, momentum,
+                                                                slice_var, direction, depth-1, stepsize)
+            if accept_set_bool == 1:
+                if direction == -1:
+                    (position_backward, momentum_backward, _, _, position_bar2,
+                     candidate_set_size2, accept_set_bool2) = _build_tree(position_backward, momentum_backward,
+                                                                          slice_var, direction, depth-1, stepsize)
+                else:
+                    (_, _, position_forward, momentum_forward, position_bar2,
+                     candidate_set_size2, accept_set_bool2) = _build_tree(position_forward, momentum_forward,
+                                                                          slice_var, direction, depth-1, stepsize)
+
+                if (np.random.rand() < candidate_set_size2/(candidate_set_size2 + candidate_set_size)):
+                    position_bar = position_bar2
+                criteria1 = np.dot((position_forward - position_backward), momentum_backward)>=0
+                criteria2 = np.dot((position_forward - position_backward), momentum_forward)>=0
+                accept_set_bool = accept_set_bool2 and criteria1 and criteria2
+                candidate_set_size = candidate_set_size + candidate_set_size2
+
+            return (position_backward, momentum_backward, position_forward, momentum_forward,
+                    position_bar, candidate_set_size, accept_set_bool)
+
+    def _sample():
