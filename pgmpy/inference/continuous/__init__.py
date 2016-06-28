@@ -1,6 +1,6 @@
 from .base import (LeapFrog, ModifiedEuler, BaseSimulateHamiltonianDynamics,
                    BaseGradLogPDF, GradLogPDFGaussian)
-from .sampling import HamiltonianMCda, HamiltonianMC
+from .sampling import HamiltonianMCda, HamiltonianMC, NoUTurnSampler
 
 
 __all__ = ['LeapFrog',
@@ -9,4 +9,5 @@ __all__ = ['LeapFrog',
            'BaseGradLogPDF',
            'GradLogPDFGaussian',
            'HamiltonianMC',
-           'HamiltonianMCda']
+           'HamiltonianMCda',
+           'NoUTurnSampler']
