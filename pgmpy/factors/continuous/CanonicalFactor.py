@@ -89,6 +89,11 @@ class CanonicalFactor(ContinuousFactor):
 
         super(CanonicalFactor, self).__init__(variables, pdf)
 
+    def assignment(self, *args):
+        if self.pdf is None:
+            self.pdf = self.to_joint_gaussian().pdf
+        return super(CanonicalFactor, self).assignment(*args)
+
     def copy(self):
         """
         Makes a copy of the factor.
