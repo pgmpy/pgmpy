@@ -5,6 +5,7 @@ from .JointProbabilityDistribution import JointProbabilityDistribution
 from .continuous.ContinuousNode import ContinuousNode
 from .continuous.ContinuousFactor import ContinuousFactor
 from .continuous.JointGaussianDistribution import JointGaussianDistribution
+from .continuous.CanonicalFactor import CanonicalFactor
 
 __all__ = ['Factor',
            'State',
@@ -17,4 +18,5 @@ __all__ = ['Factor',
            'factorset_divide',
            'ContinuousNode',
            'ContinuousFactor',
-           'JointGaussianDistribution']
+           'JointGaussianDistribution',
+           'CanonicalFactor']
