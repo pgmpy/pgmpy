@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 from pgmpy.factors import ContinuousFactor
-from pgmpy.factors import JointGaussianDistribution as JGD
+from pgmpy.factors import JointGaussianDistribution
 
 class CanonicalFactor(ContinuousFactor):
     u"""
@@ -88,3 +88,81 @@ class CanonicalFactor(ContinuousFactor):
                              (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
 
         super(CanonicalFactor, self).__init__(variables, pdf)
+
+    def copy(self):
+        """
+        Makes a copy of the factor.
+
+        Returns
+        -------
+        CanonicalFactor object: Copy of the factor
+
+        Examples
+        --------
+        >>> from pgmpy.factors import CanonicalFactor
+        >>> phi = CanonicalFactor(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
+                                  np.array([[1], [-1]]), -3)
+        >>> phi.variables
+        ['X', 'Y']
+
+        >>> phi.K
+        matrix([[1, -1],
+               [-1, 1]])
+
+        >>> phi.h
+        matrix([[1],
+               [-1]])
+
+        >>> phi.g
+        -3
+
+        >>> phi2 = phi.copy()
+
+        >>> phi2.variables
+        ['X', 'Y']
+
+        >>> phi2.K
+        matrix([[1, -1],
+               [-1, 1]])
+
+        >>> phi2.h
+        matrix([[1],
+               [-1]])
+
+        >>> phi2.g
+        -3
+
+        """
+        copy_factor = CanonicalFactor(self.scope(), self.K.copy(),
+                                      self.h.copy(), self.g, self.pdf)
+        if self.pdf is not None:
+            copy_factor.pdf = self.pdf
+
+        return copy_factor
+
+    def to_joint_gaussian(self):
+        """
+        Return an equivalent Joint Gaussian Distribution.
+
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> from pgmpy.factors import CanonicalFactor
+        >>> phi = CanonicalFactor(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
+                                  np.array([[5], [-1]]), 1)
+        >>> jgd = phi.to_joint_gaussian()
+        >>> jgd.variables
+        ['x1', 'x2']
+        >>> jgd.covariance
+        array([[ 0.5  ,  0.25 ],
+               [ 0.25 ,  0.375]])
+        >>> jgd.mean
+        array([[ 2.25 ],
+               [ 0.875]])
+
+        """
+        covariance = np.linalg.inv(self.K)
+        mean = np.dot(covariance, self.h)
+
+        return JointGaussianDistribution(self.scope(), mean, covariance)
