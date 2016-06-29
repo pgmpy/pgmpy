@@ -17,7 +17,7 @@ class CanonicalFactor(ContinuousFactor):
     operations used in inference: factor product, factor division,
     factor reduction, and marginalization. Thus, we define this
     CanonicalFactor class that allows the inference process to be
-    performed. We can represent every Gaussian as a canonical form.
+    performed on joint Gaussian networks.
 
     A canonical form C (X; K,h,g) is defined as
 
@@ -61,11 +61,11 @@ class CanonicalFactor(ContinuousFactor):
         ['X', 'Y']
 
         >>> phi.K
-        matrix([[1, -1],
+        array([[1, -1],
                [-1, 1]])
 
         >>> phi.h
-        matrix([[1],
+        array([[1],
                [-1]])
 
         >>> phi.g
@@ -111,11 +111,11 @@ class CanonicalFactor(ContinuousFactor):
         ['X', 'Y']
 
         >>> phi.K
-        matrix([[1, -1],
+        array([[1, -1],
                [-1, 1]])
 
         >>> phi.h
-        matrix([[1],
+        array([[1],
                [-1]])
 
         >>> phi.g
@@ -127,11 +127,11 @@ class CanonicalFactor(ContinuousFactor):
         ['X', 'Y']
 
         >>> phi2.K
-        matrix([[1, -1],
+        array([[1, -1],
                [-1, 1]])
 
         >>> phi2.h
-        matrix([[1],
+        array([[1],
                [-1]])
 
         >>> phi2.g
@@ -171,3 +171,105 @@ class CanonicalFactor(ContinuousFactor):
         mean = np.dot(covariance, self.h)
 
         return JointGaussianDistribution(self.scope(), mean, covariance)
+
+    def reduce(self, values, inplace=True):
+        """
+        Reduces the distribution to the context of the given variable values.
+
+        Let C(X,Y ; K, h, g) be some canonical form over X,Y where,
+
+        k = [[K_XX, K_XY],        ;       h = [[h_X],
+             [K_YX, K_YY]]                     [h_Y]]
+
+        The formula for the obtained conditional distribution for setting
+        Y = y is given by,
+
+        .. math:: K' = K_{XX}
+        .. math:: h' = h_X - K_{XX} * y
+        .. math:: g' = {h^T}_Y * y + 0.5 * y^T * K_{YY} * y
+        
+
+        Parameters
+        ----------
+        values: list, array-like
+            A list of tuples of the form (variable name, variable value).
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new CaninicalFactor object.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                if inplace=True (default) returns None
+                if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> from pgmpy.factors import CanonicalFactor
+        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'], 
+                                  np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+                                  np.array([[1], [4], [-1]]), -2)
+        >>> phi.variables
+        ['X1', 'X2', 'X3']
+
+        >>> phi.K
+        array([[ 1., -1.],
+                [-1.,  3.]])
+
+        >>> phi.h
+        array([[ 1. ],
+                [ 3.5]])
+
+        >>> phi.g
+        -2
+
+        >>> phi.reduce([('X3', 0.25)])
+
+        >>> phi.variables
+        ['X1', 'X2']
+
+        >>> phi.K
+        array([[ 1, -1],
+                [-1,  4]])
+
+        >>> phi.h
+        array([[ 1. ],
+                [ 4.5]])
+
+        >>> phi.g
+        array([[-2.375]])
+        """
+        if not isinstance(values, list):
+            raise TypeError("values: Expected type list or array-like,\
+                             got type {var_type}".format(var_type=type(values)))
+
+        phi = self if inplace else self.copy()
+
+        var_to_reduce = [var for var, value in values]
+
+        # index_to_keep -> j vector
+        index_to_keep = [self.variables.index(var) for var in self.variables
+                         if var not in var_to_reduce]
+        # index_to_reduce -> i vector
+        index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
+
+        K_i_i = self.K[np.ix_(index_to_keep, index_to_keep)]
+        K_i_j = self.K[np.ix_(index_to_keep, index_to_reduce)]
+        K_j_j = self.K[np.ix_(index_to_reduce, index_to_reduce)]
+        h_i = self.h[index_to_keep]
+        h_j = self.h[index_to_reduce]
+
+        # The values for the reduced variables.
+        y = np.array([value for index,
+                      value in sorted([(self.variables.index(var), value) for var,
+                                        value in values])]).reshape(len(index_to_reduce), 1)
+
+        phi.variables = [self.variables[index] for index in index_to_keep]
+        phi.K = K_i_i
+        phi.h = h_i - np.dot(K_i_j, y)
+        phi.g = self.g + np.dot(h_j.T, y) - 0.5 * np.dot(np.dot(y.T, K_j_j), y)
+        phi.pdf = None
+
+        if not inplace:
+            return phi
