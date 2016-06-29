@@ -206,6 +206,7 @@ class CanonicalFactor(ContinuousFactor):
 
         Examples
         --------
+        >>> imort numpy as np
         >>> from pgmpy.factors import CanonicalFactor
         >>> phi = CanonicalFactor(['X1', 'X2', 'X3'], 
                                   np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
@@ -270,6 +271,111 @@ class CanonicalFactor(ContinuousFactor):
         phi.h = h_i - np.dot(K_i_j, y)
         phi.g = self.g + np.dot(h_j.T, y) - 0.5 * np.dot(np.dot(y.T, K_j_j), y)
         phi.pdf = None
+
+        if not inplace:
+            return phi
+
+    def operate(self, other, operation, inplace=True):
+        """
+        Gives the CanonicalFactor operation (product or divide) with
+        the other factor.
+
+        The product of two canonical factors over the same scope
+        X is simply:
+        
+        C(K1, h1, g1) * C(K2, h2, g2) = C(K1+K2, h1+h2, g1+g2)
+
+        The division of canonical forms is defined analogously:
+
+        C(K1, h1, g1) / C(K2, h2, g2) = C(K1-K2, h1-h2, g1- g2)
+
+        When we have two canonical factors over different scopes X and Y,
+        we simply extend the scope of both to make their scopes match and
+        then perform the operation of the above equation. The extension of
+        the scope is performed by simply adding zero entries to both the K
+        matrices and the h vectors.
+
+        Parameters
+        ----------
+        other: CanonicalFactor
+            The CanonicalFactor to be multiplied.
+
+        operation: String
+            'product' for multiplication operation and 'divide' for
+            division operation.
+
+        Returns
+        -------
+        CanonicalFactor or None: 
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new CanonicalFactor instance.
+
+        Example
+        -------
+        >>> import numpy as np
+        >>> from pgmpy.factors import CanonicalFactor
+        >>> phi1 = CanonicalFactor(['x1', 'x2', 'x3'],
+                                   np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+                                   np.array([[1], [4], [-1]]), -2)
+        >>> phi2 = CanonicalFactor(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
+                                   np.array([[5], [-1]]), 1)
+
+        >>> phi3 = phi1 * phi2
+        >>> phi3.K
+        array([[ 4., -3.,  0.],
+               [-3.,  8., -2.],
+               [ 0., -2.,  4.]])
+        >>> phi3.h
+        array([ 6.,  3., -1.])
+        >>> phi3.g
+        -1
+
+        >>> phi4 = phi1 / phi2
+        >>> phi4.K
+        array([[-2.,  1.,  0.],
+               [ 1.,  0., -2.],
+               [ 0., -2.,  4.]])
+        >>> phi4.h
+        array([-4.,  5., -1.])
+        >>> phi4.g
+        -3
+
+        """
+        if not isinstance(other, CanonicalFactor):
+            raise TypeError("CanonicalFactor object can only be multiplied or divided with "
+                            "an another CanonicalFactor object. Got {other_type}, expected "
+                            "CanonicalFactor.".format(other_type=type(other)))
+
+        phi = self if inplace else self.copy()
+
+        all_vars = self.variables + [var for var in other.variables if var not in self.variables]
+        no_of_var = len(all_vars)
+
+        self_var_index = [all_vars.index(var) for var in self.variables]
+        other_var_index = [all_vars.index(var) for var in other.variables]
+
+        def _extend_K_scope(K, index):
+            ext_K = np.zeros([no_of_var, no_of_var])
+            ext_K[np.ix_(index, index)] = K
+            return ext_K
+
+        def _extend_h_scope(h, index):
+            ext_h = np.zeros(no_of_var)
+            ext_h[index] = h
+            return ext_h
+
+        phi.variables = all_vars
+        phi.pdf = None
+
+        if operation == 'product':
+            phi.K = _extend_K_scope(self.K, self_var_index) + _extend_K_scope(other.K, other_var_index)
+            phi.h = _extend_h_scope(self.h, self_var_index) + _extend_h_scope(other.h, other_var_index)
+            phi.g = self.g + other.g
+
+        else:
+            phi.K = _extend_K_scope(self.K, self_var_index) - _extend_K_scope(other.K, other_var_index)
+            phi.h = _extend_h_scope(self.h, self_var_index) - _extend_h_scope(other.h, other_var_index)
+            phi.g = self.g - other.g
 
         if not inplace:
             return phi
