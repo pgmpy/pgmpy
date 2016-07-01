@@ -170,7 +170,7 @@ class ContinuousFactor(object):
                              "got type {var_type}".format(var_type=type(values)))
 
         for var,value in values:
-            if var not in phi.variables:
+            if var not in self.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
         phi = self if inplace else self.copy()
@@ -241,7 +241,7 @@ class ContinuousFactor(object):
                              "got type {var_type}".format(var_type=type(variables)))
 
         for var in variables:
-            if var not in phi.variables:
+            if var not in self.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
         phi = self if inplace else self.copy()
@@ -308,7 +308,7 @@ class ContinuousFactor(object):
         if not inplace:
             return phi
 
-    def operate(self, other, operation, inplace=True):
+    def _operate(self, other, operation, inplace=True):
         """
         Gives the ContinuousFactor operation (product or divide) with
         the other factor.
@@ -328,28 +328,6 @@ class ContinuousFactor(object):
                         if inplace=True (default) returns None
                         if inplace=False returns a new `Factor` instance.
 
-        Example
-        -------
-        >>> from pgmpy.factors import ContinuousFactor
-        >>> from scipy.stats import multivariate_normal
-        >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])
-        >>> sn_pdf2 = lambda x1,x2: multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
-        >>> sn1 = ContinuousFactor(['x2'], sn_pdf1)
-        >>> sn2 = ContinuousFactor(['x1', 'x2'], sn_pdf2)
-
-        >>> sn3 = sn1.operate(sn2, 'product', inplace=False)
-        >>> sn3.assignment(0, 0)
-        0.063493635934240983
-        >>> sn4 = sn2.operate(sn1, 'divide', inplace=False)
-        >>> sn4.assignment(0, 0)
-        0.3989422804014327
-
-        >>> sn3 = sn1 * sn2
-        >>> sn3.assignment(0, 0)
-        0.063493635934240983
-        >>> sn4 = sn2 / sn1
-        >>> sn4.assignment(0, 0)
-        0.3989422804014327
         """
         if not isinstance(other, ContinuousFactor):
             raise TypeError("ContinuousFactor object can only be multiplied or divided with "
@@ -377,8 +355,76 @@ class ContinuousFactor(object):
         if not inplace:
             return phi
 
+    def product(self, other, inplace=True):
+        """
+        Gives the ContinuousFactor product with the other factor.
+
+        Parameters
+        ----------
+        other: ContinuousFactor
+            The ContinuousFactor to be multiplied.
+
+        Returns
+        -------
+        ContinuousFactor or None: 
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
+        Example
+        -------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from scipy.stats import multivariate_normal
+        >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])
+        >>> sn_pdf2 = lambda x1,x2: multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
+        >>> sn1 = ContinuousFactor(['x2'], sn_pdf1)
+        >>> sn2 = ContinuousFactor(['x1', 'x2'], sn_pdf2)
+
+        >>> sn3 = sn1.product(sn2, inplace=False)
+        >>> sn3.assignment(0, 0)
+        0.063493635934240983
+
+        >>> sn3 = sn1 * sn2
+        >>> sn3.assignment(0, 0)
+        0.063493635934240983
+        """
+        return self._operate(other, 'product', inplace)
+
+    def divide(self, other, inplace=True):
+        """
+        Gives the ContinuousFactor divide with the other factor.
+
+        Parameters
+        ----------
+        other: ContinuousFactor
+            The ContinuousFactor to be multiplied.
+
+        Returns
+        -------
+        ContinuousFactor or None: 
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new `Factor` instance.
+
+        Example
+        -------
+        >>> from pgmpy.factors import ContinuousFactor
+        >>> from scipy.stats import multivariate_normal
+        >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])
+        >>> sn_pdf2 = lambda x1,x2: multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
+        >>> sn1 = ContinuousFactor(['x2'], sn_pdf1)
+        >>> sn2 = ContinuousFactor(['x1', 'x2'], sn_pdf2)
+
+        >>> sn4 = sn2.divide(sn1, inplace=False)
+        >>> sn4.assignment(0, 0)
+        0.3989422804014327
+
+        >>> sn4 = sn2 / sn1
+        >>> sn4.assignment(0, 0)
+        0.3989422804014327
+        """
+        return self._operate(other, 'divide', inplace)
+
     def __mul__(self, other):
-        return self.operate(other, 'product', inplace=False)
+        return self._operate(other, 'product', inplace=False)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -387,6 +433,6 @@ class ContinuousFactor(object):
         if set(other.variables) - set(self.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
-        return self.operate(other, 'divide', inplace=False)
+        return self._operate(other, 'divide', inplace=False)
 
     __div__ = __truediv__

@@ -230,12 +230,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
 
     def test_operate(self):
         phi1 = self.phi1.copy()
-        phi1.operate(self.phi2, 'product')
+        phi1._operate(self.phi2, 'product')
         self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
         for inp in np.random.rand(4, 4):
             self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
 
-        phi1 = self.phi1.operate(self.phi2, 'product', inplace=False)
+        phi1 = self.phi1._operate(self.phi2, 'product', inplace=False)
         self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
         for inp in np.random.rand(4, 4):
             self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
@@ -246,12 +246,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(phi1.pdf(*inp), self.phi1.pdf(inp[0], inp[1]) * self.phi2.pdf(inp[2], inp[3]))
 
         phi3 = self.phi3.copy()
-        phi3.operate(self.phi1, 'product')
+        phi3._operate(self.phi1, 'product')
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
 
-        phi3 = self.phi3.operate(self.phi1, 'product', inplace=False)
+        phi3 = self.phi3._operate(self.phi1, 'product', inplace=False)
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
@@ -262,12 +262,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) * self.phi1.pdf(inp[0], inp[1]))
 
         phi3 = self.phi3.copy()
-        phi3.operate(self.phi1, 'divide')
+        phi3._operate(self.phi1, 'divide')
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
 
-        phi3 = self.phi3.operate(self.phi1, 'divide', inplace=False)
+        phi3 = self.phi3._operate(self.phi1, 'divide', inplace=False)
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
@@ -278,12 +278,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(phi3.pdf(*inp), self.phi3.pdf(*inp) / self.phi1.pdf(inp[0], inp[1]))
 
         phi4 = self.phi4.copy()
-        phi4.operate(self.phi2, 'product')
+        phi4._operate(self.phi2, 'product')
         self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
 
-        phi4 = self.phi4.operate(self.phi2, 'product', inplace=False)
+        phi4 = self.phi4._operate(self.phi2, 'product', inplace=False)
         self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
@@ -294,12 +294,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) * self.phi2.pdf(inp[0], inp[1]))
 
         phi4 = self.phi4.copy()
-        phi4.operate(self.phi2, 'divide')
+        phi4._operate(self.phi2, 'divide')
         self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
 
-        phi4 = self.phi4.operate(self.phi2, 'divide', inplace=False)
+        phi4 = self.phi4._operate(self.phi2, 'divide', inplace=False)
         self.assertEqual(phi4.variables, ['x1', 'x2', 'x3'])
         for inp in np.random.rand(4, 3):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
@@ -310,41 +310,41 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(phi4.pdf(*inp), self.phi4.pdf(*inp) / self.phi2.pdf(inp[0], inp[1]))
 
     def test_operate_error(self):
-        self.assertRaises(TypeError, self.phi1.operate, 1, 'product')
-        self.assertRaises(TypeError, self.phi1.operate, 1, 'divide')
-        self.assertRaises(TypeError, self.phi1.operate, '1', 'product')
-        self.assertRaises(TypeError, self.phi1.operate, '1', 'divide')
-        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'product')
-        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'divide')
-        self.assertRaises(TypeError, self.phi1.operate, [1], 'product')
-        self.assertRaises(TypeError, self.phi1.operate, [1], 'divide')
+        self.assertRaises(TypeError, self.phi1._operate, 1, 'product')
+        self.assertRaises(TypeError, self.phi1._operate, 1, 'divide')
+        self.assertRaises(TypeError, self.phi1._operate, '1', 'product')
+        self.assertRaises(TypeError, self.phi1._operate, '1', 'divide')
+        self.assertRaises(TypeError, self.phi1._operate, self.phi2.pdf, 'product')
+        self.assertRaises(TypeError, self.phi1._operate, self.phi2.pdf, 'divide')
+        self.assertRaises(TypeError, self.phi1._operate, [1], 'product')
+        self.assertRaises(TypeError, self.phi1._operate, [1], 'divide')
 
-        self.assertRaises(TypeError, self.phi4.operate, 1, 'product')
-        self.assertRaises(TypeError, self.phi4.operate, 1, 'divide')
-        self.assertRaises(TypeError, self.phi4.operate, '1', 'product')
-        self.assertRaises(TypeError, self.phi4.operate, '1', 'divide')
-        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'product')
-        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'divide')
-        self.assertRaises(TypeError, self.phi4.operate, [1], 'product')
-        self.assertRaises(TypeError, self.phi4.operate, [1], 'divide')
+        self.assertRaises(TypeError, self.phi4._operate, 1, 'product')
+        self.assertRaises(TypeError, self.phi4._operate, 1, 'divide')
+        self.assertRaises(TypeError, self.phi4._operate, '1', 'product')
+        self.assertRaises(TypeError, self.phi4._operate, '1', 'divide')
+        self.assertRaises(TypeError, self.phi4._operate, self.phi2.pdf, 'product')
+        self.assertRaises(TypeError, self.phi4._operate, self.phi2.pdf, 'divide')
+        self.assertRaises(TypeError, self.phi4._operate, [1], 'product')
+        self.assertRaises(TypeError, self.phi4._operate, [1], 'divide')
 
-        self.assertRaises(TypeError, self.phi1.operate, 1, 'product', False)
-        self.assertRaises(TypeError, self.phi1.operate, 1, 'divide', False)
-        self.assertRaises(TypeError, self.phi1.operate, '1', 'product', False)
-        self.assertRaises(TypeError, self.phi1.operate, '1', 'divide', False)
-        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'product', False)
-        self.assertRaises(TypeError, self.phi1.operate, self.phi2.pdf, 'divide', False)
-        self.assertRaises(TypeError, self.phi1.operate, [1], 'product', False)
-        self.assertRaises(TypeError, self.phi1.operate, [1], 'divide', False)
+        self.assertRaises(TypeError, self.phi1._operate, 1, 'product', False)
+        self.assertRaises(TypeError, self.phi1._operate, 1, 'divide', False)
+        self.assertRaises(TypeError, self.phi1._operate, '1', 'product', False)
+        self.assertRaises(TypeError, self.phi1._operate, '1', 'divide', False)
+        self.assertRaises(TypeError, self.phi1._operate, self.phi2.pdf, 'product', False)
+        self.assertRaises(TypeError, self.phi1._operate, self.phi2.pdf, 'divide', False)
+        self.assertRaises(TypeError, self.phi1._operate, [1], 'product', False)
+        self.assertRaises(TypeError, self.phi1._operate, [1], 'divide', False)
 
-        self.assertRaises(TypeError, self.phi4.operate, 1, 'product', False)
-        self.assertRaises(TypeError, self.phi4.operate, 1, 'divide', False)
-        self.assertRaises(TypeError, self.phi4.operate, '1', 'product', False)
-        self.assertRaises(TypeError, self.phi4.operate, '1', 'divide', False)
-        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'product', False)
-        self.assertRaises(TypeError, self.phi4.operate, self.phi2.pdf, 'divide', False)
-        self.assertRaises(TypeError, self.phi4.operate, [1], 'product', False)
-        self.assertRaises(TypeError, self.phi4.operate, [1], 'divide', False)
+        self.assertRaises(TypeError, self.phi4._operate, 1, 'product', False)
+        self.assertRaises(TypeError, self.phi4._operate, 1, 'divide', False)
+        self.assertRaises(TypeError, self.phi4._operate, '1', 'product', False)
+        self.assertRaises(TypeError, self.phi4._operate, '1', 'divide', False)
+        self.assertRaises(TypeError, self.phi4._operate, self.phi2.pdf, 'product', False)
+        self.assertRaises(TypeError, self.phi4._operate, self.phi2.pdf, 'divide', False)
+        self.assertRaises(TypeError, self.phi4._operate, [1], 'product', False)
+        self.assertRaises(TypeError, self.phi4._operate, [1], 'divide', False)
 
         self.assertRaises(ValueError, self.phi1.__truediv__, self.phi2)
         self.assertRaises(ValueError, self.phi1.__truediv__, self.phi3)
