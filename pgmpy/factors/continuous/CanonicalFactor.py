@@ -9,6 +9,7 @@ from scipy.stats import multivariate_normal
 from pgmpy.factors import ContinuousFactor
 from pgmpy.factors import JointGaussianDistribution
 
+
 class CanonicalFactor(ContinuousFactor):
     u"""
     The intermediate factors in a Gaussian network can be described
@@ -239,11 +240,14 @@ class CanonicalFactor(ContinuousFactor):
                 [ 4.5]])
 
         >>> phi.g
-        array([[-2.375]])
+        -2.375
         """
-        if not isinstance(values, list):
-            raise TypeError("values: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(values)))
+        if not isinstance(values, (list, tuple, np.ndarray)):
+            raise TypeError("variables: Expected type list or array-like, "
+                             "got type {var_type}".format(var_type=type(values)))
+
+        if not all([var in self.variables for var,value in values]):
+            raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
 
@@ -269,8 +273,107 @@ class CanonicalFactor(ContinuousFactor):
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
-        phi.g = self.g + np.dot(h_j.T, y) - 0.5 * np.dot(np.dot(y.T, K_j_j), y)
+        phi.g = (self.g + np.dot(h_j.T, y) - 0.5 * np.dot(np.dot(y.T, K_j_j), y))[0][0]
         phi.pdf = None
+
+        if not inplace:
+            return phi
+
+    def marginalize(self, variables, inplace=True):
+        u"""
+        Modifies the factor with marginalized values.
+
+        Let C(X,Y ; K, h, g) be some canonical form over X,Y where,
+
+        k = [[K_XX, K_XY],        ;       h = [[h_X],
+             [K_YX, K_YY]]                     [h_Y]]
+
+        In this case, the result of the integration operation is a canonical
+        from C (K', h', g') given by,
+
+        .. math:: K' = K_{XX} - K_{XY} * {K^{-1}}_{YY} * K_YX
+        .. math:: h' = h_X - K_{XY} * {K^{-1}}_{YY} * h_Y
+        .. math:: g' = g + 0.5 * (|Y| * log(2*pi) - log(|K_{YY}|) + {h^T}_Y * K_{YY} * h_Y)
+
+        Parameters
+        ----------
+
+        variables: list or array-like
+                List of variables over which to marginalize.
+
+        inplace: boolean
+                If inplace=True it will modify the distribution itself,
+                else would return a new distribution.
+
+        Returns
+        -------
+        CanonicalFactor or None :
+                if inplace=True (default) returns None
+                if inplace=False return a new CanonicalFactor instance
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import CanonicalFactor
+        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
+        ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+        ...                       np.array([[1], [4], [-1]]), -2)
+        >>> phi.K
+        array([[ 1, -1,  0],
+                [-1,  4, -2],
+                [ 0, -2,  4]])
+
+        >>> phi.h
+        array([[ 1],
+                [ 4],
+                [-1]])
+
+        >>> phi.g
+        -2
+
+        >>> phi.marginalize(['X3'])
+
+        >>> phi.K
+        array([[ 1., -1.],
+                [-1.,  3.]])
+
+        >>> phi.h
+        array([[ 1. ],
+                [ 3.5]])
+
+        >>> phi.g
+        0.22579135
+        """
+        if not isinstance(variables, (list, tuple, np.ndarray)):
+            raise TypeError("variables: Expected type list or array-like, "
+                             "got type {var_type}".format(var_type=type(variables)))
+
+        if not all([var in self.variables for var in variables]):
+            raise ValueError("Variable not in scope.")
+
+        phi = self if inplace else self.copy()
+
+        # index_to_keep -> i vector
+        index_to_keep = [self.variables.index(var) for var in self.variables
+                         if var not in variables]
+        # index_to_marginalize -> j vector
+        index_to_marginalize = [self.variables.index(var) for var in variables]
+
+        K_i_i = self.K[np.ix_(index_to_keep, index_to_keep)]
+        K_i_j = self.K[np.ix_(index_to_keep, index_to_marginalize)]
+        K_j_i = self.K[np.ix_(index_to_marginalize, index_to_keep)]
+        K_j_j = self.K[np.ix_(index_to_marginalize, index_to_marginalize)]
+        K_j_j_inv = np.linalg.inv(K_j_j)
+        h_i = self.h[index_to_keep]
+        h_j = self.h[index_to_marginalize]
+
+        phi.variables = [self.variables[index] for index in index_to_keep]
+        phi.pdf = None
+
+        phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
+        phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
+        phi.g = self.g + 0.5 * (len(variables) * np.log(2 * np.pi)
+                - np.log(np.linalg.det(K_j_j)) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
 
         if not inplace:
             return phi
@@ -301,8 +404,8 @@ class CanonicalFactor(ContinuousFactor):
             The CanonicalFactor to be multiplied.
 
         operation: String
-            'product' for multiplication operation and 'divide' for
-            division operation.
+            'product' for multiplication operation and
+            'divide' for division operation.
 
         Returns
         -------
