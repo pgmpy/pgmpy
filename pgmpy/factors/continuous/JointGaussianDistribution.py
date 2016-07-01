@@ -22,8 +22,10 @@ class JointGaussianDistribution(ContinuousFactor):
         ----------
         variables: iterable of any hashable python object
             The variables for which the distribution is defined.
+
         mean: n x 1, array like
             n-dimensional vector where n is the number of variables.
+
         covariance: n x n, 2-d array like
             n x n dimensional matrix where n is the number of variables.
 
@@ -95,6 +97,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
         variables: iterator
                 List of variables over which to marginalize.
+
         inplace: boolean
                 If inplace=True it will modify the distribution itself,
                 else would return a new distribution.

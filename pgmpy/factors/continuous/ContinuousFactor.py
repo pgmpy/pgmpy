@@ -1,8 +1,9 @@
 from __future__ import division
 
-import six
 import numpy as np
 import scipy.integrate as integrate
+
+from pgmpy.extern import six
 
 
 class ContinuousFactor(object):
@@ -168,8 +169,9 @@ class ContinuousFactor(object):
             raise TypeError("variables: Expected type list or array-like, "
                              "got type {var_type}".format(var_type=type(values)))
 
-        if not all([var in self.variables for var,value in values]):
-            raise ValueError("Variable not in scope.")
+        for var,value in values:
+            if var not in phi.variables:
+                raise ValueError("{var} not in scope.".format(var=var))
 
         phi = self if inplace else self.copy()
 
@@ -238,14 +240,11 @@ class ContinuousFactor(object):
             raise TypeError("variables: Expected type list or array-like, "
                              "got type {var_type}".format(var_type=type(variables)))
 
-        if not all([var in self.variables for var in variables]):
-            raise ValueError("Variable not in scope.")
-
-        phi = self if inplace else self.copy()
-
         for var in variables:
             if var not in phi.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
+
+        phi = self if inplace else self.copy()
 
         all_var = [var for var in self.variables]
         var_to_keep = [var for var in self.variables if var not in variables]
