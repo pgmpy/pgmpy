@@ -2,10 +2,10 @@
 
 from __future__ import division
 
-import six
 import numpy as np
 from scipy.stats import multivariate_normal
 
+from pgmpy.extern import six
 from pgmpy.factors import ContinuousFactor
 from pgmpy.factors import JointGaussianDistribution
 
@@ -34,8 +34,6 @@ class CanonicalFactor(ContinuousFactor):
         """
         Parameters
         ----------
-        Parameters
-        ----------
         variables: list or array-like
         The variables for wich the distribution is defined.
 
@@ -45,14 +43,12 @@ class CanonicalFactor(ContinuousFactor):
 
         g : int, float
 
-        The terms K, h and g are defined parameters for canonical
-        factors representation.
-
         pdf: function
         The probability density function of the distribution.
 
-        Examples
-        --------
+        The terms K, h and g are defined parameters for canonical
+        factors representation.
+
         Examples
         --------
         >>> from pgmpy.factors import CanonicalFactor
@@ -77,7 +73,7 @@ class CanonicalFactor(ContinuousFactor):
 
         if len(h) != no_of_var:
             raise ValueError("Length of h parameter vector must be equal to the"
-                         "number of variables.")
+                             "number of variables.")
 
         self.h = np.asarray(np.reshape(h, (no_of_var, 1)), dtype=float)
         self.g = g
@@ -188,7 +184,7 @@ class CanonicalFactor(ContinuousFactor):
         .. math:: K' = K_{XX}
         .. math:: h' = h_X - K_{XX} * y
         .. math:: g' = {h^T}_Y * y + 0.5 * y^T * K_{YY} * y
-        
+
 
         Parameters
         ----------
@@ -209,7 +205,7 @@ class CanonicalFactor(ContinuousFactor):
         --------
         >>> imort numpy as np
         >>> from pgmpy.factors import CanonicalFactor
-        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'], 
+        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
                                   np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
                                   np.array([[1], [4], [-1]]), -2)
         >>> phi.variables
@@ -244,9 +240,9 @@ class CanonicalFactor(ContinuousFactor):
         """
         if not isinstance(values, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type list or array-like, "
-                             "got type {var_type}".format(var_type=type(values)))
+                            "got type {var_type}".format(var_type=type(values)))
 
-        if not all([var in self.variables for var,value in values]):
+        if not all([var in self.variables for var, value in values]):
             raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
@@ -268,7 +264,7 @@ class CanonicalFactor(ContinuousFactor):
         # The values for the reduced variables.
         y = np.array([value for index,
                       value in sorted([(self.variables.index(var), value) for var,
-                                        value in values])]).reshape(len(index_to_reduce), 1)
+                                      value in values])]).reshape(len(index_to_reduce), 1)
 
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.K = K_i_i
@@ -346,7 +342,7 @@ class CanonicalFactor(ContinuousFactor):
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type list or array-like, "
-                             "got type {var_type}".format(var_type=type(variables)))
+                            "got type {var_type}".format(var_type=type(variables)))
 
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope.")
@@ -372,20 +368,20 @@ class CanonicalFactor(ContinuousFactor):
 
         phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
         phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
-        phi.g = self.g + 0.5 * (len(variables) * np.log(2 * np.pi)
-                - np.log(np.linalg.det(K_j_j)) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
+        phi.g = self.g + 0.5 * (len(variables) * np.log(2 * np.pi) -
+                                np.log(np.linalg.det(K_j_j)) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
 
         if not inplace:
             return phi
 
-    def operate(self, other, operation, inplace=True):
+    def _operate(self, other, operation, inplace=True):
         """
         Gives the CanonicalFactor operation (product or divide) with
         the other factor.
 
         The product of two canonical factors over the same scope
         X is simply:
-        
+
         C(K1, h1, g1) * C(K2, h2, g2) = C(K1+K2, h1+h2, g1+g2)
 
         The division of canonical forms is defined analogously:
@@ -409,7 +405,7 @@ class CanonicalFactor(ContinuousFactor):
 
         Returns
         -------
-        CanonicalFactor or None: 
+        CanonicalFactor or None:
                         if inplace=True (default) returns None
                         if inplace=False returns a new CanonicalFactor instance.
 
