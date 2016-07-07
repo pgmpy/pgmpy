@@ -396,7 +396,7 @@ class HamiltonianMCda(HamiltonianMC):
     def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
-            raise AttributeError(
+            raise ValueError(
                 "delta should be a floating value in between 0 and 1")
 
         self.delta = delta
@@ -633,7 +633,7 @@ class NoUTurnSampler(HamiltonianMCda):
      (1.7139810571103862, 2.809135711303245, 5.690811523613858), ...,
      (-0.7742669710786649, 2.092867703984895, 6.139480724333439),
      (1.3916152816323692, 1.394952482021687, 3.446906546649354),
-     (-0.2726336476939125, 2.6230854954595357, 2.923948403903159)], 
+     (-0.2726336476939125, 2.6230854954595357, 2.923948403903159)],
               dtype=[('x', '<f8'), ('y', '<f8'), ('z', '<f8')])
 
     References
@@ -654,8 +654,8 @@ class NoUTurnSampler(HamiltonianMCda):
         Initalizes root node of the tree, i.e depth = 0
         """
 
-        position_bar, momentum_bar, grad_bar = self.simulate_dynamics(self.model, position, momentum, stepsize,
-                                                                      self.grad_log_pdf).get_proposed_values()
+        position_bar, momentum_bar, _ = self.simulate_dynamics(self.model, position, momentum, stepsize,
+                                                               self.grad_log_pdf).get_proposed_values()
 
         _, logp_bar = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
 
@@ -691,7 +691,7 @@ class NoUTurnSampler(HamiltonianMCda):
         if depth == 0:
             # Take single leapfrog step in the given direction (direction * stepsize)
             position_bar, momentum_bar, candidate_set_size, accept_set_bool =\
-                    self._initalize_tree(position, momentum, slice_var, direction * stepsize)
+                self._initalize_tree(position, momentum, slice_var, direction * stepsize)
 
             return (position_bar, momentum_bar, position_bar, momentum_bar, position_bar,
                     candidate_set_size, accept_set_bool)
@@ -756,7 +756,7 @@ class NoUTurnSampler(HamiltonianMCda):
                                                                            slice_var, direction, depth, stepsize)
             if accept_set_bool2 == 1:
                 if np.random.rand() < candidate_set_size2 / candidate_set_size:
-                    position = position_bar
+                    position = position_bar.copy()
 
             accept_set_bool, candidate_set_size = self._update_acceptance_criteria(position_forward, position_backward,
                                                                                    momentum_forward, momentum_backward,
@@ -837,7 +837,7 @@ class NoUTurnSampler(HamiltonianMCda):
 
         return samples
 
-    def generate_sample(self, initial_pos, num_samples,stepsize=None):
+    def generate_sample(self, initial_pos, num_samples, stepsize=None):
         """
         Returns a generator type object whose each iteration yields a sample
 
@@ -889,7 +889,7 @@ class NoUTurnSampler(HamiltonianMCda):
 
         position_m = initial_pos
 
-        for i in range(0, num_samples):
+        for _ in range(0, num_samples):
 
             position_m = self._sample(position_m, stepsize)
 
@@ -942,7 +942,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
      (0.21509819341468212, 2.157760225367607, 3.5749582768731476),
      (0.20699150582681913, 2.0605044285377305, 3.8588980251618135),
      (0.20699150582681913, 2.0605044285377305, 3.8588980251618135),
-     (0.085332419611991, 1.7556171374575567, 4.49985082288814)], 
+     (0.085332419611991, 1.7556171374575567, 4.49985082288814)],
               dtype=[('x', '<f8'), ('v', '<f8'), ('t', '<f8')])
 
     References
@@ -956,7 +956,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
-            raise AttributeError(
+            raise ValueError(
                 "delta should be a floating value in between 0 and 1")
 
         self.delta = delta
@@ -971,7 +971,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         if depth == 0:
 
             position_bar, momentum_bar, candidate_set_size, accept_set_bool =\
-                    self._initalize_tree(position, momentum, slice_var, direction * stepsize)
+                self._initalize_tree(position, momentum, slice_var, direction * stepsize)
 
             alpha = min(1, self._acceptance_prob(position, position_bar, momentum, momentum_bar))
 
@@ -1113,7 +1113,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:
-            return NoUTurnSampler.sample(self, initial_pos, num_samples, stepsize)
+            return NoUTurnSampler(self.model, self.grad_log_pdf,
+                                  self.simulate_dynamics).sample(initial_pos, num_samples, stepsize)
 
         mu = np.log(10.0 * stepsize)
         stepsize_bar = 1.0
@@ -1189,7 +1190,6 @@ class NoUTurnSamplerDA(NoUTurnSampler):
                [-56.63440044, -16.03309364],
                [-63.880094  , -19.19981944]])
         """
-        self.accepted_proposals = 0
         initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
         _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
 
@@ -1197,7 +1197,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
-            for sample in NoUTurnSampler.generate_sample(self, initial_pos, num_samples, stepsize):
+            for sample in NoUTurnSampler(self.model, self.grad_log_pdf,
+                                         self.simulate_dynamics).generate_sample(initial_pos, num_samples, stepsize):
                 yield sample
             return
         mu = np.log(10.0 * stepsize)
