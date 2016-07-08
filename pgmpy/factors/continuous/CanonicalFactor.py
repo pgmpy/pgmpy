@@ -82,7 +82,7 @@ class CanonicalFactor(ContinuousFactor):
         if self.K.shape != (no_of_var, no_of_var):
             raise ValueError("The K matrix should be a square matrix with order equal to"
                              "the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
-                             (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
+                             (got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)))
 
         super(CanonicalFactor, self).__init__(variables, pdf)
 
@@ -206,8 +206,8 @@ class CanonicalFactor(ContinuousFactor):
         >>> imort numpy as np
         >>> from pgmpy.factors import CanonicalFactor
         >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
-                                  np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-                                  np.array([[1], [4], [-1]]), -2)
+        ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+        ...                       np.array([[1], [4], [-1]]), -2)
         >>> phi.variables
         ['X1', 'X2', 'X3']
 
