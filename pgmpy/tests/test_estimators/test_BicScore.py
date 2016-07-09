@@ -3,11 +3,11 @@ import unittest
 import pandas as pd
 import numpy as np
 from pgmpy.models import BayesianModel
-from pgmpy.estimators import BayesianScore
+from pgmpy.estimators import BicScore, ExhaustiveSearch
 from pgmpy.factors import TabularCPD
 
 
-class TestBayesianScore(unittest.TestCase):
+class TestBicScore(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0], 'D': ['X', 'Y', 'Z']})
         self.m1 = BayesianModel([('A', 'C'), ('B', 'C'), ('D', 'B')])
@@ -18,13 +18,13 @@ class TestBayesianScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BayesianScore(self.d1).score(self.m1), -10.73813429536977)
-        self.assertEqual(BayesianScore(self.d1).score(BayesianModel()), 0)
+        self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -13.523145537608112)
+        self.assertEqual(BicScore(self.d1).score(BayesianModel()), 0)
 
     def test_score_titanic(self):
-        scorer = BayesianScore(self.titanic_data2)
+        scorer = BicScore(self.titanic_data2)
         titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
-        self.assertAlmostEqual(scorer.score(titanic), -1891.0630673606006)
+        self.assertAlmostEqual(scorer.score(titanic), -1871.6525128037401)
         titanic2 = BayesianModel([("Pclass", "Sex"), ])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
