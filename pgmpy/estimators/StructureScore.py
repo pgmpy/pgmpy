@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from pgmpy.estimators import BaseEstimator
 
+
 class StructureScore(BaseEstimator):
     def __init__(self, data, **kwargs):
         """

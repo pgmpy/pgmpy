@@ -215,7 +215,6 @@ class StructureEstimator(BaseEstimator):
 
         Parameters
         ----------
-
         data: pandas DataFrame object
             datafame object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.

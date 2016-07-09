@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 import numpy as np
-from pgmpy.estimators import ExhaustiveSearch
+from pgmpy.estimators import ExhaustiveSearch, BdeuScore
 from pgmpy.factors import TabularCPD
 from pgmpy.extern import six
 from pgmpy.models import BayesianModel
@@ -13,6 +13,7 @@ class TestBaseEstimator(unittest.TestCase):
         self.rand_data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         self.rand_data['C'] = self.rand_data['B']
         self.est_rand = ExhaustiveSearch(self.rand_data)
+        self.est_rand_bdeu = ExhaustiveSearch(self.rand_data, scoring_method=BdeuScore(self.rand_data))
 
         # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/titanic_train.csv')
@@ -38,8 +39,10 @@ class TestBaseEstimator(unittest.TestCase):
 
     def test_estimate_rand(self):
         est = self.est_rand.estimate()
+        est_bdeu = self.est_rand.estimate()
         self.assertSetEqual(set(est.nodes()), set(['A', 'B', 'C']))
         self.assertTrue(est.edges() == [('B', 'C')] or est.edges() == [('C', 'B')])
+        self.assertTrue(est_bdeu.edges() == [('B', 'C')] or est_bdeu.edges() == [('C', 'B')])
 
     def test_estimate_titanic(self):
         e1 = self.est_titanic.estimate()
