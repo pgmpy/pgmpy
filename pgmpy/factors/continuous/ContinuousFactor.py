@@ -181,11 +181,7 @@ class ContinuousFactor(object):
             raise TypeError("variables: Expected type list or array-like, "
                             "got type {var_type}".format(var_type=type(values)))
 
-<<<<<<< HEAD
-        for var,value in values:
-=======
         for var, value in values:
->>>>>>> 8dfd27a... minor changes in ContinuousFactor
             if var not in self.variables:
                 raise ValueError("{var} not in scope.".format(var=var))
 
@@ -375,7 +371,6 @@ class ContinuousFactor(object):
         if not inplace:
             return phi
 
-<<<<<<< HEAD
     def product(self, other, inplace=True):
         """
         Gives the ContinuousFactor product with the other factor.
@@ -442,28 +437,18 @@ class ContinuousFactor(object):
         >>> sn4.assignment(0, 0)
         0.3989422804014327
         """
-        return self._operate(other, 'divide', inplace)
-
-    def __mul__(self, other):
-        return self._operate(other, 'product', inplace=False)
-=======
-    def product(self, other):
-        return self.operate(other, 'product', inplace=False)
->>>>>>> 8dfd27a... minor changes in ContinuousFactor
-
-    def divide(self, other):
         if set(other.variables) - set(self.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
-        return self._operate(other, 'divide', inplace=False)
+        return self._operate(other, 'divide', inplace)
 
     def __mul__(self, other):
-        return self.product(other)
+        return self.product(other, inplace=False)
 
     def __rmul__(self, other):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        return self.divide(other)
+        return self.divide(other, inplace=False)
 
     __div__ = __truediv__
