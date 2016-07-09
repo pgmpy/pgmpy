@@ -92,7 +92,7 @@ class TestContinuousFactorMethods(unittest.TestCase):
     def test_reduce(self):
         phi1 = self.phi1.copy()
         phi1.reduce([('x', 1)])
-        reduced_pdf1 = lambda y: (np.power(1, 1)*np.power(y, 2))/beta(1, y)
+        reduced_pdf1 = lambda y: (np.power(1, 1) * np.power(y, 2))/beta(1, y)
         self.assertEqual(phi1.variables, ['y'])
         for inp in np.random.rand(4):
             self.assertEqual(phi1.pdf(inp), reduced_pdf1(inp))
