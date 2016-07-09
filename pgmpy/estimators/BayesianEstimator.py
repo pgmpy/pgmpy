@@ -1,13 +1,13 @@
 # coding:utf-8
 
-from pgmpy.estimators import BaseEstimator
+from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import TabularCPD
 from pgmpy.models import BayesianModel
 import numpy as np
 import pandas as pd
 
 
-class BayesianEstimator(BaseEstimator):
+class BayesianEstimator(ParameterEstimator):
     def __init__(self, model, data, **kwargs):
         """
         Class used to compute parameters for a model using Bayesian Parameter Estimation.
