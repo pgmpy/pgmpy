@@ -314,6 +314,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Example
         -------
 
+        >>> import numpy as np
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
@@ -331,10 +332,8 @@ class JointGaussianDistribution(ContinuousFactor):
         >>> phi.g
         -6.51533
         """
-        # TODO: This method will return a CanonicalFactor object.
-        # Currently this cannot be used until the CanonicalFactor class is
-        # created. For now the method returns a tuple of the CanonicalFactor
-        # parameters - (K, h, g)
+        from pgmpy.factors import CanonicalFactor
+        
         mu = self.mean
         sigma = self.covariance
 
@@ -345,4 +344,4 @@ class JointGaussianDistribution(ContinuousFactor):
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
             np.power(2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
 
-        return K, h, g
+        return CanonicalFactor(self.scope(), K, h, g)
