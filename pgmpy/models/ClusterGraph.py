@@ -212,7 +212,7 @@ class ClusterGraph(UndirectedGraph):
         """
         Returns a dictionary with the given factors as keys and their respective
         cardinality as values.
-        
+
         Parameters
         ----------
         check_cardinality: boolean, optional
@@ -230,7 +230,6 @@ class ClusterGraph(UndirectedGraph):
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
-        
         """
         cardinalities = defaultdict(int)
         for factor in self.factors:
@@ -299,3 +298,32 @@ class ClusterGraph(UndirectedGraph):
                         'Cardinality of variable {var} not matching among factors'.format(var=variable))
         return True
 
+    def copy(self):
+        """
+        Returns a copy of ClusterGraph.
+
+        Returns
+        -------
+        ClusterGraph: copy of ClusterGraph
+
+        Examples
+        -------
+        >>> G = ClusterGraph()
+        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
+        >>> G.add_edge(('a', 'b'), ('b', 'c'))
+        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> graph_copy = G.copy()
+        >>> graph_copy.factors
+        [<Factor representing phi(a:2, b:2) at 0xb71b19cc>, <Factor representing phi(b:2, c:2) at 0xb4eaf3ac>]
+        >>> graph_copy.edges()
+        [(('a', 'b'), ('b', 'c'))]
+        >>> graph_copy.nodes()
+        [('a', 'b'), ('b', 'c')]
+        """
+        copy = ClusterGraph(self.edges())
+        if self.factors:
+            factors_copy = [factor.copy() for factor in self.factors]
+            copy.add_factors(*factors_copy)
+        return copy

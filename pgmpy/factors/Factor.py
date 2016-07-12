@@ -9,6 +9,7 @@ import numpy as np
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
+from pgmpy.utils import StateNameInit, StateNameDecorator
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -28,6 +29,7 @@ class Factor(object):
     reduce([variable_values_list])
     """
 
+    @StateNameInit()
     def __init__(self, variables, cardinality, values):
         """
         Initialize a factor class.
@@ -72,22 +74,38 @@ class Factor(object):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         >>> phi
         <Factor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
+        >>> print(phi)
+        +------+------+------+-----------------+
+        | x1   | x2   | x3   |   phi(x1,x2,x3) |
+        |------+------+------+-----------------|
+        | x1_0 | x2_0 | x3_0 |          1.0000 |
+        | x1_0 | x2_0 | x3_1 |          1.0000 |
+        | x1_0 | x2_1 | x3_0 |          1.0000 |
+        | x1_0 | x2_1 | x3_1 |          1.0000 |
+        | x1_1 | x2_0 | x3_0 |          1.0000 |
+        | x1_1 | x2_0 | x3_1 |          1.0000 |
+        | x1_1 | x2_1 | x3_0 |          1.0000 |
+        | x1_1 | x2_1 | x3_1 |          1.0000 |
+        +------+------+------+-----------------+
         """
+        if isinstance(variables, six.string_types):
+            raise TypeError("Variables: Expected type list or array like, got string")
 
-        values = np.array(values)
-
-        if values.dtype != int and values.dtype != float:
-            raise TypeError("Values: Expected type int or type float, got ", values.dtype)
+        values = np.array(values, dtype=float)
 
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
 
         if values.size != np.product(cardinality):
             raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
+
+        if len(set(variables)) != len(variables):
+            raise ValueError("Variable names cannot be same")
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
@@ -140,6 +158,7 @@ class Factor(object):
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
+    @StateNameDecorator(argument=None, return_val=True)
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -171,7 +190,7 @@ class Factor(object):
         rev_card = self.cardinality[::-1]
         for i, card in enumerate(rev_card):
             assignments[:, i] = index % card
-            index = index//card
+            index = index // card
 
         assignments = assignments[:, ::-1]
 
@@ -203,7 +222,7 @@ class Factor(object):
 
                [[ 1.,  1.],
                 [ 1.,  1.],
-                [ 1.,  1.]]]
+                [ 1.,  1.]]])
         """
         return Factor(self.variables, self.cardinality, np.ones(self.values.size))
 
@@ -279,6 +298,8 @@ class Factor(object):
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
         ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
+        >>> phi.variables
+        ['x1','x2','x3']
         >>> phi.maximize(['x2'])
         >>> phi.variables
         ['x1', 'x3']
@@ -287,7 +308,7 @@ class Factor(object):
         >>> phi.values
         array([[ 0.25,  0.35],
                [ 0.05,  0.07],
-               [ 0.15,  0.21]]
+               [ 0.15,  0.21]])
         """
         if isinstance(variables, six.string_types):
             raise TypeError("variables: Expected type list or array-like, got type str")
@@ -328,6 +349,14 @@ class Factor(object):
         --------
         >>> from pgmpy.factors import Factor
         >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi.values
+        array([[[ 0,  1],
+                [ 2,  3],
+                [ 4,  5]],
+
+               [[ 6,  7],
+                [ 8,  9],
+                [10, 11]]])
         >>> phi.normalize()
         >>> phi.variables
         ['x1', 'x2', 'x3']
@@ -340,7 +369,7 @@ class Factor(object):
 
                [[ 0.09090909,  0.10606061],
                 [ 0.12121212,  0.13636364],
-                [ 0.15151515,  0.16666667]]]
+                [ 0.15151515,  0.16666667]]])
 
         """
         phi = self if inplace else self.copy()
@@ -350,6 +379,7 @@ class Factor(object):
         if not inplace:
             return phi
 
+    @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
@@ -385,7 +415,8 @@ class Factor(object):
 
         if (any(isinstance(value, six.string_types) for value in values) or
                 not all(isinstance(state, (int, np.integer)) for var, state in values)):
-            raise TypeError("values: must contain tuples or array-like elements of the form (hashable object, type int)")
+            raise TypeError("values: must contain tuples or array-like elements of the form "
+                            "(hashable object, type int)")
 
         phi = self if inplace else self.copy()
 
@@ -447,7 +478,7 @@ class Factor(object):
                  [45, 63]],
 
                 [[10, 30],
-                 [55, 77]]]]
+                 [55, 77]]]])
         """
         phi = self if inplace else self.copy()
         if isinstance(phi1, (int, float)):
@@ -481,7 +512,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values + phi1.values
@@ -565,7 +596,7 @@ class Factor(object):
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
                 phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                                                                       phi1.variables[axis]
+                    phi1.variables[axis]
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values * phi1.values
@@ -604,7 +635,7 @@ class Factor(object):
 
                [[ 3.        ,  1.75      ],
                 [ 4.        ,  2.25      ],
-                [ 5.        ,  2.75      ]]]
+                [ 5.        ,  2.75      ]]])
         """
         phi = self if inplace else self.copy()
         phi1 = phi1.copy()
@@ -661,7 +692,7 @@ class Factor(object):
 
                [[ 9, 10, 11],
                 [12, 13, 14],
-                [15, 16, 17]]]
+                [15, 16, 17]]])
         """
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
@@ -673,7 +704,7 @@ class Factor(object):
         else:
             return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p="phi", tablefmt="fancy_grid"):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
@@ -682,16 +713,24 @@ class Factor(object):
         phi_or_p: 'phi' | 'p'
                 'phi': When used for Factors.
                   'p': When used for CPDs.
+        print_state_names: boolean
+                If True, the user defined state names are displayed.
         """
-        string_header = list(self.scope())
+        string_header = list(map(lambda x: six.text_type(x), self.scope()))
         string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
                                                               variables=','.join(string_header)))
 
         value_index = 0
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
-            prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
-                         for i in range(len(self.variables))]
+            if self.state_names and print_state_names:
+                prob_list = ["{var}({state})".format(var=list(self.variables)[i],
+                            state=self.state_names[list(self.variables)[i]][prob[i]])
+                            for i in range(len(self.variables))]
+            else:
+                prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
+                             for i in range(len(self.variables))]
+
             prob_list.append(self.values.ravel()[value_index])
             factor_table.append(prob_list)
             value_index += 1
@@ -728,26 +767,39 @@ class Factor(object):
             return False
 
         else:
+            phi = other.copy()
             for axis in range(self.values.ndim):
-                exchange_index = other.variables.index(self.variables[axis])
-                other.variables[axis], other.variables[exchange_index] = (other.variables[exchange_index],
-                                                                          other.variables[axis])
-                other.cardinality[axis], other.cardinality[exchange_index] = (other.cardinality[exchange_index],
-                                                                              other.cardinality[axis])
-                other.values = other.values.swapaxes(axis, exchange_index)
+                exchange_index = phi.variables.index(self.variables[axis])
+                phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
+                                                                      phi.variables[axis])
+                phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                          phi.cardinality[axis])
+                phi.values = phi.values.swapaxes(axis, exchange_index)
 
-            if other.values.shape != self.values.shape:
+            if phi.values.shape != self.values.shape:
                 return False
-            elif not np.allclose(other.values, self.values):
+            elif not np.allclose(phi.values, self.values):
                 return False
-            elif not all(self.cardinality == other.cardinality):
+            elif not all(self.cardinality == phi.cardinality):
                 return False
             else:
                 return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __hash__(self):
-        return hash(str(self.variables) + str(self.cardinality.tolist()) +
-                    str(self.values.astype('float').tolist()))
+        variable_hashes = [hash(variable) for variable in self.variables]
+        sorted_var_hashes = sorted(variable_hashes)
+        phi = self.copy()
+        for axis in range(phi.values.ndim):
+            exchange_index = variable_hashes.index(sorted_var_hashes[axis])
+            variable_hashes[axis], variable_hashes[exchange_index] = (variable_hashes[exchange_index],
+                                                                      variable_hashes[axis])
+            phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
+                                                                      phi.cardinality[axis])
+            phi.values = phi.values.swapaxes(axis, exchange_index)
+        return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
 
 
 def factor_product(*args):
@@ -791,7 +843,7 @@ def factor_product(*args):
              [45, 63]],
 
             [[10, 30],
-             [55, 77]]]]
+             [55, 77]]]])
     """
     if not all(isinstance(phi, Factor) for phi in args):
         raise TypeError("Arguments must be factors")
@@ -831,7 +883,7 @@ def factor_divide(phi1, phi2):
 
            [[ 3.        ,  1.75      ],
             [ 4.        ,  2.25      ],
-            [ 5.        ,  2.75      ]]]
+            [ 5.        ,  2.75      ]]])
     """
     if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
         raise TypeError("phi1 and phi2 should be factors instances")

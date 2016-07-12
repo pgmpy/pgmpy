@@ -1,12 +1,14 @@
+import numpy as np
+
 try:
     from lxml import etree
 except ImportError:
     try:
         import xml.etree.ElementTree as etree
     except ImportError:
-        #try:
+        # try:
         #    import xml.etree.cElementTree as etree
-        #except ImportError:
+        # except ImportError:
         # commented out as causing problem with dictionary attributes
         print("Failed to import ElementTree from any known place")
 
@@ -164,17 +166,19 @@ class XBNReader(object):
                  [ 0.7 ,  0.3 ],
                  [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
         """
-        import numpy as np
         distribution = {}
         for dist in self.bnmodel.find('DISTRIBUTIONS'):
             variable_name = dist.find('PRIVATE').get('NAME')
             distribution[variable_name] = {'TYPE': dist.get('TYPE')}
             if dist.find('CONDSET') is not None:
-                distribution[variable_name]['CONDSET'] = [var.get('NAME') for var in dist.find('CONDSET').findall('CONDELEM')]
-                distribution[variable_name]['CARDINALITY'] = np.array([len(set(np.array([list(map(int, dpi.get('INDEXES').split()))
-                                                                                         for dpi in dist.find('DPIS')])[:, i]))
-                                                                       for i in range(len(distribution[variable_name]['CONDSET']))])
-            distribution[variable_name]['DPIS'] = np.array([list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
+                distribution[variable_name]['CONDSET'] = [var.get('NAME') for
+                                                          var in dist.find('CONDSET').findall('CONDELEM')]
+                distribution[variable_name]['CARDINALITY'] = np.array(
+                    [len(set(np.array([list(map(int, dpi.get('INDEXES').split()))
+                                       for dpi in dist.find('DPIS')])[:, i]))
+                     for i in range(len(distribution[variable_name]['CONDSET']))])
+            distribution[variable_name]['DPIS'] = np.array(
+                [list(map(float, dpi.text.split())) for dpi in dist.find('DPIS')])
 
         return distribution
 
@@ -393,9 +397,10 @@ class XBNWriter(object):
             dist = etree.SubElement(distributions, 'DIST', attrib={'TYPE': self.model.node[var]['TYPE']})
             etree.SubElement(dist, 'PRIVATE', attrib={'NAME': var})
             dpis = etree.SubElement(dist, 'DPIS')
-            if len(cpd.evidence):
+            evidence = cpd.variables[:0:-1]
+            if evidence:
                 condset = etree.SubElement(dist, 'CONDSET')
-                for condelem in sorted(cpd.evidence):
+                for condelem in sorted(evidence):
                     etree.SubElement(condset, 'CONDELEM', attrib={'NAME': condelem})
                 # TODO: Get Index value.
                 for val in range(0, len(cpd_values), 2):

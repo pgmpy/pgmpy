@@ -277,47 +277,51 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                              decisioncriteria_expected)
 
     def test_potential(self):
-        potential_expected = [{'role': 'Utility',
-                               'Variables': {'D0': ['D1', 'C0', 'C1']},
-                               'type': 'Tree/ADD',
-                               'UtilityVaribale': 'U1',
-                               'Branches': [{'Potential': {'type': 'Tree/ADD',
-                                                           'Branches': [{'Thresholds': [{'value': u'–Infinity'},
-                                                                                        {'value': '0', 'belongsTo': 'Left'}],
-                                                                         'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
-                                                                                                                        'Values': '3'},
-                                                                                                          'type': 'Exponential'},
-                                                                                                         {'NumericVariables': ['C0', 'C1'],
-                                                                                                          'Potential': {'type': 'Table',
-                                                                                                                        'Values': u'–1'},
-                                                                                                          'Coefficients': u'4 –1',
-                                                                                                          'type': 'Exponential'}],
-                                                                                       'Variables': {'C0': ['C1']},
-                                                                                       'type': 'MixtureOfExponentials'}},
-                                                                        {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
-                                                                                        {'value': '+Infinity'}],
-                                                                         'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
-                                                                                                          'Potential': {'Variables': {'D1': []},
-                                                                                                                        'type': 'Table',
-                                                                                                                        'Values': '10  5'},
-                                                                                                          'Coefficients': '0.25',
-                                                                                                          'type': 'Exponential'}],
-                                                                                       'Variables': {'C1': ['D1']},
-                                                                                       'type': 'MixtureOfExponentials'}}],
-                                                           'TopVariable': 'C1'},
-                                             'States': [{'name': 'no'}]},
-                                            {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
-                                                                              'Potential': {'type': 'Table',
-                                                                                            'Values': '0.3'},
-                                                                              'Coefficients': '1',
-                                                                              'type': 'Exponential'},
-                                                                             {'Potential': {'type': 'Table',
-                                                                                            'Values': '0.7'},
-                                                                              'type': 'Exponential'}],
-                                                           'Variables': {'C0': []},
-                                                           'type': 'MixtureOfExponentials'},
-                                             'States': [{'name': 'yes'}]}],
-                               'TopVariable': 'D0'}]
+        potential_expected = [{
+            'role': 'Utility',
+            'Variables': {'D0': ['D1', 'C0', 'C1']},
+            'type': 'Tree/ADD',
+            'UtilityVaribale': 'U1',
+            'Branches': [{
+                'Potential': {
+                    'type': 'Tree/ADD',
+                    'Branches': [{'Thresholds': [{'value': u'–Infinity'},
+                                                 {'value': '0', 'belongsTo': 'Left'}],
+                                  'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
+                                                                                 'Values': '3'},
+                                                                   'type': 'Exponential'},
+                                                                  {'NumericVariables': ['C0', 'C1'],
+                                                                   'Potential': {'type': 'Table',
+                                                                                 'Values': u'–1'},
+                                                                   'Coefficients': u'4 –1',
+                                                                   'type': 'Exponential'}],
+                                                'Variables': {'C0': ['C1']},
+                                                'type': 'MixtureOfExponentials'}},
+                                 {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
+                                                 {'value': '+Infinity'}],
+                                  'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
+                                                                   'Potential': {'Variables': {'D1': []},
+                                                                                 'type': 'Table',
+                                                                                 'Values': '10  5'},
+                                                                   'Coefficients': '0.25',
+                                                                   'type': 'Exponential'}],
+                                                'Variables': {'C1': ['D1']},
+                                                'type': 'MixtureOfExponentials'}}],
+                    'TopVariable': 'C1'},
+                'States': [{'name': 'no'}]},
+                {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
+                                                  'Potential': {'type': 'Table',
+                                                                'Values': '0.3'},
+                                                  'Coefficients': '1',
+                                                  'type': 'Exponential'},
+                                                 {'Potential': {'type': 'Table',
+                                                                'Values': '0.7'},
+                                                  'type': 'Exponential'}],
+                               'Variables': {'C0': []},
+                               'type': 'MixtureOfExponentials'},
+                 'States': [{'name': 'yes'}]}],
+            'TopVariable': 'D0'}]
+
         self.assertListEqual(self.reader_string.probnet['Potentials'],
                              potential_expected)
         self.assertListEqual(self.reader_file.probnet['Potentials'],
@@ -606,7 +610,6 @@ class TestProbModelXMLReaderString(unittest.TestCase):
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
 
-
 class TestProbModelXMLWriter(unittest.TestCase):
     def setUp(self):
         self.model_data = {'probnet':
@@ -629,7 +632,8 @@ class TestProbModelXMLWriter(unittest.TestCase):
                                            'States': {'smart': {}, 'dumb': {}},
                                            'Comment': None,
                                            'Coordinates': {}}},
-                            'Comment': 'Student example model from Probabilistic Graphical Models: Principles and Techniques by Daphne Koller',
+                            'Comment': 'Student example model from Probabilistic Graphical Models: '
+                                       'Principles and Techniques by Daphne Koller',
                             'edges': {('difficulty', 'grade'):
                                       {'directed': '1',
                                        'Label': 'diff_to_grad',
@@ -650,43 +654,50 @@ class TestProbModelXMLWriter(unittest.TestCase):
                                             'Variables': {'D0': ['D1', 'C0', 'C1']},
                                             'type': 'Tree/ADD',
                                             'UtilityVaribale': 'U1',
-                                            'Branches': [{'Potential': {'type': 'Tree/ADD',
-                                                                        'Branches': [{'Thresholds': [{'value': '-Infinity'},
-                                                                                                     {'value': '0', 'belongsTo': 'Left'}],
-                                                                                      'Potential': {'Subpotentials': [{'Potential': {'type': 'Table',
-                                                                                                                                     'Values': '3'},
-                                                                                                                       'type': 'Exponential'},
-                                                                                                                      {'NumericVariables': ['C0', 'C1'],
-                                                                                                                       'Potential': {'type': 'Table',
-                                                                                                                                     'Values': '-1'},
-                                                                                                                       'Coefficients': '4 -1',
-                                                                                                                       'type': 'Exponential'}],
-                                                                                                    'Variables': {'C0': ['C1']},
-                                                                                                    'type': 'MixtureOfExponentials'}},
-                                                                                     {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
-                                                                                                     {'value': '+Infinity'}],
-                                                                                      'Potential': {'Subpotentials': [{'NumericVariables': ['C1'],
-                                                                                                                       'Potential': {'Variables': {'D1': []},
-                                                                                                                                     'type': 'Table',
-                                                                                                                                     'Values': '10  5'},
-                                                                                                                       'Coefficients': '0.25',
-                                                                                                                       'type': 'Exponential'}],
-                                                                                                    'Variables': {'C1': ['D1']},
-                                                                                                    'type': 'MixtureOfExponentials'}}],
-                                                                        'TopVariable': 'C1'},
-                                                          'States': [{'name': 'no'}]},
-                                                         {'Potential': {'Subpotentials': [{'NumericVariables': ['C0'],
-                                                                                           'Potential': {'type': 'Table',
-                                                                                                         'Values': '0.3'},
-                                                                                           'Coefficients': '1',
-                                                                                           'type': 'Exponential'},
-                                                                                          {'Potential': {'type': 'Table',
-                                                                                                         'Values': '0.7'},
-                                                                                           'type': 'Exponential'}],
-                                                                        'Variables': {'C0': []},
-                                                                        'type': 'MixtureOfExponentials'},
-                                                          'States': [{'name': 'yes'}]}],
+                                            'Branches': [{
+                                                'Potential': {
+                                                    'type': 'Tree/ADD',
+                                                    'Branches': [{
+                                                        'Thresholds': [{'value': '-Infinity'},
+                                                                       {'value': '0', 'belongsTo': 'Left'}],
+                                                        'Potential': {'Subpotentials': [
+                                                            {'Potential': {'type': 'Table',
+                                                                           'Values': '3'},
+                                                             'type': 'Exponential'},
+                                                            {'NumericVariables': ['C0', 'C1'],
+                                                             'Potential': {'type': 'Table',
+                                                                           'Values': '-1'},
+                                                             'Coefficients': '4 -1',
+                                                             'type': 'Exponential'}],
+                                                            'Variables': {'C0': ['C1']},
+                                                            'type': 'MixtureOfExponentials'}},
+                                                        {'Thresholds': [{'value': '0', 'belongsTo': 'Left'},
+                                                                        {'value': '+Infinity'}],
+                                                         'Potential': {'Subpotentials': [
+                                                             {'NumericVariables': ['C1'],
+                                                              'Potential': {'Variables': {'D1': []},
+                                                                            'type': 'Table',
+                                                                            'Values': '10  5'},
+                                                              'Coefficients': '0.25',
+                                                              'type': 'Exponential'}],
+                                                             'Variables': {'C1': ['D1']},
+                                                             'type': 'MixtureOfExponentials'}}],
+                                                    'TopVariable': 'C1'},
+                                                'States': [{'name': 'no'}]},
+                                                {'Potential': {'Subpotentials': [
+                                                    {'NumericVariables': ['C0'],
+                                                     'Potential': {'type': 'Table',
+                                                                   'Values': '0.3'},
+                                                     'Coefficients': '1',
+                                                     'type': 'Exponential'},
+                                                    {'Potential': {'type': 'Table',
+                                                                   'Values': '0.7'},
+                                                     'type': 'Exponential'}],
+                                                    'Variables': {'C0': []},
+                                                    'type': 'MixtureOfExponentials'},
+                                                    'States': [{'name': 'yes'}]}],
                                             'TopVariable': 'D0'}]}}
+
         self.maxDiff = None
         self.writer = ProbModelXMLWriter(model_data=self.model_data)
 
@@ -1051,7 +1062,6 @@ class TestProbModelXMLWriter(unittest.TestCase):
             data = myfile.read()
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
         self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))
-
 
 
 class TestProbModelXMLmethods(unittest.TestCase):

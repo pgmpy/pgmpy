@@ -42,7 +42,8 @@ variable  "family-out" { //2 values
         property "position = (257, 99)" ;
 }
 probability (  "light-on"  "family-out" ) { //2 variable(s) and 4 values
-        table 0.6 0.05 0.4 0.95 ;
+        (true) 0.6 0.4 ;
+        (false) 0.05 0.95 ;
 }
 probability (  "bowel-problem" ) { //1 variable(s) and 2 values
         table 0.01 0.99 ;

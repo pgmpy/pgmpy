@@ -107,6 +107,33 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(model.cardinalities['p'], 3)
         self.assertDictEqual(model.transition_models['p'], {})
 
+    def test_copy(self):
+        model = MC(['a', 'b'], [2, 2], [State('a', 0), State('b', 1)])
+        model.add_transition_model('a', {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}})
+        model.add_transition_model('b', {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}})
+        copy = model.copy()
+
+        self.assertIsInstance(copy, MC)
+        self.assertEqual(sorted(model.variables), sorted(copy.variables))
+        self.assertEqual(model.cardinalities, copy.cardinalities)
+        self.assertEqual(model.transition_models, copy.transition_models)
+        self.assertEqual(model.state, copy.state)
+
+        model.add_variable('p', 1)
+        model.set_start_state([State('a', 0), State('b', 1), State('p', 0)])
+        model.add_transition_model('p', {0: {0: 1}})
+
+        self.assertNotEqual(sorted(model.variables), sorted(copy.variables))
+        self.assertEqual(sorted(['a', 'b']), sorted(copy.variables))
+        self.assertNotEqual(model.cardinalities, copy.cardinalities)
+        self.assertEqual({'a': 2, 'b': 2}, copy.cardinalities)
+        self.assertNotEqual(model.state, copy.state)
+        self.assertEqual([State('a', 0), State('b', 1)], copy.state)
+        self.assertNotEqual(model.transition_models, copy.transition_models)
+        self.assertEqual(len(copy.transition_models), 2)
+        self.assertEqual(copy.transition_models['a'], {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}})
+        self.assertEqual(copy.transition_models['b'], {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}})
+
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "warn")
     def test_add_variable_existing(self, warn):
         model = MC(['p'], [2])
@@ -154,17 +181,15 @@ class TestMarkovChain(unittest.TestCase):
         model.add_transition_model('var', transition_model)
         self.assertDictEqual(model.transition_models['var'], transition_model)
 
-    @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
-    def test_sample(self, sample_discrete):
+    def test_sample(self):
         model = MC(['a', 'b'], [2, 2])
         model.transition_models['a'] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models['b'] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-        sample_discrete.side_effect = [[1], [0]]
         sample = model.sample(start_state=[State('a', 0), State('b', 1)], size=2)
         self.assertEqual(len(sample), 2)
         self.assertEqual(list(sample.columns), ['a', 'b'])
-        self.assertEqual(list(sample.loc[0]), [0, 1])
-        self.assertEqual(list(sample.loc[1]), [1, 0])
+        self.assertTrue(list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
+        self.assertTrue(list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
 
     @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):

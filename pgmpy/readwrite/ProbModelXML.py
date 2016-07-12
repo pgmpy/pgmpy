@@ -116,7 +116,7 @@ except ImportError:
         # import xml.etree.cElementTree as etree
         # print("running with cElementTree on Python 2.5+")
         # Commented out because behaviour is different from expected
-        
+
         warnings.warn("Failed to import ElementTree from any known place")
 
 import networkx as nx
@@ -269,10 +269,11 @@ def get_probmodel_data(model):
     for cpd in cpds:
         potential_dict = {}
         potential_dict['Variables'] = {}
-        if cpd.evidence is None:
-            potential_dict['Variables'][cpd.variable] = []
+        evidence = cpd.variables[:0:-1]
+        if evidence:
+            potential_dict['Variables'][cpd.variable] = evidence
         else:
-            potential_dict['Variables'][cpd.variable] = cpd.evidence
+            potential_dict['Variables'][cpd.variable] = []
         potential_dict['type'] = "Table"
         potential_dict['role'] = "conditionalProbability"
         potential_dict['Values'] = " ".join([str(val) for val in cpd.values.ravel().astype(float)]) + " "
@@ -411,7 +412,7 @@ class ProbModelXMLWriter(object):
         """
         edge_data = self.data['probnet']['edges'][edge]
         if isinstance(edge, six.string_types):
-           edge = eval(edge)
+            edge = eval(edge)
         link = etree.SubElement(self.links, 'Link', attrib={'var1': edge[0], 'var2': edge[1],
                                                             'directed': edge_data['directed']})
         try:
@@ -873,7 +874,10 @@ class ProbModelXMLReader(object):
         if variable.find('States/State') is None:
             warnings.warn("States not available for node: " + variable_name)
         else:
-            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {prop.attrib['name']: prop.attrib['value'] for prop in state.findall('AdditionalProperties/Property')} for state in variable.findall('States/State')}
+            self.probnet['Variables'][variable_name]['States'] = {state.attrib['name']: {
+                prop.attrib['name']: prop.attrib['value'] for
+                prop in state.findall('AdditionalProperties/Property')} for state in variable.findall(
+                'States/State')}
 
     def add_edge(self, edge):
         """

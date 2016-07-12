@@ -3,11 +3,12 @@
 import itertools
 from collections import defaultdict
 
-from pgmpy.factors import Factor
 import numpy as np
 from networkx.algorithms import bipartite
 
+from pgmpy.models import MarkovModel
 from pgmpy.base import UndirectedGraph
+from pgmpy.factors import Factor
 from pgmpy.factors import factor_product
 from pgmpy.extern.six.moves import filter, range, zip
 
@@ -162,7 +163,6 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_factors(phi1, phi2)
         >>> G.get_cardinality()
             defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
-        
         """
         cardinalities = defaultdict(int)
         for factor in self.factors:
@@ -191,7 +191,7 @@ class FactorGraph(UndirectedGraph):
         if not all(isinstance(factor_node, Factor) for factor_node in factor_nodes):
             raise ValueError('Factors not associated for all the random variables')
 
-        if (not (bipartite.is_bipartite(self)) or 
+        if (not (bipartite.is_bipartite(self)) or
             not (bipartite.is_bipartite_node_set(self, variable_nodes) or
                  bipartite.is_bipartite_node_set(self, variable_nodes))):
             raise ValueError('Edges can only be between variables and factors')
@@ -284,7 +284,6 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> mm = G.to_markov_model()
         """
-        from pgmpy.models import MarkovModel
         mm = MarkovModel()
 
         variable_nodes = self.get_variable_nodes()

@@ -73,6 +73,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         initialize_initial_state
         inter_slice
         intra_slice
+        copy
         """
         super(DynamicBayesianNetwork, self).__init__()
         if ebunch:
@@ -161,7 +162,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         [(('D', 1), ('I', 1)), (('D', 0), ('I', 0))]
         """
         try:
-            if len(start) != 2 or len(end) !=2:
+            if len(start) != 2 or len(end) != 2:
                 raise ValueError('Nodes must be of type (node, time_slice).')
             elif not isinstance(start[1], int) or not isinstance(end[1], int):
                 raise ValueError('Nodes must be of type (node, time_slice).')
@@ -183,14 +184,15 @@ class DynamicBayesianNetwork(DirectedGraph):
         elif start in super(DynamicBayesianNetwork, self).nodes() and end \
                 in super(DynamicBayesianNetwork, self).nodes() and \
                 nx.has_path(self, end, start):
-            raise ValueError(
-                 'Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
-                     start=str(start), end=str(end)))
+            raise ValueError('Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
+                start=str(start), end=str(end)))
 
         super(DynamicBayesianNetwork, self).add_edge(start, end, **kwargs)
 
         if start[1] == end[1]:
             super(DynamicBayesianNetwork, self).add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
+        else:
+            super(DynamicBayesianNetwork, self).add_node((end[0], 1 - end[1]))
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -364,7 +366,7 @@ class DynamicBayesianNetwork(DirectedGraph):
                 raise ValueError('cpd should be an instance of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(
-                                super(DynamicBayesianNetwork, self).nodes())):
+                    super(DynamicBayesianNetwork, self).nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
         self.cpds.extend(cpds)
@@ -455,13 +457,14 @@ class DynamicBayesianNetwork(DirectedGraph):
         for node in super(DynamicBayesianNetwork, self).nodes():
             cpd = self.get_cpds(node=node)
             if isinstance(cpd, TabularCPD):
-                evidence = cpd.evidence
+                evidence = cpd.variables[:0:-1]
+                evidence_card = cpd.cardinality[:0:-1]
                 parents = self.get_parents(node)
-                if set(evidence if evidence else []) != set(parents if parents else []):
+                if set(evidence) != set(parents if parents else []):
                     raise ValueError("CPD associated with {node} doesn't have "
                                      "proper parents associated with it.".format(node=node))
                 if not np.allclose(cpd.to_factor().marginalize([node], inplace=False).values.flatten('C'),
-                                   np.ones(np.product(cpd.evidence_card)),
+                                   np.ones(np.product(evidence_card)),
                                    atol=0.01):
                     raise ValueError('Sum of probabilities of states for node {node}'
                                      ' is not equal to 1'.format(node=node))
@@ -506,11 +509,16 @@ class DynamicBayesianNetwork(DirectedGraph):
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
+                        evidence_card = cpd.cardinality[:0:-1]
                         new_cpd = TabularCPD(temp_var, cpd.variable_card,
-                                             cpd.values.reshape(cpd.variable_card, np.prod(cpd.evidence_card)),
-                                             parents, cpd.evidence_card)
+                                             cpd.values.reshape(cpd.variable_card, np.prod(evidence_card)),
+                                             parents, evidence_card)
                     else:
-                        new_cpd = TabularCPD(temp_var, cpd.variable_card, np.split(cpd.values, cpd.variable_card))
+                        if cpd.get_evidence():
+                            initial_cpd = cpd.marginalize(cpd.get_evidence(), inplace=False)
+                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(initial_cpd.values, (-1, 2)))
+                        else:
+                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(cpd.values, (-1, 2)))
                     self.add_cpds(new_cpd)
             self.check_model()
 
@@ -542,3 +550,41 @@ class DynamicBayesianNetwork(DirectedGraph):
                 self.get_parents(node), 2))
 
         return moral_graph
+
+    def copy(self):
+        """
+        Returns a copy of the dynamic bayesian network.
+
+        Returns
+        -------
+        DynamicBayesianNetwork: copy of the dynamic bayesian network
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors import TabularCPD
+        >>> dbn = DBN()
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
+        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
+                                        [0.4,0.25,0.8,0.03],
+                                        [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_cpds(grade_cpd)
+        >>> dbn_copy = dbn.copy()
+        >>> dbn_copy.nodes()
+        ['Z', 'G', 'I', 'D']
+        >>> dbn_copy.edges()
+        [(('I', 1), ('G', 1)),
+        (('I', 0), ('I', 1)),
+        (('I', 0), ('G', 0)),
+        (('D', 1), ('G', 1)),
+        (('D', 0), ('G', 0)),
+        (('D', 0), ('D', 1))]
+        >> dbn_copy.get_cpds()
+        [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7f13961a3320>]
+        """
+        dbn = DynamicBayesianNetwork()
+        dbn.add_nodes_from(self.nodes())
+        dbn.add_edges_from(self.edges())
+        cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
+        dbn.add_cpds(*cpd_copy)
+        return dbn

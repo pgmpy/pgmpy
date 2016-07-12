@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import networkx as nx
+
 from pgmpy.models import ClusterGraph
 
 
@@ -68,8 +70,6 @@ class JunctionTree(ClusterGraph):
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
         ...                   (('a', 'b', 'c'), ('a', 'c'))])
         """
-        import networkx as nx
-
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, u, v):
             raise ValueError('Addition of edge between {u} and {v} forms a cycle breaking the '
                              'properties of Junction Tree'.format(u=str(u), v=str(v)))
@@ -91,9 +91,41 @@ class JunctionTree(ClusterGraph):
         check: boolean
             True if all the checks are passed
         """
-        import networkx as nx
-
         if not nx.is_connected(self):
             raise ValueError('The Junction Tree defined is not fully connected.')
 
         return super(JunctionTree, self).check_model()
+
+    def copy(self):
+        """
+        Returns a copy of JunctionTree.
+
+        Returns
+        -------
+        JunctionTree : copy of JunctionTree
+
+        Examples
+        -------
+        >>> import numpy as np
+        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.models import JunctionTree
+        >>> G = JunctionTree()
+        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')), (('a', 'b', 'c'), ('a', 'c'))])
+        >>> phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        >>> phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        >>> G.add_factors(phi1,phi2)
+        >>> modelCopy = G.copy()
+        >>> modelCopy.edges()
+        [(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))]
+        >>> G.factors
+        [<Factor representing phi(a:1, b:2) at 0xb720ee4c>, <Factor representing phi(a:1, c:2) at 0xb4e1e06c>]
+        >>> modelCopy.factors
+        [<Factor representing phi(a:1, b:2) at 0xb4bd11ec>, <Factor representing phi(a:1, c:2) at 0xb4bd138c>]
+
+        """
+        copy = JunctionTree(self.edges())
+        copy.add_nodes_from(self.nodes())
+        if self.factors:
+            factors_copy = [factor.copy() for factor in self.factors]
+            copy.add_factors(*factors_copy)
+        return copy

@@ -1,12 +1,15 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 
 from pgmpy.factors import Factor
-from pgmpy.models import MarkovModel
-from pgmpy.tests import help_functions as hf
+from pgmpy.factors import factor_product
+from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
+from pgmpy.models import BayesianModel, MarkovModel, FactorGraph
+from pgmpy.tests import help_functions as hf
 
 
 class TestMarkovModelCreation(unittest.TestCase):
@@ -112,9 +115,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-
     def test_get_cardinality_check_cardinality(self):
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -130,9 +131,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
 
-
     def test_check_model(self):
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
@@ -149,7 +148,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertTrue(self.graph.check_model())
 
     def test_check_model1(self):
-    
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -159,7 +157,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
-        
+
         phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
         self.assertRaises(ValueError, self.graph.check_model)
@@ -178,7 +176,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi2)
 
     def test_check_model2(self):
-    
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -193,7 +190,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2)
 
-
         phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
         phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
         phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
@@ -203,10 +199,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
 
-
     def test_factor_graph(self):
-        from pgmpy.models import FactorGraph
-
         phi1 = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
         phi2 = Factor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
@@ -241,9 +234,8 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertEqual(len(junction_tree.edges()), 1)
 
     def test_junction_tree_single_clique(self):
-        from pgmpy.factors import factor_product
 
-        self.graph.add_edges_from([('x1','x2'), ('x2', 'x3'), ('x1', 'x3')])
+        self.graph.add_edges_from([('x1', 'x2'), ('x2', 'x3'), ('x1', 'x3')])
         phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*phi)
 
@@ -260,25 +252,12 @@ class TestMarkovModelMethods(unittest.TestCase):
                              ['a', 'c'])
 
     def test_local_independencies(self):
-        from pgmpy.independencies import Independencies
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         independencies = self.graph.get_local_independencies()
-
         self.assertIsInstance(independencies, Independencies)
-        self.assertEqual(len(independencies.get_assertions()), 2)
-
-        string = ''
-        for assertion in sorted(independencies.get_assertions(),
-                                key=lambda x: list(x.event1)):
-            string += str(assertion) + '\n'
-
-        self.assertEqual(string, '(a _|_ c | b)\n(c _|_ a | b)\n')
+        self.assertEqual(independencies, Independencies(['a', 'c', 'b']))
 
     def test_bayesian_model(self):
-        from pgmpy.models import BayesianModel
-        import networkx as nx
-
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
         phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
@@ -545,6 +524,88 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.assertListEqual(hf.recursive_sorted(H.edges()),
                              [['a', 'b'], ['a', 'd'], ['b', 'c'],
                               ['b', 'd'], ['c', 'd']])
+
+    def test_copy(self):
+        # Setup the original graph
+        self.graph.add_nodes_from(['a', 'b'])
+        self.graph.add_edges_from([('a', 'b')])
+
+        # Generate the copy
+        copy = self.graph.copy()
+
+        # Ensure the copied model is correct
+        self.assertTrue(copy.check_model())
+
+        # Basic sanity checks to ensure the graph was copied correctly
+        self.assertEqual(len(copy.nodes()), 2)
+        self.assertListEqual(copy.neighbors('a'), ['b'])
+        self.assertListEqual(copy.neighbors('b'), ['a'])
+
+        # Modify the original graph ...
+        self.graph.add_nodes_from(['c'])
+        self.graph.add_edges_from([('c', 'b')])
+
+        # ... and ensure none of those changes get propagated
+        self.assertEqual(len(copy.nodes()), 2)
+        self.assertListEqual(copy.neighbors('a'), ['b'])
+        self.assertListEqual(copy.neighbors('b'), ['a'])
+        with self.assertRaises(nx.NetworkXError):
+            copy.neighbors('c')
+
+        # Ensure the copy has no factors at this point
+        self.assertEqual(len(copy.get_factors()), 0)
+
+        # Add factors to the original graph
+        phi1 = Factor(['a', 'b'], [2, 2], [[0.3, 0.7], [0.9, 0.1]])
+        self.graph.add_factors(phi1)
+
+        # The factors should not get copied over
+        with self.assertRaises(AssertionError):
+            self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+
+        # Create a fresh copy
+        del copy
+        copy = self.graph.copy()
+        self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+
+        # If we change factors in the original, it should not be passed to the clone
+        phi1.values = np.array([[0.5, 0.5], [0.5, 0.5]])
+        self.assertNotEqual(self.graph.get_factors(), copy.get_factors())
+
+        # Start with a fresh copy
+        del copy
+        self.graph.add_nodes_from(['d'])
+        copy = self.graph.copy()
+
+        # Ensure an unconnected node gets copied over as well
+        self.assertEqual(len(copy.nodes()), 4)
+        self.assertListEqual(self.graph.neighbors('a'), ['b'])
+        self.assertTrue('a' in self.graph.neighbors('b'))
+        self.assertTrue('c' in self.graph.neighbors('b'))
+        self.assertListEqual(self.graph.neighbors('c'), ['b'])
+        self.assertListEqual(self.graph.neighbors('d'), [])
+
+        # Verify that changing the copied model should not update the original
+        copy.add_nodes_from(['e'])
+        self.assertListEqual(copy.neighbors('e'), [])
+        with self.assertRaises(nx.NetworkXError):
+            self.graph.neighbors('e')
+
+        # Verify that changing edges in the copy doesn't create edges in the original
+        copy.add_edges_from([('d', 'b')])
+
+        self.assertTrue('a' in copy.neighbors('b'))
+        self.assertTrue('c' in copy.neighbors('b'))
+        self.assertTrue('d' in copy.neighbors('b'))
+
+        self.assertTrue('a' in self.graph.neighbors('b'))
+        self.assertTrue('c' in self.graph.neighbors('b'))
+        self.assertFalse('d' in self.graph.neighbors('b'))
+
+        # If we remove factors from the copied model, it should not reflect in the original
+        copy.remove_factors(phi1)
+        self.assertEqual(len(self.graph.get_factors()), 1)
+        self.assertEqual(len(copy.get_factors()), 0)
 
     def tearDown(self):
         del self.graph

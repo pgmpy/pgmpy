@@ -1,0 +1,7 @@
+networkx
+numpy
+scipy
+pandas
+pyparsing
+mock
+nose
