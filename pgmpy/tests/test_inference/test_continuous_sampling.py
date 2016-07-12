@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 
 from pgmpy.inference.continuous import (HamiltonianMC as HMC, HamiltonianMCda as HMCda, ModifiedEuler,
-                                        GradLogPDFGaussian as GradGaussian)
+                                        GradLogPDFGaussian as GradGaussian, NoUTurnSampler as NUTS,
+                                        NoUTurnSamplerDA as NUTSda)
 from pgmpy.models import JointGaussianDistribution as JGD
 
 
@@ -20,12 +21,14 @@ class TestHMCInference(unittest.TestCase):
             HMCda(model=self.test_model, grad_log_pdf=1)
         with self.assertRaises(TypeError):
             HMCda(model=self.test_model, grad_log_pdf=GradGaussian, simulate_dynamics=1)
+        with self.assertRaises(ValueError):
+            HMCda(model=self.test_model, delta=-1)
         with self.assertRaises(TypeError):
             self.hmc_sampler.sample(initial_pos=1, num_adapt=1, num_samples=1, trajectory_length=1)
         with self.assertRaises(TypeError):
             self.hmc_sampler.generate_sample(1, 1, 1, 1).send(None)
         with self.assertRaises(TypeError):
-            HMC(model=self.test_model).sample(position0=1, num_samples=1, trajectory_length=1)
+            HMC(model=self.test_model).sample(initial_pos=1, num_samples=1, trajectory_length=1)
         with self.assertRaises(TypeError):
             HMC(model=self.test_model).generate_sample(1, 1, 1).send(None)
         # TODO: Remove them after implementation of JointGaussianDistribution
@@ -89,3 +92,65 @@ class TestHMCInference(unittest.TestCase):
     def tearDown(self):
         del self.hmc_sampler
         del self.test_model
+
+
+class TestNUTSInference(unittest.TestCase):
+
+    def setUp(self):
+        mean = np.array([-1, 1, 0])
+        covariance = np.array([[6, 0.7, 0.2], [0.7, 3, 0.9], [0.2, 0.9, 1]])
+        self.test_model = JGD(['x', 'y', 'z'], mean, covariance)
+        self.nuts_sampler = NUTSda(model=self.test_model, grad_log_pdf=GradGaussian)
+
+    def test_errors(self):
+        with self.assertRaises(TypeError):
+            NUTS(model=self.test_model, grad_log_pdf=JGD)
+        with self.assertRaises(TypeError):
+            NUTS(model=self.test_model, grad_log_pdf=None, simulate_dynamics=GradGaussian)
+        with self.assertRaises(ValueError):
+            NUTSda(model=self.test_model, delta=-0.2)
+        with self.assertRaises(ValueError):
+            NUTSda(model=self.test_model, delta=1.1)
+        with self.assertRaises(TypeError):
+            NUTS(self.test_model).sample(initial_pos={1, 1, 1}, num_samples=1)
+        with self.assertRaises(ValueError):
+            NUTS(self.test_model).sample(initial_pos=[1, 1], num_samples=1)
+        with self.assertRaises(TypeError):
+            NUTSda(self.test_model).sample(initial_pos=1, num_samples=1, num_adapt=1)
+        with self.assertRaises(ValueError):
+            NUTSda(self.test_model).sample(initial_pos=[1, 1, 1, 1], num_samples=1, num_adapt=1)
+        with self.assertRaises(TypeError):
+            NUTS(self.test_model).generate_sample(initial_pos=0.1, num_samples=1).send(None)
+        with self.assertRaises(ValueError):
+            NUTS(self.test_model).generate_sample(initial_pos=(0, 1, 1, 1), num_samples=1).send(None)
+        with self.assertRaises(TypeError):
+            NUTSda(self.test_model).generate_sample(initial_pos=[[1, 2, 3]], num_samples=1, num_adapt=1).send(None)
+        with self.assertRaises(ValueError):
+            NUTSda(self.test_model).generate_sample(initial_pos=[1], num_samples=1, num_adapt=1).send(None)
+
+    def test_sampling(self):
+        np.random.seed(1010101)
+        samples = self.nuts_sampler.sample(initial_pos=[-0.4, 1, 3.6], num_adapt=0, num_samples=10000)
+        sample_covariance = np.cov(samples.values.T)
+        self.assertTrue(np.linalg.norm(sample_covariance - self.test_model.covariance) < 3)
+
+        np.random.seed(1210161)
+        samples = self.nuts_sampler.generate_sample(initial_pos=[-0.4, 1, 3.6], num_adapt=0, num_samples=10000)
+        samples_array = np.array([sample for sample in samples])
+        sample_covariance = np.cov(samples_array.T)
+        self.assertTrue(np.linalg.norm(sample_covariance - self.test_model.covariance) < 3)
+
+        np.random.seed(12313131)
+        samples = self.nuts_sampler.sample(initial_pos=[0.2, 0.4, 2.2], num_adapt=10000, num_samples=10000)
+        sample_covariance = np.cov(samples.values.T)
+        self.assertTrue(np.linalg.norm(sample_covariance - self.test_model.covariance) < 0.4)
+
+        np.random.seed(921312312)
+        samples = self.nuts_sampler.generate_sample(initial_pos=[0.2, 0.4, 2.2], num_adapt=10000, num_samples=10000)
+        samples_array = np.array([sample for sample in samples])
+        sample_covariance = np.cov(samples_array.T)
+        self.assertTrue(np.linalg.norm(sample_covariance - self.test_model.covariance) < 0.4)
+
+    def tearDown(self):
+        del self.test_model
+        del self.nuts_sampler
