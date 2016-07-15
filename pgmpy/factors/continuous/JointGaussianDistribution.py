@@ -342,6 +342,6 @@ class JointGaussianDistribution(ContinuousFactor):
         h = np.dot(K, mu)
 
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
-            np.power(2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
+            np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
 
         return CanonicalFactor(self.scope(), K, h, g)

@@ -182,8 +182,8 @@ class CanonicalFactor(ContinuousFactor):
         Y = y is given by,
 
         .. math:: K' = K_{XX}
-        .. math:: h' = h_X - K_{XX} * y
-        .. math:: g' = {h^T}_Y * y + 0.5 * y^T * K_{YY} * y
+        .. math:: h' = h_X - K_{XY} * y
+        .. math:: g' = g + {h^T}_Y * y - 0.5 * y^T * K_{YY} * y
 
 
         Parameters
@@ -269,7 +269,7 @@ class CanonicalFactor(ContinuousFactor):
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
-        phi.g = (self.g + np.dot(h_j.T, y) - 0.5 * np.dot(np.dot(y.T, K_j_j), y))[0][0]
+        phi.g = self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
         phi.pdf = None
 
         if not inplace:
@@ -369,7 +369,7 @@ class CanonicalFactor(ContinuousFactor):
         phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
         phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
         phi.g = self.g + 0.5 * (len(variables) * np.log(2 * np.pi) -
-                                np.log(np.linalg.det(K_j_j)) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
+                                np.log(abs(np.linalg.det(K_j_j))) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
 
         if not inplace:
             return phi
@@ -459,7 +459,7 @@ class CanonicalFactor(ContinuousFactor):
             return ext_K
 
         def _extend_h_scope(h, index):
-            ext_h = np.zeros(no_of_var)
+            ext_h = np.zeros(no_of_var).reshape(no_of_var, 1)
             ext_h[index] = h
             return ext_h
 
