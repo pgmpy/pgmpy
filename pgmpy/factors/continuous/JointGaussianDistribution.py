@@ -345,3 +345,50 @@ class JointGaussianDistribution(ContinuousFactor):
             np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
 
         return CanonicalFactor(self.scope(), K, h, g)
+
+    def _operate(self, other, operation, inplace=True):
+        """
+        Gives the CanonicalFactor operation (product or divide) with
+        the other factor.
+
+        Parameters
+        ----------
+        other: CanonicalFactor
+            The CanonicalFactor to be multiplied.
+
+        operation: String
+            'product' for multiplication operation and
+            'divide' for division operation.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1 * dis2
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        phi = self if inplace else self.copy()
+
+        phi = self.to_canonical_factor()._operate(other.to_canonical_factor(),
+                                                 operation, inplace=False).to_joint_gaussian()
+
+        if not inplace:
+            return phi
