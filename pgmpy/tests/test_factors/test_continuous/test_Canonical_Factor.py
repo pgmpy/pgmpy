@@ -135,3 +135,55 @@ class TestJGDMethods(unittest.TestCase):
         np_test.assert_almost_equal(self.phi1.g, 39.25598935059)
 
         self.phi1 = self.phi3
+
+    def test_operate(self):
+        phi1 = self.phi1 * CanonicalFactor(['x2', 'x4'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
+        phi2 = self.phi1 / CanonicalFactor(['x2', 'x3'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
+
+        self.assertEqual(phi1.variables, ['x1', 'x2', 'x3', 'x4'])
+        np_test.assert_almost_equal(phi1.K, np.array([[ 1.1, -1. ,  0. ,  0. ],
+                                                      [-1. ,  5. , -2. ,  2. ],
+                                                      [ 0. , -2. ,  4. ,  0. ],
+                                                      [ 0. ,  3. ,  0. ,  4. ]]))
+        np_test.assert_almost_equal(phi1.h, np.array([[ 1.  ],
+                                                      [ 4.7 ],
+                                                      [-1.  ],
+                                                      [ 4.56]]))
+        np_test.assert_almost_equal(phi1.g, -8.78)
+
+        self.assertEqual(phi2.variables, ['x1', 'x2', 'x3'])
+        np_test.assert_almost_equal(phi2.K, np.array([[ 1.1, -1. ,  0. ],
+                                                      [-1. ,  3. , -4. ],
+                                                      [ 0. , -5. ,  0. ]]))
+        np_test.assert_almost_equal(phi2.h, np.array([[ 1.  ],
+                                                      [ 4.7 ],
+                                                      [-5.56]]))
+        np_test.assert_almost_equal(phi2.g, 4.78)        
+
+    def test_copy(self):
+        copy_phi1 = self.phi1.copy()
+        self.assertEqual(copy_phi1.variables, self.phi1.variables)
+        np_test.assert_array_equal(copy_phi1.K, self.phi1.K)
+        np_test.assert_array_equal(copy_phi1.h, self.phi1.h)
+        np_test.assert_array_equal(copy_phi1.g, self.phi1.g)
+
+        copy_phi1.marginalize(['x1'])
+        self.assertEqual(self.phi1.variables, ['x1', 'x2', 'x3'])
+        np_test.assert_array_equal(self.phi1.K, np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float))
+        np_test.assert_array_equal(self.phi1.h, np.array([[1], [4.7], [-1]], dtype=float))
+        self.assertEqual(self.phi1.g, -2)
+
+        self.phi1.marginalize(['x2'])
+        self.assertEqual(copy_phi1.variables, ['x2', 'x3'])
+        np_test.assert_almost_equal(copy_phi1.K, np.array([[ 3.090909, -2.], [-2.,  4.]]))
+        np_test.assert_almost_equal(copy_phi1.h, np.array([[ 5.6090909], [ -1. ]]))
+        np_test.assert_almost_equal(copy_phi1.g, -0.5787165566)
+
+        self.phi1 = self.phi3
+
+    def tearDown(self):
+        del self.phi1
+        del self.phi2
+        del self.phi3
+        del self.gauss_phi1
+        del self.gauss_phi2
