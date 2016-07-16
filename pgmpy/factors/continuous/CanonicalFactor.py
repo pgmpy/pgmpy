@@ -30,7 +30,7 @@ class CanonicalFactor(ContinuousFactor):
     Daphne Koller and Nir Friedman, Section 14.2, Chapter 14.
 
     """
-    def __init__(self, variables, K, h, g, pdf=None):
+    def __init__(self, variables, K, h, g):
         """
         Parameters
         ----------
@@ -84,12 +84,14 @@ class CanonicalFactor(ContinuousFactor):
                              "the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
                              (got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)))
 
-        super(CanonicalFactor, self).__init__(variables, pdf)
+        super(CanonicalFactor, self).__init__(variables, None)
 
-    def assignment(self, *args):
-        if self.pdf is None:
-            self.pdf = self.to_joint_gaussian().pdf
-        return super(CanonicalFactor, self).assignment(*args)
+    @property
+    def pdf(self):
+        def fun(*args):
+            x = np.array(args)
+            return np.exp(self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x)))
+        return fun
 
     def copy(self):
         """
@@ -136,9 +138,7 @@ class CanonicalFactor(ContinuousFactor):
 
         """
         copy_factor = CanonicalFactor(self.scope(), self.K.copy(),
-                                      self.h.copy(), self.g, self.pdf)
-        if self.pdf is not None:
-            copy_factor.pdf = self.pdf
+                                      self.h.copy(), self.g)
 
         return copy_factor
 
@@ -270,7 +270,6 @@ class CanonicalFactor(ContinuousFactor):
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
         phi.g = self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
-        phi.pdf = None
 
         if not inplace:
             return phi
@@ -364,7 +363,6 @@ class CanonicalFactor(ContinuousFactor):
         h_j = self.h[index_to_marginalize]
 
         phi.variables = [self.variables[index] for index in index_to_keep]
-        phi.pdf = None
 
         phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
         phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
@@ -464,7 +462,6 @@ class CanonicalFactor(ContinuousFactor):
             return ext_h
 
         phi.variables = all_vars
-        phi.pdf = None
 
         if operation == 'product':
             phi.K = _extend_K_scope(self.K, self_var_index) + _extend_K_scope(other.K, other_var_index)

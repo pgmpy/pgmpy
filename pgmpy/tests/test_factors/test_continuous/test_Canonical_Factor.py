@@ -17,7 +17,6 @@ class TestCanonicalFactor(unittest.TestCase):
         np_test.assert_array_equal(phi.K, np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float))
         np_test.assert_array_equal(phi.h, np.array([[1], [4.7], [-1]], dtype=float))
         self.assertEqual(phi.g, -2)
-        self.assertEqual(phi.pdf, None)
 
         phi = CanonicalFactor(['x1', ('y', 'z'), 'x3'],
                               np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
@@ -26,7 +25,6 @@ class TestCanonicalFactor(unittest.TestCase):
         np_test.assert_array_equal(phi.K, np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float))
         np_test.assert_array_equal(phi.h, np.array([[1], [4.7], [-1]], dtype=float))
         self.assertEqual(phi.g, -2)
-        self.assertEqual(phi.pdf, None)
 
         phi = CanonicalFactor(['x'], [[1]], [0], 1)
         self.assertEqual(phi.variables, ['x'])
@@ -65,8 +63,8 @@ class TestJGDMethods(unittest.TestCase):
         self.gauss_phi2 = JGD(['x'], np.array([0]), np.array([[1]]))
 
     def test_assignment(self):
-        np_test.assert_almost_equal(self.phi1.assignment(*[1, 2, 3]), 1.217470031e-06)
-        np_test.assert_almost_equal(self.phi2.assignment(1.234), 0.186314991823)
+        np_test.assert_almost_equal(self.phi1.assignment(1,2,3), 0.0007848640)
+        np_test.assert_almost_equal(self.phi2.assignment(1.2), 1.323129812337)
 
     def test_to_joint_gaussian(self):
         jgd1 = self.phi1.to_joint_gaussian()
