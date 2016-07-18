@@ -46,7 +46,68 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
         super(ConstraintBasedEstimator, self).__init__(data, **kwargs)
 
-    def estimate(self, p_value=0.05):
+    def estimate(self, p_value=0.01):
+        """
+        Estimates a BayesianModel for the data set, using the PC contraint-based
+        structure learning algorithm. Independencies are identified from the
+        data set using a chi-squared statistic with the acceptance threshold of
+        `p_value`. PC identifies a partially directed acyclic graph (PDAG), given
+        that the tested independencies admit a faithful Bayesian network representation.
+        This method returns a BayesianModel that is a completion of this PDAG.
+
+        Parameters
+        ----------
+        p_value: float, default: 0.05
+            A significance level to use for conditional independence tests in the data set.
+            The p_value is the threshold probability of falsely rejecting the hypothesis
+            that variables are conditionally dependent.
+
+            The lower `p_value`, the more likely we are to reject dependencies,
+            resulting in a sparser graph.
+
+        Returns
+        -------
+        model: BayesianModel
+            An estimated for the BayesianModel for the data set (not yet parametrized).
+
+        Reference
+        ---------
+        Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> data = pd.DataFrame(np.random.randint(0, 5, size=(2500, 3)), columns=list('XYZ'))
+        >>> data['sum'] = data.sum(axis=1)
+        >>> print(data)
+              X  Y  Z  sum
+        0     3  0  1    4
+        1     1  4  3    8
+        2     0  0  3    3
+        3     0  2  3    5
+        4     2  1  1    4
+        ...  .. .. ..  ...
+        2495  2  3  0    5
+        2496  1  1  2    4
+        2497  0  4  2    6
+        2498  0  0  0    0
+        2499  2  4  0    6
+
+        [2500 rows x 4 columns]
+        >>> c = ConstraintBasedEstimator(data)
+        >>> model = c.estimate()
+        >>> print(model.edges())
+        [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
+        """
+
+        pdag = self.estimate_pdag(p_value)
+        model = self.pdag_to_dag(pdag)
+        return model
+
+    def estimate_pdag(self, p_value=0.05):
         """Estimates a DAG pattern (DirectedGraph) based on identified independencies
         from the data set, using the PC algorithm. Independencies are determined
         using a chi-squared statistic with the acceptance threshold of `p_value`.
@@ -85,7 +146,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
         >>> c = ConstraintBasedEstimator(data)
-        >>> pdag = c.estimate()
+        >>> pdag = c.estimate_pdag()
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """
@@ -135,6 +196,108 @@ class ConstraintBasedEstimator(StructureEstimator):
             progress = num_edges > pdag.number_of_edges()
 
         return pdag
+
+    @staticmethod
+    def pdag_to_dag(pdag):
+        """Completes a PDAG to a DAG, without adding v-structures, if such a
+        completion exists. If no faithful extension is possible, some fully
+        oriented DAG that corresponds to the PDAG is returned and a warning is
+        generated. This is a static method.
+
+        Parameters
+        ----------
+        pdag: DirectedGraph
+            A directed acyclic graph pattern, consisting in (acyclic) directed edges
+            as well as "undirected" edges, represented as both-way edges between
+            nodes.
+
+        Returns
+        -------
+        dag: BayesianModel
+            A faithful orientation of pdag, if one exists. Otherwise any
+            fully orientated DAG/BayesianModel with the structure of pdag.
+
+        References
+        ----------
+        [1] Chickering, Learning Equivalence Classes of Bayesian-Network Structures,
+            2002; See page 454 (last paragraph) for the algorithm pdag_to_dag
+            http://www.jmlr.org/papers/volume2/chickering02a/chickering02a.pdf
+        [2] Dor & Tarsi, A simple algorithm to construct a consistent extension
+            of a partially oriented graph, 1992,
+            http://ftp.cs.ucla.edu/pub/stat_ser/r185-dor-tarsi.pdf
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.base import DirectedGraph
+        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
+        >>> data['C'] = data['A'] - data['B']
+        >>> data['D'] += data['A']
+        >>> c = ConstraintBasedEstimator(data)
+        >>> pdag = c.estimate_pdag()
+        >>> pdag.edges()
+        [('B', 'C'), ('D', 'A'), ('A', 'D'), ('A', 'C')]
+        >>> c.pdag_to_dag(pdag).edges()
+        [('B', 'C'), ('A', 'D'), ('A', 'C')]
+
+        >>> # pdag_to_dag is static:
+        ... pdag1 = DirectedGraph([('A', 'B'), ('C', 'B'), ('C', 'D'), ('D', 'C'), ('D', 'A'), ('A', 'D')])
+        >>> ConstraintBasedEstimator.pdag_to_dag(pdag1).edges()
+        [('D', 'C'), ('C', 'B'), ('A', 'B'), ('A', 'D')]
+
+        >>> # example of a pdag with no faithful extension:
+        ... pdag2 = DirectedGraph([('A', 'B'), ('A', 'C'), ('B', 'C'), ('C', 'B')])
+        >>> ConstraintBasedEstimator.pdag_to_dag(pdag2).edges()
+        UserWarning: PDAG has no faithful extension (= no oriented DAG with the same v-structures as PDAG).
+        Remaining undirected PDAG edges oriented arbitrarily.
+        [('B', 'C'), ('A', 'B'), ('A', 'C')]
+        """
+
+        dag = BayesianModel()
+        dag.add_nodes_from(pdag.nodes())
+
+        # add already directed edges of pdag to dag
+        for X, Y in pdag.edges():
+            if not pdag.has_edge(Y, X):
+                dag.add_edge(X, Y)
+
+        while pdag.number_of_nodes() > 0:
+            # find node with (1) no directed outgoing edges and
+            #                (2) the set of undirected neighbors is either empty or
+            #                    undirected neighbors + parents of X are a clique
+            found = False
+            for X in pdag.nodes():
+                directed_outgoing_edges = set(pdag.successors(X)) - set(pdag.predecessors(X))
+                undirected_neighbors = set(pdag.successors(X)) & set(pdag.predecessors(X))
+                neighbors_are_clique = all((pdag.has_edge(Y, Z)
+                                            for Z in pdag.predecessors(X)
+                                            for Y in undirected_neighbors if not Y == Z))
+
+                if not directed_outgoing_edges and \
+                        (not undirected_neighbors or neighbors_are_clique):
+                    found = True
+                    # add all edges of X as outgoing edges to dag
+                    for Y in pdag.predecessors(X):
+                        dag.add_edge(Y, X)
+
+                    pdag.remove_node(X)
+                    break
+
+            if not found:
+                warn("PDAG has no faithful extension (= no oriented DAG with the " +
+                     "same v-structures as PDAG). Remaining undirected PDAG edges " +
+                     "oriented arbitrarily.")
+                for X, Y in pdag.edges():
+                    if not dag.has_edge(Y, X):
+                        try:
+                            dag.add_edge(X, Y)
+                        except ValueError:
+                            pass
+                break
+
+        return dag
 
     def estimate_skeleton(self, p_value=0.05):
         """Estimates a graph skeleton (UndirectedGraph) for the data set, using
