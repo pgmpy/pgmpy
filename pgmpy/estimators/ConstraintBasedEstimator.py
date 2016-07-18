@@ -46,6 +46,177 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
         super(ConstraintBasedEstimator, self).__init__(data, **kwargs)
 
+    def estimate(self, p_value=0.05):
+        """Estimates a DAG pattern (DirectedGraph) based on identified independencies
+        from the data set, using the PC algorithm. Independencies are determined
+        using a chi-squared statistic with the acceptance threshold of `p_value`.
+
+        Parameters
+        ----------
+        p_value: float, default: 0.05
+            A significance level to use for conditional independence tests in
+            the data set. The p_value is the threshold probability of falsely
+            rejecting the hypothesis that variables are conditionally dependent.
+
+            The lower `p_value`, the more likely we are to reject dependencies,
+            resulting in a sparser graph.
+
+        Returns
+        -------
+        pdag: DirectedGraph
+            An estimate for the DAG pattern of the BN underlying the data. The
+            graph might contain some nodes with both-way edges (X->Y and Y->X).
+            Any completion by (removing one of the both-way edges for each such
+            pair) results in a I-equivalent Bayesian network DAG.
+
+        Reference
+        ---------
+        Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.base import DirectedGraph
+        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
+        >>> data['C'] = data['A'] - data['B']
+        >>> data['D'] += data['A']
+        >>> c = ConstraintBasedEstimator(data)
+        >>> pdag = c.estimate()
+        >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
+        [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
+        """
+
+        skel, seperating_sets = self.estimate_skeleton(p_value)
+        pdag = skel.to_directed()
+        node_pairs = combinations(pdag.nodes(), 2)
+
+        # 1) for each X-Z-Y, if Z not in the seperating set of X,Y, then orient edges as X->Z<-Y
+        # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
+        for X, Y in node_pairs:
+            if not skel.has_edge(X, Y):
+                for Z in set(skel.neighbors(X)) & set(skel.neighbors(X)):
+                    if Z not in seperating_sets[frozenset((X, Y))]:
+                        pdag.remove_edges_from([(Z, X), (Z, Y)])
+
+        progress = True
+        while progress:  # as long as edges can be oriented (removed)
+            num_edges = pdag.number_of_edges()
+
+            # 2) for each X->Z-Y, orient edges to Z->Y
+            for X, Y in node_pairs:
+                for Z in ((set(pdag.successors(X)) - set(pdag.predecessors(X))) &
+                          (set(pdag.successors(Y)) & set(pdag.predecessors(Y)))):
+                    pdag.remove(Y, Z)
+
+            # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
+            for X, Y in node_pairs:
+                for path in nx.all_simple_paths(pdag, X, Y):
+                    is_directed = True
+                    for src, dst in path:
+                        if pdag.has_edge(dst, src):
+                            is_directed = False
+                    if is_directed:
+                        pdag.remove(Y, X)
+                        break
+
+            # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
+            for X, Y in node_pairs:
+                for Z in (set(pdag.successors(X)) & set(pdag.predecessors(X)) &
+                          set(pdag.successors(Y)) & set(pdag.predecessors(Y))):
+                    for W in ((set(pdag.successors(X)) - set(pdag.predecessors(X))) &
+                              (set(pdag.successors(Y)) - set(pdag.predecessors(Y))) &
+                              (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))):
+                        pdag.remove(W, Z)
+
+            progress = num_edges > pdag.number_of_edges()
+
+        return pdag
+
+    def estimate_skeleton(self, p_value=0.05):
+        """Estimates a graph skeleton (UndirectedGraph) for the data set, using
+        the first part of the PC algorithm. Independencies are determined using
+        a chisquare statistic with the acceptance threshold of `p_value`.
+        Returns a tuple `(skeleton, seperating_sets).
+
+        Parameters
+        ----------
+        p_value: float, default: 0.05
+            A significance level to use for conditional independence tests in
+            the data set. The p_value is the threshold probability of falsely
+            rejecting the hypothesis that variables are conditionally dependent.
+
+            The lower `p_value`, the more likely we are to reject dependencies,
+            resulting in a sparser graph.
+
+        Returns
+        -------
+        skeleton: UndirectedGraph
+            An estimate for the undirected graph skeleton of the BN underlying the data.
+        seperating_sets: dict
+            A dict containing for each pair of not directly connected nodes a
+            seperating set of variables that makes then conditionally independent.
+            (needed for edge orientation procedures)
+
+        Reference
+        ---------
+        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+            Section 3.4.2.1 (page 85), Algorithm 3.3
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>>
+        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
+        >>> data['F'] = data['A'] + data['B'] + data ['C']
+        >>> est = ConstraintBasedEstimator(data)
+        >>> skel, sep_sets = est.estimate_skeleton()
+        >>> skel.edges()
+        [('A', 'F'), ('B', 'F'), ('C', 'F')]
+        >>> # all independencies are unconditional:
+        >>> sep_sets
+        {('D', 'A'): (), ('C', 'A'): (), ('C', 'E'): (), ('E', 'F'): (), ('B', 'D'): (),
+         ('B', 'E'): (), ('D', 'F'): (), ('D', 'E'): (), ('A', 'E'): (), ('B', 'A'): (),
+         ('B', 'C'): (), ('C', 'D'): ()}
+        >>>
+        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 3)), columns=list('XYZ'))
+        >>> data['X'] += data['Z']
+        >>> data['Y'] += data['Z']
+        >>> est = ConstraintBasedEstimator(data)
+        >>> skel, sep_sets = est.estimate_skeleton()
+        >>> skel.edges()
+        [('X', 'Z'), ('Y', 'Z')]
+        >>> # X, Y dependent, but conditionally independent given Z:
+        >>> sep_sets
+        {('X', 'Y'): ('Z',)}
+        >>>
+        """
+
+        nodes = self.state_names.keys()
+        graph = UndirectedGraph(combinations(nodes, 2))
+        lim_neighbors = 0
+        seperating_sets = dict()
+        while not all([len(graph.neighbors(node)) < lim_neighbors for node in nodes]):
+            for node in nodes:
+                for neighbor in graph.neighbors(node):
+                    # search if there is a set of neighbors (of size lim_neighbors)
+                    # that makes X and Y independent:
+                    for seperating_set in combinations(set(graph.neighbors(node)) - set([neighbor]), lim_neighbors):
+                        if self.test_conditional_independence(node, neighbor, seperating_set) >= p_value:
+                            # reject hypothesis that they are dependent
+                            seperating_sets[frozenset((node, neighbor))] = seperating_set
+                            graph.remove_edge(node, neighbor)
+                            break
+            lim_neighbors += 1
+
+        return graph, seperating_sets
 
     def test_conditional_independence(self, X, Y, Zs=[]):
         """Chi-square conditional independence test.
