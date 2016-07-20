@@ -41,13 +41,13 @@ class HamiltonianMC(object):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, LeapFrog
-    >>> from pgmpy.models import JointGaussianDistribution as JGD
+    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, LeapFrog, GradLogPDFGaussian
+    >>> from pgmpy.factors import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([-3, 4])
     >>> covariance = np.array([[3, 0.7], [0.7, 5]])
     >>> model = JGD(['x', 'y'], mean, covariance)
-    >>> sampler = HMC(model=model, grad_log_pdf=None, simulate_dynamics=LeapFrog)
+    >>> sampler = HMC(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
     >>> samples = sampler.sample(initial_pos=np.array([1, 1]), num_samples = 10000,
     ...                          trajectory_length=2, stepsize=0.4)
     >>> samples
@@ -74,9 +74,9 @@ class HamiltonianMC(object):
     CRC Press, 2011.
     """
 
-    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog):
+    def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
 
-        if grad_log_pdf is not None and not issubclass(grad_log_pdf, BaseGradLogPDF):
+        if not issubclass(grad_log_pdf, BaseGradLogPDF):
             raise TypeError("grad_log_pdf must be an instance of " +
                             "pgmpy.inference.base_continuous.BaseGradLogPDF")
 
@@ -96,14 +96,15 @@ class HamiltonianMC(object):
         """
 
         # Parameters to help in evaluating Joint distribution P(position, momentum)
-        _, logp = self.model.get_gradient_log_pdf(position, self.grad_log_pdf)
-        _, logp_bar = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
+        _, logp = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
+        _, logp_bar = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
         # acceptance_prob = P(position_bar, momentum_bar)/ P(position, momentum)
         potential_change = logp_bar - logp  # Negative change
         kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
 
-        return np.exp(potential_change - kinetic_change)  # acceptance probability
+        # acceptance probability
+        return np.exp(potential_change - kinetic_change)
 
     def _find_reasonable_stepsize(self, position, stepsize_app=1):
         """
@@ -158,7 +159,7 @@ class HamiltonianMC(object):
         if lsteps is None:
             lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
 
-        grad_bar, _ = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
+        grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
         for _ in range(lsteps):
             position_bar, momentum_bar, grad_bar =\
@@ -212,7 +213,7 @@ class HamiltonianMC(object):
         --------
         >>> # Example if pandas is installed in working environment
         >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, -1])
         >>> covariance = np.array([[1, 0.2], [0.2, 1]])
@@ -298,7 +299,7 @@ class HamiltonianMC(object):
         Examples
         --------
         >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([4, -1])
         >>> covariance = np.array([[3, 0.4], [0.4, 3]])
@@ -370,7 +371,7 @@ class HamiltonianMCda(HamiltonianMC):
     Example:
     --------
     >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, LeapFrog
-    >>> from pgmpy.models import JointGaussianDistribution as JGD
+    >>> from pgmpy.factors import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
     >>> covariance = np.array([[2, 0.4, 0.5], [0.4, 3, 0.6], [0.5, 0.6, 4]])
@@ -458,7 +459,7 @@ class HamiltonianMCda(HamiltonianMC):
         Examples
         ---------
         >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -485,7 +486,8 @@ class HamiltonianMCda(HamiltonianMC):
             return HamiltonianMC.sample(self, initial_pos, num_samples, trajectory_length, stepsize)
 
         # stepsize is epsilon
-        mu = np.log(10.0 * stepsize)  # freely chosen point, after each iteration xt(/position) is shrunk towards it
+        # freely chosen point, after each iteration xt(/position) is shrunk towards it
+        mu = np.log(10.0 * stepsize)
         # log(10 * stepsize) large values to save computation
         # stepsize_bar is epsilon_bar
         stepsize_bar = 1.0
@@ -549,7 +551,7 @@ class HamiltonianMCda(HamiltonianMC):
         Examples
         --------
         >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -619,13 +621,13 @@ class NoUTurnSampler(HamiltonianMCda):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, LeapFrog
-    >>> from pgmpy.models import JointGaussianDistribution as JGD
+    >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, LeapFrog, GradLogPDFGaussian
+    >>> from pgmpy.factors import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
     >>> covariance = np.array([[4, 0.1, 0.2], [0.1, 1, 0.3], [0.2, 0.3, 8]])
     >>> model = JGD(['x', 'y', 'z'], mean, covariance)
-    >>> sampler = NUTS(model=model, grad_log_pdf=None, simulate_dynamics=LeapFrog)
+    >>> sampler = NUTS(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
     >>> samples = sampler.sample(initial_pos=np.array([0.1, 0.9, 0.3]), num_samples=20000,stepsize=0.4)
     >>> samples
     rec.array([(0.1, 0.9, 0.3),
@@ -644,7 +646,7 @@ class NoUTurnSampler(HamiltonianMCda):
     Algorithm 3 : Efficient No-U-Turn Sampler
     """
 
-    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog):
+    def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
 
         super(NoUTurnSampler, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
                                              simulate_dynamics=simulate_dynamics)
@@ -657,7 +659,7 @@ class NoUTurnSampler(HamiltonianMCda):
         position_bar, momentum_bar, _ = self.simulate_dynamics(self.model, position, momentum, stepsize,
                                                                self.grad_log_pdf).get_proposed_values()
 
-        _, logp_bar = self.model.get_gradient_log_pdf(position_bar, self.grad_log_pdf)
+        _, logp_bar = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
         hamiltonian = logp_bar - 0.5 * np.dot(momentum_bar, momentum_bar)
 
@@ -737,7 +739,7 @@ class NoUTurnSampler(HamiltonianMCda):
         position_backward, position_forward = position, position
         momentum_backward, momentum_forward = momentum, momentum
         candidate_set_size = accept_set_bool = 1
-        _, log_pdf = self.model.get_gradient_log_pdf(position, self.grad_log_pdf)
+        _, log_pdf = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
 
         # Resample slice variable `u`
         slice_var = np.random.uniform(0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum)))
@@ -794,13 +796,13 @@ class NoUTurnSampler(HamiltonianMCda):
         Examples
         ---------
         >>> # If environment has a installation of pandas
-        >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, GradLogPDFGaussian, LeapFrog
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([0, 0, 0])
         >>> covariance = np.array([[6, 0.7, 0.2], [0.7, 3, 0.9], [0.2, 0.9, 1]])
         >>> model = JGD(['x', 'y', 'z'], mean, covariance)
-        >>> sampler = NUTS(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
+        >>> sampler = NUTS(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
         >>> samples = sampler.sample(initial_pos=np.array([1, 1, 1]), num_samples=10, stepsize=0.4)
         >>> samples
                   x         y         z
@@ -860,13 +862,13 @@ class NoUTurnSampler(HamiltonianMCda):
 
         Examples
         ---------
-        >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, GradLogPDFGaussian
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([11, -6])
         >>> covariance = np.array([[0.7, 0.2], [0.2, 14]])
         >>> model = JGD(['x', 'y'], mean, covariance)
-        >>> sampler = NUTS(model=model)
+        >>> sampler = NUTS(model=model, grad_log_pdf=GradLogPDFGaussian)
         >>> samples = sampler.generate_sample(initial_pos=np.array([1, 1]), num_samples=10, stepsize=0.4)
         >>> samples = np.array([sample for sample in samples])
         >>> samples
@@ -924,13 +926,13 @@ class NoUTurnSamplerDA(NoUTurnSampler):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda
-    >>> from pgmpy.models import JointGaussianDistribution as JGD
+    >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian
+    >>> from pgmpy.factors import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([-1, 12, -3])
     >>> covariance = np.array([[-2, 7, 2], [7, 14, 4], [2, 4, -1]])
     >>> model = JGD(['x', 'v', 't'], mean, covariance)
-    >>> sampler = NUTSda(model=model)
+    >>> sampler = NUTSda(model=model, grad_log_pdf=GradLogPDFGaussian)
     >>> samples = sampler.sample(initial_pos=np.array([0, 0, 0]), num_adapt=10, num_samples=10, stepsize=0.25)
     >>> samples
     rec.array([(0.0, 0.0, 0.0),
@@ -953,7 +955,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     Algorithm 6 : No-U-Turn Sampler with Dual Averaging
     """
 
-    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65):
+    def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog, delta=0.65):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
             raise ValueError(
@@ -1023,7 +1025,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         momentum_backward, momentum_forward = momentum, momentum
         candidate_set_size = accept_set_bool = 1
         position_m_1 = position
-        _, log_pdf = self.model.get_gradient_log_pdf(position, self.grad_log_pdf)
+        _, log_pdf = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
 
         # Resample slice variable `u`
         slice_var = np.random.uniform(0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum)))
@@ -1085,13 +1087,13 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         Examples
         ---------
         >>> # If environment has a installation of pandas
-        >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian, LeapFrog
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([10, -13])
         >>> covariance = np.array([[16, -3], [-3, 13]])
         >>> model = JGD(['x', 'y'], mean, covariance)
-        >>> sampler = NUTSda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
+        >>> sampler = NUTSda(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
         >>> samples = sampler.sample(initial_pos=np.array([12, -4]), num_adapt=10, num_samples=10, stepsize=0.1)
         >>> samples
                    x          y
@@ -1131,7 +1133,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             samples[i] = position_m
 
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha, n_alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu,
+                                                                   i, alpha, n_alpha)
             else:
                 stepsize = stepsize_bar
 
@@ -1166,13 +1169,13 @@ class NoUTurnSamplerDA(NoUTurnSampler):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda
-        >>> from pgmpy.models import JointGaussianDistribution as JGD
+        >>> from pgmpy.inference.continuous import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, -100])
         >>> covariance = np.array([[-12, 45], [45, -10]])
         >>> model = JGD(['a', 'b'], mean, covariance)
-        >>> sampler = NUTSda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
+        >>> sampler = NUTSda(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
         >>> samples = sampler.generate_sample(initial_pos=np.array([12, -4]), num_adapt=10,
         ...                                   num_samples=10, stepsize=0.1)
         >>> samples
@@ -1214,7 +1217,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             position_m, alpha, n_alpha = self._sample(position_m, stepsize)
 
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha, n_alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu,
+                                                                   i, alpha, n_alpha)
             else:
                 stepsize = stepsize_bar
 

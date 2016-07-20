@@ -7,7 +7,6 @@ from .JunctionTree import JunctionTree
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
 from .MarkovChain import MarkovChain
 from .NaiveBayes import NaiveBayes
-from .JointGaussian import JointGaussianDistribution
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
@@ -17,5 +16,4 @@ __all__ = ['BayesianModel',
            'ClusterGraph',
            'DynamicBayesianNetwork',
            'MarkovChain',
-           'NaiveBayes',
-           'JointGaussianDistribution']
+           'NaiveBayes']
