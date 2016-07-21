@@ -12,7 +12,7 @@ from pgmpy.factors import ContinuousFactor
 class LinearGaussianCPD(ContinuousFactor):
     u"""
     For, X -> Y the Linear Gaussian model assumes that the mean
-    of Y is a liner function of X and that the variance of Y does
+    of Y is a liner function of mean of X and the variance of Y does
     not depend on X.
 
     For example,
@@ -77,7 +77,7 @@ class LinearGaussianCPD(ContinuousFactor):
                              "length of the beta vector.")
 
         self.evidence = evidence
-        self.beta_vector = beta_vector
+        self.beta_vector = None if beta_vector is None else np.asarray(beta_vector)
 
         variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(variables, None)
@@ -92,3 +92,37 @@ class LinearGaussianCPD(ContinuousFactor):
             return multivariate_normal.pdf(args[0], np.array(mean), np.array([[self.variance]]))
 
         return _pdf
+
+    def copy(self):
+        """
+        Return a copy of the distribution.
+
+        Returns
+        -------
+        LinearGaussianCPD: copy of the distribution
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import LinearGaussianCPD
+        >>> cpd = LinearGaussianCPD('Y', 0.2, 9.6, ['X1', 'X2', 'X3'], [-2, 3, 7])
+        >>> copy_cpd = cpd.copy()
+        >>> copy_cpd.variable
+        'Y'
+        >>> copy_cpd.evidence
+        ['X1', 'X2', 'X3']
+        >>> 
+        """
+        evidence = list(self.evidence) if self.evidence else None
+        copy_cpd = LinearGaussianCPD(self.variable, self.beta_not, self.variance,
+                                     evidence, self.beta_vector)
+
+        return copy_cpd
+
+    def __str__(self):
+        # P(Y| X1, X2, X3) = N(-2*X1(x1) + 3*X2(x2) + 7*X3(x3) ; 0.2)
+        rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
+                  "N(" + " + ".join(["{coeff}*{parent}(x{index})".format(coeff=coeff, parent=parent, index=index+1)
+                                    for (index, parent), coeff in zip(enumerate(self.evidence),
+                                                                      self.beta_vector)]) + "; " + str(self.beta_not) + ")"
+        return rep_str
