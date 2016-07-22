@@ -13,17 +13,17 @@ class TestContinuousFactor(unittest.TestCase):
         pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
         phi1 = ContinuousFactor(['x', 'y'], pdf1)
         self.assertEqual(phi1.variables, ['x', 'y'])
-        self.assertEqual(phi1.pdf, pdf1)
+        self.assertEqual(phi1._pdf, pdf1)
 
         pdf2 = lambda *args: multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
         phi2 = ContinuousFactor(['x1', 'x2'], pdf2)
         self.assertEqual(phi2.variables, ['x1', 'x2'])
-        self.assertEqual(phi2.pdf, pdf2)
+        self.assertEqual(phi2._pdf, pdf2)
 
         pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
         phi3 = ContinuousFactor(['x', 'y', 'z'], pdf3)
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
-        self.assertEqual(phi3.pdf, pdf3)
+        self.assertEqual(phi3._pdf, pdf3)
 
     def test_class_init_typeerror(self):
         pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
@@ -366,12 +366,12 @@ class TestContinuousFactorMethods(unittest.TestCase):
 
         copy1.variables = ['A', 'B']
         self.assertEqual(copy4.variables, self.phi1.variables)
-        copy1.pdf = lambda a, b: (a + b) / (a * a + b * b)
+        copy1._pdf = lambda a, b: (a + b) / (a * a + b * b)
         copy1_pdf = lambda a, b: (a + b) / (a * a + b * b)
         self.assertEqual(copy4.pdf, self.phi1.pdf)
         copy4.variables = ['X', 'Y']
         self.assertEqual(copy1.variables, ['A', 'B'])
-        copy4.pdf = lambda a, b: a + b
+        copy4._pdf = lambda a, b: a + b
         for inp in np.random.rand(4, 2):
             self.assertEqual(copy1.pdf(inp[0], inp[1]), copy1_pdf(inp[0], inp[1]))
 
