@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pgmpy.models import JointGaussianDistribution as JGD
+from pgmpy.factors import JointGaussianDistribution as JGD
 from pgmpy.inference.continuous import LeapFrog, ModifiedEuler, GradLogPDFGaussian
 
 
@@ -36,26 +36,32 @@ class TestLeapFrog(unittest.TestCase):
         momentum = [-1, -1, -1]
         self.test_with_grad_log = LeapFrog(model=self.test_model, position=position, momentum=momentum,
                                            stepsize=0.3, grad_log_pdf=GradLogPDFGaussian, grad_log_position=None)
-        grad_log_position, _ = self.test_model.get_gradient_log_pdf(variable_assignment=position)
+        grad_log_position, _ = GradLogPDFGaussian(position, self.test_model).get_gradient_log_pdf()
         self.test_without_grad_log = LeapFrog(model=self.test_model, position=position, momentum=momentum,
-                                              stepsize=0.4, grad_log_pdf=None, grad_log_position=grad_log_position)
+                                              stepsize=0.4, grad_log_pdf=GradLogPDFGaussian,
+                                              grad_log_position=grad_log_position)
 
     def test_errors(self):
         with self.assertRaises(TypeError):
-            LeapFrog(model=self.test_model, position=1, momentum=[1, 1], stepsize=0.1)
+            LeapFrog(model=self.test_model, position=1, momentum=[1, 1], stepsize=0.1,
+                     grad_log_pdf=GradLogPDFGaussian)
         with self.assertRaises(TypeError):
-            LeapFrog(model=self.test_model, position=[1, 1], momentum=1, stepsize=0.1)
+            LeapFrog(model=self.test_model, position=[1, 1], momentum=1, stepsize=0.1,
+                     grad_log_pdf=GradLogPDFGaussian)
         with self.assertRaises(ValueError):
-            LeapFrog(model=self.test_model, position=[1, 1], momentum=[1], stepsize=0.1)
+            LeapFrog(model=self.test_model, position=[1, 1], momentum=[1], stepsize=0.1,
+                     grad_log_pdf=GradLogPDFGaussian)
         with self.assertRaises(TypeError):
             LeapFrog(model=self.test_model, position=[1], momentum=[1], stepsize=0.1, grad_log_pdf=1)
         with self.assertRaises(ValueError):
-            LeapFrog(model=self.test_model, position=[1, 1], momentum=[1, 1], stepsize=0.1)
+            LeapFrog(model=self.test_model, position=[1, 1], momentum=[1, 1], stepsize=0.1,
+                     grad_log_pdf=GradLogPDFGaussian)
         with self.assertRaises(TypeError):
-            LeapFrog(model=self.test_model, position=[1, 1, 1], momentum=[1, 1, 1], stepsize=0.1, grad_log_position=1)
+            LeapFrog(model=self.test_model, position=[1, 1, 1], momentum=[1, 1, 1], stepsize=0.1,
+                     grad_log_pdf=GradLogPDFGaussian, grad_log_position=1)
         with self.assertRaises(ValueError):
             LeapFrog(model=self.test_model, position=[1, 1, 1], momentum=[1, 1, 1], stepsize=0.1,
-                     grad_log_position=[1, 1])
+                     grad_log_pdf=GradLogPDFGaussian, grad_log_position=[1, 1])
 
     def test_leapfrog_methods(self):
         new_pos, new_momentum, new_grad = self.test_with_grad_log.get_proposed_values()
@@ -83,9 +89,10 @@ class TestModifiedEuler(unittest.TestCase):
         momentum = [-2, 1]
         self.test_with_grad_log = ModifiedEuler(model=self.test_model, position=position, momentum=momentum,
                                                 stepsize=0.5, grad_log_pdf=GradLogPDFGaussian, grad_log_position=None)
-        grad_log_position, _ = self.test_model.get_gradient_log_pdf(variable_assignment=position)
+        grad_log_position, _ = GradLogPDFGaussian(position, self.test_model).get_gradient_log_pdf()
         self.test_without_grad_log = ModifiedEuler(model=self.test_model, position=position, momentum=momentum,
-                                                   stepsize=0.3, grad_log_pdf=None, grad_log_position=grad_log_position)
+                                                   stepsize=0.3, grad_log_pdf=GradLogPDFGaussian,
+                                                   grad_log_position=grad_log_position)
 
     def test_modified_euler_methods(self):
         new_pos, new_momentum, new_grad = self.test_with_grad_log.get_proposed_values()
