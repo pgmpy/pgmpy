@@ -3,9 +3,9 @@ import unittest
 import numpy as np
 
 from pgmpy.inference.continuous import (HamiltonianMC as HMC, HamiltonianMCda as HMCda, ModifiedEuler,
-                                        GradLogPDFGaussian as GradGaussian, NoUTurnSampler as NUTS,
+                                        GradLogPDFGaussian, NoUTurnSampler as NUTS,
                                         NoUTurnSamplerDA as NUTSda)
-from pgmpy.models import JointGaussianDistribution as JGD
+from pgmpy.factors import JointGaussianDistribution as JGD
 
 
 class TestHMCInference(unittest.TestCase):
@@ -14,13 +14,13 @@ class TestHMCInference(unittest.TestCase):
         mean = [-1, 1, -1]
         covariance = np.array([[3, 0.8, 0.2], [0.8, 2, 0.3], [0.2, 0.3, 1]])
         self.test_model = JGD(['x', 'y', 'z'], mean, covariance)
-        self.hmc_sampler = HMCda(model=self.test_model)
+        self.hmc_sampler = HMCda(model=self.test_model, grad_log_pdf=GradLogPDFGaussian)
 
     def test_errors(self):
         with self.assertRaises(TypeError):
             HMCda(model=self.test_model, grad_log_pdf=1)
         with self.assertRaises(TypeError):
-            HMCda(model=self.test_model, grad_log_pdf=GradGaussian, simulate_dynamics=1)
+            HMCda(model=self.test_model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=1)
         with self.assertRaises(ValueError):
             HMCda(model=self.test_model, delta=-1)
         with self.assertRaises(TypeError):
@@ -31,15 +31,6 @@ class TestHMCInference(unittest.TestCase):
             HMC(model=self.test_model).sample(initial_pos=1, num_samples=1, trajectory_length=1)
         with self.assertRaises(TypeError):
             HMC(model=self.test_model).generate_sample(1, 1, 1).send(None)
-        # TODO: Remove them after implementation of JointGaussianDistribution
-        with self.assertRaises(TypeError):
-            JGD(['x', 'y'], mean=1, covariance=1)
-        with self.assertRaises(TypeError):
-            JGD(['x', 'y'], mean=np.ones(2), covariance=1)
-        with self.assertRaises(ValueError):
-            JGD(['x', 'y'], mean=np.ones(3), covariance=np.eye(2))
-        with self.assertRaises(ValueError):
-            JGD(['x', 'y'], mean=np.ones(3), covariance=[[1, 2, 3], [1, 2, 3]])
 
     def test_acceptance_prob(self):
         acceptance_probability = self.hmc_sampler._acceptance_prob(np.array([1, 2, 3]), np.array([2, 3, 4]),
@@ -100,33 +91,36 @@ class TestNUTSInference(unittest.TestCase):
         mean = np.array([-1, 1, 0])
         covariance = np.array([[6, 0.7, 0.2], [0.7, 3, 0.9], [0.2, 0.9, 1]])
         self.test_model = JGD(['x', 'y', 'z'], mean, covariance)
-        self.nuts_sampler = NUTSda(model=self.test_model, grad_log_pdf=GradGaussian)
+        self.nuts_sampler = NUTSda(model=self.test_model, grad_log_pdf=GradLogPDFGaussian)
 
     def test_errors(self):
         with self.assertRaises(TypeError):
             NUTS(model=self.test_model, grad_log_pdf=JGD)
         with self.assertRaises(TypeError):
-            NUTS(model=self.test_model, grad_log_pdf=None, simulate_dynamics=GradGaussian)
+            NUTS(model=self.test_model, grad_log_pdf=None, simulate_dynamics=GradLogPDFGaussian)
         with self.assertRaises(ValueError):
-            NUTSda(model=self.test_model, delta=-0.2)
+            NUTSda(model=self.test_model, delta=-0.2, grad_log_pdf=None)
         with self.assertRaises(ValueError):
-            NUTSda(model=self.test_model, delta=1.1)
+            NUTSda(model=self.test_model, delta=1.1, grad_log_pdf=GradLogPDFGaussian)
         with self.assertRaises(TypeError):
-            NUTS(self.test_model).sample(initial_pos={1, 1, 1}, num_samples=1)
+            NUTS(self.test_model, GradLogPDFGaussian).sample(initial_pos={1, 1, 1}, num_samples=1)
         with self.assertRaises(ValueError):
-            NUTS(self.test_model).sample(initial_pos=[1, 1], num_samples=1)
+            NUTS(self.test_model, GradLogPDFGaussian).sample(initial_pos=[1, 1], num_samples=1)
         with self.assertRaises(TypeError):
-            NUTSda(self.test_model).sample(initial_pos=1, num_samples=1, num_adapt=1)
+            NUTSda(self.test_model, GradLogPDFGaussian).sample(initial_pos=1, num_samples=1, num_adapt=1)
         with self.assertRaises(ValueError):
-            NUTSda(self.test_model).sample(initial_pos=[1, 1, 1, 1], num_samples=1, num_adapt=1)
+            NUTSda(self.test_model, GradLogPDFGaussian).sample(initial_pos=[1, 1, 1, 1], num_samples=1, num_adapt=1)
         with self.assertRaises(TypeError):
-            NUTS(self.test_model).generate_sample(initial_pos=0.1, num_samples=1).send(None)
+            NUTS(self.test_model, GradLogPDFGaussian).generate_sample(initial_pos=0.1, num_samples=1).send(None)
         with self.assertRaises(ValueError):
-            NUTS(self.test_model).generate_sample(initial_pos=(0, 1, 1, 1), num_samples=1).send(None)
+            NUTS(self.test_model, GradLogPDFGaussian).generate_sample(initial_pos=(0, 1, 1, 1),
+                                                                      num_samples=1).send(None)
         with self.assertRaises(TypeError):
-            NUTSda(self.test_model).generate_sample(initial_pos=[[1, 2, 3]], num_samples=1, num_adapt=1).send(None)
+            NUTSda(self.test_model, GradLogPDFGaussian).generate_sample(initial_pos=[[1, 2, 3]], num_samples=1,
+                                                                        num_adapt=1).send(None)
         with self.assertRaises(ValueError):
-            NUTSda(self.test_model).generate_sample(initial_pos=[1], num_samples=1, num_adapt=1).send(None)
+            NUTSda(self.test_model, GradLogPDFGaussian).generate_sample(initial_pos=[1], num_samples=1,
+                                                                        num_adapt=1).send(None)
 
     def test_sampling(self):
         np.random.seed(1010101)
