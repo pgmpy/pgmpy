@@ -55,8 +55,6 @@ class JointGaussianDistribution(ContinuousFactor):
                                  number of variables.")
 
         self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
-        normal_pdf = lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, no_of_var)[0],
-                                                           covariance)
         self.covariance = np.asarray(covariance, dtype=float)
         self._precision_matrix = None
 
@@ -65,7 +63,12 @@ class JointGaussianDistribution(ContinuousFactor):
                               the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
                              (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
 
-        super(JointGaussianDistribution, self).__init__(variables, normal_pdf)
+        super(JointGaussianDistribution, self).__init__(variables, None)
+
+    @property
+    def pdf(self):
+        return lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, len(self.variables))[0],
+                                                     self.covariance)
 
     @property
     def precision_matrix(self):
@@ -150,7 +153,6 @@ class JointGaussianDistribution(ContinuousFactor):
         phi.mean = phi.mean[index_to_keep]
         phi.covariance = phi.covariance[np.ix_(index_to_keep, index_to_keep)]
         phi._precision_matrix = None
-        phi.pdf = lambda *args: multivariate_normal(args, phi.mean.reshape(1, len(phi.variables)), phi.covariance)
 
         if not inplace:
             return phi
@@ -241,8 +243,6 @@ class JointGaussianDistribution(ContinuousFactor):
         phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
         phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
         phi._precision_matrix = None
-        phi.pdf = lambda *args: multivariate_normal(args, phi.mean.reshape(1, len(phi.variables)),
-                                                    phi.covariance)
 
         if not inplace:
             return phi
@@ -314,6 +314,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Example
         -------
 
+        >>> import numpy as np
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
@@ -331,10 +332,8 @@ class JointGaussianDistribution(ContinuousFactor):
         >>> phi.g
         -6.51533
         """
-        # TODO: This method will return a CanonicalFactor object.
-        # Currently this cannot be used until the CanonicalFactor class is
-        # created. For now the method returns a tuple of the CanonicalFactor
-        # parameters - (K, h, g)
+        from pgmpy.factors import CanonicalFactor
+        
         mu = self.mean
         sigma = self.covariance
 
@@ -343,6 +342,53 @@ class JointGaussianDistribution(ContinuousFactor):
         h = np.dot(K, mu)
 
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
-            np.power(2 * np.pi, len(self.variables)/2) * np.power(np.linalg.det(sigma), 0.5))
+            np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
 
-        return K, h, g
+        return CanonicalFactor(self.scope(), K, h, g)
+
+    def _operate(self, other, operation, inplace=True):
+        """
+        Gives the CanonicalFactor operation (product or divide) with
+        the other factor.
+
+        Parameters
+        ----------
+        other: CanonicalFactor
+            The CanonicalFactor to be multiplied.
+
+        operation: String
+            'product' for multiplication operation and
+            'divide' for division operation.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                        if inplace=True (default) returns None
+                        if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1 * dis2
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        phi = self if inplace else self.copy()
+
+        phi = self.to_canonical_factor()._operate(other.to_canonical_factor(),
+                                                 operation, inplace=False).to_joint_gaussian()
+
+        if not inplace:
+            return phi

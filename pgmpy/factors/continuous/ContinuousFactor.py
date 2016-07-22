@@ -43,7 +43,14 @@ class ContinuousFactor(object):
             raise ValueError("Variable names cannot be same.")
 
         self.variables = list(variables)
-        self.pdf = pdf
+        self._pdf = pdf
+
+    @property
+    def pdf(self):
+        """
+        Returns the pdf of the ContinuousFactor.
+        """
+        return self._pdf
 
     def scope(self):
         """
@@ -209,7 +216,7 @@ class ContinuousFactor(object):
             return pdf(*reduced_args, **reduced_kwargs)
 
         phi.variables = var_to_keep
-        phi.pdf = reduced_pdf
+        phi._pdf = reduced_pdf
 
         if not inplace:
             return phi
@@ -274,7 +281,7 @@ class ContinuousFactor(object):
         def marginalized_pdf(*args):
             return integrate.nquad(reordered_pdf, [[-np.inf, np.inf] for i in range(len(variables))], args=args)[0]
 
-        phi.pdf = marginalized_pdf
+        phi._pdf = marginalized_pdf
         phi.variables = var_to_keep
 
         if not inplace:
@@ -315,7 +322,7 @@ class ContinuousFactor(object):
 
         pdf_mod = integrate.nquad(pdf, [[-np.inf, np.inf] for var in self.variables])[0]
 
-        phi.pdf = lambda *args: pdf(*args) / pdf_mod
+        phi._pdf = lambda *args: pdf(*args) / pdf_mod
 
         if not inplace:
             return phi
@@ -366,7 +373,7 @@ class ContinuousFactor(object):
                 return pdf(*self_pdf_args) / other.pdf(*other_pdf_args)
 
         phi.variables = modified_pdf_var
-        phi.pdf = modified_pdf
+        phi._pdf = modified_pdf
 
         if not inplace:
             return phi
