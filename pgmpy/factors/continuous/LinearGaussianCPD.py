@@ -73,14 +73,14 @@ class LinearGaussianCPD(ContinuousFactor):
         self.beta_0 = beta_0
         self.variance = variance
 
-        if len(evidence) != len(beta_vector):
+        if (len(evidence) if evidence else 0) != (len(beta_vector) if beta_vector else 0):
             raise ValueError("The number of variables in evidence must be equal to the "
                              "length of the beta vector.")
 
         self.evidence = evidence
         self.beta_vector = None if beta_vector is None else np.asarray(beta_vector)
 
-        variables = [variable] + evidence
+        variables = [variable] + evidence if evidence else [variable]
         super(LinearGaussianCPD, self).__init__(variables, None)
 
     @property
@@ -121,9 +121,14 @@ class LinearGaussianCPD(ContinuousFactor):
         return copy_cpd
 
     def __str__(self):
-        # P(Y| X1, X2, X3) = N(-2*X1(x1) + 3*X2(x2) + 7*X3(x3) ; 0.2)
-        rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
-                  "N(" + " + ".join(["{coeff}*{parent}(x{index})".format(coeff=coeff, parent=parent, index=index+1)
-                                    for (index, parent), coeff in zip(enumerate(self.evidence),
-                                                                      self.beta_vector)]) + "; " + str(self.beta_0) + ")"
+        if self.evidence and self.beta_vector:
+            # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
+            rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
+                      "N(" + " + ".join(["{coeff}*{parent}_mu)".format(coeff=coeff, parent=parent)
+                                        for coeff, parent in zip(self.beta_vector,
+                                                                 self.evidence)]) + "; " + str(self.beta_0) + ")"
+        else:
+            # P(X) = N(1, 4)
+            rep_str = "P({X}) = N({beta_0}; {variance})".format(X=str(self.variable), beta_0=str(self.beta_0),
+                                                                variance=str(self.variance))
         return rep_str
