@@ -15,6 +15,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
     An important result is that the linear Gaussian Bayesian Networks
     are an alternative representation for the class of multivariate
     Gaussian distributions.
+
     """
     def __init__(self, ebunch=None):
         super(LinearGaussianBayesianNetwork, self).__init__(ebunch)
@@ -63,3 +64,66 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                     break
             else:
                 self.cpds.append(cpd)
+
+    def get_cpds(self, node=None):
+        """
+        Returns the cpd of the node. If node is not specified returns all the CPDs
+        that have been added till now to the graph
+
+        Parameter
+        ---------
+        node: any hashable python object (optional)
+            The node whose CPD we want. If node not specified returns all the
+            CPDs added to the model.
+
+        Returns
+        -------
+        A list of linear Gaussian CPDs.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
+        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
+        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> model.get_cpds()
+        """
+        return super(LinearGaussianBayesianNetwork, self).get_cpds(node)
+
+    def remove_cpds(self, *cpds):
+        """
+        Removes the cpds that are provided in the argument.
+
+        Parameters
+        ----------
+        *cpds: LinearGaussianCPD object
+            A LinearGaussianCPD object on any subset of the variables
+            of the model which is to be associated with the model.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
+        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
+        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> for cpd in model.get_cpds():
+                print(cpd)
+
+        P(x1) = N(1; 4)
+        P(x2| x1) = N(0.5*x1_mu); -5)
+        P(x3| x2) = N(-1*x2_mu); 4)
+
+        >>> model.remove_cpds(cpd2, cpd3)
+        >>> for cpd in model.get_cpds():
+                print(cpd)
+
+        P(x1) = N(1; 4)
+
+        """
+        return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
