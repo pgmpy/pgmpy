@@ -12,24 +12,25 @@ from pgmpy.factors import ContinuousFactor
 class LinearGaussianCPD(ContinuousFactor):
     u"""
     For, X -> Y the Linear Gaussian model assumes that the mean
-    of Y is a liner function of mean of X and the variance of Y does
+    of Y is a linear function of mean of X and the variance of Y does
     not depend on X.
 
     For example,
     p(Y|X) = N(-2x + 0.9 ; 1)
+    Here, x is the mean of the variable X.
 
     Let Y be a continuous variable with continuous parents
     X1 ............ Xk . We say that Y has a linear Gaussian CPD
     if there are parameters β0,.........βk and σ2 such that,
 
-    p(Y |x1.......xk) = N(β0 + β1 + ......... + βk ; σ2)
+    p(Y |x1.......xk) = N(β0 + x1*β1 + ......... + xk*βk ; σ2)
 
     In vector notation,
 
     p(Y |x) = N(β0 + β.T * x ; σ2)
 
     """
-    def __init__(self, variable, beta_not, variance, evidence=None, beta_vector=None):
+    def __init__(self, variable, beta_0, variance, evidence=None, beta_vector=None):
         """
         Parameters
         ----------
@@ -37,7 +38,7 @@ class LinearGaussianCPD(ContinuousFactor):
         variable: any hashable python object
             The variable whose CPD is defined.
 
-        beta_not: int, float
+        beta_0: int, float
             Represents the constant term in the linear equation.
 
         variance: int, float
@@ -64,12 +65,12 @@ class LinearGaussianCPD(ContinuousFactor):
         ['x1', 'x2', 'x3']
         >>> cpd.beta_vector
         [-2, 3, 7]
-        >>> cpd.beta_not
+        >>> cpd.beta_0
         0.2
 
         """
         self.variable = variable
-        self.beta_not = beta_not
+        self.beta_0 = beta_0
         self.variance = variance
 
         if len(evidence) != len(beta_vector):
@@ -87,8 +88,8 @@ class LinearGaussianCPD(ContinuousFactor):
 
         def _pdf(*args):
             # The first element of args is the value of the variable on which CPD is defined
-            # and the rest of the elements give the values of the parents of this variable. 
-            mean = sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)]) + self.beta_not
+            # and the rest of the elements give the mean values of the parent variables.
+            mean = sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)]) + self.beta_0
             return multivariate_normal.pdf(args[0], np.array(mean), np.array([[self.variance]]))
 
         return _pdf
@@ -111,10 +112,10 @@ class LinearGaussianCPD(ContinuousFactor):
         'Y'
         >>> copy_cpd.evidence
         ['X1', 'X2', 'X3']
-        >>> 
+ 
         """
         evidence = list(self.evidence) if self.evidence else None
-        copy_cpd = LinearGaussianCPD(self.variable, self.beta_not, self.variance,
+        copy_cpd = LinearGaussianCPD(self.variable, self.beta_0, self.variance,
                                      evidence, self.beta_vector)
 
         return copy_cpd
@@ -124,5 +125,5 @@ class LinearGaussianCPD(ContinuousFactor):
         rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
                   "N(" + " + ".join(["{coeff}*{parent}(x{index})".format(coeff=coeff, parent=parent, index=index+1)
                                     for (index, parent), coeff in zip(enumerate(self.evidence),
-                                                                      self.beta_vector)]) + "; " + str(self.beta_not) + ")"
+                                                                      self.beta_vector)]) + "; " + str(self.beta_0) + ")"
         return rep_str
