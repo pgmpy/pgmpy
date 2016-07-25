@@ -127,3 +127,33 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
+
+    def get_cardinality(self, node):
+        """
+        Cardinality is not defined for continuous variables.
+        """
+        raise ValueError("Cardinality is not defined for continuous variables.")
+
+    def fit(self, data, estimator_type=None, state_names=[], complete_samples_only=True, **kwargs):
+        """
+        For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
+        """
+        raise NotImplementedError("fit method has not been implemented for LinearGaussianBayesianNetwork.")
+
+    def predict(self, data):
+        """
+        For now, predict method has not been implemented for LinearGaussianBayesianNetwork.
+        """
+        raise NotImplementedError("predict method has not been implemented for LinearGaussianBayesianNetwork.")
+
+    def to_markov_model(self):
+        """
+        For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.
+        """
+        raise NotImplementedError("to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.")
+
+    def is_imap(self, JPD):
+        """
+        For now, is_imap method has not been implemented for LinearGaussianBayesianNetwork.
+        """
+        raise NotImplementedError("is_imap method has not been implemented for LinearGaussianBayesianNetwork.")
