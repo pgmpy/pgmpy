@@ -30,7 +30,7 @@ class LinearGaussianCPD(ContinuousFactor):
     p(Y |x) = N(β0 + β.T * x ; σ2)
 
     """
-    def __init__(self, variable, beta_0, variance, evidence=None, beta_vector=None):
+    def __init__(self, variable, beta_0, variance, evidence=[], beta_vector=[]):
         """
         Parameters
         ----------
@@ -73,14 +73,14 @@ class LinearGaussianCPD(ContinuousFactor):
         self.beta_0 = beta_0
         self.variance = variance
 
-        if (len(evidence) if evidence else 0) != (len(beta_vector) if beta_vector else 0):
+        if len(evidence) != len(beta_vector):
             raise ValueError("The number of variables in evidence must be equal to the "
                              "length of the beta vector.")
 
         self.evidence = evidence
-        self.beta_vector = None if beta_vector is None else np.asarray(beta_vector)
+        self.beta_vector = np.asarray(beta_vector)
 
-        variables = [variable] + evidence if evidence else [variable]
+        variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(variables, None)
 
     @property
@@ -114,9 +114,8 @@ class LinearGaussianCPD(ContinuousFactor):
         ['X1', 'X2', 'X3']
  
         """
-        evidence = list(self.evidence) if self.evidence else None
         copy_cpd = LinearGaussianCPD(self.variable, self.beta_0, self.variance,
-                                     evidence, self.beta_vector)
+                                     list(self.evidence), self.beta_vector)
 
         return copy_cpd
 
