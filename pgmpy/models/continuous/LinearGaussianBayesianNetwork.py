@@ -127,6 +127,43 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
 
     def to_joint_gaussian(self):
+        """
+        The linear Gaussian Bayesian Networks are an alternative
+        representation for the class of multivariate Gaussian distributions.
+        This method returns an equivalent joint Gaussian distribution.
+
+        Returns
+        -------
+        JointGaussianDistribution: An equivalent joint Gaussian
+                                   distribution for the network.
+
+        Reference
+        ---------
+        Section 7.2, Example 7.3,
+        Probabilistic Graphical Models, Principles and Techniques
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
+        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
+        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> jgd = model.to_joint_gaussian()
+        >>> jgd.variables
+        ['x1', 'x2', 'x3']
+        >>> jgd.mean
+        array([[ 1. ],
+               [-4.5],
+               [ 8.5]])
+        >>> jgd.covariance
+        array([[ 4.,  2., -2.],
+               [ 2.,  5., -5.],
+               [-2., -5.,  8.]])
+
+        """
         variables = nx.topological_sort(self)
         mean = np.zeros(len(variables))
         covariance = np.zeros((len(variables), len(variables)))
