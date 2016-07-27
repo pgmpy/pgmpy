@@ -187,6 +187,28 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         return JointGaussianDistribution(variables, mean, covariance)
 
+    def check_model(self):
+        """
+        Checks the model for various errors. This method checks for the following
+        error - 
+
+        * Checks if the CPDs associated with nodes are consistent with their parents.
+
+        Returns
+        -------
+        check: boolean
+            True if all the checks pass.
+
+        """
+        for node in self.nodes():
+            cpd = self.get_cpds(node=node)
+
+            if isinstance(cpd, LinearGaussianCPD):
+                if set(cpd.evidence) != set(self.get_parents(node)):
+                    raise ValueError("CPD associated with %s doesn't have "
+                                     "proper parents associated with it." % node)
+        return True
+
     def get_cardinality(self, node):
         """
         Cardinality is not defined for continuous variables.
