@@ -1,9 +1,11 @@
 from __future__ import division
 
 import numpy as np
+import networkx as nx
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors import LinearGaussianCPD
+from pgmpy.factors import JointGaussianDistribution
 
 
 class LinearGaussianBayesianNetwork(BayesianModel):
@@ -17,10 +19,6 @@ class LinearGaussianBayesianNetwork(BayesianModel):
     Gaussian distributions.
 
     """
-    def __init__(self, ebunch=None):
-        super(LinearGaussianBayesianNetwork, self).__init__(ebunch)
-
-        self._jgd = None
 
     def add_cpds(self, *cpds):
         """
@@ -127,6 +125,30 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
+
+    def to_joint_gaussian(self):
+        variables = nx.topological_sort(self)
+        mean = np.zeros(len(variables))
+        covariance = np.zeros((len(variables), len(variables)))
+
+        for node_idx in range(len(variables)):
+            cpd = self.get_cpds(variables[node_idx])
+            mean[node_idx] = sum([coeff * mean[variables.index(parent)] for coeff, parent in zip(cpd.beta_vector,
+                                                                                                 cpd.evidence)]) + cpd.beta_0
+            covariance[node_idx, node_idx] = sum([coeff * coeff * covariance[variables.index(parent), variables.index(parent)]
+                                                  for coeff, parent in zip(cpd.beta_vector,
+                                                                           cpd.evidence)]) + cpd.variance
+
+        for node_i_idx in range(len(variables)):
+            for node_j_idx in range(len(variables)):
+                if covariance[node_j_idx, node_i_idx] != 0:
+                    covariance[node_i_idx, node_j_idx] = covariance[node_j_idx, node_i_idx]
+                else:
+                    cpd_j = self.get_cpds(variables[node_j_idx])
+                    covariance[node_i_idx, node_j_idx] = sum([coeff * covariance[node_i_idx, variables.index(parent)]
+                                                       for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
+
+        return JointGaussianDistribution(variables, mean, covariance)
 
     def get_cardinality(self, node):
         """
