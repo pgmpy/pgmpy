@@ -160,6 +160,9 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
+    
+    def test_model(self):
+        self.reader.get_model().check_model()
 
     def tearDown(self):
         del self.reader
