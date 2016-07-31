@@ -117,7 +117,7 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
 
     def test_get_parents(self):
         parents_expected = {'bowel-problem': [],
-                            'dog-out': ['family-out', 'bowel-problem'],
+                            'dog-out': ['bowel-problem', 'family-out'],
                             'family-out': [],
                             'hear-bark': ['dog-out'],
                             'light-on': ['family-out']}
@@ -137,14 +137,14 @@ class TestXMLBIFReaderMethodsString(unittest.TestCase):
     def test_get_cpd(self):
         cpd_expected = {'bowel-problem': np.array([[0.01],
                                                    [0.99]]),
-                        'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
-                                             [0.9, 0.1, 0.3, 0.7]]),
+                        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
+                                             [0.01, 0.03, 0.1, 0.7]]),
                         'family-out': np.array([[0.15],
                                                 [0.85]]),
-                        'hear-bark': np.array([[0.7, 0.3],
-                                               [0.01, 0.99]]),
-                        'light-on': np.array([[0.6, 0.4],
-                                              [0.05, 0.95]])}
+                        'hear-bark': np.array([[0.7, 0.01],
+                                               [0.3, 0.99]]),
+                        'light-on': np.array([[0.6, 0.05],
+                                              [0.4, 0.95]])}                                      
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
@@ -266,7 +266,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
 
     def test_get_parents(self):
         parents_expected = {'bowel-problem': [],
-                            'dog-out': ['family-out', 'bowel-problem'],
+                            'dog-out': ['bowel-problem', 'family-out'],
                             'family-out': [],
                             'hear-bark': ['dog-out'],
                             'light-on': ['family-out']}
@@ -286,14 +286,14 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     def test_get_cpd(self):
         cpd_expected = {'bowel-problem': np.array([[0.01],
                                                    [0.99]]),
-                        'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
-                                             [0.9, 0.1, 0.3, 0.7]]),
+                        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
+                                             [0.01, 0.03, 0.1, 0.7]]),
                         'family-out': np.array([[0.15],
                                                 [0.85]]),
-                        'hear-bark': np.array([[0.7, 0.3],
-                                               [0.01, 0.99]]),
-                        'light-on': np.array([[0.6, 0.4],
-                                              [0.05, 0.95]])}
+                        'hear-bark': np.array([[0.7, 0.01],
+                                               [0.3, 0.99]]),
+                        'light-on': np.array([[0.6, 0.05],
+                                              [0.4, 0.95]])}                                      
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
@@ -309,6 +309,9 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
+    
+    def test_model(self):
+        self.reader.get_model().check_model()
 
     def tearDown(self):
         del self.reader
