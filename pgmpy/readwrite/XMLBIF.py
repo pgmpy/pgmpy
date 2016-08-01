@@ -216,7 +216,7 @@ class XMLBIFWriter(object):
         self.encoding = encoding
         self.prettyprint = prettyprint
 
-        self.xml = etree.Element("BIF", attrib={'version': '0.3'})
+        self.xml = etree.Element("BIF", attrib={'VERSION': '0.3'})
         self.network = etree.SubElement(self.xml, 'NETWORK')
         if self.model.name:
             etree.SubElement(self.network, 'NAME').text = self.model.name
@@ -387,7 +387,7 @@ class XMLBIFWriter(object):
         for cpd in cpds:
             table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
             table_tag[cpd.variable].text = ''
-            for val in cpd.values.ravel():
+            for val in cpd.get_cpd().ravel(order="F"):
                 table_tag[cpd.variable].text += str(val) + ' '
 
         return table_tag
