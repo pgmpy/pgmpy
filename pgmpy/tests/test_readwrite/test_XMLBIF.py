@@ -286,7 +286,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             file_text = f.read()    
         reader = XMLBIFReader(string=file_text)
         model = reader.get_model()
-        self.assertListEqual(self.expected_model.nodes(),model.nodes())
+        self.assertSetEqual(set(self.expected_model.nodes()),set(model.nodes()))
         for node in self.expected_model.nodes():
             self.assertListEqual(self.expected_model.get_parents(node),model.get_parents(node))
             np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values,model.get_cpds(node=node).values)
