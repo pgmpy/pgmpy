@@ -4,7 +4,7 @@ import string
 import re
 from io import BytesIO
 
-#TODO input and output state
+# TODO input and output state
 
 
 try:
@@ -29,6 +29,7 @@ class XMLBIFReader(object):
     """
     Base class for reading network file in XMLBIF format.
     """
+
     def __init__(self, path=None, string=None):
         """
         Initialisation of XMLBIFReader object.
@@ -151,7 +152,7 @@ class XMLBIFReader(object):
         for variable in variable_CPD:
             arr = np.array(variable_CPD[variable])
             arr = arr.reshape((len(self.variable_states[variable]),
-                               arr.size//len(self.variable_states[variable])),order='F')
+                               arr.size // len(self.variable_states[variable])), order='F')
             variable_CPD[variable] = arr
         return variable_CPD
 
@@ -199,6 +200,7 @@ class XMLBIFWriter(object):
     """
     Base class for writing XMLBIF network file format.
     """
+
     def __init__(self, model, encoding='utf-8', prettyprint=True):
         """
         Initialise a XMLBIFWriter object.
@@ -242,22 +244,22 @@ class XMLBIFWriter(object):
             self.indent(self.xml)
         f = BytesIO()
         et = etree.ElementTree(self.xml)
-        et.write(f, encoding='utf-8', xml_declaration=True) 
-        return f.getvalue().decode('utf-8')  # your XML file, encoded as UTF-8    
-        #return etree.tostring(self.xml, encoding=self.encoding)
+        et.write(f, encoding='utf-8', xml_declaration=True)
+        return f.getvalue().decode('utf-8')  # your XML file, encoded as UTF-8
+        # return etree.tostring(self.xml, encoding=self.encoding)
 
     def indent(self, elem, level=0):
         """
         Inplace prettyprint formatter.
         """
-        i = "\n" + level*"  "
+        i = "\n" + level * "  "
         if len(elem):
             if not elem.text or not elem.text.strip():
                 elem.text = i + "  "
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
             for elem in elem:
-                self.indent(elem, level+1)
+                self.indent(elem, level + 1)
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
         else:
@@ -317,17 +319,17 @@ class XMLBIFWriter(object):
                 state_tag.text = self._make_valid_state(state.state)
                 outcome_tag[var].append(state_tag)
         return outcome_tag
-        
-    def _make_valid_state(self,state):
+
+    def _make_valid_state(self, state):
         """Transform the input statename into a valid state in XMLBIF. 
         XMLBIF states must start with a letter an only contain letters,
         numbers and underscores.
         """
         s = str(state)
-        s_allowed = re.sub("[^a-zA-Z0-9]","_",s)
-    
+        s_allowed = re.sub("[^a-zA-Z0-9]", "_", s)
+
         if s_allowed[0] not in string.ascii_letters:
-            s_allowed="state"+s_allowed
+            s_allowed = "state" + s_allowed
         return s_allowed
 
     def get_properties(self):

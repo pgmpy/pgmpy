@@ -7,8 +7,6 @@ import numpy.testing as np_test
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 
 
-
-
 try:
     from lxml import etree
 except ImportError:
@@ -19,32 +17,32 @@ except ImportError:
             import xml.etree.ElementTree as etree
         except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
-            
+
 TEST_FILE = """<?xml version="1.0" encoding="US-ASCII"?>
 
 
 <!--
-	Bayesian network in XMLBIF v0.3 (BayesNet Interchange Format)
-	Produced by JavaBayes (http://www.cs.cmu.edu/~javabayes/
-	Output created Mon Aug 01 10:33:28 AEST 2016
+    Bayesian network in XMLBIF v0.3 (BayesNet Interchange Format)
+    Produced by JavaBayes (http://www.cs.cmu.edu/~javabayes/
+    Output created Mon Aug 01 10:33:28 AEST 2016
 -->
 
 
 
 <!-- DTD for the XMLBIF 0.3 format -->
 <!DOCTYPE BIF [
-	<!ELEMENT BIF ( NETWORK )*>
-	      <!ATTLIST BIF VERSION CDATA #REQUIRED>
-	<!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
-	<!ELEMENT NAME (#PCDATA)>
-	<!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
-	      <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
-	<!ELEMENT OUTCOME (#PCDATA)>
-	<!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
-	<!ELEMENT FOR (#PCDATA)>
-	<!ELEMENT GIVEN (#PCDATA)>
-	<!ELEMENT TABLE (#PCDATA)>
-	<!ELEMENT PROPERTY (#PCDATA)>
+    <!ELEMENT BIF ( NETWORK )*>
+          <!ATTLIST BIF VERSION CDATA #REQUIRED>
+    <!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
+    <!ELEMENT NAME (#PCDATA)>
+    <!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
+          <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
+    <!ELEMENT OUTCOME (#PCDATA)>
+    <!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
+    <!ELEMENT FOR (#PCDATA)>
+    <!ELEMENT GIVEN (#PCDATA)>
+    <!ELEMENT TABLE (#PCDATA)>
+    <!ELEMENT PROPERTY (#PCDATA)>
 ]>
 
 
@@ -54,69 +52,69 @@ TEST_FILE = """<?xml version="1.0" encoding="US-ASCII"?>
 
 <!-- Variables -->
 <VARIABLE TYPE="nature">
-	<NAME>light_on</NAME>
-	<OUTCOME>true</OUTCOME>
-	<OUTCOME>false</OUTCOME>
-	<PROPERTY>position = (73, 165)</PROPERTY>
+    <NAME>light_on</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (73, 165)</PROPERTY>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
-	<NAME>bowel_problem</NAME>
-	<OUTCOME>true</OUTCOME>
-	<OUTCOME>false</OUTCOME>
-	<PROPERTY>position = (190, 69)</PROPERTY>
+    <NAME>bowel_problem</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (190, 69)</PROPERTY>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
-	<NAME>dog_out</NAME>
-	<OUTCOME>true</OUTCOME>
-	<OUTCOME>false</OUTCOME>
-	<PROPERTY>position = (155, 165)</PROPERTY>
+    <NAME>dog_out</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (155, 165)</PROPERTY>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
-	<NAME>hear_bark</NAME>
-	<OUTCOME>true</OUTCOME>
-	<OUTCOME>false</OUTCOME>
-	<PROPERTY>position = (154, 241)</PROPERTY>
+    <NAME>hear_bark</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (154, 241)</PROPERTY>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
-	<NAME>family_out</NAME>
-	<OUTCOME>true</OUTCOME>
-	<OUTCOME>false</OUTCOME>
-	<PROPERTY>position = (112, 69)</PROPERTY>
+    <NAME>family_out</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (112, 69)</PROPERTY>
 </VARIABLE>
 
 
 <!-- Probability distributions -->
 <DEFINITION>
-	<FOR>light_on</FOR>
-	<GIVEN>family_out</GIVEN>
-	<TABLE>0.6 0.4 0.05 0.95 </TABLE>
+    <FOR>light_on</FOR>
+    <GIVEN>family_out</GIVEN>
+    <TABLE>0.6 0.4 0.05 0.95 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
-	<FOR>bowel_problem</FOR>
-	<TABLE>0.01 0.99 </TABLE>
+    <FOR>bowel_problem</FOR>
+    <TABLE>0.01 0.99 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
-	<FOR>dog_out</FOR>
-	<GIVEN>bowel_problem</GIVEN>
-	<GIVEN>family_out</GIVEN>
-	<TABLE>0.99 0.01 0.97 0.03 0.9 0.1 0.3 0.7 </TABLE>
+    <FOR>dog_out</FOR>
+    <GIVEN>bowel_problem</GIVEN>
+    <GIVEN>family_out</GIVEN>
+    <TABLE>0.99 0.01 0.97 0.03 0.9 0.1 0.3 0.7 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
-	<FOR>hear_bark</FOR>
-	<GIVEN>dog_out</GIVEN>
-	<TABLE>0.7 0.3 0.01 0.99 </TABLE>
+    <FOR>hear_bark</FOR>
+    <GIVEN>dog_out</GIVEN>
+    <TABLE>0.7 0.3 0.01 0.99 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
-	<FOR>family_out</FOR>
-	<TABLE>0.15 0.85 </TABLE>
+    <FOR>family_out</FOR>
+    <TABLE>0.15 0.85 </TABLE>
 </DEFINITION>
 
 
@@ -125,9 +123,10 @@ TEST_FILE = """<?xml version="1.0" encoding="US-ASCII"?>
 
 
 class TestXMLBIFReaderMethods(unittest.TestCase):
+
     def setUp(self):
         self.reader = XMLBIFReader(string=TEST_FILE)
-    
+
     def test_get_variables(self):
         var_expected = ['light_on', 'bowel_problem', 'dog_out',
                         'hear_bark', 'family_out']
@@ -173,7 +172,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                         'hear_bark': np.array([[0.7, 0.01],
                                                [0.3, 0.99]]),
                         'light_on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}                                      
+                                              [0.4, 0.95]])}
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
@@ -189,7 +188,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
-    
+
     def test_model(self):
         self.reader.get_model().check_model()
 
@@ -198,6 +197,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
 
 
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
+
     def setUp(self):
         with open("dog_problem.xml", 'w') as fout:
             fout.write(TEST_FILE)
@@ -248,7 +248,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                         'hear_bark': np.array([[0.7, 0.01],
                                                [0.3, 0.99]]),
                         'light_on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}                                      
+                                              [0.4, 0.95]])}
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable],
@@ -264,31 +264,30 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         for variable in property_expected:
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
-    
+
     def test_model(self):
         self.reader.get_model().check_model()
-    
+
     def tearDown(self):
         del self.reader
         os.remove("dog_problem.xml")
-        
 
-        
+
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
+
     def setUp(self):
         reader = XMLBIFReader(string=TEST_FILE)
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
-        
+
     def test_write_xmlbif(self):
         self.writer.write_xmlbif("dog_problem_output.xml")
-        with open("dog_problem_output.xml","r") as f:
-            file_text = f.read()    
+        with open("dog_problem_output.xml", "r") as f:
+            file_text = f.read()
         reader = XMLBIFReader(string=file_text)
         model = reader.get_model()
-        self.assertSetEqual(set(self.expected_model.nodes()),set(model.nodes()))
+        self.assertSetEqual(set(self.expected_model.nodes()), set(model.nodes()))
         for node in self.expected_model.nodes():
-            self.assertListEqual(self.expected_model.get_parents(node),model.get_parents(node))
-            np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values,model.get_cpds(node=node).values)
+            self.assertListEqual(self.expected_model.get_parents(node), model.get_parents(node))
+            np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values, model.get_cpds(node=node).values)
         os.remove("dog_problem_output.xml")
-            
