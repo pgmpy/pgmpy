@@ -270,7 +270,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
     
     def tearDown(self):
         del self.reader
-        #os.remove("dog_problem.xml")
+        os.remove("dog_problem.xml")
         
 
         
@@ -290,20 +290,5 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         for node in self.expected_model.nodes():
             self.assertListEqual(self.expected_model.get_parents(node),model.get_parents(node))
             np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values,model.get_cpds(node=node).values)
-        #os.remove("dog_problem_output.xml")
+        os.remove("dog_problem_output.xml")
             
-                
-        
-#    def assertXMLElementEqual(self,want,got):            
-#        self.assertEqual(want.tag,got.tag)
-#        self.assertEqual(want.text.strip(),got.text.strip())
-#        self.assertDictEqual(want.attrib,got.attrib)
-#        self.assertEqual(len(want.getchildren()),len(got.getchildren()))
-#        for want_child, got_child in zip(want.getchildren(),got.getchildren()):
-#            self.assertEqual(type(want_child),type(got_child))
-#            self.assertXMLElementEqual(want_child,got_child)
-#            #if isinstance(want_child,xml.etree.cElementTree.Element) or isinstance(want_child,xml.etree.ElementTree.Element)
-# 
-        
-
-
