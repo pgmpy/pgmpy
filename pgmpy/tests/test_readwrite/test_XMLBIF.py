@@ -290,6 +290,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         for node in self.expected_model.nodes():
             self.assertListEqual(self.expected_model.get_parents(node),model.get_parents(node))
             np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values,model.get_cpds(node=node).values)
+        #os.remove("dog_problem_output.xml")
             
                 
         
