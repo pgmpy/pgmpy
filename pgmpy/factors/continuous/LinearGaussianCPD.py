@@ -120,10 +120,10 @@ class LinearGaussianCPD(ContinuousFactor):
         return copy_cpd
 
     def __str__(self):
-        if self.evidence and self.beta_vector:
+        if self.evidence and list(self.beta_vector):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
-                      "N(" + " + ".join(["{coeff}*{parent}_mu)".format(coeff=coeff, parent=parent)
+                      "N(" + " + ".join(["{coeff}*{parent}_mu".format(coeff=coeff, parent=parent)
                                         for coeff, parent in zip(self.beta_vector,
                                                                  self.evidence)]) + "; " + str(self.beta_0) + ")"
         else:
