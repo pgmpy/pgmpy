@@ -115,7 +115,7 @@ class XMLBIFReader(object):
          'hear-bark': ['dog-out'],
          'light-on': ['family-out']}
         """
-        variable_parents = {definition.find('FOR').text: [edge.text for edge in definition.findall('GIVEN')][::-1]
+        variable_parents = {definition.find('FOR').text: [edge.text for edge in definition.findall('GIVEN')]
                             for definition in self.network.findall('DEFINITION')}
         return variable_parents
 
@@ -144,7 +144,7 @@ class XMLBIFReader(object):
         for variable in variable_CPD:
             arr = np.array(variable_CPD[variable])
             arr = arr.reshape((len(self.variable_states[variable]),
-                               arr.size//len(self.variable_states[variable])))
+                               arr.size//len(self.variable_states[variable])),order='F')
             variable_CPD[variable] = arr
         return variable_CPD
 
