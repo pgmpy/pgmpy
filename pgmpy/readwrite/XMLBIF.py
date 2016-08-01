@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+import string
+import re
+from io import BytesIO
+
+#TODO input and output state
+
+
 try:
     from lxml import etree
 except ImportError:
@@ -233,7 +240,11 @@ class XMLBIFWriter(object):
         """
         if self.prettyprint:
             self.indent(self.xml)
-        return etree.tostring(self.xml, encoding=self.encoding)
+        f = BytesIO()
+        et = etree.ElementTree(self.xml)
+        et.write(f, encoding='utf-8', xml_declaration=True) 
+        return f.getvalue().decode('utf-8')  # your XML file, encoded as UTF-8    
+        #return etree.tostring(self.xml, encoding=self.encoding)
 
     def indent(self, elem, level=0):
         """
@@ -303,9 +314,21 @@ class XMLBIFWriter(object):
             outcome_tag[var] = []
             for state in [State(var, state) for state in range(cpd.get_cardinality([var])[var])]:
                 state_tag = etree.SubElement(self.variables[var], "OUTCOME")
-                state_tag.text = str(state.state)
+                state_tag.text = self._make_valid_state(state.state)
                 outcome_tag[var].append(state_tag)
         return outcome_tag
+        
+    def _make_valid_state(self,state):
+        """Transform the input statename into a valid state in XMLBIF. 
+        XMLBIF states must start with a letter an only contain letters,
+        numbers and underscores.
+        """
+        s = str(state)
+        s_allowed = re.sub("[^a-zA-Z0-9]","_",s)
+    
+        if s_allowed[0] not in string.ascii_letters:
+            s_allowed="state"+s_allowed
+        return s_allowed
 
     def get_properties(self):
         """
@@ -405,6 +428,5 @@ class XMLBIFWriter(object):
         >>> writer = XMLBIFWriter(model)
         >>> writer.write_xmlbif(test_file)
         """
-        writer = self.__str__()[:-1].decode('utf-8')
         with open(filename, 'w') as fout:
-            fout.write(writer)
+            fout.write(self.__str__())
