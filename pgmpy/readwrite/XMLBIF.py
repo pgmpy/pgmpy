@@ -235,6 +235,8 @@ class XMLBIFWriter(object):
         self.properties = self.get_properties()
         self.definition = self.get_definition()
         self.tables = self.get_cpd()
+        
+    
 
     def __str__(self):
         """
@@ -244,10 +246,9 @@ class XMLBIFWriter(object):
             self.indent(self.xml)
         f = BytesIO()
         et = etree.ElementTree(self.xml)
-        et.write(f, encoding='utf-8', xml_declaration=True)
-        return f.getvalue().decode('utf-8')  # your XML file, encoded as UTF-8
-        # return etree.tostring(self.xml, encoding=self.encoding)
-
+        et.write(f, encoding=self.encoding, xml_declaration=True)
+        return f.getvalue().decode(self.encoding)  
+       
     def indent(self, elem, level=0):
         """
         Inplace prettyprint formatter.
