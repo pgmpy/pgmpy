@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import string
+
 from io import BytesIO
-from pgmpy.extern.six.moves import map
+
 
 # TODO input and output state
 
@@ -22,7 +22,7 @@ import numpy as np
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors import TabularCPD, State
-from pgmpy.extern.six.moves import map, range
+from pgmpy.extern.six.moves import map
 
 
 class XMLBIFReader(object):
@@ -327,7 +327,7 @@ class XMLBIFWriter(object):
         """
         s = str(state)
         s_fixed = "".join(map(lambda x: x if x.isalnum() else "_",s))
-        if s_fixed[0] not in string.ascii_letters:
+        if not s_fixed[0].isalpha():
             s_fixed = "state" + s_fixed
         return s_fixed
 
