@@ -2,6 +2,7 @@
 
 
 from io import BytesIO
+import pyparsing as pp
 
 
 # TODO input and output state
@@ -327,7 +328,7 @@ class XMLBIFWriter(object):
         numbers and underscores.
         """
         s = str(state)
-        s_fixed = "".join(map(lambda x: x if x.isalnum() else "_",s))
+        s_fixed = pp.CharsNotIn(pp.alphanums+"_").setParseAction(pp.replaceWith("_")).transformString(s)
         if not s_fixed[0].isalpha():
             s_fixed = "state" + s_fixed
         return s_fixed
