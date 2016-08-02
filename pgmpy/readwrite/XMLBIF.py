@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import string
-import re
 from io import BytesIO
+from pgmpy.extern.six.moves import map
 
 # TODO input and output state
 
@@ -321,16 +321,15 @@ class XMLBIFWriter(object):
         return outcome_tag
 
     def _make_valid_state(self, state):
-        """Transform the input statename into a valid state in XMLBIF. 
+        """Transform the input statename into a valid state in XMLBIF.
         XMLBIF states must start with a letter an only contain letters,
         numbers and underscores.
         """
         s = str(state)
-        s_allowed = re.sub("[^a-zA-Z0-9]", "_", s)
-
-        if s_allowed[0] not in string.ascii_letters:
-            s_allowed = "state" + s_allowed
-        return s_allowed
+        s_fixed = "".join(map(lambda x: x if x.isalnum() else "_",s))
+        if s_fixed[0] not in string.ascii_letters:
+            s_fixed = "state" + s_fixed
+        return s_fixed
 
     def get_properties(self):
         """
