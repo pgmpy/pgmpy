@@ -4,6 +4,7 @@ from __future__ import division
 
 from itertools import product
 from warnings import warn
+import numbers
 
 import numpy as np
 
@@ -107,7 +108,7 @@ class TabularCPD(Factor):
 
         variables = [variable]
 
-        if not isinstance(variable_card, int):
+        if not isinstance(variable_card, numbers.Integral):
             raise TypeError("Event cardinality must be an integer")
         self.variable_card = variable_card
 
