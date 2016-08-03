@@ -181,18 +181,19 @@ class XMLBIFReader(object):
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
+            evidence_card = [len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]]
             cpd = TabularCPD(var, len(self.variable_states[var]), values,
                              evidence=self.variable_parents[var],
-                             evidence_card=[len(self.variable_states[evidence_var])
-                                            for evidence_var in self.variable_parents[var]])
+                             evidence_card=evidence_card, state_names=self.get_states())
             tabular_cpds.append(cpd)
 
         model.add_cpds(*tabular_cpds)
 
         for node, properties in self.variable_property.items():
             for prop in properties:
-                prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
-                model.node[node][prop_name] = prop_value
+                if prop is not None:
+                    prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                    model.node[node][prop_name] = prop_value
 
         return model
 
@@ -230,14 +231,14 @@ class XMLBIFWriter(object):
         self.network = etree.SubElement(self.xml, 'NETWORK')
         if self.model.name:
             etree.SubElement(self.network, 'NAME').text = self.model.name
+        else:
+            etree.SubElement(self.network, 'NAME').text = "UNTITLED"
 
         self.variables = self.get_variables()
         self.states = self.get_states()
         self.properties = self.get_properties()
         self.definition = self.get_definition()
         self.tables = self.get_cpd()
-        
-    
 
     def __str__(self):
         """
@@ -248,8 +249,8 @@ class XMLBIFWriter(object):
         f = BytesIO()
         et = etree.ElementTree(self.xml)
         et.write(f, encoding=self.encoding, xml_declaration=True)
-        return f.getvalue().decode(self.encoding)  
-       
+        return f.getvalue().decode(self.encoding)
+
     def indent(self, elem, level=0):
         """
         Inplace prettyprint formatter.
@@ -316,19 +317,24 @@ class XMLBIFWriter(object):
         for cpd in cpds:
             var = cpd.variable
             outcome_tag[var] = []
-            for state in [State(var, state) for state in range(cpd.get_cardinality([var])[var])]:
+            if cpd.state_names is None or cpd.state_names.get(var) is None:
+                states = range(cpd.get_cardinality([var])[var])
+            else:
+                states = cpd.state_names[var]
+
+            for state in states:
                 state_tag = etree.SubElement(self.variables[var], "OUTCOME")
-                state_tag.text = self._make_valid_state(state.state)
+                state_tag.text = self._make_valid_state_name(state)
                 outcome_tag[var].append(state_tag)
         return outcome_tag
 
-    def _make_valid_state(self, state):
-        """Transform the input statename into a valid state in XMLBIF.
+    def _make_valid_state_name(self, state_name):
+        """Transform the input state_name into a valid state in XMLBIF.
         XMLBIF states must start with a letter an only contain letters,
         numbers and underscores.
         """
-        s = str(state)
-        s_fixed = pp.CharsNotIn(pp.alphanums+"_").setParseAction(pp.replaceWith("_")).transformString(s)
+        s = str(state_name)
+        s_fixed = pp.CharsNotIn(pp.alphanums + "_").setParseAction(pp.replaceWith("_")).transformString(s)
         if not s_fixed[0].isalpha():
             s_fixed = "state" + s_fixed
         return s_fixed
