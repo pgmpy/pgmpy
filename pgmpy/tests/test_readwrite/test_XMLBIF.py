@@ -5,6 +5,8 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
+from pgmpy.models import BayesianModel
+from pgmpy.factors import TabularCPD
 
 
 try:
@@ -280,14 +282,59 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-    def test_write_xmlbif(self):
-        self.writer.write_xmlbif("dog_problem_output.xml")
-        with open("dog_problem_output.xml", "r") as f:
+        self.model_stateless = BayesianModel([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        self.cpd_d = TabularCPD(variable='D', variable_card=2, values=[[0.6, 0.4]])
+        self.cpd_i = TabularCPD(variable='I', variable_card=2, values=[[0.7, 0.3]])
+
+        self.cpd_g = TabularCPD(variable='G', variable_card=3,
+                                values=[[0.3, 0.05, 0.9,  0.5],
+                                        [0.4, 0.25, 0.08, 0.3],
+                                        [0.3, 0.7,  0.02, 0.2]],
+                                evidence=['I', 'D'],
+                                evidence_card=[2, 2])
+
+        self.cpd_l = TabularCPD(variable='L', variable_card=2,
+                                values=[[0.1, 0.4, 0.99],
+                                        [0.9, 0.6, 0.01]],
+                                evidence=['G'],
+                                evidence_card=[3])
+
+        self.cpd_s = TabularCPD(variable='S', variable_card=2,
+                                values=[[0.95, 0.2],
+                                        [0.05, 0.8]],
+                                evidence=['I'],
+                                evidence_card=[2])
+
+        self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
+        self.writer_stateless = XMLBIFWriter(self.model_stateless)
+
+    def test_write_xmlbif_statefull(self):
+        self.writer.write_xmlbif("dog_problem_output.xbif")
+        with open("dog_problem_output.xbif", "r") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
         model = reader.get_model()
-        self.assertSetEqual(set(self.expected_model.nodes()), set(model.nodes()))
-        for node in self.expected_model.nodes():
-            self.assertListEqual(self.expected_model.get_parents(node), model.get_parents(node))
-            np_test.assert_array_equal(self.expected_model.get_cpds(node=node).values, model.get_cpds(node=node).values)
-        os.remove("dog_problem_output.xml")
+        self.assert_models_equivelent(self.expected_model, model)
+        os.remove("dog_problem_output.xbif")
+
+    def test_write_xmlbif_stateless(self):
+        self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
+        with open("grade_problem_output.xbif", 'r') as f:
+            reader = XMLBIFReader(f)
+        model = reader.get_model()
+        self.assert_models_equivelent(self.model_stateless, model)
+        self.assertDictEqual({'G': ['state0', 'state1', 'state2'],
+                              'I': ['state0', 'state1'],
+                              'D': ['state0', 'state1'],
+                              'S': ['state0', 'state1'],
+                              'L': ['state0', 'state1']},
+                             model.get_cpds('D').state_names)
+        os.remove("grade_problem_output.xbif")
+
+    def assert_models_equivelent(self, expected, got):
+        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        for node in expected.nodes():
+            self.assertListEqual(expected.get_parents(node), got.get_parents(node))
+            cpds_expected = expected.get_cpds(node=node)
+            cpds_got = got.get_cpds(node=node)
+            np_test.assert_array_equal(cpds_expected.values, cpds_got.values)
