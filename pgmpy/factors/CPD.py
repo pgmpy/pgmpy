@@ -114,28 +114,17 @@ class TabularCPD(Factor):
 
         cardinality = [variable_card]
         if evidence_card is not None:
-            if not isinstance(evidence_card, (list, tuple)):
-                if isinstance(evidence_card, np.ndarray):
-                    evidence_card = evidence_card.tolist()
-                elif isinstance(evidence_card, (int, float)):
-                    evidence_card = [evidence_card]
-                else:
-                    raise TypeError("Must be a list, tuple or array of variable names ",
-                                    "and variable name can be any hashable python object")
+            if isinstance(evidence_card,numbers.Real):
+                raise TypeError("Evidence card must be a list of numbers")
             cardinality.extend(evidence_card)
 
         if evidence is not None:
-            if not isinstance(evidence, (list, tuple)):
-                if isinstance(evidence, np.ndarray):
-                    evidence = evidence.tolist()
-                elif isinstance(evidence, six.string_types):
-                    evidence = [evidence]
-                else:
-                    raise TypeError("Evidence must be list, tuple or array"
-                                    " of strings.")
+            if isinstance(evidence, six.string_types):
+                raise TypeError("Evidence must be list, tuple or array of strings.")
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise ValueError("Cardinality of all evidences not specified")
+                raise ValueError("Length of evidence_card doesn't match length of evidence")
+
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
