@@ -241,7 +241,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertRaises(ValueError, self.model.get_cpds, 'B')
 
     def test_add_single_cpd(self):
-        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], [2])
         self.G.add_cpds(cpd_s)
         self.assertListEqual(self.G.get_cpds(), [cpd_s])
 
@@ -330,7 +330,7 @@ class TestBayesianModelCPD(unittest.TestCase):
     def test_check_model2(self):
         cpd_s = TabularCPD('s', 2, values=np.array([[0.5, 0.3],
                                                     [0.8, 0.7]]),
-                           evidence=['i'], evidence_card=2)
+                           evidence=['i'], evidence_card=[2])
         self.G.add_cpds(cpd_s)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_s)

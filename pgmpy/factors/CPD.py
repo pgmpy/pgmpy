@@ -86,7 +86,7 @@ class TabularCPD(Factor):
     values: 2d array, 2d list or 2d tuple
         values of the cpd table
 
-    evidence: string, array-like
+    evidence: array-like
         evidences(if any) w.r.t. which cpd is defined
 
     evidence_card: integer, array-like
