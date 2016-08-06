@@ -99,7 +99,7 @@ class JointGaussianDistribution(ContinuousFactor):
         ----------
 
         variables: iterator
-                List of variables over which to marginalize.
+                List of variables over which marginalization is to be done.
 
         inplace: boolean
                 If inplace=True it will modify the distribution itself,
