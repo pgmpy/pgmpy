@@ -177,6 +177,10 @@ class BayesianModel(DirectedGraph):
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
 
+        Returns
+        -------
+        A list of TabularCPDs.
+
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
@@ -204,7 +208,7 @@ class BayesianModel(DirectedGraph):
 
         Parameters
         ----------
-        *cpds: TabularCPD, TreeCPD, RuleCPD object
+        *cpds: TabularCPD object
             A CPD object on any subset of the variables of the model which
             is to be associated with the model.
 

@@ -6,6 +6,7 @@ from .continuous.ContinuousNode import ContinuousNode
 from .continuous.ContinuousFactor import ContinuousFactor
 from .continuous.JointGaussianDistribution import JointGaussianDistribution
 from .continuous.CanonicalFactor import CanonicalFactor
+from .continuous.LinearGaussianCPD import LinearGaussianCPD
 
 __all__ = ['Factor',
            'State',
@@ -19,4 +20,5 @@ __all__ = ['Factor',
            'ContinuousNode',
            'ContinuousFactor',
            'JointGaussianDistribution',
-           'CanonicalFactor']
+           'CanonicalFactor',
+           'LinearGaussianCPD']
