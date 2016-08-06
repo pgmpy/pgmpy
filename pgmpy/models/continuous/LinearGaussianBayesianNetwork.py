@@ -183,14 +183,14 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                 else:
                     cpd_j = self.get_cpds(variables[node_j_idx])
                     covariance[node_i_idx, node_j_idx] = sum([coeff * covariance[node_i_idx, variables.index(parent)]
-                                                       for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
+                                                             for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
 
         return JointGaussianDistribution(variables, mean, covariance)
 
     def check_model(self):
         """
         Checks the model for various errors. This method checks for the following
-        error - 
+        error -
 
         * Checks if the CPDs associated with nodes are consistent with their parents.
 
