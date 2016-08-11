@@ -1,10 +1,10 @@
 # coding:utf-8
 
+import numpy as np
+import pandas as pd
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import TabularCPD
 from pgmpy.models import BayesianModel
-import numpy as np
-import pandas as pd
 
 
 class BayesianEstimator(ParameterEstimator):
@@ -133,8 +133,8 @@ class BayesianEstimator(ParameterEstimator):
             alpha = float(equivalent_sample_size) / (node_cardinality * np.prod(parents_cardinalities))
             pseudo_counts = [alpha] * node_cardinality
         elif prior_type == 'dirichlet':
-            assert len(pseudo_counts) == node_cardinality, \
-                "'pseudo_counts' should have length {0}".format(node_cardinality)
+            if not len(pseudo_counts) == node_cardinality:
+                raise ValueError("'pseudo_counts' should have length {0}".format(node_cardinality))
             if isinstance(pseudo_counts, dict):
                 pseudo_counts = sorted(pseudo_counts.values())
         else:

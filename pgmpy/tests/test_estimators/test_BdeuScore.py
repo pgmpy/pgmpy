@@ -18,13 +18,13 @@ class TestBdeuScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BdeuScore(self.d1).score(self.m1), -9.232455617226538)
+        self.assertAlmostEqual(BdeuScore(self.d1).score(self.m1), -9.907103407446435)
         self.assertEqual(BdeuScore(self.d1).score(BayesianModel()), 0)
 
     def test_score_titanic(self):
         scorer = BdeuScore(self.titanic_data2, equivalent_sample_size=25)
         titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
-        self.assertAlmostEqual(scorer.score(titanic), -1885.0159462526487)
+        self.assertAlmostEqual(scorer.score(titanic),  -1892.7383393910427)
         titanic2 = BayesianModel([("Pclass", "Sex"), ])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))

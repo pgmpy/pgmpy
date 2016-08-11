@@ -1,10 +1,10 @@
 # coding:utf-8
 
+import numpy as np
+import pandas as pd
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import TabularCPD
 from pgmpy.models import BayesianModel
-import numpy as np
-import pandas as pd
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):

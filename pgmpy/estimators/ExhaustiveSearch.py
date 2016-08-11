@@ -5,6 +5,7 @@ import networkx as nx
 from warnings import warn
 from itertools import combinations
 from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import K2Score
 from pgmpy.utils.mathext import powerset
 from pgmpy.models import BayesianModel
 
@@ -22,7 +23,7 @@ class ExhaustiveSearch(StructureEstimator):
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
-        scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used if not set)
+        scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
             An instance of `K2Score`, `BdeuScore`, or `BicScore`.
             This score is optimized during structure estimation by the `estimate`-method.
 
@@ -40,7 +41,6 @@ class ExhaustiveSearch(StructureEstimator):
         if scoring_method is not None:
             self.scoring_method = scoring_method
         else:
-            from pgmpy.estimators import K2Score
             self.scoring_method = K2Score(data, **kwargs)
 
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
@@ -100,7 +100,7 @@ class ExhaustiveSearch(StructureEstimator):
 
     def all_scores(self):
         """
-        Computes an list of DAGs and their structure scores, ordered by score.
+        Computes a list of DAGs and their structure scores, ordered by score.
 
         Returns
         -------
@@ -119,31 +119,31 @@ class ExhaustiveSearch(StructureEstimator):
         >>> searcher = ExhaustiveSearch(data, scoring_method=K2Score(data))
         >>> for score, model in searcher.all_scores():
         ...   print("{0}\t{1}".format(score, model.edges()))
-        -24248.197441476987             [('A', 'B'), ('A', 'C')]
-        -24248.19235057253              [('C', 'A'), ('A', 'B')]
-        -24248.19235057253              [('B', 'A'), ('A', 'C')]
-        -24212.796296322067             [('A', 'B')]
-        -24212.796296322067             [('A', 'C')]
-        -24212.791205417612             [('B', 'A')]
-        -24212.791205417612             [('C', 'A')]
-        -24212.791205417612             [('B', 'A'), ('C', 'A')]
-        -24177.395151167144             []
-        -16605.51994508473              [('B', 'C'), ('A', 'B'), ('A', 'C')]
-        -16605.51994508473              [('C', 'B'), ('A', 'B'), ('A', 'C')]
-        -16605.51485418027              [('C', 'B'), ('C', 'A'), ('A', 'B')]
-        -16605.51485418027              [('B', 'C'), ('B', 'A'), ('A', 'C')]
-        -16570.118799929805             [('C', 'B'), ('A', 'B')]
-        -16570.118799929805             [('B', 'C'), ('A', 'C')]
-        -16276.388236054732             [('B', 'C'), ('A', 'B')]
-        -16276.388236054732             [('C', 'B'), ('A', 'C')]
-        -16276.383145150277             [('B', 'C'), ('B', 'A')]
-        -16276.383145150277             [('B', 'C'), ('C', 'A')]
-        -16276.383145150277             [('B', 'A'), ('C', 'B')]
-        -16276.383145150277             [('C', 'B'), ('C', 'A')]
-        -16276.383145150277             [('B', 'C'), ('B', 'A'), ('C', 'A')]
-        -16276.383145150277             [('B', 'A'), ('C', 'B'), ('C', 'A')]
-        -16240.987090899813             [('B', 'C')]
-        -16240.987090899813             [('C', 'B')]
+        -24234.44977974726      [('A', 'B'), ('A', 'C')]
+        -24234.449760691063     [('A', 'B'), ('C', 'A')]
+        -24234.449760691063     [('A', 'C'), ('B', 'A')]
+        -24203.700955937973     [('A', 'B')]
+        -24203.700955937973     [('A', 'C')]
+        -24203.700936881774     [('B', 'A')]
+        -24203.700936881774     [('C', 'A')]
+        -24203.700936881774     [('B', 'A'), ('C', 'A')]
+        -24172.952132128685     []
+        -16597.30920265254      [('A', 'B'), ('A', 'C'), ('B', 'C')]
+        -16597.30920265254      [('A', 'B'), ('A', 'C'), ('C', 'B')]
+        -16597.309183596342     [('A', 'B'), ('C', 'A'), ('C', 'B')]
+        -16597.309183596342     [('A', 'C'), ('B', 'A'), ('B', 'C')]
+        -16566.560378843253     [('A', 'B'), ('C', 'B')]
+        -16566.560378843253     [('A', 'C'), ('B', 'C')]
+        -16268.324549347722     [('A', 'B'), ('B', 'C')]
+        -16268.324549347722     [('A', 'C'), ('C', 'B')]
+        -16268.324530291524     [('B', 'A'), ('B', 'C')]
+        -16268.324530291524     [('B', 'C'), ('C', 'A')]
+        -16268.324530291524     [('B', 'A'), ('C', 'B')]
+        -16268.324530291524     [('C', 'A'), ('C', 'B')]
+        -16268.324530291524     [('B', 'A'), ('B', 'C'), ('C', 'A')]
+        -16268.324530291524     [('B', 'A'), ('C', 'A'), ('C', 'B')]
+        -16237.575725538434     [('B', 'C')]
+        -16237.575725538434     [('C', 'B')]
         """
 
         scored_dags = sorted([(self.scoring_method.score(dag), dag) for dag in self.all_dags()],

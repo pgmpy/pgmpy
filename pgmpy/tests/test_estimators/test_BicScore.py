@@ -18,13 +18,13 @@ class TestBicScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -13.523145537608112)
+        self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -10.698440814229318)
         self.assertEqual(BicScore(self.d1).score(BayesianModel()), 0)
 
     def test_score_titanic(self):
         scorer = BicScore(self.titanic_data2)
         titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
-        self.assertAlmostEqual(scorer.score(titanic), -1871.6525128037401)
+        self.assertAlmostEqual(scorer.score(titanic), -1896.7250012840179)
         titanic2 = BayesianModel([("Pclass", "Sex"), ])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))

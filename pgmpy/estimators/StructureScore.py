@@ -5,7 +5,8 @@ from pgmpy.estimators import BaseEstimator
 class StructureScore(BaseEstimator):
     def __init__(self, data, **kwargs):
         """
-        Base class for structure scoring classes in pgmpy. Scoring classes are
+        Abstract base class for structure scoring classes in pgmpy. Use any of the derived classes
+        K2Score, BdeuScore, or BicScore. Scoring classes are
         used to measure how well a model is able to describe the given data set.
 
         Parameters
@@ -25,11 +26,50 @@ class StructureScore(BaseEstimator):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
+
+        Reference
+        ---------
+        Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+        Section 18.3
         """
         super(StructureScore, self).__init__(data, **kwargs)
 
     def score(self, model):
-        pass
+        """
+        Computes a score to measure how well the given `BayesianModel` fits to the data set.
+        (This method relies on the `local_score`-method that is implemented in each subclass.)
 
-    def local_score(self, variable, parents):
-        pass
+        Parameters
+        ----------
+        model: `BayesianModel` instance
+            The Bayesian network that is to be scored. Nodes of the BayesianModel need to coincide
+            with column names of data set.
+
+        Returns
+        -------
+        score: float
+            A number indicating the degree of fit between data and model
+
+        Examples
+        -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.estimators import K2Score
+        >>> # create random data sample with 3 variables, where B and C are identical:
+        >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
+        >>> data['C'] = data['B']
+        >>> K2Score(data).score(BayesianModel([['A','B'], ['A','C']]))
+        -24242.367348745247
+        >>> K2Score(data).score(BayesianModel([['A','B'], ['B','C']]))
+        -16273.793897051042
+        """
+
+        score = 0
+        for node in model.nodes():
+            score += self.local_score(node, model.predecessors(node))
+        score += self.structure_prior(model)
+        return score
+
+    def structure_prior(self, model):
+        "A (log) prior distribution over models. Currently unused (= uniform)."
+        return 0

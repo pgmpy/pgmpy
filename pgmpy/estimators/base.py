@@ -151,8 +151,8 @@ class ParameterEstimator(BaseEstimator):
             This sets the behavior of the `state_count`-method.
         """
 
-        assert set(model.nodes()) <= set(data.columns.values), \
-            "variable names of the model must be identical to column names in data"
+        if not set(model.nodes()) <= set(data.columns.values):
+            raise ValueError("variable names of the model must be identical to column names in data")
         self.model = model
 
         super(ParameterEstimator, self).__init__(data, **kwargs)

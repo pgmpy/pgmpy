@@ -30,44 +30,25 @@ class BicScore(StructureScore):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
+
+        References
+        ---------
+        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+        Section 18.3.4-18.3.6 (esp. page 802)
+        [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
         """
         super(BicScore, self).__init__(data, **kwargs)
 
-    def score(self, model):
-        """
-        Computes a score to measure how well the given `BayesianModel` fits to the data set.
-
-        Parameters
-        ----------
-        model: `BayesianModel` instance
-            The Bayesian network that is to be scored. Nodes of the BayesianModel need to coincide
-            with column names of data set.
-
-        Returns
-        -------
-        score: float
-            A number indicating the degree of fit between data and model
-        """
-
-        score = 0
-        for node in model.nodes():
-            score += self.local_score(node, model.predecessors(node))
-        score += self.structure_prior(model)
-        return score
-
-    def structure_prior(self, model):
-        "A prior distribution over models. Currently unused (= uniform)."
-        return 0
-
     def local_score(self, variable, parents):
-        "Computes a score that roughly measures how much a \
-        given variable is influenced by a given list of potential parents."
+        "Computes a score that measures how much a \
+        given variable is \"influenced\" by a given list of potential parents."
 
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
         state_counts = self.state_counts(variable, parents)
-        sample_size = len(self.data.ix[0])
-        num_parents_states = float(len(state_counts))
+        sample_size = len(self.data)
+        num_parents_states = float(len(state_counts.columns))
 
         score = 0
         for parents_state in state_counts:  # iterate over df columns (only 1 if no parents)
