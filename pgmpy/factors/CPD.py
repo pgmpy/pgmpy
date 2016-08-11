@@ -114,7 +114,7 @@ class TabularCPD(Factor):
 
         cardinality = [variable_card]
         if evidence_card is not None:
-            if isinstance(evidence_card,numbers.Real):
+            if isinstance(evidence_card, numbers.Real):
                 raise TypeError("Evidence card must be a list of numbers")
             cardinality.extend(evidence_card)
 
@@ -130,7 +130,7 @@ class TabularCPD(Factor):
             raise TypeError("Values must be a 2D list/array")
 
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
-                                                     state_names=self.state_names)
+                                         state_names=self.state_names)
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
@@ -197,8 +197,8 @@ class TabularCPD(Factor):
         # Build row headers
         if self.state_names and print_state_names:
             variable_array = [['{var}({state})'.format
-                                (var=self.variable, state=self.state_names[self.variable][i])
-                                 for i in range(self.variable_card)]]
+                               (var=self.variable, state=self.state_names[self.variable][i])
+                               for i in range(self.variable_card)]]
         else:
             variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
         # Stack with data
@@ -446,7 +446,7 @@ class TabularCPD(Factor):
                 evidence_card = self.cardinality[1:]
                 card_map = dict(zip(evidence, evidence_card))
                 old_pos_map = dict(zip(evidence, range(len(evidence))))
-                trans_ord = [0]+[(old_pos_map[letter]+1) for letter in new_order]
+                trans_ord = [0] + [(old_pos_map[letter] + 1) for letter in new_order]
                 new_values = np.transpose(self.values, trans_ord)
 
                 if inplace:

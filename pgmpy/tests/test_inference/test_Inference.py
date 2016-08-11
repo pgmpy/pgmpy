@@ -10,6 +10,7 @@ from collections import defaultdict
 
 
 class TestInferenceBase(unittest.TestCase):
+
     def setUp(self):
         self.bayesian = BayesianModel([('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e')])
         a_cpd = TabularCPD('a', 2, [[0.4, 0.6]])

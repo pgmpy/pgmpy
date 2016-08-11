@@ -11,6 +11,7 @@ from pgmpy.factors import TabularCPD
 
 
 class TestDBNInference(unittest.TestCase):
+
     def setUp(self):
         dbn_1 = DynamicBayesianNetwork()
         dbn_1.add_edges_from(
@@ -63,7 +64,7 @@ class TestDBNInference(unittest.TestCase):
                        ('Y', 1): 0,
                        ('Y', 2): 1})
         np_test.assert_array_almost_equal(query_result[('X', 2)].values,
-                                          np.array([0.76738736,  0.23261264]))
+                                          np.array([0.76738736, 0.23261264]))
 
     def test_forward_inf_multiple_variable_with_evidence(self):
         query_result = self.dbn_inference_1.forward_inference([('Z', 1), (

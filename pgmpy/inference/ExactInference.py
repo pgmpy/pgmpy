@@ -38,7 +38,7 @@ class VariableElimination(Inference):
         if isinstance(evidence, string_types):
             raise TypeError("evidence must be a list of strings")
 
-        #Dealing with the case when variables is not provided.
+        # Dealing with the case when variables is not provided.
         if not variables:
             all_factors = []
             for factor_li in self.factors.values():
@@ -315,6 +315,7 @@ class BeliefPropagation(Inference):
     model: BayesianModel, MarkovModel, FactorGraph, JunctionTree
         model for which inference is to performed
     """
+
     def __init__(self, model):
         super(BeliefPropagation, self).__init__(model)
 
