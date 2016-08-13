@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 import numpy as np
-
+from itertools import combinations, chain
 from pgmpy.extern.six.moves import map
 
 
@@ -87,3 +87,16 @@ def sample_discrete(values, weights, size=1):
         return np.random.choice(values, size=size, p=weights)
     else:
         return np.fromiter(map(lambda t: np.random.choice(values, p=t), weights), dtype='int')
+
+
+def powerset(l):
+    """
+    Generates all subsets of list `l` (as tuples).
+
+    Example
+    -------
+    >>> from pgmpy.utils.mathext import powerset
+    >>> list(powerset([1,2,3]))
+    [(), (1,), (2,), (3,), (1,2), (1,3), (2,3), (1,2,3)]
+    """
+    return chain.from_iterable(combinations(l, r) for r in range(len(l)+1))
