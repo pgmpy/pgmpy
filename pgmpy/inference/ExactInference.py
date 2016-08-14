@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import networkx as nx
 
+from pgmpy.extern.six import string_types
 from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.factors.Factor import factor_product
@@ -32,6 +33,11 @@ class VariableElimination(Inference):
             list of variables representing the order in which they
             are to be eliminated. If None order is computed automatically.
         """
+        if isinstance(variables, string_types):
+            raise TypeError("variables must be a list of strings")
+        if isinstance(evidence, string_types):
+            raise TypeError("evidence must be a list of strings")
+
         # Dealing with the case when variables is not provided.
         if not variables:
             all_factors = []
@@ -309,6 +315,7 @@ class BeliefPropagation(Inference):
     model: BayesianModel, MarkovModel, FactorGraph, JunctionTree
         model for which inference is to performed
     """
+
     def __init__(self, model):
         super(BeliefPropagation, self).__init__(model)
 

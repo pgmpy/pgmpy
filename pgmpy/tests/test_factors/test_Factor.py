@@ -1,6 +1,7 @@
 import unittest
 import warnings
 from collections import OrderedDict
+from itertools import permutations
 
 import numpy as np
 import numpy.testing as np_test
@@ -17,6 +18,7 @@ from pgmpy.models import MarkovModel
 
 
 class TestFactorInit(unittest.TestCase):
+
     def test_class_init(self):
         phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         self.assertEqual(phi.variables, ['x1', 'x2', 'x3'])
@@ -41,6 +43,7 @@ class TestFactorInit(unittest.TestCase):
 
 
 class TestFactorMethods(unittest.TestCase):
+
     def setUp(self):
         self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
         self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
@@ -57,8 +60,8 @@ class TestFactorMethods(unittest.TestCase):
         self.phi5 = Factor([self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24))
 
         self.card6 = [4, 2, 1, 3, 5, 6]
-        self.phi6 = Factor([self.tup1, self.tup2, self.tup3, self.tup1+self.tup2,
-                            self.tup2+self.tup3, self.tup3+self.tup1], self.card6,
+        self.phi6 = Factor([self.tup1, self.tup2, self.tup3, self.tup1 + self.tup2,
+                            self.tup2 + self.tup3, self.tup3 + self.tup1], self.card6,
                            np.arange(np.prod(self.card6), dtype=np.float))
 
         self.var1 = 'x1'
@@ -158,7 +161,7 @@ class TestFactorMethods(unittest.TestCase):
         phi6_mar = self.phi6.marginalize([self.tup1, self.tup2], inplace=False)
         np_test.assert_array_equal(phi6_mar.values.shape, phi6_mar.cardinality)
 
-        self.phi6.marginalize([self.tup1, self.tup3+self.tup1], inplace=True)
+        self.phi6.marginalize([self.tup1, self.tup3 + self.tup1], inplace=True)
         np_test.assert_array_equal(self.phi6.values.shape, self.phi6.cardinality)
 
     def test_normalize(self):
@@ -456,18 +459,20 @@ class TestFactorMethods(unittest.TestCase):
 
 class TestHash:
     # Used to check the hash function of Factor class.
+
     def __init__(self, x, y):
         self.x = x
         self.y = y
 
     def __hash__(self):
-        return hash(str(self.x)+str(self.y))
+        return hash(str(self.x) + str(self.y))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
 
 
 class TestTabularCPDInit(unittest.TestCase):
+
     def test_cpd_init(self):
         cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1]])
         self.assertEqual(cpd.variable, 'grade')
@@ -476,22 +481,33 @@ class TestTabularCPDInit(unittest.TestCase):
         np_test.assert_array_equal(cpd.cardinality, np.array([3]))
         np_test.assert_array_almost_equal(cpd.values, np.array([0.1, 0.1, 0.1]))
 
-        cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                      [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                      [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                         evidence=['intel', 'diff'], evidence_card=[3, 2])
-        self.assertEqual(cpd.variable, 'grade')
-        self.assertEqual(cpd.variable_card, 3)
-        np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
-        self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
-        np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                         0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                         0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 3, 2))
+        values = [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                  [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                  [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]
+
+        evidence = ['intel', 'diff']
+        evidence_card = [3, 2]
+
+        valid_value_inputs = [values, np.asarray(values)]
+        valid_evidence_inputs = [evidence, set(evidence), np.asarray(evidence)]
+        valid_evidence_card_inputs = [evidence_card, np.asarray(evidence_card)]
+
+        for value in valid_value_inputs:
+            for evidence in valid_evidence_inputs:
+                for evidence_card in valid_evidence_card_inputs:
+                    cpd = TabularCPD('grade', 3, values, evidence=['intel', 'diff'], evidence_card=[3, 2])
+                    self.assertEqual(cpd.variable, 'grade')
+                    self.assertEqual(cpd.variable_card, 3)
+                    np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
+                    self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
+                    np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                                                                     0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                                                                     0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 3, 2))
 
         cpd = TabularCPD('grade', 3, [[0.1, 0.1],
                                       [0.1, 0.1],
                                       [0.8, 0.8]],
-                         evidence='evi1', evidence_card=2)
+                         evidence=['evi1'], evidence_card=[2.0])
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variable_card, 3)
         np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
@@ -511,14 +527,14 @@ class TestTabularCPDInit(unittest.TestCase):
         self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                          ['evi1', 'evi2'], 5)
+                          ['evi1', 'evi2'], [5.0])
         self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           ['evi1'], [5, 6])
-        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
+        self.assertRaises(TypeError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                                              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                           'evi1', [5, 6])
 
     def test_cpd_init_value_not_2d(self):
@@ -529,6 +545,7 @@ class TestTabularCPDInit(unittest.TestCase):
 
 
 class TestTabularCPDMethods(unittest.TestCase):
+
     def setUp(self):
         self.cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -672,6 +689,7 @@ class TestTabularCPDMethods(unittest.TestCase):
 
 
 class TestJointProbabilityDistributionInit(unittest.TestCase):
+
     def test_jpd_init(self):
         jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12) / 12)
         np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
@@ -683,6 +701,7 @@ class TestJointProbabilityDistributionInit(unittest.TestCase):
 
 
 class TestJointProbabilityDistributionMethods(unittest.TestCase):
+
     def setUp(self):
         self.jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
         self.jpd1 = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
