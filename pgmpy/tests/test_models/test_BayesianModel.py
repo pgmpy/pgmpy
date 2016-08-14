@@ -13,6 +13,7 @@ from pgmpy.estimators import BayesianEstimator, BaseEstimator, MaximumLikelihood
 
 
 class TestBaseModelCreation(unittest.TestCase):
+
     def setUp(self):
         self.G = BayesianModel()
 
@@ -103,6 +104,7 @@ class TestBaseModelCreation(unittest.TestCase):
 
 
 class TestBayesianModelMethods(unittest.TestCase):
+
     def setUp(self):
         self.G = BayesianModel([('a', 'd'), ('b', 'd'),
                                 ('d', 'e'), ('b', 'c')])
@@ -177,6 +179,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
 
 class TestBayesianModelCPD(unittest.TestCase):
+
     def setUp(self):
         self.G = BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
                                 ('i', 's')])
@@ -241,7 +244,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertRaises(ValueError, self.model.get_cpds, 'B')
 
     def test_add_single_cpd(self):
-        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], 2)
+        cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], [2])
         self.G.add_cpds(cpd_s)
         self.assertListEqual(self.G.get_cpds(), [cpd_s])
 
@@ -330,7 +333,7 @@ class TestBayesianModelCPD(unittest.TestCase):
     def test_check_model2(self):
         cpd_s = TabularCPD('s', 2, values=np.array([[0.5, 0.3],
                                                     [0.8, 0.7]]),
-                           evidence=['i'], evidence_card=2)
+                           evidence=['i'], evidence_card=[2])
         self.G.add_cpds(cpd_s)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_s)
@@ -354,6 +357,7 @@ class TestBayesianModelCPD(unittest.TestCase):
 
 
 class TestBayesianModelFitPredict(unittest.TestCase):
+
     def setUp(self):
         self.model_disconnected = BayesianModel()
         self.model_disconnected.add_nodes_from(['A', 'B', 'C', 'D', 'E'])
@@ -370,12 +374,12 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         print(isinstance(BayesianEstimator, BaseEstimator))
         print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
         self.model2.fit(self.data1, estimator_type=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
-        self.assertEqual(self.model2.get_cpds('B'), TabularCPD('B', 2, [[11.0/15], [4.0/15]]))
+        self.assertEqual(self.model2.get_cpds('B'), TabularCPD('B', 2, [[11.0 / 15], [4.0 / 15]]))
 
     def test_fit_missing_data(self):
         self.model2.fit(self.data2, state_names={'C': [0, 1]}, complete_samples_only=False)
         cpds = set([TabularCPD('A', 2, [[0.5], [0.5]]),
-                    TabularCPD('B', 2, [[2./3], [1./3]]),
+                    TabularCPD('B', 2, [[2. / 3], [1. / 3]]),
                     TabularCPD('C', 2, [[0, 0.5, 0.5, 0.5], [1, 0.5, 0.5, 0.5]],
                                evidence=['A', 'B'], evidence_card=[2, 2])])
         self.assertSetEqual(cpds, set(self.model2.get_cpds()))
@@ -427,6 +431,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
 
 class TestDirectedGraphCPDOperations(unittest.TestCase):
+
     def setUp(self):
         self.graph = BayesianModel()
 

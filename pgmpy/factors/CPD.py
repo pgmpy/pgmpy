@@ -4,6 +4,7 @@ from __future__ import division
 
 from itertools import product
 from warnings import warn
+import numbers
 
 import numpy as np
 
@@ -85,7 +86,7 @@ class TabularCPD(Factor):
     values: 2d array, 2d list or 2d tuple
         values of the cpd table
 
-    evidence: string, array-like
+    evidence: array-like
         evidences(if any) w.r.t. which cpd is defined
 
     evidence_card: integer, array-like
@@ -107,40 +108,29 @@ class TabularCPD(Factor):
 
         variables = [variable]
 
-        if not isinstance(variable_card, int):
+        if not isinstance(variable_card, numbers.Integral):
             raise TypeError("Event cardinality must be an integer")
         self.variable_card = variable_card
 
         cardinality = [variable_card]
         if evidence_card is not None:
-            if not isinstance(evidence_card, (list, tuple)):
-                if isinstance(evidence_card, np.ndarray):
-                    evidence_card = evidence_card.tolist()
-                elif isinstance(evidence_card, (int, float)):
-                    evidence_card = [evidence_card]
-                else:
-                    raise TypeError("Must be a list, tuple or array of variable names ",
-                                    "and variable name can be any hashable python object")
+            if isinstance(evidence_card, numbers.Real):
+                raise TypeError("Evidence card must be a list of numbers")
             cardinality.extend(evidence_card)
 
         if evidence is not None:
-            if not isinstance(evidence, (list, tuple)):
-                if isinstance(evidence, np.ndarray):
-                    evidence = evidence.tolist()
-                elif isinstance(evidence, six.string_types):
-                    evidence = [evidence]
-                else:
-                    raise TypeError("Evidence must be list, tuple or array"
-                                    " of strings.")
+            if isinstance(evidence, six.string_types):
+                raise TypeError("Evidence must be list, tuple or array of strings.")
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise ValueError("Cardinality of all evidences not specified")
+                raise ValueError("Length of evidence_card doesn't match length of evidence")
+
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
-                                                     state_names=self.state_names)
+                                         state_names=self.state_names)
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
@@ -207,8 +197,8 @@ class TabularCPD(Factor):
         # Build row headers
         if self.state_names and print_state_names:
             variable_array = [['{var}({state})'.format
-                                (var=self.variable, state=self.state_names[self.variable][i])
-                                 for i in range(self.variable_card)]]
+                               (var=self.variable, state=self.state_names[self.variable][i])
+                               for i in range(self.variable_card)]]
         else:
             variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
         # Stack with data
@@ -456,7 +446,7 @@ class TabularCPD(Factor):
                 evidence_card = self.cardinality[1:]
                 card_map = dict(zip(evidence, evidence_card))
                 old_pos_map = dict(zip(evidence, range(len(evidence))))
-                trans_ord = [0]+[(old_pos_map[letter]+1) for letter in new_order]
+                trans_ord = [0] + [(old_pos_map[letter] + 1) for letter in new_order]
                 new_values = np.transpose(self.values, trans_ord)
 
                 if inplace:

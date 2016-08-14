@@ -7,6 +7,7 @@ import numpy as np
 
 
 class TestDynamicBayesianNetworkCreation(unittest.TestCase):
+
     def setUp(self):
         self.network = DynamicBayesianNetwork()
 
@@ -60,6 +61,7 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
 
 
 class TestDynamicBayesianNetworkMethods(unittest.TestCase):
+
     def setUp(self):
         self.network = DynamicBayesianNetwork()
         self.grade_cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.8, 0.5],
@@ -67,7 +69,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                                                          [0.3, 0.7, 0.1, 0.2]],
                                     evidence=[('D', 0), ('I', 0)], evidence_card=[2, 2])
         self.d_i_cpd = TabularCPD(('D', 1), 2, values=[[0.6, 0.3], [0.4, 0.7]],
-                                  evidence=[('D', 0)], evidence_card=2)
+                                  evidence=[('D', 0)], evidence_card=[2])
         self.diff_cpd = TabularCPD(('D', 0), 2, values=[[0.6, 0.4]])
         self.intel_cpd = TabularCPD(('I', 0), 2, values=[[0.7, 0.3]])
         self.i_i_cpd = TabularCPD(('I', 1), 2, values=[[0.5, 0.4], [0.5, 0.6]],
@@ -183,6 +185,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
 
 
 class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
+
     def setUp(self):
         self.G = DynamicBayesianNetwork()
         self.G.add_edges_from(
@@ -195,6 +198,7 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
          (('D', 0), ('D', 1)), (('I', 1), ('G', 1))]
 
         """
+
     def test_check_model(self):
 
         grade_cpd = TabularCPD(('G', 0), 3, values=[[0.3, 0.05, 0.7, 0.5],
