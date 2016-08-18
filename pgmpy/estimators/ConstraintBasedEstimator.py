@@ -184,6 +184,58 @@ class ConstraintBasedEstimator(StructureEstimator):
         return self.build_skeleton(nodes, is_independent)
 
     @staticmethod
+    def estimate_from_independencies(nodes, independencies):
+        """Estimates a BayesianModel from an Independencies()-object or a
+        decision function for conditional independencies. This requires that
+        the set of independencies admits a faithful representation (e.g. is a
+        set of d-seperation for some BN or is closed under the semi-graphoid
+        axioms). See `build_skeleton`, `skeleton_to_pdag`, `pdag_to_dag` for
+        details.
+
+        Parameters
+        ----------
+        nodes: list, array-like
+            A list of node/variable names of the network skeleton.
+        independencies: Independencies-instance or function.
+            The source of independency information from which to build the skeleton.
+            The provided Independencies should admit a faithful representation.
+            Can either be provided as an Independencies()-instance or by passing a
+            function `f(X, Y, Zs)` that returns `True` when X _|_ Y | Zs,
+            otherwise `False`. (X, Y being individual nodes and Zs a list of nodes).
+
+        Returns
+        -------
+        model: BayesianModel()-instance
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.independencies import Independencies
+
+        >>> ind = Independencies(['B', 'C'], ['A', ['B', 'C'], 'D'])
+        >>> ind = ind.closure()
+        >>> skel = ConstraintBasedEstimator.estimate_from_independencies("ABCD", ind)
+        >>> print(skel.edges())
+        [('B', 'D'), ('A', 'D'), ('C', 'D')]
+
+        >>> model = BayesianModel([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
+        >>> skel = ConstraintBasedEstimator.estimate_from_independencies(model.nodes(), model.get_independencies())
+        >>> print(skel.edges())
+        [('B', 'C'), ('A', 'C'), ('C', 'E'), ('D', 'B')]
+        >>> # note that ('D', 'B') is flipped compared to the original network;
+        >>> # Both networks belong to the same PDAG/are I-equivalent
+        """
+
+        skel, seperating_sets = ConstraintBasedEstimator.build_skeleton(nodes, independencies)
+        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, seperating_sets)
+        dag = ConstraintBasedEstimator.pdag_to_dag(pdag)
+
+        return dag
+
+    @staticmethod
     def pdag_to_dag(pdag):
         """Completes a PDAG to a DAG, without adding v-structures, if such a
         completion exists. If no faithful extension is possible, some fully
@@ -284,6 +336,22 @@ class ConstraintBasedEstimator(StructureEstimator):
                 break
 
         return dag
+
+    @staticmethod
+    def model_to_pdag(model):
+        """Construct the DAG pattern (representing the I-equivalence class) for
+        a given BayesianModel. This is the "inverse" to pdag_to_dag.
+        """
+
+        if not isinstance(pdag, BayesianModel):
+            TypeError("'model' must be a BayesianModel()-instance.")
+
+        skel, seperating_sets = ConstraintBasedEstimator.build_skeleton(
+                                    model.nodes(),
+                                    model.get_independencies())
+        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, seperating_sets)
+
+        return pdag
 
     @staticmethod
     def skeleton_to_pdag(skel, seperating_sets):
