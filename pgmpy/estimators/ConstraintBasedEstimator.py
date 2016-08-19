@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-import numpy as np
-import pandas as pd
 from warnings import warn
 from itertools import combinations
+
+import numpy as np
+import pandas as pd
 from scipy.stats import chisquare
 
 from pgmpy.base import UndirectedGraph
@@ -47,24 +48,24 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
         super(ConstraintBasedEstimator, self).__init__(data, **kwargs)
 
-    def estimate(self, p_value=0.05):
+    def estimate(self, significance_level=0.01):
         """
         Estimates a BayesianModel for the data set, using the PC contraint-based
         structure learning algorithm. Independencies are identified from the
         data set using a chi-squared statistic with the acceptance threshold of
-        `p_value`. PC identifies a partially directed acyclic graph (PDAG), given
+        `significance_level`. PC identifies a partially directed acyclic graph (PDAG), given
         that the tested independencies admit a faithful Bayesian network representation.
         This method returns a BayesianModel that is a completion of this PDAG.
 
         Parameters
         ----------
-        p_value: float, default: 0.05
-            A significance level to use for conditional independence tests in the data set.
-            The p_value is the threshold probability of falsely rejecting the hypothesis
-            that variables are conditionally dependent.
+        significance_level: float, default: 0.01
+            The significance level to use for conditional independence tests in the data set.
 
-            The lower `p_value`, the more likely we are to reject dependencies,
-            resulting in a sparser graph.
+            `significance_level` is the desired Type 1 error probability of
+            falsely rejecting the null hypothesis that variables are independent,
+            given that they are. The lower `significance_level`, the less likely
+            we are to accept dependencies, resulting in a sparser graph.
 
         Returns
         -------
@@ -104,26 +105,26 @@ class ConstraintBasedEstimator(StructureEstimator):
         [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
         """
 
-        skel, seperating_sets = self.estimate_skeleton(p_value)
+        skel, seperating_sets = self.estimate_skeleton(significance_level)
         pdag = self.skeleton_to_pdag(skel, seperating_sets)
         model = self.pdag_to_dag(pdag)
         return model
 
-    def estimate_skeleton(self, p_value=0.05):
+    def estimate_skeleton(self, significance_level=0.01):
         """Estimates a graph skeleton (UndirectedGraph) for the data set.
         Uses the build_skeleton method (PC algorithm); independencies are
         determined using a chisquare statistic with the acceptance threshold
-        of `p_value`. Returns a tuple `(skeleton, seperating_sets).
+        of `significance_level`. Returns a tuple `(skeleton, seperating_sets).
 
         Parameters
         ----------
-        p_value: float, default: 0.05
-            A significance level to use for conditional independence tests in
-            the data set. The p_value is the threshold probability of falsely
-            rejecting the hypothesis that variables are conditionally dependent.
+        significance_level: float, default: 0.01
+            The significance level to use for conditional independence tests in the data set.
 
-            The lower `p_value`, the more likely we are to reject dependencies,
-            resulting in a sparser graph.
+            `significance_level` is the desired Type 1 error probability of
+            falsely rejecting the null hypothesis that variables are independent,
+            given that they are. The lower `significance_level`, the less likely
+            we are to accept dependencies, resulting in a sparser graph.
 
         Returns
         -------
@@ -168,18 +169,16 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> # X, Y dependent, but conditionally independent given Z:
         >>> sep_sets
         {('X', 'Y'): ('Z',)}
-        >>>
         """
 
         nodes = self.state_names.keys()
 
         def is_independent(X, Y, Zs):
-            """Computes p-value of chi2 independence test. If it is larger
-            than or equal to the provided threshold `p_value`, return `True`
-            (thereby rejecting the hypothesis that variables X and Y are
-            dependent given a list of variables Zs). Otherwise return `False`.
+            """Returns result of hypothesis test for the null hypothesis that
+            X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
             """
-            return self.test_conditional_independence(X, Y, Zs) >= p_value
+            chi2, p_value, sufficient_data = self.test_conditional_independence(X, Y, Zs)
+            return p_value >= significance_level
 
         return self.build_skeleton(nodes, is_independent)
 
@@ -274,7 +273,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
         >>> c = ConstraintBasedEstimator(data)
-        >>> pdag = c.skeleton_to_pdag(c.estimate_skeleton())
+        >>> pdag = c.skeleton_to_pdag(*c.estimate_skeleton())
         >>> pdag.edges()
         [('B', 'C'), ('D', 'A'), ('A', 'D'), ('A', 'C')]
         >>> c.pdag_to_dag(pdag).edges()
@@ -293,6 +292,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         [('B', 'C'), ('A', 'B'), ('A', 'C')]
         """
 
+        pdag = pdag.copy()
         dag = BayesianModel()
         dag.add_nodes_from(pdag.nodes())
 
@@ -343,8 +343,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         a given BayesianModel. This is the "inverse" to pdag_to_dag.
         """
 
-        if not isinstance(pdag, BayesianModel):
-            TypeError("'model' must be a BayesianModel()-instance.")
+        if not isinstance(model, BayesianModel):
+            raise TypeError("model: Expected BayesianModel instance, " +
+                            "got type {model_type}".format(model_type=type(model)))
 
         skel, seperating_sets = ConstraintBasedEstimator.build_skeleton(
                                     model.nodes(),
@@ -392,7 +393,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
         >>> c = ConstraintBasedEstimator(data)
-        >>> pdag = c.skeleton_to_pdag(c.estimate_skeleton())
+        >>> pdag = c.skeleton_to_pdag(*c.estimate_skeleton())
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """
@@ -537,7 +538,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
     def test_conditional_independence(self, X, Y, Zs=[]):
         """Chi-square conditional independence test.
-        Tests if X is independent from Y given Zs in the data.
+        Tests the null hypothesis that X is independent from Y given Zs.
 
         This is done by comparing the observed frequencies with the expected
         frequencies if X,Y were conditionally independent, using a chisquare
@@ -558,13 +559,19 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
+        chi2: float
+            The chi2 test statistic.
         p_value: float
-            A significance level for the hypothesis that X and Y are dependent
-            given Zs. The p_value is the probability of falsely rejecting the
-            hypothesis that the variables are conditionally dependent. A low
-            p_value (e.g. below 0.05 or 0.01) indicates dependence. (The lower
-            the threshold for the p_value, the more likely we are to reject
-            dependency, resulting in a sparser graph.)
+            The p_value, i.e. the probability of observing the computed chi2
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+        sufficient_data: bool
+            A flag that indicates if the sample size is considered sufficient.
+            As in [4], require at least 5 samples per parameter (on average).
+            That is, the size of the data set must be greater than
+            `5 * (c(X) - 1) * (c(Y) - 1) * prod([c(Z) for Z in Zs])`
+            (c() denotes the variable cardinality).
+
 
         References
         ----------
@@ -573,6 +580,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         [2] Neapolitan, Learning Bayesian Networks, Section 10.3 (page 600ff)
             http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         [3] Chi-square test https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+        [4] Tsamardinos et al., The max-min hill-climbing BN structure learning algorithm, 2005, Section 4
 
         Examples
         --------
@@ -583,11 +591,11 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> data['E'] = data['A'] + data['B'] + data['C']
         >>> c = ConstraintBasedEstimator(data)
         >>> print(c.test_conditional_independence('A', 'C'))  # independent
-        0.9848481578
+        (0.95035644482050263, 0.8132617142699442, True)
         >>> print(c.test_conditional_independence('A', 'B', 'D'))  # independent
-        0.962206185665
+        (5.5227461320130899, 0.59644169242588885, True)
         >>> print(c.test_conditional_independence('A', 'B', ['D', 'E']))  # dependent
-        0.0
+        (9192.5172226063387, 0.0, True)
         """
 
         if isinstance(Zs, (frozenset, list, set, tuple,)):
@@ -595,13 +603,11 @@ class ConstraintBasedEstimator(StructureEstimator):
         else:
             Zs = [Zs]
 
-        # Check is sample size is sufficient. Require at least 5 samples per parameter (on average)
-        # (As suggested in Spirtes et al., Causation, Prediction and Search, 2000, and also used in
-        # Tsamardinos et al., The max-min hill-climbing BN structure learning algorithm, 2005, Section 4)
         num_params = ((len(self.state_names[X])-1) *
                       (len(self.state_names[Y])-1) *
                       np.prod([len(self.state_names[Z]) for Z in Zs]))
-        if len(self.data) < num_params:
+        sufficient_data = len(self.data) >= num_params * 5
+        if not sufficient_data:
             warn("Insufficient data for testing {0} _|_ {1} | {2}. ".format(X, Y, Zs) +
                  "At least {0} samples recommended, {1} present.".format(num_params, len(self.data)))
 
@@ -636,14 +642,14 @@ class ConstraintBasedEstimator(StructureEstimator):
                 for Y_val in XYZ_expected.columns:
                     XYZ_expected.loc[X_val, Y_val] = (XZ_state_counts.loc[X_val] *
                                                       YZ_state_counts.loc[Y_val] /
-                                                      Z_state_counts)
+                                                      float(Z_state_counts))
 
         observed = XYZ_state_counts.values.flatten()
-        expected = XYZ_expected.values.flatten()
+        expected = XYZ_expected.fillna(0).values.flatten()
         # remove elements where the expected value is 0;
         # this also corrects the degrees of freedom for chisquare
         observed, expected = zip(*((o, e) for o, e in zip(observed, expected) if not e == 0))
 
-        chi2, p_value = chisquare(observed, expected)
+        chi2, significance_level = chisquare(observed, expected)
 
-        return p_value
+        return (chi2, significance_level, sufficient_data)
