@@ -9,33 +9,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.base import DirectedGraph, UndirectedGraph
 
 
-class TestBaseEstimator(unittest.TestCase):
-    def setUp(self):
-        # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
-        self.titanic_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/titanic_train.csv')
-
-    def test_test_conditional_independence(self):
-        data = pd.DataFrame(np.random.randint(0, 2, size=(1000, 4)), columns=list('ABCD'))
-        data['E'] = data['A'] + data['B'] + data['C']
-        est = ConstraintBasedEstimator(data)
-
-        self.assertGreater(est.test_conditional_independence('A', 'C')[1], 0.01)  # independent
-        self.assertGreater(est.test_conditional_independence('A', 'B', 'D')[1], 0.01)  # independent
-        self.assertLess(est.test_conditional_independence('A', 'B', ['D', 'E'])[1], 0.01)  # dependent
-
-    def test_test_conditional_independence_titanic(self):
-        est = ConstraintBasedEstimator(self.titanic_data)
-
-        self.assertEqual(est.test_conditional_independence('Embarked', 'Sex'),
-                         (13.355630515001746, 0.020264556044311655, True))
-        self.assertEqual(est.test_conditional_independence('Pclass', 'Survived', ['Embarked']),
-                         (96.403283942888635, 4.1082315854166553e-13, True))
-        self.assertEqual(est.test_conditional_independence('Embarked', 'Survived', ["Sex", "Pclass"]),
-                         (21.537481934494085, 0.96380273702382602, True))
-        # insufficient data test commented out, because generates warning
-        # self.assertEqual(est.test_conditional_independence('Sex', 'Survived', ["Age", "Embarked"]),
-        #                 (235.51133052530713, 0.99999999683394869, False))
-
+class TestConstraintBasedEstimator(unittest.TestCase):
     def test_build_skeleton(self):
         ind = Independencies(['B', 'C'], ['A', ['B', 'C'], 'D'])
         ind = ind.closure()
@@ -156,6 +130,3 @@ class TestBaseEstimator(unittest.TestCase):
         "Checks if two lists of undirected edges are equal."
         return ((((X, Y) in edges2 or (Y, X) in edges2) for X, Y in edges1) and
                 (((X, Y) in edges1 or (Y, X) in edges1) for X, Y in edges2))
-
-    def tearDown(self):
-        del self.titanic_data
