@@ -8,7 +8,7 @@ from pgmpy.extern import six
 from pgmpy.models import BayesianModel
 
 
-class TestBaseEstimator(unittest.TestCase):
+class TestHillClimbEstimator(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         self.rand_data['C'] = self.rand_data['B']
@@ -35,6 +35,19 @@ class TestBaseEstimator(unittest.TestCase):
                                 (('flip', ('A', 'B')), -0.0005546520851567038)]
         self.assertSetEqual(set([op for op, score in model2_legal_ops]),
                             set([op for op, score in model2_legal_ops_ref]))
+
+    def test_legal_operations_blacklist_whitelist(self):
+        model2_legal_ops_bl = list(self.est_rand._legal_operations(
+            self.model2, black_list=[('A', 'B'), ('A', 'C'), ('C', 'A'), ('C', 'B')]))
+        model2_legal_ops_bl_ref = [('+', ('B', 'C')), ('-', ('A', 'B'))]
+        self.assertSetEqual(set([op for op, score in model2_legal_ops_bl]),
+                            set(model2_legal_ops_bl_ref))
+
+        model2_legal_ops_wl = list(self.est_rand._legal_operations(
+            self.model2, white_list=[('A', 'B'), ('A', 'C'), ('C', 'A'), ('A', 'B')]))
+        model2_legal_ops_wl_ref = [('+', ('A', 'C')), ('+', ('C', 'A')), ('-', ('A', 'B')), ('flip', ('A', 'B'))]
+        self.assertSetEqual(set([op for op, score in model2_legal_ops_wl]),
+                            set(model2_legal_ops_wl_ref))
 
     def test_legal_operations_titanic(self):
         est = self.est_titanic1
