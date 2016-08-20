@@ -34,6 +34,11 @@ class HillClimbSearch(StructureEstimator):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
+
+        References
+        ----------
+        Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+        Section 18.4.3 (page 811ff)
         """
         if scoring_method is not None:
             self.scoring_method = scoring_method
@@ -42,13 +47,16 @@ class HillClimbSearch(StructureEstimator):
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
-    def _legal_operations(self, model, tabu_list=[], max_indegree=None):
+    def _legal_operations(self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
         see Koller & Fridman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
         If a number `max_indegree` is provided, only modifications that keep the number
-        of parents for each node below `max_indegree` are considered."""
+        of parents for each node below `max_indegree` are considered. A list of
+        edges can optionally be passed as `black_list` or `white_list` to exclude those
+        edges or to limit the search.
+        """
 
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
@@ -59,9 +67,11 @@ class HillClimbSearch(StructureEstimator):
         )
 
         for (X, Y) in potential_new_edges:  # (1) add single edge
-            if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
-                operation = ("+", (X, Y))
-                if operation not in tabu_list:
+            if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
+                operation = ('+', (X, Y))
+                if (operation not in tabu_list and
+                        (black_list is None or (X, Y) not in black_list) and
+                        (white_list is None or (X, Y) in white_list)):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if max_indegree is None or len(new_parents) <= max_indegree:
@@ -83,25 +93,23 @@ class HillClimbSearch(StructureEstimator):
             new_edges = list(model.edges()) + [(Y, X)]
             new_edges.remove((X, Y))
             if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
-                operation = ("flip", (X, Y))
-                if operation not in tabu_list and ("flip", (Y, X)) not in tabu_list:
+                operation = ('flip', (X, Y))
+                if (operation not in tabu_list and ('flip', (Y, X)) not in tabu_list and
+                        (black_list is None or (X, Y) not in black_list) and
+                        (white_list is None or (X, Y) in white_list)):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
                     new_X_parents = old_X_parents + [Y]
                     new_Y_parents = old_Y_parents[:]
                     new_Y_parents.remove(X)
                     if max_indegree is None or len(new_X_parents) <= max_indegree:
-                        score_delta = (
-                            local_score(X, new_X_parents)
-                            + local_score(Y, new_Y_parents)
-                            - local_score(X, old_X_parents)
-                            - local_score(Y, old_Y_parents)
-                        )
-                        yield (operation, score_delta)
+                        score_delta = (local_score(X, new_X_parents) +
+                                       local_score(Y, new_Y_parents) -
+                                       local_score(X, old_X_parents) -
+                                       local_score(Y, old_Y_parents))
+                        yield(operation, score_delta)
 
-    def estimate(
-        self, start=None, tabu_length=0, max_indegree=None, epsilon=1e-4, max_iter=1e6
-    ):
+    def estimate(self, start=None, tabu_length=0, max_indegree=None, black_list=None, white_list=None, epsilon=1e-4, max_iter=1e6):
         """
         Performs local hill climb search to estimates the `DAG` structure
         that has optimal score, according to the scoring method supplied in the constructor.
@@ -121,6 +129,13 @@ class HillClimbSearch(StructureEstimator):
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
+        black_list: list or None
+            If a list of edges is provided as `black_list`, they are excluded from the search
+            and the resulting model will not contain any of those edges. Default: None
+        white_list: list or None
+            If a list of edges is provided as `white_list`, the search is limited to those
+            edges. The resulting model will then only contain edges that are in `white_list`.
+            Default: None
 
         epsilon: float (default: 1e-4)
             Defines the exit condition. If the improvement in score is less than `epsilon`,
@@ -173,9 +188,9 @@ class HillClimbSearch(StructureEstimator):
             best_score_delta = 0
             best_operation = None
 
-            for operation, score_delta in self._legal_operations(
-                current_model, tabu_list, max_indegree
-            ):
+            for operation, score_delta in self._legal_operations(current_model, tabu_list,
+                                                                 max_indegree, black_list,
+                                                                 white_list):
                 if score_delta > best_score_delta:
                     best_operation = operation
                     best_score_delta = score_delta
