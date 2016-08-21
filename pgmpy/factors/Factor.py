@@ -281,7 +281,7 @@ class Factor(object):
 
         Parameters
         ----------
-        variable: list, array-like
+        variables: list, array-like
             List of variables with respect to which factor is to be maximized
 
         inplace: boolean
