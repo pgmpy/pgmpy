@@ -281,7 +281,7 @@ class Factor(object):
 
         Parameters
         ----------
-        variable: list, array-like
+        variables: list, array-like
             List of variables with respect to which factor is to be maximized
 
         inplace: boolean
@@ -442,8 +442,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1: `Factor`
+        phi1: `Factor` instance.
             Factor to be added.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
@@ -526,8 +530,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1: `Factor`
+        phi1: `Factor` instance
             Factor to be multiplied.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
@@ -610,8 +618,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1 : Factor
+        phi1 : `Factor` instance
             The denominator for division.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
