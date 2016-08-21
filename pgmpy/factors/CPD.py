@@ -267,10 +267,11 @@ class TabularCPD(Factor):
         """
         Modifies the cpd table with marginalized values.
 
-        Paramters
+        Parameters
         ---------
-        variables: string, list-type
-            name of variable to be marginalized
+        variables: list, array-like
+            list of variable to be marginalized
+
         inplace: boolean
             If inplace=True it will modify the CPD itself, else would return
             a new CPD
@@ -304,11 +305,12 @@ class TabularCPD(Factor):
 
         Parameters
         ----------
-        values: string, list-type
-            name of the variable values
+        values: list, array-like
+            A list of tuples of the form (variable_name, variable_state).
+
         inplace: boolean
-            If inplace=True it will modify the CPD itself, else would return
-            a new CPD
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Examples
         --------
@@ -357,6 +359,7 @@ class TabularCPD(Factor):
         ----------
         new_order: list
             list of new ordering of variables
+
         inplace: boolean
             If inplace == True it will modify the CPD itself
             otherwise new value will be returned without affecting old values
