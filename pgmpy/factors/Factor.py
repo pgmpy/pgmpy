@@ -442,8 +442,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1: `Factor`
+        phi1: `Factor` instance.
             Factor to be added.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
