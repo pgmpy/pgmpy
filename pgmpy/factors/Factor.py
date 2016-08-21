@@ -530,8 +530,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1: `Factor`
+        phi1: `Factor` instance
             Factor to be multiplied.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
@@ -614,8 +618,12 @@ class Factor(object):
 
         Parameters
         ----------
-        phi1 : Factor
+        phi1 : `Factor` instance
             The denominator for division.
+
+        inplace: boolean
+            If inplace=True it will modify the factor itself, else would return
+            a new factor.
 
         Returns
         -------
