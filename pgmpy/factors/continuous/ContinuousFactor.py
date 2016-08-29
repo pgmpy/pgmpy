@@ -347,7 +347,7 @@ class ContinuousFactor(object):
 
         Returns
         -------
-        ContinuousFactor or None: 
+        ContinuousFactor or None:
                         if inplace=True (default) returns None
                         if inplace=False returns a new `Factor` instance.
 
@@ -389,7 +389,7 @@ class ContinuousFactor(object):
 
         Returns
         -------
-        ContinuousFactor or None: 
+        ContinuousFactor or None:
                         if inplace=True (default) returns None
                         if inplace=False returns a new `Factor` instance.
 
@@ -423,7 +423,7 @@ class ContinuousFactor(object):
 
         Returns
         -------
-        ContinuousFactor or None: 
+        ContinuousFactor or None:
                         if inplace=True (default) returns None
                         if inplace=False returns a new `Factor` instance.
 

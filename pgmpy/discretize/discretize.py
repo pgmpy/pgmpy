@@ -91,8 +91,8 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         """
         step = (self.high - self.low) / self.cardinality
-        labels = ['x={i}'.format(i=str(i)) for i in np.round
-                        (np.arange(self.low, self.high, step), 3)]
+        labels = ['x={i}'.format(i=str(i)) for i in np.round(
+            np.arange(self.low, self.high, step), 3)]
         return labels
 
 
@@ -189,8 +189,8 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         step = (self.high - self.low) / (self.cardinality - 1)
 
         # for x=[low]
-        discrete_values = [(lev(self.low) - lev(self.low + step)) / step
-                           + 1 - self.factor.cdf(self.low)]
+        discrete_values = [(lev(self.low) - lev(self.low + step)) / step +
+                           1 - self.factor.cdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 2)
@@ -213,7 +213,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
         Reference
         ---------
-        Klugman, S. A., Panjer, H. H. and Willmot, G. E., 
+        Klugman, S. A., Panjer, H. H. and Willmot, G. E.,
         Loss Models, From Data to Decisions, Fourth Edition,
         Wiley, definition 3.5 and equation 3.8.
 
@@ -225,7 +225,8 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         order: int
             The order of the moment, default is first order.
         """
-        fun = lambda x: np.power(x, order)*self.factor.pdf(x)
+        def fun(x):
+            return np.power(x, order) * self.factor.pdf(x)
         return (integrate.quad(fun, -np.inf, u)[0] +
                 np.power(u, order)*(1 - self.factor.cdf(u)))
 

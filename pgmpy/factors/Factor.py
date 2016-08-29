@@ -736,9 +736,10 @@ class Factor(object):
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
             if self.state_names and print_state_names:
-                prob_list = ["{var}({state})".format(var=list(self.variables)[i],
-                            state=self.state_names[list(self.variables)[i]][prob[i]])
-                            for i in range(len(self.variables))]
+                prob_list = ["{var}({state})".format(
+                    var=list(self.variables)[i], state=self.state_names[list(
+                        self.variables)[i]][prob[i]])
+                             for i in range(len(self.variables))]
             else:
                 prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
                              for i in range(len(self.variables))]

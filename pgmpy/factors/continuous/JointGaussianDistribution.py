@@ -249,7 +249,7 @@ class JointGaussianDistribution(ContinuousFactor):
 
     def normalize(self, inplace=True):
         phi = self if inplace else self.copy()
-        
+
         # The pdf of a Joint Gaussian distrinution is always
         # normalized. Hence, no changes.
         if not inplace:
@@ -333,7 +333,7 @@ class JointGaussianDistribution(ContinuousFactor):
         -6.51533
         """
         from pgmpy.factors import CanonicalFactor
-        
+
         mu = self.mean
         sigma = self.covariance
 
@@ -385,10 +385,8 @@ class JointGaussianDistribution(ContinuousFactor):
                [ 1.6],
                [ 3.5]])
         """
-        phi = self if inplace else self.copy()
-
-        phi = self.to_canonical_factor()._operate(other.to_canonical_factor(),
-                                                 operation, inplace=False).to_joint_gaussian()
+        phi = self.to_canonical_factor()._operate(
+            other.to_canonical_factor(), operation, inplace=False).to_joint_gaussian()
 
         if not inplace:
             return phi

@@ -1,9 +1,9 @@
 import unittest
 
-import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors import LinearGaussianCPD
+
 
 class TestLGCPD(unittest.TestCase):
     def test_class_init(self):
