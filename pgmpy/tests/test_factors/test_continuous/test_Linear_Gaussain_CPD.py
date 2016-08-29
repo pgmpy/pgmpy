@@ -1,9 +1,9 @@
 import unittest
 
-import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors import LinearGaussianCPD
+
 
 class TestLGCPD(unittest.TestCase):
     def test_class_init(self):
@@ -34,7 +34,7 @@ class TestLGCPD(unittest.TestCase):
 
     def test_copy(self):
         cpd = LinearGaussianCPD('y', 0.67, 2, ['x1', 'x2', 'x3'],
-                                 [1, 4.56, 8])
+                                [1, 4.56, 8])
         copy = cpd.copy()
 
         self.assertEqual(cpd.variable, copy.variable)

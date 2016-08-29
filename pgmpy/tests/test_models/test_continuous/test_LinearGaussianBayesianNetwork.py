@@ -41,7 +41,7 @@ class TestLGBNMethods(unittest.TestCase):
         tab_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                           [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                           [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                                         evidence=['diff', 'intel'], evidence_card=[2, 3])
+                             evidence=['diff', 'intel'], evidence_card=[2, 3])
         self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
         self.assertRaises(ValueError, self.model.add_cpds, 1)
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
@@ -50,12 +50,10 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         jgd = self.model.to_joint_gaussian()
         self.assertEqual(jgd.variables, ['x1', 'x2', 'x3'])
-        np_test.assert_array_equal(jgd.mean, np.array([[ 1. ],
-                                                       [-4.5],
-                                                       [ 8.5]]))
-        np_test.assert_array_equal(jgd.covariance, np.array([[ 4.,  2., -2.],
-                                                             [ 2.,  5., -5.],
-                                                             [-2., -5.,  8.]]))
+        np_test.assert_array_equal(jgd.mean, np.array([[1.0], [-4.5], [8.5]]))
+        np_test.assert_array_equal(jgd.covariance, np.array([[4.0, 2.0, -2.0],
+                                                             [2.0, 5.0, -5.0],
+                                                             [-2.0, -5.0, 8.0]]))
 
     def test_check_model(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)

@@ -112,7 +112,6 @@ class LinearGaussianCPD(ContinuousFactor):
         'Y'
         >>> copy_cpd.evidence
         ['X1', 'X2', 'X3']
- 
         """
         copy_cpd = LinearGaussianCPD(self.variable, self.beta_0, self.variance,
                                      list(self.evidence), self.beta_vector)

@@ -142,4 +142,3 @@ class MinFill(BaseEliminationOrder):
         (fill in edges) to the graph due to its elimination
         """
         return len(list(self.fill_in_edges(node)))
-
