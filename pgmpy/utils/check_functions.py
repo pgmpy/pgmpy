@@ -3,6 +3,7 @@ Contains simple check functions
 """
 import numpy as np
 
+
 def _check_1d_array_object(parameter, name_param):
     """
     Checks whether given parameter is a 1d array like object, and returns a numpy array object
@@ -15,6 +16,7 @@ def _check_1d_array_object(parameter, name_param):
         raise TypeError("{} should be a 1d array type object".format(name_param))
 
     return parameter
+
 
 def _check_length_equal(param_1, param_2, name_param_1, name_param_2):
     """
