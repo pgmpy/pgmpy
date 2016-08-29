@@ -11,26 +11,31 @@ from pgmpy.discretize import UnbiasedDiscretizer
 
 
 class TestContinuousNodeInit(unittest.TestCase):
+    def custom_pdf(self, x):
+        return 0.5 if (x > -1 and x < 1) else 0
+
+    def std_normal_pdf(self, x):
+        return np.exp(-x * x / 2) / (np.sqrt(2 * np.pi))
+
+    def exp_pdf(self, x):
+        return 2 * np.exp(-2 * x) if x >= 0 else 0
+
     def test_class_init1(self):
-        custom_pdf = lambda x: 0.5 if x > -1 and x < 1 else 0
-        std_normal_pdf = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-        exp_pdf = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
+        custom_node1 = ContinuousNode(self.custom_pdf)
+        custom_node2 = ContinuousNode(self.custom_pdf, -1, 1)
 
-        custom_node1 = ContinuousNode(custom_pdf)
-        custom_node2 = ContinuousNode(custom_pdf, -1, 1)
+        normal_node1 = ContinuousNode(self.std_normal_pdf)
+        normal_node2 = ContinuousNode(self.std_normal_pdf, -5, 5)
 
-        normal_node1 = ContinuousNode(std_normal_pdf)
-        normal_node2 = ContinuousNode(std_normal_pdf, -5, 5)
+        exp_node1 = ContinuousNode(self.exp_pdf)
+        exp_node2 = ContinuousNode(self.exp_pdf, 0, 10)
 
-        exp_node1 = ContinuousNode(exp_pdf)
-        exp_node2 = ContinuousNode(exp_pdf, 0, 10)
-
-        self.assertEqual(custom_node1.pdf, custom_pdf)
-        self.assertEqual(custom_node2.pdf, custom_pdf)
-        self.assertEqual(normal_node1.pdf, std_normal_pdf)
-        self.assertEqual(normal_node2.pdf, std_normal_pdf)
-        self.assertEqual(exp_node1.pdf, exp_pdf)
-        self.assertEqual(exp_node2.pdf, exp_pdf)
+        self.assertEqual(custom_node1.pdf, self.custom_pdf)
+        self.assertEqual(custom_node2.pdf, self.custom_pdf)
+        self.assertEqual(normal_node1.pdf, self.std_normal_pdf)
+        self.assertEqual(normal_node2.pdf, self.std_normal_pdf)
+        self.assertEqual(exp_node1.pdf, self.exp_pdf)
+        self.assertEqual(exp_node2.pdf, self.exp_pdf)
 
     def test_class_init2(self):
         # A normal random varible with mean=1 and variance=0.5

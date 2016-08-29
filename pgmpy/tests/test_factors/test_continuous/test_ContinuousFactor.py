@@ -9,74 +9,76 @@ from pgmpy.factors import ContinuousFactor
 
 
 class TestContinuousFactor(unittest.TestCase):
+    def pdf1(self, x, y):
+        return np.power(x, 1) * np.power(y, 2) / beta(x, y)
+
+    def pdf2(self, *args):
+        return multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
+
+    def pdf3(self, x, y, z):
+        return z * (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
+
     def test_class_init(self):
-        pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        phi1 = ContinuousFactor(['x', 'y'], pdf1)
+        phi1 = ContinuousFactor(['x', 'y'], self.pdf1)
         self.assertEqual(phi1.variables, ['x', 'y'])
-        self.assertEqual(phi1._pdf, pdf1)
+        self.assertEqual(phi1._pdf, self.pdf1)
 
-        pdf2 = lambda *args: multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
-        phi2 = ContinuousFactor(['x1', 'x2'], pdf2)
+        phi2 = ContinuousFactor(['x1', 'x2'], self.pdf2)
         self.assertEqual(phi2.variables, ['x1', 'x2'])
-        self.assertEqual(phi2._pdf, pdf2)
+        self.assertEqual(phi2._pdf, self.pdf2)
 
-        pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        phi3 = ContinuousFactor(['x', 'y', 'z'], pdf3)
+        phi3 = ContinuousFactor(['x', 'y', 'z'], self.pdf3)
         self.assertEqual(phi3.variables, ['x', 'y', 'z'])
-        self.assertEqual(phi3._pdf, pdf3)
+        self.assertEqual(phi3._pdf, self.pdf3)
 
     def test_class_init_typeerror(self):
-        pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(TypeError, ContinuousFactor, 'x y', pdf1)
-        self.assertRaises(TypeError, ContinuousFactor, 'x', pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, 'x y', self.pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, 'x', self.pdf1)
 
-        pdf2 = lambda *args: multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
-        self.assertRaises(TypeError, ContinuousFactor, 'x1 x2', pdf2)
-        self.assertRaises(TypeError, ContinuousFactor, 'x1', pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, 'x1 x2', self.pdf2)
+        self.assertRaises(TypeError, ContinuousFactor, 'x1', self.pdf1)
 
-        pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(TypeError, ContinuousFactor, 'x y z', pdf3)
-        self.assertRaises(TypeError, ContinuousFactor, 'x', pdf3)
+        self.assertRaises(TypeError, ContinuousFactor, 'x y z', self.pdf3)
+        self.assertRaises(TypeError, ContinuousFactor, 'x', self.pdf3)
 
-        pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(TypeError, ContinuousFactor, set(['x', 'y']), pdf1)
-        self.assertRaises(TypeError, ContinuousFactor, {'x': 1, 'y': 2}, pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, set(['x', 'y']), self.pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, {'x': 1, 'y': 2}, self.pdf1)
 
-        pdf2 = lambda *args: multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
-        self.assertRaises(TypeError, ContinuousFactor, set(['x1', 'x2']), pdf2)
-        self.assertRaises(TypeError, ContinuousFactor, {'x1': 1, 'x2': 2}, pdf1)
+        self.assertRaises(TypeError, ContinuousFactor, set(['x1', 'x2']), self.pdf2)
+        self.assertRaises(TypeError, ContinuousFactor, {'x1': 1, 'x2': 2}, self.pdf1)
 
-        pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(TypeError, ContinuousFactor, set(['x', 'y', 'z']), pdf3)
-        self.assertRaises(TypeError, ContinuousFactor, {'x': 1, 'y': 2, 'z': 3}, pdf3)
+        self.assertRaises(TypeError, ContinuousFactor, set(['x', 'y', 'z']), self.pdf3)
+        self.assertRaises(TypeError, ContinuousFactor, {'x': 1, 'y': 2, 'z': 3}, self.pdf3)
 
     def test_class_init_valueerror(self):
-        pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(ValueError, ContinuousFactor, ['x', 'x'], pdf1)
-        self.assertRaises(ValueError, ContinuousFactor, ['x', 'y', 'y'], pdf1)
+        self.assertRaises(ValueError, ContinuousFactor, ['x', 'x'], self.pdf1)
+        self.assertRaises(ValueError, ContinuousFactor, ['x', 'y', 'y'], self.pdf1)
 
-        pdf2 = lambda *args: multivariate_normal.pdf(args, [0, 0], [[1, 0], [0, 1]])
-        self.assertRaises(ValueError, ContinuousFactor, ['x1', 'x1'], pdf2)
-        self.assertRaises(ValueError, ContinuousFactor, ['x1', 'x2', 'x2'], pdf2)
+        self.assertRaises(ValueError, ContinuousFactor, ['x1', 'x1'], self.pdf2)
+        self.assertRaises(ValueError, ContinuousFactor, ['x1', 'x2', 'x2'], self.pdf2)
 
-        pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
-        self.assertRaises(ValueError, ContinuousFactor, ['x', 'x'], pdf1)
-        self.assertRaises(ValueError, ContinuousFactor, ['x', 'y', 'y', 'z', 'z'], pdf1)
+        self.assertRaises(ValueError, ContinuousFactor, ['x', 'x'], self.pdf1)
+        self.assertRaises(ValueError, ContinuousFactor, ['x', 'y', 'y', 'z', 'z'], self.pdf1)
 
 
 class TestContinuousFactorMethods(unittest.TestCase):
+    def pdf1(self, x, y):
+        return np.power(x, 1) * np.power(y, 2) / beta(x, y)
+
+    def pdf2(self, x1, x2):
+        return multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
+
+    def pdf3(self, x, y, z):
+        return z * (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
+
+    def pdf4(self, x1, x2, x3):
+        return multivariate_normal.pdf([x1, x2, x3], [0, 0, 0],
+                                       [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
     def setUp(self):
-        self.pdf1 = lambda x, y: (np.power(x, 1)*np.power(y, 2))/beta(x, y)
         self.phi1 = ContinuousFactor(['x', 'y'], self.pdf1)
-
-        self.pdf2 = lambda x1, x2: multivariate_normal.pdf([x1, x2], [0, 0], [[1, 0], [0, 1]])
         self.phi2 = ContinuousFactor(['x1', 'x2'], self.pdf2)
-
-        self.pdf3 = lambda x, y, z: z*(np.power(x, 1)*np.power(y, 2))/beta(x, y)
         self.phi3 = ContinuousFactor(['x', 'y', 'z'], self.pdf3)
-
-        self.pdf4 = lambda x1, x2, x3: multivariate_normal.pdf([x1, x2, x3], [0, 0, 0],
-                                                               [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.phi4 = ContinuousFactor(['x1', 'x2', 'x3'], self.pdf4)
 
     def test_scope(self):
@@ -150,11 +152,11 @@ class TestContinuousFactorMethods(unittest.TestCase):
     def test_reduce_error(self):
         self.assertRaises(TypeError, self.phi1.reduce, 'x1')
         self.assertRaises(TypeError, self.phi1.reduce, set(['x', 'y']))
-        self.assertRaises(TypeError, self.phi1.reduce, {'x':1, 'y':1})
+        self.assertRaises(TypeError, self.phi1.reduce, {'x': 1, 'y': 1})
 
         self.assertRaises(TypeError, self.phi4.reduce, 'x4')
         self.assertRaises(TypeError, self.phi4.reduce, set(['x1', 'x2', 'x3']))
-        self.assertRaises(TypeError, self.phi4.reduce, {'x1':1, 'x2':1, 'x3':1})
+        self.assertRaises(TypeError, self.phi4.reduce, {'x1': 1, 'x2': 1, 'x3': 1})
 
         self.assertRaises(ValueError, self.phi1.reduce, [('z', 3)])
         self.assertRaises(ValueError, self.phi1.reduce, [('x', 0), ('y', 1), ('z', 4)])
@@ -202,23 +204,24 @@ class TestContinuousFactorMethods(unittest.TestCase):
             np_test.assert_almost_equal(phi4.pdf(inp),
                                         multivariate_normal.pdf([inp], [0], [[1]]))
 
-    def marginalize_error(self):
-        self.assertRaises(TypeError, phi1.marginalize, 'x1')
-        self.assertRaises(TypeError, phi1.marginalize, set(['x', 'y']))
-        self.assertRaises(TypeError, phi1.marginalize, {'x':1, 'y':1})
+    def test_marginalize_error(self):
+        self.assertRaises(TypeError, self.phi1.marginalize, 'x1')
+        self.assertRaises(TypeError, self.phi1.marginalize, set(['x', 'y']))
+        self.assertRaises(TypeError, self.phi1.marginalize, {'x': 1, 'y': 1})
 
-        self.assertRaises(TypeError, phi4.marginalize, 'x4')
-        self.assertRaises(TypeError, phi4.marginalize, set(['x1', 'x2', 'x3']))
-        self.assertRaises(TypeError, phi4.marginalize, {'x1':1, 'x2':1, 'x3':1})
+        self.assertRaises(TypeError, self.phi4.marginalize, 'x4')
+        self.assertRaises(TypeError, self.phi4.marginalize, set(['x1', 'x2', 'x3']))
+        self.assertRaises(TypeError, self.phi4.marginalize, {'x1': 1, 'x2': 1, 'x3': 1})
 
-        self.assertRaises(ValueError, phi1.marginalize, ['z'])
-        self.assertRaises(ValueError, phi1.marginalize, ['x', 'y', 'z'])
+        self.assertRaises(ValueError, self.phi1.marginalize, ['z'])
+        self.assertRaises(ValueError, self.phi1.marginalize, ['x', 'y', 'z'])
 
-        self.assertRaises(ValueError, phi4.marginalize, ['x4'])
-        self.assertRaises(ValueError, phi4.marginalize, ['x1', 'x2', 'x3', 'x4'])
+        self.assertRaises(ValueError, self.phi4.marginalize, ['x4'])
+        self.assertRaises(ValueError, self.phi4.marginalize, ['x1', 'x2', 'x3', 'x4'])
 
     def test_normalize(self):
-        pdf2 = lambda x1, x2: 2 * self.pdf2(x1, x2)
+        def pdf2(x1, x2):
+            return 2 * self.pdf2(x1, x2)
 
         phi2 = ContinuousFactor(['x1', 'x2'], pdf2)
         phi4 = phi2.copy()
@@ -395,9 +398,6 @@ class TestContinuousFactorMethods(unittest.TestCase):
             self.assertEqual(copy2.pdf(inp[0], inp[1]), reduced_pdf(inp[0], inp[1]))
 
     def tearDown(self):
-        del self.pdf1
-        del self.pdf2
-        del self.pdf3
         del self.phi1
         del self.phi2
         del self.phi3

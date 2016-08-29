@@ -34,7 +34,7 @@ class TestLGCPD(unittest.TestCase):
 
     def test_copy(self):
         cpd = LinearGaussianCPD('y', 0.67, 2, ['x1', 'x2', 'x3'],
-                                 [1, 4.56, 8])
+                                [1, 4.56, 8])
         copy = cpd.copy()
 
         self.assertEqual(cpd.variable, copy.variable)
