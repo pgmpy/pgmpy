@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
-from scipy.stats import multivariate_normal
 
 from pgmpy.factors import JointGaussianDistribution as JGD
 from pgmpy.factors import CanonicalFactor

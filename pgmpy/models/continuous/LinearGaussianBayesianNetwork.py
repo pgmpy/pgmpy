@@ -170,11 +170,11 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         for node_idx in range(len(variables)):
             cpd = self.get_cpds(variables[node_idx])
-            mean[node_idx] = sum([coeff * mean[variables.index(parent)] for coeff, parent in zip(cpd.beta_vector,
-                                                                                                 cpd.evidence)]) + cpd.beta_0
-            covariance[node_idx, node_idx] = sum([coeff * coeff * covariance[variables.index(parent), variables.index(parent)]
-                                                  for coeff, parent in zip(cpd.beta_vector,
-                                                                           cpd.evidence)]) + cpd.variance
+            mean[node_idx] = sum([coeff * mean[variables.index(parent)] for
+                                  coeff, parent in zip(cpd.beta_vector, cpd.evidence)]) + cpd.beta_0
+            covariance[node_idx, node_idx] = sum(
+                [coeff * coeff * covariance[variables.index(parent), variables.index(parent)]
+                 for coeff, parent in zip(cpd.beta_vector, cpd.evidence)]) + cpd.variance
 
         for node_i_idx in range(len(variables)):
             for node_j_idx in range(len(variables)):
@@ -182,8 +182,9 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                     covariance[node_i_idx, node_j_idx] = covariance[node_j_idx, node_i_idx]
                 else:
                     cpd_j = self.get_cpds(variables[node_j_idx])
-                    covariance[node_i_idx, node_j_idx] = sum([coeff * covariance[node_i_idx, variables.index(parent)]
-                                                             for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
+                    covariance[node_i_idx, node_j_idx] = sum(
+                        [coeff * covariance[node_i_idx, variables.index(parent)]
+                         for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
 
         return JointGaussianDistribution(variables, mean, covariance)
 

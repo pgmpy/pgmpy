@@ -163,8 +163,8 @@ class NaiveBayes(BayesianModel):
         independencies = []
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.parent_node:
-                independencies.append(Independencies([variable, list(set(self.children_nodes)
-                                                                     - set(variable)), self.parent_node]))
+                independencies.append(Independencies(
+                    [variable, list(set(self.children_nodes) - set(variable)), self.parent_node]))
             else:
                 independencies.append(None)
         return independencies
