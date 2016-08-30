@@ -1,2 +1,5 @@
-This page is for models
-=======================
+Models Module
+=============
+
+.. automodule:: pgmpy.models.BayesianModel
+   :members:

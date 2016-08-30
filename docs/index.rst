@@ -11,11 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-Installation
-============
-
-Documentation
-=============
+   Contributing
 
 Indices and tables
 ==================
