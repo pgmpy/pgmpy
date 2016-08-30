@@ -65,6 +65,36 @@ class Independencies(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def contains(self, assertion):
+        """
+        Returns `True` if `assertion` is contained in this `Independencies`-object,
+        otherwise `False`.
+
+        Parameters
+        ----------
+        assertion: IndependenceAssertion()-object
+
+        Examples
+        --------
+        >>> from pgmpy.independencies import Independencies, IndependenceAssertion
+        >>> ind = Independencies(['A', 'B', ['C', 'D']])
+        >>> IndependenceAssertion('A', 'B', ['C', 'D']) in ind
+        True
+        >>> # does not depend on variable order:
+        >>> IndependenceAssertion('B', 'A', ['D', 'C']) in ind
+        True
+        >>> # but does not check entailment:
+        >>> IndependenceAssertion('X', 'Y', 'Z') in Independencies(['X', 'Y'])
+        False
+        """
+        if not isinstance(assertion, IndependenceAssertion):
+            raise TypeError("' in <Independencies()>' requires IndependenceAssertion" +
+                            " as left operand, not {0}".format(type(assertion)))
+
+        return assertion in self.get_assertions()
+
+    __contains__ = contains
+
     def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
