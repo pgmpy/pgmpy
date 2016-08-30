@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from warnings import warn
 from itertools import combinations
 
@@ -126,6 +127,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         -------
         skeleton: UndirectedGraph
             An estimate for the undirected graph skeleton of the BN underlying the data.
+
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
             separating set of variables that makes then conditionally independent.
@@ -191,6 +193,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         ----------
         nodes: list, array-like
             A list of node/variable names of the network skeleton.
+
         independencies: Independencies-instance or function.
             The source of independency information from which to build the skeleton.
             The provided Independencies should admit a faithful representation.
@@ -200,12 +203,10 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
-        model: BayesianModel()-instance
+        model: BayesianModel instance
 
         Examples
         --------
-        >>> import pandas as pd
-        >>> import numpy as np
         >>> from pgmpy.estimators import ConstraintBasedEstimator
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.independencies import Independencies
@@ -359,7 +360,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         ----------
         skel: UndirectedGraph
             An undirected graph skeleton as e.g. produced by the
-            estimate_skeleton()-method.
+            estimate_skeleton method.
+
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
             separating set ("witnessing set") of variables that makes then
@@ -383,7 +385,6 @@ class ConstraintBasedEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.base import DirectedGraph
         >>> from pgmpy.estimators import ConstraintBasedEstimator
         >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
         >>> data['C'] = data['A'] - data['B']
@@ -457,6 +458,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         ----------
         nodes: list, array-like
             A list of node/variable names of the network skeleton.
+
         independencies: Independencies-instance or function.
             The source of independency information from which to build the skeleton.
             The provided Independencies should admit a faithful representation.
@@ -468,6 +470,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         -------
         skeleton: UndirectedGraph
             An estimate for the undirected graph skeleton of the BN underlying the data.
+
         separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
             separating set ("witnessing set") of variables that makes then
@@ -482,8 +485,6 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Examples
         --------
-        >>> import pandas as pd
-        >>> import numpy as np
         >>> from pgmpy.estimators import ConstraintBasedEstimator
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.independencies import Independencies
