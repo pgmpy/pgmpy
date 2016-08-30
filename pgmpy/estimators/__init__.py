@@ -7,8 +7,9 @@ from pgmpy.estimators.BdeuScore import BdeuScore
 from pgmpy.estimators.BicScore import BicScore
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
+from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
 
 __all__ = ['BaseEstimator',
            'ParameterEstimator', 'MaximumLikelihoodEstimator', 'BayesianEstimator',
-           'StructureEstimator', 'ExhaustiveSearch', 'HillClimbSearch',
+           'StructureEstimator', 'ExhaustiveSearch', 'HillClimbSearch', 'ConstraintBasedEstimator'
            'StructureScore', 'K2Score', 'BdeuScore', 'BicScore']
