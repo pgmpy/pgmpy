@@ -109,7 +109,7 @@ class Factor(object):
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
-        self.values = values.reshape(cardinality)
+        self.values = values.reshape(self.cardinality)
 
     def scope(self):
         """

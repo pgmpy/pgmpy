@@ -1,5 +1,5 @@
-networkx==1.9.1
-numpy==1.9.2
-scipy==0.16.0
-pandas==0.16.2
-pyparsing==2.0.3
+networkx==1.11
+numpy==1.11.1
+scipy==0.18.0
+pandas==0.18.1
+pyparsing==2.1.8
