@@ -143,7 +143,7 @@ class BaseEstimator(object):
             A variable name contained in the data set, different from X
         Zs: list of variable names
             A list of variable names contained in the data set, different from X and Y.
-            This is the seperating set that (potentially) makes X and Y independent.
+            This is the separating set that (potentially) makes X and Y independent.
             Default: []
 
         Returns

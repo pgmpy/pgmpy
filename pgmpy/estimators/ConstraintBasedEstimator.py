@@ -101,8 +101,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
         """
 
-        skel, seperating_sets = self.estimate_skeleton(significance_level)
-        pdag = self.skeleton_to_pdag(skel, seperating_sets)
+        skel, separating_sets = self.estimate_skeleton(significance_level)
+        pdag = self.skeleton_to_pdag(skel, separating_sets)
         model = self.pdag_to_dag(pdag)
         return model
 
@@ -110,7 +110,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         """Estimates a graph skeleton (UndirectedGraph) for the data set.
         Uses the build_skeleton method (PC algorithm); independencies are
         determined using a chisquare statistic with the acceptance threshold
-        of `significance_level`. Returns a tuple `(skeleton, seperating_sets).
+        of `significance_level`. Returns a tuple `(skeleton, separating_sets).
 
         Parameters
         ----------
@@ -126,9 +126,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         -------
         skeleton: UndirectedGraph
             An estimate for the undirected graph skeleton of the BN underlying the data.
-        seperating_sets: dict
+        separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            seperating set of variables that makes then conditionally independent.
+            separating set of variables that makes then conditionally independent.
             (needed for edge orientation procedures)
 
         Reference
@@ -224,8 +224,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> # Both networks belong to the same PDAG/are I-equivalent
         """
 
-        skel, seperating_sets = ConstraintBasedEstimator.build_skeleton(nodes, independencies)
-        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, seperating_sets)
+        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(nodes, independencies)
+        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
         dag = ConstraintBasedEstimator.pdag_to_dag(pdag)
 
         return dag
@@ -343,26 +343,26 @@ class ConstraintBasedEstimator(StructureEstimator):
             raise TypeError("model: Expected BayesianModel instance, " +
                             "got type {model_type}".format(model_type=type(model)))
 
-        skel, seperating_sets = ConstraintBasedEstimator.build_skeleton(
+        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
                                     model.nodes(),
                                     model.get_independencies())
-        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, seperating_sets)
+        pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
 
         return pdag
 
     @staticmethod
-    def skeleton_to_pdag(skel, seperating_sets):
+    def skeleton_to_pdag(skel, separating_sets):
         """Orients the edges of a graph skeleton based on information from
-        `seperating_sets` to form a DAG pattern (DirectedGraph).
+        `separating_sets` to form a DAG pattern (DirectedGraph).
 
         Parameters
         ----------
         skel: UndirectedGraph
             An undirected graph skeleton as e.g. produced by the
             estimate_skeleton()-method.
-        seperating_sets: dict
+        separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            seperating set ("witnessing set") of variables that makes then
+            separating set ("witnessing set") of variables that makes then
             conditionally independent. (needed for edge orientation)
 
         Returns
@@ -397,12 +397,12 @@ class ConstraintBasedEstimator(StructureEstimator):
         pdag = skel.to_directed()
         node_pairs = combinations(pdag.nodes(), 2)
 
-        # 1) for each X-Z-Y, if Z not in the seperating set of X,Y, then orient edges as X->Z<-Y
+        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
         for X, Y in node_pairs:
             if not skel.has_edge(X, Y):
                 for Z in set(skel.neighbors(X)) & set(skel.neighbors(Y)):
-                    if Z not in seperating_sets[frozenset((X, Y))]:
+                    if Z not in separating_sets[frozenset((X, Y))]:
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         progress = True
@@ -445,7 +445,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         using (the first part of) the PC algorithm. The independencies can either be
         provided as an instance of the `Independencies`-class or by passing a
         decision function that decides any conditional independency assertion.
-        Returns a tuple `(skeleton, seperating_sets)`.
+        Returns a tuple `(skeleton, separating_sets)`.
 
         If an Independencies-instance is passed, the contained IndependenceAssertions
         have to admit a faithful BN representation. This is the case if
@@ -468,9 +468,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         -------
         skeleton: UndirectedGraph
             An estimate for the undirected graph skeleton of the BN underlying the data.
-        seperating_sets: dict
+        separating_sets: dict
             A dict containing for each pair of not directly connected nodes a
-            seperating set ("witnessing set") of variables that makes then
+            separating set ("witnessing set") of variables that makes then
             conditionally independent. (needed for edge orientation procedures)
 
         Reference
@@ -517,17 +517,17 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         graph = UndirectedGraph(combinations(nodes, 2))
         lim_neighbors = 0
-        seperating_sets = dict()
+        separating_sets = dict()
         while not all([len(graph.neighbors(node)) < lim_neighbors for node in nodes]):
             for node in nodes:
                 for neighbor in graph.neighbors(node):
                     # search if there is a set of neighbors (of size lim_neighbors)
                     # that makes X and Y independent:
-                    for seperating_set in combinations(set(graph.neighbors(node)) - set([neighbor]), lim_neighbors):
-                        if is_independent(node, neighbor, seperating_set):
-                            seperating_sets[frozenset((node, neighbor))] = seperating_set
+                    for separating_set in combinations(set(graph.neighbors(node)) - set([neighbor]), lim_neighbors):
+                        if is_independent(node, neighbor, separating_set):
+                            separating_sets[frozenset((node, neighbor))] = separating_set
                             graph.remove_edge(node, neighbor)
                             break
             lim_neighbors += 1
 
-        return graph, seperating_sets
+        return graph, separating_sets
