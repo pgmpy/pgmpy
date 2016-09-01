@@ -6,8 +6,8 @@ from pgmpy.inference import VariableElimination
 from pgmpy.inference import BeliefPropagation
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.models import JunctionTree
-from pgmpy.factors import TabularCPD
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.discrete import Factor
 from pgmpy.extern.six.moves import range
 
 

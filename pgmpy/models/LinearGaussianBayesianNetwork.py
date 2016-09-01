@@ -4,8 +4,8 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.models import BayesianModel
-from pgmpy.factors import LinearGaussianCPD
-from pgmpy.factors import JointGaussianDistribution
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.factors.continuous import JointGaussianDistribution
 
 
 class LinearGaussianBayesianNetwork(BayesianModel):

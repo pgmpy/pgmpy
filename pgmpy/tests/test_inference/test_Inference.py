@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
-from pgmpy.factors import Factor
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import Inference
 from collections import defaultdict
 

@@ -1,10 +1,11 @@
 import unittest
 
 import pandas as pd
-from pgmpy.models import BayesianModel
 import numpy as np
+
+from pgmpy.models import BayesianModel
 from pgmpy.estimators import BayesianEstimator
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 
 
 class TestBayesianEstimator(unittest.TestCase):

@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from scipy.stats import norm, t, gamma
 
-from pgmpy.factors import ContinuousNode
+from pgmpy.factors.continuous import ContinuousNode
 from pgmpy.discretize import BaseDiscretizer
 from pgmpy.discretize import RoundingDiscretizer
 from pgmpy.discretize import UnbiasedDiscretizer

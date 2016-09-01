@@ -1,17 +1,16 @@
 import unittest
 import warnings
 from collections import OrderedDict
-from itertools import permutations
 
 import numpy as np
 import numpy.testing as np_test
-
-from pgmpy.factors import Factor
-from pgmpy.factors import JointProbabilityDistribution as JPD
-from pgmpy.factors import factor_product
-from pgmpy.factors import factor_divide
-from pgmpy.factors.CPD import TabularCPD
 from pgmpy.extern.six.moves import range
+
+from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
+from pgmpy.factors.discrete import factor_divide
+from pgmpy.factors.discrete import factor_product
+from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel

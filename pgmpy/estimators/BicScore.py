@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import numpy as np
-import pandas as pd
-from math import lgamma, log
+
+from math import log
+
 from pgmpy.estimators import StructureScore
 
 

@@ -1,16 +1,15 @@
-from collections import namedtuple
 import itertools
+from collections import namedtuple
 
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
+from pgmpy.extern.six.moves import map, range
 
-from pgmpy.factors.Factor import factor_product
+from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
-from pgmpy.extern.six.moves import map, range
-
 
 State = namedtuple('State', ['var', 'state'])
 
@@ -53,7 +52,7 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> from pgmpy.inference.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
@@ -113,7 +112,7 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> from pgmpy.factors.Factor import State
         >>> from pgmpy.inference.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
@@ -167,7 +166,7 @@ class BayesianModelSampling(Inference):
         --------
         >>> from pgmpy.factors.Factor import State
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> from pgmpy.inference.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])

@@ -5,8 +5,7 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.extern import six
-from pgmpy.factors import ContinuousFactor
+from pgmpy.factors.continuous import ContinuousFactor
 
 
 class LinearGaussianCPD(ContinuousFactor):

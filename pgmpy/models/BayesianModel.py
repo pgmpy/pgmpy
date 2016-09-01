@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DirectedGraph
-from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
+from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, reduce
@@ -130,7 +130,7 @@ class BayesianModel(DirectedGraph):
         EXAMPLE
         -------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> student = BayesianModel([('diff', 'grades'), ('intel', 'grades')])
         >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],

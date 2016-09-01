@@ -2,7 +2,7 @@ import unittest
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 import numpy as np
 
 

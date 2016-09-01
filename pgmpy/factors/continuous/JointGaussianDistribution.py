@@ -2,11 +2,10 @@
 
 from __future__ import division
 
-import six
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors import ContinuousFactor
+from pgmpy.factors.continuous import ContinuousFactor
 
 
 class JointGaussianDistribution(ContinuousFactor):

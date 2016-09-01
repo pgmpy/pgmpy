@@ -8,7 +8,7 @@ import networkx as nx
 from pgmpy.extern.six.moves import filter, range
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovModel
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 
 
 class Mplp(Inference):

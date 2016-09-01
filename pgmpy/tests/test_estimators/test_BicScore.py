@@ -1,10 +1,9 @@
 import unittest
 
 import pandas as pd
-import numpy as np
+
 from pgmpy.models import BayesianModel
-from pgmpy.estimators import BicScore, ExhaustiveSearch
-from pgmpy.factors import TabularCPD
+from pgmpy.estimators import BicScore
 
 
 class TestBicScore(unittest.TestCase):

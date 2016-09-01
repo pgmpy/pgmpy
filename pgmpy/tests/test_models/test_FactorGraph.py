@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.models import FactorGraph
 from pgmpy.models import MarkovModel
 from pgmpy.models import JunctionTree
