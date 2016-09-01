@@ -2,7 +2,7 @@ import unittest
 
 from pgmpy.extern.six.moves import filter, range
 from pgmpy.factors import FactorSet
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 
 
 class TestFactorSet(unittest.TestCase):

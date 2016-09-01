@@ -5,7 +5,7 @@ from warnings import warn
 import numpy as np
 from pandas import DataFrame
 
-from pgmpy.factors import State
+from pgmpy.factors.discrete import State
 from pgmpy.utils import sample_discrete
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip

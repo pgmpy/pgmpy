@@ -1,17 +1,17 @@
 import unittest
 
-import pandas as pd
+from pandas import DataFrame
 from numpy import NaN
+
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import ParameterEstimator
-from pgmpy.factors import TabularCPD
 
 
 class TestParameterEstimator(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([('A', 'C'), ('B', 'C'), ('D', 'B')])
-        self.d1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0], 'D': ['X', 'Y', 'Z']})
-        self.d2 = pd.DataFrame(data={'A': [0, NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, NaN], 'D': [NaN, 'Y', NaN]})
+        self.d1 = DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0], 'D': ['X', 'Y', 'Z']})
+        self.d2 = DataFrame(data={'A': [0, NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, NaN], 'D': [NaN, 'Y', NaN]})
 
     def test_state_count(self):
         e = ParameterEstimator(self.m1, self.d1)

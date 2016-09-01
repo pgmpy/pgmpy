@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.extern.six.moves import filter, reduce
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.extern import six
 
 

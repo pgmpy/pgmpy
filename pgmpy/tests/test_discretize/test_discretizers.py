@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 from scipy.stats import gamma, expon
 
-from pgmpy.factors import ContinuousNode
+from pgmpy.factors.continuous import ContinuousNode
 from pgmpy.discretize import BaseDiscretizer
 from pgmpy.discretize import RoundingDiscretizer
 from pgmpy.discretize import UnbiasedDiscretizer

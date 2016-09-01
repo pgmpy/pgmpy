@@ -1,10 +1,10 @@
 import unittest
+
 import pandas as pd
 import numpy as np
-import networkx as nx
 
 from pgmpy.estimators import ConstraintBasedEstimator
-from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianModel
 from pgmpy.base import DirectedGraph, UndirectedGraph
 

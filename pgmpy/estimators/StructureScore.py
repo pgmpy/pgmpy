@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from pgmpy.estimators import BaseEstimator
 
 

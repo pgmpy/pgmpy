@@ -121,8 +121,9 @@ except ImportError:
 
 import networkx as nx
 import numpy as np
+
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map
 

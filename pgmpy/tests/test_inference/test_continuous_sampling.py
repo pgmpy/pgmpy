@@ -5,7 +5,7 @@ import numpy as np
 from pgmpy.inference.continuous import (HamiltonianMC as HMC, HamiltonianMCda as HMCda, ModifiedEuler,
                                         GradLogPDFGaussian, NoUTurnSampler as NUTS,
                                         NoUTurnSamplerDA as NUTSda)
-from pgmpy.factors import JointGaussianDistribution as JGD
+from pgmpy.factors.continuous import JointGaussianDistribution as JGD
 
 
 class TestHMCInference(unittest.TestCase):

@@ -10,7 +10,7 @@ import numpy.testing as np_test
 
 from pgmpy.readwrite import ProbModelXMLReader, ProbModelXMLWriter, get_probmodel_data
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.extern.six.moves import range
 from pgmpy.extern import six
 

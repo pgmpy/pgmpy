@@ -2,10 +2,9 @@ import unittest
 
 import pandas as pd
 import numpy as np
+
 from pgmpy.estimators import ExhaustiveSearch, BdeuScore, BicScore
-from pgmpy.factors import TabularCPD
 from pgmpy.extern import six
-from pgmpy.models import BayesianModel
 
 
 class TestBaseEstimator(unittest.TestCase):

@@ -3,8 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 
-from pgmpy.factors import Factor
-from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import Factor, factor_product
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range

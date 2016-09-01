@@ -3,7 +3,7 @@ import numpy as np
 
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 

@@ -7,7 +7,7 @@ import numpy.testing as np_test
 
 from pgmpy.models import BayesianModel, MarkovModel
 import pgmpy.tests.help_functions as hf
-from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
+from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.estimators import BayesianEstimator, BaseEstimator, MaximumLikelihoodEstimator
 

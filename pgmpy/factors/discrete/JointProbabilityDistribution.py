@@ -3,7 +3,7 @@ from operator import mul
 
 import numpy as np
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.extern import six

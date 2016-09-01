@@ -2,9 +2,8 @@ import unittest
 
 import pandas as pd
 import numpy as np
+
 from pgmpy.estimators import HillClimbSearch, K2Score
-from pgmpy.factors import TabularCPD
-from pgmpy.extern import six
 from pgmpy.models import BayesianModel
 
 

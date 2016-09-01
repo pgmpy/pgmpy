@@ -1,17 +1,18 @@
 import unittest
 
 import pandas as pd
-from numpy import NaN
+import numpy as np
+
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import MaximumLikelihoodEstimator
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 
 
 class TestMLE(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([('A', 'C'), ('B', 'C')])
         self.d1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        self.d2 = pd.DataFrame(data={'A': [0, NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, NaN], 'D': [NaN, 'Y', NaN]})
+        self.d2 = pd.DataFrame(data={'A': [0, np.NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, np.NaN], 'D': [np.NaN, 'Y', np.NaN]})
         self.cpds = [TabularCPD('A', 2, [[2.0/3], [1.0/3]]),
                      TabularCPD('B', 2, [[2.0/3], [1.0/3]]),
                      TabularCPD('C', 2, [[0.0, 0.0, 1.0, 0.5],

@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors import factor_product, Factor
+from pgmpy.factors.discrete import factor_product, Factor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import map, range, zip
 

@@ -4,8 +4,8 @@ from collections import defaultdict
 import numpy as np
 import networkx as nx
 
-from pgmpy.factors import TabularCPD
-from pgmpy.base import DirectedGraph, UndirectedGraph
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.base import DirectedGraph
 
 
 class DynamicBayesianNetwork(DirectedGraph):

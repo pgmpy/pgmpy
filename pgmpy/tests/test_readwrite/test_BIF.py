@@ -5,7 +5,7 @@ import numpy.testing as np_test
 
 from pgmpy.readwrite import BIFReader, BIFWriter
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.extern.six.moves import map, range
 
 

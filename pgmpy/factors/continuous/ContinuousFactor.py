@@ -3,8 +3,6 @@ from __future__ import division
 import numpy as np
 import scipy.integrate as integrate
 
-from pgmpy.extern import six
-
 
 class ContinuousFactor(object):
     """

@@ -8,7 +8,7 @@ import numbers
 
 import numpy as np
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
@@ -340,7 +340,7 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
         ...                               [0.1, 0.1],
         ...                               [0.8, 0.8]],

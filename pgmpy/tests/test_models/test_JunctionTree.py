@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import Factor
 from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
 

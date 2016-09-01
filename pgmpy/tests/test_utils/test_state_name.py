@@ -1,16 +1,12 @@
 import unittest
-import itertools
 
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors import Factor
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import Factor, TabularCPD
 from pgmpy.models import BayesianModel
 from pgmpy.inference import Inference
 from pgmpy.inference import VariableElimination
-from pgmpy.utils import StateNameInit
-from pgmpy.utils import StateNameDecorator
 
 
 class TestStateNameInit(unittest.TestCase):

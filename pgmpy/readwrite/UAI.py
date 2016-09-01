@@ -5,7 +5,7 @@ import numpy as np
 from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
 from pgmpy.models import BayesianModel, MarkovModel
-from pgmpy.factors import TabularCPD, Factor
+from pgmpy.factors.discrete import TabularCPD, Factor
 from pgmpy.extern.six.moves import map, range
 
 

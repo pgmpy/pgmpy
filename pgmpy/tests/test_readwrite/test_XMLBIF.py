@@ -6,7 +6,7 @@ import numpy.testing as np_test
 
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 
 
 try:

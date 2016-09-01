@@ -1,8 +1,8 @@
-from itertools import tee, chain, combinations
 from collections import defaultdict
+from itertools import tee, chain, combinations
 
-from pgmpy.factors import Factor
-from pgmpy.factors.Factor import factor_product
+from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference, BeliefPropagation
 
 
