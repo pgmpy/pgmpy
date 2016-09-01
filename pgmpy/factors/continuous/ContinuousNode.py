@@ -1,6 +1,6 @@
 from scipy.stats import rv_continuous
 
-from pgmpy.discretize import BaseDiscretizer
+from pgmpy.factors.continuous import BaseDiscretizer
 
 
 class ContinuousNode(rv_continuous):

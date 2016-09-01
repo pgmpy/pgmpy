@@ -1,3 +1,4 @@
+from .discretize import BaseDiscretizer, RoundingDiscretizer, UnbiasedDiscretizer
 from .ContinuousFactor import ContinuousFactor
 from .JointGaussianDistribution import JointGaussianDistribution
 from .CanonicalFactor import CanonicalFactor
@@ -10,4 +11,7 @@ __all__ = ['CanonicalFactor',
            'ContinuousNode',
            'JointGaussianDistribution',
            'LinearGaussianCPD'
+           'BaseDiscretizer',
+           'RoundingDiscretizer',
+           'UnbiasedDiscretizer'
            ]

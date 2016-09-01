@@ -5,9 +5,9 @@ import numpy.testing as np_test
 from scipy.stats import gamma, expon
 
 from pgmpy.factors.continuous import ContinuousNode
-from pgmpy.discretize import BaseDiscretizer
-from pgmpy.discretize import RoundingDiscretizer
-from pgmpy.discretize import UnbiasedDiscretizer
+from pgmpy.factors.continuous import BaseDiscretizer
+from pgmpy.factors.continuous import RoundingDiscretizer
+from pgmpy.factors.continuous import UnbiasedDiscretizer
 
 
 class TestBaseDiscretizer(unittest.TestCase):
