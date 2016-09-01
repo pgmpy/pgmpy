@@ -11,7 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   Contributing
+   models
+   contributing
+   estimators
 
 Indices and tables
 ==================
