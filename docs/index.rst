@@ -14,6 +14,8 @@ Contents:
    models
    factors
    sampling
+   inference
+   readwrite
    contributing
    estimators
 
