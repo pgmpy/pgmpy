@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import division
 
 import numpy as np
@@ -7,8 +9,8 @@ try:
 except ImportError:
     HAS_PANDAS = False
 
-from pgmpy.sampling import HamiltonianMC, HamiltonianMCda
-from pgmpy.sampling import LeapFrog, BaseGradLogPDF, BaseSimulateHamiltonianDynamics
+from pgmpy.sampling import HamiltonianMCda
+from pgmpy.sampling import LeapFrog
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 
