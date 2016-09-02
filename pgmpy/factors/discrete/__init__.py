@@ -1,9 +1,9 @@
-from .Factor import State, Factor, factor_product, factor_divide
+from .DiscreteFactor import State, DiscreteFactor, factor_product, factor_divide
 from .CPD import TabularCPD
 from .JointProbabilityDistribution import JointProbabilityDistribution
 
 __all__ = ['TabularCPD',
-           'Factor',
+           'DiscreteFactor',
            'factor_divide',
            'factor_product',
            'State'

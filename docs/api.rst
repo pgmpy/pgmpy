@@ -37,7 +37,7 @@ factors module
 
 .. module:: pgmpy.factors
 
-.. autoclass:: Factor
+.. autoclass:: DiscreteFactor
    :members:
 
 .. autoclass:: TabularCPD

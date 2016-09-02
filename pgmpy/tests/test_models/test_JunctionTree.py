@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
 
@@ -45,11 +45,11 @@ class TestJunctionTreeCreation(unittest.TestCase):
 
 class TestJunctionTreeMethods(unittest.TestCase):
     def setUp(self):
-        self.factor1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        self.factor2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
-        self.factor3 = Factor(['d', 'e'], [2, 2], np.random.rand(4))
-        self.factor4 = Factor(['e', 'f'], [2, 2], np.random.rand(4))
-        self.factor5 = Factor(['a', 'b', 'e'], [2, 2, 2], np.random.rand(8))
+        self.factor1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        self.factor2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.factor3 = DiscreteFactor(['d', 'e'], [2, 2], np.random.rand(4))
+        self.factor4 = DiscreteFactor(['e', 'f'], [2, 2], np.random.rand(4))
+        self.factor5 = DiscreteFactor(['a', 'b', 'e'], [2, 2, 2], np.random.rand(8))
 
         self.graph1 = JunctionTree()
         self.graph1.add_edge(('a', 'b'), ('b', 'c'))
@@ -112,8 +112,8 @@ class TestJunctionTreeCopy(unittest.TestCase):
 
     def test_copy_with_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         graph_copy = self.graph.copy()
 
@@ -131,14 +131,14 @@ class TestJunctionTreeCopy(unittest.TestCase):
         self.assertTrue(phi1 in graph_copy.factors and phi2 in graph_copy.factors)
 
         self.graph.add_factors(phi1, phi2)
-        self.graph.factors[0] = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        self.graph.factors[0] = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
         self.assertNotEqual(self.graph.factors, graph_copy.factors)
 
     def test_copy_with_factorchanges(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         graph_copy = self.graph.copy()
 

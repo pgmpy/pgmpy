@@ -1,7 +1,7 @@
 from collections import defaultdict
 from itertools import tee, chain, combinations
 
-from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference, BeliefPropagation
 
@@ -201,14 +201,14 @@ class DBNInference(Inference):
 
         Parameters:
         ----------
-        factor: Factor
+        factor: DiscreteFactor
            The factor which needs to be shifted.
 
         shift: int
            The new timeslice to which the factor should belong to.
         """
         new_scope = self._shift_nodes(factor.scope(), shift)
-        return Factor(new_scope, factor.cardinality, factor.values)
+        return DiscreteFactor(new_scope, factor.cardinality, factor.values)
 
     def forward_inference(self, variables, evidence=None, args=None):
         """
@@ -288,7 +288,7 @@ class DBNInference(Inference):
                 changed_values = {}
                 for key in new_values.keys():
                     new_key = (key[0], time_slice)
-                    new_factor = Factor([new_key], new_values[key].cardinality, new_values[key].values)
+                    new_factor = DiscreteFactor([new_key], new_values[key].cardinality, new_values[key].values)
                     changed_values[new_key] = new_factor
                 factor_values.update(changed_values)
 
@@ -379,7 +379,7 @@ class DBNInference(Inference):
                 changed_values = {}
                 for key in new_values.keys():
                     new_key = (key[0], time_slice)
-                    new_factor = Factor([new_key], new_values[key].cardinality, new_values[key].values)
+                    new_factor = DiscreteFactor([new_key], new_values[key].cardinality, new_values[key].values)
                     changed_values[new_key] = new_factor
                 factor_values.update(changed_values)
 

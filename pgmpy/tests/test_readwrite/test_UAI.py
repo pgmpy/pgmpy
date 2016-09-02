@@ -3,7 +3,7 @@ import unittest
 
 from pgmpy.readwrite import UAIReader, UAIWriter
 from pgmpy.models import BayesianModel, MarkovModel
-from pgmpy.factors.discrete import TabularCPD, Factor
+from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.extern.six.moves import map
 
 
@@ -126,7 +126,7 @@ class TestUAIWriter(unittest.TestCase):
             variables = table[0]
             cardinality = [int(domain[var]) for var in variables]
             values = list(map(float, table[1]))
-            factor = Factor(variables, cardinality, values)
+            factor = DiscreteFactor(variables, cardinality, values)
             factors.append(factor)
         self.markovmodel.add_factors(*factors)
         self.markovwriter = UAIWriter(self.markovmodel)

@@ -3,7 +3,7 @@ import numpy as np
 
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
-from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
 
@@ -42,26 +42,26 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
 
     def test_add_single_factor(self):
         self.graph.add_node(('a', 'b'))
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
         six.assertCountEqual(self, self.graph.factors, [phi1])
 
     def test_add_single_factor_raises_error(self):
         self.graph.add_node(('a', 'b'))
-        phi1 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.assertRaises(ValueError, self.graph.add_factors, phi1)
 
     def test_add_multiple_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
 
     def test_get_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         six.assertCountEqual(self, self.graph.get_factors(), [])
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_factors(node=('b', 'a')), phi1)
@@ -70,16 +70,16 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
 
     def test_remove_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
         six.assertCountEqual(self, self.graph.factors, [phi2])
 
     def test_get_partition_function(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_partition_function(), 22.0)
 
@@ -98,18 +98,18 @@ class TestClusterGraphMethods(unittest.TestCase):
 
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-        phi1 = Factor(['a', 'b', 'c'], [1, 2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b', 'c'], [1, 2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c': 2})
         self.graph.remove_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
         self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2, 'c': 2})
 
-        phi3 = Factor(['a', 'c'], [1, 1], np.random.rand(1))
+        phi3 = DiscreteFactor(['a', 'c'], [1, 1], np.random.rand(1))
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {'c': 1, 'b': 2, 'a': 1})
 
@@ -119,12 +119,12 @@ class TestClusterGraphMethods(unittest.TestCase):
     def test_get_cardinality_check_cardinality(self):
         self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
                                    (('a', 'b', 'c'), ('a', 'c'))])
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
         self.graph.remove_factors(phi1)
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
@@ -133,23 +133,23 @@ class TestClusterGraphMethods(unittest.TestCase):
 
     def test_check_model(self):
         self.graph.add_edges_from([(('a', 'b'), ('a', 'c'))])
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
         self.assertTrue(self.graph.check_model())
 
         self.graph.remove_factors(phi2)
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
         self.assertTrue(self.graph.check_model())
 
     def test_check_model1(self):
         self.graph.add_edges_from([(('a', 'b'), ('a', 'c')),
                                    (('a', 'c'), ('a', 'd'))])
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertRaises(ValueError, self.graph.check_model)
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.check_model)
 
@@ -157,25 +157,25 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([(('a', 'b'), ('a', 'c')),
                                    (('a', 'c'), ('a', 'd'))])
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['a', 'c'], [3, 3], np.random.rand(9))
-        phi3 = Factor(['a', 'd'], [4, 4], np.random.rand(16))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [3, 3], np.random.rand(9))
+        phi3 = DiscreteFactor(['a', 'd'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi1, phi2, phi3)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
-        phi2 = Factor(['a', 'c'], [1, 3], np.random.rand(3))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi3)
 
-        phi3 = Factor(['a', 'd'], [1, 4], np.random.rand(4))
+        phi3 = DiscreteFactor(['a', 'd'], [1, 4], np.random.rand(4))
         self.graph.add_factors(phi3)
         self.assertTrue(self.graph.check_model())
 
     def test_copy_with_factors(self):
         self.graph.add_edges_from([[('a', 'b'), ('b', 'c')]])
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         graph_copy = self.graph.copy()
         self.assertIsInstance(graph_copy, ClusterGraph)
@@ -189,7 +189,7 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.assertTrue(phi1 not in self.graph.factors and phi2 not in self.graph.factors)
         self.assertTrue(phi1 in graph_copy.factors and phi2 in graph_copy.factors)
         self.graph.add_factors(phi1, phi2)
-        self.graph.factors[0] = Factor(['a', 'b'], [2, 2], np.random.rand(4))
+        self.graph.factors[0] = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
         self.assertNotEqual(self.graph.factors, graph_copy.factors)
 

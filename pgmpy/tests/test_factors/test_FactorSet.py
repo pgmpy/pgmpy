@@ -2,19 +2,19 @@ import unittest
 
 from pgmpy.extern.six.moves import filter, range
 from pgmpy.factors import FactorSet
-from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 
 
 class TestFactorSet(unittest.TestCase):
     def setUp(self):
-        self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        self.phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
-        self.phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
-        self.phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
+        self.phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        self.phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        self.phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(8))
+        self.phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(8))
 
     def test_class_init(self):
-        phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         factor_set1 = FactorSet(phi1, phi2)
         self.assertEqual({phi1, phi2}, factor_set1.get_factors())
 
@@ -32,11 +32,11 @@ class TestFactorSet(unittest.TestCase):
         self.assertEqual({self.phi1, self.phi2, self.phi3, self.phi4}, factor_set3.factors)
 
     def test_factorset_divide(self):
-        phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(1, 13))
-        phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(1, 9))
+        phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(1, 13))
+        phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(1, 9))
         factor_set1 = FactorSet(phi1, phi2)
-        phi3 = Factor(['x5', 'x6', 'x7'], [2, 2, 2], range(1, 9))
-        phi4 = Factor(['x5', 'x7', 'x8'], [2, 2, 2], range(1, 9))
+        phi3 = DiscreteFactor(['x5', 'x6', 'x7'], [2, 2, 2], range(1, 9))
+        phi4 = DiscreteFactor(['x5', 'x7', 'x8'], [2, 2, 2], range(1, 9))
         factor_set2 = FactorSet(phi3, phi4)
         factor_set3 = factor_set2.divide(factor_set1, inplace=False)
         self.assertEqual({phi3, phi4, phi1.identity_factor() / phi1, phi2.identity_factor() / phi2},

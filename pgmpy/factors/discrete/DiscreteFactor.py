@@ -15,9 +15,9 @@ from pgmpy.utils import StateNameInit, StateNameDecorator
 State = namedtuple('State', ['var', 'state'])
 
 
-class Factor(object):
+class DiscreteFactor(object):
     """
-    Base class for Factor.
+    Base class for DiscreteFactor.
 
     Public Methods
     --------------
@@ -25,7 +25,7 @@ class Factor(object):
     get_cardinality(variable)
     marginalize([variable_list])
     normalize()
-    product(*Factor)
+    product(*DiscreteFactor)
     reduce([variable_values_list])
     """
 
@@ -68,17 +68,17 @@ class Factor(object):
 
         values: list, array_like
             List of values of factor.
-            A Factor's values are stored in a row vector in the value
+            A DiscreteFactor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
             `variables` cycle through their values the fastest.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         >>> phi
-        <Factor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
+        <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
         >>> print(phi)
         +------+------+------+-----------------+
         | x1   | x2   | x3   |   phi(x1,x2,x3) |
@@ -121,8 +121,8 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -143,8 +143,8 @@ class Factor(object):
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality(['x1'])
         {'x1': 2}
         >>> phi.get_cardinality(['x1', 'x2'])
@@ -175,8 +175,8 @@ class Factor(object):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['diff', 'intel'], [2, 2], np.ones(4))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['diff', 'intel'], [2, 2], np.ones(4))
         >>> phi.assignment([1, 2])
         [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
@@ -206,12 +206,12 @@ class Factor(object):
 
         Returns
         -------
-        Factor: The identity factor.
+        DiscreteFactor: The identity factor.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi_identity = phi.identity_factor()
         >>> phi_identity.variables
         ['x1', 'x2', 'x3']
@@ -224,7 +224,7 @@ class Factor(object):
                 [ 1.,  1.],
                 [ 1.,  1.]]])
         """
-        return Factor(self.variables, self.cardinality, np.ones(self.values.size))
+        return DiscreteFactor(self.variables, self.cardinality, np.ones(self.values.size))
 
     def marginalize(self, variables, inplace=True):
         """
@@ -241,13 +241,13 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
         array([ 14.,  22.,  30.])
@@ -290,13 +290,13 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
         ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
         >>> phi.variables
         ['x1','x2','x3']
@@ -342,13 +342,13 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.values
         array([[[ 0,  1],
                 [ 2,  3],
@@ -395,13 +395,13 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.reduce([('x1', 0), ('x2', 0)])
         >>> phi.variables
         ['x3']
@@ -438,12 +438,12 @@ class Factor(object):
 
     def sum(self, phi1, inplace=True):
         """
-        Factor sum with `phi1`.
+        DiscreteFactor sum with `phi1`.
 
         Parameters
         ----------
-        phi1: `Factor` instance.
-            Factor to be added.
+        phi1: `DiscreteFactor` instance.
+            DiscreteFactor to be added.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -451,14 +451,14 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Example
         -------
-        >>> from pgmpy.factors import Factor
-        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi1.sum(phi2, inplace=True)
         >>> phi1.variables
         ['x1', 'x2', 'x3', 'x4']
@@ -526,12 +526,12 @@ class Factor(object):
 
     def product(self, phi1, inplace=True):
         """
-        Factor product with `phi1`.
+        DiscreteFactor product with `phi1`.
 
         Parameters
         ----------
-        phi1: `Factor` instance
-            Factor to be multiplied.
+        phi1: `DiscreteFactor` instance
+            DiscreteFactor to be multiplied.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -539,14 +539,14 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Example
         -------
-        >>> from pgmpy.factors import Factor
-        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
         >>> phi1.product(phi2, inplace=True)
         >>> phi1.variables
         ['x1', 'x2', 'x3', 'x4']
@@ -614,11 +614,11 @@ class Factor(object):
 
     def divide(self, phi1, inplace=True):
         """
-        Factor division by `phi1`.
+        DiscreteFactor division by `phi1`.
 
         Parameters
         ----------
-        phi1 : `Factor` instance
+        phi1 : `DiscreteFactor` instance
             The denominator for division.
 
         inplace: boolean
@@ -627,14 +627,14 @@ class Factor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+        DiscreteFactor or None: if inplace=True (default) returns None
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Examples
         --------
-        >>> from pgmpy.factors import Factor
-        >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5)])
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5)])
         >>> phi1.divide(phi2)
         >>> phi1.variables
         ['x1', 'x2', 'x3']
@@ -685,13 +685,13 @@ class Factor(object):
 
         Returns
         -------
-        Factor: copy of the factor
+        DiscreteFactor: copy of the factor
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
-        >>> phi = Factor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
+        >>> from pgmpy.factors import DiscreteFactor
+        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 3], np.arange(18))
         >>> phi_copy = phi.copy()
         >>> phi_copy.variables
         ['x1', 'x2', 'x3']
@@ -708,7 +708,7 @@ class Factor(object):
         """
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
-        return Factor(self.scope(), self.cardinality, self.values)
+        return DiscreteFactor(self.scope(), self.cardinality, self.values)
 
     def __str__(self):
         if six.PY2:
@@ -753,7 +753,7 @@ class Factor(object):
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
                               for var, card in zip(self.variables, self.cardinality)])
-        return "<Factor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
+        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
@@ -773,7 +773,7 @@ class Factor(object):
     __div__ = __truediv__
 
     def __eq__(self, other):
-        if not (isinstance(self, Factor) and isinstance(other, Factor)):
+        if not (isinstance(self, DiscreteFactor) and isinstance(other, DiscreteFactor)):
             return False
 
         elif set(self.scope()) != set(other.scope()):
@@ -821,18 +821,18 @@ def factor_product(*args):
 
     Parameters
     ----------
-    args: `Factor` instances.
+    args: `DiscreteFactor` instances.
         factors to be multiplied
 
     Returns
     -------
-    Factor: `Factor` representing factor product over all the `Factor` instances in args.
+    DiscreteFactor: `DiscreteFactor` representing factor product over all the `DiscreteFactor` instances in args.
 
     Examples
     --------
-    >>> from pgmpy.factors import Factor, factor_product
-    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
+    >>> from pgmpy.factors import DiscreteFactor, factor_product
+    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
     >>> phi = factor_product(phi1, phi2)
     >>> phi.variables
     ['x1', 'x2', 'x3', 'x4']
@@ -858,14 +858,14 @@ def factor_product(*args):
             [[10, 30],
              [55, 77]]]])
     """
-    if not all(isinstance(phi, Factor) for phi in args):
+    if not all(isinstance(phi, DiscreteFactor) for phi in args):
         raise TypeError("Arguments must be factors")
     return reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
 def factor_divide(phi1, phi2):
     """
-    Returns `Factor` representing `phi1 / phi2`.
+    Returns `DiscreteFactor` representing `phi1 / phi2`.
 
     Parameters
     ----------
@@ -877,13 +877,13 @@ def factor_divide(phi1, phi2):
 
     Returns
     -------
-    Factor: `Factor` representing factor division `phi1 / phi2`.
+    DiscreteFactor: `DiscreteFactor` representing factor division `phi1 / phi2`.
 
     Examples
     --------
-    >>> from pgmpy.factors import Factor, factor_divide
-    >>> phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-    >>> phi2 = Factor(['x3', 'x1'], [2, 2], range(1, 5))
+    >>> from pgmpy.factors import DiscreteFactor, factor_divide
+    >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+    >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5))
     >>> phi = factor_divide(phi1, phi2)
     >>> phi.variables
     ['x1', 'x2', 'x3']
@@ -898,6 +898,6 @@ def factor_divide(phi1, phi2):
             [ 4.        ,  2.25      ],
             [ 5.        ,  2.75      ]]])
     """
-    if not isinstance(phi1, Factor) or not isinstance(phi2, Factor):
+    if not isinstance(phi1, DiscreteFactor) or not isinstance(phi2, DiscreteFactor):
         raise TypeError("phi1 and phi2 should be factors instances")
     return phi1.divide(phi2, inplace=False)
