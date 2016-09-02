@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from pgmpy.factors.continuous import JointGaussianDistribution as JGD
-from pgmpy.sampling import (HamiltonianMC as HMC, HamiltonianMCda as HMCda, GradLogPDFGaussian, NoUTurnSampler as NUTS,
+from pgmpy.sampling import (HamiltonianMC as HMC, HamiltonianMCDA as HMCda, GradLogPDFGaussian, NoUTurnSampler as NUTS,
                             NoUTurnSamplerDA as NUTSda)
 
 

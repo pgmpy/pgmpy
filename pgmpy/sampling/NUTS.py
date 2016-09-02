@@ -9,12 +9,12 @@ try:
 except ImportError:
     HAS_PANDAS = False
 
-from pgmpy.sampling import HamiltonianMCda
+from pgmpy.sampling import HamiltonianMCDA
 from pgmpy.sampling import LeapFrog
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 
-class NoUTurnSampler(HamiltonianMCda):
+class NoUTurnSampler(HamiltonianMCDA):
     """
     Class for performing sampling in Continuous model
     using No U Turn Sampler (a variant of Hamiltonian Monte Carlo)

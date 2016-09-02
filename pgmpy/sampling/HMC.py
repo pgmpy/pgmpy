@@ -343,7 +343,7 @@ class HamiltonianMC(object):
         self.acceptance_rate = self.accepted_proposals / num_samples
 
 
-class HamiltonianMCda(HamiltonianMC):
+class HamiltonianMCDA(HamiltonianMC):
     """
     Class for performing sampling in Continuous model
     using Hamiltonian Monte Carlo with dual averaging for
@@ -371,7 +371,7 @@ class HamiltonianMCda(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, LeapFrog
+    >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, LeapFrog
     >>> from pgmpy.factors import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
@@ -403,7 +403,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         self.delta = delta
 
-        super(HamiltonianMCda, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
+        super(HamiltonianMCDA, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
                                               simulate_dynamics=simulate_dynamics)
 
     def _adapt_params(self, stepsize, stepsize_bar, h_bar, mu, index_i, alpha, n_alpha=1):
@@ -459,7 +459,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         Examples
         ---------
-        >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
@@ -551,7 +551,7 @@ class HamiltonianMCda(HamiltonianMC):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import HamiltonianMCda as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
