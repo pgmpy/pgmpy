@@ -1,16 +1,15 @@
-from collections import namedtuple
 import itertools
+from collections import namedtuple
 
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
+from pgmpy.extern.six.moves import map, range
 
-from pgmpy.factors.Factor import factor_product
+from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
-from pgmpy.extern.six.moves import map, range
-
 
 State = namedtuple('State', ['var', 'state'])
 
@@ -53,8 +52,8 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -113,9 +112,9 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
-        >>> from pgmpy.factors.Factor import State
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> from pgmpy.factors.DiscreteFactor import State
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -165,10 +164,10 @@ class BayesianModelSampling(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors.Factor import State
+        >>> from pgmpy.factors.DiscreteFactor import State
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -332,12 +331,12 @@ class GibbsSampling(MarkovChain):
 
         Examples:
         ---------
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> from pgmpy.inference import GibbsSampling
         >>> from pgmpy.models import MarkovModel
         >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
-        >>> factor_ab = Factor(['A', 'B'], [2, 2], [1, 2, 3, 4])
-        >>> factor_cb = Factor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
         >>> gibbs.sample(size=4)
@@ -373,12 +372,12 @@ class GibbsSampling(MarkovChain):
 
         Examples:
         ---------
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> from pgmpy.inference import GibbsSampling
         >>> from pgmpy.models import MarkovModel
         >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
-        >>> factor_ab = Factor(['A', 'B'], [2, 2], [1, 2, 3, 4])
-        >>> factor_cb = Factor(['C', 'B'], [2, 2], [5, 6, 7, 8])
+        >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
+        >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
         >>> gen = gibbs.generate_sample(size=2)

@@ -1,10 +1,9 @@
 import unittest
 
 import pandas as pd
-import numpy as np
+
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import K2Score
-from pgmpy.factors import TabularCPD
 
 
 class TestK2Score(unittest.TestCase):

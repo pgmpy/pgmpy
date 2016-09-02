@@ -8,7 +8,7 @@ import numbers
 
 import numpy as np
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
@@ -16,7 +16,7 @@ from pgmpy.utils import StateNameInit
 from pgmpy.utils import StateNameDecorator
 
 
-class TabularCPD(Factor):
+class TabularCPD(DiscreteFactor):
     """
     Defines the conditional probability distribution table (cpd table)
 
@@ -340,16 +340,16 @@ class TabularCPD(Factor):
 
         Examples
         --------
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
         ...                               [0.1, 0.1],
         ...                               [0.8, 0.8]],
         ...                  evidence='evi1', evidence_card=2)
         >>> factor = cpd.to_factor()
         >>> factor
-        <Factor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
+        <DiscreteFactor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
-        return Factor(self.variables, self.cardinality, self.values)
+        return DiscreteFactor(self.variables, self.cardinality, self.values)
 
     def reorder_parents(self, new_order, inplace=True):
         """
@@ -497,13 +497,13 @@ class TabularCPD(Factor):
 #                           /         \
 #             P(A|b_1,c_1,d_0)      P(A|b_1,c_1,d_1)
 #
-#         >>> from pgmpy.factors import TreeCPD, Factor
-#         >>> tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+#         >>> from pgmpy.factors import TreeCPD, DiscreteFactor
+#         >>> tree = TreeCPD([('B', DiscreteFactor(['A'], [2], [0.8, 0.2]), '0'),
 #         ...                 ('B', 'C', '1'),
-#         ...                 ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+#         ...                 ('C', DiscreteFactor(['A'], [2], [0.1, 0.9]), '0'),
 #         ...                 ('C', 'D', '1'),
-#         ...                 ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-#         ...                 ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+#         ...                 ('D', DiscreteFactor(['A'], [2], [0.9, 0.1]), '0'),
+#         ...                 ('D', DiscreteFactor(['A'], [2], [0.4, 0.6]), '1')])
 #         """
 #         nx.DiGraph.__init__(self)
 #         # TODO: Check cycles and self loops.
@@ -535,10 +535,10 @@ class TabularCPD(Factor):
 #
 #         Examples
 #         --------
-#         >>> from pgmpy.factors import TreeCPD, Factor
-#         >>> tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+#         >>> from pgmpy.factors import TreeCPD, DiscreteFactor
+#         >>> tree = TreeCPD([('B', DiscreteFactor(['A'], [2], [0.8, 0.2]), 0),
 #         ...                 ('B', 'C', 1)])
-#         >>> tree.add_edge('C', Factor(['A'], [2], [0.1, 0.9]), label=0)
+#         >>> tree.add_edge('C', DiscreteFactor(['A'], [2], [0.1, 0.9]), label=0)
 #         """
 #         if u != v:
 #             if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
@@ -568,10 +568,10 @@ class TabularCPD(Factor):
 #
 #         Examples
 #         --------
-#         >>> from pgmpy.factors import TreeCPD, Factor
+#         >>> from pgmpy.factors import TreeCPD, DiscreteFactor
 #         >>> tree = TreeCPD()
 #         >>> tree.add_edges_from([('B', 'C', 1), ('C', 'D', 1),
-#         ...                      ('D', Factor(['A'], [2], [0.6, 0.4]))])
+#         ...                      ('D', DiscreteFactor(['A'], [2], [0.6, 0.4]))])
 #         """
 #         for edge in ebunch:
 #             if len(edge) == 2:
@@ -590,7 +590,7 @@ class TabularCPD(Factor):
 #
 #         for edge in edge_attributes:
 #             edge_dict.setdefault(edge[0], []).append(edge_attributes[edge])
-#             if isinstance(edge[1], Factor):
+#             if isinstance(edge[1], DiscreteFactor):
 #                 variable = edge[1].scope()
 #                 variable_card = edge[1].cardinality
 #                 edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1].values.tolist()
@@ -598,8 +598,8 @@ class TabularCPD(Factor):
 #                 edge_values[(edge[0], edge[0] + edge_attributes.get(edge))] = edge[1]
 #         #adjlist
 #         for source in self.nodes():
-#             if not isinstance(source, Factor):
-#                 adjlist[source] = [i[1] for i in edge_attributes if not isinstance(i[1], Factor) and i[0] == source]
+#             if not isinstance(source, DiscreteFactor):
+#                 adjlist[source] = [i[1] for i in edge_attributes if not isinstance(i[1], DiscreteFactor) and i[0] == source]
 #                 adjlist[source] = sorted(adjlist[source], key=lambda x: (len(nx.descendants(self, x)), x))
 #
 #         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
@@ -636,7 +636,7 @@ class TabularCPD(Factor):
 #
 #         Examples
 #         --------
-#         >>> from pgmpy.factors import TreeCPD, Factor
+#         >>> from pgmpy.factors import TreeCPD, DiscreteFactor
 #         >>> tree = TreeCPD([('B', factors(['A'], [2], [0.8, 0.2]), '0'),
 #         ...                 ('B', 'C', '1'),
 #         ...                 ('C', factors(['A'], [2], [0.1, 0.9]), '0'),
@@ -649,9 +649,9 @@ class TabularCPD(Factor):
 #         # TODO: This method assumes that factors class has a get_variable method. Check this after merging navin's PR.
 #         root = [node for node, in_degree in self.in_degree().items() if in_degree == 0][0]
 #         paths_root_to_factors = {target: path for target, path in nx.single_source_shortest_path(self, root).items() if
-#                                  isinstance(target, Factor)}
+#                                  isinstance(target, DiscreteFactor)}
 #         for node in self.nodes_iter():
-#             if isinstance(node, Factor):
+#             if isinstance(node, DiscreteFactor):
 #                 rule_cpd = RuleCPD(node.scope()[0])
 #
 #         for factor, path in paths_root_to_factors.items():
@@ -900,7 +900,7 @@ class TabularCPD(Factor):
 #                                   assignments[assignment_index+1].split('_')[0],
 #                                   assignments[assignment_index].split('_')[1])
 #             tree_cpd.add_edge(assignments[-1].split('_')[0],
-#                               Factor([self.variable], [len(value)], value),
+#                               DiscreteFactor([self.variable], [len(value)], value),
 #                               assignments[-1].split('_')[1])
 #         return tree_cpd
 #

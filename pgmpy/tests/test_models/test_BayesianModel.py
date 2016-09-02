@@ -7,7 +7,7 @@ import numpy.testing as np_test
 
 from pgmpy.models import BayesianModel, MarkovModel
 import pgmpy.tests.help_functions as hf
-from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
+from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
 from pgmpy.independencies import Independencies
 from pgmpy.estimators import BayesianEstimator, BaseEstimator, MaximumLikelihoodEstimator
 
@@ -152,7 +152,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
                0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
         JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
-        fac = Factor(['diff', 'intel', 'grade'], [2, 3, 3], val)
+        fac = DiscreteFactor(['diff', 'intel', 'grade'], [2, 3, 3], val)
         self.assertTrue(self.G1.is_imap(JPD))
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 

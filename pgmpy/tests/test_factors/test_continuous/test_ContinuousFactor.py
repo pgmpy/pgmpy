@@ -5,7 +5,7 @@ import numpy.testing as np_test
 from scipy.special import beta
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors import ContinuousFactor
+from pgmpy.factors.continuous import ContinuousFactor
 
 
 class TestContinuousFactor(unittest.TestCase):

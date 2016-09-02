@@ -107,20 +107,20 @@ class JunctionTree(ClusterGraph):
         Examples
         -------
         >>> import numpy as np
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> from pgmpy.models import JunctionTree
         >>> G = JunctionTree()
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')), (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        >>> phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        >>> phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        >>> phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         >>> G.add_factors(phi1,phi2)
         >>> modelCopy = G.copy()
         >>> modelCopy.edges()
         [(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))]
         >>> G.factors
-        [<Factor representing phi(a:1, b:2) at 0xb720ee4c>, <Factor representing phi(a:1, c:2) at 0xb4e1e06c>]
+        [<DiscreteFactor representing phi(a:1, b:2) at 0xb720ee4c>, <DiscreteFactor representing phi(a:1, c:2) at 0xb4e1e06c>]
         >>> modelCopy.factors
-        [<Factor representing phi(a:1, b:2) at 0xb4bd11ec>, <Factor representing phi(a:1, c:2) at 0xb4bd138c>]
+        [<DiscreteFactor representing phi(a:1, b:2) at 0xb4bd11ec>, <DiscreteFactor representing phi(a:1, c:2) at 0xb4bd138c>]
 
         """
         copy = JunctionTree(self.edges())

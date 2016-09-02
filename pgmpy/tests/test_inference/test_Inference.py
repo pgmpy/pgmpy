@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
-from pgmpy.factors import Factor
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import Inference
 from collections import defaultdict
 
@@ -25,10 +25,10 @@ class TestInferenceBase(unittest.TestCase):
         self.bayesian.add_cpds(a_cpd, b_cpd, c_cpd, d_cpd, e_cpd)
 
         self.markov = MarkovModel([('a', 'b'), ('b', 'd'), ('a', 'c'), ('c', 'd')])
-        factor_1 = Factor(['a', 'b'], [2, 2], np.array([100, 1, 1, 100]))
-        factor_2 = Factor(['a', 'c'], [2, 2], np.array([40, 30, 100, 20]))
-        factor_3 = Factor(['b', 'd'], [2, 2], np.array([1, 100, 100, 1]))
-        factor_4 = Factor(['c', 'd'], [2, 2], np.array([60, 60, 40, 40]))
+        factor_1 = DiscreteFactor(['a', 'b'], [2, 2], np.array([100, 1, 1, 100]))
+        factor_2 = DiscreteFactor(['a', 'c'], [2, 2], np.array([40, 30, 100, 20]))
+        factor_3 = DiscreteFactor(['b', 'd'], [2, 2], np.array([1, 100, 100, 1]))
+        factor_4 = DiscreteFactor(['c', 'd'], [2, 2], np.array([60, 60, 40, 40]))
         self.markov.add_factors(factor_1, factor_2, factor_3, factor_4)
 
     def test_bayesian_inference_init(self):
@@ -56,19 +56,19 @@ class TestInferenceBase(unittest.TestCase):
         infer_markov = Inference(self.markov)
         self.assertEqual(set(infer_markov.variables), {'a', 'b', 'c', 'd'})
         self.assertEqual(infer_markov.cardinality, {'a': 2, 'b': 2, 'c': 2, 'd': 2})
-        self.assertEqual(infer_markov.factors, {'a': [Factor(['a', 'b'], [2, 2],
-                                                             np.array([100, 1, 1, 100])),
-                                                      Factor(['a', 'c'], [2, 2],
-                                                             np.array([40, 30, 100, 20]))],
-                                                'b': [Factor(['a', 'b'], [2, 2],
-                                                             np.array([100, 1, 1, 100])),
-                                                      Factor(['b', 'd'], [2, 2],
-                                                             np.array([1, 100, 100, 1]))],
-                                                'c': [Factor(['a', 'c'], [2, 2],
-                                                             np.array([40, 30, 100, 20])),
-                                                      Factor(['c', 'd'], [2, 2],
-                                                             np.array([60, 60, 40, 40]))],
-                                                'd': [Factor(['b', 'd'], [2, 2],
-                                                             np.array([1, 100, 100, 1])),
-                                                      Factor(['c', 'd'], [2, 2],
-                                                             np.array([60, 60, 40, 40]))]})
+        self.assertEqual(infer_markov.factors, {'a': [DiscreteFactor(['a', 'b'], [2, 2],
+                                                                     np.array([100, 1, 1, 100])),
+                                                      DiscreteFactor(['a', 'c'], [2, 2],
+                                                                     np.array([40, 30, 100, 20]))],
+                                                'b': [DiscreteFactor(['a', 'b'], [2, 2],
+                                                                     np.array([100, 1, 1, 100])),
+                                                      DiscreteFactor(['b', 'd'], [2, 2],
+                                                                     np.array([1, 100, 100, 1]))],
+                                                'c': [DiscreteFactor(['a', 'c'], [2, 2],
+                                                                     np.array([40, 30, 100, 20])),
+                                                      DiscreteFactor(['c', 'd'], [2, 2],
+                                                                     np.array([60, 60, 40, 40]))],
+                                                'd': [DiscreteFactor(['b', 'd'], [2, 2],
+                                                                     np.array([1, 100, 100, 1])),
+                                                      DiscreteFactor(['c', 'd'], [2, 2],
+                                                                     np.array([60, 60, 40, 40]))]})

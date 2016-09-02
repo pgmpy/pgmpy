@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-import numpy as np
-import pandas as pd
-import networkx as nx
+
 from warnings import warn
 from itertools import combinations
+
+import networkx as nx
+
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators import K2Score
 from pgmpy.utils.mathext import powerset

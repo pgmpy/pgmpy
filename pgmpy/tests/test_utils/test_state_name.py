@@ -1,16 +1,12 @@
 import unittest
-import itertools
 
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors import Factor
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianModel
 from pgmpy.inference import Inference
 from pgmpy.inference import VariableElimination
-from pgmpy.utils import StateNameInit
-from pgmpy.utils import StateNameDecorator
 
 
 class TestStateNameInit(unittest.TestCase):
@@ -21,10 +17,10 @@ class TestStateNameInit(unittest.TestCase):
         self.sn1 = {'speed': ['low', 'medium', 'high'],
                     'switch': ['on', 'off'], 'time': ['day', 'night']}
 
-        self.phi1 = Factor(['speed', 'switch', 'time'],
-                           [3, 2, 2], np.ones(12))
-        self.phi2 = Factor(['speed', 'switch', 'time'],
-                           [3, 2, 2], np.ones(12), state_names=self.sn1)
+        self.phi1 = DiscreteFactor(['speed', 'switch', 'time'],
+                                   [3, 2, 2], np.ones(12))
+        self.phi2 = DiscreteFactor(['speed', 'switch', 'time'],
+                                   [3, 2, 2], np.ones(12), state_names=self.sn1)
 
         self.cpd1 = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -72,10 +68,10 @@ class StateNameDecorator(unittest.TestCase):
                     'switch': ['on', 'off'],
                     'time': ['day', 'night']}
 
-        self.phi1 = Factor(['speed', 'switch', 'time'],
-                           [3, 2, 2], np.ones(12))
-        self.phi2 = Factor(['speed', 'switch', 'time'],
-                           [3, 2, 2], np.ones(12), state_names=self.sn1)
+        self.phi1 = DiscreteFactor(['speed', 'switch', 'time'],
+                                   [3, 2, 2], np.ones(12))
+        self.phi2 = DiscreteFactor(['speed', 'switch', 'time'],
+                                   [3, 2, 2], np.ones(12), state_names=self.sn1)
 
         self.cpd1 = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -111,29 +107,29 @@ class StateNameDecorator(unittest.TestCase):
         self.assertEqual(self.phi2.assignment([1, 2]), req_op1)
 
     def test_factor_reduce_statename(self):
-        phi = Factor(['speed', 'switch', 'time'],
-                     [3, 2, 2], np.ones(12), state_names=self.sn1)
+        phi = DiscreteFactor(['speed', 'switch', 'time'],
+                             [3, 2, 2], np.ones(12), state_names=self.sn1)
         phi.reduce([('speed', 'medium'), ('time', 'day')])
         self.assertEqual(phi.variables, ['switch'])
         self.assertEqual(phi.cardinality, [2])
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
-        phi = Factor(['speed', 'switch', 'time'],
-                     [3, 2, 2], np.ones(12), state_names=self.sn1)
+        phi = DiscreteFactor(['speed', 'switch', 'time'],
+                             [3, 2, 2], np.ones(12), state_names=self.sn1)
         phi = phi.reduce([('speed', 'medium'), ('time', 'day')], inplace=False)
         self.assertEqual(phi.variables, ['switch'])
         self.assertEqual(phi.cardinality, [2])
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
-        phi = Factor(['speed', 'switch', 'time'],
-                     [3, 2, 2], np.ones(12), state_names=self.sn1)
+        phi = DiscreteFactor(['speed', 'switch', 'time'],
+                             [3, 2, 2], np.ones(12), state_names=self.sn1)
         phi.reduce([('speed', 1), ('time', 0)])
         self.assertEqual(phi.variables, ['switch'])
         self.assertEqual(phi.cardinality, [2])
         np_test.assert_array_equal(phi.values, np.array([1, 1]))
 
-        phi = Factor(['speed', 'switch', 'time'],
-                     [3, 2, 2], np.ones(12), state_names=self.sn1)
+        phi = DiscreteFactor(['speed', 'switch', 'time'],
+                             [3, 2, 2], np.ones(12), state_names=self.sn1)
         phi = phi.reduce([('speed', 1), ('time', 0)], inplace=False)
         self.assertEqual(phi.variables, ['switch'])
         self.assertEqual(phi.cardinality, [2])
@@ -191,7 +187,7 @@ class StateNameDecorator(unittest.TestCase):
     def test_inference_query_statename(self):
         inf_op1 = self.model2.query(['grade'], evidence={'intel': 'poor'})
         inf_op2 = self.model2.query(['grade'], evidence={'intel': 0})
-        req_op = {'grade': Factor(['grade'], [3], np.array([0.1, 0.1, 0.8]))}
+        req_op = {'grade': DiscreteFactor(['grade'], [3], np.array([0.1, 0.1, 0.8]))}
 
         self.assertEqual(inf_op1, inf_op2)
         self.assertEqual(inf_op1, req_op)

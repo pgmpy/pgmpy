@@ -4,7 +4,6 @@ import numpy as np
 
 from pgmpy.inference.mplp import Mplp
 from pgmpy.readwrite import UAIReader
-from pgmpy.extern import six
 
 
 class TestMplp(unittest.TestCase):

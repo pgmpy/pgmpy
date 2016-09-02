@@ -3,10 +3,10 @@ from string import Template
 
 import numpy
 from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore,\
-    cppStyleComment, Literal, printables
+    cppStyleComment, printables
 
 from pgmpy.models import BayesianModel
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.extern.six.moves import map, range
 
 

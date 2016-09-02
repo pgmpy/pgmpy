@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors import LinearGaussianCPD
-from pgmpy.factors import TabularCPD
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 

@@ -3,8 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 
-from pgmpy.factors import Factor
-from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor, factor_product
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range
@@ -97,18 +96,18 @@ class TestMarkovModelMethods(unittest.TestCase):
 
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2})
         self.graph.remove_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-        phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        phi2 = Factor(['c', 'd'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['c', 'd'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
         self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'a': 2, 'b': 2, 'c': 1})
 
-        phi3 = Factor(['d', 'a'], [1, 2], np.random.rand(2))
+        phi3 = DiscreteFactor(['d', 'a'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {'d': 1, 'c': 1, 'b': 2, 'a': 2})
 
@@ -119,31 +118,31 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
         self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
-        phi3 = Factor(['c', 'd'], [2, 2], np.random.rand(4))
+        phi3 = DiscreteFactor(['c', 'd'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
 
     def test_check_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['c', 'b'], [3, 2], np.random.rand(6))
-        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
-        phi4 = Factor(['d', 'a'], [4, 1], np.random.rand(4))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['c', 'b'], [3, 2], np.random.rand(6))
+        phi3 = DiscreteFactor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = DiscreteFactor(['d', 'a'], [4, 1], np.random.rand(4))
 
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.assertTrue(self.graph.check_model())
 
         self.graph.remove_factors(phi1, phi4)
-        phi1 = Factor(['a', 'b'], [4, 2], np.random.rand(8))
+        phi1 = DiscreteFactor(['a', 'b'], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1)
         self.assertTrue(self.graph.check_model())
 
@@ -151,26 +150,26 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
 
-        phi2 = Factor(['b', 'c'], [3, 3], np.random.rand(9))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 3], np.random.rand(9))
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
 
-        phi3 = Factor(['c', 'a'], [4, 4], np.random.rand(16))
+        phi3 = DiscreteFactor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi3)
 
-        phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
-        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
-        phi4 = Factor(['d', 'a'], [4, 3], np.random.rand(12))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 3], np.random.rand(6))
+        phi3 = DiscreteFactor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = DiscreteFactor(['d', 'a'], [4, 3], np.random.rand(12))
         self.graph.add_factors(phi2, phi3, phi4)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2, phi3, phi4)
 
-        phi2 = Factor(['a', 'b'], [1, 3], np.random.rand(3))
+        phi2 = DiscreteFactor(['a', 'b'], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
@@ -179,29 +178,29 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
-        phi1 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1)
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['a', 'c'], [1, 2], np.random.rand(2))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2)
 
-        phi1 = Factor(['a', 'b'], [1, 2], np.random.rand(2))
-        phi2 = Factor(['b', 'c'], [2, 3], np.random.rand(6))
-        phi3 = Factor(['c', 'd'], [3, 4], np.random.rand(12))
-        phi4 = Factor(['d', 'a'], [4, 1], np.random.rand(4))
-        phi5 = Factor(['d', 'b'], [4, 2], np.random.rand(8))
+        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 3], np.random.rand(6))
+        phi3 = DiscreteFactor(['c', 'd'], [3, 4], np.random.rand(12))
+        phi4 = DiscreteFactor(['d', 'a'], [4, 1], np.random.rand(4))
+        phi5 = DiscreteFactor(['d', 'b'], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
 
     def test_factor_graph(self):
-        phi1 = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
-        phi2 = Factor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
+        phi1 = DiscreteFactor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
+        phi2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
         self.graph.add_factors(phi1, phi2)
 
@@ -222,10 +221,10 @@ class TestMarkovModelMethods(unittest.TestCase):
     def test_junction_tree(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
         junction_tree = self.graph.to_junction_tree()
@@ -236,7 +235,7 @@ class TestMarkovModelMethods(unittest.TestCase):
     def test_junction_tree_single_clique(self):
 
         self.graph.add_edges_from([('x1', 'x2'), ('x2', 'x3'), ('x1', 'x3')])
-        phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
+        phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*phi)
 
         junction_tree = self.graph.to_junction_tree()
@@ -260,10 +259,10 @@ class TestMarkovModelMethods(unittest.TestCase):
     def test_bayesian_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
         bm = self.graph.to_bayesian_model()
@@ -282,58 +281,58 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
     def test_add_factor_raises_error(self):
         self.graph.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles'),
                                    ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        factor = Factor(['Alice', 'Bob', 'John'], [2, 2, 2], np.random.rand(8))
+        factor = DiscreteFactor(['Alice', 'Bob', 'John'], [2, 2, 2], np.random.rand(8))
         self.assertRaises(ValueError, self.graph.add_factors, factor)
 
     def test_add_single_factor(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi = Factor(['a', 'b'], [2, 2], range(4))
+        phi = DiscreteFactor(['a', 'b'], [2, 2], range(4))
         self.graph.add_factors(phi)
         six.assertCountEqual(self, self.graph.factors, [phi])
 
     def test_add_multiple_factors(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
 
     def test_get_factors(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         six.assertCountEqual(self, self.graph.get_factors(), [])
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
         six.assertCountEqual(self, self.graph.factors, [phi2])
 
     def test_remove_multiple_factors(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.factors, [])
 
     def test_partition_function(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertEqual(self.graph.get_partition_function(), 22.0)
 
     def test_partition_function_raises_error(self):
         self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
-        phi1 = Factor(['a', 'b'], [2, 2], range(4))
-        phi2 = Factor(['b', 'c'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError,
                           self.graph.get_partition_function)
@@ -357,10 +356,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h1_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H1', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -371,10 +370,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h2_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H2', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -385,10 +384,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h3_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H3', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -399,10 +398,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h4_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H4', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -413,10 +412,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h5_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H4', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -427,10 +426,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h6_inplace(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.graph.triangulate(heuristic='H4', inplace=True)
         self.assertTrue(self.graph.is_triangulated())
@@ -441,19 +440,19 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_cardinality_mismatch_raises_error(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        factor_list = [Factor(edge, [2, 2], np.random.rand(4)) for edge in
+        factor_list = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in
                        self.graph.edges()]
         self.graph.add_factors(*factor_list)
-        self.graph.add_factors(Factor(['a', 'b'], [2, 3], np.random.rand(6)))
+        self.graph.add_factors(DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6)))
         self.assertRaises(ValueError, self.graph.triangulate)
 
     def test_triangulation_h1_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H1', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -463,10 +462,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h2_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H2', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -476,10 +475,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h3_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H3', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -489,10 +488,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h4_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H4', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -502,10 +501,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h5_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H5', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -515,10 +514,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
     def test_triangulation_h6_create_new(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
-        phi1 = Factor(['a', 'b'], [2, 3], np.random.rand(6))
-        phi2 = Factor(['b', 'c'], [3, 4], np.random.rand(12))
-        phi3 = Factor(['c', 'd'], [4, 5], np.random.rand(20))
-        phi4 = Factor(['d', 'a'], [5, 2], np.random.random(10))
+        phi1 = DiscreteFactor(['a', 'b'], [2, 3], np.random.rand(6))
+        phi2 = DiscreteFactor(['b', 'c'], [3, 4], np.random.rand(12))
+        phi3 = DiscreteFactor(['c', 'd'], [4, 5], np.random.rand(20))
+        phi4 = DiscreteFactor(['d', 'a'], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         H = self.graph.triangulate(heuristic='H6', inplace=True)
         self.assertListEqual(hf.recursive_sorted(H.edges()),
@@ -556,7 +555,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.assertEqual(len(copy.get_factors()), 0)
 
         # Add factors to the original graph
-        phi1 = Factor(['a', 'b'], [2, 2], [[0.3, 0.7], [0.9, 0.1]])
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], [[0.3, 0.7], [0.9, 0.1]])
         self.graph.add_factors(phi1)
 
         # The factors should not get copied over

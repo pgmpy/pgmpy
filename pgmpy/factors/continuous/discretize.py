@@ -60,7 +60,7 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         Returns
         -------
-        A list of discrete values or a Factor object.
+        A list of discrete values or a DiscreteFactor object.
         """
         pass
 

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DirectedGraph
-from pgmpy.factors import TabularCPD, JointProbabilityDistribution, Factor
+from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, reduce
@@ -130,7 +130,7 @@ class BayesianModel(DirectedGraph):
         EXAMPLE
         -------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> student = BayesianModel([('diff', 'grades'), ('intel', 'grades')])
         >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
@@ -757,7 +757,7 @@ class BayesianModel(DirectedGraph):
             raise TypeError("JPD must be an instance of JointProbabilityDistribution")
         factors = [cpd.to_factor() for cpd in self.get_cpds()]
         factor_prod = reduce(mul, factors)
-        JPD_fact = Factor(JPD.variables, JPD.cardinality, JPD.values)
+        JPD_fact = DiscreteFactor(JPD.variables, JPD.cardinality, JPD.values)
         if JPD_fact == factor_prod:
             return True
         else:

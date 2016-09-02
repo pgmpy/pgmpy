@@ -2,10 +2,9 @@ import unittest
 
 from mock import MagicMock, patch
 
-from pgmpy.factors import Factor, TabularCPD, State
-from pgmpy.inference.Sampling import BayesianModelSampling, GibbsSampling
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
 from pgmpy.models import BayesianModel, MarkovModel
-from pgmpy.extern import six
+from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -69,7 +68,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({0, 1}))
         self.assertTrue(set(sample.L).issubset({0, 1}))
 
-    @patch("pgmpy.inference.BayesianModelSampling.forward_sample", autospec=True)
+    @patch("pgmpy.sampling.BayesianModelSampling.forward_sample", autospec=True)
     def test_rejection_sample_less_arg(self, forward_sample):
         sample = self.sampling_inference.rejection_sample(size=5)
         forward_sample.assert_called_once_with(self.sampling_inference, 5)
@@ -113,9 +112,9 @@ class TestGibbsSampling(unittest.TestCase):
 
         # A test Markov model
         self.markov_model = MarkovModel([('A', 'B'), ('C', 'B'), ('B', 'D')])
-        factor_ab = Factor(['A', 'B'], [2, 3], [1, 2, 3, 4, 5, 6])
-        factor_cb = Factor(['C', 'B'], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
-        factor_bd = Factor(['B', 'D'], [3, 2], [5, 7, 2, 1, 9, 3])
+        factor_ab = DiscreteFactor(['A', 'B'], [2, 3], [1, 2, 3, 4, 5, 6])
+        factor_cb = DiscreteFactor(['C', 'B'], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
+        factor_bd = DiscreteFactor(['B', 'D'], [3, 2], [5, 7, 2, 1, 9, 3])
         self.markov_model.add_factors(factor_ab, factor_cb, factor_bd)
 
         self.gibbs = GibbsSampling(self.bayesian_model)
@@ -124,7 +123,7 @@ class TestGibbsSampling(unittest.TestCase):
         del self.bayesian_model
         del self.markov_model
 
-    @patch('pgmpy.inference.Sampling.GibbsSampling._get_kernel_from_bayesian_model', autospec=True)
+    @patch('pgmpy.sampling.GibbsSampling._get_kernel_from_bayesian_model', autospec=True)
     @patch('pgmpy.models.MarkovChain.__init__', autospec=True)
     def test_init_bayesian_model(self, init, get_kernel):
         model = MagicMock(spec_set=BayesianModel)
@@ -132,7 +131,7 @@ class TestGibbsSampling(unittest.TestCase):
         init.assert_called_once_with(gibbs)
         get_kernel.assert_called_once_with(gibbs, model)
 
-    @patch('pgmpy.inference.Sampling.GibbsSampling._get_kernel_from_markov_model', autospec=True)
+    @patch('pgmpy.sampling.GibbsSampling._get_kernel_from_markov_model', autospec=True)
     def test_init_markov_model(self, get_kernel):
         model = MagicMock(spec_set=MarkovModel)
         gibbs = GibbsSampling(model)
@@ -162,7 +161,7 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertTrue(set(sample['intel']).issubset({0, 1}))
         self.assertTrue(set(sample['grade']).issubset({0, 1, 2}))
 
-    @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
+    @patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         self.gibbs.state = None
         random_state.return_value = [State('diff', 0), State('intel', 0), State('grade', 0)]
@@ -178,7 +177,7 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertEqual({samples[0][0].var, samples[0][1].var, samples[0][2].var}, {'diff', 'intel', 'grade'})
         self.assertEqual({samples[1][0].var, samples[1][1].var, samples[1][2].var}, {'diff', 'intel', 'grade'})
 
-    @patch("pgmpy.inference.Sampling.GibbsSampling.random_state", autospec=True)
+    @patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state):
         self.gibbs.state = None
         gen = self.gibbs.generate_sample(size=2)

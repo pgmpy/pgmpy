@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors import factor_product, Factor
+from pgmpy.factors.discrete import factor_product, DiscreteFactor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import map, range, zip
 
@@ -128,10 +128,10 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
         ...                 values=np.random.rand(6))
         >>> student.add_factors(factor)
         """
@@ -150,9 +150,9 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.get_factors()
@@ -166,9 +166,9 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
@@ -190,9 +190,9 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
@@ -227,7 +227,7 @@ class MarkovModel(UndirectedGraph):
                         'Cardinality of variable {var} not matching among factors'.format(var=variable))
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
-                    raise ValueError("Factor inconsistent with the model.")
+                    raise ValueError("DiscreteFactor inconsistent with the model.")
         return True
 
     def to_factor_graph(self):
@@ -243,10 +243,10 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor1 = Factor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
-        >>> factor2 = Factor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
+        >>> factor1 = DiscreteFactor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
+        >>> factor2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         >>> student.add_factors(factor1, factor2)
         >>> factor_graph = student.to_factor_graph()
         """
@@ -307,13 +307,13 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> G = MarkovModel()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
         ...                   ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
         >>> G.add_factors(*phi)
         >>> G_chordal = G.triangulate()
         """
@@ -450,13 +450,13 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
         ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
         >>> mm.add_factors(*phi)
         >>> junction_tree = mm.to_junction_tree()
         """
@@ -494,7 +494,7 @@ class MarkovModel(UndirectedGraph):
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
         if set(all_vars) != set(self.nodes()):
-            ValueError('Factor for all the random variables not specified')
+            ValueError('DiscreteFactor for all the random variables not specified')
 
         # Dictionary stating whether the factor is used to create clique
         # potential or not
@@ -513,7 +513,7 @@ class MarkovModel(UndirectedGraph):
 
             # To compute clique potential, initially set it as unity factor
             var_card = [self.get_cardinality()[x] for x in node]
-            clique_potential = Factor(node, var_card, np.ones(np.product(var_card)))
+            clique_potential = DiscreteFactor(node, var_card, np.ones(np.product(var_card)))
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
             clique_potential *= factor_product(*clique_factors)
@@ -596,13 +596,13 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
         ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
+        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in mm.edges()]
         >>> mm.add_factors(*phi)
         >>> bm = mm.to_bayesian_model()
         """
@@ -655,13 +655,13 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> G = MarkovModel()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                   ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
         ...                   ('x4', 'x7'), ('x5', 'x7')])
-        >>> phi = [Factor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
+        >>> phi = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in G.edges()]
         >>> G.add_factors(*phi)
         >>> G.get_partition_function()
         """
@@ -671,7 +671,7 @@ class MarkovModel(UndirectedGraph):
         factor = factor_product(factor, *[self.factors[i] for i in
                                           range(1, len(self.factors))])
         if set(factor.scope()) != set(self.nodes()):
-            raise ValueError('Factor for all the random variables not defined.')
+            raise ValueError('DiscreteFactor for all the random variables not defined.')
 
         return np.sum(factor.values)
 
@@ -685,7 +685,7 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         -------
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> from pgmpy.models import MarkovModel
         >>> G = MarkovModel()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
@@ -695,11 +695,11 @@ class MarkovModel(UndirectedGraph):
         [(('a', 'b'), ('b', 'c'))]
         >>> G_copy.nodes()
         [('a', 'b'), ('b', 'c')]
-        >>> factor = Factor([('a', 'b')], cardinality=[3],
+        >>> factor = DiscreteFactor([('a', 'b')], cardinality=[3],
         ...                 values=np.random.rand(3))
         >>> G.add_factors(factor)
         >>> G.get_factors()
-        [<Factor representing phi(('a', 'b'):3) at 0x...>]
+        [<DiscreteFactor representing phi(('a', 'b'):3) at 0x...>]
         >>> G_copy.get_factors()
         []
         """

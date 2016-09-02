@@ -3,13 +3,13 @@ from operator import mul
 
 import numpy as np
 
-from pgmpy.factors import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.extern import six
 
 
-class JointProbabilityDistribution(Factor):
+class JointProbabilityDistribution(DiscreteFactor):
     """
     Base class for Joint Probability Distribution
 
@@ -363,7 +363,7 @@ class JointProbabilityDistribution(Factor):
             raise TypeError("model must be an instance of BayesianModel")
         factors = [cpd.to_factor() for cpd in model.get_cpds()]
         factor_prod = six.moves.reduce(mul, factors)
-        JPD_fact = Factor(self.variables, self.cardinality, self.values)
+        JPD_fact = DiscreteFactor(self.variables, self.cardinality, self.values)
         if JPD_fact == factor_prod:
             return True
         else:
@@ -371,7 +371,7 @@ class JointProbabilityDistribution(Factor):
 
     def to_factor(self):
         """
-        Returns JointProbabilityDistribution as a Factor object
+        Returns JointProbabilityDistribution as a DiscreteFactor object
 
         Examples
         --------
@@ -380,9 +380,9 @@ class JointProbabilityDistribution(Factor):
         >>> prob = JointProbabilityDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
         >>> phi = prob.to_factor()
         >>> type(phi)
-        pgmpy.factors.Factor.Factor
+        pgmpy.factors.DiscreteFactor.DiscreteFactor
         """
-        return Factor(self.variables, self.cardinality, self.values)
+        return DiscreteFactor(self.variables, self.cardinality, self.values)
 
     def pmap(self):
         pass

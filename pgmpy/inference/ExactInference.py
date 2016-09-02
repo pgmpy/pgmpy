@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-import itertools
 import copy
+import itertools
 
-import numpy as np
 import networkx as nx
+import numpy as np
+from pgmpy.extern.six.moves import filter, range
 
 from pgmpy.extern.six import string_types
-from pgmpy.extern.six.moves import filter, range
+from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference
-from pgmpy.factors.Factor import factor_product
 from pgmpy.models import JunctionTree
 from pgmpy.utils import StateNameDecorator
 

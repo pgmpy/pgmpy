@@ -1,13 +1,13 @@
 from .BayesianModel import BayesianModel
-from .NoisyOrModel import NoisyOrModel
-from .MarkovModel import MarkovModel
-from .FactorGraph import FactorGraph
 from .ClusterGraph import ClusterGraph
-from .JunctionTree import JunctionTree
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
+from .FactorGraph import FactorGraph
+from .JunctionTree import JunctionTree
 from .MarkovChain import MarkovChain
+from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
-from .continuous.LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
+from .NoisyOrModel import NoisyOrModel
+from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
