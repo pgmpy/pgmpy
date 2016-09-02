@@ -2,7 +2,7 @@ import unittest
 
 from mock import MagicMock, patch
 
-from pgmpy.factors.discrete import Factor, TabularCPD, State
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 
@@ -112,9 +112,9 @@ class TestGibbsSampling(unittest.TestCase):
 
         # A test Markov model
         self.markov_model = MarkovModel([('A', 'B'), ('C', 'B'), ('B', 'D')])
-        factor_ab = Factor(['A', 'B'], [2, 3], [1, 2, 3, 4, 5, 6])
-        factor_cb = Factor(['C', 'B'], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
-        factor_bd = Factor(['B', 'D'], [3, 2], [5, 7, 2, 1, 9, 3])
+        factor_ab = DiscreteFactor(['A', 'B'], [2, 3], [1, 2, 3, 4, 5, 6])
+        factor_cb = DiscreteFactor(['C', 'B'], [4, 3], [3, 1, 4, 5, 7, 8, 1, 3, 10, 4, 5, 6])
+        factor_bd = DiscreteFactor(['B', 'D'], [3, 2], [5, 7, 2, 1, 9, 3])
         self.markov_model.add_factors(factor_ab, factor_cb, factor_bd)
 
         self.gibbs = GibbsSampling(self.bayesian_model)

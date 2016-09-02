@@ -142,10 +142,10 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = ClusterGraph()
         >>> student.add_node(('Alice', 'Bob'))
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[3, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
         ...                 values=np.random.rand(6))
         >>> student.add_factors(factor)
         """
@@ -168,14 +168,14 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
         ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = Factor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
-        >>> phi2 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi3 = Factor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
         >>> G.get_factors()
         >>> G.get_factors(node=('a', 'b', 'c'))
@@ -198,9 +198,9 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = ClusterGraph()
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 value=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
@@ -222,9 +222,9 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> student = ClusterGraph()
-        >>> factor = Factor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_node(('Alice', 'Bob'))
         >>> student.add_factors(factor)
@@ -253,14 +253,14 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import Factor
+        >>> from pgmpy.factors import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
         ...                   (('a', 'b', 'c'), ('a', 'c'))])
-        >>> phi1 = Factor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
-        >>> phi2 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi3 = Factor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2, phi3)
         >>> G.get_partition_function()
         """
@@ -311,12 +311,12 @@ class ClusterGraph(UndirectedGraph):
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> G.add_edge(('a', 'b'), ('b', 'c'))
-        >>> phi1 = Factor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> phi2 = Factor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
         >>> graph_copy = G.copy()
         >>> graph_copy.factors
-        [<Factor representing phi(a:2, b:2) at 0xb71b19cc>, <Factor representing phi(b:2, c:2) at 0xb4eaf3ac>]
+        [<DiscreteFactor representing phi(a:2, b:2) at 0xb71b19cc>, <DiscreteFactor representing phi(b:2, c:2) at 0xb4eaf3ac>]
         >>> graph_copy.edges()
         [(('a', 'b'), ('b', 'c'))]
         >>> graph_copy.nodes()

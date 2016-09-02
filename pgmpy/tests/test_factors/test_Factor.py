@@ -6,7 +6,7 @@ import numpy as np
 import numpy.testing as np_test
 from pgmpy.extern.six.moves import range
 
-from pgmpy.factors.discrete import Factor
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete import factor_divide
 from pgmpy.factors.discrete import factor_product
@@ -19,57 +19,57 @@ from pgmpy.models import MarkovModel
 class TestFactorInit(unittest.TestCase):
 
     def test_class_init(self):
-        phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+        phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
         self.assertEqual(phi.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
 
     def test_class_init1(self):
-        phi = Factor([1, 2, 3], [2, 3, 2], np.arange(12))
+        phi = DiscreteFactor([1, 2, 3], [2, 3, 2], np.arange(12))
         self.assertEqual(phi.variables, [1, 2, 3])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
 
     def test_class_init_sizeerror(self):
-        self.assertRaises(ValueError, Factor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
+        self.assertRaises(ValueError, DiscreteFactor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
 
     def test_class_init_typeerror(self):
-        self.assertRaises(TypeError, Factor, 'x1', [3], [1, 2, 3])
-        self.assertRaises(ValueError, Factor, ['x1', 'x1', 'x3'], [2, 3, 2], range(12))
+        self.assertRaises(TypeError, DiscreteFactor, 'x1', [3], [1, 2, 3])
+        self.assertRaises(ValueError, DiscreteFactor, ['x1', 'x1', 'x3'], [2, 3, 2], range(12))
 
     def test_init_size_var_card_not_equal(self):
-        self.assertRaises(ValueError, Factor, ['x1', 'x2'], [2], np.ones(2))
+        self.assertRaises(ValueError, DiscreteFactor, ['x1', 'x2'], [2], np.ones(2))
 
 
 class TestFactorMethods(unittest.TestCase):
 
     def setUp(self):
-        self.phi = Factor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
-        self.phi1 = Factor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        self.phi2 = Factor([('x1', 0), ('x2', 0), ('x3', 0)], [2, 3, 2], range(12))
+        self.phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.random.uniform(5, 10, size=8))
+        self.phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        self.phi2 = DiscreteFactor([('x1', 0), ('x2', 0), ('x3', 0)], [2, 3, 2], range(12))
         # This larger factor (phi3) caused a bug in reduce
         card3 = [3, 3, 3, 2, 2, 2, 2, 2, 2]
-        self.phi3 = Factor(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
-                           card3, np.arange(np.prod(card3), dtype=np.float))
+        self.phi3 = DiscreteFactor(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
+                                   card3, np.arange(np.prod(card3), dtype=np.float))
 
         self.tup1 = ('x1', 'x2')
         self.tup2 = ('x2', 'x3')
         self.tup3 = ('x3', (1, 'x4'))
-        self.phi4 = Factor([self.tup1, self.tup2, self.tup3], [2, 3, 4], np.random.uniform(3, 10, size=24))
-        self.phi5 = Factor([self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24))
+        self.phi4 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 3, 4], np.random.uniform(3, 10, size=24))
+        self.phi5 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24))
 
         self.card6 = [4, 2, 1, 3, 5, 6]
-        self.phi6 = Factor([self.tup1, self.tup2, self.tup3, self.tup1 + self.tup2,
-                            self.tup2 + self.tup3, self.tup3 + self.tup1], self.card6,
-                           np.arange(np.prod(self.card6), dtype=np.float))
+        self.phi6 = DiscreteFactor([self.tup1, self.tup2, self.tup3, self.tup1 + self.tup2,
+                                    self.tup2 + self.tup3, self.tup3 + self.tup1], self.card6,
+                                   np.arange(np.prod(self.card6), dtype=np.float))
 
         self.var1 = 'x1'
         self.var2 = ('x2', 1)
         self.var3 = frozenset(['x1', 'x2'])
-        self.phi7 = Factor([self.var1, self.var2], [3, 2], [3, 2, 4, 5, 9, 8])
-        self.phi8 = Factor([self.var2, self.var3], [2, 2], [2, 1, 5, 6])
-        self.phi9 = Factor([self.var1, self.var3], [3, 2], [3, 2, 4, 5, 9, 8])
-        self.phi10 = Factor([self.var3], [2], [3, 6])
+        self.phi7 = DiscreteFactor([self.var1, self.var2], [3, 2], [3, 2, 4, 5, 9, 8])
+        self.phi8 = DiscreteFactor([self.var2, self.var3], [2, 2], [2, 1, 5, 6])
+        self.phi9 = DiscreteFactor([self.var1, self.var3], [3, 2], [3, 2, 4, 5, 9, 8])
+        self.phi10 = DiscreteFactor([self.var3], [2], [3, 6])
 
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
@@ -250,49 +250,49 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(identity_factor1.values, np.ones(24).reshape(2, 3, 4))
 
     def test_factor_product(self):
-        phi = Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        expected_factor = Factor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
-                                 [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
+                                         [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
-        phi = Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
+        phi = DiscreteFactor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = DiscreteFactor(['x2', 'x3'], [2, 2], range(4))
         prod = factor_product(phi, phi1)
-        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2],
-                                 [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2],
+                                         [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(prod.variables, expected_factor.variables)
 
         prod = factor_product(self.phi7, self.phi8)
-        expected_factor = Factor([self.var1, self.var2, self.var3], [3, 2, 2],
-                                 [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48])
+        expected_factor = DiscreteFactor([self.var1, self.var2, self.var3], [3, 2, 2],
+                                         [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(prod.variables, expected_factor.variables)
 
     def test_product(self):
-        phi = Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        expected_factor = Factor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
-                                 [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3', 'x4'], [2, 2, 2, 2],
+                                         [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3', 'x4'])
 
-        phi = Factor(['x1', 'x2'], [3, 2], range(6))
-        phi1 = Factor(['x2', 'x3'], [2, 2], range(4))
+        phi = DiscreteFactor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = DiscreteFactor(['x2', 'x3'], [2, 2], range(4))
         prod = phi.product(phi1, inplace=False)
-        expected_factor = Factor(['x1', 'x2', 'x3'], [3, 2, 2],
-                                 [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2],
+                                         [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15])
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ['x1', 'x2', 'x3'])
 
         phi7_copy = self.phi7
         phi7_copy.product(self.phi8, inplace=True)
-        expected_factor = Factor([self.var1, self.var2, self.var3], [3, 2, 2],
-                                 [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48])
+        expected_factor = DiscreteFactor([self.var1, self.var2, self.var3], [3, 2, 2],
+                                         [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48])
         self.assertEqual(expected_factor, phi7_copy)
         self.assertEqual(phi7_copy.variables, [self.var1, self.var2, self.var3])
 
@@ -300,8 +300,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, factor_product, 1, 2)
 
     def test_factor_mul(self):
-        phi = Factor(['x1', 'x2'], [2, 2], range(4))
-        phi1 = Factor(['x3', 'x4'], [2, 2], range(4))
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
         prod = phi * phi1
 
         sorted_vars = ['x1', 'x2', 'x3', 'x4']
@@ -317,10 +317,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod.variables, ['x1', 'x2', 'x3', 'x4'])
 
     def test_factor_divide(self):
-        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
-        phi2 = Factor(['x1'], [2], [1, 2])
+        phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = DiscreteFactor(['x1'], [2], [1, 2])
         expected_factor = phi1.divide(phi2, inplace=False)
-        phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        phi3 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, expected_factor)
 
         self.phi9.divide(self.phi10, inplace=True)
@@ -329,10 +329,10 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi9.variables, [self.var1, self.var3])
 
     def test_factor_divide_truediv(self):
-        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
-        phi2 = Factor(['x1'], [2], [1, 2])
+        phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 2, 4])
+        phi2 = DiscreteFactor(['x1'], [2], [1, 2])
         div = phi1 / phi2
-        phi3 = Factor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
+        phi3 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 1, 2])
         self.assertEqual(phi3, div)
 
         self.phi9 = self.phi9 / self.phi10
@@ -341,17 +341,17 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(self.phi9.variables, [self.var1, self.var3])
 
     def test_factor_divide_invalid(self):
-        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
-        phi2 = Factor(['x1'], [2], [0, 2])
+        phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = DiscreteFactor(['x1'], [2], [0, 2])
         div = phi1.divide(phi2, inplace=False)
         np_test.assert_array_equal(div.values.ravel(), np.array([np.inf, np.inf, 1.5, 2]))
 
     def test_factor_divide_no_common_scope(self):
-        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
-        phi2 = Factor(['x3'], [2], [0, 2])
+        phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = DiscreteFactor(['x3'], [2], [0, 2])
         self.assertRaises(ValueError, factor_divide, phi1, phi2)
 
-        phi2 = Factor([self.var3], [2], [2, 1])
+        phi2 = DiscreteFactor([self.var3], [2], [2, 1])
         self.assertRaises(ValueError, factor_divide, self.phi7, phi2)
 
     def test_factor_divide_non_factor_arg(self):
@@ -367,64 +367,64 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(self.phi6 == self.phi6)
 
     def test_eq1(self):
-        phi1 = Factor(['x1', 'x2', 'x3'], [2, 4, 3], range(24))
-        phi2 = Factor(['x2', 'x1', 'x3'], [4, 2, 3],
-                      [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17, 6, 7,
+        phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 4, 3], range(24))
+        phi2 = DiscreteFactor(['x2', 'x1', 'x3'], [4, 2, 3],
+                              [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17, 6, 7,
                        8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi1 == phi2)
         self.assertEqual(phi2.variables, ['x2', 'x1', 'x3'])
 
-        phi3 = Factor([self.tup1, self.tup2, self.tup3], [2, 4, 3], range(24))
-        phi4 = Factor([self.tup2, self.tup1, self.tup3], [4, 2, 3],
-                      [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
+        phi3 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 4, 3], range(24))
+        phi4 = DiscreteFactor([self.tup2, self.tup1, self.tup3], [4, 2, 3],
+                              [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
                        6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi3 == phi4)
 
     def test_hash(self):
-        phi1 = Factor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
-        phi2 = Factor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
+        phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        phi2 = DiscreteFactor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
         self.assertEqual(hash(phi1), hash(phi2))
 
-        phi1 = Factor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
-        phi2 = Factor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
+        phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], range(8))
+        phi2 = DiscreteFactor(['x3', 'x1', 'x2'], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi1), hash(phi2))
 
         var1 = TestHash(1, 2)
-        phi3 = Factor([var1, self.var2, self.var3], [2, 4, 3], range(24))
-        phi4 = Factor([self.var2, var1, self.var3], [4, 2, 3],
-                      [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
+        phi3 = DiscreteFactor([var1, self.var2, self.var3], [2, 4, 3], range(24))
+        phi4 = DiscreteFactor([self.var2, var1, self.var3], [4, 2, 3],
+                              [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
                        6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertEqual(hash(phi3), hash(phi4))
 
         var1 = TestHash(2, 3)
         var2 = TestHash('x2', 1)
-        phi3 = Factor([var1, var2, self.var3], [2, 2, 2], range(8))
-        phi4 = Factor([self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
+        phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], range(8))
+        phi4 = DiscreteFactor([self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi3), hash(phi4))
 
     def test_maximize_single(self):
         self.phi1.maximize(['x1'])
-        self.assertEqual(self.phi1, Factor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
+        self.assertEqual(self.phi1, DiscreteFactor(['x2', 'x3'], [3, 2], [6, 7, 8, 9, 10, 11]))
         self.phi1.maximize(['x2'])
-        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
-        self.phi2 = Factor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
-                                                           0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
+        self.assertEqual(self.phi1, DiscreteFactor(['x3'], [2], [10, 11]))
+        self.phi2 = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
+                                                                   0.00, 0.00, 0.15, 0.21, 0.08, 0.18])
         self.phi2.maximize(['x2'])
-        self.assertEqual(self.phi2, Factor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
-                                                                  0.07, 0.15, 0.21]))
+        self.assertEqual(self.phi2, DiscreteFactor(['x1', 'x3'], [3, 2], [0.25, 0.35, 0.05,
+                                                                          0.07, 0.15, 0.21]))
 
         self.phi5.maximize([('x1', 'x2')])
-        self.assertEqual(self.phi5, Factor([('x2', 'x3'), ('x3', (1, 'x4'))], [3, 4],
-                                           [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]))
+        self.assertEqual(self.phi5, DiscreteFactor([('x2', 'x3'), ('x3', (1, 'x4'))], [3, 4],
+                                                   [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]))
         self.phi5.maximize([('x2', 'x3')])
-        self.assertEqual(self.phi5, Factor([('x3', (1, 'x4'))], [4], [20, 21, 22, 23]))
+        self.assertEqual(self.phi5, DiscreteFactor([('x3', (1, 'x4'))], [4], [20, 21, 22, 23]))
 
     def test_maximize_list(self):
         self.phi1.maximize(['x1', 'x2'])
-        self.assertEqual(self.phi1, Factor(['x3'], [2], [10, 11]))
+        self.assertEqual(self.phi1, DiscreteFactor(['x3'], [2], [10, 11]))
 
         self.phi5.maximize([('x1', 'x2'), ('x2', 'x3')])
-        self.assertEqual(self.phi5, Factor([('x3', (1, 'x4'))], [4], [20, 21, 22, 23]))
+        self.assertEqual(self.phi5, DiscreteFactor([('x3', (1, 'x4'))], [4], [20, 21, 22, 23]))
 
     def test_maximize_shape(self):
         values = ['A', 'D', 'F', 'H']
@@ -432,7 +432,7 @@ class TestFactorMethods(unittest.TestCase):
         # Previously a sorting error caused these to be different
         np_test.assert_array_equal(phi3_max.values.shape, phi3_max.cardinality)
 
-        phi = Factor([self.var1, self.var2, self.var3], [3, 2, 2], [3, 2, 4, 5, 9, 8, 3, 2, 4, 5, 9, 8])
+        phi = DiscreteFactor([self.var1, self.var2, self.var3], [3, 2, 2], [3, 2, 4, 5, 9, 8, 3, 2, 4, 5, 9, 8])
         phi_max = phi.marginalize([self.var1, self.var2], inplace=False)
         np_test.assert_array_equal(phi_max.values.shape, phi_max.cardinality)
 
@@ -457,7 +457,7 @@ class TestFactorMethods(unittest.TestCase):
 
 
 class TestHash:
-    # Used to check the hash function of Factor class.
+    # Used to check the hash function of DiscreteFactor class.
 
     def __init__(self, x, y):
         self.x = x
@@ -802,34 +802,34 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 #
 # class TestTreeCPDInit(unittest.TestCase):
 #     def test_init_single_variable_nodes(self):
-#         tree = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), 0),
+#         tree = TreeCPD([('B', DiscreteFactor(['A'], [2], [0.8, 0.2]), 0),
 #                         ('B', 'C', 1),
-#                         ('C', Factor(['A'], [2], [0.1, 0.9]), 0),
+#                         ('C', DiscreteFactor(['A'], [2], [0.1, 0.9]), 0),
 #                         ('C', 'D', 1),
-#                         ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-#                         ('D', Factor(['A'], [2], [0.4, 0.6]), 1)])
+#                         ('D', DiscreteFactor(['A'], [2], [0.9, 0.1]), 0),
+#                         ('D', DiscreteFactor(['A'], [2], [0.4, 0.6]), 1)])
 #
 #         self.assertTrue('B' in tree.nodes())
 #         self.assertTrue('C' in tree.nodes())
 #         self.assertTrue('D' in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.1, 0.9]) in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.4, 0.6]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.1, 0.9]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.4, 0.6]) in tree.nodes())
 #
-#         self.assertTrue(('B', Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
-#         self.assertTrue(('B', Factor(['A'], [2], [0.1, 0.9]) in tree.edges()))
-#         self.assertTrue(('B', Factor(['A'], [2], [0.9, 0.1]) in tree.edges()))
-#         self.assertTrue(('B', Factor(['A'], [2], [0.4, 0.6]) in tree.edges()))
+#         self.assertTrue(('B', DiscreteFactor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+#         self.assertTrue(('B', DiscreteFactor(['A'], [2], [0.1, 0.9]) in tree.edges()))
+#         self.assertTrue(('B', DiscreteFactor(['A'], [2], [0.9, 0.1]) in tree.edges()))
+#         self.assertTrue(('B', DiscreteFactor(['A'], [2], [0.4, 0.6]) in tree.edges()))
 #         self.assertTrue(('C', 'D') in tree.edges())
 #         self.assertTrue(('B', 'C') in tree.edges())
 #
-#         self.assertEqual(tree['B'][Factor(['A'], [2], [0.8, 0.2])]['label'], 0)
+#         self.assertEqual(tree['B'][DiscreteFactor(['A'], [2], [0.8, 0.2])]['label'], 0)
 #         self.assertEqual(tree['B']['C']['label'], 1)
-#         self.assertEqual(tree['C'][Factor(['A'], [2], [0.1, 0.9])]['label'], 0)
+#         self.assertEqual(tree['C'][DiscreteFactor(['A'], [2], [0.1, 0.9])]['label'], 0)
 #         self.assertEqual(tree['C']['D']['label'], 1)
-#         self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], 0)
-#         self.assertEqual(tree['D'][Factor(['A'], [2], [0.4, 0.6])]['label'], 1)
+#         self.assertEqual(tree['D'][DiscreteFactor(['A'], [2], [0.9, 0.1])]['label'], 0)
+#         self.assertEqual(tree['D'][DiscreteFactor(['A'], [2], [0.4, 0.6])]['label'], 1)
 #
 #         self.assertRaises(ValueError, tree.add_edges_from, [('F', 'G')])
 #
@@ -840,47 +840,47 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 #         self.assertRaises(ValueError, TreeCPD, [('A', 'B', 0), ('B', 'C', 1), ('C', 'A', 0)])
 #
 #     def test_init_multi_variable_nodes(self):
-#         tree = TreeCPD([(('B', 'C'), Factor(['A'], [2], [0.8, 0.2]), (0, 0)),
+#         tree = TreeCPD([(('B', 'C'), DiscreteFactor(['A'], [2], [0.8, 0.2]), (0, 0)),
 #                         (('B', 'C'), 'D', (0, 1)),
-#                         (('B', 'C'), Factor(['A'], [2], [0.1, 0.9]), (1, 0)),
+#                         (('B', 'C'), DiscreteFactor(['A'], [2], [0.1, 0.9]), (1, 0)),
 #                         (('B', 'C'), 'E', (1, 1)),
-#                         ('D', Factor(['A'], [2], [0.9, 0.1]), 0),
-#                         ('D', Factor(['A'], [2], [0.4, 0.6]), 1),
-#                         ('E', Factor(['A'], [2], [0.3, 0.7]), 0),
-#                         ('E', Factor(['A'], [2], [0.8, 0.2]), 1)
+#                         ('D', DiscreteFactor(['A'], [2], [0.9, 0.1]), 0),
+#                         ('D', DiscreteFactor(['A'], [2], [0.4, 0.6]), 1),
+#                         ('E', DiscreteFactor(['A'], [2], [0.3, 0.7]), 0),
+#                         ('E', DiscreteFactor(['A'], [2], [0.8, 0.2]), 1)
 #                         ])
 #
 #         self.assertTrue(('B', 'C') in tree.nodes())
 #         self.assertTrue('D' in tree.nodes())
 #         self.assertTrue('E' in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.8, 0.2]) in tree.nodes())
-#         self.assertTrue(Factor(['A'], [2], [0.9, 0.1]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.8, 0.2]) in tree.nodes())
+#         self.assertTrue(DiscreteFactor(['A'], [2], [0.9, 0.1]) in tree.nodes())
 #
-#         self.assertTrue((('B', 'C'), Factor(['A'], [2], [0.8, 0.2]) in tree.edges()))
+#         self.assertTrue((('B', 'C'), DiscreteFactor(['A'], [2], [0.8, 0.2]) in tree.edges()))
 #         self.assertTrue((('B', 'C'), 'E') in tree.edges())
-#         self.assertTrue(('D', Factor(['A'], [2], [0.4, 0.6])) in tree.edges())
-#         self.assertTrue(('E', Factor(['A'], [2], [0.8, 0.2])) in tree.edges())
+#         self.assertTrue(('D', DiscreteFactor(['A'], [2], [0.4, 0.6])) in tree.edges())
+#         self.assertTrue(('E', DiscreteFactor(['A'], [2], [0.8, 0.2])) in tree.edges())
 #
-#         self.assertEqual(tree[('B', 'C')][Factor(['A'], [2], [0.8, 0.2])]['label'], (0, 0))
+#         self.assertEqual(tree[('B', 'C')][DiscreteFactor(['A'], [2], [0.8, 0.2])]['label'], (0, 0))
 #         self.assertEqual(tree[('B', 'C')]['D']['label'], (0, 1))
-#         self.assertEqual(tree['D'][Factor(['A'], [2], [0.9, 0.1])]['label'], 0)
-#         self.assertEqual(tree['E'][Factor(['A'], [2], [0.3, 0.7])]['label'], 0)
+#         self.assertEqual(tree['D'][DiscreteFactor(['A'], [2], [0.9, 0.1])]['label'], 0)
+#         self.assertEqual(tree['E'][DiscreteFactor(['A'], [2], [0.3, 0.7])]['label'], 0)
 #
 #
 # class TestTreeCPD(unittest.TestCase):
 #     def setUp(self):
-#         self.tree1 = TreeCPD([('B', Factor(['A'], [2], [0.8, 0.2]), '0'),
+#         self.tree1 = TreeCPD([('B', DiscreteFactor(['A'], [2], [0.8, 0.2]), '0'),
 #                               ('B', 'C', '1'),
-#                               ('C', Factor(['A'], [2], [0.1, 0.9]), '0'),
+#                               ('C', DiscreteFactor(['A'], [2], [0.1, 0.9]), '0'),
 #                               ('C', 'D', '1'),
-#                               ('D', Factor(['A'], [2], [0.9, 0.1]), '0'),
-#                               ('D', Factor(['A'], [2], [0.4, 0.6]), '1')])
+#                               ('D', DiscreteFactor(['A'], [2], [0.9, 0.1]), '0'),
+#                               ('D', DiscreteFactor(['A'], [2], [0.4, 0.6]), '1')])
 #
 #         self.tree2 = TreeCPD([('C','A','0'),('C','B','1'),
-#                               ('A', Factor(['J'], [2], [0.9, 0.1]), '0'),
-#                               ('A', Factor(['J'], [2], [0.3, 0.7]), '1'),
-#                               ('B', Factor(['J'], [2], [0.8, 0.2]), '0'),
-#                               ('B', Factor(['J'], [2], [0.4, 0.6]), '1')])
+#                               ('A', DiscreteFactor(['J'], [2], [0.9, 0.1]), '0'),
+#                               ('A', DiscreteFactor(['J'], [2], [0.3, 0.7]), '1'),
+#                               ('B', DiscreteFactor(['J'], [2], [0.8, 0.2]), '0'),
+#                               ('B', DiscreteFactor(['J'], [2], [0.4, 0.6]), '1')])
 #
 #     def test_add_edge(self):
 #         self.tree1.add_edge('yolo', 'yo', 0)

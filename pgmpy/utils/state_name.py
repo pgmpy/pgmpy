@@ -19,11 +19,11 @@ class StateNameInit():
     Example
     -------
     >>> import numpy as np
-    >>> from pgmpy.factors import Factor
+    >>> from pgmpy.factors import DiscreteFactor
     >>> sn = {'speed': ['low', 'medium', 'high'],
     ...       'switch': ['on', 'off'],
     ...       'time': ['day', 'night']}
-    >>> phi = Factor(['speed', 'switch', 'time'],
+    >>> phi = DiscreteFactor(['speed', 'switch', 'time'],
     ...              [3, 2, 2], np.ones(12), state_names=sn)
     >>> print(phi.state_names)
     {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}

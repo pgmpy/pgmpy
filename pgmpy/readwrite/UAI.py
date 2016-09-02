@@ -5,7 +5,7 @@ import numpy as np
 from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
 from pgmpy.models import BayesianModel, MarkovModel
-from pgmpy.factors.discrete import TabularCPD, Factor
+from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.extern.six.moves import map, range
 
 
@@ -240,7 +240,7 @@ class UAIReader(object):
                 variables = table[0]
                 cardinality = [int(self.domain[var]) for var in variables]
                 value = list(map(float, table[1]))
-                factor = Factor(variables=variables, cardinality=cardinality, values=value)
+                factor = DiscreteFactor(variables=variables, cardinality=cardinality, values=value)
                 factors.append(factor)
 
             model.add_factors(*factors)

@@ -128,7 +128,7 @@ class ContinuousFactor(object):
 
         Returns
         -------
-        An n-D array or a Factor object according to the discretiztion
+        An n-D array or a DiscreteFactor object according to the discretiztion
         method used.
 
         Examples
@@ -234,7 +234,7 @@ class ContinuousFactor(object):
 
         Returns
         -------
-        Factor or None: if inplace=True (default) returns None
+        DiscreteFactor or None: if inplace=True (default) returns None
                         if inplace=False returns a new ContinuousFactor instance.
 
         Examples
@@ -347,7 +347,7 @@ class ContinuousFactor(object):
         -------
         ContinuousFactor or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         """
         if not isinstance(other, ContinuousFactor):
@@ -389,7 +389,7 @@ class ContinuousFactor(object):
         -------
         ContinuousFactor or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Example
         -------
@@ -423,7 +423,7 @@ class ContinuousFactor(object):
         -------
         ContinuousFactor or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `Factor` instance.
+                        if inplace=False returns a new `DiscreteFactor` instance.
 
         Example
         -------
