@@ -53,7 +53,7 @@ class BayesianModelSampling(Inference):
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -114,7 +114,7 @@ class BayesianModelSampling(Inference):
         >>> from pgmpy.models.BayesianModel import BayesianModel
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> from pgmpy.factors.Factor import State
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -167,7 +167,7 @@ class BayesianModelSampling(Inference):
         >>> from pgmpy.factors.Factor import State
         >>> from pgmpy.models.BayesianModel import BayesianModel
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> from pgmpy.inference.Sampling import BayesianModelSampling
+        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])

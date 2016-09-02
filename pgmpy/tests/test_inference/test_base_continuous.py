@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from pgmpy.factors.continuous import JointGaussianDistribution as JGD
-from pgmpy.inference.continuous import LeapFrog, ModifiedEuler, GradLogPDFGaussian
+from pgmpy.sampling import LeapFrog, ModifiedEuler, GradLogPDFGaussian
 
 
 class TestGradLogPDFGaussian(unittest.TestCase):
