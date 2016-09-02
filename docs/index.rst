@@ -6,7 +6,15 @@
 Welcome to pgmpy's documentation!
 =================================
 
-Contents:
+Getting Started:
+
+.. toctree::
+   :maxdepth: 3
+
+   Installation
+   contributing
+
+Documentation:
 
 .. toctree::
    :maxdepth: 3
@@ -16,11 +24,8 @@ Contents:
    sampling
    inference
    readwrite
-   contributing
    estimators
-
-.. toctree::
-   installation
+   contributing
 
 Indices and tables
 ==================
