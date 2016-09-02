@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
-BUILDDIR      = _build
+BUILDDIR      = ../../pgmpy_docs/
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -51,7 +51,7 @@ help:
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)/*
+	rm -rf $(BUILDDIR)/html $(BUILDDIR)/doctrees
 
 .PHONY: html
 html:
