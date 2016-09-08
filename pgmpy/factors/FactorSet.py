@@ -6,7 +6,7 @@ from pgmpy.extern import six
 
 
 class FactorSet(object):
-    r"""
+    """
     Base class of *DiscreteFactor Sets*.
 
     A factor set provides a compact representation of  higher dimensional factor
