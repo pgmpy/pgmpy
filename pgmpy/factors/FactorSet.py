@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pgmpy.extern.six.moves import filter, reduce
-from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.base import BaseFactor
 from pgmpy.extern import six
 
 
@@ -37,8 +37,8 @@ class FactorSet(object):
         set([<DiscreteFactor representing phi(x1:2, x2:3, x3:2) at 0x7f8e32b4c2d0>,
              <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b4c710>])
         """
-        if not all(isinstance(phi, DiscreteFactor) for phi in factors_list):
-            raise TypeError("Input parameters must be all factors")
+        if not all(isinstance(phi, BaseFactor) for phi in factors_list):
+            raise TypeError("Input parameters must be child classes of BaseFactor")
         self.factors = set([factor.copy() for factor in factors_list])
 
     def add_factors(self, *factors):

@@ -1,11 +1,11 @@
 from __future__ import division
 
 from itertools import product
-
 from collections import namedtuple
 
 import numpy as np
 
+from pgmpy.factors.base import BaseFactor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
@@ -15,7 +15,7 @@ from pgmpy.utils import StateNameInit, StateNameDecorator
 State = namedtuple('State', ['var', 'state'])
 
 
-class DiscreteFactor(object):
+class DiscreteFactor(BaseFactor):
     """
     Base class for DiscreteFactor.
 
