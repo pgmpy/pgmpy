@@ -1,10 +1,12 @@
 from __future__ import division
 
+from pgmpy.factors.base import BaseFactor
+
 import numpy as np
 import scipy.integrate as integrate
 
 
-class ContinuousFactor(object):
+class ContinuousFactor(BaseFactor):
     """
     Base class for factors representing various multivariate
     representations.
