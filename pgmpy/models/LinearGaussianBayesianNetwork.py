@@ -33,7 +33,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> from pgmpy.factors import LinearGaussianCPD
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
         >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
         >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
@@ -81,7 +81,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
         >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
         >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
@@ -104,7 +104,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
         >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
         >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
@@ -145,7 +145,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> form pgmpy.factors import LinearGaussianCPD
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
         >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
         >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])

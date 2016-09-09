@@ -52,8 +52,8 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> from pgmpy.sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -112,9 +112,9 @@ class BayesianModelSampling(Inference):
         Examples
         --------
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> from pgmpy.factors.DiscreteFactor import State
-        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> from pgmpy.factors.discrete import State
+        >>> from pgmpy.sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -164,10 +164,10 @@ class BayesianModelSampling(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors.DiscreteFactor import State
+        >>> from pgmpy.factors.discrete import State
         >>> from pgmpy.models.BayesianModel import BayesianModel
-        >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> from pgmpy.sampling.Sampling import BayesianModelSampling
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> from pgmpy.sampling import BayesianModelSampling
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -227,7 +227,7 @@ class GibbsSampling(MarkovChain):
     Examples:
     ---------
     Initialization from a BayesianModel object:
-    >>> from pgmpy.factors import TabularCPD
+    >>> from pgmpy.factors.discrete import TabularCPD
     >>> from pgmpy.models import BayesianModel
     >>> intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
     >>> sat_cpd = TabularCPD('sat', 2, [[0.95, 0.2], [0.05, 0.8]], evidence=['intel'], evidence_card=[2])
@@ -372,8 +372,8 @@ class GibbsSampling(MarkovChain):
 
         Examples:
         ---------
-        >>> from pgmpy.factors import DiscreteFactor
-        >>> from pgmpy.inference import GibbsSampling
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import MarkovModel
         >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
         >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])

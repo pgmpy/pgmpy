@@ -43,7 +43,7 @@ class MarkovChain(object):
     >>> model.add_transition_model('diff', diff_tm)
 
     Set a start state
-    >>> from pgmpy.factors import State
+    >>> from pgmpy.factors.discrete import State
     >>> model.set_start_state([State('intel', 0), State('diff', 2)])
 
     Sample from it
@@ -95,7 +95,7 @@ class MarkovChain(object):
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain as MC
-        >>> from pgmpy.factors import State
+        >>> from pgmpy.factors.discrete import State
         >>> model = MC(['a', 'b'], [2, 2])
         >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
@@ -231,7 +231,7 @@ class MarkovChain(object):
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain as MC
-        >>> from pgmpy.factors import State
+        >>> from pgmpy.factors.discrete import State
         >>> model = MC(['intel', 'diff'], [2, 3])
         >>> model.set_start_state([State('intel', 0), State('diff', 2)])
         >>> intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
@@ -320,7 +320,7 @@ class MarkovChain(object):
         Examples:
         ---------
         >>> from pgmpy.models.MarkovChain import MarkovChain
-        >>> from pgmpy.factors import State
+        >>> from pgmpy.factors.discrete import State
         >>> model = MarkovChain()
         >>> model.add_variables_from(['intel', 'diff'], [3, 2])
         >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
@@ -375,7 +375,7 @@ class MarkovChain(object):
         Examples:
         ---------
         >>> from pgmpy.models import MarkovChain
-        >>> from pgmpy.factors import State
+        >>> from pgmpy.factors.discrete import State
         >>> model = MarkovChain()
         >>> model.add_variables_from(['intel', 'diff'], [3, 2])
         >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}

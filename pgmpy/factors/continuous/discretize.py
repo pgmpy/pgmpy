@@ -28,7 +28,7 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
     Examples
     --------
     >>> from scipy.stats import norm
-    >>> from pgmpy.factors import ContinuousNode
+    >>> from pgmpy.factors.continuous import ContinuousNode
     >>> normal = ContinuousNode(norm(0, 1).pdf)
     >>> from pgmpy.discretize import BaseDiscretizer
     >>> class ChildDiscretizer(BaseDiscretizer):
@@ -114,8 +114,8 @@ class RoundingDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors import ContinuousNode
-    >>> from pgmpy.discretize import RoundingDiscretizer
+    >>> from pgmpy.factors.continuous import ContinuousNode
+    >>> from pgmpy.factors.continuous import RoundingDiscretizer
     >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
     >>> std_normal = ContinuousNode(std_normal_pdf)
     >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3,
@@ -173,7 +173,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     --------
     >>> import numpy as np
     >>> from pgmpy.factors import ContinuousNode
-    >>> from pgmpy.discretize import UnbiasedDiscretizer
+    >>> from pgmpy.factors.continuous import UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
     >>> exp_node = ContinuousNode(exp_pdf)

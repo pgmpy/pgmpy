@@ -213,7 +213,7 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd = TabularCPD('grade', 2,
         ...                  [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                  ['intel', 'diff'], [2, 2])
@@ -248,7 +248,7 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -278,7 +278,7 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -314,7 +314,7 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd_table = TabularCPD('grade', 2,
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
@@ -340,7 +340,7 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors.discrete.CPD import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
         ...                               [0.1, 0.1],
         ...                               [0.8, 0.8]],

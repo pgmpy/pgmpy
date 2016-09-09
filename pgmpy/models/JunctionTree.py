@@ -107,7 +107,7 @@ class JunctionTree(ClusterGraph):
         Examples
         -------
         >>> import numpy as np
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import JunctionTree
         >>> G = JunctionTree()
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')), (('a', 'b', 'c'), ('a', 'c'))])

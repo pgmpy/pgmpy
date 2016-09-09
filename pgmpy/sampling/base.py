@@ -72,8 +72,8 @@ class BaseGradLogPDF(object):
         Example
         --------
         >>> # Using implementation of GradLogPDFGaussian
-        >>> from pgmpy.inference.continuous import GradLogPDFGaussian
-        >>> from pgmpy.factors import JointGaussianDistribution
+        >>> from pgmpy.sampling.base import GradLogPDFGaussian
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, -5], [-5, 2]])
@@ -103,8 +103,8 @@ class GradLogPDFGaussian(BaseGradLogPDF):
 
     Example
     -------
-    >>> from pgmpy.inference.continuous import GradLogPDFGaussian
-    >>> from pgmpy.factors import JointGaussianDistribution
+    >>> from pgmpy.sampling import GradLogPDFGaussian
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution
     >>> import numpy as np
     >>> mean = np.array([3, 4])
     >>> covariance = np.array([[5, 4], [4, 5]])
@@ -162,9 +162,9 @@ class BaseSimulateHamiltonianDynamics(object):
 
     Examples
     --------
-    >>> from pgmpy.inference.continuous import BaseSimulateHamiltonianDynamics
-    >>> from pgmpy.factors import JointGaussianDistribution
-    >>> from pgmpy.inference.continuous import GradLogPDFGaussian
+    >>> from pgmpy.sampling import BaseSimulateHamiltonianDynamics
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution
+    >>> from pgmpy.sampling import GradLogPDFGaussian
     >>> import numpy as np
     >>> # Class should initalize self.new_position, self.new_momentum and self.new_grad_logp
     >>> # self.new_grad_logp represents gradient log at new proposed value of position
@@ -289,8 +289,8 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
 
     Example
     --------
-    >>> from pgmpy.factors import JointGaussianDistribution
-    >>> from pgmpy.inference.continuous import LeapFrog, GradLogPDFGaussian as GLPG
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution
+    >>> from pgmpy.sampling import LeapFrog, GradLogPDFGaussian as GLPG
     >>> import numpy as np
     >>> pos = np.array([2, 1])
     >>> momentum = np.array([7, 7])
@@ -360,8 +360,8 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
 
     Example
     --------
-    >>> from pgmpy.factors import JointGaussianDistribution
-    >>> from pgmpy.inference.continuous import GradLogPDFGaussian, ModifiedEuler
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution
+    >>> from pgmpy.sampling import GradLogPDFGaussian, ModifiedEuler
     >>> import numpy as np
     >>> pos = np.array([2, 1])
     >>> momentum = np.array([1, 1])

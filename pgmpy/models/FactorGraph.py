@@ -106,7 +106,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -130,7 +130,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -217,7 +217,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -244,7 +244,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -273,7 +273,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -311,7 +311,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -335,7 +335,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -372,7 +372,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))

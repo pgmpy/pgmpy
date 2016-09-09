@@ -128,7 +128,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
         ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
@@ -150,7 +150,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
@@ -166,7 +166,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
@@ -190,7 +190,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
@@ -243,7 +243,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor1 = DiscreteFactor(['Alice', 'Bob'], [3, 2], np.random.rand(6))
         >>> factor2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
@@ -307,7 +307,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = MarkovModel()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
@@ -450,7 +450,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
@@ -596,7 +596,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
@@ -655,7 +655,7 @@ class MarkovModel(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = MarkovModel()
         >>> G.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
         >>> G.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
@@ -685,7 +685,7 @@ class MarkovModel(UndirectedGraph):
 
         Examples
         -------
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import MarkovModel
         >>> G = MarkovModel()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])

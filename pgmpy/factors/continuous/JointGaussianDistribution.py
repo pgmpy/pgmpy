@@ -31,7 +31,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -77,7 +77,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
@@ -113,7 +113,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -187,7 +187,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -265,7 +265,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> gauss_dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...                 np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> copy_dis = gauss_dis.copy()
@@ -314,7 +314,7 @@ class JointGaussianDistribution(ContinuousFactor):
         -------
 
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> phi = dis.to_canonical_factor()
@@ -368,7 +368,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])

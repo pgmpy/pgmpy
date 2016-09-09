@@ -103,8 +103,7 @@ class LinearGaussianCPD(ContinuousFactor):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> from pgmpy.factors import LinearGaussianCPD
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> cpd = LinearGaussianCPD('Y', 0.2, 9.6, ['X1', 'X2', 'X3'], [-2, 3, 7])
         >>> copy_cpd = cpd.copy()
         >>> copy_cpd.variable

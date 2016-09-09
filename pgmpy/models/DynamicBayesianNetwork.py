@@ -335,7 +335,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
         >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
@@ -389,7 +389,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
@@ -422,7 +422,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
@@ -481,7 +481,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         Examples:
         -------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = DBN()
         >>> student.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
         >>> student.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
@@ -562,7 +562,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],

@@ -142,7 +142,7 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
         >>> student.add_node(('Alice', 'Bob'))
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[3, 2],
@@ -168,7 +168,7 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
@@ -198,7 +198,7 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 value=np.random.rand(4))
@@ -222,7 +222,7 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
@@ -253,7 +253,7 @@ class ClusterGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import ClusterGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
         >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
@@ -308,6 +308,7 @@ class ClusterGraph(UndirectedGraph):
 
         Examples
         -------
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> G.add_edge(('a', 'b'), ('b', 'c'))

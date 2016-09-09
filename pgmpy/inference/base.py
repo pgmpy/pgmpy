@@ -30,7 +30,7 @@ class Inference(object):
     --------
     >>> from pgmpy.inference import Inference
     >>> from pgmpy.models import BayesianModel
-    >>> from pgmpy.factors import TabularCPD
+    >>> from pgmpy.factors.discrete import TabularCPD
     >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
     >>> diff_cpd = TabularCPD('diff', 2, [[0.2, 0.8]])
     >>> intel_cpd = TabularCPD('intel', 2, [[0.3, 0.7]])
