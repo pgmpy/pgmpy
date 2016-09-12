@@ -52,7 +52,7 @@ class BaseEliminationOrder:
         --------
         >>> import numpy as np
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference.EliminationOrder import MinFill
         >>> model = BayesianModel([('c', 'd'), ('d', 'g'), ('i', 'g'),
         ...                        ('i', 's'), ('s', 'j'), ('g', 'l'),

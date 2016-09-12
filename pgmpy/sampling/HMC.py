@@ -42,8 +42,8 @@ class HamiltonianMC(object):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, LeapFrog, GradLogPDFGaussian
-    >>> from pgmpy.factors import JointGaussianDistribution as JGD
+    >>> from pgmpy.sampling import HamiltonianMC as HMC, LeapFrog, GradLogPDFGaussian
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([-3, 4])
     >>> covariance = np.array([[3, 0.7], [0.7, 5]])
@@ -213,8 +213,8 @@ class HamiltonianMC(object):
         Examples
         --------
         >>> # Example if pandas is installed in working environment
-        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.sampling import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, -1])
         >>> covariance = np.array([[1, 0.2], [0.2, 1]])
@@ -371,8 +371,8 @@ class HamiltonianMCDA(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, LeapFrog
-    >>> from pgmpy.factors import JointGaussianDistribution as JGD
+    >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog
+    >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
     >>> covariance = np.array([[2, 0.4, 0.5], [0.4, 3, 0.6], [0.5, 0.6, 4]])
@@ -459,8 +459,8 @@ class HamiltonianMCDA(HamiltonianMC):
 
         Examples
         ---------
-        >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
@@ -551,8 +551,8 @@ class HamiltonianMCDA(HamiltonianMC):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, GradLogPDFGaussian as GLPG, LeapFrog
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([1, 1])
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])

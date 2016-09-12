@@ -23,9 +23,9 @@ class Mplp(Inference):
     model: MarkovModel for which inference is to be performed.
     Examples
     --------
-    >>> from pgmpy.models import MarkovModel
-    >>> from pgmpy.factors import DiscreteFactor
     >>> import numpy as np
+    >>> from pgmpy.models import MarkovModel
+    >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> student = MarkovModel()
     >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])
     >>> factor_a = DiscreteFactor(['A'], cardinality=[2], value=np.array([0.54577, 1.8323]))
@@ -269,7 +269,7 @@ class Mplp(Inference):
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
@@ -412,7 +412,7 @@ class Mplp(Inference):
         Example:
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.inference import Mplp
         >>> mm = MarkovModel()
         >>> mm.add_nodes_from(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'])
@@ -470,10 +470,11 @@ class Mplp(Inference):
         Reference:
         Section 3.3: The Dual Algorithm; Tightening LP Relaxation for MAP using Message Passing (2008)
         By Sontag Et al.
+
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> import numpy as np
         >>> student = MarkovModel()
         >>> student.add_edges_from([('A', 'B'), ('B', 'C'), ('C', 'D'), ('E', 'F')])

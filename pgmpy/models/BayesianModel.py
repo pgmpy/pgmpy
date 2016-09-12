@@ -184,7 +184,7 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
         ...                               [0.9, 0.1, 0.8, 0.3]],
@@ -215,7 +215,7 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
         ...                               [0.9, 0.1, 0.8, 0.3]],
@@ -318,7 +318,6 @@ class BayesianModel(DirectedGraph):
 
         Examples
         --------
-
         >>> from pgmpy.models import BayesianModel
         >>> student = BayesianModel()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
@@ -523,7 +522,7 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
@@ -735,8 +734,8 @@ class BayesianModel(DirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
-        >>> from pgmpy.factors import JointProbabilityDistribution
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> from pgmpy.factors.discrete import JointProbabilityDistribution
         >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])

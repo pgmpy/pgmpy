@@ -132,8 +132,8 @@ class HillClimbSearch(StructureEstimator):
         ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         >>> best_model.edges()
         [('B', 'J'), ('A', 'J')]
-        >>> search a model with restriction on the number of parents:
-        ... est.estimate(max_indegree=1).edges()
+        >>> # search a model with restriction on the number of parents:
+        >>> est.estimate(max_indegree=1).edges()
         [('J', 'A'), ('B', 'J')]
         """
 

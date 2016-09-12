@@ -39,6 +39,7 @@ class XMLBIFReader(object):
         ----------
         path : file or str
             File of XMLBIF data
+            File of XMLBIF data
         string : str
             String of XMLBIF data
 

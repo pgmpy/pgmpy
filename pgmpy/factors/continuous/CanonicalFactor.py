@@ -49,7 +49,7 @@ class CanonicalFactor(ContinuousFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi = CanonicalFactor(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
                                   np.array([[1], [-1]]), -3)
         >>> phi.variables
@@ -101,7 +101,7 @@ class CanonicalFactor(ContinuousFactor):
 
         Examples
         --------
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi = CanonicalFactor(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
                                   np.array([[1], [-1]]), -3)
         >>> phi.variables
@@ -148,7 +148,7 @@ class CanonicalFactor(ContinuousFactor):
         --------
 
         >>> import numpy as np
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi = CanonicalFactor(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
                                   np.array([[5], [-1]]), 1)
         >>> jgd = phi.to_joint_gaussian()
@@ -201,8 +201,8 @@ class CanonicalFactor(ContinuousFactor):
 
         Examples
         --------
-        >>> imort numpy as np
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> import numpy as np
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
         ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
         ...                       np.array([[1], [4], [-1]]), -2)
@@ -307,7 +307,7 @@ class CanonicalFactor(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
         ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
         ...                       np.array([[1], [4], [-1]]), -2)
@@ -408,7 +408,7 @@ class CanonicalFactor(ContinuousFactor):
         Example
         -------
         >>> import numpy as np
-        >>> from pgmpy.factors import CanonicalFactor
+        >>> from pgmpy.factors.continuous import CanonicalFactor
         >>> phi1 = CanonicalFactor(['x1', 'x2', 'x3'],
                                    np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
                                    np.array([[1], [4], [-1]]), -2)

@@ -461,7 +461,7 @@ class BeliefPropagation(Inference):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
         >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
@@ -494,7 +494,7 @@ class BeliefPropagation(Inference):
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
         >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
@@ -630,7 +630,7 @@ class BeliefPropagation(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.inference import BeliefPropagation
         >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
@@ -670,7 +670,7 @@ class BeliefPropagation(Inference):
 
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.inference import BeliefPropagation
         >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),

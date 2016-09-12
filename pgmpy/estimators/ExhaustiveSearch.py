@@ -66,14 +66,13 @@ class ExhaustiveSearch(StructureEstimator):
         Examples
         --------
         >>> import pandas as pd
-        >>> import numpy as np
         >>> from pgmpy.estimators import ExhaustiveSearch
         >>> s = ExhaustiveSearch(pd.DataFrame(data={'Temperature': [23, 19],
                                                     'Weather': ['sunny', 'cloudy'],
                                                     'Humidity': [65, 75]}))
         >>> list(s.all_dags())
         [<networkx.classes.digraph.DiGraph object at 0x7f6955216438>,
-        <networkx.classes.digraph.DiGraph object at 0x7f6955216518>,
+         <networkx.classes.digraph.DiGraph object at 0x7f6955216518>,
         ....
         >>> [dag.edges() for dag in s.all_dags()]
         [[], [('Humidity', 'Temperature')], [('Humidity', 'Weather')],

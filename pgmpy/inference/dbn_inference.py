@@ -22,7 +22,7 @@ class DBNInference(Inference):
 
         Examples:
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = DBN()
@@ -225,7 +225,7 @@ class DBNInference(Inference):
 
         Examples:
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = DBN()
@@ -323,7 +323,7 @@ class DBNInference(Inference):
 
         Examples:
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = DBN()
@@ -409,7 +409,7 @@ class DBNInference(Inference):
 
         Examples:
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.inference import DBNInference
         >>> dbnet = DBN()
