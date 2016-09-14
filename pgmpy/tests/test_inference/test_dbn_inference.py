@@ -114,3 +114,88 @@ class TestDBNInference(unittest.TestCase):
                                           np.array([0.66594382, 0.33405618]))
         np_test.assert_array_almost_equal(query_result[('X', 1)].values,
                                           np.array([0.7621772, 0.2378228]))
+
+
+class TestDBNInferenceMarkovChain(unittest.TestCase):
+    """
+    Example taken from:
+    https://en.wikipedia.org/wiki/Examples_of_Markov_chains#A_simple_weather_model
+    """
+    def setUp(self):
+        self.dbn = DynamicBayesianNetwork()
+        self.dbn.add_edge(('Weather', 0), ('Weather', 1))
+        cpd_start = TabularCPD(variable=('Weather', 0),
+                               variable_card=2,
+                               values=[[1.0],   # sun
+                                       [0.0]])  # rain
+        cpd_transition = TabularCPD(('Weather', 1),
+                                    variable_card=2,
+                                    values=[[0.9, 0.5],   # sun|sun, sun|rain
+                                            [0.1, 0.5]],  # rain|sun, rain|rain
+                                    evidence=[('Weather', 0)],
+                                    evidence_card=[2])
+
+        self.dbn.add_cpds(cpd_start, cpd_transition)
+        self.dbn.initialize_initial_state()
+        self.weather_inf = DBNInference(self.dbn)
+
+        self.a = np.array([1.0, 0.0])
+        self.b = np.matrix([[0.9, 0.1], [0.5, 0.5]])
+
+    def test_markov_weather_n(self):
+        n = 1
+        np_test.assert_almost_equal(
+            self.a * self.b ** n,
+            np.matrix([0.9, 0.1]))
+
+    def test_inference_0(self):
+        var = ('Weather', 0)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.array([1.0, 0.0]))
+
+    def test_inference_0_t(self):
+        t = 0
+        var = ('Weather', t)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.reshape(np.array(self.a * self.b ** t), (2,)))
+
+    def test_inference_1(self):
+        var = ('Weather', 1)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.array([0.9, 0.1]))
+
+    def test_inference_1_t(self):
+        t = 1
+        var = ('Weather', t)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.reshape(np.array(self.a * self.b ** t), (2,)))
+
+    def test_inference_2(self):
+        var = ('Weather', 2)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.array([0.86, 0.14]))
+
+    def test_inference_2_t(self):
+        t = 2
+        var = ('Weather', t)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.reshape(np.array(self.a * self.b ** t), (2,)))
+
+    def test_inference_100_t(self):
+        t = 100
+        var = ('Weather', t)
+        np_test.assert_array_almost_equal(
+            self.weather_inf.forward_inference([var])[var].values,
+            np.reshape(np.array(self.a * self.b ** t), (2,)))
+
+    def tearDown(self):
+        del self.a
+        del self.b
+        del self.dbn
+        del self.weather_inf

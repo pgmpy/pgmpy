@@ -84,7 +84,12 @@ class Inference(object):
                     self.factors[var].append(factor)
 
         elif isinstance(model, DynamicBayesianNetwork):
-            self.start_bayesian_model = BayesianModel(model.get_intra_edges(0))
+            if len(model.nodes()) == 1:
+                # Special case where graph is a single node.
+                self.start_bayesian_model = BayesianModel()
+                self.start_bayesian_model.add_nodes_from(model.get_slice_nodes(0))
+            else:
+                self.start_bayesian_model = BayesianModel(model.get_intra_edges(0))
             self.start_bayesian_model.add_cpds(*model.get_cpds(time_slice=0))
             cpd_inter = [model.get_cpds(node) for node in model.get_interface_nodes(1)]
             self.interface_nodes = model.get_interface_nodes(0)

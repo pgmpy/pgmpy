@@ -502,7 +502,12 @@ class BayesianModel(DirectedGraph):
         ('intel', 'SAT'), ('grade', 'letter')]
         """
         moral_graph = self.moralize()
-        mm = MarkovModel(moral_graph.edges())
+        if len(moral_graph.nodes()) == 1:
+            # Special case where graph is a single node.
+            mm = MarkovModel()
+            mm.add_nodes_from(moral_graph.nodes())
+        else:
+            mm = MarkovModel(moral_graph.edges())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
         return mm
