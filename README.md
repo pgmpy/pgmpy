@@ -56,12 +56,6 @@ Then install using:
 sudo python setup.py install
 ```
 
-To install it on python3:
-
-```bash
-sudo python3 setup.py install
-```
-
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
 
 Development
