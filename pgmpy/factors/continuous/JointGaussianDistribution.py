@@ -389,3 +389,4 @@ class JointGaussianDistribution(ContinuousFactor):
 
         if not inplace:
             return phi
+

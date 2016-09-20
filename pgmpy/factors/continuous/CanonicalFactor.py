@@ -211,11 +211,11 @@ class CanonicalFactor(ContinuousFactor):
 
         >>> phi.K
         array([[ 1., -1.],
-                [-1.,  3.]])
+               [-1.,  3.]])
 
         >>> phi.h
         array([[ 1. ],
-                [ 3.5]])
+               [ 3.5]])
 
         >>> phi.g
         -2
@@ -227,11 +227,11 @@ class CanonicalFactor(ContinuousFactor):
 
         >>> phi.K
         array([[ 1, -1],
-                [-1,  4]])
+               [-1,  4]])
 
         >>> phi.h
         array([[ 1. ],
-                [ 4.5]])
+               [ 4.5]])
 
         >>> phi.g
         -2.375
