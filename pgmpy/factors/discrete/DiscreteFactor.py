@@ -102,7 +102,8 @@ class DiscreteFactor(BaseFactor):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
 
         if values.size != np.product(cardinality):
-            raise ValueError("Values array must be of size: {size}".format(size=np.product(cardinality)))
+            raise ValueError("Values array must be of size: {size}".format(
+                size=np.product(cardinality)))
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
