@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import unittest
+
 from pgmpy.base import DirectedGraph
 import pgmpy.tests.help_functions as hf
-import unittest
 
 
 class TestDirectedGraphCreation(unittest.TestCase):
@@ -80,14 +81,13 @@ class TestDirectedGraphCreation(unittest.TestCase):
 class TestDirectedGraphMoralization(unittest.TestCase):
     def setUp(self):
         self.graph = DirectedGraph()
+        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
 
     def test_get_parents(self):
-        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         self.assertListEqual(sorted(self.graph.get_parents('grade')),
                              ['diff', 'intel'])
 
     def test_moralize(self):
-        self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
         moral_graph = self.graph.moralize()
         self.assertListEqual(hf.recursive_sorted(moral_graph.edges()),
                              [['diff', 'grade'], ['diff', 'intel'],

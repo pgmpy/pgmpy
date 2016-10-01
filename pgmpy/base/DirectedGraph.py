@@ -11,9 +11,9 @@ class DirectedGraph(nx.DiGraph):
     """
     Base class for directed graphs.
 
-    Directed graph assumes that all the nodes in graph are either random
-    variables, factors or clusters of random variables and edges in the graph
-    are dependencies between these random variables.
+    Each node in the graph can represent either a random variable, `Factor`,
+    or a cluster of random variables. Edges in the graph represent the
+    dependencies between these.
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ class DirectedGraph(nx.DiGraph):
     >>> from pgmpy.base import DirectedGraph
     >>> G = DirectedGraph()
 
-    G can be grown in several ways
+    G can be grown in several ways:
 
     **Nodes:**
 
@@ -54,7 +54,7 @@ class DirectedGraph(nx.DiGraph):
     >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
 
     If some edges connect nodes not yet in the model, the nodes
-    are added automatically.  There are no errors when adding
+    are added automatically. There are no errors when adding
     nodes or edges that already exist.
 
     **Shortcuts:**
@@ -70,42 +70,47 @@ class DirectedGraph(nx.DiGraph):
     def __init__(self, ebunch=None):
         super(DirectedGraph, self).__init__(ebunch)
 
-    def add_node(self, node, **kwargs):
+    def add_node(self, node):
         """
-        Add a single node to the Graph.
+        Adds a single node to the Graph.
 
         Parameters
         ----------
-        node: node
-            A node can be any hashable Python object.
+        node: str, int, or any hashable python object.
+            The node to add to the graph.
 
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_node('A')
+        >>> G.nodes()
+        ['A']
         """
-        super(DirectedGraph, self).add_node(node, **kwargs)
+        super(DirectedGraph, self).add_node(node)
 
-    def add_nodes_from(self, nodes, **kwargs):
+    def add_nodes_from(self, nodes):
         """
         Add multiple nodes to the Graph.
 
         Parameters
         ----------
         nodes: iterable container
-            A container of nodes (list, dict, set, etc.).
+            A container of nodes (list, dict, set, or any hashable python
+            object).
 
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['A', 'B', 'C'])
+        >>> G.nodes()
+        ['A', 'B', 'C']
         """
         for node in nodes:
-            self.add_node(node, **kwargs)
+            self.add_node(node)
 
-    def add_edge(self, u, v, **kwargs):
+    def add_edge(self, u, v):
         """
         Add an edge between u and v.
 
@@ -114,7 +119,7 @@ class DirectedGraph(nx.DiGraph):
 
         Parameters
         ----------
-        u,v : nodes
+        u, v : nodes
             Nodes can be any hashable Python object.
 
         Examples
@@ -123,15 +128,27 @@ class DirectedGraph(nx.DiGraph):
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edge('Alice', 'Bob')
-        """
-        super(DirectedGraph, self).add_edge(u, v, **kwargs)
+        >>> G.nodes()
+        ['Alice', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob')]
 
-    def add_edges_from(self, ebunch, **kwargs):
+        When the node is not already present in the graph:
+        >>> G.add_edge('Alice', 'Ankur')
+        >>> G.nodes()
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Alice', 'Ankur')]
+        """
+        super(DirectedGraph, self).add_edge(u, v) 
+
+    def add_edges_from(self, ebunch):
         """
         Add all the edges in ebunch.
 
         If nodes referred in the ebunch are not already present, they
-        will be automatically added. Node names should be strings.
+        will be automatically added. Node names can be any hashable python
+        objects.
 
         Parameters
         ----------
@@ -145,13 +162,26 @@ class DirectedGraph(nx.DiGraph):
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> G.nodes()
+        ['Alice', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Bob', 'Charles')]
+
+        When the node is not already in the model.
+        >>> G.add_edges_from([('Alice', 'Ankur')])
+        >>> G.nodes()
+        ['Alice', 'Bob', 'Charles', 'Ankur']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')]
         """
         for edge in ebunch:
-            self.add_edge(*edge, **kwargs)
+            self.add_edge(*edge)
 
     def get_parents(self, node):
         """
         Returns a list of parents of node.
+
+        Throws an error if the node is not present in the graph.
 
         Parameters
         ----------
@@ -186,6 +216,7 @@ class DirectedGraph(nx.DiGraph):
         moral_graph = UndirectedGraph(self.to_undirected().edges())
 
         for node in self.nodes():
-            moral_graph.add_edges_from(itertools.combinations(self.get_parents(node), 2))
+            moral_graph.add_edges_from(
+                itertools.combinations(self.get_parents(node), 2))
 
         return moral_graph
