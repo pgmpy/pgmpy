@@ -24,7 +24,5 @@ setup(
         "networkx >= 1.8.1",
         "scipy >= 0.12.1",
         "numpy >= 1.7.0",
-        "nose >= 1.3.0",
-        "coveralls >= 0.4"
     ],
 )
