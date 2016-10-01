@@ -1,45 +1,38 @@
+skip_tags: true
+clone_depth: 50
+
+os: Visual Studio 2015
+
 environment:
   matrix:
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.8"
-      PYTHON_ARCH: "32"
+    - PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "x86_64"
+    - PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "x86_64"
+    - PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "x86_64"
 
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.8"
-      PYTHON_ARCH: "64"
+platform:
+    - x64
 
-    - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.4.0"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.4.0"
-      PYTHON_ARCH: "64"
-
-install:
-  # Install Python (from the official .msi of http://python.org) and pip when
-  # not already installed.
-  - "powershell ./build_tools/appveyor/install.ps1"
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "python -m pip install -U pip"
-
-  # Check that we have the expected version and architecture for Python
-  - "python --version"
-  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
-  - "pip --version"
-
-  # Install the build and runtime dependencies of the project.
-  - "%CMD_IN_ENV% pip install --timeout=60 --trusted-host 28daf2247a33ed269873-7b1aad3fab3cc330e1fd9d109892382a.r6.cf2.rackcdn.com -r requirements-dev.txt"
-
-  # Install the generated wheel package to test it
-  - "pip install --pre --no-index --find-links dist/ pgmpy"
-
-# Not a .NET project, we build scikit-learn in the install step instead
-build: false
+build_script:
+  - ps: Start-FileDownload "https://repo.continuum.io/miniconda/Miniconda$env:PY_MAJOR_VER-latest-Windows-$env:PYTHON_ARCH.exe" C:\Miniconda.exe; echo "Finished downloading miniconda"
+  - cmd: C:\Miniconda.exe /S /D=C:\Py
+  - SET PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
+  - conda config --set always_yes yes
+  - conda update conda --quiet
+  - conda install numpy scipy pandas pip nose mock --quiet
+  - pip install pyparsing
+  - python setup.py develop
+  - set "GIT_DIR=%cd%"
 
 test_script:
-  - "python -c \"import nose; nose.main()\" --with-timer --timer-top-n 20 -s -v sklearn"
+  - nosetests -v
 
-artifacts:
-  # Archive the generated wheel package in the ci.appveyor.com build report.
-  - path: dist\*
+notifications:
+  - provider: Webhook
+    url: https://webhooks.gitter.im/e/c084306bedf9aa508af2
+    method: GET
+    on_build_success: false
+    on_build_failure: true
+    on_build_status_changed: true
