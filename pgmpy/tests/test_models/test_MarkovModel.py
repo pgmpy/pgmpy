@@ -347,7 +347,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
     def test_check_clique(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'a')])
-        self.assertTrue(self.graph.check_clique(['a', 'b', 'c']))
+        self.assertTrue(self.graph.is_clique(['a', 'b', 'c']))
 
     def test_is_triangulated(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'a')])

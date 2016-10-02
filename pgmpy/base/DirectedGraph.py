@@ -9,7 +9,7 @@ from pgmpy.base import UndirectedGraph
 
 class DirectedGraph(nx.DiGraph):
     """
-    Base class for directed graphs.
+    Base class for all Directed Graphical Models.
 
     Each node in the graph can represent either a random variable, `Factor`,
     or a cluster of random variables. Edges in the graph represent the
@@ -34,12 +34,12 @@ class DirectedGraph(nx.DiGraph):
 
     Add one node at a time:
 
-    >>> G.add_node('a')
+    >>> G.add_node(node='a')
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(['a', 'b'])
+    >>> G.add_nodes_from(nodes=['a', 'b'])
 
     **Edges:**
 
@@ -47,11 +47,11 @@ class DirectedGraph(nx.DiGraph):
 
     Add one edge,
 
-    >>> G.add_edge('a', 'b')
+    >>> G.add_edge(u='a', v='b')
 
     a list of edges,
 
-    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+    >>> G.add_edges_from(ebunch=[('a', 'b'), ('b', 'c')])
 
     If some edges connect nodes not yet in the model, the nodes
     are added automatically. There are no errors when adding
@@ -83,7 +83,7 @@ class DirectedGraph(nx.DiGraph):
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
-        >>> G.add_node('A')
+        >>> G.add_node(node='A')
         >>> G.nodes()
         ['A']
         """
@@ -103,7 +103,7 @@ class DirectedGraph(nx.DiGraph):
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
-        >>> G.add_nodes_from(['A', 'B', 'C'])
+        >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
         >>> G.nodes()
         ['A', 'B', 'C']
         """
@@ -115,7 +115,7 @@ class DirectedGraph(nx.DiGraph):
         Add an edge between u and v.
 
         The nodes u and v will be automatically added if they are
-        not already in the graph
+        not already in the graph.
 
         Parameters
         ----------
@@ -126,21 +126,21 @@ class DirectedGraph(nx.DiGraph):
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
-        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
-        >>> G.add_edge('Alice', 'Bob')
+        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
+        >>> G.add_edge(u='Alice', v='Bob')
         >>> G.nodes()
         ['Alice', 'Bob', 'Charles']
         >>> G.edges()
         [('Alice', 'Bob')]
 
         When the node is not already present in the graph:
-        >>> G.add_edge('Alice', 'Ankur')
+        >>> G.add_edge(u='Alice', v='Ankur')
         >>> G.nodes()
         ['Alice', 'Ankur', 'Bob', 'Charles']
         >>> G.edges()
         [('Alice', 'Bob'), ('Alice', 'Ankur')]
         """
-        super(DirectedGraph, self).add_edge(u, v) 
+        super(DirectedGraph, self).add_edge(u, v)
 
     def add_edges_from(self, ebunch):
         """
@@ -148,7 +148,7 @@ class DirectedGraph(nx.DiGraph):
 
         If nodes referred in the ebunch are not already present, they
         will be automatically added. Node names can be any hashable python
-        objects.
+        object.
 
         Parameters
         ----------
@@ -160,15 +160,15 @@ class DirectedGraph(nx.DiGraph):
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
-        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
-        >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
+        >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> G.nodes()
         ['Alice', 'Bob', 'Charles']
         >>> G.edges()
         [('Alice', 'Bob'), ('Bob', 'Charles')]
 
-        When the node is not already in the model.
-        >>> G.add_edges_from([('Alice', 'Ankur')])
+        When the node is not already in the model:
+        >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
         >>> G.nodes()
         ['Alice', 'Bob', 'Charles', 'Ankur']
         >>> G.edges()
@@ -191,8 +191,8 @@ class DirectedGraph(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
-        >>> G.parents('grade')
+        >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
+        >>> G.parents(node='grade')
         ['diff', 'intel']
         """
         return self.predecessors(node)
@@ -208,7 +208,7 @@ class DirectedGraph(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph([('diff', 'grade'), ('intel', 'grade')])
+        >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
         >>> moral_graph = G.moralize()
         >>> moral_graph.edges()
         [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]

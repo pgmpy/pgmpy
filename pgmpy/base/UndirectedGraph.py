@@ -9,9 +9,9 @@ class UndirectedGraph(nx.Graph):
     """
     Base class for all the Undirected Graphical models.
 
-    UndirectedGraph assumes that all the nodes in graph are either random
-    variables, factors or cliques of random variables and edges in the graphs
-    are interactions between these random variables, factors or clusters.
+    Each node in the graph can represent either a random variable, `Factor`,
+    or a cluster of random variables. Edges in the graph are interactions
+    between the nodes.
 
     Parameters
     ----------
@@ -68,68 +68,85 @@ class UndirectedGraph(nx.Graph):
     def __init__(self, ebunch=None):
         super(UndirectedGraph, self).__init__(ebunch)
 
-    def add_node(self, node, **kwargs):
+    def add_node(self, node):
         """
         Add a single node to the Graph.
 
         Parameters
         ----------
-        node: node
-            A node can be any hashable Python object.
+        node: str, int, or any hashable python object.
+            The node to add to the graph.
 
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_node('A')
+        >>> G.add_node(node='A')
+        >>> G.nodes()
+        ['A']
         """
-        super(UndirectedGraph, self).add_node(node, **kwargs)
+        super(UndirectedGraph, self).add_node(node)
 
-    def add_nodes_from(self, nodes, **kwargs):
+    def add_nodes_from(self, nodes):
         """
         Add multiple nodes to the Graph.
 
         Parameters
         ----------
         nodes: iterable container
-            A container of nodes (list, dict, set, etc.).
+            A container of nodes (list, dict, set, or any hashable python
+            object).
 
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(['A', 'B', 'C'])
+        >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
+        >>> G.nodes()
+        ['A', 'B', 'C']
         """
         for node in nodes:
-            self.add_node(node, **kwargs)
+            self.add_node(node)
 
-    def add_edge(self, u, v, **kwargs):
+    def add_edge(self, u, v):
         """
         Add an edge between u and v.
 
         The nodes u and v will be automatically added if they are
-        not already in the graph
+        not already in the graph.
 
         Parameters
         ----------
-        u,v : nodes
+        u, v : nodes
             Nodes can be any hashable Python object.
 
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
-        >>> G.add_edge('Alice', 'Bob')
-        """
-        super(UndirectedGraph, self).add_edge(u, v, **kwargs)
+        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
+        >>> G.add_edge(u='Alice', v='Bob')
+        >>> G.nodes()
+        ['Alice', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob')]
 
-    def add_edges_from(self, ebunch, **kwargs):
+        When the node is not already present in the graph:
+        >>> G.add_edge(u='Alice', v='Ankur')
+        >>> G.nodes()
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Alice', 'Ankur')]
+        """
+        super(UndirectedGraph, self).add_edge(u, v)
+
+    def add_edges_from(self, ebunch):
         """
         Add all the edges in ebunch.
 
         If nodes referred in the ebunch are not already present, they
-        will be automatically added.
+        will be automatically added. Node names can be any hashable python
+        object.
 
         Parameters
         ----------
@@ -141,13 +158,24 @@ class UndirectedGraph(nx.Graph):
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_nodes_from(['Alice', 'Bob', 'Charles'])
-        >>> G.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
+        >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
+        >>> G.nodes()
+        ['Alice', 'Bob', 'Charles']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Bob', 'Charles')]
+
+        When the node is not already in the model:
+        >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
+        >>> G.nodes()
+        ['Alice', 'Ankur', 'Charles', 'Bob']
+        >>> G.edges()
+        [('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')]
         """
         for edge in ebunch:
-            self.add_edge(*edge, **kwargs)
+            self.add_edge(*edge)
 
-    def check_clique(self, nodes):
+    def is_clique(self, nodes):
         """
         Check if the given nodes form a clique.
 
@@ -155,6 +183,22 @@ class UndirectedGraph(nx.Graph):
         ----------
         nodes: list, array-like
             List of nodes to check if they are a part of any clique.
+
+        Examples
+        --------
+        >>> from pgmpy.base import UndirectedGraph
+        >>> G = UndirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'),
+                                        ('B', 'E'), ('D', 'E'), ('E', 'F'),
+                                        ('D', 'F'), ('B', 'F')])
+        >>> G.is_clique(nodes=['A', 'B', 'C', 'D'])
+        False
+        >>> G.is_clique(nodes=['B', 'D', 'E', 'F'])
+        True
+
+        Since B, D, E and F are clique, any subset of these should also
+        be clique.
+        >>> G.is_clique(nodes=['D', 'E', 'B'])
+        True
         """
         for node1, node2 in itertools.combinations(nodes, 2):
             if not self.has_edge(node1, node2):
@@ -163,14 +207,21 @@ class UndirectedGraph(nx.Graph):
 
     def is_triangulated(self):
         """
-        Checks whether the undirected graph is triangulated or not.
+        Checks whether the undirected graph is triangulated (also known
+        as chordal) or not.
+
+        Chordal Graph: A chordal graph is one in which all cycles of four
+                       or more vertices have a chord.
 
         Examples
         --------
         >>> from pgmpy.base import UndirectedGraph
         >>> G = UndirectedGraph()
-        >>> G.add_edges_from([('x1', 'x2'), ('x1', 'x3'), ('x1', 'x4'),
-        ...                   ('x2', 'x4'), ('x3', 'x4')])
+        >>> G.add_edges_from(ebunch=[('x1', 'x2'), ('x1', 'x3'),
+        ...                          ('x2', 'x4'), ('x3', 'x4')])
+        >>> G.is_triangulated()
+        False
+        >>> G.add_edge(u='x1', v='x4')
         >>> G.is_triangulated()
         True
         """
