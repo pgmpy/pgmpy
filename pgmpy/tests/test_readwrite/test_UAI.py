@@ -55,12 +55,13 @@ class TestUAIReader(unittest.TestCase):
 
     def test_get_model(self):
         model = self.reader_string.get_model()
-        edge_expected = {'var_2': {'var_0': {},
-                                   'var_1': {}},
-                         'var_0': {'var_2': {},
-                                   'var_1': {}},
-                         'var_1': {'var_2': {},
-                                   'var_0': {}}}
+        edge_expected = {
+            'var_2': {'var_0': {'weight': None},
+                      'var_1': {'weight': None}},
+            'var_0': {'var_2': {'weight': None},
+                      'var_1': {'weight': None}},
+            'var_1': {'var_2': {'weight': None},
+                      'var_0': {'weight': None}}}
         self.assertListEqual(sorted(model.nodes()), sorted(['var_0', 'var_2', 'var_1']))
         self.assertDictEqual(model.edge, edge_expected)
 

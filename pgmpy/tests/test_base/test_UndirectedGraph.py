@@ -31,6 +31,19 @@ class TestUndirectedGraphCreation(unittest.TestCase):
         self.assertListEqual(sorted(self.graph.nodes()),
                              ['a', 'b', 'c', 'd'])
 
+    def test_add_node_with_weight(self):
+        self.graph.add_node('a')
+        self.graph.add_node('weight_a', weight=0.3)
+        self.assertEqual(self.graph.node['weight_a']['weight'], 0.3)
+        self.assertEqual(self.graph.node['a']['weight'], None)
+
+    def test_add_nodes_from_with_weight(self):
+        self.graph.add_node(1)
+        self.graph.add_nodes_from(['weight_b', 'weight_c'], weights=[0.3, 0.5])
+        self.assertEqual(self.graph.node['weight_b']['weight'], 0.3)
+        self.assertEqual(self.graph.node['weight_c']['weight'], 0.5)
+        self.assertEqual(self.graph.node[1]['weight'], None)
+
     def test_add_nodes_from_non_string(self):
         self.graph.add_nodes_from([1, 2, 3, 4])
 
