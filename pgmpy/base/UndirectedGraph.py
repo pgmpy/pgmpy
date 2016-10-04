@@ -192,6 +192,8 @@ class UndirectedGraph(nx.Graph):
         will be automatically added. Node names can be any hashable python
         object.
 
+        **The behavior of adding weights is different than networkx.
+
         Parameters
         ----------
         ebunch : container of edges
@@ -222,7 +224,7 @@ class UndirectedGraph(nx.Graph):
 
         Adding edges with weights:
         >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
-                             weights=[0.3, 0.5])
+        ...                  weights=[0.3, 0.5])
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.3}
         >>> G.edge['Maria']['Mason']

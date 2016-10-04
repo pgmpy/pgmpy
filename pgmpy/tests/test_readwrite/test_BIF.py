@@ -138,16 +138,22 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                           ('dog-out', 'hear-bark')]
         nodes_expected = ['bowel-problem', 'hear-bark', 'light-on',
                           'dog-out', 'family-out']
-        edge_expected = {'bowel-problem': {'dog-out': {}},
-                         'dog-out': {'hear-bark': {}},
-                         'family-out': {'dog-out': {}, 'light-on': {}},
+        edge_expected = {'bowel-problem': {'dog-out': {'weight': None}},
+                         'dog-out': {'hear-bark': {'weight': None}},
+                         'family-out': {'dog-out': {'weight': None},
+                                        'light-on': {'weight': None}},
                          'hear-bark': {},
                          'light-on': {}}
-        node_expected = {'bowel-problem': {'position': '(335, 99)'},
-                         'dog-out': {'position': '(300, 195)'},
-                         'family-out': {'position': '(257, 99)'},
-                         'hear-bark': {'position': '(296, 268)'},
-                         'light-on': {'position': '(218, 195)'}}
+        node_expected = {'bowel-problem': {'weight': None,
+                                           'position': '(335, 99)'},
+                         'dog-out': {'weight': None,
+                                     'position': '(300, 195)'},
+                         'family-out': {'weight': None,
+                                        'position': '(257, 99)'},
+                         'hear-bark': {'weight': None,
+                                       'position': '(296, 268)'},
+                         'light-on': {'weight': None,
+                                      'position': '(218, 195)'}}
         cpds_expected = [np.array([[0.01],
                                    [0.99]]),
                          np.array([[0.99, 0.97, 0.9, 0.3],

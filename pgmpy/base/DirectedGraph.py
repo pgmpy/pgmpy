@@ -70,7 +70,7 @@ class DirectedGraph(nx.DiGraph):
     def __init__(self, ebunch=None):
         super(DirectedGraph, self).__init__(ebunch)
 
-    def add_node(self, node):
+    def add_node(self, node, weight=None):
         """
         Adds a single node to the Graph.
 
@@ -79,6 +79,9 @@ class DirectedGraph(nx.DiGraph):
         node: str, int, or any hashable python object.
             The node to add to the graph.
 
+        weight: int, float
+            The weight of the node.
+
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
@@ -86,18 +89,33 @@ class DirectedGraph(nx.DiGraph):
         >>> G.add_node(node='A')
         >>> G.nodes()
         ['A']
-        """
-        super(DirectedGraph, self).add_node(node)
 
-    def add_nodes_from(self, nodes):
+        Adding a node with some weight.
+        >>> G.add_node(node='B', weight=0.3)
+
+        The weight of these nodes can be accessed as:
+        >>> G.node['B']
+        {'weight': 0.3}
+        >>> G.node['A']
+        {'weight': None}
+        """
+        super(DirectedGraph, self).add_node(node, weight=weight)
+
+    def add_nodes_from(self, nodes, weights=None):
         """
         Add multiple nodes to the Graph.
+
+        **The behviour of adding weights is different than in networkx.
 
         Parameters
         ----------
         nodes: iterable container
             A container of nodes (list, dict, set, or any hashable python
             object).
+
+        weights: list, tuple (default=None)
+            A container of weights (int, float). The weight value at index i
+            is associated with the variable at index i.
 
         Examples
         --------
@@ -106,11 +124,29 @@ class DirectedGraph(nx.DiGraph):
         >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
         >>> G.nodes()
         ['A', 'B', 'C']
-        """
-        for node in nodes:
-            self.add_node(node)
 
-    def add_edge(self, u, v):
+        Adding nodes with weights:
+        >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
+        >>> G.node['D']
+        {'weight': 0.3}
+        >>> G.node['E']
+        {'weight': 0.6}
+        >>> G.node['A']
+        {'weight': None}
+        """
+        nodes = list(nodes)
+
+        if weights:
+            if len(nodes) != len(weights):
+                raise ValueError("The number of elements in nodes and weights"
+                                 "should be equal.")
+            for index in range(len(nodes)):
+                self.add_node(node=nodes[index], weight=weights[index])
+        else:
+            for node in nodes:
+                self.add_node(node=node)
+
+    def add_edge(self, u, v, weight=None):
         """
         Add an edge between u and v.
 
@@ -121,6 +157,9 @@ class DirectedGraph(nx.DiGraph):
         ----------
         u, v : nodes
             Nodes can be any hashable Python object.
+
+        weight: int, float (default=None)
+            The weight of the edge
 
         Examples
         --------
@@ -139,10 +178,15 @@ class DirectedGraph(nx.DiGraph):
         ['Alice', 'Ankur', 'Bob', 'Charles']
         >>> G.edges()
         [('Alice', 'Bob'), ('Alice', 'Ankur')]
-        """
-        super(DirectedGraph, self).add_edge(u, v)
 
-    def add_edges_from(self, ebunch):
+        Adding edges with weight:
+        >>> G.add_edge('Ankur', 'Maria', weight=0.1)
+        >>> G.edge['Ankur']['Maria']
+        {'weight': 0.1}
+        """
+        super(DirectedGraph, self).add_edge(u, v, weight=weight)
+
+    def add_edges_from(self, ebunch, weights=None):
         """
         Add all the edges in ebunch.
 
@@ -150,11 +194,17 @@ class DirectedGraph(nx.DiGraph):
         will be automatically added. Node names can be any hashable python
         object.
 
+        **The behavior of adding weights is different than networkx.
+
         Parameters
         ----------
         ebunch : container of edges
             Each edge given in the container will be added to the graph.
             The edges must be given as 2-tuples (u, v).
+
+        weights: list, tuple (default=None)
+            A container of weights (int, float). The weight value at index i
+            is associated with the edge at index i.
 
         Examples
         --------
@@ -173,9 +223,27 @@ class DirectedGraph(nx.DiGraph):
         ['Alice', 'Bob', 'Charles', 'Ankur']
         >>> G.edges()
         [('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')]
+
+        Adding edges with weights:
+        >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
+        ...                  weights=[0.3, 0.5])
+        >>> G.edge['Ankur']['Maria']
+        {'weight': 0.3}
+        >>> G.edge['Maria']['Mason']
+        {'weight': 0.5}
         """
-        for edge in ebunch:
-            self.add_edge(*edge)
+        ebunch = list(ebunch)
+
+        if weights:
+            if len(ebunch) != len(weights):
+                raise ValueError("The number of elements in ebunch and weights"
+                                 "should be equal")
+            for index in range(len(ebunch)):
+                self.add_edge(ebunch[index][0], ebunch[index][1],
+                              weight=weights[index])
+        else:
+            for edge in ebunch:
+                self.add_edge(edge[0], edge[1])
 
     def get_parents(self, node):
         """
