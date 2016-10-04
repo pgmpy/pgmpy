@@ -8,7 +8,9 @@ pgmpy
 
 pgmpy is a python library for working with Probabilistic Graphical Models.
 
-Documentation  and list of algorithms we support is at our official site http://pgmpy.org/
+Documentation  and list of algorithms supported is at our official site http://pgmpy.org/
+Examples on using pgmpy: https://github.com/pgmpy/pgmpy/tree/dev/examples
+Basic tutorial on Probabilistic Graphical models using pgmpy: https://github.com/pgmpy/pgmpy_notebook
 
 Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
 
