@@ -19,6 +19,7 @@ Basic Examples:
    :maxdepth: 3
 
    Monte Hall Problem <https://github.com/pgmpy/pgmpy/blob/dev/examples/Monte%20Hall%20Problem.ipynb>
+   Creating a Bayesian Network in pgmpy <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Bayesian%20Network.ipynb>
    Inference in Bayesian Network using Asia model <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Bayesian%20Networks.ipynb>
 
 Notebooks:
