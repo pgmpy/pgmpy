@@ -55,7 +55,7 @@ $ conda install --file requirements.txt  # or requirements-dev.txt
 Then install using:
 
 ```bash
-sudo python3 setup.py install
+sudo python setup.py install
 ```
 
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
@@ -118,7 +118,7 @@ Here is a small snippet of pgmpy API
 ```
 python3
 >>> from pgmpy.models import BayesianModel
->>> from pgmpy.factors import TabularCPD
+>>> from pgmpy.factors.discrete import TabularCPD
 >>> student = BayesianModel()
 >>> # instantiates a new Bayesian Model called 'student'
 
