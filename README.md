@@ -115,8 +115,7 @@ Then the docs will be in _build/html
 Example:
 ========
 Here is a small snippet of pgmpy API
-```
-python3
+```python
 >>> from pgmpy.models import BayesianModel
 >>> from pgmpy.factors.discrete import TabularCPD
 >>> student = BayesianModel()
