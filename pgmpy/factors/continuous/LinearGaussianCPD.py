@@ -119,12 +119,18 @@ class LinearGaussianCPD(ContinuousFactor):
     def __str__(self):
         if self.evidence and list(self.beta_vector):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
-            rep_str = "P(" + str(self.variable) + "| " + ", ".join([str(var) for var in self.evidence]) + ") = " +\
-                      "N(" + " + ".join(["{coeff}*{parent}_mu".format(coeff=coeff, parent=parent)
-                                        for coeff, parent in zip(self.beta_vector,
-                                                                 self.evidence)]) + "; " + str(self.beta_0) + ")"
+            rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
+                node=str(self.variable),
+                parents=', '.join([str(var) for var in self.evidence]),
+                mu=" + ".join(["{coeff}*{parent}".format(
+                    coeff=coeff, parent=parent) for coeff, parent in
+                                zip(self.beta_vector, self.evidence)]),
+                b_0=str(self.beta_0),
+                sigma=str(self.variance))
         else:
             # P(X) = N(1, 4)
-            rep_str = "P({X}) = N({beta_0}; {variance})".format(X=str(self.variable), beta_0=str(self.beta_0),
-                                                                variance=str(self.variance))
+            rep_str = "P({X}) = N({beta_0}; {variance})".format(
+                X=str(self.variable),
+                beta_0=str(self.beta_0),
+                variance=str(self.variance))
         return rep_str
