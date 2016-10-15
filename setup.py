@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pgmpy",
-    version="0.1.0",
+    version="0.1.3",
     description="A library for Probabilistic Graphical Models",
     packages=find_packages(exclude=['tests']),
     author=open("AUTHORS.rst").read(),
@@ -12,7 +12,6 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
-        "Intended Audience :: Researchers",
         "Operating System :: Unix",
         "Operating System :: POSIX",
         "Operating System :: Microsoft :: Windows",
