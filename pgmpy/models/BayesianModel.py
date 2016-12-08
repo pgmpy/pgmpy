@@ -103,8 +103,8 @@ class BayesianModel(DirectedGraph):
         u,v : nodes
               Nodes can be any hashable python object.
 
-        EXAMPLE
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import BayesianModel/home/abinash/software_packages/numpy-1.7.1
         >>> G = BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
@@ -117,6 +117,48 @@ class BayesianModel(DirectedGraph):
                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
         else:
             super(BayesianModel, self).add_edge(u, v, **kwargs)
+
+    def remove_node(self, node):
+        """
+        Remove node from the model.
+
+        Removing a node also removes all the associated edges, removes the CPD
+        of the node and marginalizes the CPDs of it's children.
+
+        Parameters
+        ----------
+        node : node
+            Node which is to be removed from the model.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.models import BayesianModel
+        >>> model = BayesianModel([('A', 'B'), ('B', 'C'),
+        ...                        ('A', 'D'), ('D', 'C')])
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...                       columns=['A', 'B', 'C', 'D'])
+        >>> model.fit(values)
+        >>> model.remove_node('A')
+
+        """
+        affected_nodes = [v for u, v in self.edges() if u == node]
+
+        for affected_node in affected_nodes:
+            node_cpd = self.get_cpds(node=affected_node)
+            if node_cpd:
+                node_cpd.marginalize([node], inplace=True)
+                # self.remove_cpds(node_cpd)
+                # self.add_cpds(new_cpd)
+
+        if self.get_cpds(node=node):
+            self.remove_cpds(node)
+        super(BayesianModel, self).remove_node(node)
+
+    def remove_nodes_from(self, nodes):
+        for node in nodes:
+            self.remove_node(node)
 
     def add_cpds(self, *cpds):
         """
@@ -761,3 +803,12 @@ class BayesianModel(DirectedGraph):
             return True
         else:
             return False
+
+    def copy(self):
+        copy = BayesianModel(self.edges())
+        if self.cpds:
+            cpd_copy = []
+            for cpd in self.cpds:
+                cpd_copy.append(cpd.copy())
+            copy.add_cpds(*cpd_copy)
+        return copy
