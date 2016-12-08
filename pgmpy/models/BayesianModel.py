@@ -805,10 +805,12 @@ class BayesianModel(DirectedGraph):
             return False
 
     def copy(self):
-        copy = BayesianModel(self.edges())
+        model_copy = BayesianModel()
+        model_copy.add_nodes_from(self.nodes())
+        model_copy.add_edges_from(self.edges())
         if self.cpds:
             cpd_copy = []
             for cpd in self.cpds:
                 cpd_copy.append(cpd.copy())
-            copy.add_cpds(*cpd_copy)
-        return copy
+            model_copy.add_cpds(*cpd_copy)
+        return model_copy
