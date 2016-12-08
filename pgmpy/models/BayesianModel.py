@@ -130,6 +130,10 @@ class BayesianModel(DirectedGraph):
         node : node
             Node which is to be removed from the model.
 
+        Returns
+        -------
+        None
+
         Examples
         --------
         >>> import pandas as pd
@@ -140,8 +144,16 @@ class BayesianModel(DirectedGraph):
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
         >>> model.fit(values)
+        >>> model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
+         <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
+         <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
         >>> model.remove_node('A')
-
+        >>> model.get_cpds()
+        [<TabularCPD representing P(B:2) at 0x7f28248e23c8>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
+         <TabularCPD representing P(D:2) at 0x7f28248e26a0>]
         """
         affected_nodes = [v for u, v in self.edges() if u == node]
 
@@ -157,6 +169,40 @@ class BayesianModel(DirectedGraph):
         super(BayesianModel, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
+        """
+        Remove multiple nodes from the model.
+
+        Removing a node also removes all the associated edges, removes the CPD
+        of the node and marginalizes the CPDs of it's children.
+
+        Parameters
+        ----------
+        nodes : list, set (iterable)
+            Nodes which are to be removed from the model.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.models import BayesianModel
+        >>> model = BayesianModel([('A', 'B'), ('B', 'C'),
+        ...                        ('A', 'D'), ('D', 'C')])
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
+        ...                       columns=['A', 'B', 'C', 'D'])
+        >>> model.fit(values)
+        >>> model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x7f28248e2438>,
+         <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
+         <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
+         <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
+        >>> model.remove_node(['A', 'B'])
+        [<TabularCPD representing P(C:2 | D:2) at 0x7f28248e2a58>,
+         <TabularCPD representing P(D:2) at 0x7f28248e26d8>]
+        """
         for node in nodes:
             self.remove_node(node)
 
@@ -805,6 +851,36 @@ class BayesianModel(DirectedGraph):
             return False
 
     def copy(self):
+        """
+        Returns a copy of the model.
+
+        Returns
+        -------
+        BayesianModel: Copy of the model on which the method was called.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = BayesianModel([('A', 'B'), ('B', 'C')])
+        >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
+        >>> cpd_b = TabularCPD('B', 2, [[0.3, 0.7], [0.7, 0.3]],
+                               evidence=['A'],
+                               evidence_card=[2])
+        >>> cpd_c = TabularCPD('C', 2, [[0.1, 0.9], [0.9, 0.1]],
+                               evidence=['B'],
+                               evidence_card=[2])
+        >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+        >>> copy_model = model.copy()
+        >>> copy_model.nodes()
+        ['C', 'A', 'B']
+        >>> copy_model.edges()
+        [('A', 'B'), ('B', 'C')]
+        >>> copy_model.get_cpds()
+        [<TabularCPD representing P(A:2) at 0x7f2824930a58>,
+         <TabularCPD representing P(B:2 | A:2) at 0x7f2824930a90>,
+         <TabularCPD representing P(C:2 | B:2) at 0x7f2824944240>]
+        """
         model_copy = BayesianModel()
         model_copy.add_nodes_from(self.nodes())
         model_copy.add_edges_from(self.edges())
