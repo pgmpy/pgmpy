@@ -11,9 +11,9 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 class TestLGBNMethods(unittest.TestCase):
     def setUp(self):
         self.model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        self.cpd1 = LinearGaussianCPD('x1', 1, 4)
-        self.cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
-        self.cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        self.cpd1 = LinearGaussianCPD('x1', [1], 4)
+        self.cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        self.cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
 
     def test_add_cpds(self):
         self.model.add_cpds(self.cpd1)
@@ -60,7 +60,7 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(self.model.check_model(), True)
 
         self.model.add_edge('x1', 'x4')
-        cpd4 = LinearGaussianCPD('x4', 4, 3, ['x2'], [-1])
+        cpd4 = LinearGaussianCPD('x4', [4, -1], 3, ['x2'])
         self.model.add_cpds(cpd4)
 
         self.assertRaises(ValueError, self.model.check_model)

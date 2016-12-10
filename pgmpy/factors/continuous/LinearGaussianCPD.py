@@ -29,7 +29,7 @@ class LinearGaussianCPD(ContinuousFactor):
     p(Y |x) = N(β0 + β.T * x ; σ2)
 
     """
-    def __init__(self, variable, beta_0, variance, evidence=[], beta_vector=[]):
+    def __init__(self, variable, beta, variance, evidence=[]):
         """
         Parameters
         ----------
@@ -37,25 +37,22 @@ class LinearGaussianCPD(ContinuousFactor):
         variable: any hashable python object
             The variable whose CPD is defined.
 
-        beta_0: int, float
-            Represents the constant term in the linear equation.
+        beta: iterable of int or float
+            An iterable representing the coefficient vector of the linear equation.
+            The first term represents the constant term in the linear equation.
 
         variance: int, float
             The variance of the variable defined.
 
         evidence: iterable of any hashabale python objects
-            An iterable of the parents of the variable. None
-            if there are no parents.
-
-        beta_vector: iterable of int or float
-            An iterable representing the coefficient vector of the linear equation.
+            An iterable of the parents of the variable. None if there are no parents.
 
         Examples
         --------
 
         # For P(Y| X1, X2, X3) = N(-2x1 + 3x2 + 7x3 + 0.2; 9.6)
 
-        >>> cpd = LinearGaussianCPD('Y', 0.2, 9.6, ['X1', 'X2', 'X3'], [-2, 3, 7])
+        >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
         >>> cpd.variable
         'Y'
         >>> cpd.variance
@@ -63,21 +60,20 @@ class LinearGaussianCPD(ContinuousFactor):
         >>> cpd.evidence
         ['x1', 'x2', 'x3']
         >>> cpd.beta_vector
-        [-2, 3, 7]
-        >>> cpd.beta_0
-        0.2
+        [0.2, -2, 3, 7]
 
         """
         self.variable = variable
-        self.beta_0 = beta_0
+        self.beta = beta
+        self.beta_0 = beta[0]
         self.variance = variance
 
-        if len(evidence) != len(beta_vector):
-            raise ValueError("The number of variables in evidence must be equal to the "
+        if len(evidence) != len(beta) - 1:
+            raise ValueError("The number of variables in evidence must be one less than the "
                              "length of the beta vector.")
 
         self.evidence = evidence
-        self.beta_vector = np.asarray(beta_vector)
+        self.beta_vector = np.asarray(beta[1:])
 
         variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(variables, None)
@@ -104,15 +100,15 @@ class LinearGaussianCPD(ContinuousFactor):
         Examples
         --------
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
-        >>> cpd = LinearGaussianCPD('Y', 0.2, 9.6, ['X1', 'X2', 'X3'], [-2, 3, 7])
+        >>> cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
         >>> copy_cpd = cpd.copy()
         >>> copy_cpd.variable
         'Y'
         >>> copy_cpd.evidence
         ['X1', 'X2', 'X3']
         """
-        copy_cpd = LinearGaussianCPD(self.variable, self.beta_0, self.variance,
-                                     list(self.evidence), self.beta_vector)
+        copy_cpd = LinearGaussianCPD(self.variable, self.beta, self.variance,
+                                     list(self.evidence))
 
         return copy_cpd
 
