@@ -886,8 +886,5 @@ class BayesianModel(DirectedGraph):
         model_copy.add_nodes_from(self.nodes())
         model_copy.add_edges_from(self.edges())
         if self.cpds:
-            cpd_copy = []
-            for cpd in self.cpds:
-                cpd_copy.append(cpd.copy())
-            model_copy.add_cpds(*cpd_copy)
+            model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
