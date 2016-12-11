@@ -199,7 +199,7 @@ class BayesianModel(DirectedGraph):
          <TabularCPD representing P(B:2 | A:2) at 0x7f28248e23c8>,
          <TabularCPD representing P(C:2 | B:2, D:2) at 0x7f28248e2748>,
          <TabularCPD representing P(D:2 | A:2) at 0x7f28248e26a0>]
-        >>> model.remove_node(['A', 'B'])
+        >>> model.remove_nodes_from(['A', 'B'])
         >>> model.get_cpds()
         [<TabularCPD representing P(C:2 | D:2) at 0x7f28248e2a58>,
          <TabularCPD representing P(D:2) at 0x7f28248e26d8>]
