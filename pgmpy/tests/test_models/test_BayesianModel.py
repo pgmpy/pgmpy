@@ -173,6 +173,24 @@ class TestBayesianModelMethods(unittest.TestCase):
         G3 = BayesianModel([('W', 'V'), ('W', 'X'), ('Y', 'X'), ('Z', 'Y')])
         self.assertFalse(G3.is_iequivalent(G2))
 
+    def test_copy(self):
+        model_copy = self.G1.copy()
+        self.assertEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
+        self.assertEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
+        self.assertNotEqual(id(self.G1.get_cpds('diff')),
+                            id(model_copy.get_cpds('diff')))
+
+    def test_remove_node(self):
+        self.G1.remove_node('diff')
+        self.assertEqual(sorted(self.G1.nodes()), sorted(['grade', 'intel']))
+        self.assertRaises(ValueError, self.G1.get_cpds, 'diff')
+
+    def test_remove_nodes_from(self):
+        self.G1.remove_nodes_from(['diff', 'grade'])
+        self.assertEqual(sorted(self.G1.nodes()), sorted(['intel']))
+        self.assertRaises(ValueError, self.G1.get_cpds, 'diff')
+        self.assertRaises(ValueError, self.G1.get_cpds, 'grade')
+
     def tearDown(self):
         del self.G
         del self.G1
