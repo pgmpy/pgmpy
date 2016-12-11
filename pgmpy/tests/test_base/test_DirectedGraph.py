@@ -99,6 +99,19 @@ class TestDirectedGraphCreation(unittest.TestCase):
         self.assertListEqual(self.graph.predecessors('b'), ['a'])
         self.assertListEqual(self.graph.predecessors('c'), ['b'])
 
+    def test_get_leaves(self):
+        self.graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'),
+                                   ('D', 'E'), ('D', 'F'), ('A', 'G')])
+        self.assertEqual(sorted(self.graph.get_leaves()),
+                         sorted(['C', 'G', 'E', 'F']))
+
+    def test_get_roots(self):
+        self.graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'),
+                                   ('D', 'E'), ('D', 'F'), ('A', 'G')])
+        self.assertEqual(['A'], self.graph.get_roots())
+        self.graph.add_edge('H', 'G')
+        self.assertEqual(sorted(['A', 'H']), sorted(self.graph.get_roots()))
+
     def tearDown(self):
         del self.graph
 

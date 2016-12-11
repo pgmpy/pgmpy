@@ -300,7 +300,8 @@ class DirectedGraph(nx.DiGraph):
         >>> graph.get_leaves()
         ['C', 'D']
         """
-        return [node for node, out_degree in self.out_degree_iter() if out_degree == 0]
+        return [node for node, out_degree in self.out_degree_iter() if
+                out_degree == 0]
 
     def get_roots(self):
         """
