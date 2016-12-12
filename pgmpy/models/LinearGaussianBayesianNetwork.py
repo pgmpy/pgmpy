@@ -35,9 +35,9 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
-        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
-        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.cpds:
                 print(cpd)
@@ -83,9 +83,9 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
-        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
-        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.get_cpds()
         """
@@ -106,9 +106,9 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
-        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
-        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.get_cpds():
                 print(cpd)
@@ -147,9 +147,9 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
-        >>> cpd1 = LinearGaussianCPD('x1', 1, 4)
-        >>> cpd2 = LinearGaussianCPD('x2', -5, 4, ['x1'], [0.5])
-        >>> cpd3 = LinearGaussianCPD('x3', 4, 3, ['x2'], [-1])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> jgd = model.to_joint_gaussian()
         >>> jgd.variables
