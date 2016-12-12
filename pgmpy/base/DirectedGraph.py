@@ -309,7 +309,7 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base  import DirectedGraph
+        >>> from pgmpy.base import DirectedGraph
         >>> graph = DirectedGraph([('A', 'B'), ('B', 'C'), ('B', 'D'), ('E', 'B')])
         >>> graph.get_roots()
         ['A', 'E']

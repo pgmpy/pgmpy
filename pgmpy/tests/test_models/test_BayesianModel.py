@@ -180,6 +180,16 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertNotEqual(id(self.G1.get_cpds('diff')),
                             id(model_copy.get_cpds('diff')))
 
+        self.G1.remove_cpds('diff')
+        diff_cpd = TabularCPD('diff', 2, values=[[0.3], [0.7]])
+        self.G1.add_cpds(diff_cpd)
+        self.assertNotEqual(self.G1.get_cpds('diff'),
+                            model_copy.get_cpds('diff'))
+
+        self.G1.remove_node('intel')
+        self.assertNotEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
+        self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
+
     def test_remove_node(self):
         self.G1.remove_node('diff')
         self.assertEqual(sorted(self.G1.nodes()), sorted(['grade', 'intel']))
