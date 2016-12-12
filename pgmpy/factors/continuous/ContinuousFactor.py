@@ -4,6 +4,10 @@ from pgmpy.factors.base import BaseFactor
 
 import numpy as np
 import scipy.integrate as integrate
+from scipy.stats import multivariate_normal, matrix_normal, dirichlet
+import scipy
+import types
+import six
 
 
 class ContinuousFactor(BaseFactor):
@@ -11,10 +15,10 @@ class ContinuousFactor(BaseFactor):
     Base class for factors representing various multivariate
     representations.
     """
-    def __init__(self, variables, pdf):
+    def __init__(self, variables, pdf, **pdf_args):
         """
         Parameters
-        ----------
+            ----------
         variables: list or array-like
             The variables for wich the distribution is defined.
 
@@ -35,6 +39,34 @@ class ContinuousFactor(BaseFactor):
         >>> dirichlet_factor.assignemnt(5,6)
         226800.0
         """
+        self.pdf_type = None
+
+        if isinstance(pdf, types.FunctionType):
+            self.pdf_type = 1
+        else:
+            self.pdf_type = 2
+            if isinstance(pdf, six.string_types):
+                pdf_dir = {
+                    'multivariate_normal': 'mul_normal',
+                    'matrix_normal': 'mat_normal',
+                    'dirichlet': 'dirichlet',
+                    'wishart': 'wishart',
+                    'invwishart': 'invwishart',
+                    'special_ortho_group': 's_ortho_group',
+                    'ortho_group': 'ortho_group',
+                    'random_correlation': 'rand_corr'
+                }
+                if pdf in pdf_dir:
+                    if pdf == 'multivariate_normal':
+                        pdf = multivariate_normal(**pdf_args).pdf
+                    if pdf == 'matrix_normal':
+                        pdf = matrix_normal(**pdf_args).pdf
+                    if pdf == 'dirichlet':
+                        pdf = dirichlet(**pdf_args).pdf
+                else:
+                    raise ValueError('{pdf}pdf not present'.format(pdf))
+            elif isinstance(pdf, scipy.stats._multivariate.multivariate_normal_frozen):
+                pdf = pdf.pdf
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type list or array-like, "
                             "got type {var_type}".format(var_type=type(variables)))
@@ -44,7 +76,7 @@ class ContinuousFactor(BaseFactor):
 
         self.variables = list(variables)
         self._pdf = pdf
-
+    
     @property
     def pdf(self):
         """
@@ -89,7 +121,10 @@ class ContinuousFactor(BaseFactor):
         >>> phi.assignment(1, 2)
         0.013064233284684921
         """
-        return self.pdf(*args)
+        if self.pdf_type == 2:
+            return self.pdf(list(args))
+        else:
+            return self.pdf(*args)
 
     def copy(self):
         """
