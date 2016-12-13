@@ -330,7 +330,7 @@ class JointGaussianDistribution(ContinuousFactor):
         >>> phi.g
         -6.51533
         """
-        from pgmpy.factors import CanonicalFactor
+        from pgmpy.factors.continuous import CanonicalFactor
 
         mu = self.mean
         sigma = self.covariance
