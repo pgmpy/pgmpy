@@ -183,7 +183,7 @@ class TestJGDMethods(unittest.TestCase):
                                    np.asarray([[4, -4], [-4, 7]], dtype=float))
         self.assertEqual(self.phi1._precision_matrix, None)
 
-        self.phi1 = self.phi3
+        self.phi1 = self.phi3.copy()
         self.phi1.reduce([('x1', 3), ('x2', 1)])
         self.assertEqual(self.phi1.variables, ['x3'])
         np_test.assert_array_equal(self.phi1.mean, np.asarray([[0]], dtype=float))
@@ -191,7 +191,13 @@ class TestJGDMethods(unittest.TestCase):
                                    np.asarray([[3]], dtype=float))
         self.assertEqual(self.phi1._precision_matrix, None)
 
-        self.phi1 = self.phi3
+        self.phi1 = self.phi3.copy()
+        self.phi1.reduce([('x2', 1), ('x1', 3)])
+        self.assertEqual(self.phi1.variables, ['x3'])
+        np_test.assert_array_equal(self.phi1.mean, np.asarray([[0]], dtype=float))
+        np_test.assert_array_equal(self.phi1.covariance,
+                                   np.asarray([[3]], dtype=float))
+        self.assertEqual(self.phi1._precision_matrix, None)
 
     def test_normalize(self):
         phi = self.phi1.copy()
