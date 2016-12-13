@@ -230,9 +230,8 @@ class JointGaussianDistribution(ContinuousFactor):
 
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
-        x_i = np.array([value for index,
-                        value in sorted([(self.variables.index(var), value) for var,
-                                         value in values])]).reshape(len(index_to_reduce), 1)
+        x_i = np.array([value for var, value in values]).reshape(len(index_to_reduce), 1)
+
         sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
         sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
         sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
