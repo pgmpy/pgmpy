@@ -96,14 +96,19 @@ class TestJGDMethods(unittest.TestCase):
         np_test.assert_almost_equal(self.phi1.h, np.array([[11.7], [-1.0]]))
         np_test.assert_almost_equal(self.phi1.g, -21.95)
 
-        self.phi1 = self.phi3
+        self.phi1 = self.phi3.copy()
         self.phi1.reduce([('x1', 4), ('x2', 1.23)])
         self.assertEqual(self.phi1.variables, ['x3'])
         np_test.assert_almost_equal(self.phi1.K, np.array([[4.0]]))
         np_test.assert_almost_equal(self.phi1.h, np.array([[1.46]]))
         np_test.assert_almost_equal(self.phi1.g, 0.8752)
 
-        self.phi1 = self.phi3
+        self.phi1 = self.phi3.copy()
+        self.phi1.reduce([('x2', 1.23), ('x1', 4)])
+        self.assertEqual(self.phi1.variables, ['x3'])
+        np_test.assert_almost_equal(self.phi1.K, np.array([[4.0]]))
+        np_test.assert_almost_equal(self.phi1.h, np.array([[1.46]]))
+        np_test.assert_almost_equal(self.phi1.g, 0.8752)
 
     def test_marginalize(self):
         phi = self.phi1.marginalize(['x1'], inplace=False)
