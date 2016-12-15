@@ -6,15 +6,13 @@ from __future__ import division
 from math import sqrt
 
 import numpy as np
-try:
-    from pandas import DataFrame
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF
+from pgmpy.base import HAS_PANDAS
 
+if HAS_PANDAS:
+    import pandas
 
 
 class HamiltonianMC(object):
@@ -201,7 +199,7 @@ class HamiltonianMC(object):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -265,8 +263,8 @@ class HamiltonianMC(object):
         self.acceptance_rate = self.accepted_proposals / num_samples
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(samples)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(samples)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return samples
@@ -453,7 +451,7 @@ class HamiltonianMCDA(HamiltonianMC):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -519,8 +517,8 @@ class HamiltonianMCDA(HamiltonianMC):
         self.acceptance_rate = self.accepted_proposals / num_samples
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(samples)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(samples)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return samples

@@ -4,21 +4,18 @@ from warnings import warn
 
 import networkx as nx
 import numpy as np
-try:
-    from pandas import DataFrame
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
 
 from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 from pgmpy.extern.six.moves import map, range
-
+from pgmpy.base import HAS_PANDAS
 
 State = namedtuple('State', ['var', 'state'])
 
+if HAS_PANDAS:
+    import pandas
 
 class BayesianModelSampling(Inference):
     """
@@ -50,7 +47,7 @@ class BayesianModelSampling(Inference):
         size: int
             size of sample to be generated
 
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -94,8 +91,8 @@ class BayesianModelSampling(Inference):
             sampled[node] = sample_discrete(states, weights, size)
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(sampled)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(sampled)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return sampled
@@ -124,7 +121,7 @@ class BayesianModelSampling(Inference):
             None if no evidence
         size: int
             size of sample to be generated
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -161,23 +158,19 @@ class BayesianModelSampling(Inference):
         i = 0
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
-            _sampled = self.forward_sample(_size)
+            _sampled = self.forward_sample(_size, 'recarray')
 
             for evid in evidence:
                 _sampled = _sampled[_sampled[evid[0]] == evid[1]]
 
             prob = max(len(_sampled) / _size, 0.01)
-
-            if HAS_PANDAS is True:
-                _sampled = _sampled.to_records(False)
-
             sampled = np.append(sampled, _sampled)[:size]
 
             i += len(_sampled)
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(sampled)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(sampled)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return sampled
@@ -197,7 +190,7 @@ class BayesianModelSampling(Inference):
             None if no evidence
         size: int
             size of sample to be generated
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -256,8 +249,8 @@ class BayesianModelSampling(Inference):
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(sampled)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(sampled)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return sampled
@@ -378,7 +371,7 @@ class GibbsSampling(MarkovChain):
             Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
             Number of samples to be generated.
-        return_type: string
+        return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
 
@@ -421,8 +414,8 @@ class GibbsSampling(MarkovChain):
             sampled[i + 1] = np.array([st for var, st in self.state])
 
         if return_type.lower() == "dataframe":
-            if HAS_PANDAS is True:
-                return DataFrame.from_records(sampled)
+            if HAS_PANDAS:
+                return pandas.DataFrame.from_records(sampled)
             else:
                 warn("Pandas installation not found. Returning numpy.recarray object")
                 return sampled
