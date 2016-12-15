@@ -260,9 +260,7 @@ class CanonicalFactor(ContinuousFactor):
         h_j = self.h[index_to_reduce]
 
         # The values for the reduced variables.
-        y = np.array([value for index,
-                      value in sorted([(self.variables.index(var), value) for var,
-                                      value in values])]).reshape(len(index_to_reduce), 1)
+        y = np.array([value for var, value in values]).reshape(len(index_to_reduce), 1)
 
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.K = K_i_i
