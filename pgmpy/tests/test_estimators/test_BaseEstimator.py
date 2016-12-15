@@ -40,12 +40,12 @@ class TestBaseEstimator(unittest.TestCase):
     def test_test_conditional_independence_titanic(self):
         est = BaseEstimator(self.titanic_data)
 
-        self.assertEqual(est.test_conditional_independence('Embarked', 'Sex'),
-                         (13.355630515001746, 0.020264556044311655, True))
-        self.assertEqual(est.test_conditional_independence('Pclass', 'Survived', ['Embarked']),
-                         (96.403283942888635, 4.1082315854166553e-13, True))
-        self.assertEqual(est.test_conditional_independence('Embarked', 'Survived', ["Sex", "Pclass"]),
-                         (21.537481934494085, 0.96380273702382602, True))
+        np.testing.assert_almost_equal(est.test_conditional_independence('Embarked', 'Sex'),
+                                       (13.355630515001746, 0.020264556044311655, True))
+        np.testing.assert_almost_equal(est.test_conditional_independence('Pclass', 'Survived', ['Embarked']),
+                                       (96.403283942888635, 4.1082315854166553e-13, True))
+        np.testing.assert_almost_equal(est.test_conditional_independence('Embarked', 'Survived', ["Sex", "Pclass"]),
+                                       (21.537481934494085, 0.96380273702382602, True))
         # insufficient data test commented out, because generates warning
         # self.assertEqual(est.test_conditional_independence('Sex', 'Survived', ["Age", "Embarked"]),
         #                 (235.51133052530713, 0.99999999683394869, False))
