@@ -1,6 +1,5 @@
 from collections import namedtuple
 import itertools
-from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -10,12 +9,11 @@ from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 from pgmpy.extern.six.moves import map, range
-from pgmpy.base import HAS_PANDAS
+from pgmpy.sampling import _return_samples
+
 
 State = namedtuple('State', ['var', 'state'])
 
-if HAS_PANDAS:
-    import pandas
 
 class BayesianModelSampling(Inference):
     """
@@ -70,10 +68,9 @@ class BayesianModelSampling(Inference):
         ...                ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(2)
-                diff       intel       grade
-        0        1           0          1
-        1        1           0          2
+        >>> inference.forward_sample(size=2, return_type='recarray')
+        rec.array([(0, 0, 1), (1, 0, 2)], 
+          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
         types = [(var_name, 'int') for var_name in self.topological_order]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
@@ -90,14 +87,7 @@ class BayesianModelSampling(Inference):
                 weights = cpd.values
             sampled[node] = sample_discrete(states, weights, size)
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(sampled)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return sampled
-        else:
-            return sampled
+        return _return_samples(return_type, sampled)
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
@@ -145,7 +135,7 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var='diff', state=0)]
-        >>> inference.rejection_sample(evidence, 2)
+        >>> inference.rejection_sample(evidence=evidence, size=2, return_type='dataframe')
                 intel       diff       grade
         0         0          0          1
         1         0          0          1
@@ -168,14 +158,7 @@ class BayesianModelSampling(Inference):
 
             i += len(_sampled)
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(sampled)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return sampled
-        else:
-            return sampled
+        return _return_samples(return_type, sampled)
 
     def likelihood_weighted_sample(self, evidence=None, size=1, return_type="dataframe"):
         """
@@ -214,10 +197,9 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State('diff', 0)]
-        >>> inference.likelihood_weighted_sample(evidence, 2)
-                intel       diff       grade  _weight
-        0         0          0          1        0.6
-        1         1          0          1        0.6
+        >>> inference.likelihood_weighted_sample(evidence=evidence, size=2, return_type='recarray')
+        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], 
+          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
         types = [(var_name, 'int') for var_name in self.topological_order]
         types.append(('_weight', 'float'))
@@ -248,14 +230,7 @@ class BayesianModelSampling(Inference):
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(sampled)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return sampled
-        else:
-            return sampled
+        return _return_samples(return_type, sampled)
 
 
 class GibbsSampling(MarkovChain):
@@ -390,7 +365,7 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4)
+        >>> gibbs.sample(size=4, return_tupe='dataframe')
            A  B  C
         0  0  1  1
         1  1  0  0
@@ -413,14 +388,7 @@ class GibbsSampling(MarkovChain):
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = np.array([st for var, st in self.state])
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(sampled)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return sampled
-        else:
-            return sampled
+        return _return_samples(return_type, sampled)
 
     def generate_sample(self, start_state=None, size=1):
         """

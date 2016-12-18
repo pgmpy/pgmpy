@@ -8,11 +8,7 @@ from math import sqrt
 import numpy as np
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
-from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF
-from pgmpy.base import HAS_PANDAS
-
-if HAS_PANDAS:
-    import pandas
+from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF, _return_samples
 
 
 class HamiltonianMC(object):
@@ -209,7 +205,6 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> # Example if pandas is installed in working environment
         >>> from pgmpy.sampling import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
         >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
@@ -231,7 +226,7 @@ class HamiltonianMC(object):
         >>> model = JGD(['x', 'y', 'z'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG)
         >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000,
-        ...                          trajectory_length=6, stepsize=0.25)
+        ...                          trajectory_length=6, stepsize=0.25, return_type='dataframe')
         >>> np.cov(samples.values.T)
         array([[ 1.00795398,  0.71384233,  0.79802097],
                [ 0.71384233,  1.00633524,  0.21313767],
@@ -262,14 +257,7 @@ class HamiltonianMC(object):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(samples)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return samples
-        else:
-            return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
         """
@@ -372,14 +360,14 @@ class HamiltonianMCDA(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog
+    >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog, GradLogPDFGaussian as GLPG
     >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
     >>> covariance = np.array([[2, 0.4, 0.5], [0.4, 3, 0.6], [0.5, 0.6, 4]])
     >>> model = JGD(['x', 'y', 'z'], mean, covariance)
-    >>> sampler = HMCda(model=model)
-    >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000, num_samples = 10000, trajectory_length=7
+    >>> sampler = HMCda(model=model, grad_log_pdf=GLPG)
+    >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000, num_samples = 10000, trajectory_length=7,
     ...                          return_type='recarray')
     >>> samples_array = np.array([samples[var_name] for var_name in model.variables])
     >>> np.cov(samples_array)
@@ -516,14 +504,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        if return_type.lower() == "dataframe":
-            if HAS_PANDAS:
-                return pandas.DataFrame.from_records(samples)
-            else:
-                warn("Pandas installation not found. Returning numpy.recarray object")
-                return samples
-        else:
-            return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
         """

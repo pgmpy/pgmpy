@@ -2,5 +2,5 @@
 try:
     import pandas
     HAS_PANDAS = True
-except:
+except ImportError:
     HAS_PANDAS = False
