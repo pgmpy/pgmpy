@@ -177,7 +177,7 @@ class MarkovChain(object):
         -----------
         variable: any hashable python object
             must be an existing variable of the model.
-        transition_model: dict
+        transition_model: dict or ndarray
             representing valid transition probabilities defined for every possible state of the variable.
 
         Examples:
@@ -186,11 +186,28 @@ class MarkovChain(object):
         >>> model = MC()
         >>> model.add_variable('grade', 3)
         >>> grade_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6 }, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        >>> grade_tm_matrix = np.array([[0.1, 0.5, 0.4], [0.2, 0.2, 0.6], [0.7, 0.15, 0.15]])
         >>> model.add_transition_model('grade', grade_tm)
+        >>> model.add_transition_model('grade', grade_tm_matrix)
         """
+        if isinstance(transition_model, list):
+            transition_model = np.array(transition_model)
+
         # check if the transition model is valid
         if not isinstance(transition_model, dict):
-            raise ValueError('Transition model must be a dict.')
+            if not isinstance(transition_model, np.ndarray):
+                raise ValueError('Transition model must be a dict or numpy array')
+            elif len(transition_model.shape) != 2:
+                raise ValueError('Transition model must be 2d array.given {t}'.format(t=transition_model.shape))
+            elif transition_model.shape[0] != transition_model.shape[1]:
+                raise ValueError('Dimension mismatch {d1}!={d2}'.format(d1=transition_model.shape[0],
+                                 d2=transition_model.shape[1]))
+
+        # convert the matrix to dict
+        if isinstance(transition_model, np.ndarray):
+            size = transition_model.shape[0]
+            transition_model = dict((i, dict((j, float(transition_model[i][j]))
+                                     for j in range(0, size))) for i in range(0, size))
 
         exp_states = set(range(self.cardinalities[variable]))
         tm_states = set(transition_model.keys())
