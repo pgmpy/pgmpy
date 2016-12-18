@@ -6,15 +6,9 @@ from __future__ import division
 from math import sqrt
 
 import numpy as np
-try:
-    import pandas as pd
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
-from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF
-
+from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF, _return_samples
 
 
 class HamiltonianMC(object):
@@ -50,7 +44,7 @@ class HamiltonianMC(object):
     >>> model = JGD(['x', 'y'], mean, covariance)
     >>> sampler = HMC(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
     >>> samples = sampler.sample(initial_pos=np.array([1, 1]), num_samples = 10000,
-    ...                          trajectory_length=2, stepsize=0.4)
+    ...                          trajectory_length=2, stepsize=0.4, return_type='recarray')
     >>> samples
     rec.array([(1.0, 1.0), (-3.1861687131079086, 3.7940994520145654),
      (-1.6920542547310844, 6.347410703806017), ...,
@@ -179,7 +173,7 @@ class HamiltonianMC(object):
 
         return position, alpha
 
-    def sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
+    def sample(self, initial_pos, num_samples, trajectory_length, stepsize=None, return_type='dataframe'):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -201,18 +195,16 @@ class HamiltonianMC(object):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
 
         Returns
         -------
-        Returns two different types (based on installations)
-
-        pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-
-        numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
 
         Examples
         --------
-        >>> # Example if pandas is installed in working environment
         >>> from pgmpy.sampling import HamiltonianMC as HMC, GradLogPDFGaussian, ModifiedEuler
         >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
@@ -221,7 +213,7 @@ class HamiltonianMC(object):
         >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=ModifiedEuler)
         >>> samples = sampler.sample(np.array([1, 1]), num_samples = 5,
-        ...                          trajectory_length=6, stepsize=0.25)
+        ...                          trajectory_length=6, stepsize=0.25, return_type='dataframe')
         >>> samples
                        x              y
         0   1.000000e+00   1.000000e+00
@@ -234,7 +226,7 @@ class HamiltonianMC(object):
         >>> model = JGD(['x', 'y', 'z'], mean, covariance)
         >>> sampler = HMC(model=model, grad_log_pdf=GLPG)
         >>> samples = sampler.sample(np.array([1, 1]), num_samples = 10000,
-        ...                          trajectory_length=6, stepsize=0.25)
+        ...                          trajectory_length=6, stepsize=0.25, return_type='dataframe')
         >>> np.cov(samples.values.T)
         array([[ 1.00795398,  0.71384233,  0.79802097],
                [ 0.71384233,  1.00633524,  0.21313767],
@@ -265,10 +257,7 @@ class HamiltonianMC(object):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        if HAS_PANDAS is True:
-            return pd.DataFrame.from_records(samples)
-
-        return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
         """
@@ -299,7 +288,7 @@ class HamiltonianMC(object):
 
         Examples
         --------
-        >>> from pgmpy.inference.continuous import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG
+        >>> from pgmpy.sampling import HamiltonianMC as HMC, GradLogPDFGaussian as GLPG
         >>> from pgmpy.factors import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([4, -1])
@@ -371,14 +360,15 @@ class HamiltonianMCDA(HamiltonianMC):
 
     Example:
     --------
-    >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog
+    >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog, GradLogPDFGaussian as GLPG
     >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
     >>> import numpy as np
     >>> mean = np.array([1, 2, 3])
     >>> covariance = np.array([[2, 0.4, 0.5], [0.4, 3, 0.6], [0.5, 0.6, 4]])
     >>> model = JGD(['x', 'y', 'z'], mean, covariance)
-    >>> sampler = HMCda(model=model)
-    >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000, num_samples = 10000, trajectory_length=7)
+    >>> sampler = HMCda(model=model, grad_log_pdf=GLPG)
+    >>> samples = sampler.sample(np.array([0, 0, 0]), num_adapt=10000, num_samples = 10000, trajectory_length=7,
+    ...                          return_type='recarray')
     >>> samples_array = np.array([samples[var_name] for var_name in model.variables])
     >>> np.cov(samples_array)
     array([[ 1.83023816,  0.40449162,  0.51200707],
@@ -424,7 +414,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
         return stepsize, stepsize_bar, h_bar
 
-    def sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
+    def sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None, return_type='dataframe'):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -449,13 +439,13 @@ class HamiltonianMCDA(HamiltonianMC):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
+
         Returns
         -------
-        Returns two different types (based on installations)
-
-        pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-
-        numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
 
         Examples
         ---------
@@ -466,8 +456,8 @@ class HamiltonianMCDA(HamiltonianMC):
         >>> covariance = np.array([[1, 0.7], [0.7, 3]])
         >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = HMCda(model=model, grad_log_pdf=GLPG, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000,
-        ...                          num_samples = 10000, trajectory_length=2, stepsize=None)
+        >>> samples = sampler.sample(np.array([1, 1]), num_adapt=10000, num_samples = 10000,
+        ...                          trajectory_length=2, stepsize=None, return_type='recarray')
         >>> samples_array = np.array([samples[var_name] for var_name in model.variables])
         >>> np.cov(samples_array)
         array([[ 0.98432155,  0.66517394],
@@ -514,10 +504,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        if HAS_PANDAS is True:
-            return pd.DataFrame.from_records(samples)
-
-        return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
         """

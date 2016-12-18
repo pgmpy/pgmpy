@@ -3,14 +3,8 @@
 from __future__ import division
 
 import numpy as np
-try:
-    import pandas as pd
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
 
-from pgmpy.sampling import HamiltonianMCDA
-from pgmpy.sampling import LeapFrog
+from pgmpy.sampling import HamiltonianMCDA, LeapFrog, _return_samples
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 
@@ -45,7 +39,8 @@ class NoUTurnSampler(HamiltonianMCDA):
     >>> covariance = np.array([[4, 0.1, 0.2], [0.1, 1, 0.3], [0.2, 0.3, 8]])
     >>> model = JGD(['x', 'y', 'z'], mean, covariance)
     >>> sampler = NUTS(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
-    >>> samples = sampler.sample(initial_pos=np.array([0.1, 0.9, 0.3]), num_samples=20000,stepsize=0.4)
+    >>> samples = sampler.sample(initial_pos=np.array([0.1, 0.9, 0.3]), num_samples=20000,
+    ...                          stepsize=0.4, return_type='recarray')
     >>> samples
     rec.array([(0.1, 0.9, 0.3),
      (-0.27303886844752756, 0.5028580705249155, 0.2895768065049909),
@@ -185,7 +180,7 @@ class NoUTurnSampler(HamiltonianMCDA):
 
         return position
 
-    def sample(self, initial_pos, num_samples, stepsize=None):
+    def sample(self, initial_pos, num_samples, stepsize=None, return_type='dataframe'):
         """
         Method to return samples using No U Turn Sampler
 
@@ -202,25 +197,26 @@ class NoUTurnSampler(HamiltonianMCDA):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
+
         Returns
         -------
-        Returns two different types (based on installations)
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
 
-        pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-
-        numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
 
         Examples
         ---------
-        >>> # If environment has a installation of pandas
-        >>> from pgmpy.inference.continuous import NoUTurnSampler as NUTS, GradLogPDFGaussian, LeapFrog
-        >>> from pgmpy.factors import JointGaussianDistribution as JGD
+        >>> from pgmpy.sampling import NoUTurnSampler as NUTS, GradLogPDFGaussian, LeapFrog
+        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
         >>> mean = np.array([0, 0, 0])
         >>> covariance = np.array([[6, 0.7, 0.2], [0.7, 3, 0.9], [0.2, 0.9, 1]])
         >>> model = JGD(['x', 'y', 'z'], mean, covariance)
         >>> sampler = NUTS(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(initial_pos=np.array([1, 1, 1]), num_samples=10, stepsize=0.4)
+        >>> samples = sampler.sample(initial_pos=np.array([1, 1, 1]), num_samples=10,
+        ...                          stepsize=0.4, return_type='dataframe')
         >>> samples
                   x         y         z
         0  1.000000  1.000000  1.000000
@@ -251,10 +247,7 @@ class NoUTurnSampler(HamiltonianMCDA):
             position_m = self._sample(position_m, stepsize)
             samples[i] = position_m
 
-        if HAS_PANDAS is True:
-            return pd.DataFrame.from_records(samples)
-
-        return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_samples, stepsize=None):
         """
@@ -350,7 +343,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     >>> covariance = np.array([[-2, 7, 2], [7, 14, 4], [2, 4, -1]])
     >>> model = JGD(['x', 'v', 't'], mean, covariance)
     >>> sampler = NUTSda(model=model, grad_log_pdf=GradLogPDFGaussian)
-    >>> samples = sampler.sample(initial_pos=np.array([0, 0, 0]), num_adapt=10, num_samples=10, stepsize=0.25)
+    >>> samples = sampler.sample(initial_pos=np.array([0, 0, 0]), num_adapt=10, num_samples=10,
+    ...                          stepsize=0.25, return_type='recarray')
     >>> samples
     rec.array([(0.0, 0.0, 0.0),
      (0.06100992691638076, -0.17118088764170125, 0.14048470935160887),
@@ -473,7 +467,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
 
         return position, alpha, n_alpha
 
-    def sample(self, initial_pos, num_adapt, num_samples, stepsize=None):
+    def sample(self, initial_pos, num_adapt, num_samples, stepsize=None, return_type='dataframe'):
         """
         Returns samples using No U Turn Sampler with dual averaging
 
@@ -493,17 +487,17 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             The stepsize for proposing new values of position and momentum in simulate_dynamics
             If None, then will be choosen suitably
 
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
+
         Returns
         -------
-        Returns two different types (based on installations)
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
 
-        pandas.DataFrame: Returns samples as pandas.DataFrame if environment has a installation of pandas
-
-        numpy.recarray: Returns samples in form of numpy recorded arrays (numpy.recarray)
 
         Examples
         ---------
-        >>> # If environment has a installation of pandas
         >>> from pgmpy.sampling import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian, LeapFrog
         >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
         >>> import numpy as np
@@ -511,7 +505,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         >>> covariance = np.array([[16, -3], [-3, 13]])
         >>> model = JGD(['x', 'y'], mean, covariance)
         >>> sampler = NUTSda(model=model, grad_log_pdf=GradLogPDFGaussian, simulate_dynamics=LeapFrog)
-        >>> samples = sampler.sample(initial_pos=np.array([12, -4]), num_adapt=10, num_samples=10, stepsize=0.1)
+        >>> samples = sampler.sample(initial_pos=np.array([12, -4]), num_adapt=10, num_samples=10,
+        ...                          stepsize=0.1, return_type='dataframe')
         >>> samples
                    x          y
         0  12.000000  -4.000000
@@ -555,10 +550,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             else:
                 stepsize = stepsize_bar
 
-        if HAS_PANDAS is True:
-            return pd.DataFrame.from_records(samples)
-
-        return samples
+        return _return_samples(return_type, samples)
 
     def generate_sample(self, initial_pos, num_adapt, num_samples, stepsize=None):
         """

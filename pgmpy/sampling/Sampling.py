@@ -1,15 +1,16 @@
-import itertools
 from collections import namedtuple
+import itertools
 
 import networkx as nx
 import numpy as np
-from pandas import DataFrame
-from pgmpy.extern.six.moves import map, range
 
 from pgmpy.factors.discrete import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
+from pgmpy.extern.six.moves import map, range
+from pgmpy.sampling import _return_samples
+
 
 State = namedtuple('State', ['var', 'state'])
 
@@ -35,7 +36,7 @@ class BayesianModelSampling(Inference):
         self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
-    def forward_sample(self, size=1):
+    def forward_sample(self, size=1, return_type='dataframe'):
         """
         Generates sample(s) from joint distribution of the bayesian network.
 
@@ -44,10 +45,15 @@ class BayesianModelSampling(Inference):
         size: int
             size of sample to be generated
 
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
+
         Returns
         -------
-        sampled: pandas.DataFrame
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
             the generated samples
+
 
         Examples
         --------
@@ -62,24 +68,26 @@ class BayesianModelSampling(Inference):
         ...                ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(2)
-                diff       intel       grade
-        0        1           0          1
-        1        1           0          2
+        >>> inference.forward_sample(size=2, return_type='recarray')
+        rec.array([(0, 0, 1), (1, 0, 2)], 
+          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
-        sampled = DataFrame(index=range(size), columns=self.topological_order)
+        types = [(var_name, 'int') for var_name in self.topological_order]
+        sampled = np.zeros(size, dtype=types).view(np.recarray)
+
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
             if evidence:
                 cached_values = self.pre_compute_reduce(variable=node)
-                evidence = sampled.ix[:, evidence].values
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence))
+                evidence = np.vstack([sampled[i] for i in evidence])
+                weights = list(map(lambda t: cached_values[tuple(t)], evidence.T))
             else:
                 weights = cpd.values
             sampled[node] = sample_discrete(states, weights, size)
-        return sampled
+
+        return _return_samples(return_type, sampled)
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
@@ -92,7 +100,7 @@ class BayesianModelSampling(Inference):
 
         return cached_values
 
-    def rejection_sample(self, evidence=None, size=1):
+    def rejection_sample(self, evidence=None, size=1, return_type="dataframe"):
         """
         Generates sample(s) from joint distribution of the bayesian network,
         given the evidence.
@@ -103,10 +111,13 @@ class BayesianModelSampling(Inference):
             None if no evidence
         size: int
             size of sample to be generated
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
 
         Returns
         -------
-        sampled: pandas.DataFrame
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
             the generated samples
 
         Examples
@@ -124,26 +135,32 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var='diff', state=0)]
-        >>> inference.rejection_sample(evidence, 2)
+        >>> inference.rejection_sample(evidence=evidence, size=2, return_type='dataframe')
                 intel       diff       grade
         0         0          0          1
         1         0          0          1
         """
         if evidence is None:
             return self.forward_sample(size)
-        sampled = DataFrame(columns=self.topological_order)
+        types = [(var_name, 'int') for var_name in self.topological_order]
+        sampled = np.zeros(0, dtype=types).view(np.recarray)
         prob = 1
-        while len(sampled) < size:
-            _size = int(((size - len(sampled)) / prob) * 1.5)
-            _sampled = self.forward_sample(_size)
-            for evid in evidence:
-                _sampled = _sampled[_sampled.ix[:, evid[0]] == evid[1]]
-            prob = max(len(_sampled) / _size, 0.01)
-            sampled = sampled.append(_sampled)
-        sampled.reset_index(inplace=True, drop=True)
-        return sampled[:size]
+        i = 0
+        while i < size:
+            _size = int(((size - i) / prob) * 1.5)
+            _sampled = self.forward_sample(_size, 'recarray')
 
-    def likelihood_weighted_sample(self, evidence=None, size=1):
+            for evid in evidence:
+                _sampled = _sampled[_sampled[evid[0]] == evid[1]]
+
+            prob = max(len(_sampled) / _size, 0.01)
+            sampled = np.append(sampled, _sampled)[:size]
+
+            i += len(_sampled)
+
+        return _return_samples(return_type, sampled)
+
+    def likelihood_weighted_sample(self, evidence=None, size=1, return_type="dataframe"):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
         network, that comply with the given evidence.
@@ -156,10 +173,13 @@ class BayesianModelSampling(Inference):
             None if no evidence
         size: int
             size of sample to be generated
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
 
         Returns
         -------
-        sampled: pandas.DataFrame
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
             the generated samples with corresponding weights
 
         Examples
@@ -177,36 +197,40 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State('diff', 0)]
-        >>> inference.likelihood_weighted_sample(evidence, 2)
-                intel       diff       grade  _weight
-        0         0          0          1        0.6
-        1         1          0          1        0.6
+        >>> inference.likelihood_weighted_sample(evidence=evidence, size=2, return_type='recarray')
+        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], 
+          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
-        sampled = DataFrame(index=range(size), columns=self.topological_order)
+        types = [(var_name, 'int') for var_name in self.topological_order]
+        types.append(('_weight', 'float'))
+        sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled['_weight'] = np.ones(size)
         evidence_dict = {var: st for var, st in evidence}
+
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.get_evidence()
+
             if evidence:
-                evidence_values = sampled.ix[:, evidence].values
+                evidence_values = np.vstack([sampled[i] for i in evidence])
                 cached_values = self.pre_compute_reduce(node)
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence_values))
+                weights = list(map(lambda t: cached_values[tuple(t)], evidence_values.T))
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
-                        sampled.loc[i, '_weight'] *= weights[i][evidence_dict[node]]
+                        sampled['_weight'][i] *= weights[i][evidence_dict[node]]
                 else:
                     sampled[node] = sample_discrete(states, weights)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
-                        sampled.loc[i, '_weight'] *= cpd.values[evidence_dict[node]]
+                        sampled['_weight'][i] *= cpd.values[evidence_dict[node]]
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
-        return sampled
+
+        return _return_samples(return_type, sampled)
 
 
 class GibbsSampling(MarkovChain):
@@ -235,10 +259,8 @@ class GibbsSampling(MarkovChain):
     >>> student.add_nodes_from(['intel', 'sat'])
     >>> student.add_edge('intel', 'sat')
     >>> student.add_cpds(intel_cpd, sat_cpd)
-
     >>> from pgmpy.inference import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-
     Sample from it:
     >>> gibbs_chain.sample(size=3)
        intel  sat
@@ -314,7 +336,7 @@ class GibbsSampling(MarkovChain):
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
 
-    def sample(self, start_state=None, size=1):
+    def sample(self, start_state=None, size=1, return_type="dataframe"):
         """
         Sample from the Markov Chain.
 
@@ -324,10 +346,14 @@ class GibbsSampling(MarkovChain):
             Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
             Number of samples to be generated.
+        return_type: string (dataframe | recarray)
+            Return type for samples, either of 'dataframe' or 'recarray'.
+            Defaults to 'dataframe'
 
-        Return Type:
-        ------------
-        pandas.DataFrame
+        Returns
+        -------
+        sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
+            the generated samples
 
         Examples:
         ---------
@@ -339,7 +365,7 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4)
+        >>> gibbs.sample(size=4, return_tupe='dataframe')
            A  B  C
         0  0  1  1
         1  1  0  0
@@ -351,16 +377,18 @@ class GibbsSampling(MarkovChain):
         elif start_state is not None:
             self.set_start_state(start_state)
 
-        sampled = DataFrame(index=range(size), columns=self.variables)
-        sampled.loc[0] = [st for var, st in self.state]
+        types = [(var_name, 'int') for var_name in self.variables]
+        sampled = np.zeros(size, dtype=types).view(np.recarray)
+        sampled[0] = np.array([st for var, st in self.state])
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
                 next_st = sample_discrete(list(range(self.cardinalities[var])),
                                           self.transition_models[var][other_st])[0]
                 self.state[j] = State(var, next_st)
-            sampled.loc[i + 1] = [st for var, st in self.state]
-        return sampled
+            sampled[i + 1] = np.array([st for var, st in self.state])
+
+        return _return_samples(return_type, sampled)
 
     def generate_sample(self, start_state=None, size=1):
         """
@@ -385,9 +413,10 @@ class GibbsSampling(MarkovChain):
         [[State(var='C', state=1), State(var='B', state=1), State(var='A', state=0)],
          [State(var='C', state=0), State(var='B', state=1), State(var='A', state=1)]]
         """
+
         if start_state is None and self.state is None:
             self.state = self.random_state()
-        else:
+        elif start_state is not None:
             self.set_start_state(start_state)
 
         for i in range(size):

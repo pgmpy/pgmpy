@@ -1,6 +1,12 @@
+from warnings import warn
+
 import numpy as np
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
+from pgmpy.base import HAS_PANDAS
+
+if HAS_PANDAS:
+    import pandas
 
 
 class BaseGradLogPDF(object):
@@ -398,3 +404,17 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
         grad_log, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
         return position_bar, momentum_bar, grad_log
+
+
+def _return_samples(return_type, samples):
+    """
+        A utility function to return samples according to type
+    """
+    if return_type.lower() == "dataframe":
+        if HAS_PANDAS:
+            return pandas.DataFrame.from_records(samples)
+        else:
+            warn("Pandas installation not found. Returning numpy.recarray object")
+            return samples
+    else:
+        return samples
