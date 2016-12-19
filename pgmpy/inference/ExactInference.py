@@ -97,6 +97,7 @@ class VariableElimination(Inference):
                                                           inplace=False).normalize(inplace=False)
         return query_var_factor
 
+    @StateNameDecorator(argument='variables', return_val=None)
     def query(self, variables, evidence=None, elimination_order=None):
         """
         Parameters
@@ -123,8 +124,28 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-        return self._variable_elimination(variables, 'marginalize',
+        variable_list = []
+
+        for var in variables:
+            if isinstance(var, tuple):
+                variable_list.append(var[0])
+            if isinstance(var, str):
+                variable_list.append(var)
+
+        query_factors = self._variable_elimination(variable_list, 'marginalize',
                                           evidence=evidence, elimination_order=elimination_order)
+
+        query_dis_factor = {}
+
+        for var in variables:
+            if isinstance(var, tuple):
+                query_factor = copy.copy(query_factors[var[0]])
+                query_factor.reduce([(var[0], var[1])])
+                query_dis_factor[var[0] + '=' + str(var[1])] = query_factor
+            if isinstance(var, str):
+                query_dis_factor[var] = query_factors[var]
+
+        return query_dis_factor
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
