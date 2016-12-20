@@ -127,9 +127,9 @@ class VariableElimination(Inference):
         variable_list = []
 
         for var in variables:
-            if isinstance(var, tuple):
+            if isinstance(var, tuple) and var not in self.variables:
                 variable_list.append(var[0])
-            if isinstance(var, str):
+            else:
                 variable_list.append(var)
 
         query_factors = self._variable_elimination(variable_list, 'marginalize',
@@ -138,11 +138,11 @@ class VariableElimination(Inference):
         query_dis_factor = {}
 
         for var in variables:
-            if isinstance(var, tuple):
+            if isinstance(var, tuple) and var not in self.variables:
                 query_factor = copy.copy(query_factors[var[0]])
                 query_factor.reduce([(var[0], var[1])])
-                query_dis_factor[var[0] + '=' + str(var[1])] = query_factor
-            if isinstance(var, str):
+                query_dis_factor[var[0]] = query_factor
+            else:
                 query_dis_factor[var] = query_factors[var]
 
         return query_dis_factor
