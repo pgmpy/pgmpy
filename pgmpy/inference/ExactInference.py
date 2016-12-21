@@ -97,7 +97,6 @@ class VariableElimination(Inference):
                                                           inplace=False).normalize(inplace=False)
         return query_var_factor
 
-    @StateNameDecorator(argument='variables', return_val=None)
     def query(self, variables, evidence=None, elimination_order=None):
         """
         Parameters
@@ -140,7 +139,17 @@ class VariableElimination(Inference):
         for var in variables:
             if isinstance(var, tuple) and var not in self.variables:
                 query_factor = copy.copy(query_factors[var[0]])
-                query_factor.reduce([(var[0], var[1])])
+                if not isinstance(var[1], int):
+                    try:
+                        state = self.state_names[var[0]].index(var[1])
+                    except:
+                        raise ValueError(str(var[1]) + ' state not present in ' + str(var[0]))
+                    query_factor.reduce([(var[0], state)])
+                else:
+                    try:
+                        query_factor.reduce([(var[0], var[1])])
+                    except:
+                        raise ValueError(str(var[1]) + ' state not present in ' + str(var[0]))
                 query_dis_factor[var[0]] = query_factor
             else:
                 query_dis_factor[var] = query_factors[var]
