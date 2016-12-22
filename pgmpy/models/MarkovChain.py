@@ -282,11 +282,11 @@ class MarkovChain(object):
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st])[0]
+                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size = size)
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
-                next_st = samples[var][st]
+                next_st = samples[var][st][i]
                 self.state[j] = State(var, next_st)
             sampled.loc[i + 1] = [st for var, st in self.state]
 
@@ -305,7 +305,7 @@ class MarkovChain(object):
         >>> from pgmpy.models.MarkovChain import MarkovChain as MC
         >>> from pgmpy.factors.discrete import State
         >>> model = MC(['intel', 'diff'], [3, 2])
-        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {2: 0.1, 1:0.9}}
+        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {2: 0.5, 1:0.5}}
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
