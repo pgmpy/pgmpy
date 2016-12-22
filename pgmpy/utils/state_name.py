@@ -1,3 +1,4 @@
+from wrapt import decorator
 """
 The file contains decorators to manage the user defined
 variable state names. It maps the internal representaion
@@ -28,17 +29,16 @@ class StateNameInit():
     >>> print(phi.state_names)
     {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}
     """
-    def __call__(self, f):
-        def wrapper(*args, **kwargs):
-            # Case, when no state names dict is provided.
-            if 'state_names' not in kwargs:
-                # args[0] represents the self parameter of the __init__ method
-                args[0].state_names = None
-            else:
-                args[0].state_names = kwargs['state_names']
-                del kwargs['state_names']
-            f(*args, **kwargs)
-        return wrapper
+    @decorator
+    def __call__(self, f, instance, args, kwargs):
+        # Case, when no state names dict is provided.
+        if 'state_names' not in kwargs:
+            # instance represents the self parameter of the __init__ method
+            instance.state_names = None
+        else:
+            instance.state_names = kwargs['state_names']
+            del kwargs['state_names']
+        f(*args, **kwargs)
 
 
 class StateNameDecorator():
@@ -158,44 +158,42 @@ class StateNameDecorator():
                     arg_val[var] = self.state_names[var].index(arg_val[var])
             return arg_val
 
-    def __call__(self, f):
-        def wrapper(*args, **kwargs):
-            # args[0] represents the self parameter of the __init__ method
-            method_self = args[0]
+    @decorator
+    def __call__(self, f, instance, args, kwargs):
+        # instance represents the self parameter of the __init__ method
+        method_self = instance
 
-            if not method_self.state_names:
+        if not method_self.state_names:
+            return f(*args, **kwargs)
+        else:
+            self.state_names = method_self.state_names
+
+        if self.arg and not self.return_val:
+            # If input parameters are in kwargs format
+            if self.arg in kwargs:
+                arg_val = kwargs[self.arg]
+                kwargs[self.arg] = self.get_mapped_value(arg_val)
                 return f(*args, **kwargs)
+            # If input parameters are in args format
             else:
-                self.state_names = method_self.state_names
+                for arg_val in args[:]:
+                    mapped_arg_val = self.get_mapped_value(arg_val)
+                    if mapped_arg_val:
+                        mapped_args = list(args)
+                        mapped_args[args.index(arg_val)] = mapped_arg_val
+                return f(*mapped_args, **kwargs)
 
-            if self.arg and not self.return_val:
-                # If input parameters are in kwargs format
-                if self.arg in kwargs:
-                    arg_val = kwargs[self.arg]
-                    kwargs[self.arg] = self.get_mapped_value(arg_val)
-                    return f(*args, **kwargs)
-                # If input parameters are in args format
-                else:
-                    for arg_val in args[1:]:
-                        mapped_arg_val = self.get_mapped_value(arg_val)
-                        if mapped_arg_val:
-                            mapped_args = list(args)
-                            mapped_args[args.index(arg_val)] = mapped_arg_val
-                    return f(*mapped_args, **kwargs)
+        elif not self.arg and self.return_val:
+            return_val = f(*args, **kwargs)
 
-            elif not self.arg and self.return_val:
-                return_val = f(*args, **kwargs)
+            mapped_return_val = self.get_mapped_value(return_val)
+            # If the function returns only one output
+            if mapped_return_val:
+                return mapped_return_val
 
-                mapped_return_val = self.get_mapped_value(return_val)
-                # If the function returns only one output
-                if mapped_return_val:
-                    return mapped_return_val
-
-                # If the function returns more than one output.
-                for ret_val in list(return_val):
-                    mapped_ret_val = self.get_mapped_value(ret_val)
-                    if ret_val:
-                        return_val[return_val.index(ret_val)] = mapped_ret_val
-                return return_val
-
-        return wrapper
+            # If the function returns more than one output.
+            for ret_val in list(return_val):
+                mapped_ret_val = self.get_mapped_value(ret_val)
+                if ret_val:
+                    return_val[return_val.index(ret_val)] = mapped_ret_val
+            return return_val
