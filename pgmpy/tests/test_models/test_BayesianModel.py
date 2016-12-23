@@ -453,6 +453,16 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                                              1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1,
                                              1, 1, 1, 0]))
 
+    def test_predict_raises_error(self):
+        fit_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])[:]
+
+        predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
+                              columns=['A', 'B', 'C', 'F', 'E'])[:]
+        
+        self.model_connected.fit(fit_data)
+        self.assertRaises(ValueError, self.model_connected.predict, predict_data)
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
