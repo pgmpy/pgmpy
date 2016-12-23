@@ -453,6 +453,27 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                                              1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1,
                                              1, 1, 1, 0]))
 
+    def test_connected_predict_probability(self):
+        np.random.seed(42)
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(100, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
+        fit_data = values[:80]
+        predict_data = values[80:].copy()
+        self.model_connected.fit(fit_data)
+        self.assertRaises(ValueError, self.model_connected.predict, predict_data)
+        predict_data.drop('E', axis=1, inplace=True)
+        e_prob = self.model_connected.predict_probability(predict_data)
+        np_test.assert_allclose(e_prob.values.ravel(),
+                                    np.array([0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.57894737,
+                                             0.42105263,  0.5       ,  0.5       ,  0.57894737,  0.42105263,
+                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.57894737,
+                                             0.42105263,  0.57894737,  0.42105263,  0.5       ,  0.5       ,
+                                             0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.5       ,
+                                             0.5       ,  0.57894737,  0.42105263,  0.57894737,  0.42105263,
+                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.5       ,
+                                             0.5       ,  0.5       ,  0.5       ,  0.5       ,  0.5       ]), atol = 0)
+ 
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected

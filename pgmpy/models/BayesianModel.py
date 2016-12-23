@@ -714,11 +714,20 @@ class BayesianModel(DirectedGraph):
         >>> predict_data.drop('E', axis=1, inplace=True)
         >>> y_pred = model.predict(predict_data)
         >>> y_pred
-        array([0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1,
-               1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1,
-               1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
-               1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1,
-               1, 1, 1, 0, 0, 0, 1, 0])
+            B
+        800 0
+        801 1
+        802 1
+        803 1
+        804 0
+        ... ...
+        993 0
+        994 0
+        995 1
+        996 1
+        997 0
+        998 0
+        999 0
         """
         from pgmpy.inference import VariableElimination
 
@@ -736,6 +745,71 @@ class BayesianModel(DirectedGraph):
             states_dict = model_inference.map_query(variables=missing_variables, evidence=data_point.to_dict())
             for k, v in states_dict.items():
                 pred_values[k].append(v)
+        return pd.DataFrame(pred_values, index=data.index)
+
+    def predict_probability(self, data):
+        """
+        Predicts probabilities of all states of the missing variables.
+
+        Parameters
+        ----------
+        data : pandas DataFrame object
+            A DataFrame object with column names same as the variables in the model.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import BayesianModel
+        >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(100, 5)),
+        ...                       columns=['A', 'B', 'C', 'D', 'E'])
+        >>> train_data = values[:80]
+        >>> predict_data = values[80:]
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model.fit(values)
+        >>> predict_data = predict_data.copy()
+        >>> predict_data.drop('B', axis=1, inplace=True)
+        >>> y_prob = model.predict_probability(predict_data)
+        >>> y_prob 
+            B_0         B_1
+        80  0.439178    0.560822
+        81  0.581970    0.418030
+        82  0.488275    0.511725
+        83  0.581970    0.418030
+        84  0.510794    0.489206
+        85  0.439178    0.560822
+        86  0.439178    0.560822
+        87  0.417124    0.582876
+        88  0.407978    0.592022
+        89  0.429905    0.570095
+        90  0.581970    0.418030
+        91  0.407978    0.592022
+        92  0.429905    0.570095
+        93  0.429905    0.570095
+        94  0.439178    0.560822
+        95  0.407978    0.592022
+        96  0.559904    0.440096
+        97  0.417124    0.582876
+        98  0.488275    0.511725
+        99  0.407978    0.592022
+        """
+        from pgmpy.inference import VariableElimination
+
+        if set(data.columns) == set(self.nodes()):
+            raise ValueError("No variable missing in data. Nothing to predict")
+
+        elif set(data.columns) - set(self.nodes()):
+            raise ValueError("data has variables which are not in the model")
+
+        missing_variables = set(self.nodes()) - set(data.columns)
+        pred_values = defaultdict(list)
+
+        model_inference = VariableElimination(self)
+        for index, data_point in data.iterrows():
+            states_dict = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            for k, v in states_dict.items():
+                for l in range(len(v.values)):
+                    pred_values[k + '_' + str(l)].append(v.values[l])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_factorized_product(self, latex=False):
