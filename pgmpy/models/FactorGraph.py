@@ -16,7 +16,7 @@ from pgmpy.extern.six.moves import filter, range, zip
 
 class FactorGraph(UndirectedGraph):
     """
-    Class for representing factor graph.
+    Createlass for representing factor   graph.
 
     DiscreteFactor graph is a bipartite graph representing factorization of a function.
     They allow efficient computation of marginal distributions through sum-product
