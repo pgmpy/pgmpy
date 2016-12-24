@@ -2,8 +2,8 @@ language: python
 virtualenv:
     system_site_packages: false
 env:
+    - DISTRIB="conda" PYTHON_VERSION="3.5" COVERAGE="true"
     - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
-    - DISTRIB="conda" PYTHON_VERSION="3.3" COVERAGE="true"
     - DISTRIB="conda" PYTHON_VERSION="2.7" COVERAGE="true"
 
 before_install:

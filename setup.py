@@ -10,7 +10,9 @@ setup(
     author=open("AUTHORS.rst").read(),
     url="https://github.com/pgmpy/pgmpy",
     classifiers=[
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 2.7",
         "Intended Audience :: Developers",
         "Operating System :: Unix",
         "Operating System :: POSIX",
