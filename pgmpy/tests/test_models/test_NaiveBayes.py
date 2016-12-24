@@ -155,7 +155,6 @@ class TestNaiveBayesMethods(unittest.TestCase):
         self.assertListEqual(sorted(self.G1._get_ancestors_of('a')), ['a'])
         self.assertListEqual(sorted(self.G1._get_ancestors_of(['b', 'e'])), ['a', 'b', 'e'])
 
-
     def tearDown(self):
         del self.G1
         del self.G2
