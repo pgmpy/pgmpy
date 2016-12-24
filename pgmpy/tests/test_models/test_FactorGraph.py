@@ -93,6 +93,26 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.remove_factors(phi1)
         six.assertCountEqual(self, self.graph.factors, [phi2])
 
+    def test_remove_node(self):
+        self.graph.add_nodes_from(['a','b','c'])
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1, phi2)
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.remove_node('a')
+        six.assertCountEqual(self, self.graph.nodes(), ['b','c']+self.graph.factors)
+
+    def test_remove_nodes_from(self):
+        self.graph.add_nodes_from(['a','b','c'])
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1, phi2)
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
+                                   ('b', phi2), ('c', phi2)])
+        self.graph.remove_nodes_from(['a', 'b'])
+        six.assertCountEqual(self, self.graph.nodes(), ['c'] + self.graph.factors)
+
     def test_get_partition_function(self):
         phi1 = DiscreteFactor(['a', 'b'], [2, 2], range(4))
         phi2 = DiscreteFactor(['b', 'c'], [2, 2], range(4))
@@ -213,7 +233,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertTrue(self.graph.check_model())
 
         self.graph.remove_factors(phi1)
-        self.graph.remove_node(phi1)
+        #self.graph.remove_node(phi1)
         phi1 = DiscreteFactor(['a', 'b'], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1)
         self.graph.add_edges_from([('a', phi1)])
@@ -274,7 +294,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
 
         self.graph.remove_factors(phi2)
-        self.graph.remove_node(phi2)
+        #self.graph.remove_node(phi2)
         phi3 = DiscreteFactor(['c', 'a'], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
         self.graph.add_edges_from([('a', phi3), ('c', phi3)])
