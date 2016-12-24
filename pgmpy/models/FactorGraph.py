@@ -95,7 +95,6 @@ class FactorGraph(UndirectedGraph):
         else:
             raise ValueError('Self loops are not allowed')
 
-
     def add_factors(self, *factors):
         """
         Associate a factor to the graph.
@@ -144,8 +143,8 @@ class FactorGraph(UndirectedGraph):
         """
         for factor in factors:
             self.factors.remove(factor)
-            if factor in super(FactorGraph,self).nodes():
-                super(FactorGraph,self).remove_node(factor)
+            if factor in super(FactorGraph, self).nodes():
+                super(FactorGraph, self).remove_node(factor)
 
     def remove_node(self, node):
         """
@@ -166,19 +165,19 @@ class FactorGraph(UndirectedGraph):
         if not isinstance(node, six.string_types):
             raise ValueError("Node must be a string given{s}", s=type(node))
 
-        affected_factors = [v for u,v in self.edges() if u==node]
-        affected_factors.extend([u for u,v in self.edges() if v==node])
+        affected_factors = [v for u, v in self.edges() if u == node]
+        affected_factors.extend([u for u, v in self.edges() if v == node])
         # remove and marginalise
         for ii in affected_factors:
-                edge_nodes = [v for u,v in self.edges() if u == ii]
-                edge_nodes.extend([u for u,v in self.edges() if v == ii])
-                fac_temp = ii.marginalize([node], inplace = False)
+                edge_nodes = [v for u, v in self.edges() if u == ii]
+                edge_nodes.extend([u for u, v in self.edges() if v == ii])
+                fac_temp = ii.marginalize([node], inplace=False)
                 self.remove_factors(ii)
                 if len(fac_temp.scope()) != 0:
                     self.add_factors(fac_temp)
                     edges = list(zip(edge_nodes, [fac_temp for _ in range(len(edge_nodes))]))
                     self.add_edges_from(edges)
-        super(FactorGraph,self).remove_node(node)                
+        super(FactorGraph, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
         """
@@ -197,11 +196,11 @@ class FactorGraph(UndirectedGraph):
         >>> G.remove_nodes_from(['a','b'])
         """
         if not isinstance(nodes, (list, tuple, np.ndarray)):
-            raise ValueError("nodes must be a iterable type {s} given".format(s = type(nodes)))
+            raise ValueError("nodes must be a iterable type {s} given".format(s=type(nodes)))
 
         for node in nodes:
             self.remove_node(node)
-        
+
     def get_cardinality(self, check_cardinality=False):
         """
         Returns a dictionary with the given factors as keys and their respective
