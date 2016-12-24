@@ -129,13 +129,10 @@ class TestNaiveBayesMethods(unittest.TestCase):
                               ('d', 's')])
 
     def test_local_independencies(self):
-        self.assertListEqual(self.G1.local_independencies('a'), [None])
-        self.assertListEqual(self.G1.local_independencies('b'),
-                             [Independencies(['b', ['e', 'c', 'd'], 'a'])])
-        self.assertListEqual(self.G1.local_independencies('c'),
-                             [Independencies(['c', ['e', 'b', 'd'], 'a'])])
-        self.assertListEqual(self.G1.local_independencies('d'),
-                             [Independencies(['d', ['b', 'c', 'e'], 'a'])])
+        self.assertEqual(self.G1.local_independencies('a'), Independencies())
+        self.assertEqual(self.G1.local_independencies('b'), Independencies(['b', ['e', 'c', 'd'], 'a']))
+        self.assertEqual(self.G1.local_independencies('c'), Independencies(['c', ['e', 'b', 'd'], 'a']))
+        self.assertEqual(self.G1.local_independencies('d'), Independencies(['d', ['b', 'c', 'e'], 'a']))
 
     def test_active_trail_nodes(self):
         self.assertListEqual(sorted(self.G2.active_trail_nodes('d')), ['d', 'g', 'l', 's'])
