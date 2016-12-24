@@ -168,15 +168,15 @@ class FactorGraph(UndirectedGraph):
         affected_factors = [v for u, v in self.edges() if u == node]
         affected_factors.extend([u for u, v in self.edges() if v == node])
         # remove and marginalise
-        for ii in affected_factors:
-                edge_nodes = [v for u, v in self.edges() if u == ii]
-                edge_nodes.extend([u for u, v in self.edges() if v == ii])
-                fac_temp = ii.marginalize([node], inplace=False)
-                self.remove_factors(ii)
-                if len(fac_temp.scope()) != 0:
-                    self.add_factors(fac_temp)
-                    edges = list(zip(edge_nodes, [fac_temp for _ in range(len(edge_nodes))]))
-                    self.add_edges_from(edges)
+        for factor in affected_factors:
+            edge_nodes = [v for u, v in self.edges() if u == factor]
+            edge_nodes.extend([u for u, v in self.edges() if v == factor])
+            fac_temp = factor.marginalize([node], inplace=False)
+            self.remove_factors(factor)
+            if len(fac_temp.scope()) != 0:
+                self.add_factors(fac_temp)
+                edges = list(zip(edge_nodes, [fac_temp for _ in range(len(edge_nodes))]))
+                self.add_edges_from(edges)
         super(FactorGraph, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
