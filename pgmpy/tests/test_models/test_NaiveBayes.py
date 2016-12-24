@@ -146,6 +146,12 @@ class TestNaiveBayesMethods(unittest.TestCase):
         self.assertListEqual(sorted(self.G2.active_trail_nodes('s', observed=['g', 'l'])), ['d', 's'])
         self.assertListEqual(sorted(self.G2.active_trail_nodes('s', observed=['d', 'l'])), ['s'])
 
+    def test_get_ancestors_of(self):
+        self.assertListEqual(sorted(self.G1._get_ancestors_of('b')), ['a', 'b'])
+        self.assertListEqual(sorted(self.G1._get_ancestors_of('e')), ['a', 'e'])
+        self.assertListEqual(sorted(self.G1._get_ancestors_of('a')), ['a'])
+        self.assertListEqual(sorted(self.G1._get_ancestors_of(['b', 'e'])), ['a', 'b', 'e'])
+
     def tearDown(self):
         del self.G1
         del self.G2
