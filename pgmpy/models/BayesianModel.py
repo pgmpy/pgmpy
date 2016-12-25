@@ -471,12 +471,8 @@ class BayesianModel(DirectedGraph):
         >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
         >>>                         ('grade', 'letter'), ('intel', 'SAT')])
         >>> ind = student.local_independencies('grade')
-        >>> ind.event1
-        {'grade'}
-        >>> ind.event2
-        {'SAT'}
-        >>> ind.event3
-        {'diff', 'intel'}
+        >>> ind
+        (grade _|_ SAT | diff, intel)
         """
         def dfs(node):
             """
