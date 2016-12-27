@@ -141,7 +141,7 @@ class NaiveBayes(BayesianModel):
 
     def local_independencies(self, variables):
         """
-        Returns a independencies object containing the local independencies
+        Returns an instance of Independencies containing the local independencies
         of each of the variables.
 
 
