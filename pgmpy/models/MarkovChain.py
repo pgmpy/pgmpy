@@ -5,7 +5,6 @@ from warnings import warn
 import numpy as np
 from pandas import DataFrame
 from scipy.linalg import eig
-import math
 
 from pgmpy.factors.discrete import State
 from pgmpy.utils import sample_discrete
@@ -284,7 +283,7 @@ class MarkovChain(object):
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size = size)
+                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size)
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
@@ -369,22 +368,23 @@ class MarkovChain(object):
                 self.state[j] = State(var, next_st)
             yield self.state[:]
 
-    def check_stationarity(self, tolerance=0.2, sample=None):
+    def is_stationarity(self, tolerance=0.2, sample=None):
         """
-        Checks if the given markov model is stationary and checks the steady state
+        Checks if the given markov chain is stationary and checks the steady state
         probablity values for the state are consistent.
-
 
         Parameters:
         -----------
         tolerance: float
-            reprsents the diff between actual steady state value and the computed value
+            represents the diff between actual steady state value and the computed value
         sample: [State(i,j)]
             represents the list of state which the markov chain has sampled
 
         Return Type:
         ------------
-        None
+        Boolean
+        True, if the markov chain converges to steady state distribution within the tolerance
+        False, if the markov chain does not converge to steady state distribution within tolerance
 
         Examples:
         ---------
@@ -396,20 +396,29 @@ class MarkovChain(object):
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
-        >>> model.check_stationarity()
+        >>> model.is_stationarity()
+        True
         """
         keys = self.transition_models.keys()
+        return_val = True
         for k in keys:
-            transition_mat = DataFrame(self.transition_models[k]).as_matrix()
+            # convert dict to numpy matrix
+            transition_mat = np.array([np.array(list(self.transition_models[k][i].values()))
+                                       for i in self.transition_models[k].keys()], dtype=np.float)
             S, U = eig(transition_mat.T)
             stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
             stationary = (stationary / np.sum(stationary)).real
+
             probabilites = []
-            window_size = 10000 if sample == None else len(sample) 
+            window_size = 10000 if sample is None else len(sample)
             for i in range(0, transition_mat.shape[0]):
                 probabilites.extend(self.prob_from_sample([State(k, i)], window_size=window_size))
-            if any(np.abs(i) > tolerance for i in np.subtract(probabilites,stationary)):
-                raise ValueError('Model is not stationary')
+            if any(np.abs(i) > tolerance for i in np.subtract(probabilites, stationary)):
+                return_val = return_val and False
+            else:
+                return_val = return_val and True
+
+        return return_val
 
     def random_state(self):
         """
