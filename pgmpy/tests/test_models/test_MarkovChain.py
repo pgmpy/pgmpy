@@ -5,6 +5,7 @@ import numpy as np
 from pandas import DataFrame
 from mock import patch, call
 
+
 from pgmpy.factors.discrete import State
 from pgmpy.models import MarkovChain as MC
 from pgmpy.extern.six.moves import range, zip
@@ -228,6 +229,24 @@ class TestMarkovChain(unittest.TestCase):
         sample.return_value = self.sample
         probabilites = model.prob_from_sample([State('a', 1), State('b', 0)])
         self.assertEqual(list(probabilites), [1] * 50 + [0] * 50)
+
+    def test_is_stationarity_success(self):
+        model = MC(['intel', 'diff'], [2, 3])
+        model.set_start_state([State('intel', 0), State('diff', 2)])
+        intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
+        model.add_transition_model('intel', intel_tm)
+        diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        model.add_transition_model('diff', diff_tm)
+        self.assertTrue(model.is_stationarity)
+
+    def test_is_stationarity_failure(self):
+        model = MC(['intel', 'diff'], [2, 3])
+        model.set_start_state([State('intel', 0), State('diff', 2)])
+        intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
+        model.add_transition_model('intel', intel_tm)
+        diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        model.add_transition_model('diff', diff_tm)
+        self.assertFalse(model.is_stationarity(0.002, None))
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
     def test_generate_sample(self, sample_discrete):
