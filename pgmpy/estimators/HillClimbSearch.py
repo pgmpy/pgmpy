@@ -156,7 +156,7 @@ class HillClimbSearch(StructureEstimator):
                     best_operation = operation
                     best_score_delta = score_delta
 
-            if best_operation is None or best_score_delta < epsilon :
+            if best_operation is None or best_score_delta < epsilon:
                 break
             elif best_operation[0] == '+':
                 current_model.add_edge(*best_operation[1])
