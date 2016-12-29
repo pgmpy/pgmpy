@@ -136,7 +136,7 @@ class HillClimbSearch(StructureEstimator):
         >>> est.estimate(max_indegree=1).edges()
         [('J', 'A'), ('B', 'J')]
         """
-
+        epsilon = 1e-10
         nodes = self.state_names.keys()
         if start is None:
             start = BayesianModel()
@@ -157,6 +157,8 @@ class HillClimbSearch(StructureEstimator):
                     best_score_delta = score_delta
 
             if best_operation is None:
+                break
+            if best_score_delta < epsilon:
                 break
             elif best_operation[0] == '+':
                 current_model.add_edge(*best_operation[1])
