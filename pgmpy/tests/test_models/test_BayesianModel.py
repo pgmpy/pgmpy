@@ -489,7 +489,6 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                               columns=['A', 'B', 'C', 'F', 'E'])[:]
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
 
-
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
