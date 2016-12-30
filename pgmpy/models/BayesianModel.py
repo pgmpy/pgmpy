@@ -714,7 +714,7 @@ class BayesianModel(DirectedGraph):
         >>> predict_data.drop('E', axis=1, inplace=True)
         >>> y_pred = model.predict(predict_data)
         >>> y_pred
-            B
+            E
         800 0
         801 1
         802 1
@@ -735,7 +735,7 @@ class BayesianModel(DirectedGraph):
             raise ValueError("No variable missing in data. Nothing to predict")
 
         elif set(data.columns) - set(self.nodes()):
-            raise ValueError("data has variables which are not in the model")
+            raise ValueError("Data has variables which are not in the model")
 
         missing_variables = set(self.nodes()) - set(data.columns)
         pred_values = defaultdict(list)
@@ -799,7 +799,7 @@ class BayesianModel(DirectedGraph):
             raise ValueError("No variable missing in data. Nothing to predict")
 
         elif set(data.columns) - set(self.nodes()):
-            raise ValueError("data has variables which are not in the model")
+            raise ValueError("Data has variables which are not in the model")
 
         missing_variables = set(self.nodes()) - set(data.columns)
         pred_values = defaultdict(list)
@@ -809,7 +809,8 @@ class BayesianModel(DirectedGraph):
             states_dict = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
             for k, v in states_dict.items():
                 for l in range(len(v.values)):
-                    pred_values[k + '_' + str(l)].append(v.values[l])
+                    state = self.get_cpds(k).state_names[k][l]
+                    pred_values[k + '_' + str(state)].append(v.values[l])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_factorized_product(self, latex=False):
