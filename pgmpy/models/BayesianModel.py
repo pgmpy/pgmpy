@@ -630,7 +630,7 @@ class BayesianModel(DirectedGraph):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator_type=None, state_names=[], complete_samples_only=True, **kwargs):
+    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -674,16 +674,16 @@ class BayesianModel(DirectedGraph):
 
         from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, BaseEstimator
 
-        if estimator_type is None:
-            estimator_type = MaximumLikelihoodEstimator
+        if estimator is None:
+            estimator = MaximumLikelihoodEstimator
         else:
-            if not issubclass(estimator_type, BaseEstimator):
+            if not issubclass(estimator, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
-        estimator = estimator_type(self, data, state_names=state_names,
+        _estimator = estimator(self, data, state_names=state_names,
                                    complete_samples_only=complete_samples_only)
 
-        cpds_list = estimator.get_parameters(**kwargs)
+        cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
     def predict(self, data):
