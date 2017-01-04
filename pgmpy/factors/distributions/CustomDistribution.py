@@ -31,7 +31,7 @@ class CustomDistribution(BaseDistribution):
         >>> dirichlet_dist.scope()
         ['x', 'y']
         """
-        if not hasattr(variables, '__iter__'):
+        if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
                 "variables: Expected type: iterable, got: {type}".format(
                     type=type(variables)))
@@ -212,7 +212,7 @@ class CustomDistribution(BaseDistribution):
         >>> custom_dist.assignment(1, 3)
         24.0
         """
-        if not hasattr(values, '__iter__'):
+        if not isinstance(values, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type: iterable, "
                             "got: {var_type}".format(var_type=type(values)))
 
@@ -287,7 +287,7 @@ class CustomDistribution(BaseDistribution):
         >>> normal_dist.assignment(1)
         0.24197072451914328
         """
-        if not hasattr(variables, '__iter__'):
+        if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type iterable, "
                             "got: {var_type}".format(var_type=type(variables)))
 
