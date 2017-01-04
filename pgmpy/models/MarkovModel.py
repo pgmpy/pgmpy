@@ -143,9 +143,10 @@ class MarkovModel(UndirectedGraph):
 
             self.factors.append(factor)
 
-    def get_factors(self):
+    def get_factors(self, node=None):
         """
-        Returns the factors that have been added till now to the graph
+        Returns all the factors containing the node. If node is not specified 
+        returns all the factors that have been added till now to the graph.
 
         Examples
         --------
@@ -156,8 +157,18 @@ class MarkovModel(UndirectedGraph):
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
         >>> student.get_factors()
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x38602b0>]
+        >>> student.get_factors('Alice')
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x38602b0>]
         """
-        return self.factors
+        if node:
+            if node not in self.nodes():
+                raise ValueError('Node not present in the Undirected Graph')
+            factors = list(filter(lambda x: node in x.scope(),
+                                  self.factors))
+            return factors
+        else:
+            return self.factors
 
     def remove_factors(self, *factors):
         """

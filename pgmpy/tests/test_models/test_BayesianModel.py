@@ -405,7 +405,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
     def test_bayesian_fit(self):
         print(isinstance(BayesianEstimator, BaseEstimator))
         print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
-        self.model2.fit(self.data1, estimator_type=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
+        self.model2.fit(self.data1, estimator=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
         self.assertEqual(self.model2.get_cpds('B'), TabularCPD('B', 2, [[11.0 / 15], [4.0 / 15]]))
 
     def test_fit_missing_data(self):

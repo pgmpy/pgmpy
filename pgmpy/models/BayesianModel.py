@@ -680,10 +680,9 @@ class BayesianModel(DirectedGraph):
             if not issubclass(estimator, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
-        _estimator = estimator(self, data, state_names=state_names,
-                                   complete_samples_only=complete_samples_only)
+        cpds_list = estimator(self, data, state_names=state_names,
+                                   complete_samples_only=complete_samples_only).get_parameters(**kwargs)
 
-        cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
     def predict(self, data):
