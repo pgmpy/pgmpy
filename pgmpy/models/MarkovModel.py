@@ -187,7 +187,7 @@ class MarkovModel(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self, check_cardinality=False):
+    def get_cardinality(self, node=None, check_cardinality=False):
         """
         Returns a dictionary with the given factors as keys and their respective
         cardinality as values.
@@ -209,13 +209,19 @@ class MarkovModel(UndirectedGraph):
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
         """
-        cardinalities = defaultdict(int)
-        for factor in self.factors:
-            for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                cardinalities[variable] = cardinality
-        if check_cardinality and len(self.nodes()) != len(cardinalities):
-            raise ValueError('Factors for all the variables not defined')
-        return cardinalities
+        if node:
+            factors = self.get_factors(node)
+            if not factors:
+                raise ValueError('Factor for the variable is not defined')
+            return factors[0].cardinality[factors[0].scope().index(node)]
+        else:
+            cardinalities = defaultdict(int)
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    cardinalities[variable] = cardinality
+            if check_cardinality and len(self.nodes()) != len(cardinalities):
+                raise ValueError('Factors for all the variables not defined')
+            return cardinalities
 
     def check_model(self):
         """
