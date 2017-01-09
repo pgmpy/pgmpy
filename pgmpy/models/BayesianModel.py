@@ -315,10 +315,12 @@ class BayesianModel(DirectedGraph):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
-    def get_cardinality(self, node):
+    def get_cardinality(self, node=None):
         """
-        Returns the cardinality of the node. Throws an error if the CPD for the
+        Returns the cardinality of the node. Throws an error if the cpd for the
         queried node hasn't been added to the network.
+        If node is not specified returns a dictionary with the nodes as keys
+        and their respective cardinality as values.
 
         Parameters
         ----------
@@ -327,8 +329,25 @@ class BayesianModel(DirectedGraph):
         Returns
         -------
         int: The cardinality of the node.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd)
+        >>> student.get_cardinality()
+        {'grade': 2}
+        >>> student.get_cardinality('grade')
+        2
         """
-        return self.get_cpds(node).cardinality[0]
+        if node:
+            return self.get_cpds(node).cardinality[0]
+        else:
+            return {cpd.variable:cpd.cardinality[0] for cpd in self.get_cpds()}
 
     def check_model(self):
         """

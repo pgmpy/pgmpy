@@ -187,16 +187,16 @@ class MarkovModel(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self, node=None, check_cardinality=False):
+    def get_cardinality(self, node=None):
         """
-        Returns a dictionary with the given factors as keys and their respective
-        cardinality as values.
+        Returns the cardinality of the node. Throws an error if the factor for the
+        queried node hasn't been added to the network.
+        If node is not specified returns a dictionary with the nodes as keys
+        and their respective cardinality as values.
 
         Parameters
         ----------
-        check_cardinality: boolean, optional
-            If, check_cardinality=True it checks if cardinality information
-            for all the variables is availble or not. If not it raises an error.
+        node: Any hashable python object.
 
         Examples
         --------
@@ -208,6 +208,8 @@ class MarkovModel(UndirectedGraph):
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+        >>> student.get_cardinality('Bob')
+        3
         """
         if node:
             factors = self.get_factors(node)
@@ -219,8 +221,6 @@ class MarkovModel(UndirectedGraph):
             for factor in self.factors:
                 for variable, cardinality in zip(factor.scope(), factor.cardinality):
                     cardinalities[variable] = cardinality
-            if check_cardinality and len(self.nodes()) != len(cardinalities):
-                raise ValueError('Factors for all the variables not defined')
             return cardinalities
 
     def check_model(self):
@@ -245,6 +245,8 @@ class MarkovModel(UndirectedGraph):
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
                     raise ValueError("DiscreteFactor inconsistent with the model.")
+        if len(self.nodes()) != len(cardinalities):
+            raise ValueError('Factors for all the variables not defined')
         return True
 
     def to_factor_graph(self):

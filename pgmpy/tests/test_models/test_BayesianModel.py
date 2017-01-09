@@ -117,6 +117,11 @@ class TestBayesianModelMethods(unittest.TestCase):
                                evidence=['diff', 'intel'], evidence_card=[2, 3])
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
+    def test_get_cardinality(self):
+        self.assertDictEqual(self.G1.get_cardinality(), {'diff': 2, 'grade': 3, 'intel': 3})
+        self.assertEqual(self.G1.get_cardinality('diff'), 2)
+        self.assertDictEqual(self.G.get_cardinality(), {})
+
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
