@@ -611,7 +611,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                          np.array([[0.99, 0.01], [0.95, 0.05]]),
                          np.array([[1, 0, 0, 1], [0, 1, 0, 1]])]
         for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_cpd(),
+            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
                                        cpds_expected[cpd_index])
         self.assertDictEqual(model.node, node_expected)
         self.assertDictEqual(model.edge, edge_expected)

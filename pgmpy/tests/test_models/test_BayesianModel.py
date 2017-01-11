@@ -555,7 +555,7 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.graph.remove_cpds('diff', 'grade')
         self.assertListEqual(self.graph.get_cpds(), [cpd2])
 
-    def test_get_cpd_for_node(self):
+    def test_get_values_for_node(self):
         cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
         cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
         cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
@@ -566,7 +566,7 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.assertEqual(self.graph.get_cpds('intel'), cpd2)
         self.assertEqual(self.graph.get_cpds('grade'), cpd3)
 
-    def test_get_cpd_raises_error(self):
+    def test_get_values_raises_error(self):
         cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
         cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
         cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
