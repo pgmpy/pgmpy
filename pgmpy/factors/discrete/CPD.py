@@ -94,7 +94,7 @@ class TabularCPD(DiscreteFactor):
 
     Public Methods
     --------------
-    get_cpd()
+    get_values()
     marginalize([variables_list])
     normalize()
     reduce([values_list])
@@ -146,7 +146,7 @@ class TabularCPD(DiscreteFactor):
 
         return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
 
-    def get_cpd(self):
+    def get_values(self):
         """
         Returns the cpd
         >>> from pgmpy.factors import TabularCPD
@@ -154,7 +154,7 @@ class TabularCPD(DiscreteFactor):
         ...                               [0.1, 0.1],
         ...                               [0.8, 0.8]],
         ...                  evidence='evi1', evidence_card=2)
-        >>> cpd.get_cpd()
+        >>> cpd.get_values()
         array([[ 0.1,  0.1],
                [ 0.1,  0.1],
                [ 0.8,  0.8]])
@@ -202,7 +202,7 @@ class TabularCPD(DiscreteFactor):
         else:
             variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
         # Stack with data
-        labeled_rows = np.hstack((np.array(variable_array).T, self.get_cpd())).tolist()
+        labeled_rows = np.hstack((np.array(variable_array).T, self.get_values())).tolist()
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
         return cdf_str
@@ -233,7 +233,7 @@ class TabularCPD(DiscreteFactor):
         """
         evidence = self.variables[1:] if len(self.variables) > 1 else None
         evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
-        return TabularCPD(self.variable, self.variable_card, self.get_cpd(),
+        return TabularCPD(self.variable, self.variable_card, self.get_values(),
                           evidence, evidence_card)
 
     def normalize(self, inplace=True):
@@ -253,12 +253,12 @@ class TabularCPD(DiscreteFactor):
         ...                        [[0.7, 0.2, 0.6, 0.2],[0.4, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
         >>> cpd_table.normalize()
-        >>> cpd_table.get_cpd()
+        >>> cpd_table.get_values()
         array([[ 0.63636364,  0.33333333,  0.6       ,  0.2       ],
                [ 0.36363636,  0.66666667,  0.4       ,  0.8       ]])
         """
         tabular_cpd = self if inplace else self.copy()
-        cpd = tabular_cpd.get_cpd()
+        cpd = tabular_cpd.get_values()
         tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tabular_cpd.cardinality)
         if not inplace:
             return tabular_cpd
@@ -283,7 +283,7 @@ class TabularCPD(DiscreteFactor):
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
         >>> cpd_table.marginalize(['diff'])
-        >>> cpd_table.get_cpd()
+        >>> cpd_table.get_values()
         array([[ 0.65,  0.4 ],
                 [ 0.35,  0.6 ]])
         """
@@ -319,7 +319,7 @@ class TabularCPD(DiscreteFactor):
         ...                        [[0.7, 0.6, 0.6, 0.2],[0.3, 0.4, 0.4, 0.8]],
         ...                        ['intel', 'diff'], [2, 2])
         >>> cpd_table.reduce([('diff', 0)])
-        >>> cpd_table.get_cpd()
+        >>> cpd_table.get_values()
         array([[ 0.7,  0.6],
                [ 0.3,  0.4]])
         """
@@ -456,12 +456,12 @@ class TabularCPD(DiscreteFactor):
                     variables = [self.variables[0]] + new_order
                     cardinality = [self.variable_card] + [card_map[var] for var in new_order]
                     super(TabularCPD, self).__init__(variables, cardinality, new_values.flatten('C'))
-                    return self.get_cpd()
+                    return self.get_values()
                 else:
                     return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order]))
             else:
                 warn("Same ordering provided as current")
-                return self.get_cpd()
+                return self.get_values()
 
     def get_evidence(self):
         return self.variables[:0:-1]

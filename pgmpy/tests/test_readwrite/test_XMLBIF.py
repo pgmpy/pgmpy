@@ -164,7 +164,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         self.assertListEqual(sorted(self.reader.edge_list),
                              sorted(edges_expected))
 
-    def test_get_cpd(self):
+    def test_get_values(self):
         cpd_expected = {'bowel_problem': np.array([[0.01],
                                                    [0.99]]),
                         'dog_out': np.array([[0.99, 0.97, 0.9, 0.3],
@@ -240,7 +240,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         self.assertListEqual(sorted(self.reader.edge_list),
                              sorted(edges_expected))
 
-    def test_get_cpd(self):
+    def test_get_values(self):
         cpd_expected = {'bowel_problem': np.array([[0.01],
                                                    [0.99]]),
                         'dog_out': np.array([[0.99, 0.97, 0.9, 0.3],

@@ -93,7 +93,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
             self.assertListEqual(property_expected[variable],
                                  prop[variable])
 
-    def test_get_cpd(self):
+    def test_get_values(self):
 
         cpd_expected = {'bowel-problem': np.array([[0.01],
                                                    [0.99]]),
@@ -166,7 +166,7 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                    [0.4, 0.95]])]
         model = self.reader.get_model()
         for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_cpd(),
+            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
                                        cpds_expected[cpd_index])
         self.assertDictEqual(model.node, node_expected)
         self.assertDictEqual(model.edge, edge_expected)
