@@ -15,8 +15,8 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
     Parameters
     ----------
-    factor: A ContinuousNode or a ContinuousFactor object
-        the continuous node or factor representing the distribution
+    factor: ContinuousFactor object
+        the continuous factor representing the distribution
         to be discretized.
 
     low, high: float
@@ -28,15 +28,15 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
     Examples
     --------
     >>> from scipy.stats import norm
-    >>> from pgmpy.factors.continuous import ContinuousNode
-    >>> normal = ContinuousNode(norm(0, 1).pdf)
-    >>> from pgmpy.discretize import BaseDiscretizer
+    >>> from pgmpy.factors.continuous import ContinuousFactor
+    >>> normal = ContinuousFactor(['x'], norm(0, 1).pdf)
+    >>> from pgmpy.factors.continuous import BaseDiscretizer
     >>> class ChildDiscretizer(BaseDiscretizer):
     ...     def get_discrete_values(self):
     ...         pass
     >>> discretizer = ChildDiscretizer(normal, -3, 3, 10)
     >>> discretizer.factor
-    <pgmpy.factors.continuous.ContinuousNode.ContinuousNode object at 0x04C98190>
+    <pgmpy.factors.continuous.ContinuousFactor.ContinuousFactor at 0x7f5e73b4f690>
     >>> discretizer.cardinality
     10
     >>> discretizer.get_labels()
@@ -76,15 +76,15 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         Examples
         --------
-        >>> from pgmpy.factors import ContinuousNode
-        >>> from pgmpy.discretize import BaseDiscretizer
+        >>> from pgmpy.factors.continuous import ContinuousFactor
+        >>> from pgmpy.factors.continuous import BaseDiscretizer
         >>> class ChildDiscretizer(BaseDiscretizer):
         ...     def get_discrete_values(self):
         ...         pass
         >>> from scipy.stats import norm
-        >>> node = ContinuousNode(norm(0).pdf)
+        >>> node = ContinuousFactor(['x'],norm(0).pdf)
         >>> child = ChildDiscretizer(node, -5, 5, 20)
-        >>> chld.get_labels()
+        >>> child.get_labels()
         ['x=-5.0', 'x=-4.5', 'x=-4.0', 'x=-3.5', 'x=-3.0', 'x=-2.5',
          'x=-2.0', 'x=-1.5', 'x=-1.0', 'x=-0.5', 'x=0.0', 'x=0.5', 'x=1.0',
          'x=1.5', 'x=2.0', 'x=2.5', 'x=3.0', 'x=3.5', 'x=4.0', 'x=4.5']
@@ -104,37 +104,38 @@ class RoundingDiscretizer(BaseDiscretizer):
     For the rounding method,
 
     The probability mass is,
-    cdf(x+step/2)-cdf(x), for x = low
+    pdf(x+step/2)-pdf(x), for x = low
 
-    cdf(x+step/2)-cdf(x-step/2), for low < x <= high
+    pdf(x+step/2)-pdf(x-step/2), for low < x <= high
 
-    where, cdf is the cumulative density function of the distribution
+    where, pdf is the probability distribution function of the distribution
     and step = (high-low)/cardinality.
 
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors.continuous import ContinuousNode
+    >>> from pgmpy.factors.continuous import ContinuousFactor
     >>> from pgmpy.factors.continuous import RoundingDiscretizer
     >>> std_normal_pdf = lambda x : np.exp(-x*x/2) / (np.sqrt(2*np.pi))
-    >>> std_normal = ContinuousNode(std_normal_pdf)
+    >>> std_normal = ContinuousFactor(['x'],std_normal_pdf)
     >>> std_normal.discretize(RoundingDiscretizer, low=-3, high=3,
     ...                       cardinality=12)
-    [0.001629865203424451, 0.009244709419989363, 0.027834684208773178,
-     0.065590616803038182, 0.120977578710013, 0.17466632194020804,
-     0.19741265136584729, 0.17466632194020937, 0.12097757871001302,
-     0.065590616803036905, 0.027834684208772664, 0.0092447094199902269]
+    [0.0064055105605519067, 0.022646089334076365, 0.054537666990844114,
+     0.096371766562510383, 0.11848834676578252, 0.085530684648044863,
+     0.0, -0.085530684648044863, -0.11848834676578252, -0.096371766562510383,
+     -0.054537666990844114, -0.022646089334076365]
+
     """
 
     def get_discrete_values(self):
         step = (self.high - self.low) / self.cardinality
 
         # for x=[low]
-        discrete_values = [self.factor.cdf(self.low + step/2) - self.factor.cdf(self.low)]
+        discrete_values = [self.factor.pdf(self.low + step/2) - self.factor.pdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 1)
-        discrete_values.extend([self.factor.cdf(i + step/2) - self.factor.cdf(i - step/2) for i in points])
+        discrete_values.extend([self.factor.pdf(i + step/2) - self.factor.pdf(i - step/2) for i in points])
 
         return discrete_values
 
@@ -152,14 +153,14 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     For this method,
 
     The probability mass is,
-    (E(x) - E(x + step))/step + 1 - cdf(x), for x = low
+    (E(x) - E(x + step))/step + 1 - pdf(x), for x = low
 
     (2 * E(x) - E(x - step) - E(x + step))/step, for low < x < high
 
-    (E(x) - E(x - step))/step - 1 + cdf(x), for x = high
+    (E(x) - E(x - step))/step - 1 + pdf(x), for x = high
 
     where, E(x) is the first limiting moment of the distribution
-    about the point x, cdf is the cumulative density function
+    about the point x, pdf is the cumulative density function
     and step = (high-low)/cardinality.
 
     Reference
@@ -172,17 +173,15 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors import ContinuousNode
+    >>> from pgmpy.factors import ContinuousFactor
     >>> from pgmpy.factors.continuous import UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
-    >>> exp_node = ContinuousNode(exp_pdf)
+    >>> exp_node = ContinuousFactor(['x'], exp_pdf)
     >>> exp_node.discretize(UnbiasedDiscretizer, low=0, high=5, cardinality=10)
-    [0.39627368905806137, 0.4049838434034298, 0.13331784003148325,
-     0.043887287876647259, 0.014447413395300212, 0.0047559685431339703,
-     0.0015656350182896128, 0.00051540201980112557, 0.00016965346326140994,
-     3.7867260839208328e-05]
-
+    [-1.6161473475282573, -0.91996594389338915, 0.14154646450934863, 0.19288709748975491,
+     0.11165505506586672, 0.052609322844422921, 0.02253740509793296, 0.0091371406359543883,
+     0.0035734371652806018, 0.0022581684726103884]
     """
     def get_discrete_values(self):
         lev = self._lim_moment
@@ -190,14 +189,14 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
         # for x=[low]
         discrete_values = [(lev(self.low) - lev(self.low + step)) / step +
-                           1 - self.factor.cdf(self.low)]
+                           1 - self.factor.pdf(self.low)]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 2)
         discrete_values.extend([(2 * lev(i) - lev(i - step) - lev(i + step)) / step for i in points])
 
         # for x=[high]
-        discrete_values.append((lev(self.high) - lev(self.high - step)) / step - 1 + self.factor.cdf(self.high))
+        discrete_values.append((lev(self.high) - lev(self.high - step)) / step - 1 + self.factor.pdf(self.high))
 
         return discrete_values
 
@@ -206,9 +205,9 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         This method calculates the kth order limiting moment of
         the distribution. It is given by -
 
-        E(u) = Integral (-inf to u) [ (x^k)*pdf(x) dx ] + (u^k)(1-cdf(u))
+        E(u) = Integral (-inf to u) [ (x^k)*pdf(x) dx ] + (u^k)(1-pdf(u))
 
-        where, pdf is the probability density function and cdf is the
+        where, pdf is the probability density function and pdf is the
         cumulative density function of the distribution.
 
         Reference
@@ -228,7 +227,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         def fun(x):
             return np.power(x, order) * self.factor.pdf(x)
         return (integrate.quad(fun, -np.inf, u)[0] +
-                np.power(u, order)*(1 - self.factor.cdf(u)))
+                np.power(u, order)*(1 - self.factor.pdf(u)))
 
     def get_labels(self):
         labels = list('x={i}'.format(i=str(i)) for i in np.round
