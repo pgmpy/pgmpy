@@ -338,16 +338,20 @@ class BayesianModel(DirectedGraph):
         >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
         ...                               [0.9, 0.1, 0.8, 0.3]],
         ...                  ['intel', 'diff'], [2, 2])
-        >>> student.add_cpds(cpd)
+        >>> cpd2 = TabularCPD('diff', 2, [[0.8, 0.2]])
+        >>> student.add_cpds(cpd, cpd2)
         >>> student.get_cardinality()
-        {'grade': 2}
+        defaultdict(int, {'diff': 2, 'grade': 2})
         >>> student.get_cardinality('grade')
-        2
+        defaultdict(int, {'grade': 2})
         """
+        cardinalities = defaultdict(int)
         if node:
-            return self.get_cpds(node).cardinality[0]
+            cardinalities[node] = self.get_cpds(node).cardinality[0]
         else:
-            return {cpd.variable:cpd.cardinality[0] for cpd in self.get_cpds()}
+            for cpd in self.get_cpds():
+                cardinalities[cpd.variable] = cpd.cardinality[0]
+        return cardinalities
 
     def check_model(self):
         """

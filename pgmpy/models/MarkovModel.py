@@ -155,9 +155,12 @@ class MarkovModel(UndirectedGraph):
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
-        >>> student.add_factors(factor)
+        >>> factor2 = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 3],
+                 values=np.random.rand(6))
+        >>> student.add_factors(factor, factor2)
         >>> student.get_factors()
-        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x38602b0>]
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x9500d70>,
+         <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x9500350>]
         >>> student.get_factors('Alice')
         [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x38602b0>]
         """
@@ -209,19 +212,19 @@ class MarkovModel(UndirectedGraph):
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
         >>> student.get_cardinality('Bob')
-        3
+        defaultdict(<class 'int'>, {'Bob': 2})
         """
+        cardinalities = defaultdict(int)
         if node:
             factors = self.get_factors(node)
             if not factors:
                 raise ValueError('Factor for the variable is not defined')
-            return factors[0].cardinality[factors[0].scope().index(node)]
+            cardinalities[node]=factors[0].cardinality[factors[0].scope().index(node)]
         else:
-            cardinalities = defaultdict(int)
             for factor in self.factors:
                 for variable, cardinality in zip(factor.scope(), factor.cardinality):
                     cardinalities[variable] = cardinality
-            return cardinalities
+        return cardinalities
 
     def check_model(self):
         """

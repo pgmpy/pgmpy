@@ -119,7 +119,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_get_cardinality(self):
         self.assertDictEqual(self.G1.get_cardinality(), {'diff': 2, 'grade': 3, 'intel': 3})
-        self.assertEqual(self.G1.get_cardinality('diff'), 2)
+        self.assertDictEqual(self.G1.get_cardinality('diff'), {'diff': 2})
         self.assertDictEqual(self.G.get_cardinality(), {})
 
     def test_moral_graph(self):
