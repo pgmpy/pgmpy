@@ -423,7 +423,7 @@ class BayesianModel(DirectedGraph):
         Page 75 Algorithm 3.1
         """
         if observed:
-            observed_list = [observed] if isinstance(observed, str) else observed
+            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
         else:
             observed_list = []
         ancestors_list = self._get_ancestors_of(observed_list)
