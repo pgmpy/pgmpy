@@ -152,7 +152,7 @@ class TabularCPD(DiscreteFactor):
         
         Examples
         --------
-        >>> from pgmpy.factors import TabularCPD
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> cpd = TabularCPD('grade', 3, [[0.1, 0.1],
         ...                               [0.1, 0.1],
         ...                               [0.8, 0.8]],
