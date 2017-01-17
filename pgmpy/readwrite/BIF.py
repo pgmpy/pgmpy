@@ -61,7 +61,7 @@ class BIFReader(object):
         self.variable_states = self.get_states()
         self.variable_properties = self.get_property()
         self.variable_parents = self.get_parents()
-        self.variable_cpds = self.get_cpd()
+        self.variable_cpds = self.get_values()
         self.variable_edges = self.get_edges()
 
     def get_variable_grammar(self):
@@ -214,7 +214,7 @@ class BIFReader(object):
             variable_parents[names[0]] = names[1:]
         return variable_parents
 
-    def get_cpd(self):
+    def get_values(self):
         """
         Returns the CPD of the variables present in the network
 
@@ -222,7 +222,7 @@ class BIFReader(object):
         --------
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_cpd()
+        >>> reader.get_values()
         {'bowel-problem': np.array([[0.01],
                                     [0.99]]),
         'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],

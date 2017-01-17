@@ -616,30 +616,30 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_copy(self):
         copy_cpd = self.cpd.copy()
-        np_test.assert_array_equal(self.cpd.get_cpd(), copy_cpd.get_cpd())
+        np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
 
     def test_copy_original_safe(self):
         copy_cpd = self.cpd.copy()
         copy_cpd.reorder_parents(['diff', 'intel'])
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                  [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
 
     def test_reduce_1(self):
         self.cpd.reduce([('diff', 0)])
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                                  [0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8]]))
 
     def test_reduce_2(self):
         self.cpd.reduce([('intel', 0)])
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1],
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1],
                                                                  [0.1, 0.1],
                                                                  [0.8, 0.8]]))
 
     def test_reduce_3(self):
         self.cpd.reduce([('intel', 0), ('diff', 0)])
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1],
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1],
                                                                  [0.1],
                                                                  [0.8]]))
 
@@ -653,8 +653,8 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.cpd.reduce([('diff', 1)])
         np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
-    def test_get_cpd(self):
-        np_test.assert_array_equal(self.cpd.get_cpd(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    def test_get_values(self):
+        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                  [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                                                  [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
 
@@ -662,7 +662,7 @@ class TestTabularCPDMethods(unittest.TestCase):
         new_vals = self.cpd2.reorder_parents(['B', 'A', 'C'])
         np_test.assert_array_equal(new_vals, np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
                                                        [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
-        np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
+        np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
                                                                   [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
 
     def test_reorder_parents(self):
@@ -672,7 +672,7 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_reorder_parents_no_effect(self):
         self.cpd2.reorder_parents(['C', 'A', 'B'], inplace=False)
-        np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
+        np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
                                                                   [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
 
     def test_reorder_parents_warning(self):
@@ -680,7 +680,7 @@ class TestTabularCPDMethods(unittest.TestCase):
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(['A', 'B', 'C'], inplace=False)
             assert("Same ordering provided as current" in str(w[-1].message))
-            np_test.assert_array_equal(self.cpd2.get_cpd(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
+            np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
                                                                       [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
 
     def tearDown(self):

@@ -5,3 +5,4 @@ pandas
 pyparsing
 mock
 nose
+wrapt

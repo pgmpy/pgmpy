@@ -483,6 +483,39 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                                              1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1,
                                              1, 1, 1, 0], dtype=str))
 
+    def test_connected_predict_probability(self):
+        np.random.seed(42)
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(100, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
+        fit_data = values[:80]
+        predict_data = values[80:].copy()
+        self.model_connected.fit(fit_data)
+        predict_data.drop('E', axis=1, inplace=True)
+        e_prob = self.model_connected.predict_probability(predict_data)
+        np_test.assert_allclose(e_prob.values.ravel(),
+                                    np.array([0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.57894737,
+                                             0.42105263,  0.5       ,  0.5       ,  0.57894737,  0.42105263,
+                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.57894737,
+                                             0.42105263,  0.57894737,  0.42105263,  0.5       ,  0.5       ,
+                                             0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.5       ,
+                                             0.5       ,  0.57894737,  0.42105263,  0.57894737,  0.42105263,
+                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.5       ,
+                                             0.5       ,  0.5       ,  0.5       ,  0.5       ,  0.5       ]), atol = 0)
+        predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
+                              columns=['A', 'B', 'C', 'F', 'E'])[:]
+
+    def test_predict_probability_errors(self):
+        np.random.seed(42)
+        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(2, 5)),
+                              columns=['A', 'B', 'C', 'D', 'E'])
+        fit_data = values[:1]
+        predict_data = values[1:].copy()
+        self.model_connected.fit(fit_data)
+        self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
+        predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
+                              columns=['A', 'B', 'C', 'F', 'E'])[:]
+        self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
@@ -549,7 +582,7 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.graph.remove_cpds('diff', 'grade')
         self.assertListEqual(self.graph.get_cpds(), [cpd2])
 
-    def test_get_cpd_for_node(self):
+    def test_get_values_for_node(self):
         cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
         cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
         cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),
@@ -560,7 +593,7 @@ class TestDirectedGraphCPDOperations(unittest.TestCase):
         self.assertEqual(self.graph.get_cpds('intel'), cpd2)
         self.assertEqual(self.graph.get_cpds('grade'), cpd3)
 
-    def test_get_cpd_raises_error(self):
+    def test_get_values_raises_error(self):
         cpd1 = TabularCPD('diff', 2, values=np.random.rand(2, 1))
         cpd2 = TabularCPD('intel', 2, values=np.random.rand(2, 1))
         cpd3 = TabularCPD('grade', 2, values=np.random.rand(2, 4),

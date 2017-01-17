@@ -144,7 +144,7 @@ class StateNameDecorator(unittest.TestCase):
         cpd.reduce([('diff', 'high')])
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variables, ['grade', 'intel'])
-        np_test.assert_array_equal(cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
+        np_test.assert_array_equal(cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                             [0.1, 0.1, 0.1],
                                                             [0.8, 0.8, 0.8]]))
 
@@ -156,7 +156,7 @@ class StateNameDecorator(unittest.TestCase):
         cpd.reduce([('diff', 0)])
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variables, ['grade', 'intel'])
-        np_test.assert_array_equal(cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
+        np_test.assert_array_equal(cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                             [0.1, 0.1, 0.1],
                                                             [0.8, 0.8, 0.8]]))
 
@@ -168,7 +168,7 @@ class StateNameDecorator(unittest.TestCase):
         cpd = cpd.reduce([('diff', 'high')], inplace=False)
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variables, ['grade', 'intel'])
-        np_test.assert_array_equal(cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
+        np_test.assert_array_equal(cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                             [0.1, 0.1, 0.1],
                                                             [0.8, 0.8, 0.8]]))
 
@@ -180,7 +180,7 @@ class StateNameDecorator(unittest.TestCase):
         cpd = cpd.reduce([('diff', 0)], inplace=False)
         self.assertEqual(cpd.variable, 'grade')
         self.assertEqual(cpd.variables, ['grade', 'intel'])
-        np_test.assert_array_equal(cpd.get_cpd(), np.array([[0.1, 0.1, 0.1],
+        np_test.assert_array_equal(cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                             [0.1, 0.1, 0.1],
                                                             [0.8, 0.8, 0.8]]))
 

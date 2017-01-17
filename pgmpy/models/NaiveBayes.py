@@ -141,9 +141,8 @@ class NaiveBayes(BayesianModel):
 
     def local_independencies(self, variables):
         """
-        Returns a list of independencies objects containing the local independencies
-        of each of the variables. If local independencies does not exist for a variable
-        it gives a None for that variable.
+        Returns an instance of Independencies containing the local independencies
+        of each of the variables.
 
 
         Parameters
@@ -158,15 +157,12 @@ class NaiveBayes(BayesianModel):
         >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
         >>> ind = model.local_independencies('b')
         >>> ind
-        [(b _|_ d, c | a)]
+        (b _|_ d, c | a)
         """
-        independencies = []
+        independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.parent_node:
-                independencies.append(Independencies(
-                    [variable, list(set(self.children_nodes) - set(variable)), self.parent_node]))
-            else:
-                independencies.append(None)
+                independencies.add_assertions([variable, list(set(self.children_nodes) - set(variable)), self.parent_node])
         return independencies
 
     def fit(self, data, parent_node=None, estimator_type=None):

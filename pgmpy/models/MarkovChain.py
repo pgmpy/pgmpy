@@ -4,6 +4,7 @@ from warnings import warn
 
 import numpy as np
 from pandas import DataFrame
+from scipy.linalg import eig
 
 from pgmpy.factors.discrete import State
 from pgmpy.utils import sample_discrete
@@ -177,8 +178,11 @@ class MarkovChain(object):
         -----------
         variable: any hashable python object
             must be an existing variable of the model.
-        transition_model: dict
-            representing valid transition probabilities defined for every possible state of the variable.
+        transition_model: dict or 2d array
+            dict representing valid transition probabilities defined for every possible state of the variable.
+            array represent a square matrix where every row sums to 1,
+            array[i,j] indicates the transition probalities from State i to State j
+
 
         Examples:
         ---------
@@ -186,11 +190,27 @@ class MarkovChain(object):
         >>> model = MC()
         >>> model.add_variable('grade', 3)
         >>> grade_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6 }, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        >>> grade_tm_matrix = np.array([[0.1, 0.5, 0.4], [0.2, 0.2, 0.6], [0.7, 0.15, 0.15]])
         >>> model.add_transition_model('grade', grade_tm)
+        >>> model.add_transition_model('grade', grade_tm_matrix)
         """
+        if isinstance(transition_model, list):
+            transition_model = np.array(transition_model)
+
         # check if the transition model is valid
         if not isinstance(transition_model, dict):
-            raise ValueError('Transition model must be a dict.')
+            if not isinstance(transition_model, np.ndarray):
+                raise ValueError('Transition model must be a dict or numpy array')
+            elif len(transition_model.shape) != 2:
+                raise ValueError('Transition model must be 2d array.given {t}'.format(t=transition_model.shape))
+            elif transition_model.shape[0] != transition_model.shape[1]:
+                raise ValueError('Dimension mismatch {d1}!={d2}'.format(d1=transition_model.shape[0],
+                                 d2=transition_model.shape[1]))
+            else:
+                # convert the matrix to dict
+                size = transition_model.shape[0]
+                transition_model = dict((i, dict((j, float(transition_model[i][j]))
+                                         for j in range(0, size))) for i in range(0, size))
 
         exp_states = set(range(self.cardinalities[variable]))
         tm_states = set(transition_model.keys())
@@ -263,11 +283,11 @@ class MarkovChain(object):
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st])[0]
+                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size)
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
-                next_st = samples[var][st]
+                next_st = samples[var][st][i]
                 self.state[j] = State(var, next_st)
             sampled.loc[i + 1] = [st for var, st in self.state]
 
@@ -284,8 +304,9 @@ class MarkovChain(object):
         Examples:
         ---------
         >>> from pgmpy.models.MarkovChain import MarkovChain as MC
+        >>> from pgmpy.factors.discrete import State
         >>> model = MC(['intel', 'diff'], [3, 2])
-        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {2: 1}}
+        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {2: 0.5, 1:0.5}}
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
@@ -346,6 +367,58 @@ class MarkovChain(object):
                                           list(self.transition_models[var][st].values()))[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
+
+    def is_stationarity(self, tolerance=0.2, sample=None):
+        """
+        Checks if the given markov chain is stationary and checks the steady state
+        probablity values for the state are consistent.
+
+        Parameters:
+        -----------
+        tolerance: float
+            represents the diff between actual steady state value and the computed value
+        sample: [State(i,j)]
+            represents the list of state which the markov chain has sampled
+
+        Return Type:
+        ------------
+        Boolean
+        True, if the markov chain converges to steady state distribution within the tolerance
+        False, if the markov chain does not converge to steady state distribution within tolerance
+
+        Examples:
+        ---------
+        >>> from pgmpy.models.MarkovChain import MarkovChain
+        >>> from pgmpy.factors.discrete import State
+        >>> model = MarkovChain()
+        >>> model.add_variables_from(['intel', 'diff'], [3, 2])
+        >>> intel_tm = {0: {0: 0.2, 1: 0.4, 2:0.4}, 1: {0: 0, 1: 0.5, 2: 0.5}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
+        >>> model.add_transition_model('intel', intel_tm)
+        >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
+        >>> model.add_transition_model('diff', diff_tm)
+        >>> model.is_stationarity()
+        True
+        """
+        keys = self.transition_models.keys()
+        return_val = True
+        for k in keys:
+            # convert dict to numpy matrix
+            transition_mat = np.array([np.array(list(self.transition_models[k][i].values()))
+                                       for i in self.transition_models[k].keys()], dtype=np.float)
+            S, U = eig(transition_mat.T)
+            stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
+            stationary = (stationary / np.sum(stationary)).real
+
+            probabilites = []
+            window_size = 10000 if sample is None else len(sample)
+            for i in range(0, transition_mat.shape[0]):
+                probabilites.extend(self.prob_from_sample([State(k, i)], window_size=window_size))
+            if any(np.abs(i) > tolerance for i in np.subtract(probabilites, stationary)):
+                return_val = return_val and False
+            else:
+                return_val = return_val and True
+
+        return return_val
 
     def random_state(self):
         """

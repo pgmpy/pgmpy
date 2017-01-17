@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import sys
 import unittest
-
+import numpy as np
 from pandas import DataFrame
 from mock import patch, call
+
 
 from pgmpy.factors.discrete import State
 from pgmpy.models import MarkovChain as MC
@@ -16,8 +17,11 @@ class TestMarkovChain(unittest.TestCase):
         self.card = [3, 2, 3]
         self.cardinalities = {'intel': 3, 'diff': 2, 'grade': 3}
         self.intel_tm = {0: {0: 0.1, 1: 0.25, 2: 0.65}, 1: {0: 0.5, 1: 0.3, 2: 0.2}, 2: {0: 0.3, 1: 0.3, 2: 0.4}}
+        self.intel_tm_matrix = np.array([[0.1, 0.25, 0.65], [0.5, 0.3, 0.2], [0.3, 0.3, 0.4]])
         self.diff_tm = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.75, 1: 0.25}}
+        self.diff_tm_matrix = np.array([[0.3, 0.7], [0.75, 0.25]])
         self.grade_tm = {0: {0: 0.4, 1: 0.2, 2: 0.4}, 1: {0: 0.9, 1: 0.05, 2: 0.05}, 2: {0: 0.1, 1: 0.4, 2: 0.5}}
+        self.grade_tm_matrix = [[0.4, 0.2, 0.4], [0.9, 0.05, 0.05], [0.1, 0.4, 0.5]]
         self.start_state = [State('intel', 0), State('diff', 1), State('grade', 2)]
         self.model = MC()
 
@@ -149,8 +153,10 @@ class TestMarkovChain(unittest.TestCase):
 
     def test_add_transition_model_bad_type(self):
         model = MC()
-        # if transition_model is not a dict
+        grade_tm_matrix_bad = [[0.1, 0.5, 0.4], [0.2, 0.2, 0.6], 'abc']
+        # if transition_model is not a dict or np.array
         self.assertRaises(ValueError, model.add_transition_model, 'var', 123)
+        self.assertRaises(ValueError, model.add_transition_model, 'var', grade_tm_matrix_bad)
 
     def test_add_transition_model_bad_states(self):
         model = MC(['var'], [2])
@@ -181,6 +187,21 @@ class TestMarkovChain(unittest.TestCase):
         model.add_transition_model('var', transition_model)
         self.assertDictEqual(model.transition_models['var'], transition_model)
 
+    def test_transition_model_bad_matrix_dimension(self):
+        model = MC(['var'], [2])
+        transition_model = np.array([0.3, 0.7])
+        # check for square dimension of the matrix
+        self.assertRaises(ValueError, model.add_transition_model, 'var', transition_model)
+        transition_model = np.array([[0.3, 0.6, 0.1], [0.3, 0.3, 0.4]])
+        self.assertRaises(ValueError, model.add_transition_model, 'var', transition_model)
+
+    def test_transition_model_dict_to_matrix(self):
+        model = MC(['var'], [2])
+        transition_model = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.5, 1: 0.5}}
+        transition_model_matrix = np.array([[0.3, 0.7], [0.5, 0.5]])
+        model.add_transition_model('var', transition_model_matrix)
+        self.assertDictEqual(model.transition_models['var'], transition_model)
+
     def test_sample(self):
         model = MC(['a', 'b'], [2, 2])
         model.transition_models['a'] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
@@ -208,6 +229,24 @@ class TestMarkovChain(unittest.TestCase):
         sample.return_value = self.sample
         probabilites = model.prob_from_sample([State('a', 1), State('b', 0)])
         self.assertEqual(list(probabilites), [1] * 50 + [0] * 50)
+
+    def test_is_stationarity_success(self):
+        model = MC(['intel', 'diff'], [2, 3])
+        model.set_start_state([State('intel', 0), State('diff', 2)])
+        intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
+        model.add_transition_model('intel', intel_tm)
+        diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        model.add_transition_model('diff', diff_tm)
+        self.assertTrue(model.is_stationarity)
+
+    def test_is_stationarity_failure(self):
+        model = MC(['intel', 'diff'], [2, 3])
+        model.set_start_state([State('intel', 0), State('diff', 2)])
+        intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
+        model.add_transition_model('intel', intel_tm)
+        diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
+        model.add_transition_model('diff', diff_tm)
+        self.assertFalse(model.is_stationarity(0.002, None))
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
     def test_generate_sample(self, sample_discrete):

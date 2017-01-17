@@ -60,7 +60,7 @@ class XMLBIFReader(object):
         self.variable_parents = self.get_parents()
         self.edge_list = self.get_edges()
         self.variable_states = self.get_states()
-        self.variable_CPD = self.get_cpd()
+        self.variable_CPD = self.get_values()
         self.variable_property = self.get_property()
 
     def get_variables(self):
@@ -129,14 +129,14 @@ class XMLBIFReader(object):
                             for definition in self.network.findall('DEFINITION')}
         return variable_parents
 
-    def get_cpd(self):
+    def get_values(self):
         """
         Returns the CPD of the variables present in the network
 
         Examples
         --------
         >>> reader = XMLBIF.XMLBIFReader("xmlbif_test.xml")
-        >>> reader.get_cpd()
+        >>> reader.get_values()
         {'bowel-problem': array([[ 0.01],
                                  [ 0.99]]),
          'dog-out': array([[ 0.99,  0.01,  0.97,  0.03],
@@ -239,7 +239,7 @@ class XMLBIFWriter(object):
         self.states = self.get_states()
         self.properties = self.get_properties()
         self.definition = self.get_definition()
-        self.tables = self.get_cpd()
+        self.tables = self.get_values()
 
     def __str__(self):
         """
@@ -396,7 +396,7 @@ class XMLBIFWriter(object):
 
         return definition_tag
 
-    def get_cpd(self):
+    def get_values(self):
         """
         Add Table to XMLBIF.
 
@@ -407,7 +407,7 @@ class XMLBIFWriter(object):
         Examples
         -------
         >>> writer = XMLBIFWriter(model)
-        >>> writer.get_cpd()
+        >>> writer.get_values()
         {'dog-out': <Element TABLE at 0x7f240726f3c8>,
          'light-on': <Element TABLE at 0x7f240726f488>,
          'bowel-problem': <Element TABLE at 0x7f240726f388>,
@@ -420,7 +420,7 @@ class XMLBIFWriter(object):
         for cpd in cpds:
             table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
             table_tag[cpd.variable].text = ''
-            for val in cpd.get_cpd().ravel(order="F"):
+            for val in cpd.get_values().ravel(order="F"):
                 table_tag[cpd.variable].text += str(val) + ' '
 
         return table_tag
