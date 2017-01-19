@@ -736,7 +736,8 @@ class BayesianModel(DirectedGraph):
         missing_variables = set(self.nodes()) - set(data.columns)
         pred_values = defaultdict(list)
 
-        model_inference = VariableElimination(self)
+        # Send state_names dict from one of the estimated CPDs to the inference class.
+        model_inference = VariableElimination(self, state_names=self.get_cpds()[0].state_names)
         for index, data_point in data.iterrows():
             states_dict = model_inference.map_query(variables=missing_variables, evidence=data_point.to_dict())
             for k, v in states_dict.items():

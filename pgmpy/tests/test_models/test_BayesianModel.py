@@ -398,6 +398,10 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                                         'C': [1, 1, np.NaN],
                                         'D': [np.NaN, 'Y', np.NaN]})
 
+        # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
+        self.titanic_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/titanic_train.csv', dtype=str)
+        self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
+
     def test_bayesian_fit(self):
         print(isinstance(BayesianEstimator, BaseEstimator))
         print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
@@ -426,9 +430,35 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             value = value.reindex(sorted(value.index)).values
             np_test.assert_array_equal(cpd.values, value)
 
+    def test_predict(self):
+        titanic = BayesianModel()
+        titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic.fit(self.titanic_data2[500:])
+
+        p1 = titanic.predict(self.titanic_data2[["Sex", "Pclass"]][:30])
+        p2 = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
+        p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
+
+        p1_res =  np.array(['0', '1', '0', '1', '0', '0', '0', '0', '0', '1', '0', '1', '0',
+                            '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+                            '0', '0', '0', '0'])
+        p2_res = np.array(['male', 'female', 'female', 'female', 'male', 'male', 'male',
+                           'male', 'female', 'female', 'female', 'female', 'male', 'male',
+                           'male', 'female', 'male', 'female', 'male', 'female', 'male',
+                           'female', 'female', 'female', 'male', 'female', 'male', 'male',
+                           'female', 'male'])
+        p3_res = np.array(['3', '1', '1', '1', '3', '3', '3', '3', '1', '1', '1', '1', '3',
+                           '3', '3', '1', '3', '1', '3', '1', '3', '1', '1', '1', '3', '1',
+                           '3', '3', '1', '3'])
+
+        np_test.assert_array_equal(p1.values.ravel(), p1_res)
+        np_test.assert_array_equal(p2.values.ravel(), p2_res)
+        np_test.assert_array_equal(p3.values.ravel(), p3_res)
+
     def test_connected_predict(self):
         np.random.seed(42)
-        values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+        values = pd.DataFrame(np.array(np.random.randint(low=0, high=2, size=(1000, 5)),
+                                       dtype=str),
                               columns=['A', 'B', 'C', 'D', 'E'])
         fit_data = values[:800]
         predict_data = values[800:].copy()
@@ -451,10 +481,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                                              0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0,
                                              1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1,
                                              1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1,
-                                             1, 1, 1, 0]))
-        predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
-                              columns=['A', 'B', 'C', 'F', 'E'])[:]
-        self.assertRaises(ValueError, self.model_connected.predict, predict_data)
+                                             1, 1, 1, 0], dtype=str))
 
     def test_connected_predict_probability(self):
         np.random.seed(42)
