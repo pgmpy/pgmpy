@@ -433,7 +433,7 @@ class BayesianModel(DirectedGraph):
         # down -> from child to parent
 
         active_trails = {}
-        for start in [variables] if isinstance(variables, str) else variables:
+        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
             visit_list = set()
             visit_list.add((start, 'up'))
             traversed_list = set()
@@ -496,7 +496,7 @@ class BayesianModel(DirectedGraph):
             return descendents
 
         independencies = Independencies()
-        for variable in [variables] if isinstance(variables, str) else variables:
+        for variable in variables if isinstance(variables, (list, tuple)) else [variables]:
             non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
             parents = set(self.get_parents(variable))
             if non_descendents - parents:
