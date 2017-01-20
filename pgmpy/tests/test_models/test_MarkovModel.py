@@ -100,7 +100,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {'a': 1, 'b': 2})
-        self.assertDictEqual(self.graph.get_cardinality('a'), {'a': 1})
         self.graph.remove_factors(phi1)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
@@ -108,12 +107,10 @@ class TestMarkovModelMethods(unittest.TestCase):
         phi2 = DiscreteFactor(['c', 'd'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
         self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'a': 2, 'b': 2, 'c': 1})
-        self.assertDictEqual(self.graph.get_cardinality('d'), {'d': 2})
 
         phi3 = DiscreteFactor(['d', 'a'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'c': 1, 'b': 2, 'a': 2})
-        self.assertDictEqual(self.graph.get_cardinality('d'), {'d': 2})
 
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
@@ -294,6 +291,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
         six.assertCountEqual(self, self.graph.get_factors('a'), [phi1])
+        self.assertRaises(ValueError, self.graph.get_factors, 'd')
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
