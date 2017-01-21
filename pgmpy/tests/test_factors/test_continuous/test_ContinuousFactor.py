@@ -379,9 +379,9 @@ class TestContinuousFactorMethods(unittest.TestCase):
         results3 = univariate_chi.discretize(RoundingDiscretizer, low=0, high=1, cardinality=3)
         results3 = [round(i, 6) for i in results3]
 
-        self.assertAlmostEqual(results1, [0.154375, 0.085531, 0.0, -0.085531], places=4)
-        self.assertAlmostEqual(results2, [-2.120911, -0.115055, 0.198042, 0.033288, 0.004727], places=4)
-        self.assertAlmostEqual(results3, [0.038335, 0.059015, 0.039992], places=4)
+        np.testing.assert_almost_equal(results1, [0.154375, 0.085531, 0.0, -0.085531],decimal=4)
+        np.testing.assert_almost_equal(results2, [-2.120911, -0.115055, 0.198042, 0.033288, 0.004727], decimal=4)
+        np.testing.assert_almost_equal(results3, [0.038335, 0.059015, 0.039992], decimal=4)
 
     def test_copy(self):
         copy1 = self.phi1.copy()
