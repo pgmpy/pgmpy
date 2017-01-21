@@ -173,7 +173,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.factors import ContinuousFactor
+    >>> from pgmpy.factors.continuous import ContinuousFactor
     >>> from pgmpy.factors.continuous import UnbiasedDiscretizer
     # exponential distribution with rate = 2
     >>> exp_pdf = lambda x: 2*np.exp(-2*x) if x>=0 else 0
