@@ -132,6 +132,19 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(edge in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')] or
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
+    def test_get_ancestors_of_success(self):
+        G = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
+        ancenstors1 = G._get_ancestors_of('g')
+        ancenstors2 = G._get_ancestors_of('d')
+        ancenstors3 = G._get_ancestors_of(['i', 'l'])
+        self.assertEqual(ancenstors1, {'d', 'i', 'g'})
+        self.assertEqual(ancenstors2, {'d'})
+        self.assertEqual(ancenstors3, {'g', 'i', 'l', 'd'})
+
+    def test_get_ancestors_of_failure(self):
+        G = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
+        self.assertRaises(ValueError, G._get_ancestors_of, 'h')
+
     def test_local_independencies(self):
         self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
         self.assertEqual(self.G.local_independencies('c'), Independencies(['c', ['a', 'd', 'e'], 'b']))
