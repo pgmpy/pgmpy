@@ -382,9 +382,9 @@ class BayesianModel(DirectedGraph):
         if not isinstance(obs_nodes_list, (list, tuple)):
             obs_nodes_list = [obs_nodes_list]
 
-        for i in obs_nodes_list:
-            if i not in self.nodes():
-                raise ValueError('Node {s} not in not in graph'.format(s=i))
+        for node in obs_nodes_list:
+            if node not in self.nodes():
+                raise ValueError('Node {s} not in not in graph'.format(s=node))
 
         ancestors_list = set()
         nodes_list = set(obs_nodes_list)

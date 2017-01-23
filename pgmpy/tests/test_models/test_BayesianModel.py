@@ -116,6 +116,7 @@ class TestBayesianModelMethods(unittest.TestCase):
                                                    [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
                                evidence=['diff', 'intel'], evidence_card=[2, 3])
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
+        self.G2 = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
 
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
@@ -133,17 +134,15 @@ class TestBayesianModelMethods(unittest.TestCase):
                             (edge[1], edge[0]) in [('a', 'b'), ('c', 'b'), ('d', 'a'), ('d', 'b'), ('d', 'e')])
 
     def test_get_ancestors_of_success(self):
-        G = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
-        ancenstors1 = G._get_ancestors_of('g')
-        ancenstors2 = G._get_ancestors_of('d')
-        ancenstors3 = G._get_ancestors_of(['i', 'l'])
+        ancenstors1 = self.G2._get_ancestors_of('g')
+        ancenstors2 = self.G2._get_ancestors_of('d')
+        ancenstors3 = self.G2._get_ancestors_of(['i', 'l'])
         self.assertEqual(ancenstors1, {'d', 'i', 'g'})
         self.assertEqual(ancenstors2, {'d'})
         self.assertEqual(ancenstors3, {'g', 'i', 'l', 'd'})
 
     def test_get_ancestors_of_failure(self):
-        G = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
-        self.assertRaises(ValueError, G._get_ancestors_of, 'h')
+        self.assertRaises(ValueError, self.G2._get_ancestors_of, 'h')
 
     def test_local_independencies(self):
         self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
