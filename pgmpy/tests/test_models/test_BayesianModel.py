@@ -213,14 +213,15 @@ class TestBayesianModelCPD(unittest.TestCase):
                                 ('i', 's')])
 
     def test_active_trail_nodes(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes('d')), ['d', 'g', 'l'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('i')), ['g', 'i', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('d')['d']), ['d', 'g', 'l'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('i')['i']), ['g', 'i', 'l', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'i'])['d']), ['d', 'g', 'l'])
 
     def test_active_trail_nodes_args(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes('d', observed='g')), ['d', 'i', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('l', observed='g')), ['l'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['i', 'l'])), ['s'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])), ['g', 'i', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'l'], observed='g')['d']), ['d', 'i', 's'])
+        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'l'], observed='g')['l']), ['l'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['i', 'l'])['s']), ['s'])
+        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])['s']), ['g', 'i', 's'])
 
     def test_is_active_trail_triplets(self):
         self.assertTrue(self.G.is_active_trail('d', 'l'))

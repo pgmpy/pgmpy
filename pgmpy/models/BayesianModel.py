@@ -391,17 +391,19 @@ class BayesianModel(DirectedGraph):
             ancestors_list.add(node)
         return ancestors_list
 
-    def active_trail_nodes(self, start, observed=None):
+    def active_trail_nodes(self, variables, observed=None):
         """
-        Returns all the nodes reachable from start via an active trail.
+        Returns a dictionary with the given variables as keys and all the nodes reachable
+        from that respective variable as values.
 
         Parameters
         ----------
 
-        start: Graph node
+        variables: str or array like
+            variables whose active trails are to be found.
 
         observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
+            If given the active trails would be computed assuming these nodes to be observed.
 
         Examples
         --------
@@ -410,9 +412,9 @@ class BayesianModel(DirectedGraph):
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
         >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
         >>> student.active_trail_nodes('diff')
-        {'diff', 'grade'}
-        >>> student.active_trail_nodes('diff', observed='grades')
-        {'diff', 'intel'}
+        {'diff': {'diff', 'grades'}}
+        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
+        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
 
         References
         ----------
@@ -421,7 +423,7 @@ class BayesianModel(DirectedGraph):
         Page 75 Algorithm 3.1
         """
         if observed:
-            observed_list = [observed] if isinstance(observed, str) else observed
+            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
         else:
             observed_list = []
         ancestors_list = self._get_ancestors_of(observed_list)
@@ -430,29 +432,32 @@ class BayesianModel(DirectedGraph):
         # up ->  from parent to child
         # down -> from child to parent
 
-        visit_list = set()
-        visit_list.add((start, 'up'))
-        traversed_list = set()
-        active_nodes = set()
-        while visit_list:
-            node, direction = visit_list.pop()
-            if (node, direction) not in traversed_list:
-                if node not in observed_list:
-                    active_nodes.add(node)
-                traversed_list.add((node, direction))
-                if direction == 'up' and node not in observed_list:
-                    for parent in self.predecessors(node):
-                        visit_list.add((parent, 'up'))
-                    for child in self.successors(node):
-                        visit_list.add((child, 'down'))
-                elif direction == 'down':
+        active_trails = {}
+        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
+            visit_list = set()
+            visit_list.add((start, 'up'))
+            traversed_list = set()
+            active_nodes = set()
+            while visit_list:
+                node, direction = visit_list.pop()
+                if (node, direction) not in traversed_list:
                     if node not in observed_list:
-                        for child in self.successors(node):
-                            visit_list.add((child, 'down'))
-                    if node in ancestors_list:
+                        active_nodes.add(node)
+                    traversed_list.add((node, direction))
+                    if direction == 'up' and node not in observed_list:
                         for parent in self.predecessors(node):
                             visit_list.add((parent, 'up'))
-        return active_nodes
+                        for child in self.successors(node):
+                            visit_list.add((child, 'down'))
+                    elif direction == 'down':
+                        if node not in observed_list:
+                            for child in self.successors(node):
+                                visit_list.add((child, 'down'))
+                        if node in ancestors_list:
+                            for parent in self.predecessors(node):
+                                visit_list.add((parent, 'up'))
+            active_trails[start] = active_nodes
+        return active_trails
 
     def local_independencies(self, variables):
         """
@@ -491,7 +496,7 @@ class BayesianModel(DirectedGraph):
             return descendents
 
         independencies = Independencies()
-        for variable in [variables] if isinstance(variables, str) else variables:
+        for variable in variables if isinstance(variables, (list, tuple)) else [variables]:
             non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
             parents = set(self.get_parents(variable))
             if non_descendents - parents:
@@ -527,7 +532,7 @@ class BayesianModel(DirectedGraph):
         >>> student.is_active_trail('grades', 'sat')
         True
         """
-        if end in self.active_trail_nodes(start, observed):
+        if end in self.active_trail_nodes(start, observed)[start]:
             return True
         else:
             return False
@@ -556,7 +561,7 @@ class BayesianModel(DirectedGraph):
             for r in range(len(rest)):
                 for observed in itertools.combinations(rest, r):
                     d_seperated_variables = rest - set(observed) - set(
-                        self.active_trail_nodes(start, observed=observed))
+                        self.active_trail_nodes(start, observed=observed)[start])
                     if d_seperated_variables:
                         independencies.add_assertions([start, d_seperated_variables, observed])
 
