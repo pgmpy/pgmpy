@@ -1,3 +1,5 @@
+from __future__ import division
+
 import unittest
 
 import numpy as np
@@ -379,9 +381,9 @@ class TestContinuousFactorMethods(unittest.TestCase):
         results3 = univariate_chi.discretize(RoundingDiscretizer, low=0, high=1, cardinality=3)
         results3 = [round(i, 6) for i in results3]
 
-        np.testing.assert_almost_equal(results1, [0.154375, 0.085531, 0.0, -0.085531],decimal=4)
+        np.testing.assert_almost_equal(results1, [0.059167, 0.085531, 0.0, -0.085531],decimal=4)
         np.testing.assert_almost_equal(results2, [-2.120911, -0.115055, 0.198042, 0.033288, 0.004727], decimal=4)
-        np.testing.assert_almost_equal(results3, [0.038335, 0.059015, 0.039992], decimal=4)
+        np.testing.assert_almost_equal(results3, [0.008325, 0.028291, 0.030074], decimal=4)
 
     def test_copy(self):
         copy1 = self.phi1.copy()
