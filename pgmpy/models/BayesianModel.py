@@ -361,7 +361,7 @@ class BayesianModel(DirectedGraph):
 
     def _get_ancestors_of(self, obs_nodes_list):
         """
-        Returns a list of all ancestors of all the observed nodes including the
+        Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
 
         Parameters
@@ -381,6 +381,10 @@ class BayesianModel(DirectedGraph):
         """
         if not isinstance(obs_nodes_list, (list, tuple)):
             obs_nodes_list = [obs_nodes_list]
+
+        for i in obs_nodes_list:
+            if i not in self.nodes():
+                raise ValueError('Node {s} not in not in graph'.format(s=i))
 
         ancestors_list = set()
         nodes_list = set(obs_nodes_list)
