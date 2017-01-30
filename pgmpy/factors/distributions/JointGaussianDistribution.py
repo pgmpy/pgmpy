@@ -5,15 +5,17 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.distributions import BaseDistribution
 
 
-class JointGaussianDistribution(ContinuousFactor):
+class JointGaussianDistribution(BaseDistribution):
     u"""
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
     This is the base class for its representation.
+
+    #TODO: Add more examples after refactoring ContinuousFactor class
     """
     def __init__(self, variables, mean, covariance):
         """
@@ -31,7 +33,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -77,7 +79,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
@@ -113,7 +115,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -187,7 +189,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -264,7 +266,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> gauss_dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...                 np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> copy_dis = gauss_dis.copy()
@@ -313,7 +315,7 @@ class JointGaussianDistribution(ContinuousFactor):
         -------
 
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> phi = dis.to_canonical_factor()
@@ -367,7 +369,7 @@ class JointGaussianDistribution(ContinuousFactor):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
         >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
