@@ -27,7 +27,7 @@ class BayesianModel(DirectedGraph):
     models hold directed edges.  Self loops are not allowed neither
     multiple (parallel) edges.
 
-    Nodes should be strings.
+    Nodes can be any hashable python object.
 
     Edges are represented as links between nodes.
 
