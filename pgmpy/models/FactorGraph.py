@@ -391,3 +391,39 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('DiscreteFactor for all the random variables not defined.')
 
         return np.sum(factor.values)
+
+    def copy(self):
+        """
+        Returns a copy of the model.
+
+        Returns
+        -------
+        FactorGraph : Copy of FactorGraph
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> import numpy as np
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
+        >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1, phi2)
+        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_edges_from([('a', phi1), ('b', phi1),
+        ...                   ('b', phi2), ('c', phi2)])
+        >>> G_copy = G.copy()
+        >>> G_copy.nodes()
+        [<Factor representing phi(b:2, c:2) at 0xb4badd4c>, 'b', 'c',
+          'a', <Factor representing phi(a:2, b:2) at 0xb4badf2c>]
+
+        """
+        clone_FactorGraph = FactorGraph(self.edges())
+        clone_FactorGraph.add_nodes_from(self.nodes())
+
+        if self.factors:
+           factors_copy = [factor.copy() for factor in self.factors]
+           clone_FactorGraph.add_factors(*factors_copy)
+
+        return clone_FactorGraph	
