@@ -1,6 +1,6 @@
 # Contributing to pgmpy
 
-Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation) :D . 
+Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation). 
 In this document we'll try to summarize everything that you need to know to do a good job.
 
 
@@ -25,7 +25,7 @@ Or You can go through the [try git tutorial](https://try.github.io/levels/1/chal
 
 #### Forks + GitHub Pull requests
 
-We use the famous
+We use
 [gitflow](http://nvie.com/posts/a-successful-git-branching-model/) to manage our
 branches.
 
@@ -37,18 +37,17 @@ Summary of our git branching model:
   `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can
   do it by switching to `develop` branch (`git checkout develop`) and then
   creating a new branch (`git checkout -b name-of-the-new-branch`);
-- Do many small commits on that branch locally (`git add files-changed`,
-  `git commit -m "Add some change"`);
-- Push to your fork on GitHub (with the name as your local branch:
+- Make changes to the codebase and commit it. <b> [Imp] </b> Make sure that tests pass for each of your commits.
+- Rebase your branch on the current dev and push to your fork on GitHub (with the name as your local branch:
   `git push origin branch-name`);
 - Create a pull request using the GitHub Web interface (asking us to pull the
-  changes from your new branch and add the changes to our `develop` branch);
+  changes from your new branch and add the changes to our `develop` branch).;
 - Wait for comments.
 
 
 #### Tips
 
-- Write [helpful commit
+- <b> [Imp] </b>  Write [helpful commit
   messages](http://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message).
 - Anything in the `dev` branch should be deployable (no failing tests).
 - Never use `git add .`: it can add unwanted files;
