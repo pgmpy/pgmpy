@@ -315,20 +315,32 @@ class BayesianModel(DirectedGraph):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
-    def get_cardinality(self, node):
+    def get_cardinality(self):
         """
-        Returns the cardinality of the node. Throws an error if the CPD for the
-        queried node hasn't been added to the network.
+        Returns a dictionary with the nodes as keys
+        and their respective cardinality as values.
 
         Parameters
         ----------
-        node: Any hashable python object.
+        None.
 
-        Returns
-        -------
-        int: The cardinality of the node.
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                               [0.9, 0.1, 0.8, 0.3]],
+        ...                  ['intel', 'diff'], [2, 2])
+        >>> cpd2 = TabularCPD('diff', 2, [[0.8, 0.2]])
+        >>> student.add_cpds(cpd, cpd2)
+        >>> student.get_cardinality()
+        defaultdict(int, {'diff': 2, 'grade': 2})
         """
-        return self.get_cpds(node).cardinality[0]
+        cardinalities = defaultdict(int)
+        for cpd in self.get_cpds():
+            cardinalities[cpd.variable] = cpd.cardinality[0]
+        return cardinalities
 
     def check_model(self):
         """
@@ -639,7 +651,7 @@ class BayesianModel(DirectedGraph):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator_type=None, state_names=[], complete_samples_only=True, **kwargs):
+    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -683,16 +695,15 @@ class BayesianModel(DirectedGraph):
 
         from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, BaseEstimator
 
-        if estimator_type is None:
-            estimator_type = MaximumLikelihoodEstimator
+        if estimator is None:
+            estimator = MaximumLikelihoodEstimator
         else:
-            if not issubclass(estimator_type, BaseEstimator):
+            if not issubclass(estimator, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
-        estimator = estimator_type(self, data, state_names=state_names,
-                                   complete_samples_only=complete_samples_only)
+        cpds_list = estimator(self, data, state_names=state_names,
+                                   complete_samples_only=complete_samples_only).get_parameters(**kwargs)
 
-        cpds_list = estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
     def predict(self, data):

@@ -118,6 +118,10 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
         self.G2 = BayesianModel([('d', 'g'), ('g', 'l'), ('i', 'g'), ('i', 'l')])
 
+    def test_get_cardinality(self):
+        self.assertDictEqual(self.G1.get_cardinality(), {'diff': 2, 'grade': 3, 'intel': 3})
+        self.assertDictEqual(self.G.get_cardinality(), {})
+
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ['a', 'b', 'c', 'd', 'e'])
@@ -418,7 +422,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
     def test_bayesian_fit(self):
         print(isinstance(BayesianEstimator, BaseEstimator))
         print(isinstance(MaximumLikelihoodEstimator, BaseEstimator))
-        self.model2.fit(self.data1, estimator_type=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
+        self.model2.fit(self.data1, estimator=BayesianEstimator, prior_type="dirichlet", pseudo_counts=[9, 3])
         self.assertEqual(self.model2.get_cpds('B'), TabularCPD('B', 2, [[11.0 / 15], [4.0 / 15]]))
 
     def test_fit_missing_data(self):

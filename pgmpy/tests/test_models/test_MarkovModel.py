@@ -95,6 +95,7 @@ class TestMarkovModelMethods(unittest.TestCase):
                                    ('d', 'a')])
 
         self.assertDictEqual(self.graph.get_cardinality(), {})
+        self.assertRaises(ValueError, self.graph.get_cardinality, 'a')
 
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
@@ -107,28 +108,12 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'a': 2, 'b': 2, 'c': 1})
 
-        phi3 = DiscreteFactor(['d', 'a'], [1, 2], np.random.rand(2))
+        phi3 = DiscreteFactor(['d', 'a'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi3)
-        self.assertDictEqual(self.graph.get_cardinality(), {'d': 1, 'c': 1, 'b': 2, 'a': 2})
+        self.assertDictEqual(self.graph.get_cardinality(), {'d': 2, 'c': 1, 'b': 2, 'a': 2})
 
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
-
-    def test_get_cardinality_check_cardinality(self):
-        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
-                                   ('d', 'a')])
-
-        phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
-        self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
-
-        phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
-        self.graph.add_factors(phi2)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
-
-        phi3 = DiscreteFactor(['c', 'd'], [2, 2], np.random.rand(4))
-        self.graph.add_factors(phi3)
-        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
 
     def test_check_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
@@ -138,6 +123,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         phi3 = DiscreteFactor(['c', 'd'], [3, 4], np.random.rand(12))
         phi4 = DiscreteFactor(['d', 'a'], [4, 1], np.random.rand(4))
 
+        self.assertRaises(ValueError, self.graph.check_model)
         self.graph.add_factors(phi1, phi2, phi3, phi4)
         self.assertTrue(self.graph.check_model())
 
@@ -304,6 +290,8 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         six.assertCountEqual(self, self.graph.get_factors(), [])
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
+        six.assertCountEqual(self, self.graph.get_factors('a'), [phi1])
+        self.assertRaises(ValueError, self.graph.get_factors, 'd')
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
@@ -533,7 +521,7 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         copy = self.graph.copy()
 
         # Ensure the copied model is correct
-        self.assertTrue(copy.check_model())
+        self.assertRaises(ValueError, copy.check_model)
 
         # Basic sanity checks to ensure the graph was copied correctly
         self.assertEqual(len(copy.nodes()), 2)

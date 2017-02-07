@@ -216,7 +216,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(self, data, estimator_type=None, state_names=[], complete_samples_only=True, **kwargs):
+    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
         """
         For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
         """

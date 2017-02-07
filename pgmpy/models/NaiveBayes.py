@@ -165,7 +165,7 @@ class NaiveBayes(BayesianModel):
                 independencies.add_assertions([variable, list(set(self.children_nodes) - set(variable)), self.parent_node])
         return independencies
 
-    def fit(self, data, parent_node=None, estimator_type=None):
+    def fit(self, data, parent_node=None, estimator=None):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.
         If a variable from the data is not present in the model, it adds that node into the model.
@@ -211,4 +211,4 @@ class NaiveBayes(BayesianModel):
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
-        super(NaiveBayes, self).fit(data, estimator_type)
+        super(NaiveBayes, self).fit(data, estimator)
