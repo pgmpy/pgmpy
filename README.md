@@ -20,11 +20,10 @@ Dependencies
 =============
 pgmpy has following non optional dependencies:
 - Python 2.7 or Python 3
-- NetworkX 1.9.1 
-- Scipy 0.12.1 
-- Numpy 1.9.2 
-- Cython 0.21 
-- Pandas 0.15.1 
+- NetworkX 1.11 
+- Scipy 0.18.0 
+- Numpy 1.11.1 
+- Pandas 0.18.1 
 
 Download
 =========
