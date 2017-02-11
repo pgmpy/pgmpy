@@ -292,7 +292,7 @@ class GibbsSampling(MarkovChain):
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
-            cpds = [cpd for cpd in model.cpds if var in cpd.scope()]
+            cpds = [model.cpds[v] for v in model.cpds if var in model.cpds[v].scope()]
             prod_cpd = factor_product(*cpds)
             kernel = {}
             scope = set(prod_cpd.scope())
