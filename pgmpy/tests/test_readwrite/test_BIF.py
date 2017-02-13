@@ -154,20 +154,20 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
                                        'position': '(296, 268)'},
                          'light-on': {'weight': None,
                                       'position': '(218, 195)'}}
-        cpds_expected = [np.array([[0.01],
-                                   [0.99]]),
-                         np.array([[0.99, 0.97, 0.9, 0.3],
-                                   [0.01, 0.03, 0.1, 0.7]]),
-                         np.array([[0.15],
-                                   [0.85]]),
-                         np.array([[0.7, 0.01],
-                                   [0.3, 0.99]]),
-                         np.array([[0.6, 0.05],
-                                   [0.4, 0.95]])]
+        cpds_expected = {'bowel-problem': np.array([[0.01],
+                                                   [0.99]]),
+                        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
+                                             [0.01, 0.03, 0.1, 0.7]]),
+                        'family-out': np.array([[0.15],
+                                                [0.85]]),
+                        'hear-bark': np.array([[0.7, 0.01],
+                                               [0.3, 0.99]]),
+                        'light-on': np.array([[0.6, 0.05],
+                                              [0.4, 0.95]])}
         model = self.reader.get_model()
-        for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
-                                       cpds_expected[cpd_index])
+        for var in cpds_expected:
+            np_test.assert_array_equal(model.cpds[var].get_values(),
+                                       cpds_expected[var])
         self.assertDictEqual(model.node, node_expected)
         self.assertDictEqual(model.edge, edge_expected)
         self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
