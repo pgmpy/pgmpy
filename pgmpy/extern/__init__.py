@@ -1,3 +1,5 @@
-from .tabulate import tabulate
+from .six import six
+from .tabulate.tabulate import tabulate
 
-__all__ = ['tabulate']
+__all__ = ['tabulate',
+           'six',]
