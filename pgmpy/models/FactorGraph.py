@@ -402,9 +402,9 @@ class FactorGraph(UndirectedGraph):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> import numpy as np
         >>> G = FactorGraph()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -419,11 +419,12 @@ class FactorGraph(UndirectedGraph):
           'a', <Factor representing phi(a:2, b:2) at 0xb4badf2c>]
 
         """
-        clone_FactorGraph = FactorGraph(self.edges())
-        clone_FactorGraph.add_nodes_from(self.nodes())
+        copy = FactorGraph(self.edges())
+        copy.add_nodes_from(self.nodes())
 
         if self.factors:
            factors_copy = [factor.copy() for factor in self.factors]
-           clone_FactorGraph.add_factors(*factors_copy)
+           copy.add_factors(*factors_copy)
 
-        return clone_FactorGraph	
+        return copy
+

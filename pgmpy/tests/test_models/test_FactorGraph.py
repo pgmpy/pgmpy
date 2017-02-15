@@ -299,6 +299,6 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.factors[0] = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
         self.assertNotEqual(self.graph.factors, graph_copy.factors)
-                  
+
     def tearDown(self):
         del self.graph
