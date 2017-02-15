@@ -101,6 +101,15 @@ class HamiltonianMC(object):
         # acceptance probability
         return np.exp(potential_change - kinetic_change)
 
+    def _get_condition(self, acceptance_prob, a):
+        """
+        Temporary method to fix issue in numpy 0.12 #852
+        """
+        if a == 1:
+            return (acceptance_prob ** a) > (1/(2**a))
+        else:
+            return (1/(acceptance_prob ** a)) > (2**(-a))
+
     def _find_reasonable_stepsize(self, position, stepsize_app=1):
         """
         Method for choosing initial value of stepsize
@@ -125,7 +134,7 @@ class HamiltonianMC(object):
         # a = 2I[acceptance_prob] -1
         a = 2 * (acceptance_prob > 0.5) - 1
 
-        condition = (acceptance_prob ** a) > (2 ** (-a))
+        condition = self._get_condition(acceptance_prob, a)
 
         while condition:
             stepsize_app = (2 ** a) * stepsize_app
@@ -136,7 +145,7 @@ class HamiltonianMC(object):
 
             acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
 
-            condition = (acceptance_prob ** a) > (2 ** (-a))
+            condition = self._get_condition(acceptance_prob, a)
 
         return stepsize_app
 
