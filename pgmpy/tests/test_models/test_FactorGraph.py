@@ -280,5 +280,25 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_edges_from([('a', phi3), ('c', phi3)])
         self.assertRaises(ValueError, self.graph.check_model)
 
+    def test_copy(self):
+        self.graph.add_nodes_from(['a', 'b', 'c'])
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
+        self.graph.add_factors(phi1, phi2)
+        self.graph.add_nodes_from([phi1, phi2])
+        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+                                   ('b', phi2), ('c', phi2)])
+        graph_copy = self.graph.copy()
+        self.assertIsInstance(graph_copy, FactorGraph)
+        self.assertTrue(graph_copy.check_model())
+        self.assertEqual(self.graph.get_factors(), graph_copy.get_factors())
+        self.graph.remove_factors(phi1, phi2)
+        self.assertTrue(phi1 not in self.graph.factors and phi2 not in self.graph.factors)
+        self.assertTrue(phi1 in graph_copy.factors and phi2 in graph_copy.factors)
+        self.graph.add_factors(phi1, phi2)
+        self.graph.factors[0] = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        self.assertNotEqual(self.graph.get_factors()[0], graph_copy.get_factors()[0])
+        self.assertNotEqual(self.graph.factors, graph_copy.factors)
+                  
     def tearDown(self):
         del self.graph
