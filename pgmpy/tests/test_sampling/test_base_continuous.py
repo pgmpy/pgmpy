@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+from pgmpy.factors.distributions import JointGaussianDistribution as JGD
 from pgmpy.sampling import LeapFrog, ModifiedEuler, GradLogPDFGaussian
 
 

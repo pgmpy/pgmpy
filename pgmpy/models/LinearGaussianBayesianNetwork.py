@@ -5,7 +5,7 @@ import networkx as nx
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.continuous import JointGaussianDistribution
+from pgmpy.factors.distributions import JointGaussianDistribution
 
 
 class LinearGaussianBayesianNetwork(BayesianModel):
