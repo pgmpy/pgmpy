@@ -41,8 +41,8 @@ class CustomDistribution(ContinuousDistribution):
         self.variables = list(variables)
         self._pdf = distribution
 
-   
-    def get_pdf(self):
+    @property
+    def pdf(self):
         """
         Returns the Probability Density Function of the distribution.
 
@@ -117,7 +117,7 @@ class CustomDistribution(ContinuousDistribution):
         >>> normal_dist.assignment(x1=0, x2=0)
         0.15915494309189535
         """
-        return self._pdf(*args, **kwargs)
+        return self.pdf(*args, **kwargs)
 
     def copy(self):
         """
@@ -141,7 +141,7 @@ class CustomDistribution(ContinuousDistribution):
         >>> copy_dist.variables
         ['x', 'y']
         """
-        return CustomDistribution(self.get_scope(), self._pdf)
+        return CustomDistribution(self.get_scope(), self.pdf)
 
     # TODO: Discretize methods need to be fixed for this to work
     def discretize(self, method, *args, **kwargs):
@@ -229,7 +229,7 @@ class CustomDistribution(ContinuousDistribution):
         var_to_keep = [var for var in self.variables if var not in var_to_remove]
 
         reduced_var_index = [(self.variables.index(var), value) for var, value in values]
-        pdf = self._pdf
+        pdf = self.pdf
 
         def reduced_pdf(*args, **kwargs):
             reduced_args = list(args)
@@ -285,7 +285,7 @@ class CustomDistribution(ContinuousDistribution):
         0.0585498315243
         """
         phi = self if inplace else self.copy()
-        pdf = self._pdf
+        pdf = self.pdf
 
         pdf_mod = integrate.nquad(pdf, [[-np.inf, np.inf] for var in self.variables])[0]
 
@@ -319,14 +319,14 @@ class CustomDistribution(ContinuousDistribution):
                         if inplace=False returns a new `DiscreteFactor` instance.
 
         """
-        if not isinstance(other, BaseDistribution):
-            raise TypeError("BaseDistribution objects can only be multiplied "
-                            "or divided with another BaseDistribution  "
+        if not isinstance(other, ContinuousDistribution):
+            raise TypeError("ContinuousDistribution objects can only be multiplied "
+                            "or divided with another ContinuousDistribution  "
                             "object. Got {other_type}, expected: "
-                            "BaseDistribution.".format(other_type=type(other)))
+                            "ContinuousDistribution.".format(other_type=type(other)))
 
         phi = self if inplace else self.copy()
-        pdf = self._pdf
+        pdf = self.pdf
         self_var = [var for var in self.variables]
 
         modified_pdf_var = self_var + [var for var in other.variables if var not in self_var]

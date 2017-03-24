@@ -5,7 +5,7 @@ from __future__ import division
 import numpy as np
 
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.factors.continuous import JointGaussianDistribution
+from pgmpy.factors.distributions import JointGaussianDistribution
 
 
 class CanonicalFactor(ContinuousFactor):

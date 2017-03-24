@@ -5,10 +5,10 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors.distributions import BaseDistribution
+from pgmpy.factors.distributions import CustomDistribution
 
 
-class JointGaussianDistribution(BaseDistribution):
+class JointGaussianDistribution(CustomDistribution):
     u"""
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,

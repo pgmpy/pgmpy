@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors.continuous import JointGaussianDistribution as JGD
+from pgmpy.factors.distributions import JointGaussianDistribution as JGD
 
 
 class TestJGDInit(unittest.TestCase):
