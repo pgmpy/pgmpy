@@ -285,7 +285,7 @@ class JointGaussianDistribution(CustomDistribution):
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = JointGaussianDistribution(self.scope(), self.mean.copy(),
+        copy_distribution = JointGaussianDistribution(self.variables, self.mean.copy(),
                                                       self.covariance.copy())
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
@@ -344,7 +344,7 @@ class JointGaussianDistribution(CustomDistribution):
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
             np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
 
-        return CanonicalFactor(self.scope(), K, h, g)
+        return CanonicalFactor(self.variables, K, h, g)
 
     def _operate(self, other, operation, inplace=True):
         """

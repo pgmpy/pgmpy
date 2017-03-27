@@ -81,10 +81,10 @@ class TestCustomDistributionMethods(unittest.TestCase):
         self.phi3 = CustomDistribution(['x', 'y', 'z'], self.pdf3)
         self.phi4 = CustomDistribution(['x1', 'x2', 'x3'], self.pdf4)
 
-    def test_scope(self):
-        self.assertEqual(self.phi1.get_scope(), self.phi1.variables)
-        self.assertEqual(self.phi2.get_scope(), self.phi2.variables)
-        self.assertEqual(self.phi3.get_scope(), self.phi3.variables)
+    def test_variables(self):
+        self.assertEqual(self.phi1.variables, self.phi1._variables)
+        self.assertEqual(self.phi2.variables, self.phi2._variables)
+        self.assertEqual(self.phi3.variables, self.phi3._variables)
 
     def test_assignment(self):
         self.assertEqual(self.phi1.assignment(1.212, 2), self.pdf1(1.212, 2))

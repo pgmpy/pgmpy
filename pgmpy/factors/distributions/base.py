@@ -2,22 +2,12 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class BaseDistribution(object):
-    #__metaclass__ = ABCMeta
-    # TODO: Fix this
-    # @abstractproperty
-    # def _pdf(self):
-    #     pass
-    #
-    # @abstractproperty
-    # def variables(self):
-    #     pass
-
-    @abstractmethod
-    def get_pdf(self):
+    @abstractproperty
+    def pdf(self):
         pass
-
-    @abstractmethod
-    def get_scope(self):
+    
+    @abstractproperty
+    def variables(self):
         pass
 
     @abstractmethod
