@@ -38,6 +38,11 @@ class ContinuousFactor(BaseFactor):
         >>> dirichlet_factor.assignment(5,6)
         226800.0
         """
+        if distribution and not isinstance(distribution, CustomDistribution):
+            raise TypeError(
+                "distribution: Expected type: CustomDistribution, got: {type}".format(
+                    type=type(distribution)))
+
         self.distribution = distribution
         self.variable = variable # The variable to predict on
         super().__init__()
@@ -116,7 +121,7 @@ class ContinuousFactor(BaseFactor):
         >>> copy_factor.variables
         ['x', 'y']
         """
-        return ContinuousFactor(self.scope(), self.distribution.copy())
+        return ContinuousFactor(self.distribution.copy())
 
     def discretize(self, method, *args, **kwargs): 
         """
@@ -202,19 +207,20 @@ class ContinuousFactor(BaseFactor):
 
         phi = self if inplace else self.copy()
         pdf = self.pdf
+        self_var = [var for var in self.scope]
 
-        union_scope = list(set(self.scope + other.scope))
+        modified_pdf_var = self_var + [var for var in other.scope if var not in self_var]
 
         def modified_pdf(*args):
-            self_pdf_args = [args[union_scope.index(var)] for var in self.scope]
-            other_pdf_args = [args[union_scope.index(var)] for var in other.scope]
+            self_pdf_args = list(args[:len(self_var)])
+            other_pdf_args = [args[modified_pdf_var.index(var)] for var in other.scope]
 
             if operation == 'product':
                 return pdf(*self_pdf_args) * other.pdf(*other_pdf_args)
             if operation == 'divide':
                 return pdf(*self_pdf_args) / other.pdf(*other_pdf_args)
 
-        phi.distribution = CustomDistribution(modified_pdf, union_scope)
+        phi.distribution = CustomDistribution(modified_pdf_var, modified_pdf)
 
         if not inplace:
             return phi

@@ -6,6 +6,7 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.distributions import CustomDistribution
 
 
 class LinearGaussianCPD(ContinuousFactor):
@@ -72,22 +73,17 @@ class LinearGaussianCPD(ContinuousFactor):
             raise ValueError("The number of variables in evidence must be one less than the "
                              "length of the beta vector.")
 
-        self.evidence = evidence
         self.beta_vector = np.asarray(beta[1:])
 
         variables = [variable] + evidence
-        super(LinearGaussianCPD, self).__init__(variables, None)
-
-    @property
-    def pdf(self):
-
         def _pdf(*args):
             # The first element of args is the value of the variable on which CPD is defined
             # and the rest of the elements give the mean values of the parent variables.
             mean = sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)]) + self.beta_0
             return multivariate_normal.pdf(args[0], np.array(mean), np.array([[self.variance]]))
 
-        return _pdf
+        super(LinearGaussianCPD, self).__init__(CustomDistribution(variables, _pdf), variable)
+
 
     def copy(self):
         """
