@@ -1,8 +1,7 @@
-from .base import BaseDistribution
-
 import numpy as np
 from scipy import integrate
 
+from .base import BaseDistribution
 
 class CustomDistribution(BaseDistribution):
     def __init__(self, variables, distribution, *args, **kwargs):
@@ -16,7 +15,6 @@ class CustomDistribution(BaseDistribution):
 
         distribution: function
             The probability density function of the distribution.
-
 
         Examples
         --------
@@ -93,14 +91,14 @@ class CustomDistribution(BaseDistribution):
     def variables(self, value):
         self._variables = value
 
-    def assignment(self, *args, **kwargs):
+    def assignment(self, *x):
         """
         Returns the probability value of the PDF at the given parameter values.
 
         Parameters
         ----------
-        *args, **kwargs: values
-            Point at which the probability value is to be computed.
+        *x: values of all variables of this distribution, 
+            collective defining a point at which the probability value is to be computed.
 
         Returns
         -------
@@ -116,18 +114,17 @@ class CustomDistribution(BaseDistribution):
         ...                                  distribution=normal_pdf)
         >>> normal_dist.assignment(0, 0)
         0.15915494309189535
-        >>> normal_dist.assignment(x1=0, x2=0)
         0.15915494309189535
         """
-        return self.pdf(*args, **kwargs)
+        return self.pdf(*x)
 
     def copy(self):
         """
-        Return a copy of the distribution.
+        Returns a copy of the CustomDistribution instance.
 
         Returns
         -------
-        CustomDistribution object: copy of the distribution
+        CustomDistribution object: copy of the instance
 
         Examples
         --------
@@ -196,7 +193,7 @@ class CustomDistribution(BaseDistribution):
         -------
         CustomDistribution or None:
                     if inplace=True (default) returns None
-                    if inplace=False returns a new ContinuousFactor instance.
+                    if inplace=False returns a new CustomDistribution instance.
 
         Examples
         --------
@@ -257,12 +254,12 @@ class CustomDistribution(BaseDistribution):
 
     def marginalize(self, variables, inplace=True):
         """
-        Marginalize the factor with respect to the given variables.
+        Marginalize the distribution with respect to the given variables.
 
         Parameters
         ----------
         variables: list, array-like
-            List of variables with respect to which factor is to be maximized.
+            List of variables to be removed from the marginalized distribution.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -270,7 +267,7 @@ class CustomDistribution(BaseDistribution):
 
         Returns
         -------
-        DiscreteFactor or None:
+        Marginalized distribution or None:
                 if inplace=True (default) returns None
                 if inplace=False returns a new CustomDistribution instance.
 
@@ -282,12 +279,12 @@ class CustomDistribution(BaseDistribution):
         ...                x=[x1, x2], mean=[0, 0], cov=[[1, 0], [0, 1]])
         >>> normal_dist = CustomDistribution(variables=['x1', 'x2'],
         ...                                  distribution=normal_pdf)
-        >>> normal_dist.get_scope()
+        >>> normal_dist.variables
         ['x1', 'x2']
         >>> normal_dist.assignment(1, 1)
         0.058549831524319168
         >>> normal_dist.marginalize(['x2'])
-        >>> normal_dist.get_scope()
+        >>> normal_dist.variables
         ['x1']
         >>> normal_dist.assignment(1)
         0.24197072451914328
@@ -329,20 +326,20 @@ class CustomDistribution(BaseDistribution):
         
     def normalize(self, inplace=True):
         """
-        Normalizes the pdf of the continuous distribution so that it
+        Normalizes the pdf of the distribution so that it
         integrates to 1 over all the variables.
 
         Parameters
         ----------
         inplace: boolean
-            If inplace=True it will modify the factor itself, else would return
-            a new factor.
+            If inplace=True it will modify the distribution itself, else would return
+            a new distribution.
 
         Returns
         -------
-        ContinuousFactor or None:
+        CustomDistribution or None:
              if inplace=True (default) returns None
-             if inplace=False returns a new ContinuousFactor instance.
+             if inplace=False returns a new CustomDistribution instance.
 
         Examples
         --------
@@ -370,27 +367,27 @@ class CustomDistribution(BaseDistribution):
 
     def _operate(self, other, operation, inplace=True):
         """
-        Gives the ContinuousFactor operation (product or divide) with
-        the other factor.
+        Gives the CustomDistribution operation (product or divide) with
+        the other distribution.
 
         Parameters
         ----------
-        other: ContinuousFactor
-            The ContinuousFactor to be multiplied.
+        other: CustomDistribution
+            The CustomDistribution to be multiplied.
 
-        operation: String
+        operation: str
             'product' for multiplication operation and 'divide' for
             division operation.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new factor.
+            a new distribution.
 
         Returns
         -------
-        ContinuousFactor or None:
+        CustomDistribution or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+                        if inplace=False returns a new `CustomDistribution` instance.
 
         """
         if not isinstance(other, CustomDistribution):
@@ -422,18 +419,18 @@ class CustomDistribution(BaseDistribution):
 
     def product(self, other, inplace=True):
         """
-        Gives the ContinuousFactor product with the other factor.
+        Gives the CustomDistribution product with the other distribution.
 
         Parameters
         ----------
-        other: ContinuousFactor
-            The ContinuousFactor to be multiplied.
+        other: CustomDistribution
+            The CustomDistribution to be multiplied.
 
         Returns
         -------
-        ContinuousFactor or None:
+        CustomDistribution or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+                        if inplace=False returns a new `CustomDistribution` instance.
 
         Example
         -------
@@ -459,18 +456,18 @@ class CustomDistribution(BaseDistribution):
 
     def divide(self, other, inplace=True):
         """
-        Gives the ContinuousFactor divide with the other factor.
+        Gives the CustomDistribution divide with the other factor.
 
         Parameters
         ----------
-        other: ContinuousFactor
-            The ContinuousFactor to be multiplied.
+        other: ContinuousCustomDistributionFactor
+            The CustomDistribution to be multiplied.
 
         Returns
         -------
-        ContinuousFactor or None:
+        CustomDistribution or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+                        if inplace=False returns a new `CustomDistribution` instance.
 
         Example
         -------
