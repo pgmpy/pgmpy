@@ -24,7 +24,7 @@ class CustomDistribution(BaseDistribution):
         # Two variable dirichlet distribution with alpha = (1, 2)
         >>> def dirichlet_pdf(x, y):
         ...     return (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
-        >>> dirichlet_dist = CustomDistribution(variables=['x', 'y'],distribution=dirichlet_pdf)
+        >>> dirichlet_dist = CustomDistribution(variables=['x', 'y'], distribution=dirichlet_pdf)
         >>> dirichlet_dist.variables
         ['x', 'y']
         """
@@ -90,33 +90,6 @@ class CustomDistribution(BaseDistribution):
     @variables.setter
     def variables(self, value):
         self._variables = value
-
-    def assignment(self, *x):
-        """
-        Returns the probability value of the PDF at the given parameter values.
-
-        Parameters
-        ----------
-        *x: values of all variables of this distribution, 
-            collective defining a point at which the probability value is to be computed.
-
-        Returns
-        -------
-        float: The probability value at the point.
-
-        Examples
-        --------
-        >>> from pgmpy.factors.distributions import CustomDistribution
-        >>> from scipy.stats import multivariate_normal
-        >>> normal_pdf = lambda x1, x2: multivariate_normal.pdf(
-        ...     x=(x1, x2), mean=[0, 0], cov=[[1, 0], [0, 1]])
-        >>> normal_dist = CustomDistribution(variables=['x1', 'x2'],
-        ...                                  distribution=normal_pdf)
-        >>> normal_dist.assignment(0, 0)
-        0.15915494309189535
-        0.15915494309189535
-        """
-        return self.pdf(*x)
 
     def copy(self):
         """
@@ -460,7 +433,7 @@ class CustomDistribution(BaseDistribution):
 
         Parameters
         ----------
-        other: ContinuousCustomDistributionFactor
+        other: CustomDistribution
             The CustomDistribution to be multiplied.
 
         Returns
