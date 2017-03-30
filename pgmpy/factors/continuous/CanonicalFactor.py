@@ -5,7 +5,7 @@ from __future__ import division
 import numpy as np
 
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.factors.distributions import JointGaussianDistribution
+from pgmpy.factors.distributions import JointGaussianDistribution, CustomDistribution
 
 
 class CanonicalFactor(ContinuousFactor):
@@ -82,14 +82,11 @@ class CanonicalFactor(ContinuousFactor):
                              "the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
                              (got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)))
 
-        super(CanonicalFactor, self).__init__(variables, None)
+        super(CanonicalFactor, self).__init__(CustomDistribution(variables, self.pdf))
 
-    @property
-    def pdf(self):
-        def fun(*args):
-            x = np.array(args)
-            return np.exp(self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x)))
-        return fun
+    def pdf(self, *args):
+        x = np.array(args)
+        return np.exp(self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x)))
 
     def copy(self):
         """
@@ -135,7 +132,7 @@ class CanonicalFactor(ContinuousFactor):
         -3
 
         """
-        copy_factor = CanonicalFactor(self.scope(), self.K.copy(),
+        copy_factor = CanonicalFactor(self.scope, self.K.copy(),
                                       self.h.copy(), self.g)
 
         return copy_factor
@@ -165,7 +162,7 @@ class CanonicalFactor(ContinuousFactor):
         covariance = np.linalg.inv(self.K)
         mean = np.dot(covariance, self.h)
 
-        return JointGaussianDistribution(self.scope(), mean, covariance)
+        return JointGaussianDistribution(self.scope, mean, covariance)
 
     def reduce(self, values, inplace=True):
         """
@@ -240,7 +237,7 @@ class CanonicalFactor(ContinuousFactor):
             raise TypeError("variables: Expected type list or array-like, "
                             "got type {var_type}".format(var_type=type(values)))
 
-        if not all([var in self.variables for var, value in values]):
+        if not all([var in self.scope for var, value in values]):
             raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
@@ -248,10 +245,10 @@ class CanonicalFactor(ContinuousFactor):
         var_to_reduce = [var for var, value in values]
 
         # index_to_keep -> j vector
-        index_to_keep = [self.variables.index(var) for var in self.variables
+        index_to_keep = [self.scope.index(var) for var in self.scope
                          if var not in var_to_reduce]
         # index_to_reduce -> i vector
-        index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
+        index_to_reduce = [self.scope.index(var) for var in var_to_reduce]
 
         K_i_i = self.K[np.ix_(index_to_keep, index_to_keep)]
         K_i_j = self.K[np.ix_(index_to_keep, index_to_reduce)]
@@ -262,10 +259,11 @@ class CanonicalFactor(ContinuousFactor):
         # The values for the reduced variables.
         y = np.array([value for var, value in values]).reshape(len(index_to_reduce), 1)
 
-        phi.variables = [self.variables[index] for index in index_to_keep]
+        phi.distribution.variables = [self.scope[index] for index in index_to_keep]
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
         phi.g = self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
+
 
         if not inplace:
             return phi
@@ -339,16 +337,16 @@ class CanonicalFactor(ContinuousFactor):
             raise TypeError("variables: Expected type list or array-like, "
                             "got type {var_type}".format(var_type=type(variables)))
 
-        if not all([var in self.variables for var in variables]):
+        if not all([var in self.scope for var in variables]):
             raise ValueError("Variable not in scope.")
 
         phi = self if inplace else self.copy()
 
         # index_to_keep -> i vector
-        index_to_keep = [self.variables.index(var) for var in self.variables
+        index_to_keep = [self.scope.index(var) for var in self.scope
                          if var not in variables]
         # index_to_marginalize -> j vector
-        index_to_marginalize = [self.variables.index(var) for var in variables]
+        index_to_marginalize = [self.scope.index(var) for var in variables]
 
         K_i_i = self.K[np.ix_(index_to_keep, index_to_keep)]
         K_i_j = self.K[np.ix_(index_to_keep, index_to_marginalize)]
@@ -358,7 +356,7 @@ class CanonicalFactor(ContinuousFactor):
         h_i = self.h[index_to_keep]
         h_j = self.h[index_to_marginalize]
 
-        phi.variables = [self.variables[index] for index in index_to_keep]
+        phi.distribution.variables = [self.scope[index] for index in index_to_keep]
 
         phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
         phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
@@ -441,11 +439,11 @@ class CanonicalFactor(ContinuousFactor):
 
         phi = self if inplace else self.copy()
 
-        all_vars = self.variables + [var for var in other.variables if var not in self.variables]
+        all_vars = self.scope + [var for var in other.scope if var not in self.scope]
         no_of_var = len(all_vars)
 
-        self_var_index = [all_vars.index(var) for var in self.variables]
-        other_var_index = [all_vars.index(var) for var in other.variables]
+        self_var_index = [all_vars.index(var) for var in self.scope]
+        other_var_index = [all_vars.index(var) for var in other.scope]
 
         def _extend_K_scope(K, index):
             ext_K = np.zeros([no_of_var, no_of_var])
@@ -457,7 +455,7 @@ class CanonicalFactor(ContinuousFactor):
             ext_h[index] = h
             return ext_h
 
-        phi.variables = all_vars
+        phi.distribution.variables = all_vars
 
         if operation == 'product':
             phi.K = _extend_K_scope(self.K, self_var_index) + _extend_K_scope(other.K, other_var_index)

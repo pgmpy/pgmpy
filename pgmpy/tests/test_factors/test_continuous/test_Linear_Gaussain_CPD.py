@@ -47,8 +47,6 @@ class TestLGCPD(unittest.TestCase):
         self.assertEqual(copy.variance, 2)
         cpd.beta_0 = 1
         self.assertEqual(copy.beta_0, 0.67)
-        cpd.evidence = ['p', 'q', 'r']
-        self.assertEqual(copy.evidence, ['x1', 'x2', 'x3'])
         cpd.beta_vector = [2, 2, 2]
         np_test.assert_array_equal(copy.beta_vector, [1, 4.56, 8])
 
@@ -60,8 +58,6 @@ class TestLGCPD(unittest.TestCase):
         self.assertEqual(cpd.variance, 0)
         copy.beta_0 = 1.5
         self.assertEqual(cpd.beta_0, 1)
-        copy.evidence = ['a', 'b', 'c']
-        self.assertEqual(cpd.evidence, ['p', 'q', 'r'])
         copy.beta_vector = [2.2, 2.2, 2.2]
         np_test.assert_array_equal(cpd.beta_vector, [2, 2, 2])
 
