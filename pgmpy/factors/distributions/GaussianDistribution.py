@@ -5,10 +5,10 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors.distributions import CustomDistribution
+from pgmpy.factors.distributions import BaseDistribution
 
 
-class GaussianDistribution(CustomDistribution):
+class GaussianDistribution(BaseDistribution):
     u"""
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
@@ -33,8 +33,8 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
         ['x1', 'x2', 'x3']
@@ -55,6 +55,7 @@ class GaussianDistribution(CustomDistribution):
             raise ValueError("Length of mean_vector must be equal to the\
                                  number of variables.")
 
+        self.variables = variables
         self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
         self.covariance = np.asarray(covariance, dtype=float)
         self._precision_matrix = None
@@ -64,12 +65,33 @@ class GaussianDistribution(CustomDistribution):
                               the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
                              (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
 
-        super(GaussianDistribution, self).__init__(variables, None)
+#        super(GaussianDistribution, self).__init__(variables, None)
 
     @property
     def pdf(self):
         return lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, len(self.variables))[0],
                                                      self.covariance)
+
+    def assignment(self, *x):
+        """
+        Returns the probability value of the PDF at the given parameter values.
+        Parameters
+        ----------
+        *x: values of all variables of this distribution,
+            collective defining a point at which the probability value is to be computed.
+        Returns
+        -------
+        float: The probability value at the point.
+        Examples
+        --------
+        >>> from pgmpy.factors.distributions import GaussianDistribution
+        >>> dist = GaussianDistribution(variables=['x1', 'x2'],
+        ...                             mean=[[0], [0]],
+        ...                             covariance=[[1, 0], [0, 1]])
+        >>> dist.assignment(0, 0)
+        0.15915494309189535
+        """
+        return self.pdf(*x)
 
     @property
     def precision_matrix(self):
@@ -79,8 +101,8 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
         array([[ 0.3125    , -0.125     ,  0.        ],
@@ -115,8 +137,8 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
         ['x1', 'x2', 'x3']
@@ -189,8 +211,8 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
         ['x1', 'x2', 'x3']
@@ -266,8 +288,8 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> gauss_dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> gauss_dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...                 np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> copy_dis = gauss_dis.copy()
         >>> copy_dis.variables
@@ -315,8 +337,8 @@ class GaussianDistribution(CustomDistribution):
         -------
 
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> phi = dis.to_canonical_factor()
         >>> phi.variables
@@ -369,10 +391,10 @@ class GaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
-        >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis2 = GD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
         >>> dis3 = dis1 * dis2
         >>> dis3.covariance
         array([[ 3.6,  1. , -0.4, -0.6],
@@ -391,3 +413,82 @@ class GaussianDistribution(CustomDistribution):
         if not inplace:
             return phi
 
+    def product(self, other, inplace=True):
+        """
+        Returns the product of two gaussian distributions.
+
+        Parameters
+        ----------
+        other: GaussianDistribution
+            The GaussianDistribution to be multiplied.
+
+        inplace: boolean
+            If True, modifies the distribution itself, otherwise returns a new
+            GaussianDistribution object.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                    if inplace=True (default) returns None.
+                    if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...            np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = GD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1.product(dis2, inplace=False)
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        self._operate(other, inplace=inplace)
+
+    def divide(self, other, inplace=True):
+        """
+        Returns the division of two gaussian distributions.
+
+        Parameters
+        ----------
+        other: GaussianDistribution
+            The GaussianDistribution to be divided.
+
+        inplace: boolean
+            If True, modifies the distribution itself, otherwise returns a new
+            GaussianDistribution object.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                    if inplace=True (default) returns None.
+                    if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...            np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = GD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1.divide(dis2, inplace=False)
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        self._operate(other, inplace=inplace)
