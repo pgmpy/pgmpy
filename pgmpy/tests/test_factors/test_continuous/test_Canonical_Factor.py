@@ -4,54 +4,54 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors.distributions import GaussianDistribution as JGD
-from pgmpy.factors.continuous import CanonicalFactor
+from pgmpy.factors.continuous import CanonicalDistribution
 
 
 class TestCanonicalFactor(unittest.TestCase):
     def test_class_init(self):
-        phi = CanonicalFactor(['x1', ('y', 'z'), 'x3'],
-                              np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-                              np.array([[1], [4.7], [-1]]), -2)
+        phi = CanonicalDistribution(['x1', ('y', 'z'), 'x3'],
+                                    np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+                                    np.array([[1], [4.7], [-1]]), -2)
         self.assertEqual(phi.variables, ['x1', ('y', 'z'), 'x3'])
         np_test.assert_array_equal(phi.K, np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float))
         np_test.assert_array_equal(phi.h, np.array([[1], [4.7], [-1]], dtype=float))
         self.assertEqual(phi.g, -2)
 
-        phi = CanonicalFactor(['x1', ('y', 'z'), 'x3'],
-                              np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-                              np.array([1, 4.7, -1]), -2)
+        phi = CanonicalDistribution(['x1', ('y', 'z'), 'x3'],
+                                    np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+                                    np.array([1, 4.7, -1]), -2)
         self.assertEqual(phi.variables, ['x1', ('y', 'z'), 'x3'])
         np_test.assert_array_equal(phi.K, np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float))
         np_test.assert_array_equal(phi.h, np.array([[1], [4.7], [-1]], dtype=float))
         self.assertEqual(phi.g, -2)
 
-        phi = CanonicalFactor(['x'], [[1]], [0], 1)
+        phi = CanonicalDistribution(['x'], [[1]], [0], 1)
         self.assertEqual(phi.variables, ['x'])
         np_test.assert_array_equal(phi.K, np.array([[1]], dtype=float))
         np_test.assert_array_equal(phi.h, np.array([[0]], dtype=float))
         self.assertEqual(phi.g, 1)
 
     def test_class_init_valueerror(self):
-        self.assertRaises(ValueError, CanonicalFactor, ['x1', 'x2', 'x3'],
+        self.assertRaises(ValueError, CanonicalDistribution, ['x1', 'x2', 'x3'],
                           np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
                           np.array([1, 2]), 7)
-        self.assertRaises(ValueError, CanonicalFactor, ['x1', 'x2', 'x3'],
+        self.assertRaises(ValueError, CanonicalDistribution, ['x1', 'x2', 'x3'],
                           np.array([[1.1, -1, 0], [-1, 4], [0, -2, 4]]),
                           np.array([1, 2, 3]), 7)
-        self.assertRaises(ValueError, CanonicalFactor, ['x1', 'x2', 'x3'],
+        self.assertRaises(ValueError, CanonicalDistribution, ['x1', 'x2', 'x3'],
                           np.array([[1.1, -1, 0], [0, -2, 4]]),
                           np.array([1, 2, 3]), 7)
-        self.assertRaises(ValueError, CanonicalFactor, ['x1', 'x3'],
+        self.assertRaises(ValueError, CanonicalDistribution, ['x1', 'x3'],
                           np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
                           np.array([1, 2, 3]), 7)
 
 
 class TestJGDMethods(unittest.TestCase):
     def setUp(self):
-        self.phi1 = CanonicalFactor(['x1', 'x2', 'x3'],
-                                    np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-                                    np.array([[1], [4.7], [-1]]), -2)
-        self.phi2 = CanonicalFactor(['x'], [[1]], [0], 1)
+        self.phi1 = CanonicalDistribution(['x1', 'x2', 'x3'],
+                                          np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
+                                          np.array([[1], [4.7], [-1]]), -2)
+        self.phi2 = CanonicalDistribution(['x'], [[1]], [0], 1)
         self.phi3 = self.phi1.copy()
 
         self.gauss_phi1 = JGD(['x1', 'x2', 'x3'],
@@ -139,8 +139,8 @@ class TestJGDMethods(unittest.TestCase):
         self.phi1 = self.phi3
 
     def test_operate(self):
-        phi1 = self.phi1 * CanonicalFactor(['x2', 'x4'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
-        phi2 = self.phi1 / CanonicalFactor(['x2', 'x3'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
+        phi1 = self.phi1 * CanonicalDistribution(['x2', 'x4'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
+        phi2 = self.phi1 / CanonicalDistribution(['x2', 'x3'], [[1, 2], [3, 4]], [0, 4.56], -6.78)
 
         self.assertEqual(phi1.variables, ['x1', 'x2', 'x3', 'x4'])
         np_test.assert_almost_equal(phi1.K, np.array([[1.1, -1.0,  0.0,  0.0],

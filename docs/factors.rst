@@ -29,7 +29,7 @@ Continuous
 Canonical Factor
 ^^^^^^^^^^^^^^^^
 
-.. automodule:: pgmpy.factors.continuous.CanonicalFactor
+.. automodule:: pgmpy.factors.continuous.CanonicalDistribution
    :members:
 
 Continuous Factor

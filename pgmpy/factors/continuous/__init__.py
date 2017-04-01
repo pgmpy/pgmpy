@@ -1,10 +1,10 @@
 from .discretize import BaseDiscretizer, RoundingDiscretizer, UnbiasedDiscretizer
 from .ContinuousFactor import ContinuousFactor
-from .CanonicalFactor import CanonicalFactor
+from .CanonicalDistribution import CanonicalDistribution
 from .LinearGaussianCPD import LinearGaussianCPD
 
 
-__all__ = ['CanonicalFactor',
+__all__ = ['CanonicalDistribution',
            'ContinuousFactor',
            'LinearGaussianCPD'
            'BaseDiscretizer',

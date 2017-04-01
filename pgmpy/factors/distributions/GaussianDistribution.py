@@ -316,7 +316,7 @@ class GaussianDistribution(BaseDistribution):
 
     def to_canonical_factor(self):
         u"""
-        Returns an equivalent CanonicalFactor object.
+        Returns an equivalent CanonicalDistribution object.
 
         The formulas for calculating the cannonical factor parameters
         for N(μ; Σ) = C(K; h; g) are as follows -
@@ -354,7 +354,7 @@ class GaussianDistribution(BaseDistribution):
         >>> phi.g
         -6.51533
         """
-        from pgmpy.factors.continuous import CanonicalFactor
+        from pgmpy.factors.continuous import CanonicalDistribution
 
         mu = self.mean
         sigma = self.covariance
@@ -366,17 +366,17 @@ class GaussianDistribution(BaseDistribution):
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
             np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
 
-        return CanonicalFactor(self.variables, K, h, g)
+        return CanonicalDistribution(self.variables, K, h, g)
 
     def _operate(self, other, operation, inplace=True):
         """
-        Gives the CanonicalFactor operation (product or divide) with
+        Gives the CanonicalDistribution operation (product or divide) with
         the other factor.
 
         Parameters
         ----------
-        other: CanonicalFactor
-            The CanonicalFactor to be multiplied.
+        other: CanonicalDistribution
+            The CanonicalDistribution to be multiplied.
 
         operation: String
             'product' for multiplication operation and
@@ -384,9 +384,9 @@ class GaussianDistribution(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new CanonicalFactor instance.
+                        if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------
@@ -428,9 +428,9 @@ class GaussianDistribution(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                     if inplace=True (default) returns None.
-                    if inplace=False returns a new CanonicalFactor instance.
+                    if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------
@@ -468,9 +468,9 @@ class GaussianDistribution(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                     if inplace=True (default) returns None.
-                    if inplace=False returns a new CanonicalFactor instance.
+                    if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------

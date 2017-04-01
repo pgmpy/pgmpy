@@ -8,14 +8,14 @@ from pgmpy.factors.distributions import BaseDistribution
 from pgmpy.factors.distributions import GaussianDistribution
 
 
-class CanonicalFactor(BaseDistribution):
+class CanonicalDistribution(BaseDistribution):
     u"""
     The intermediate factors in a Gaussian network can be described
     compactly using a simple parametric representation called the
     canonical form. This representation is closed under the basic
     operations used in inference: factor product, factor division,
     factor reduction, and marginalization. Thus, we define this
-    CanonicalFactor class that allows the inference process to be
+    CanonicalDistribution class that allows the inference process to be
     performed on joint Gaussian networks.
 
     A canonical form C (X; K,h,g) is defined as
@@ -49,8 +49,8 @@ class CanonicalFactor(BaseDistribution):
 
         Examples
         --------
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi = CanonicalFactor(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi = CanonicalDistribution(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
                                   np.array([[1], [-1]]), -3)
         >>> phi.variables
         ['X', 'Y']
@@ -119,12 +119,12 @@ class CanonicalFactor(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor object: Copy of the factor
+        CanonicalDistribution object: Copy of the factor
 
         Examples
         --------
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi = CanonicalFactor(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi = CanonicalDistribution(['X', 'Y'], np.array([[1, -1], [-1, 1]]),
                                   np.array([[1], [-1]]), -3)
         >>> phi.variables
         ['X', 'Y']
@@ -157,8 +157,8 @@ class CanonicalFactor(BaseDistribution):
         -3
 
         """
-        copy_factor = CanonicalFactor(self.variables, self.K.copy(),
-                                      self.h.copy(), self.g)
+        copy_factor = CanonicalDistribution(self.variables, self.K.copy(),
+                                            self.h.copy(), self.g)
 
         return copy_factor
 
@@ -170,8 +170,8 @@ class CanonicalFactor(BaseDistribution):
         --------
 
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi = CanonicalFactor(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi = CanonicalDistribution(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
                                   np.array([[5], [-1]]), 1)
         >>> jgd = phi.to_joint_gaussian()
         >>> jgd.variables
@@ -217,15 +217,15 @@ class CanonicalFactor(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                 if inplace=True (default) returns None
-                if inplace=False returns a new CanonicalFactor instance.
+                if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi = CanonicalDistribution(['X1', 'X2', 'X3'],
         ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
         ...                       np.array([[1], [4], [-1]]), -2)
         >>> phi.variables
@@ -320,15 +320,15 @@ class CanonicalFactor(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None :
+        CanonicalDistribution or None :
                 if inplace=True (default) returns None
-                if inplace=False return a new CanonicalFactor instance
+                if inplace=False return a new CanonicalDistribution instance
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi = CanonicalFactor(['X1', 'X2', 'X3'],
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi = CanonicalDistribution(['X1', 'X2', 'X3'],
         ...                       np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
         ...                       np.array([[1], [4], [-1]]), -2)
         >>> phi.K
@@ -392,7 +392,7 @@ class CanonicalFactor(BaseDistribution):
 
     def _operate(self, other, operation, inplace=True):
         """
-        Gives the CanonicalFactor operation (product or divide) with
+        Gives the CanonicalDistribution operation (product or divide) with
         the other factor.
 
         The product of two canonical factors over the same scope
@@ -413,7 +413,7 @@ class CanonicalFactor(BaseDistribution):
         Parameters
         ----------
         other: CanonicalFactor
-            The CanonicalFactor to be multiplied.
+            The CanonicalDistribution to be multiplied.
 
         operation: String
             'product' for multiplication operation and
@@ -421,18 +421,18 @@ class CanonicalFactor(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new CanonicalFactor instance.
+                        if inplace=False returns a new CanonicalDistribution instance.
 
         Example
         -------
         >>> import numpy as np
-        >>> from pgmpy.factors.continuous import CanonicalFactor
-        >>> phi1 = CanonicalFactor(['x1', 'x2', 'x3'],
+        >>> from pgmpy.factors.continuous import CanonicalDistribution
+        >>> phi1 = CanonicalDistribution(['x1', 'x2', 'x3'],
                                    np.array([[1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
                                    np.array([[1], [4], [-1]]), -2)
-        >>> phi2 = CanonicalFactor(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
+        >>> phi2 = CanonicalDistribution(['x1', 'x2'], np.array([[3, -2], [-2, 4]]),
                                    np.array([[5], [-1]]), 1)
 
         >>> phi3 = phi1 * phi2
@@ -456,11 +456,11 @@ class CanonicalFactor(BaseDistribution):
         -3
 
         """
-        if not isinstance(other, CanonicalFactor):
+        if not isinstance(other, CanonicalDistribution):
             raise TypeError(
-                "CanonicalFactor object can only be multiplied or divided "
-                "with an another CanonicalFactor object. Got {other_type}, "
-                "expected CanonicalFactor.".format(other_type=type(other)))
+                "CanonicalDistribution object can only be multiplied or divided "
+                "with an another CanonicalDistribution object. Got {other_type}, "
+                "expected CanonicalDistribution.".format(other_type=type(other)))
 
         phi = self if inplace else self.copy()
 
@@ -506,13 +506,13 @@ class CanonicalFactor(BaseDistribution):
 
         inplace: boolean
             If True, modifies the distribution itself, otherwise returns a new
-            CanonicalFactor object.
+            CanonicalDistribution object.
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                     if inplace=True (default) returns None.
-                    if inplace=False returns a new CanonicalFactor instance.
+                    if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------
@@ -550,9 +550,9 @@ class CanonicalFactor(BaseDistribution):
 
         Returns
         -------
-        CanonicalFactor or None:
+        CanonicalDistribution or None:
                     if inplace=True (default) returns None.
-                    if inplace=False returns a new CanonicalFactor instance.
+                    if inplace=False returns a new CanonicalDistribution instance.
 
         Examples
         --------
