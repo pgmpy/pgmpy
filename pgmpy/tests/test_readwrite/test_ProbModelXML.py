@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import unittest
 import warnings
 import json
@@ -1071,6 +1072,11 @@ class TestProbModelXMLWriter(unittest.TestCase):
         self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
         self.assertEqual(str(data), str(etree.tostring(self.expected_xml).decode('utf-8')))
 
+    def tearDown(self):
+        try:
+            os.remove('test_xml.pgmx')
+        except OSError:
+            pass
 
 class TestProbModelXMLmethods(unittest.TestCase):
     def setUp(self):
