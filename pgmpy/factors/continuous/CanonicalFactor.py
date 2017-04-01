@@ -4,11 +4,11 @@ from __future__ import division
 
 import numpy as np
 
-from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.distributions import BaseDistribution
 from pgmpy.factors.distributions import GaussianDistribution
 
 
-class CanonicalFactor(ContinuousFactor):
+class CanonicalFactor(BaseDistribution):
     u"""
     The intermediate factors in a Gaussian network can be described
     compactly using a simple parametric representation called the
@@ -70,19 +70,20 @@ class CanonicalFactor(ContinuousFactor):
         no_of_var = len(variables)
 
         if len(h) != no_of_var:
-            raise ValueError("Length of h parameter vector must be equal to the"
-                             "number of variables.")
+            raise ValueError("Length of h parameter vector must be equal to "
+                             "the number of variables.")
 
+        self.variables = variables
         self.h = np.asarray(np.reshape(h, (no_of_var, 1)), dtype=float)
         self.g = g
         self.K = np.asarray(K, dtype=float)
 
         if self.K.shape != (no_of_var, no_of_var):
-            raise ValueError("The K matrix should be a square matrix with order equal to"
-                             "the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
-                             (got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)))
-
-        super(CanonicalFactor, self).__init__(variables, None)
+            raise ValueError("The K matrix should be a square matrix with "
+                             "order equal to the number of variables. Got: "
+                             "{got_shape}, Expected: {exp_shape}".format(
+                                 got_shape=self.K.shape,
+                                 exp_shape=(no_of_var, no_of_var)))
 
     @property
     def pdf(self):
@@ -90,6 +91,27 @@ class CanonicalFactor(ContinuousFactor):
             x = np.array(args)
             return np.exp(self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x)))
         return fun
+
+    def assignment(self, *x):
+        """
+        Returns the probability value of the PDF at the given parameter values.
+        Parameters
+        ----------
+        *x: values of all variables of this distribution,
+            collective defining a point at which the probability value is to be computed.
+        Returns
+        -------
+        float: The probability value at the point.
+        Examples
+        --------
+        >>> from pgmpy.factors.distributions import GaussianDistribution
+        >>> dist = GaussianDistribution(variables=['x1', 'x2'],
+        ...                             mean=[[0], [0]],
+        ...                             covariance=[[1, 0], [0, 1]])
+        >>> dist.assignment(0, 0)
+        0.15915494309189535
+        """
+        return self.pdf(*x)
 
     def copy(self):
         """
@@ -135,7 +157,7 @@ class CanonicalFactor(ContinuousFactor):
         -3
 
         """
-        copy_factor = CanonicalFactor(self.scope(), self.K.copy(),
+        copy_factor = CanonicalFactor(self.variables, self.K.copy(),
                                       self.h.copy(), self.g)
 
         return copy_factor
@@ -165,7 +187,7 @@ class CanonicalFactor(ContinuousFactor):
         covariance = np.linalg.inv(self.K)
         mean = np.dot(covariance, self.h)
 
-        return GaussianDistribution(self.scope(), mean, covariance)
+        return GaussianDistribution(self.variables, mean, covariance)
 
     def reduce(self, values, inplace=True):
         """
@@ -435,9 +457,10 @@ class CanonicalFactor(ContinuousFactor):
 
         """
         if not isinstance(other, CanonicalFactor):
-            raise TypeError("CanonicalFactor object can only be multiplied or divided with "
-                            "an another CanonicalFactor object. Got {other_type}, expected "
-                            "CanonicalFactor.".format(other_type=type(other)))
+            raise TypeError(
+                "CanonicalFactor object can only be multiplied or divided "
+                "with an another CanonicalFactor object. Got {other_type}, "
+                "expected CanonicalFactor.".format(other_type=type(other)))
 
         phi = self if inplace else self.copy()
 
@@ -471,3 +494,95 @@ class CanonicalFactor(ContinuousFactor):
 
         if not inplace:
             return phi
+
+    def product(self, other, inplace=True):
+        """
+        Returns the product of two gaussian distributions.
+
+        Parameters
+        ----------
+        other: CanonicalFactor
+            The GaussianDistribution to be multiplied.
+
+        inplace: boolean
+            If True, modifies the distribution itself, otherwise returns a new
+            CanonicalFactor object.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                    if inplace=True (default) returns None.
+                    if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...            np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = GD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1.product(dis2, inplace=False)
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        return self._operate(other, operation='product', inplace=inplace)
+
+    def divide(self, other, inplace=True):
+        """
+        Returns the division of two gaussian distributions.
+
+        Parameters
+        ----------
+        other: GaussianDistribution
+            The GaussianDistribution to be divided.
+
+        inplace: boolean
+            If True, modifies the distribution itself, otherwise returns a new
+            GaussianDistribution object.
+
+        Returns
+        -------
+        CanonicalFactor or None:
+                    if inplace=True (default) returns None.
+                    if inplace=False returns a new CanonicalFactor instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.factors.distributions import GaussianDistribution as GD
+        >>> dis1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        ...            np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis2 = GD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
+        >>> dis3 = dis1.divide(dis2, inplace=False)
+        >>> dis3.covariance
+        array([[ 3.6,  1. , -0.4, -0.6],
+               [ 1. ,  2.5, -1. , -1.5],
+               [-0.4, -1. ,  1.6,  2.4],
+               [-1. , -2.5,  4. ,  4.5]])
+        >>> dis3.mean
+        array([[ 1.6],
+               [-1.5],
+               [ 1.6],
+               [ 3.5]])
+        """
+        return self._operate(other, operation='divide', inplace=inplace)
+
+    def __mul__(self, other):
+        return self.product(other, inplace=False)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        return self.divide(other, inplace=False)
+
+    __div__ = __truediv__
+

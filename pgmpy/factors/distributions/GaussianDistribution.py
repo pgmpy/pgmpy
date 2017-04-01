@@ -451,7 +451,7 @@ class GaussianDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        self._operate(other, inplace=inplace)
+        return self._operate(other, operation='product', inplace=inplace)
 
     def divide(self, other, inplace=True):
         """
@@ -491,4 +491,4 @@ class GaussianDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        self._operate(other, inplace=inplace)
+        return self._operate(other, operation='divide', inplace=inplace)

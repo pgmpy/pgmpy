@@ -40,6 +40,4 @@ class BaseDistribution(object):
 #    @abstractmethod
 #    def divide(self, other, inplace=True):
 #        pass
-    def __mul__(self, other):
-        self.product(other, inplace=False)
-
+    pass
