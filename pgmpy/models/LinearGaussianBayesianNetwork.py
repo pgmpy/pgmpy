@@ -5,7 +5,7 @@ import networkx as nx
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.factors.distributions import JointGaussianDistribution
+from pgmpy.factors.distributions import GaussianDistribution
 
 
 class LinearGaussianBayesianNetwork(BayesianModel):
@@ -134,7 +134,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         Returns
         -------
-        JointGaussianDistribution: An equivalent joint Gaussian
+        GaussianDistribution: An equivalent joint Gaussian
                                    distribution for the network.
 
         Reference
@@ -186,7 +186,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                         [coeff * covariance[node_i_idx, variables.index(parent)]
                          for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
 
-        return JointGaussianDistribution(variables, mean, covariance)
+        return GaussianDistribution(variables, mean, covariance)
 
     def check_model(self):
         """

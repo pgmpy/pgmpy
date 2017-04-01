@@ -5,7 +5,7 @@ from __future__ import division
 import numpy as np
 
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.factors.distributions import JointGaussianDistribution
+from pgmpy.factors.distributions import GaussianDistribution
 
 
 class CanonicalFactor(ContinuousFactor):
@@ -165,7 +165,7 @@ class CanonicalFactor(ContinuousFactor):
         covariance = np.linalg.inv(self.K)
         mean = np.dot(covariance, self.h)
 
-        return JointGaussianDistribution(self.scope(), mean, covariance)
+        return GaussianDistribution(self.scope(), mean, covariance)
 
     def reduce(self, values, inplace=True):
         """

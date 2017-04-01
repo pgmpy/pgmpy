@@ -8,7 +8,7 @@ from scipy.stats import multivariate_normal
 from pgmpy.factors.distributions import CustomDistribution
 
 
-class JointGaussianDistribution(CustomDistribution):
+class GaussianDistribution(CustomDistribution):
     u"""
     In its most common representation, a multivariate Gaussian distribution
     over X1...........Xn is characterized by an n-dimensional mean vector μ,
@@ -33,7 +33,7 @@ class JointGaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -64,7 +64,7 @@ class JointGaussianDistribution(CustomDistribution):
                               the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
                              (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
 
-        super(JointGaussianDistribution, self).__init__(variables, None)
+        super(GaussianDistribution, self).__init__(variables, None)
 
     @property
     def pdf(self):
@@ -79,7 +79,7 @@ class JointGaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.precision_matrix
@@ -108,14 +108,14 @@ class JointGaussianDistribution(CustomDistribution):
 
         Returns
         -------
-        JointGaussianDistribution or None :
+        GaussianDistribution or None :
                 if inplace=True (default) returns None
-                if inplace=False return a new JointGaussianDistribution instance
+                if inplace=False return a new GaussianDistribution instance
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -182,14 +182,14 @@ class JointGaussianDistribution(CustomDistribution):
 
         Returns
         -------
-        JointGaussianDistribution or None:
+        GaussianDistribution or None:
                 if inplace=True (default) returns None
-                if inplace=False returns a new JointGaussianDistribution instance.
+                if inplace=False returns a new GaussianDistribution instance.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis.variables
@@ -261,12 +261,12 @@ class JointGaussianDistribution(CustomDistribution):
 
         Returns
         -------
-        JointGaussianDistribution: copy of the distribution
+        GaussianDistribution: copy of the distribution
 
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> gauss_dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...                 np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> copy_dis = gauss_dis.copy()
@@ -285,8 +285,8 @@ class JointGaussianDistribution(CustomDistribution):
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = JointGaussianDistribution(self.variables, self.mean.copy(),
-                                                      self.covariance.copy())
+        copy_distribution = GaussianDistribution(self.variables, self.mean.copy(),
+                                                 self.covariance.copy())
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
 
@@ -315,7 +315,7 @@ class JointGaussianDistribution(CustomDistribution):
         -------
 
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> phi = dis.to_canonical_factor()
@@ -369,7 +369,7 @@ class JointGaussianDistribution(CustomDistribution):
         Examples
         --------
         >>> import numpy as np
-        >>> from pgmpy.factors.distributions import JointGaussianDistribution as JGD
+        >>> from pgmpy.factors.distributions import GaussianDistribution as JGD
         >>> dis1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
         ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         >>> dis2 = JGD(['x3', 'x4'], [1, 2], [[2, 3], [5, 6]])
