@@ -9,85 +9,113 @@ from pgmpy.factors.distributions import BaseDistribution
 
 
 class GaussianDistribution(BaseDistribution):
-    u"""
+    """
     In its most common representation, a multivariate Gaussian distribution
-    over X1...........Xn is characterized by an n-dimensional mean vector μ,
+    over X1, X2, ..., Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
     This is the base class for its representation.
-
-    #TODO: Add more examples after refactoring ContinuousFactor class
     """
-    def __init__(self, variables, mean, covariance):
+    def __init__(self, variables, mean, cov):
         """
         Parameters
         ----------
         variables: iterable of any hashable python object
             The variables for which the distribution is defined.
 
-        mean: n x 1, array like
-            n-dimensional vector where n is the number of variables.
+        mean: list, array-like
+            1-D array of size n where n is the number of variables.
 
-        covariance: n x n, 2-d array like
+        cov: n x n, 2-D array like
             n x n dimensional matrix where n is the number of variables.
 
         Examples
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis = GD(variables=['x1', 'x2', 'x3'],
+        ...          mean=np.array([1, -3, 4]),
+        ...          cov=np.array([[4, 2, -2],
+        ...                        [2, 5, -5],
+        ...                        [-2, -5, 8]]))
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean
         array([[ 1],
                [-3],
                [4]]))
-        >>> dis.covariance
+        >>> dis.cov
         array([[4, 2, -2],
                [2, 5, -5],
                [-2, -5, 8]])
-        >>> dis.pdf([0,0,0])
+        >>> dis.assignment([0, 0, 0])
         0.0014805631279234139
         """
         no_of_var = len(variables)
 
-        if len(mean) != no_of_var:
-            raise ValueError("Length of mean_vector must be equal to the\
-                                 number of variables.")
-
         self.variables = variables
         self.mean = np.asarray(np.reshape(mean, (no_of_var, 1)), dtype=float)
-        self.covariance = np.asarray(covariance, dtype=float)
+        self.covariance = np.asarray(cov, dtype=float)
         self._precision_matrix = None
 
-        if self.covariance.shape != (no_of_var, no_of_var):
-            raise ValueError("The Covariance matrix should be a square matrix with order equal to\
-                              the number of variables. Got: {got_shape}, Expected: {exp_shape}".format
-                             (got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)))
+        if len(mean) != no_of_var:
+            raise ValueError("Length of mean_vector must be equal to the",
+                             "number of variables.")
 
-#        super(GaussianDistribution, self).__init__(variables, None)
+        if self.covariance.shape != (no_of_var, no_of_var):
+            raise ValueError("The Covariance matrix should be a square matrix",
+                             " with order equal to the number of variables. ",
+                             "Got: {got_shape}, Expected: {exp_shape}".format
+                             (got_shape=self.covariance.shape,
+                              exp_shape=(no_of_var, no_of_var)))
 
     @property
     def pdf(self):
-        return lambda *args: multivariate_normal.pdf(args, self.mean.reshape(1, len(self.variables))[0],
-                                                     self.covariance)
+        """
+        Returns the probability density function(pdf).
+
+        Returns
+        -------
+        function: The probability density function of the distribution.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.distributions import GaussianDistribution
+        >>> dist = GD(variables=['x1', 'x2', 'x3'],
+        ...           mean=[1, -3, 4],
+        ...           cov=[[4, 2, -2],
+        ...                [2, 5, -5],
+        ...                [-2, -5, 8]])
+        >>> dist.pdf
+        <function pgmpy.factors.distributions.GaussianDistribution.GaussianDistribution.pdf.<locals>.<lambda>>
+        >>> dist.pdf([0, 0, 0])
+        0.0014805631279234139
+        """
+        return lambda *args: multivariate_normal.pdf(
+            args, self.mean.reshape(1, len(self.variables))[0], self.covariance)
 
     def assignment(self, *x):
         """
         Returns the probability value of the PDF at the given parameter values.
+
         Parameters
         ----------
-        *x: values of all variables of this distribution,
-            collective defining a point at which the probability value is to be computed.
+        *x: int, float
+            The point at which the value of the pdf needs to be computed. The
+            number of values passed should be equal to the number of variables
+            in the distribution.
+
         Returns
         -------
-        float: The probability value at the point.
+        float: float
+            The probability value at the point.
+
         Examples
         --------
         >>> from pgmpy.factors.distributions import GaussianDistribution
         >>> dist = GaussianDistribution(variables=['x1', 'x2'],
-        ...                             mean=[[0], [0]],
-        ...                             covariance=[[1, 0], [0, 1]])
+        ...                             mean=[0, 0],
+        ...                             cov=[[1, 0],
+                                             [0, 1]])
         >>> dist.assignment(0, 0)
         0.15915494309189535
         """
@@ -98,18 +126,23 @@ class GaussianDistribution(BaseDistribution):
         """
         Returns the precision matrix of the distribution.
 
+        Precision is defined as the inverse of the variance. This method returns
+        the inverse matrix of the covariance.
+
         Examples
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis = GD(variables=['x1', 'x2', 'x3'],
+        ...          mean=[1, -3, 4],
+        ...          cov=[[4, 2, -2],
+        ...               [2, 5, -5],
+        ...               [-2, -5, 8]]))
         >>> dis.precision_matrix
         array([[ 0.3125    , -0.125     ,  0.        ],
-                [-0.125     ,  0.58333333,  0.33333333],
-                [ 0.        ,  0.33333333,  0.33333333]])
+               [-0.125     ,  0.58333333,  0.33333333],
+               [ 0.        ,  0.33333333,  0.33333333]])
         """
-
         if self._precision_matrix is None:
             self._precision_matrix = np.linalg.inv(self.covariance)
         return self._precision_matrix
@@ -120,8 +153,7 @@ class GaussianDistribution(BaseDistribution):
 
         Parameters
         ----------
-
-        variables: iterator
+        variables: iterator over any hashable object.
                 List of variables over which marginalization is to be done.
 
         inplace: boolean
@@ -138,14 +170,17 @@ class GaussianDistribution(BaseDistribution):
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis = GD(variables=['x1', 'x2', 'x3'],
+        ...          mean=[1, -3, 4],
+        ...          cov=[[4, 2, -2],
+        ...               [2, 5, -5],
+        ...               [-2, -5, 8]]))
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean
         array([[ 1],
-                [-3],
-                [ 4]])
+               [-3],
+               [ 4]])
         >>> dis.covariance
         array([[ 4,  2, -2],
                [ 2,  5, -5],
@@ -155,20 +190,19 @@ class GaussianDistribution(BaseDistribution):
         dis.variables
         ['x1', 'x2']
         >>> dis.mean
-        array([[ 1],
-                [-3]]))
+        array([[ 1.],
+               [-3.]]))
         >>> dis.covariance
-        narray([[4, 2],
-               [2, 5]])
+        array([[4., 2.],
+               [2., 5.]])
         """
-
         if not isinstance(variables, list):
-            raise TypeError("variables: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(variables)))
+            raise TypeError("variables: Expected type list or array-like,"
+                            "got type {var_type}".format(
+                                var_type=type(variables)))
 
         phi = self if inplace else self.copy()
 
-        var_indexes = [phi.variables.index(var) for var in variables]
         index_to_keep = [self.variables.index(var) for var in self.variables
                          if var not in variables]
 
@@ -212,10 +246,11 @@ class GaussianDistribution(BaseDistribution):
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        >>> dis.variables
-        ['x1', 'x2', 'x3']
+        >>> dis = GD(variables=['x1', 'x2', 'x3'],
+        ...             mean=[1, -3, 4],
+        ...             cov=[[4, 2, -2],
+        ...                  [2, 5, -5],
+        ...                  [-2, -5, 8]])
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean
@@ -239,8 +274,9 @@ class GaussianDistribution(BaseDistribution):
 
         """
         if not isinstance(values, list):
-            raise TypeError("values: Expected type list or array-like,\
-                             got type {var_type}".format(var_type=type(values)))
+            raise TypeError("values: Expected type list or array-like, ",
+                            "got type {var_type}".format(
+                                var_type=type(values)))
 
         phi = self if inplace else self.copy()
 
@@ -270,6 +306,12 @@ class GaussianDistribution(BaseDistribution):
             return phi
 
     def normalize(self, inplace=True):
+        """
+        Normalizes the distribution. In case of a Gaussian Distribution the
+        distribution is always normalized, therefore this method doesn't do
+        anything and has been implemented only for a consistent API across
+        distributions.
+        """
         phi = self if inplace else self.copy()
 
         # The pdf of a Joint Gaussian distrinution is always
@@ -289,8 +331,11 @@ class GaussianDistribution(BaseDistribution):
         --------
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> gauss_dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...                 np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> gauss_dis = GD(variables=['x1', 'x2', 'x3'],
+        ...                mean=[1, -3, 4],
+        ...                cov=[[4, 2, -2],
+        ...                     [2, 5, -5],
+        ...                     [-2, -5, 8]])
         >>> copy_dis = gauss_dis.copy()
         >>> copy_dis.variables
         ['x1', 'x2', 'x3']
@@ -307,8 +352,9 @@ class GaussianDistribution(BaseDistribution):
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = GaussianDistribution(self.variables, self.mean.copy(),
-                                                 self.covariance.copy())
+        copy_distribution = GaussianDistribution(variables=self.variables,
+                                                 mean=self.mean.copy(),
+                                                 cov=self.covariance.copy())
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
 
@@ -335,22 +381,24 @@ class GaussianDistribution(BaseDistribution):
 
         Example
         -------
-
         >>> import numpy as np
         >>> from pgmpy.factors.distributions import GaussianDistribution as GD
-        >>> dis = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-        ...             np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        >>> dis = GD(variables=['x1', 'x2', 'x3'],
+        ...          mean=[1, -3, 4],
+        ...          cov=[[4, 2, -2],
+        ...               [2, 5, -5],
+        ...               [-2, -5, 8]])
         >>> phi = dis.to_canonical_factor()
         >>> phi.variables
         ['x1', 'x2', 'x3']
         >>> phi.K
         array([[0.3125, -0.125, 0.],
-                [-0.125, 0.5833, 0.333],
-                [     0., 0.333, 0.333]])
+               [-0.125, 0.5833, 0.333],
+               [     0., 0.333, 0.333]])
         >>> phi.h
         array([[  0.6875],
-                [-0.54166],
-                [ 0.33333]]))
+               [-0.54166],
+               [ 0.33333]]))
         >>> phi.g
         -6.51533
         """
@@ -364,7 +412,8 @@ class GaussianDistribution(BaseDistribution):
         h = np.dot(K, mu)
 
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
-            np.power(2 * np.pi, len(self.variables)/2) * np.power(abs(np.linalg.det(sigma)), 0.5))
+            np.power(2 * np.pi, len(self.variables)/2) *
+            np.power(abs(np.linalg.det(sigma)), 0.5))
 
         return CanonicalDistribution(self.variables, K, h, g)
 
@@ -492,3 +541,7 @@ class GaussianDistribution(BaseDistribution):
                [ 3.5]])
         """
         return self._operate(other, operation='divide', inplace=inplace)
+
+    def __repr__(self):
+        return "GaussianDistribution representing N({var}) at {address}".format(
+            var=self.variables, address=hex(id(self)))

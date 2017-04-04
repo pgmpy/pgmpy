@@ -107,7 +107,7 @@ class CanonicalDistribution(BaseDistribution):
         >>> from pgmpy.factors.distributions import GaussianDistribution
         >>> dist = GaussianDistribution(variables=['x1', 'x2'],
         ...                             mean=[[0], [0]],
-        ...                             covariance=[[1, 0], [0, 1]])
+        ...                             cov=[[1, 0], [0, 1]])
         >>> dist.assignment(0, 0)
         0.15915494309189535
         """
