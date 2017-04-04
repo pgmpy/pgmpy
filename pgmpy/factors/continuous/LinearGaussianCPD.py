@@ -5,10 +5,10 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.base import BaseFactor
 
 
-class LinearGaussianCPD(ContinuousFactor):
+class LinearGaussianCPD(BaseFactor):
     u"""
     For, X -> Y the Linear Gaussian model assumes that the mean
     of Y is a linear function of mean of X and the variance of Y does

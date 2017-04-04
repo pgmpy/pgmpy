@@ -46,6 +46,7 @@ class ContinuousFactor(BaseFactor):
             raise ValueError("Variable names cannot be same.")
 
         variables = list(variables)
+
         if isinstance(pdf, str):
             if pdf == 'gaussian':
                 self.distribution = GaussianDistribution(
@@ -56,13 +57,17 @@ class ContinuousFactor(BaseFactor):
                 raise NotImplementedError("{dist} distribution not supported.",
                                           "Please use CustomDistribution".
                                           format(dist=pdf))
-        elif isinstance(pdf, types.FunctionType):
+
+        elif isinstance(pdf, CustomDistribution):
+            self.distribution = pdf
+
+        elif callable(pdf):
             self.distribution = CustomDistribution(
                 variables=variables,
                 distribution=pdf)
 
         else:
-            raise ValueError("variables: Expected type: str or function, ",
+            raise ValueError("pdf: Expected type: str or function, ",
                              "Got: {instance}".format(instance=type(variables)))
 
     @property
@@ -70,7 +75,7 @@ class ContinuousFactor(BaseFactor):
         """
         Returns the pdf of the ContinuousFactor.
         """
-        return self.distribution.pdf()
+        return self.distribution.pdf
 
     def scope(self):
         """
@@ -245,7 +250,7 @@ class ContinuousFactor(BaseFactor):
 
         """
         phi = self if inplace else self.copy()
-        phi.distribution = phi.distribution.marginalize(values, inplace=False)
+        phi.distribution = phi.distribution.marginalize(variables, inplace=False)
 
         if not inplace:
             return phi
@@ -311,9 +316,15 @@ class ContinuousFactor(BaseFactor):
                         if inplace=False returns a new `DiscreteFactor` instance.
 
         """
+        if not isinstance(other, ContinuousFactor):
+            raise TypeError("ContinuousFactor objects can only be multiplied ",
+                            "or divided with another ContinuousFactor object. ",
+                            "Got {other_type}, expected: ContinuousFactor.".format(
+                                other_type=type(other)))
+
         phi = self if inplace else self.copy()
-        phi.distribution = phi.distribuiton._operate(
-            other=other, operation=operation, inplace=False)
+        phi.distribution = phi.distribution._operate(
+            other=other.distribution, operation=operation, inplace=False)
 
         if not inplace:
             return phi
@@ -384,7 +395,7 @@ class ContinuousFactor(BaseFactor):
         >>> sn4.assignment(0, 0)
         0.3989422804014327
         """
-        if set(other.variables) - set(self.variables):
+        if set(other.scope()) - set(self.scope()):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
         return self._operate(other, 'divide', inplace)
