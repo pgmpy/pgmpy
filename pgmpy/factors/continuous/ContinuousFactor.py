@@ -1,9 +1,12 @@
 from __future__ import division
 
-from pgmpy.factors.base import BaseFactor
+import types
 
 import numpy as np
 import scipy.integrate as integrate
+
+from pgmpy.factors.base import BaseFactor
+from pgmpy.factors.distributions import GaussianDistribution, CustomDistribution
 
 
 class ContinuousFactor(BaseFactor):
@@ -11,7 +14,7 @@ class ContinuousFactor(BaseFactor):
     Base class for factors representing various multivariate
     representations.
     """
-    def __init__(self, variables, pdf):
+    def __init__(self, variables, pdf, *args, **kwargs):
         """
         Parameters
         ----------
@@ -42,15 +45,32 @@ class ContinuousFactor(BaseFactor):
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same.")
 
-        self.variables = list(variables)
-        self._pdf = pdf
+        variables = list(variables)
+        if isinstance(pdf, str):
+            if pdf == 'gaussian':
+                self.distribution = GaussianDistribution(
+                    variables=variables,
+                    mean=kwargs['mean'],
+                    covariance=kwargs['covariance'])
+            else:
+                raise NotImplementedError("{dist} distribution not supported.",
+                                          "Please use CustomDistribution".
+                                          format(dist=pdf))
+        elif isinstance(pdf, types.FunctionType):
+            self.distribution = CustomDistribution(
+                variables=variables,
+                distribution=pdf)
+
+        else:
+            raise ValueError("variables: Expected type: str or function, ",
+                             "Got: {instance}".format(instance=type(variables)))
 
     @property
     def pdf(self):
         """
         Returns the pdf of the ContinuousFactor.
         """
-        return self._pdf
+        return self.distribution.pdf()
 
     def scope(self):
         """
@@ -69,7 +89,7 @@ class ContinuousFactor(BaseFactor):
         >>> phi.scope()
         ['x1', 'x2']
         """
-        return self.variables
+        return self.distribution.variables
 
     def assignment(self, *args):
         """
@@ -89,7 +109,7 @@ class ContinuousFactor(BaseFactor):
         >>> phi.assignment(1, 2)
         0.013064233284684921
         """
-        return self.pdf(*args)
+        return self.distribution.assignment(*args)
 
     def copy(self):
         """
@@ -114,7 +134,7 @@ class ContinuousFactor(BaseFactor):
         >>> copy_factor.variables
         ['x', 'y']
         """
-        return ContinuousFactor(self.scope(), self.pdf)
+        return ContinuousFactor(self.scope(), self.distribution.copy())
 
     def discretize(self, method, *args, **kwargs):
         """
@@ -184,40 +204,9 @@ class ContinuousFactor(BaseFactor):
         >>> custom_factor.assignment(1, 3)
         24.0
         """
-        if not isinstance(values, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type list or array-like, "
-                            "got type {var_type}".format(var_type=type(values)))
-
-        for var, value in values:
-            if var not in self.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
-
         phi = self if inplace else self.copy()
 
-        var_to_remove = [var for var, value in values]
-        var_to_keep = [var for var in self.variables if var not in var_to_remove]
-
-        reduced_var_index = [(self.variables.index(var), value) for var, value in values]
-        pdf = self.pdf
-
-        def reduced_pdf(*args, **kwargs):
-            reduced_args = list(args)
-            reduced_kwargs = kwargs.copy()
-
-            if reduced_args:
-                for index, val in reduced_var_index:
-                    reduced_args.insert(index, val)
-            if reduced_kwargs:
-                for variable, val in values:
-                    reduced_kwargs[variable] = val
-            if reduced_args and reduced_kwargs:
-                reduced_args = [arg for arg in reduced_args if arg not in reduced_kwargs.values()]
-
-            return pdf(*reduced_args, **reduced_kwargs)
-
-        phi.variables = var_to_keep
-        phi._pdf = reduced_pdf
-
+        phi.distribution = phi.distribution.reduce(values, inplace=False)
         if not inplace:
             return phi
 
@@ -255,34 +244,8 @@ class ContinuousFactor(BaseFactor):
         >>> std_normal.assignment(1)
 
         """
-        if not isinstance(variables, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type list or array-like, "
-                            "got type {var_type}".format(var_type=type(variables)))
-
-        for var in variables:
-            if var not in self.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
-
         phi = self if inplace else self.copy()
-
-        all_var = [var for var in self.variables]
-        var_to_keep = [var for var in self.variables if var not in variables]
-        reordered_var_index = [all_var.index(var) for var in variables + var_to_keep]
-        pdf = phi.pdf
-
-        # The arguments need to be reordered because integrate.nquad integrates the first n-arguments
-        # of the function passed.
-
-        def reordered_pdf(*args):
-            # ordered_args restores the original order as it was in self.variables
-            ordered_args = [args[reordered_var_index.index(index_id)] for index_id in range(len(all_var))]
-            return pdf(*ordered_args)
-
-        def marginalized_pdf(*args):
-            return integrate.nquad(reordered_pdf, [[-np.inf, np.inf] for i in range(len(variables))], args=args)[0]
-
-        phi._pdf = marginalized_pdf
-        phi.variables = var_to_keep
+        phi.distribution = phi.distribution.marginalize(values, inplace=False)
 
         if not inplace:
             return phi
@@ -318,11 +281,7 @@ class ContinuousFactor(BaseFactor):
 
         """
         phi = self if inplace else self.copy()
-        pdf = self.pdf
-
-        pdf_mod = integrate.nquad(pdf, [[-np.inf, np.inf] for var in self.variables])[0]
-
-        phi._pdf = lambda *args: pdf(*args) / pdf_mod
+        phi.distriution = phi.distribution.normalize(inplace=False)
 
         if not inplace:
             return phi
@@ -352,28 +311,9 @@ class ContinuousFactor(BaseFactor):
                         if inplace=False returns a new `DiscreteFactor` instance.
 
         """
-        if not isinstance(other, ContinuousFactor):
-            raise TypeError("ContinuousFactor object can only be multiplied or divided with "
-                            "an another ContinuousFactor object. Got {other_type}, expected "
-                            "ContinuousFactor.".format(other_type=type(other)))
-
         phi = self if inplace else self.copy()
-        pdf = self.pdf
-        self_var = [var for var in self.variables]
-
-        modified_pdf_var = self_var + [var for var in other.variables if var not in self_var]
-
-        def modified_pdf(*args):
-            self_pdf_args = list(args[:len(self_var)])
-            other_pdf_args = [args[modified_pdf_var.index(var)] for var in other.variables]
-
-            if operation == 'product':
-                return pdf(*self_pdf_args) * other.pdf(*other_pdf_args)
-            if operation == 'divide':
-                return pdf(*self_pdf_args) / other.pdf(*other_pdf_args)
-
-        phi.variables = modified_pdf_var
-        phi._pdf = modified_pdf
+        phi.distribution = phi.distribuiton._operate(
+            other=other, operation=operation, inplace=False)
 
         if not inplace:
             return phi

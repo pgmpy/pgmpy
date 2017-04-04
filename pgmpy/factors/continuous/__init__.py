@@ -1,8 +1,7 @@
-from .discretize import BaseDiscretizer, RoundingDiscretizer, UnbiasedDiscretizer
+from pgmpy.factors.distributions.CanonicalDistribution import CanonicalDistribution
 from .ContinuousFactor import ContinuousFactor
-from .CanonicalDistribution import CanonicalDistribution
 from .LinearGaussianCPD import LinearGaussianCPD
-
+from .discretize import BaseDiscretizer, RoundingDiscretizer, UnbiasedDiscretizer
 
 __all__ = ['CanonicalDistribution',
            'ContinuousFactor',
