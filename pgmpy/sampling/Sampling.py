@@ -4,7 +4,7 @@ import itertools
 import networkx as nx
 import numpy as np
 
-from pgmpy.factors.discrete import factor_product
+from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete

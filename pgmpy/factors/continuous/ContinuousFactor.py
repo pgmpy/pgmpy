@@ -35,7 +35,7 @@ class ContinuousFactor(BaseFactor):
         >>> dirichlet_factor = ContinuousFactor(['x', 'y'], drichlet_pdf)
         >>> dirichlet_factor.scope()
         ['x', 'y']
-        >>> dirichlet_factor.assignemnt(5,6)
+        >>> dirichlet_factor.assignment(5,6)
         226800.0
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
@@ -217,7 +217,7 @@ class ContinuousFactor(BaseFactor):
 
     def marginalize(self, variables, inplace=True):
         """
-        Maximizes the factor with respect to the given variables.
+        Marginalize the factor with respect to the given variables.
 
         Parameters
         ----------
@@ -342,7 +342,7 @@ class ContinuousFactor(BaseFactor):
         -------
         ContinuousFactor or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+                        if inplace=False returns a new `ContinuousFactor` instance.
 
         Example
         -------

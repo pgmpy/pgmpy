@@ -460,7 +460,7 @@ class CustomDistribution(BaseDistribution):
 
         Parameters
         ----------
-        other: ContinuousCustomDistributionFactor
+        other: CustomDistribution
             The CustomDistribution to be multiplied.
 
         Returns
