@@ -1,6 +1,6 @@
 # Contributing to pgmpy
 
-Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation). 
+Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation).
 In this document we'll try to summarize everything that you need to know to do a good job.
 
 
@@ -32,7 +32,7 @@ branches.
 Summary of our git branching model:
 - Fork the desired repository on GitHub to your account;
 - Clone your forked repository locally
-  (`git clone git@github.com:your-username:repository-name.git`);
+  (`git clone git@github.com:your-username/repository-name.git`);
 - Create a new branch off of `develop` with a descriptive name (for example:
   `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can
   do it by switching to `develop` branch (`git checkout develop`) and then
@@ -103,7 +103,7 @@ the desired feature.
 
 Please feel free to contact us through mail list if
 you have any questions or suggestions.
-Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy). 
+Connect with us at [gitter](https://gitter.im/pgmpy/pgmpy).
 Every contribution is very welcome!
 
 *Mailing list* : pgmpy@googlegroups.com
