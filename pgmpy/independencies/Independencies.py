@@ -95,6 +95,9 @@ class Independencies(object):
 
     __contains__ = contains
 
+    def __hash__(self):
+        return sum(hash(assertion) for assertion in self.get_assertions())
+
     def get_assertions(self):
         """
         Returns the independencies object which is a set of IndependenceAssertion objects.
@@ -402,6 +405,10 @@ class IndependenceAssertion(object):
 
     def __hash__(self):
         return hash((frozenset((self.event1, self.event2)), self.event3))
+
+    def __hash__(self):
+        return hash(str(sorted(self.event1)) + str(sorted(self.event2)) +
+                    str(sorted(self.event3)))
 
     @staticmethod
     def _return_list_if_str(event):
