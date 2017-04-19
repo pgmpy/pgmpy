@@ -77,6 +77,10 @@ class ContinuousFactor(BaseFactor):
         """
         return self.distribution.pdf
 
+    @property
+    def variable(self):
+        return self.scope()[0]
+
     def scope(self):
         """
         Returns the scope of the factor.
@@ -95,6 +99,9 @@ class ContinuousFactor(BaseFactor):
         ['x1', 'x2']
         """
         return self.distribution.variables
+
+    def get_evidence(self):
+        return self.scope()[1:]
 
     def assignment(self, *args):
         """
@@ -290,6 +297,9 @@ class ContinuousFactor(BaseFactor):
 
         if not inplace:
             return phi
+
+    def is_valid_cpd(self):
+        return self.distribution.is_valid_cpd()        
 
     def _operate(self, other, operation, inplace=True):
         """

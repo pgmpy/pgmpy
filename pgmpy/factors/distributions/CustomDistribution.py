@@ -25,7 +25,7 @@ class CustomDistribution(BaseDistribution):
         # Two variable dirichlet distribution with alpha = (1, 2)
         >>> def dirichlet_pdf(x, y):
         ...     return (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
-        >>> dirichlet_dist = CustomDistribution(variables=['x', 'y'],distribution=dirichlet_pdf)
+        >>> dirichlet_dist = CustomDistribution(variables=['x', 'y'], distribution=dirichlet_pdf)
         >>> dirichlet_dist.variables
         ['x', 'y']
         """
@@ -63,6 +63,10 @@ class CustomDistribution(BaseDistribution):
         <function __main__.diri_pdf>
         """
         return self._pdf
+
+    @pdf.setter
+    def pdf(self, f):
+        self._pdf = f
 
     @property
     def variables(self):
@@ -365,6 +369,10 @@ class CustomDistribution(BaseDistribution):
 
         if not inplace:
             return phi
+
+    def is_valid_cpd(self):
+        # TODO implemente this
+        return True
 
     def _operate(self, other, operation, inplace=True):
         """
