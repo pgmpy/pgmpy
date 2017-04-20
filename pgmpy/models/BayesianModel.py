@@ -85,10 +85,10 @@ class BayesianModel(DirectedGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(BayesianModel, self).__init__()
+        super().__init__()
         if ebunch:
             self.add_edges_from(ebunch)
-        self.cpds = []
+        self.cpds = {}
         self.cardinalities = defaultdict(int)
 
     def add_edge(self, u, v, **kwargs):
@@ -116,7 +116,7 @@ class BayesianModel(DirectedGraph):
             raise ValueError(
                 'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
         else:
-            super(BayesianModel, self).add_edge(u, v, **kwargs)
+            super().add_edge(u, v, **kwargs)
 
     def remove_node(self, node):
         """
@@ -245,13 +245,10 @@ class BayesianModel(DirectedGraph):
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            for prev_cpd_index in range(len(self.cpds)):
-                if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
-                    self.cpds[prev_cpd_index] = cpd
-                    break
-            else:
-                self.cpds.append(cpd)
+            if cpd.variable in self.cpds:
+                logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
+
+            self.cpds[cpd.variable] = cpd
 
     def get_cpds(self, node=None):
         """
@@ -266,7 +263,7 @@ class BayesianModel(DirectedGraph):
 
         Returns
         -------
-        A list of TabularCPDs.
+        A list of CPDs.
 
         Examples
         --------
@@ -282,12 +279,13 @@ class BayesianModel(DirectedGraph):
         if node:
             if node not in self.nodes():
                 raise ValueError('Node not present in the Directed Graph')
-            for cpd in self.cpds:
-                if cpd.variable == node:
-                    return cpd
-            raise ValueError("CPD not added for the node: {node}".format(node=node))
+
+            if node in self.cpds:
+                return self.cpds[node]
+            else:
+                raise ValueError("CPD not added for the node: {node}".format(node=node))
         else:
-            return self.cpds
+            return list(self.cpds.values())
 
     def remove_cpds(self, *cpds):
         """
@@ -295,7 +293,7 @@ class BayesianModel(DirectedGraph):
 
         Parameters
         ----------
-        *cpds: TabularCPD object
+        *cpds: CPD objects or variable names
             A CPD object on any subset of the variables of the model which
             is to be associated with the model.
 
@@ -312,8 +310,12 @@ class BayesianModel(DirectedGraph):
         """
         for cpd in cpds:
             if isinstance(cpd, six.string_types):
-                cpd = self.get_cpds(cpd)
-            self.cpds.remove(cpd)
+                del self.cpds[cpd]
+            else:
+                for var in self.cpds:
+                    if self.cpds[var] == cpd:
+                        del self.cpds[var]
+                        break
 
     def get_cardinality(self, node):
         """
@@ -326,9 +328,13 @@ class BayesianModel(DirectedGraph):
 
         Returns
         -------
-        int: The cardinality of the node.
+        int: The cardinality of the node if it is a discrete variable; None otherwise.
         """
-        return self.get_cpds(node).cardinality[0]
+        cpd = self.get_cpds(node)
+        if isinstance(cpd, TabularCPD):
+            return cpd.cardinality[0]
+        else:
+            return None
 
     def check_model(self):
         """
@@ -595,7 +601,7 @@ class BayesianModel(DirectedGraph):
         """
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
-        mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
+        mm.add_factors(*[self.cpds[var].to_factor() for var in self.cpds])
 
         return mm
 
@@ -964,5 +970,5 @@ class BayesianModel(DirectedGraph):
         model_copy.add_nodes_from(self.nodes())
         model_copy.add_edges_from(self.edges())
         if self.cpds:
-            model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+            model_copy.add_cpds(*[self.cpds[var].copy() for var in self.cpds])
         return model_copy

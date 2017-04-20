@@ -55,13 +55,10 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 
-            for prev_cpd_index in range(len(self.cpds)):
-                if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
-                    self.cpds[prev_cpd_index] = cpd
-                    break
-            else:
-                self.cpds.append(cpd)
+            if cpd.variable in self.cpds:
+                logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
+
+            self.cpds[cpd.variable] = cpd
 
     def get_cpds(self, node=None):
         """

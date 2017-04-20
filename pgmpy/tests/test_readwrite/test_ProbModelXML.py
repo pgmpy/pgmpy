@@ -602,18 +602,19 @@ class TestProbModelXMLReaderString(unittest.TestCase):
                                                     'directed': 'true'}},
                          'Tuberculosis': {'TuberculosisOrCancer': {'weight': None,
                                                                    'directed': 'true'}}}
-
-        cpds_expected = [np.array([[0.95, 0.05], [0.02, 0.98]]),
-                         np.array([[0.7, 0.3], [0.4,  0.6]]),
-                         np.array([[0.9, 0.1,  0.3,  0.7], [0.2,  0.8,  0.1,  0.9]]),
-                         np.array([[0.99], [0.01]]),
-                         np.array([[0.5], [0.5]]),
-                         np.array([[0.99, 0.01], [0.9, 0.1]]),
-                         np.array([[0.99, 0.01], [0.95, 0.05]]),
-                         np.array([[1, 0, 0, 1], [0, 1, 0, 1]])]
-        for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
-                                       cpds_expected[cpd_index])
+        cpds_expected = {
+          'Dyspnea': np.array([[0.9, 0.1,  0.3,  0.7], [0.2,  0.8,  0.1,  0.9]]),
+          'VisitToAsia': np.array([[0.99], [0.01]]),
+          'X-ray': np.array([[0.95, 0.05], [0.02, 0.98]]),
+          'Smoker': np.array([[0.5], [0.5]]),
+          'TuberculosisOrCancer': np.array([[1, 0, 0, 1], [0, 1, 0, 1]]),
+          'LungCancer': np.array([[0.99, 0.01], [0.9, 0.1]]),
+          'Tuberculosis': np.array([[0.99, 0.01], [0.95, 0.05]]),
+          'Bronchitis': np.array([[0.7, 0.3], [0.4,  0.6]])
+        }
+        for var in cpds_expected:
+            np_test.assert_array_equal(model.cpds[var].get_values(),
+                                       cpds_expected[var])
         self.assertDictEqual(model.node, node_expected)
         self.assertDictEqual(model.edge, edge_expected)
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
