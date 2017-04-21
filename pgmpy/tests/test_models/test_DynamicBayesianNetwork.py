@@ -51,10 +51,21 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
     def test_add_single_edge_with_incorrect_timeslice(self):
         self.assertRaises(ValueError, self.network.add_edge, ('a', 'b'), ('b', 'c'))
 
+    def test_add_single_edge_with_invalid_data(self):
+        with self.assertRaises(ValueError):
+            self.network.add_edge(5, 6)
+
     def test_add_multiple_edges(self):
         self.network.add_edges_from([(('a', 0), ('b', 0)), (('a', 0), ('a', 1)), (('b', 0), ('b', 1))])
         self.assertListEqual(sorted(self.network.edges()),
                              [(('a', 0), ('a', 1)), (('a', 0), ('b', 0)), (('a', 1), ('b', 1)), (('b', 0), ('b', 1))])
+
+    def test_creation_with_edges(self):
+        dbn = DynamicBayesianNetwork([(('a', 0), ('b', 0))])
+        self.assertListEqual(dbn.neighbors(('a', 0)), [('b', 0)])
+        self.assertListEqual(dbn.neighbors(('b', 0)), [])
+        self.assertListEqual(dbn.neighbors(('a', 1)), [('b', 1)])
+        self.assertListEqual(dbn.neighbors(('b', 1)), [])
 
     def tearDown(self):
         del self.network
@@ -124,6 +135,21 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(('D', 0)).variable, ('D', 0))
         self.assertEqual(self.network.get_cpds(('I', 0)).variable, ('I', 0))
         self.assertEqual(self.network.get_cpds(('I', 1)).variable, ('I', 1))
+
+    def test_invalid_cpds(self):
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        with self.assertRaises(ValueError):
+            self.network.add_cpds(None)
+
+        bad_cpd = TabularCPD(('Z', 0), 2, [[0.3], [0.05]])
+
+        with self.assertRaises(ValueError):
+            self.network.add_cpds(bad_cpd)
+
+    def test_invalid_get_cpds(self):
+        with self.assertRaises(ValueError):
+            self.network.get_cpds('Z')
 
     def test_initialize_initial_state(self):
 

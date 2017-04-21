@@ -80,6 +80,56 @@ class TestUndirectedGraphCreation(unittest.TestCase):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
         self.assertEqual(len(self.graph.neighbors('b')), 2)
 
+    def test_check_clique(self):
+        graph = UndirectedGraph()
+        graph.add_nodes_from(['a', 'b', 'c'])
+
+        # Each node is a clique
+        self.assertTrue(graph.check_clique(['a']))
+        self.assertTrue(graph.check_clique(['b']))
+        self.assertTrue(graph.check_clique(['c']))
+
+        # Any combination cannot be a clique
+        self.assertFalse(graph.check_clique(['a', 'b']))
+        self.assertFalse(graph.check_clique(['b', 'c']))
+
+        del graph
+
+        graph = UndirectedGraph()
+        graph.add_nodes_from(['a', 'b', 'c', 'd', 'e'])
+        graph.add_edges_from([('a', 'b'),
+                              ('a', 'c'),
+                              ('b', 'c'),
+                              ('c', 'd'), 
+                              ('c', 'e'), 
+                              ('d', 'e')])
+
+        self.assertTrue(graph.check_clique('a'))
+        self.assertTrue(graph.check_clique('b'))
+        self.assertTrue(graph.check_clique('c'))
+        self.assertTrue(graph.check_clique('d'))
+        self.assertTrue(graph.check_clique('e'))
+
+        # Two connected node are always cliques
+        self.assertTrue(graph.check_clique(['a', 'b']))
+        self.assertTrue(graph.check_clique(['a', 'c']))
+        self.assertTrue(graph.check_clique(['c', 'b']))
+        self.assertTrue(graph.check_clique(['c', 'e']))
+        self.assertTrue(graph.check_clique(['d', 'e']))
+        self.assertTrue(graph.check_clique(['c', 'd']))
+
+        # Disconnected nodes are never cliques
+        self.assertFalse(graph.check_clique(['b', 'e']))
+        self.assertFalse(graph.check_clique(['a', 'd']))
+        self.assertFalse(graph.check_clique(['e', 'a']))
+
+        # Check 3 connected cliques
+        self.assertTrue(graph.check_clique(['a', 'b', 'c']))
+        self.assertTrue(graph.check_clique(['c', 'e', 'd']))
+
+        # Disconnected 3 nodes should not be cliques
+        self.assertFalse(graph.check_clique(['b', 'c', 'e']))
+
     def tearDown(self):
         del self.graph
 
