@@ -285,7 +285,8 @@ class BayesianModel(DirectedGraph):
             for cpd in self.cpds:
                 if cpd.variable == node:
                     return cpd
-            raise ValueError("CPD not added for the node: {node}".format(node=node))
+            else:
+                return None
         else:
             return self.cpds
 
@@ -346,7 +347,9 @@ class BayesianModel(DirectedGraph):
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
 
-            if isinstance(cpd, TabularCPD):
+            if cpd is None:
+                raise ValueError('No CPD associated with {}'.format(node))
+            elif isinstance(cpd, TabularCPD):
                 evidence = cpd.variables[:0:-1]
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):

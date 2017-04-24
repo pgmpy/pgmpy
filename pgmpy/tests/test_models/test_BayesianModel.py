@@ -282,7 +282,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertRaises(ValueError, self.model.get_cpds, 'B')
 
         self.model.add_node('B')
-        self.assertRaises(ValueError, self.model.get_cpds, 'B')
+        self.assertIsNone(self.model.get_cpds('B'))
 
     def test_add_single_cpd(self):
         cpd_s = TabularCPD('s', 2, np.random.rand(2, 2), ['i'], [2])
