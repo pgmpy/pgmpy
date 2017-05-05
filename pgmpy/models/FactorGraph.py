@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import numpy as np
 from networkx.algorithms import bipartite
+import six
 
 from pgmpy.models.MarkovModel import MarkovModel
 from pgmpy.base import UndirectedGraph
@@ -15,7 +16,7 @@ from pgmpy.extern.six.moves import filter, range, zip
 
 class FactorGraph(UndirectedGraph):
     """
-    Class for representing factor graph.
+     Class for representing factor graph.
 
     DiscreteFactor graph is a bipartite graph representing factorization of a function.
     They allow efficient computation of marginal distributions through sum-product
@@ -81,9 +82,11 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> G.add_nodes_from([phi1, phi2])
         >>> G.add_edge('a', phi1)
         """
@@ -134,11 +137,69 @@ class FactorGraph(UndirectedGraph):
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> G.add_edge('a',phi1)
         >>> G.add_factors(phi1)
         >>> G.remove_factors(phi1)
         """
         for factor in factors:
             self.factors.remove(factor)
+            if factor in super(FactorGraph, self).nodes():
+                super(FactorGraph, self).remove_node(factor)
+
+    def remove_node(self, node):
+        """
+        Removes a single  given node from the added factors.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1)
+        >>> G.add_edges_from([('a',phi1),('b',phi1)])
+        >>> G.remove_node('a')
+        """
+        if not isinstance(node, six.string_types):
+            raise ValueError("Node must be a string given{s}", s=type(node))
+
+        affected_factors = [v for u, v in self.edges() if u == node]
+        affected_factors.extend([u for u, v in self.edges() if v == node])
+        # remove and marginalise
+        for ii in affected_factors:
+                edge_nodes = [v for u, v in self.edges() if u == ii]
+                edge_nodes.extend([u for u, v in self.edges() if v == ii])
+                fac_temp = ii.marginalize([node], inplace=False)
+                self.remove_factors(ii)
+                if len(fac_temp.scope()) != 0:
+                    self.add_factors(fac_temp)
+                    edges = list(zip(edge_nodes, [fac_temp for _ in range(len(edge_nodes))]))
+                    self.add_edges_from(edges)
+        super(FactorGraph, self).remove_node(node)
+
+    def remove_nodes_from(self, nodes):
+        """
+        Removes multiple given nodes from the added factors.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> G = FactorGraph()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> G.add_factors(phi1)
+        >>> G.add_edges_from([('a',phi1),('b',phi1)])
+        >>> G.remove_nodes_from(['a','b'])
+        """
+        if not isinstance(nodes, (list, tuple, np.ndarray)):
+            raise ValueError("nodes must be a iterable type {s} given".format(s=type(nodes)))
+
+        for node in nodes:
+            self.remove_node(node)
 
     def get_cardinality(self, check_cardinality=False):
         """
