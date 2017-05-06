@@ -123,8 +123,38 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-        return self._variable_elimination(variables, 'marginalize',
+        variable_list = []
+
+        for var in variables:
+            if isinstance(var, tuple) and var not in self.variables:
+                variable_list.append(var[0])
+            else:
+                variable_list.append(var)
+
+        query_factors = self._variable_elimination(variable_list, 'marginalize',
                                           evidence=evidence, elimination_order=elimination_order)
+
+        query_dis_factor = {}
+
+        for var in variables:
+            if isinstance(var, tuple) and var not in self.variables:
+                query_factor = copy.copy(query_factors[var[0]])
+                if not isinstance(var[1], int):
+                    try:
+                        state = self.state_names[var[0]].index(var[1])
+                    except:
+                        raise ValueError(str(var[1]) + ' state not present in ' + str(var[0]))
+                    query_factor.reduce([(var[0], state)])
+                else:
+                    try:
+                        query_factor.reduce([(var[0], var[1])])
+                    except:
+                        raise ValueError(str(var[1]) + ' state not present in ' + str(var[0]))
+                query_dis_factor[var[0]] = query_factor
+            else:
+                query_dis_factor[var] = query_factors[var]
+
+        return query_dis_factor
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
