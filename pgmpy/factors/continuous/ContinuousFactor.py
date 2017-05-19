@@ -29,10 +29,10 @@ class ContinuousFactor(BaseFactor):
         >>> import numpy as np
         >>> from scipy.special import beta
         >>> from pgmpy.factors.continuous import ContinuousFactor
-        # Two variable drichlet ditribution with alpha = (1,2)
-        >>> def drichlet_pdf(x, y):
+        # Two variable dirichlet distribution with alpha = (1,2)
+        >>> def dirichlet_pdf(x, y):
         ...     return (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
-        >>> dirichlet_factor = ContinuousFactor(['x', 'y'], drichlet_pdf)
+        >>> dirichlet_factor = ContinuousFactor(['x', 'y'], dirichlet_pdf)
         >>> dirichlet_factor.scope()
         ['x', 'y']
         >>> dirichlet_factor.assignment(5,6)
@@ -129,7 +129,7 @@ class ContinuousFactor(BaseFactor):
         >>> import numpy as np
         >>> from scipy.special import beta
         >>> from pgmpy.factors.continuous import ContinuousFactor
-        # Two variable drichlet ditribution with alpha = (1,2)
+        # Two variable dirichlet distribution with alpha = (1,2)
         >>> def dirichlet_pdf(x, y):
         ...     return (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
         >>> dirichlet_factor = ContinuousFactor(['x', 'y'], dirichlet_pdf)
