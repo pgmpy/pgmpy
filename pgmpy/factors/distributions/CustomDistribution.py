@@ -131,7 +131,7 @@ class CustomDistribution(BaseDistribution):
         >>> import numpy as np
         >>> from scipy.special import beta
         >>> from pgmpy.factors.distributions import CustomDistribution
-        # Two variable drichlet ditribution with alpha = (1,2)
+        # Two variable dirichlet distribution with alpha = (1,2)
         >>> def dirichlet_pdf(x, y):
         ...     return (np.power(x, 1) * np.power(y, 2)) / beta(x, y)
         >>> dirichlet_dist = CustomDistribution(variables=['x', 'y'],
