@@ -7,7 +7,7 @@ from scipy.stats import chisquare
 
 
 class BaseEstimator(object):
-    def __init__(self, data, state_names=None, complete_samples_only=True):
+    def __init__(self, data, state_names=None, complete_samples_only=True, count_column=None):
         """
         Base class for estimators in pgmpy; `ParameterEstimator`,
         `StructureEstimator` and `StructureScore` derive from this class.
@@ -29,13 +29,20 @@ class BaseEstimator(object):
             Specifies how to deal with missing data, if present. If set to `True` all rows
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
+            This sets the behavior of the `state_counts`-method.
+
+        count_column: string (optional, default `None`)
+            Specifies the column name where to find a pre-count states. If present 
+            the `state_counts`-method will sum on this column to retrieve the state counts.
+            If `None` then, the `state_counts`-method will count the number of occurence of each state
+            in the data.
         """
 
         self.data = data
         self.complete_samples_only = complete_samples_only
+        self._count_column = count_column
 
-        variables = list(data.columns.values)
+        variables = [c for c in data.columns.values if c != count_column]
 
         if not isinstance(state_names, dict):
             self.state_names = {var: self._collect_state_names(var) for var in variables}
@@ -108,13 +115,19 @@ class BaseEstimator(object):
 
         if not parents:
             # count how often each state of 'variable' occured
-            state_count_data = data.ix[:, variable].value_counts()
+            if self._count_column:
+                state_count_data = data.groupby(variable).sum()[self._count_column]
+            else:
+                state_count_data = data.ix[:, variable].value_counts()
             state_counts = state_count_data.reindex(self.state_names[variable]).fillna(0).to_frame()
 
         else:
             parents_states = [self.state_names[parent] for parent in parents]
             # count how often each state of 'variable' occured, conditional on parents' states
-            state_count_data = data.groupby([variable] + parents).size().unstack(parents)
+            if self._count_column:
+                state_count_data = data.groupby([variable] + parents).sum()[self._count_column].unstack(parents)
+            else:
+                state_count_data = data.groupby([variable] + parents).size().unstack(parents)
 
             # reindex rows & columns to sort them and to add missing ones
             # missing row    = some state of 'variable' did not occur in data
