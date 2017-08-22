@@ -121,15 +121,12 @@ class TestMarkovModelMethods(unittest.TestCase):
 
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
         phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
 
         phi3 = DiscreteFactor(['c', 'd'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi3)
-        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
 
     def test_check_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
