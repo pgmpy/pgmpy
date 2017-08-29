@@ -115,23 +115,19 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-    def test_get_cardinality_check_cardinality(self):
+    def test_check_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+        self.assertRaises(ValueError, self.graph.check_model)
 
         phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
+        self.assertRaises(ValueError, self.graph.check_model)
 
-        phi3 = DiscreteFactor(['c', 'd'], [2, 2], np.random.rand(4))
-        self.graph.add_factors(phi3)
-        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'d': 2, 'c': 2, 'b': 2, 'a': 1})
-
-    def test_check_model(self):
+    def test_check_model1(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
@@ -147,7 +143,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1)
         self.assertTrue(self.graph.check_model())
 
-    def test_check_model1(self):
+    def test_check_model2(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
@@ -175,7 +171,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi2)
 
-    def test_check_model2(self):
+    def test_check_model3(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
 
