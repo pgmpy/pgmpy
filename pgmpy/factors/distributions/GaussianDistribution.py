@@ -10,6 +10,7 @@ from pgmpy.factors.distributions import BaseDistribution
 
 class GaussianDistribution(BaseDistribution):
     """
+    TODO: Fix this to work for single variable
     In its most common representation, a multivariate Gaussian distribution
     over X1, X2, ..., Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
@@ -464,6 +465,8 @@ class GaussianDistribution(BaseDistribution):
 
     def product(self, other, inplace=True):
         """
+        TODO: Make it work when using `*` instead of product.
+
         Returns the product of two gaussian distributions.
 
         Parameters
