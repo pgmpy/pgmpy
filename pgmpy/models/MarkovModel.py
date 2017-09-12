@@ -177,10 +177,18 @@ class MarkovModel(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self):
+    def get_cardinality(self, node=None):
         """
-        Returns a dictionary with the given factors as keys and their respective
-        cardinality as values.
+        Returns the cardinality of the node. If node is not specified returns
+        a dictionary with the given variable as keys and their respective cardinality
+        as values.
+
+        Parameters
+        ----------
+        node: any hashable python object (optional)
+            The node whose cardinality we want. If node is not specified returns a
+            dictionary with the given variable as keys and their respective cardinality
+            as values.
 
         Examples
         --------
@@ -190,14 +198,22 @@ class MarkovModel(UndirectedGraph):
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
         >>> student.add_factors(factor)
+        >>> student.get_cardinality(node='Alice')
+        2
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
         """
-        cardinalities = defaultdict(int)
-        for factor in self.factors:
-            for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                cardinalities[variable] = cardinality
-        return cardinalities
+        if node:
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    if node == variable:
+                       return cardinality
+        else:
+            cardinalities = defaultdict(int)
+            for factor in self.factors:
+                    for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                        cardinalities[variable] = cardinality
+            return cardinalities
 
     def check_model(self):
         """

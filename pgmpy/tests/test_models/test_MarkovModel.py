@@ -115,6 +115,19 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
+    def test_get_cardinality_with_node(self):
+
+        self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
+                                   ('d', 'a')])
+
+        phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        phi2 = DiscreteFactor(['c', 'd'], [1, 2], np.random.rand(2))
+        self.graph.add_factors(phi1, phi2)
+        self.assertEqual(self.graph.get_cardinality('a'), 2)
+        self.assertEqual(self.graph.get_cardinality('b'), 2)
+        self.assertEqual(self.graph.get_cardinality('c'), 1)
+        self.assertEqual(self.graph.get_cardinality('d'), 2)
+
     def test_check_model(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c'), ('c', 'd'),
                                    ('d', 'a')])
