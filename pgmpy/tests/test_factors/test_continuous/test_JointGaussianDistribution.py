@@ -3,34 +3,34 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors.distributions import GaussianDistribution as JGD
+from pgmpy.factors.distributions import GaussianDistribution as GD
 
 
-class TestJGDInit(unittest.TestCase):
+class TestGDInit(unittest.TestCase):
     def test_class_init(self):
-        phi1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
-                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        phi1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+                  np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi1.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi1.mean, np.asarray([[1], [-3], [4]], dtype=float))
         np_test.assert_array_equal(phi1.covariance,
                                    np.asarray([[4, 2, -2], [2, 5, -5], [-2, -5, 8]], dtype=float))
         self.assertEqual(phi1._precision_matrix, None)
 
-        phi2 = JGD(['x1', 'x2', 'x3'], [1, 2, 5],
-                   np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
+        phi2 = GD(['x1', 'x2', 'x3'], [1, 2, 5],
+                  np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi2.variables, ['x1', 'x2', 'x3'])
         np_test.assert_array_equal(phi2.mean, np.asarray([[1], [2], [5]], dtype=float))
         np_test.assert_array_equal(phi2.covariance,
                                    np.asarray([[4, 2, -2], [2, 5, -5], [-2, -5, 8]], dtype=float))
         self.assertEqual(phi2._precision_matrix, None)
 
-        phi3 = JGD(['x'], [0], [[1]])
+        phi3 = GD(['x'], [0], [[1]])
         self.assertEqual(phi3.variables, ['x'])
         np_test.assert_array_equal(phi3.mean, np.asarray([[0]], dtype=float))
         np_test.assert_array_equal(phi3.covariance, np.asarray([[1]], dtype=float))
         self.assertEqual(phi3._precision_matrix, None)
 
-        phi1 = JGD(['1', 2, (1, 2, 'x')], np.array([[1], [-3], [4]]),
+        phi1 = GD(['1', 2, (1, 2, 'x')], np.array([[1], [-3], [4]]),
                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi1.variables, ['1', 2, (1, 2, 'x')])
         np_test.assert_array_equal(phi1.mean, np.asarray([[1], [-3], [4]], dtype=float))
@@ -38,7 +38,7 @@ class TestJGDInit(unittest.TestCase):
                                    np.asarray([[4, 2, -2], [2, 5, -5], [-2, -5, 8]], dtype=float))
         self.assertEqual(phi1._precision_matrix, None)
 
-        phi2 = JGD(['1', 7, (1, 2, 'x')], [1, 2, 5],
+        phi2 = GD(['1', 7, (1, 2, 'x')], [1, 2, 5],
                    np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
         self.assertEqual(phi2.variables, ['1', 7, (1, 2, 'x')])
         np_test.assert_array_equal(phi2.mean, np.asarray([[1], [2], [5]], dtype=float))
@@ -46,41 +46,41 @@ class TestJGDInit(unittest.TestCase):
                                    np.asarray([[4, 2, -2], [2, 5, -5], [-2, -5, 8]], dtype=float))
         self.assertEqual(phi2._precision_matrix, None)
 
-        phi3 = JGD([23], [0], [[1]])
+        phi3 = GD([23], [0], [[1]])
         self.assertEqual(phi3.variables, [23])
         np_test.assert_array_equal(phi3.mean, np.asarray([[0]], dtype=float))
         np_test.assert_array_equal(phi3.covariance, np.asarray([[1]], dtype=float))
         self.assertEqual(phi3._precision_matrix, None)
 
     def test_class_init_valueerror(self):
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3],
                           np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2'], [1, -3, 4],
+        self.assertRaises(ValueError, GD, ['x1', 'x2'], [1, -3, 4],
                           np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [[1, -3, 4]],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [[1, -3, 4]],
                           np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1],
                           np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [[1], [-3]],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [[1], [-3]],
                           np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
 
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3, 4],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3, 4],
                           np.array([[4, 2, -2], [2, 5, -5]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3, 4],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3, 4],
                           np.array([[4, 2, -2]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3],
                           np.array([[4, 2], [2, 5], [-2, -5]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3],
                           np.array([[4], [2], [-2]]))
-        self.assertRaises(ValueError, JGD, ['x1', 'x2', 'x3'], [1, -3],
+        self.assertRaises(ValueError, GD, ['x1', 'x2', 'x3'], [1, -3],
                           np.array([[-2]]))
 
 
 class TestJGDMethods(unittest.TestCase):
     def setUp(self):
-        self.phi1 = JGD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
+        self.phi1 = GD(['x1', 'x2', 'x3'], np.array([[1], [-3], [4]]),
                         np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]]))
-        self.phi2 = JGD(['x'], [0], [[1]])
+        self.phi2 = GD(['x'], [0], [[1]])
         self.phi3 = self.phi1.copy()
 
     def test_precision_matrix(self):
@@ -212,6 +212,18 @@ class TestJGDMethods(unittest.TestCase):
         np_test.assert_array_equal(self.phi1.mean, phi.mean)
         np_test.assert_array_equal(self.phi1.covariance, phi.covariance)
         self.assertEqual(self.phi1._precision_matrix, phi._precision_matrix)
+
+    def test_product(self):
+        pass
+
+    def test_divide(self):
+        pass
+
+    def test_eq(self):
+        pass
+
+    def test_repr(self):
+        pass
 
     def tearDown(self):
         del self.phi1

@@ -10,10 +10,10 @@ from pgmpy.factors.distributions import BaseDistribution
 
 class GaussianDistribution(BaseDistribution):
     """
-    TODO: Fix this to work for single variable
     In its most common representation, a multivariate Gaussian distribution
     over X1, X2, ..., Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
+    
     This is the base class for its representation.
     """
     def __init__(self, variables, mean, cov):
@@ -548,3 +548,34 @@ class GaussianDistribution(BaseDistribution):
     def __repr__(self):
         return "GaussianDistribution representing N({var}) at {address}".format(
             var=self.variables, address=hex(id(self)))
+
+    def __mul__(self, other):
+        return self.product(other, inplace=False)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        return self.divide(other, inplace=False)
+
+    __div__ = __truediv__
+
+    def __eq__(self, other):
+        if not (isinstance(self, GaussianDistribution) and isinstance(self, GaussianDistribution)):
+            return False
+
+        elif set(self.scope()) != set(other.scope()):
+            return False
+
+        else:
+            # Computing transform_index to be able to easily have variables in same order.
+            transform_index = [other.index(var) for var in self.variables]
+            
+            if not np.allclose(self.mean, other.mean[transform_index]):
+                return False
+            else:
+                mid_cov = other.covariance[transform_index, :]
+                transform_cov = mid_cov[:, transform_index]
+                if not np.allclose(self.covariance, transform_cov):
+                    return False
+        return True
