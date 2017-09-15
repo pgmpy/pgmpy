@@ -316,20 +316,49 @@ class BayesianModel(DirectedGraph):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
-    def get_cardinality(self, node):
+    def get_cardinality(self, node=None):
         """
         Returns the cardinality of the node. Throws an error if the CPD for the
         queried node hasn't been added to the network.
 
         Parameters
         ----------
-        node: Any hashable python object.
+        node: Any hashable python object(optional).
+              The node whose cardinality we want. If node is not specified returns a
+              dictionary with the given variable as keys and their respective cardinality
+              as values.
 
         Returns
         -------
-        int: The cardinality of the node.
+        int or dict : If node is specified returns the cardinality of the node.
+                      If node is not specified returns a dictionary with the given
+                      variable as keys and their respective cardinality as values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> cpd_diff = TabularCPD('diff',2,[[0.6,0.4]]);
+        >>> cpd_intel = TabularCPD('intel',2,[[0.7,0.3]]);
+        >>> cpd_grade = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
+        ...                                     [0.9, 0.1, 0.8, 0.3]],
+        ...                                 ['intel', 'diff'], [2, 2])
+        >>> student.add_cpds(cpd_diff,cpd_intel,cpd_grade)
+        >>> student.get_cardinality()
+        defaultdict(int, {'diff': 2, 'grade': 2, 'intel': 2})
+
+        >>> student.get_cardinality('intel')
+        2
         """
-        return self.get_cpds(node).cardinality[0]
+
+        if node:
+            return self.get_cpds(node).cardinality[0]
+        else:
+            cardinalities = defaultdict(int)
+            for cpd in self.cpds:
+                cardinalities[cpd.variable] = cpd.cardinality[0]
+            return cardinalities
 
     def check_model(self):
         """

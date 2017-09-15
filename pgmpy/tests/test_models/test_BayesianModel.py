@@ -144,6 +144,14 @@ class TestBayesianModelMethods(unittest.TestCase):
     def test_get_ancestors_of_failure(self):
         self.assertRaises(ValueError, self.G2._get_ancestors_of, 'h')
 
+    def test_get_cardinality(self):
+        self.assertDictEqual(self.G1.get_cardinality(), {'diff': 2, 'intel': 3, 'grade': 3})
+
+    def test_get_cardinality_with_node(self):
+        self.assertEqual(self.G1.get_cardinality('diff'), 2)
+        self.assertEqual(self.G1.get_cardinality('intel'), 3)
+        self.assertEqual(self.G1.get_cardinality('grade'), 3)
+
     def test_local_independencies(self):
         self.assertEqual(self.G.local_independencies('a'), Independencies(['a', ['b', 'c']]))
         self.assertEqual(self.G.local_independencies('c'), Independencies(['c', ['a', 'd', 'e'], 'b']))
