@@ -7,7 +7,8 @@ setup(
     version="0.1.4",
     description="A library for Probabilistic Graphical Models",
     packages=find_packages(exclude=['tests']),
-    author=open("AUTHORS.rst").read(),
+    author="Ankur Ankan",
+    author_email="ankurankan@gmail.com",
     url="https://github.com/pgmpy/pgmpy",
     classifiers=[
         "Programming Language :: Python :: 3.5",
