@@ -4,12 +4,13 @@ from setuptools import setup, find_packages
 
 setup(
     name="pgmpy",
-    version="0.1.5",
+    version="0.1.6",
     description="A library for Probabilistic Graphical Models",
     packages=find_packages(exclude=['tests']),
     author="Ankur Ankan",
     author_email="ankurankan@gmail.com",
     url="https://github.com/pgmpy/pgmpy",
+    license="MIT",
     classifiers=[
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.4",
@@ -21,7 +22,7 @@ setup(
         "Operating System :: MacOS",
         "Topic :: Scientific/Engineering"
     ],
-    long_description=open("README.md").read(),
+    long_description="https://github.com/pgmpy/pgmpy/blob/dev/README.md",
     install_requires=[
         "networkx >= 1.8.1",
         "scipy >= 0.12.1",
