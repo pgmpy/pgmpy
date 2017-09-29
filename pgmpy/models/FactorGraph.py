@@ -140,17 +140,25 @@ class FactorGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self, check_cardinality=False):
+    def get_cardinality(self, node=None):
         """
-        Returns a dictionary with the given factors as keys and their respective
-        cardinality as values.
+        Returns the cardinality of the node
 
         Parameters
         ----------
-        check_cardinality: boolean, optional
-            If, check_cardinality=True it checks if cardinality information
-            for all the variables is availble or not. If not it raises an error.
+        node: any hashable python object (optional)
+            The node whose cardinality we want. If node is not specified returns a
+            dictionary with the given variable as keys and their respective cardinality
+            as values.
 
+        Returns
+        -------
+        int or dict : If node is specified returns the cardinality of the node.
+                      If node is not specified returns a dictionary with the given
+                      variable as keys and their respective cardinality as values.
+
+        Examples
+        --------
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.factors import DiscreteFactor
         >>> G = FactorGraph()
@@ -163,14 +171,21 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_factors(phi1, phi2)
         >>> G.get_cardinality()
             defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
+
+        >>> G.get_cardinality('a')
+            2
         """
-        cardinalities = defaultdict(int)
-        for factor in self.factors:
-            for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                cardinalities[variable] = cardinality
-        if check_cardinality and len(self.get_variable_nodes()) != len(cardinalities):
-            raise ValueError('Factors for all the variables not defined')
-        return cardinalities
+        if node:
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    if node == variable:
+                        return cardinality
+        else:
+            cardinalities = defaultdict(int)
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    cardinalities[variable] = cardinality
+            return cardinalities
 
     def check_model(self):
         """
@@ -182,6 +197,7 @@ class FactorGraph(UndirectedGraph):
         or not.
         * Check whether factors are associated for all the random variables or not.
         * Check if factors are defined for each factor node or not.
+        * Check if cardinality information for all the variables is availble or not.
         * Check if cardinality of random variable remains same across all the
         factors.
         """
@@ -200,6 +216,9 @@ class FactorGraph(UndirectedGraph):
             raise ValueError('Factors not associated with all the factor nodes.')
 
         cardinalities = self.get_cardinality()
+        if len(variable_nodes) != len(cardinalities):
+            raise ValueError('Factors for all the variables not defined')
+
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if (cardinalities[variable] != cardinality):
