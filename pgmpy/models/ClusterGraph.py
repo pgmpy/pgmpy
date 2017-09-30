@@ -208,16 +208,23 @@ class ClusterGraph(UndirectedGraph):
         for factor in factors:
             self.factors.remove(factor)
 
-    def get_cardinality(self, check_cardinality=False):
+    def get_cardinality(self, node=None):
         """
-        Returns a dictionary with the given factors as keys and their respective
-        cardinality as values.
+        Returns the cardinality of the node
 
         Parameters
         ----------
-        check_cardinality: boolean, optional
-            If, check_cardinality=True it checks if cardinality information
-            for all the variables is availble or not. If not it raises an error.
+        node: any hashable python object (optional)
+            The node whose cardinality we want. If node is not specified returns a
+            dictionary with the given variable as keys and their respective cardinality
+            as values.
+
+        Returns
+        -------
+        int or dict : If node is specified returns the cardinality of the node.
+                      If node is not specified returns a dictionary with the given
+                      variable as keys and their respective cardinality as values.
+
 
         Examples
         --------
@@ -230,14 +237,22 @@ class ClusterGraph(UndirectedGraph):
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
         defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+
+        >>> student.get_cardinality(node='Alice')
+        2
         """
-        cardinalities = defaultdict(int)
-        for factor in self.factors:
-            for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                cardinalities[variable] = cardinality
-        if check_cardinality and len(set((x for clique in self.nodes() for x in clique))) != len(cardinalities):
-            raise ValueError('Factors for all the variables not defined.')
-        return cardinalities
+        if node:
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    if node == variable:
+                        return cardinality
+
+        else:
+	        cardinalities = defaultdict(int)
+	        for factor in self.factors:
+	            for variable, cardinality in zip(factor.scope(), factor.cardinality):
+	                cardinalities[variable] = cardinality
+	        return cardinalities
 
     def get_partition_function(self):
         r"""
@@ -277,6 +292,8 @@ class ClusterGraph(UndirectedGraph):
         * Checks if factors are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
         here as it done in the add_edges method.
+        * Checks if cardinality information for all the variables is availble or not.
+        If not it raises an error.
         * Check if cardinality of random variable remains same across all the
         factors.
 
@@ -291,11 +308,15 @@ class ClusterGraph(UndirectedGraph):
                 raise ValueError('Factors for all the cliques or clusters not defined.')
 
         cardinalities = self.get_cardinality()
+        if len(set((x for clique in self.nodes() for x in clique))) != len(cardinalities):
+	        raise ValueError('Factors for all the variables not defined.')
+
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if (cardinalities[variable] != cardinality):
                     raise ValueError(
                         'Cardinality of variable {var} not matching among factors'.format(var=variable))
+
         return True
 
     def copy(self):

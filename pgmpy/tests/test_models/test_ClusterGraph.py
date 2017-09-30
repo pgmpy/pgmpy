@@ -116,20 +116,14 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
-    def test_get_cardinality_check_cardinality(self):
-        self.graph.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
-                                   (('a', 'b', 'c'), ('a', 'c'))])
+    def test_get_cardinality_with_node(self):
+        self.graph.add_edges_from([(('a', 'b'), ('a', 'c'))])
         phi1 = DiscreteFactor(['a', 'b'], [1, 2], np.random.rand(2))
-        self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
-
-        self.graph.remove_factors(phi1)
         phi2 = DiscreteFactor(['a', 'c'], [1, 2], np.random.rand(2))
-        self.graph.add_factors(phi2)
-        self.assertRaises(ValueError, self.graph.get_cardinality, check_cardinality=True)
-
-        self.graph.add_factors(phi1)
-        self.assertDictEqual(self.graph.get_cardinality(check_cardinality=True), {'c': 2, 'b': 2, 'a': 1})
+        self.graph.add_factors(phi1, phi2)
+        self.assertEqual(self.graph.get_cardinality('a'), 1)
+        self.assertEqual(self.graph.get_cardinality('b'), 2)
+        self.assertEqual(self.graph.get_cardinality('c'), 2)
 
     def test_check_model(self):
         self.graph.add_edges_from([(('a', 'b'), ('a', 'c'))])
