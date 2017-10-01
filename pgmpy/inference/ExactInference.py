@@ -650,6 +650,7 @@ class BeliefPropagation(Inference):
         ...                     [0.1, 0.55, 0.2, 0.9]],
         ...                    ['G', 'J'], [2, 2])
         >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
         >>> belief_propagation.query(variables=['J', 'Q'],
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
@@ -690,6 +691,7 @@ class BeliefPropagation(Inference):
         ...                     [0.1, 0.55, 0.2, 0.9]],
         ...                    ['G', 'J'], [2, 2])
         >>> cpd_g = TabularCPD('G', 2, [[0.6], [0.4]])
+        >>> bayesian_model.add_cpds(cpd_a, cpd_r, cpd_j, cpd_q, cpd_l, cpd_g)
         >>> belief_propagation = BeliefPropagation(bayesian_model)
         >>> belief_propagation.map_query(variables=['J', 'Q'],
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
