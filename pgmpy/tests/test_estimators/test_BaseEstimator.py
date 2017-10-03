@@ -10,6 +10,12 @@ class TestBaseEstimator(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0], 'D': ['X', 'Y', 'Z']})
         self.d2 = pd.DataFrame(data={'A': [0, np.NaN, 1], 'B': [0, 1, 0], 'C': [1, 1, np.NaN], 'D': [np.NaN, 'Y', np.NaN]})
+        self.d3 = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0], 'D': ['X', 'Y', 'Z'],
+                                     'Count': [3, 5, 7]})
+        self.d4 = pd.DataFrame(data={'A': [0]*8 + [1] * 7,
+                                     'B': [0]*3 + [1]*5 + [0]*7,
+                                     'C': [1]*8 + [0]*7,
+                                     'D': ['X']*3 +['Y']*5 +['Z']*7})
 
         self.titanic_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/titanic_train.csv')
 
@@ -18,6 +24,14 @@ class TestBaseEstimator(unittest.TestCase):
         self.assertEqual(e.state_counts('A').values.tolist(), [[2], [1]])
         self.assertEqual(e.state_counts('C', ['A', 'B']).values.tolist(),
                          [[0., 0., 1., 0.], [1., 1., 0., 0.]])
+
+    def test_state_count_with_pre_count(self):
+        e = BaseEstimator(self.d3, count_column='Count')
+        f = BaseEstimator(self.d4)
+        self.assertEqual(e.state_counts('A').values.tolist(),
+                         f.state_counts('A').values.tolist())
+        self.assertEqual(e.state_counts('C', ['A', 'B']).values.tolist(),
+                         f.state_counts('C', ['A', 'B']).values.tolist())
 
     def test_missing_data(self):
         e = BaseEstimator(self.d2, state_names={'C': [0, 1]}, complete_samples_only=False)
