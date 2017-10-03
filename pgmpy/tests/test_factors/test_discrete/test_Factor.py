@@ -370,14 +370,14 @@ class TestFactorMethods(unittest.TestCase):
         phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 4, 3], range(24))
         phi2 = DiscreteFactor(['x2', 'x1', 'x3'], [4, 2, 3],
                               [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17, 6, 7,
-                       8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
+                               8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi1 == phi2)
         self.assertEqual(phi2.variables, ['x2', 'x1', 'x3'])
 
         phi3 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 4, 3], range(24))
         phi4 = DiscreteFactor([self.tup2, self.tup1, self.tup3], [4, 2, 3],
                               [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
-                       6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
+                               6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi3 == phi4)
 
     def test_hash(self):
@@ -393,7 +393,7 @@ class TestFactorMethods(unittest.TestCase):
         phi3 = DiscreteFactor([var1, self.var2, self.var3], [2, 4, 3], range(24))
         phi4 = DiscreteFactor([self.var2, var1, self.var3], [4, 2, 3],
                               [0, 1, 2, 12, 13, 14, 3, 4, 5, 15, 16, 17,
-                       6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
+                               6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertEqual(hash(phi3), hash(phi4))
 
         var1 = TestHash(2, 3)
@@ -621,27 +621,28 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_copy_original_safe(self):
         copy_cpd = self.cpd.copy()
         copy_cpd.reorder_parents(['diff', 'intel'])
-        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+        np_test.assert_array_equal(self.cpd.get_values(),
+                                   np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
 
     def test_reduce_1(self):
         self.cpd.reduce([('diff', 0)])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1],
-                                                                 [0.1, 0.1, 0.1],
-                                                                 [0.8, 0.8, 0.8]]))
+                                                                    [0.1, 0.1, 0.1],
+                                                                    [0.8, 0.8, 0.8]]))
 
     def test_reduce_2(self):
         self.cpd.reduce([('intel', 0)])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1],
-                                                                 [0.1, 0.1],
-                                                                 [0.8, 0.8]]))
+                                                                    [0.1, 0.1],
+                                                                    [0.8, 0.8]]))
 
     def test_reduce_3(self):
         self.cpd.reduce([('intel', 0), ('diff', 0)])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1],
-                                                                 [0.1],
-                                                                 [0.8]]))
+                                                                    [0.1],
+                                                                    [0.8]]))
 
     def test_reduce_4(self):
         self.assertRaises(ValueError, self.cpd.reduce, [('grade', 0)])
@@ -654,16 +655,18 @@ class TestTabularCPDMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
     def test_get_values(self):
-        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                 [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                                 [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+        np_test.assert_array_equal(self.cpd.get_values(),
+                                   np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
 
     def test_reorder_parents_inplace(self):
         new_vals = self.cpd2.reorder_parents(['B', 'A', 'C'])
         np_test.assert_array_equal(new_vals, np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
                                                        [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
-        np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
-                                                                  [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
+        np_test.assert_array_equal(self.cpd2.get_values(),
+                                   np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
+                                             [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
 
     def test_reorder_parents(self):
         new_vals = self.cpd2.reorder_parents(['B', 'A', 'C'])
@@ -672,16 +675,18 @@ class TestTabularCPDMethods(unittest.TestCase):
 
     def test_reorder_parents_no_effect(self):
         self.cpd2.reorder_parents(['C', 'A', 'B'], inplace=False)
-        np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
-                                                                  [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
+        np_test.assert_array_equal(self.cpd2.get_values(),
+                                   np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
+                                             [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
 
     def test_reorder_parents_warning(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.cpd2.reorder_parents(['A', 'B', 'C'], inplace=False)
             assert("Same ordering provided as current" in str(w[-1].message))
-            np_test.assert_array_equal(self.cpd2.get_values(), np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
-                                                                      [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
+            np_test.assert_array_equal(self.cpd2.get_values(),
+                                       np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
+                                                 [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
 
     def tearDown(self):
         del self.cpd
@@ -711,8 +716,9 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
 
     def test_jpd_marginal_distribution_list(self):
         self.jpd.marginal_distribution(['x1', 'x2'])
-        np_test.assert_array_almost_equal(self.jpd.values, np.array([[0.16666667, 0.16666667, 0.16666667],
-                                                                     [0.16666667, 0.16666667, 0.16666667]]))
+        np_test.assert_array_almost_equal(self.jpd.values,
+                                          np.array([[0.16666667, 0.16666667, 0.16666667],
+                                                    [0.16666667, 0.16666667, 0.16666667]]))
         np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
         dic = {'x1': 2, 'x2': 3}
         self.assertEqual(self.jpd.get_cardinality(['x1', 'x2']), dic)

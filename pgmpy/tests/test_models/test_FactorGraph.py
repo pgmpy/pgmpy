@@ -286,7 +286,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.add_nodes_from([phi1, phi2])
-        self.graph.add_edges_from([('a', phi1), ('b', phi1), 
+        self.graph.add_edges_from([('a', phi1), ('b', phi1),
                                    ('b', phi2), ('c', phi2)])
         graph_copy = self.graph.copy()
         self.assertIsInstance(graph_copy, FactorGraph)

@@ -1078,6 +1078,7 @@ class TestProbModelXMLWriter(unittest.TestCase):
         except OSError:
             pass
 
+
 class TestProbModelXMLmethods(unittest.TestCase):
     def setUp(self):
         edges_list = [('VisitToAsia', 'Tuberculosis'),

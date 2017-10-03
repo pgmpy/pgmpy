@@ -124,7 +124,7 @@ class TestNUTSInference(unittest.TestCase):
     def test_sampling(self):
         np.random.seed(1010101)
         samples = self.nuts_sampler.sample(initial_pos=[-0.4, 1, 3.6], num_adapt=0, num_samples=10000,
-                                            return_type='recarray')
+                                           return_type='recarray')
         sample_array = np.array([samples[var_name] for var_name in self.test_model.variables])
         sample_covariance = np.cov(sample_array)
         self.assertTrue(np.linalg.norm(sample_covariance - self.test_model.covariance) < 3)

@@ -94,7 +94,10 @@ class TestCustomDistributionMethods(unittest.TestCase):
     def test_reduce(self):
         phi1 = self.phi1.copy()
         phi1.reduce([('x', 1)])
-        reduced_pdf1 = lambda y: (np.power(1, 1) * np.power(y, 2))/beta(1, y)
+
+        def reduced_pdf1(y):
+            return (np.power(1, 1) * np.power(y, 2)) / beta(1, y)
+
         self.assertEqual(phi1.variables, ['y'])
         for inp in np.random.rand(4):
             self.assertEqual(phi1._pdf(inp), reduced_pdf1(inp))
@@ -108,7 +111,10 @@ class TestCustomDistributionMethods(unittest.TestCase):
 
         phi2 = self.phi2.copy()
         phi2.reduce([('x2', 7.213)])
-        reduced_pdf2 = lambda x1: multivariate_normal.pdf([x1, 7.213], [0, 0], [[1, 0], [0, 1]])
+
+        def reduced_pdf2(x1):
+            return multivariate_normal.pdf([x1, 7.213], [0, 0], [[1, 0], [0, 1]])
+
         self.assertEqual(phi2.variables, ['x1'])
         for inp in np.random.rand(4):
             self.assertEqual(phi2._pdf(inp), reduced_pdf2(inp))
@@ -122,7 +128,10 @@ class TestCustomDistributionMethods(unittest.TestCase):
 
         phi3 = self.phi3.copy()
         phi3.reduce([('y', 0.112), ('z', 23)])
-        reduced_pdf4 = lambda x: 23*(np.power(x, 1)*np.power(0.112, 2))/beta(x, 0.112)
+
+        def reduced_pdf4(x):
+            return 23*(np.power(x, 1)*np.power(0.112, 2))/beta(x, 0.112)
+
         self.assertEqual(phi3.variables, ['x'])
         for inp in np.random.rand(4):
             self.assertEqual(phi3._pdf(inp), reduced_pdf4(inp))
@@ -130,7 +139,10 @@ class TestCustomDistributionMethods(unittest.TestCase):
 
         phi3 = self.phi3.copy()
         phi3.reduce([('y', 0.112)])
-        reduced_pdf3 = lambda x, z: z*(np.power(x, 1)*np.power(0.112, 2))/beta(x, 0.112)
+
+        def reduced_pdf3(x, z):
+            return z*(np.power(x, 1)*np.power(0.112, 2))/beta(x, 0.112)
+
         self.assertEqual(phi3.variables, ['x', 'z'])
         for inp in np.random.rand(4, 2):
             self.assertEqual(phi3._pdf(inp[0], inp[1]),
@@ -249,20 +261,23 @@ class TestCustomDistributionMethods(unittest.TestCase):
         phi1._operate(self.phi2, 'product')
         self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
         for inp in np.random.rand(4, 4):
-            self.assertEqual(phi1._pdf(*inp), self.phi1._pdf(inp[0], inp[1])
-                             * self.phi2._pdf(inp[2], inp[3]))
+            self.assertEqual(
+                phi1._pdf(*inp),
+                self.phi1._pdf(inp[0], inp[1]) * self.phi2._pdf(inp[2], inp[3]))
 
         phi1 = self.phi1._operate(self.phi2, 'product', inplace=False)
         self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
         for inp in np.random.rand(4, 4):
-            self.assertEqual(phi1._pdf(*inp), self.phi1._pdf(inp[0], inp[1])
-                             * self.phi2._pdf(inp[2], inp[3]))
+            self.assertEqual(
+                phi1._pdf(*inp),
+                self.phi1._pdf(inp[0], inp[1]) * self.phi2._pdf(inp[2], inp[3]))
 
         phi1 = self.phi1 * self.phi2
         self.assertEqual(phi1.variables, ['x', 'y', 'x1', 'x2'])
         for inp in np.random.rand(4, 4):
-            self.assertEqual(phi1._pdf(*inp), self.phi1._pdf(inp[0], inp[1])
-                             * self.phi2._pdf(inp[2], inp[3]))
+            self.assertEqual(
+                phi1._pdf(*inp),
+                self.phi1._pdf(inp[0], inp[1]) * self.phi2._pdf(inp[2], inp[3]))
 
         phi3 = self.phi3.copy()
         phi3._operate(self.phi1, 'product')

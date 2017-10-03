@@ -25,6 +25,7 @@ class TestLGCPD(unittest.TestCase):
                           ['a', 'b', 'c'])
         self.assertRaises(ValueError, LinearGaussianCPD, 'x', [1, 1, 2, 3], 2,
                           ['a', 'b'])
+
     @unittest.skip("TODO")
     def test_pdf(self):
         cpd1 = LinearGaussianCPD('x', [0.23], 0.56)

@@ -83,6 +83,7 @@ class TestUndirectedGraphCreation(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
+
 class TestUndirectedGraphMethods(unittest.TestCase):
     def test_is_clique(self):
         G = UndirectedGraph([('A', 'B'), ('C', 'B'), ('B', 'D'),
@@ -98,4 +99,3 @@ class TestUndirectedGraphMethods(unittest.TestCase):
         self.assertFalse(G.is_triangulated())
         G.add_edge('A', 'D')
         self.assertTrue(G.is_triangulated())
-

@@ -460,9 +460,9 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         p2 = titanic.predict(self.titanic_data2[["Survived", "Pclass"]][:30])
         p3 = titanic.predict(self.titanic_data2[["Survived", "Sex"]][:30])
 
-        p1_res =  np.array(['0', '1', '0', '1', '0', '0', '0', '0', '0', '1', '0', '1', '0',
-                            '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
-                            '0', '0', '0', '0'])
+        p1_res = np.array(['0', '1', '0', '1', '0', '0', '0', '0', '0', '1', '0', '1', '0',
+                           '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+                           '0', '0', '0', '0'])
         p2_res = np.array(['male', 'female', 'female', 'female', 'male', 'male', 'male',
                            'male', 'female', 'female', 'female', 'female', 'male', 'male',
                            'male', 'female', 'male', 'female', 'male', 'female', 'male',
@@ -514,16 +514,16 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         predict_data.drop('E', axis=1, inplace=True)
         e_prob = self.model_connected.predict_probability(predict_data)
         np_test.assert_allclose(e_prob.values.ravel(),
-                                    np.array([0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.57894737,
-                                             0.42105263,  0.5       ,  0.5       ,  0.57894737,  0.42105263,
-                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.57894737,
-                                             0.42105263,  0.57894737,  0.42105263,  0.5       ,  0.5       ,
-                                             0.57894737,  0.42105263,  0.57894737,  0.42105263,  0.5       ,
-                                             0.5       ,  0.57894737,  0.42105263,  0.57894737,  0.42105263,
-                                             0.5       ,  0.5       ,  0.57894737,  0.42105263,  0.5       ,
-                                             0.5       ,  0.5       ,  0.5       ,  0.5       ,  0.5       ]), atol = 0)
+                                np.array([0.57894737, 0.42105263, 0.57894737, 0.42105263, 0.57894737,
+                                          0.42105263, 0.5, 0.5, 0.57894737, 0.42105263,
+                                          0.5, 0.5, 0.57894737, 0.42105263, 0.57894737,
+                                          0.42105263, 0.57894737, 0.42105263, 0.5, 0.5,
+                                          0.57894737, 0.42105263, 0.57894737, 0.42105263, 0.5,
+                                          0.5, 0.57894737, 0.42105263, 0.57894737, 0.42105263,
+                                          0.5, 0.5, 0.57894737, 0.42105263, 0.5,
+                                          0.5, 0.5, 0.5, 0.5, 0.5]), atol=0)
         predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
-                              columns=['A', 'B', 'C', 'F', 'E'])[:]
+                                    columns=['A', 'B', 'C', 'F', 'E'])[:]
 
     def test_predict_probability_errors(self):
         np.random.seed(42)
@@ -534,7 +534,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.model_connected.fit(fit_data)
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
         predict_data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1, 5)),
-                              columns=['A', 'B', 'C', 'F', 'E'])[:]
+                                    columns=['A', 'B', 'C', 'F', 'E'])[:]
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
 
     def tearDown(self):
