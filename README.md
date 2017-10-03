@@ -61,18 +61,17 @@ use the command:
 
 Contributing
 ------------
-Issues can be reported at our [issues section](https://github.com/pgmpy/pgmpy/issues) or via mail, or gitter.
-We will try our best to solve the issue at the earliest.
+Issues can be reported at our [issues section](https://github.com/pgmpy/pgmpy/issues).
 
-Before opening a pull request , have look at our [contributing guide](
+Before opening a pull request, please have a look at our [contributing guide](
 https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)
 
 Contributing guide contains some points that will make our life's easier in reviewing and merging your PR.
 
-If you face any problems in pull request, feel free to ask them at mail or gitter.
+If you face any problems in pull request, feel free to ask them on the mailing list or gitter.
 
-If you have any new features, please have a discussion on the issue tracker or the mailing
-list before working on it.
+If you want to implement any new features, please have a discussion about it on the issue tracker or the mailing
+list before starting to work on it.
 
 Testing
 -------
@@ -100,85 +99,11 @@ $ make html
 ```
 Then the docs will be in _build/html
 
-Example:
-========
-Here is a small snippet of pgmpy API
-```python
->>> from pgmpy.models import BayesianModel
->>> from pgmpy.factors.discrete import TabularCPD
->>> student = BayesianModel()
->>> # instantiates a new Bayesian Model called 'student'
+Examples:
+=========
+We have a few example jupyter notebooks here: https://github.com/pgmpy/pgmpy/tree/dev/examples
+For more detailed jupyter notebooks and basic tutorials on Graphical Models check: https://github.com/pgmpy/pgmpy_notebook/
 
->>> student.add_nodes_from(['diff', 'intel', 'grade'])
->>> # adds nodes labelled 'diff', 'intel', 'grade' to student
-
->>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
->>> # adds directed edges from 'diff' to 'grade' and 'intel' to 'grade'
-
->>> """
-... diff cpd:
-...
-... +-------+--------+
-... |diff:  |        |
-... +-------+--------+
-... |easy	|	0.2	 |
-... +-------+--------+
-... |hard	|	0.8	 |
-... +-------+--------+
-... """
-
->>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-
->>> """
-... intel cpd:
-...
-... +-------+--------+
-... |intel: |        |
-... +-------+--------+
-... |dumb	|	0.5	 |
-... +-------+--------+
-... |avg	|	0.3	 |
-... +-------+--------+
-... |smart	|	0.2	 |
-... +-------+--------+
-... """
-
->>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-
->>> """
-... grade cpd:
-...
-... +------+-----------------------+---------------------+
-... |diff: |          easy         |         hard        |
-... +------+------+------+---------+------+------+-------+
-... |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
-... +------+------+------+---------+------+------+-------+
-... |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-... +------+------+------+---------+------+------+-------+
-... |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-... +------+------+------+---------+------+------+-------+
-... |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
-... +------+------+------+---------+------+------+-------+
-... """
-
->>> grade_cpd = TabularCPD('grade', 3,
-					     [[0.1,0.1,0.1,0.1,0.1,0.1],
-                         [0.1,0.1,0.1,0.1,0.1,0.1], 
-                         [0.8,0.8,0.8,0.8,0.8,0.8]],
-					     evidence=['intel', 'diff'],
-					     evidence_card=[3, 2])
-
->>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
-
->>> # Finding active trail
->>> student.active_trail_nodes('diff')
-{'diff', 'grade'}
-
->>> # Finding active trail with observation
->>> student.active_trail_nodes('diff', observed='grade')
-{'diff', 'intel'}
-
-```
 License
 =======
 pgmpy is released under MIT License. You can read about our lisence at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
