@@ -585,4 +585,3 @@ class CanonicalDistribution(BaseDistribution):
         return self.divide(other, inplace=False)
 
     __div__ = __truediv__
-

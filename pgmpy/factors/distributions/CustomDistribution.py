@@ -3,6 +3,7 @@ from scipy import integrate
 
 from pgmpy.factors.distributions import BaseDistribution
 
+
 class CustomDistribution(BaseDistribution):
     def __init__(self, variables, distribution, *args, **kwargs):
         """
@@ -97,7 +98,7 @@ class CustomDistribution(BaseDistribution):
 
         Parameters
         ----------
-        *x: values of all variables of this distribution, 
+        *x: values of all variables of this distribution,
             collective defining a point at which the probability value is to be computed.
 
         Returns
@@ -323,7 +324,7 @@ class CustomDistribution(BaseDistribution):
 
         if not inplace:
             return phi
-        
+
     def normalize(self, inplace=True):
         """
         Normalizes the pdf of the distribution so that it

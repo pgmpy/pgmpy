@@ -722,7 +722,7 @@ class BayesianModel(DirectedGraph):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
         _estimator = estimator(self, data, state_names=state_names,
-                                   complete_samples_only=complete_samples_only)
+                               complete_samples_only=complete_samples_only)
         cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
@@ -807,7 +807,7 @@ class BayesianModel(DirectedGraph):
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('B', axis=1, inplace=True)
         >>> y_prob = model.predict_probability(predict_data)
-        >>> y_prob 
+        >>> y_prob
             B_0         B_1
         80  0.439178    0.560822
         81  0.581970    0.418030

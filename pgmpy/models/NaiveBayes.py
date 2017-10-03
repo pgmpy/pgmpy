@@ -162,7 +162,9 @@ class NaiveBayes(BayesianModel):
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.parent_node:
-                independencies.add_assertions([variable, list(set(self.children_nodes) - set(variable)), self.parent_node])
+                independencies.add_assertions(
+                    [variable, list(
+                        set(self.children_nodes) - set(variable)), self.parent_node])
         return independencies
 
     def fit(self, data, parent_node=None, estimator=None):

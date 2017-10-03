@@ -13,7 +13,7 @@ class GaussianDistribution(BaseDistribution):
     In its most common representation, a multivariate Gaussian distribution
     over X1, X2, ..., Xn is characterized by an n-dimensional mean vector μ,
     and a symmetric n x n covariance matrix Σ.
-    
+
     This is the base class for its representation.
     """
     def __init__(self, variables, mean, cov):
@@ -570,7 +570,7 @@ class GaussianDistribution(BaseDistribution):
         else:
             # Computing transform_index to be able to easily have variables in same order.
             transform_index = [other.index(var) for var in self.variables]
-            
+
             if not np.allclose(self.mean, other.mean[transform_index]):
                 return False
             else:

@@ -317,7 +317,8 @@ class ClusterGraph(UndirectedGraph):
         >>> G.add_factors(phi1, phi2)
         >>> graph_copy = G.copy()
         >>> graph_copy.factors
-        [<DiscreteFactor representing phi(a:2, b:2) at 0xb71b19cc>, <DiscreteFactor representing phi(b:2, c:2) at 0xb4eaf3ac>]
+        [<DiscreteFactor representing phi(a:2, b:2) at 0xb71b19cc>,
+         <DiscreteFactor representing phi(b:2, c:2) at 0xb4eaf3ac>]
         >>> graph_copy.edges()
         [(('a', 'b'), ('b', 'c'))]
         >>> graph_copy.nodes()

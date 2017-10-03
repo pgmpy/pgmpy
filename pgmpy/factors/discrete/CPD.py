@@ -149,7 +149,7 @@ class TabularCPD(DiscreteFactor):
     def get_values(self):
         """
         Returns the cpd
-        
+
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD

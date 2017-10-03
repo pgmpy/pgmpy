@@ -35,12 +35,16 @@ class Mplp(Inference):
     >>> factor_d = DiscreteFactor(['D'], cardinality=[2], values=np.array([0.56292, 1.7765]))
     >>> factor_e = DiscreteFactor(['E'], cardinality=[2], values=np.array([0.47117, 2.1224]))
     >>> factor_f = DiscreteFactor(['F'], cardinality=[2], values=np.array([1.5093, 0.66257]))
-    >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2], values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
-    >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2], values=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]))
-    >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2], values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
-    >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2], values=np.array([31.228, 0.032023, 0.032023, 31.228]))
+    >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2],
+    ...                             values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
+    >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2],
+    ...                             values=np.array([0.00024189, 4134.2, 4134.2, 0.00024189]))
+    >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2],
+    ...                             values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
+    >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2],
+    ...                             values=np.array([31.228, 0.032023, 0.032023, 31.228]))
     >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f, factor_a_b,
-    ...    factor_b_c, factor_c_d, factor_d_e)
+    ...                     factor_b_c, factor_c_d, factor_d_e)
     >>> mplp = Mplp(student)
     """
     def __init__(self, model):
@@ -486,12 +490,16 @@ class Mplp(Inference):
         >>> factor_d = DiscreteFactor(['D'], cardinality=[2], values=np.array([0.56292, 1.7765]))
         >>> factor_e = DiscreteFactor(['E'], cardinality=[2], values=np.array([0.47117, 2.1224]))
         >>> factor_f = DiscreteFactor(['F'], cardinality=[2], values=np.array([1.5093, 0.66257]))
-        >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2], values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
-        >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2], values=np.array([0.00024189, 4134.2, 4134.2, 0.0002418]))
-        >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2], values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
-        >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2], values=np.array([31.228, 0.032023, 0.032023, 31.228]))
-        >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f, factor_a_b,
-        ...    factor_b_c, factor_c_d, factor_d_e)
+        >>> factor_a_b = DiscreteFactor(['A', 'B'], cardinality=[2, 2],
+        ...                             values=np.array([1.3207, 0.75717, 0.75717, 1.3207]))
+        >>> factor_b_c = DiscreteFactor(['B', 'C'], cardinality=[2, 2],
+        ...                             values=np.array([0.00024189, 4134.2, 4134.2, 0.0002418]))
+        >>> factor_c_d = DiscreteFactor(['C', 'D'], cardinality=[2, 2],
+        ...                             values=np.array([0.0043227, 231.34, 231.34, 0.0043227]))
+        >>> factor_d_e = DiscreteFactor(['E', 'F'], cardinality=[2, 2],
+        ...                             values=np.array([31.228, 0.032023, 0.032023, 31.228]))
+        >>> student.add_factors(factor_a, factor_b, factor_c, factor_d, factor_e, factor_f,
+        ...                     factor_a_b, factor_b_c, factor_c_d, factor_d_e)
         >>> mplp = Mplp(student)
         >>> result = mplp.map_query()
         >>> result

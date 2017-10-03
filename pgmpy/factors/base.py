@@ -14,6 +14,7 @@ class BaseFactor(object):
     def is_valid_cpd(self):
         pass
 
+
 def factor_product(*args):
     """
     Returns factor product over `args`.

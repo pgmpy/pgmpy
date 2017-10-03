@@ -1,4 +1,4 @@
-#This module initializes flags for optional dependencies
+# This module initializes flags for optional dependencies
 try:
     import pandas
     HAS_PANDAS = True

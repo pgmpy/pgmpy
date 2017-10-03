@@ -207,7 +207,7 @@ class MarkovModel(UndirectedGraph):
             for factor in self.factors:
                 for variable, cardinality in zip(factor.scope(), factor.cardinality):
                     if node == variable:
-                       return cardinality
+                        return cardinality
         else:
             cardinalities = defaultdict(int)
             for factor in self.factors:

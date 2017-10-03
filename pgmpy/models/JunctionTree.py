@@ -118,9 +118,11 @@ class JunctionTree(ClusterGraph):
         >>> modelCopy.edges()
         [(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))]
         >>> G.factors
-        [<DiscreteFactor representing phi(a:1, b:2) at 0xb720ee4c>, <DiscreteFactor representing phi(a:1, c:2) at 0xb4e1e06c>]
+        [<DiscreteFactor representing phi(a:1, b:2) at 0xb720ee4c>,
+         <DiscreteFactor representing phi(a:1, c:2) at 0xb4e1e06c>]
         >>> modelCopy.factors
-        [<DiscreteFactor representing phi(a:1, b:2) at 0xb4bd11ec>, <DiscreteFactor representing phi(a:1, c:2) at 0xb4bd138c>]
+        [<DiscreteFactor representing phi(a:1, b:2) at 0xb4bd11ec>,
+         <DiscreteFactor representing phi(a:1, c:2) at 0xb4bd138c>]
 
         """
         copy = JunctionTree(self.edges())

@@ -753,7 +753,8 @@ class DiscreteFactor(BaseFactor):
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
                               for var, card in zip(self.variables, self.cardinality)])
-        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
+        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(
+            address=hex(id(self)), var_card=var_card)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
@@ -813,4 +814,3 @@ class DiscreteFactor(BaseFactor):
                                                                       phi.cardinality[axis])
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
-

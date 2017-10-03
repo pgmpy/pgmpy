@@ -423,8 +423,7 @@ class FactorGraph(UndirectedGraph):
         copy.add_nodes_from(self.nodes())
 
         if self.factors:
-           factors_copy = [factor.copy() for factor in self.factors]
-           copy.add_factors(*factors_copy)
+            factors_copy = [factor.copy() for factor in self.factors]
+            copy.add_factors(*factors_copy)
 
         return copy
-

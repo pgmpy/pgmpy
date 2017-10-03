@@ -69,8 +69,8 @@ class BayesianModelSampling(Inference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> inference.forward_sample(size=2, return_type='recarray')
-        rec.array([(0, 0, 1), (1, 0, 2)], 
-          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
+        rec.array([(0, 0, 1), (1, 0, 2)], dtype=
+                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
         types = [(var_name, 'int') for var_name in self.topological_order]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
@@ -198,8 +198,8 @@ class BayesianModelSampling(Inference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State('diff', 0)]
         >>> inference.likelihood_weighted_sample(evidence=evidence, size=2, return_type='recarray')
-        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], 
-          dtype=[('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
+        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
+                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
         types = [(var_name, 'int') for var_name in self.topological_order]
         types.append(('_weight', 'float'))
