@@ -25,36 +25,25 @@ pgmpy has following non optional dependencies:
 - Numpy 1.11.1 
 - Pandas 0.18.1 
 
-Download
-=========
-Currently pgmpy is not hosted on pypi or conda.
-You can either clone the git repo with:
-```
-git clone https://github.com/pgmpy/pgmpy
-```
-or download a zip from: https://github.com/pgmpy/pgmpy/archive/dev.zip
-
 Installation
 =============
-To install the dependencies switch to the pgmpy directory using:
+Using conda:
 ```
-$ cd /path/to/pgmpy
+$ conda install -c ankurankan pgmpy
 ```
-In the directory run either of the following:
 
-Using pip
+Using pip:
 ```
 $ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
-```
-or conda
-```
-$ conda install --file requirements.txt  # or requirements-dev.txt
+$ pip install pgmpy
 ```
 
-Then install using:
-
-```bash
-sudo python setup.py install
+Or for installing the latest codebase:
+```
+$ git clone https://github.com/pgmpy/pgmpy 
+$ cd pgmpy/
+$ pip install -r requirements.txt
+$ python setup.py install
 ```
 
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
