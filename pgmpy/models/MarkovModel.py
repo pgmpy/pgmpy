@@ -144,21 +144,43 @@ class MarkovModel(UndirectedGraph):
 
             self.factors.append(factor)
 
-    def get_factors(self):
+    def get_factors(self, node=None):
         """
-        Returns the factors that have been added till now to the graph
+        Returns all the factors containing the node. If node is not specified
+        returns all the factors that have been added till now to the graph.
+
+        Parameter
+        ---------
+        node: any hashable python object (optional)
+            The node whose factor we want. If node is not specified
 
         Examples
         --------
         >>> from pgmpy.models import MarkovModel
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
-        >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
+        >>> factor1 = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
         ...                 values=np.random.rand(4))
-        >>> student.add_factors(factor)
+        >>> factor2 = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 3],
+        ...					values=np.ones(6))
+        >>> student.add_factors(factor1,factor2)
         >>> student.get_factors()
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>,
+         <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x7f8a0e9bf5f8>]
+        >>> student.get_factors('Alice')
+        [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>]
         """
-        return self.factors
+        if node:
+            if node not in self.nodes():
+                raise ValueError('Node not present in the Undirected Graph')
+            node_factors = []
+            for factor in self.factors:
+                if node in factor.scope():
+                    node_factors.append(factor)
+            return node_factors
+        else:
+            return self.factors
+
 
     def remove_factors(self, *factors):
         """

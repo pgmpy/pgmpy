@@ -314,6 +314,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         six.assertCountEqual(self, self.graph.get_factors(), [])
         self.graph.add_factors(phi1, phi2)
         six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
+        six.assertCountEqual(self, self.graph.get_factors('a'), [phi1])
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
