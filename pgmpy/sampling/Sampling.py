@@ -210,12 +210,12 @@ class BayesianModelSampling(Inference):
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
-            evidence = cpd.get_evidence()
+            parents = cpd.get_evidence()
 
-            if evidence:
-                evidence_values = np.vstack([sampled[i] for i in evidence])
+            if parents:
+                parent_values = np.vstack([sampled[i] for i in parents])
                 cached_values = self.pre_compute_reduce(node)
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence_values.T))
+                weights = list(map(lambda t: cached_values[tuple(t)], parent_values.T))
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):

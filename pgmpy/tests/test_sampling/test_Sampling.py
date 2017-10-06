@@ -36,8 +36,8 @@ class TestBayesianModelSampling(unittest.TestCase):
 
     def test_forward_sample(self):
         sample = self.sampling_inference.forward_sample(25)
-        self.assertEquals(len(sample), 25)
-        self.assertEquals(len(sample.columns), 6)
+        self.assertEqual(len(sample), 25)
+        self.assertEqual(len(sample.columns), 6)
         self.assertIn('A', sample.columns)
         self.assertIn('J', sample.columns)
         self.assertIn('R', sample.columns)
@@ -53,8 +53,8 @@ class TestBayesianModelSampling(unittest.TestCase):
 
     def test_rejection_sample_basic(self):
         sample = self.sampling_inference.rejection_sample([State('A', 1), State('J', 1), State('R', 1)], 25)
-        self.assertEquals(len(sample), 25)
-        self.assertEquals(len(sample.columns), 6)
+        self.assertEqual(len(sample), 25)
+        self.assertEqual(len(sample.columns), 6)
         self.assertIn('A', sample.columns)
         self.assertIn('J', sample.columns)
         self.assertIn('R', sample.columns)
@@ -76,8 +76,8 @@ class TestBayesianModelSampling(unittest.TestCase):
 
     def test_likelihood_weighted_sample(self):
         sample = self.sampling_inference.likelihood_weighted_sample([State('A', 0), State('J', 1), State('R', 0)], 25)
-        self.assertEquals(len(sample), 25)
-        self.assertEquals(len(sample.columns), 7)
+        self.assertEqual(len(sample), 25)
+        self.assertEqual(len(sample.columns), 7)
         self.assertIn('A', sample.columns)
         self.assertIn('J', sample.columns)
         self.assertIn('R', sample.columns)
@@ -152,8 +152,8 @@ class TestGibbsSampling(unittest.TestCase):
     def test_sample(self):
         start_state = [State('diff', 0), State('intel', 0), State('grade', 0)]
         sample = self.gibbs.sample(start_state, 2)
-        self.assertEquals(len(sample), 2)
-        self.assertEquals(len(sample.columns), 3)
+        self.assertEqual(len(sample), 2)
+        self.assertEqual(len(sample.columns), 3)
         self.assertIn('diff', sample.columns)
         self.assertIn('intel', sample.columns)
         self.assertIn('grade', sample.columns)
