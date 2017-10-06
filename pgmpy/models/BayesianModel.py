@@ -242,7 +242,7 @@ class BayesianModel(DirectedGraph):
             if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
                 raise ValueError('Only TabularCPD or ContinuousFactor can be added.')
 
-            if set(cpd.variables) - set(cpd.variables).intersection(
+            if set(cpd.scope()) - set(cpd.scope()).intersection(
                     set(self.nodes())):
                 raise ValueError('CPD defined on variable not in the model', cpd)
 

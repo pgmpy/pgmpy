@@ -9,6 +9,7 @@ from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
 from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.utils import StateNameInit
+from pgmpy.factors.discrete import TabularCPD
 
 
 class Inference(object):
@@ -70,11 +71,11 @@ class Inference(object):
         if isinstance(model, BayesianModel):
             for node in model.nodes():
                 cpd = model.get_cpds(node)
-                cpd_as_factor = cpd.to_factor()
-                self.cardinality[node] = cpd.variable_card
-
-                for var in cpd.variables:
-                    self.factors[var].append(cpd_as_factor)
+                if isinstance(cpd, TabularCPD):
+                    self.cardinality[node] = cpd.variable_card
+                    cpd = cpd.to_factor()
+                for var in cpd.scope():
+                    self.factors[var].append(cpd)
 
         elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
             self.cardinality = model.get_cardinality()
