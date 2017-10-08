@@ -52,7 +52,7 @@ class XMLBIFReader(object):
         if path:
             self.network = etree.ElementTree(file=path).getroot().find('NETWORK')
         elif string:
-            self.network = etree.fromstring(string).find('NETWORK')
+            self.network = etree.fromstring(string.encode('utf-8')).find('NETWORK')
         else:
             raise ValueError("Must specify either path or string")
         self.network_name = self.network.find('NAME').text
