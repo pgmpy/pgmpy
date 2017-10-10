@@ -371,7 +371,7 @@ class CustomDistribution(BaseDistribution):
             return phi
 
     def is_valid_cpd(self):
-        return np.isclose(integrate.nquad(pdf, [[-np.inf, np.inf] for var in self.variables])[0], 1)
+        return np.isclose(integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables])[0], 1)
 
     def _operate(self, other, operation, inplace=True):
         """
