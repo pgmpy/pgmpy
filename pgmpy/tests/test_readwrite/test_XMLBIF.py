@@ -20,7 +20,7 @@ except ImportError:
         except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
 
-TEST_FILE = """<?xml version="1.0" encoding="US-ASCII"?>
+TEST_FILE = """<?xml version="1.0"?>
 
 
 <!--
