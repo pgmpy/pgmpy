@@ -14,7 +14,7 @@ before_install:
 install: source continous_integration/install.sh
 script: nosetests --with-coverage --cover-package=pgmpy
 after_success:
-    coveralls
+    codecov
 notifications:
     email: false
     webhooks:

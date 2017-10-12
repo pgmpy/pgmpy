@@ -30,7 +30,7 @@ if [[ "$DISTRIB" == "conda" ]]; then
 fi
 
 if [[ "$COVERAGE" == "true" ]]; then
-	pip install coverage coveralls
+	pip install coverage codecov
 fi
 
 # Build pgmpy
