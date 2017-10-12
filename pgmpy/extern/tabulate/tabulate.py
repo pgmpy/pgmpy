@@ -4,10 +4,12 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
+
+import re
 from collections import namedtuple
 from platform import python_version_tuple
-import re
-from pgmpy.extern.six.moves import map, range
+
+#from pgmpy.extern.six.moves import map, range
 
 if python_version_tuple()[0] < "3":
     from itertools import izip_longest
