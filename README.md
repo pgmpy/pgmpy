@@ -106,5 +106,5 @@ For more detailed jupyter notebooks and basic tutorials on Graphical Models chec
 
 License
 =======
-pgmpy is released under MIT License. You can read about our lisence at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
+pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
 
