@@ -12,7 +12,7 @@ before_install:
     - df -h
     - ulimit -a
 install: source continous_integration/install.sh
-script: nosetests --with-coverage --cover-package=pgmpy
+script: nosetests --with-coverage --cover-package=pgmpy --with-doctest
 after_success:
     codecov
 notifications:
