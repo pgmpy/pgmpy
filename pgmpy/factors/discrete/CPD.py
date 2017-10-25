@@ -169,10 +169,7 @@ class TabularCPD(DiscreteFactor):
             return self.values.reshape(1, np.prod(self.cardinality))
 
     def __str__(self):
-        if six.PY2:
-            return self._make_table_str("grid")
-        else:
-            return self._make_table_str("fancy_grid")
+        return self._make_table_str(tablefmt="grid")
 
     def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
         return super(self, TabularCPD)._str(phi_or_p, tablefmt)
@@ -187,14 +184,14 @@ class TabularCPD(DiscreteFactor):
             col_indexes = np.array(list(product(*[range(i) for i in evidence_card])))
             if self.state_names and print_state_names:
                 for i in range(len(evidence_card)):
-                    column_header = [evidence[i]] + ['{var}({state})'.format
+                    column_header = [str(evidence[i])] + ['{var}({state})'.format
                                                      (var=evidence[i],
                                                       state=self.state_names[evidence[i]][d])
                                                      for d in col_indexes.T[i]]
                     headers_list.append(column_header)
             else:
                 for i in range(len(evidence_card)):
-                    column_header = [evidence[i]] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
+                    column_header = [str(evidence[i])] + ['{s}_{d}'.format(s=evidence[i], d=d) for d in col_indexes.T[i]]
                     headers_list.append(column_header)
 
         # Build row headers
