@@ -20,8 +20,8 @@ class TabularCPD(DiscreteFactor):
     """
     Defines the conditional probability distribution table (cpd table)
 
-    Example
-    -------
+    Examples
+    --------
     For a distribution of P(grade|diff, intel)
 
     +-------+--------------------+------------------+
@@ -161,7 +161,6 @@ class TabularCPD(DiscreteFactor):
         array([[ 0.1,  0.1],
                [ 0.1,  0.1],
                [ 0.8,  0.8]])
-
         """
         if self.variable in self.variables:
             return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
@@ -268,7 +267,7 @@ class TabularCPD(DiscreteFactor):
         Modifies the cpd table with marginalized values.
 
         Parameters
-        ---------
+        ----------
         variables: list, array-like
             list of variable to be marginalized
 
@@ -353,7 +352,7 @@ class TabularCPD(DiscreteFactor):
 
     def reorder_parents(self, new_order, inplace=True):
         """
-        Returns a new cpd table according to provided order
+        Returns a new cpd table according to provided order.
 
         Parameters
         ----------

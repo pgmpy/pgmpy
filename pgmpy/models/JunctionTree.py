@@ -84,7 +84,7 @@ class JunctionTree(ClusterGraph):
 
         * Checks if clique potentials are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
-        here as it done in the add_edges method.
+          here as it done in the add_edges method.
 
         Returns
         -------
@@ -105,7 +105,7 @@ class JunctionTree(ClusterGraph):
         JunctionTree : copy of JunctionTree
 
         Examples
-        -------
+        --------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import JunctionTree

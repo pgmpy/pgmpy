@@ -11,7 +11,7 @@ TabularCPD
    :members:
 
 Discrete Factor
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 .. automodule:: pgmpy.factors.discrete.DiscreteFactor
    :members:

@@ -248,11 +248,11 @@ class ClusterGraph(UndirectedGraph):
                         return cardinality
 
         else:
-	        cardinalities = defaultdict(int)
-	        for factor in self.factors:
-	            for variable, cardinality in zip(factor.scope(), factor.cardinality):
-	                cardinalities[variable] = cardinality
-	        return cardinalities
+            cardinalities = defaultdict(int)
+            for factor in self.factors:
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    cardinalities[variable] = cardinality
+            return cardinalities
 
     def get_partition_function(self):
         r"""
@@ -291,11 +291,11 @@ class ClusterGraph(UndirectedGraph):
 
         * Checks if factors are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
-        here as it done in the add_edges method.
+          here as it done in the add_edges method.
         * Checks if cardinality information for all the variables is availble or not.
-        If not it raises an error.
+          If not it raises an error.
         * Check if cardinality of random variable remains same across all the
-        factors.
+          factors.
 
         Returns
         -------
@@ -309,7 +309,7 @@ class ClusterGraph(UndirectedGraph):
 
         cardinalities = self.get_cardinality()
         if len(set((x for clique in self.nodes() for x in clique))) != len(cardinalities):
-	        raise ValueError('Factors for all the variables not defined.')
+            raise ValueError('Factors for all the variables not defined.')
 
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):

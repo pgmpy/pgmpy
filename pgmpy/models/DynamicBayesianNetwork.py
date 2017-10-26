@@ -19,13 +19,13 @@ class DynamicBayesianNetwork(DirectedGraph):
 
         The nodes can be any hashable python objects.
 
-        Parameters:
+        Parameters
         ----------
         ebunch: Data to initialize graph.  If data=None (default) an empty
               graph is created.  The data can be an edge list, or any NetworkX
               graph object
 
-        Examples:
+        Examples
         --------
         Create an empty Dynamic Bayesian Network with no nodes and no edges:
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
@@ -63,8 +63,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> dbn.nodes()
         ['S', 'G', 'D', 'I', 'L']
 
-        Public Methods:
-        ---------------
+        Public Methods
+        --------------
         add_node
         add_nodes_from
         add_edges
@@ -233,8 +233,8 @@ class DynamicBayesianNetwork(DirectedGraph):
                 The time slice for which to get intra edges. The timeslice
                 should be a positive value or zero.
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
@@ -254,8 +254,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Returns the inter-slice edges present in the 2-TBN.
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
@@ -275,13 +275,13 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Returns the nodes in the first timeslice whose children are present in the first timeslice.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         time_slice:int
                 The timeslice should be a positive value greater than or equal to zero
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
@@ -298,13 +298,13 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Returns the nodes present in a particular timeslice
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         time_slice:int
                 The timeslice should be a positive value greater than or equal to zero
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_nodes_from(['D', 'G', 'I', 'S', 'L'])
@@ -326,14 +326,14 @@ class DynamicBayesianNetwork(DirectedGraph):
         while the time_slice is an integer value, which denotes
         the index of the time_slice that the node belongs to.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         cpds : list, set, tuple (array-like)
             List of CPDs which are to be associated with the model. Each CPD
             should be an instance of `TabularCPD`.
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
@@ -375,8 +375,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         """
         Returns the CPDs that have been associated with the network.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         node: tuple (node_name, time_slice)
             The node should be in the following form (node_name, time_slice).
             Here, node_name is the node that is inserted while the time_slice is
@@ -386,8 +386,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         time_slice: int
             The time_slice should be a positive integer greater than or equal to zero.
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> dbn = DBN()
@@ -478,8 +478,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         method, one needs to add cpds as well as the edges in the bayesian network of the whole
         skeleton including the 0th and the 1st timeslice,.
 
-        Examples:
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = DBN()

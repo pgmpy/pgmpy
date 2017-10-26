@@ -194,12 +194,12 @@ class FactorGraph(UndirectedGraph):
         random variables.
 
         * Check whether bipartite property of factor graph is still maintained
-        or not.
+          or not.
         * Check whether factors are associated for all the random variables or not.
         * Check if factors are defined for each factor node or not.
         * Check if cardinality information for all the variables is availble or not.
         * Check if cardinality of random variable remains same across all the
-        factors.
+          factors.
         """
         variable_nodes = set([x for factor in self.factors for x in factor.scope()])
         factor_nodes = set(self.nodes()) - variable_nodes
