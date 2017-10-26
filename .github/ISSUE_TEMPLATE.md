@@ -2,7 +2,8 @@
 Describe your issue here.
 
 ### Your environment
-* version of pgmpy
+* pgmpy version
+* Python version
 * Operating System
 
 ### Steps to reproduce
