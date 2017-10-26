@@ -292,8 +292,8 @@ class ClusterGraph(UndirectedGraph):
         * Checks if factors are defined for all the cliques or not.
         * Check for running intersection property is not done explicitly over
           here as it done in the add_edges method.
-        * Checks if cardinality information for all the variables is availble or not.
-          If not it raises an error.
+        * Checks if cardinality information for all the variables is availble or not. If
+          not it raises an error.
         * Check if cardinality of random variable remains same across all the
           factors.
 

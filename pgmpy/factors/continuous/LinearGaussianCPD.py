@@ -93,7 +93,7 @@ class LinearGaussianCPD(BaseFactor):
 
     def copy(self):
         """
-        Return a copy of the distribution.
+        Returns a copy of the distribution.
 
         Returns
         -------
