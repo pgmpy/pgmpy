@@ -40,7 +40,9 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'sphinx.ext.autosummary',
     'nbsphinx',
+    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -301,3 +303,6 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+# To suppress autosupress warnings while building docs. Remove this line to see the warning
+numpydoc_show_class_members = False
