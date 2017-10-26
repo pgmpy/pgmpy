@@ -11,7 +11,7 @@ Getting Started:
 .. toctree::
    :maxdepth: 3
 
-   Installation
+   Installation <https://github.com/pgmpy/pgmpy#installation>
 
 Basic Examples:
 
