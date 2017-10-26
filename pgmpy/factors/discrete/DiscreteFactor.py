@@ -716,12 +716,9 @@ class DiscreteFactor(BaseFactor):
                             atol=0.01)
 
     def __str__(self):
-        if six.PY2:
-            return self._str(phi_or_p='phi', tablefmt="psql")
-        else:
-            return self._str(phi_or_p='phi')
+        return self._str(phi_or_p='phi', tablefmt='grid')
 
-    def _str(self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True):
+    def _str(self, phi_or_p="phi", tablefmt="grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
