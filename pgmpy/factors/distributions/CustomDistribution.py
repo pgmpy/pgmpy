@@ -96,6 +96,9 @@ class CustomDistribution(BaseDistribution):
     def variables(self, value):
         self._variables = value
 
+    def sample(self, size, evidence):
+        raise NotImplementedError('Coming soon...')
+
     def assignment(self, *x):
         """
         Returns the probability value of the PDF at the given parameter values.

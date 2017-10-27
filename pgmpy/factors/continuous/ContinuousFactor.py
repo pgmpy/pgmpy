@@ -81,6 +81,9 @@ class ContinuousFactor(BaseFactor):
     def variable(self):
         return self.scope()[0]
 
+    def sample(self, size, parent_values):
+        self.distribution.sample(size, parent_values)
+
     def scope(self):
         """
         Returns the scope of the factor.

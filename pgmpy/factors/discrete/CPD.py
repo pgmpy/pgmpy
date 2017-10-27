@@ -14,6 +14,7 @@ from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
 from pgmpy.utils import StateNameInit
 from pgmpy.utils import StateNameDecorator
+from pgmpy.utils.mathext import sample_discrete
 
 
 class TabularCPD(DiscreteFactor):
@@ -205,6 +206,26 @@ class TabularCPD(DiscreteFactor):
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
         return cdf_str
+
+    def _pre_compute_reduce(self):
+        variable_evid = self.variables[1:]
+        cached_values = {}
+        for state_combination in product(*[range(i) for i in self.cardinality[1:]]):
+            states = list(zip(variable_evid, state_combination))
+            cached_values[state_combination] = self.reduce(states, inplace=False).values
+        return cached_values
+
+    def sample(self, size, parent_values=np.empty(0)):
+        """
+        Draws random sample for the variable given its parent values
+        """
+        states = range(self.cardinality[0])
+        if len(self.get_evidence()) > 0:
+            cached_values = self._pre_compute_reduce()
+            weights = list(map(lambda t: cached_values[tuple(t)], parent_values.T))
+            return sample_discrete(states, weights)
+        else:
+            return sample_discrete(states, self.values, size)
 
     def copy(self):
         """
@@ -463,7 +484,7 @@ class TabularCPD(DiscreteFactor):
                 return self.get_values()
 
     def get_evidence(self):
-        return self.variables[:0:-1]
+        return self.variables[1:]
 
 # Commenting out because not used anywhere for now and not implemented in a very good way.
 # class TreeCPD(nx.DiGraph):

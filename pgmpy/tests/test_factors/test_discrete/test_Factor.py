@@ -71,6 +71,12 @@ class TestFactorMethods(unittest.TestCase):
         self.phi9 = DiscreteFactor([self.var1, self.var3], [3, 2], [3, 2, 4, 5, 9, 8])
         self.phi10 = DiscreteFactor([self.var3], [2], [3, 6])
 
+    def test_pmf(self):
+        self.assertEqual(0, self.phi1.pmf([0, 0, 0]))
+        self.assertEqual(11, self.phi1.pmf([1, 2, 1]))
+        with self.assertRaises(ValueError):
+            self.phi1.pmf([1,0])
+
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ['x1', 'x2', 'x3'])
         self.assertListEqual(self.phi1.scope(), ['x1', 'x2', 'x3'])
