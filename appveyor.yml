@@ -30,6 +30,8 @@ install:
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
   - "pip --version"
+
+build_script:
   - "%CMD_IN_ENV% pip install numpy scipy pandas nose mock wrapt"
   - "%CMD_IN_ENV% pip install pyparsing"
   - "%CMD_IN_ENV% python setup.py develop"
