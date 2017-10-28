@@ -23,7 +23,7 @@ matrix:
   fast_finish: True
 
 install:
-  - "powershell ./build_tools/appveyor/install.ps1"
+  - "powershell ./continous_integration/appveyor/install.ps1"
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python -m pip install -U pip"
   # Check that we have the expected version and architecture for Python
