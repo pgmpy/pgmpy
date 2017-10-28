@@ -33,7 +33,6 @@ install:
   - "%CMD_IN_ENV% pip install numpy scipy pandas nose mock wrapt"
   - "%CMD_IN_ENV% pip install pyparsing"
   - "%CMD_IN_ENV% python setup.py develop"
-  - set "GIT_DIR=%cd%"
 
 test_script:
   # Excluding test_sampling because it's failing on windows. #755
