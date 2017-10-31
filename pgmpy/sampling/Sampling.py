@@ -227,7 +227,7 @@ class BayesianModelSampling(Inference):
                         # only update weights when not all parents are observed
                         parent_values = np.vstack([sampled[i] for i in parents])
                         for i in range(size):
-                            sampled['_weight'][i] *= pdf(
+                            sampled['_weight'][i] *= prob_func(
                                 evidence_dict[node],
                                 *(parent_values[:, i]))
                 else:
