@@ -219,7 +219,10 @@ class TabularCPD(DiscreteFactor):
         """
         Draws random sample for the variable given its parent values
         """
-        states = range(self.cardinality[0])
+        if self.state_names is None:
+            states = range(self.cardinality[0])
+        else:
+            states = self.state_names
         if len(self.get_evidence()) > 0:
             cached_values = self._pre_compute_reduce()
             weights = list(map(lambda t: cached_values[tuple(t)], parent_values.T))
