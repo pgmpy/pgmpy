@@ -183,6 +183,7 @@ function DownloadMiniconda ($python_version, $architecture) {
     }
     $url = $MINICONDA_URL + $filename
     $filepath = Download $filename $url
+    ren $filepath Miniconda.exe 
     return $filepath
 }
 
