@@ -169,7 +169,13 @@ function InstallPip ($python_home) {
 }
 
 
-function DownloadMiniconda ($python_version, $platform_suffix) {
+function DownloadMiniconda ($python_version, $architecture) {
+    if ($architecture -eq "32"){
+        $platform_suffix = "x86"
+    } else {
+        $platform_suffix = "x86_64
+    }
+
     if ($python_version -eq "3.4") {
         $filename = "Miniconda3-3.5.5-Windows-" + $platform_suffix + ".exe"
     } else {
@@ -222,6 +228,7 @@ function InstallMinicondaPip ($python_home) {
 }
 
 function main () {
+    DownloadMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     InstallMinicondaPip $env:PYTHON
 }
