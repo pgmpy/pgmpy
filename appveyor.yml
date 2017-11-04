@@ -31,10 +31,11 @@ install:
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
   - "pip --version"
 
-build_script:
-  - "%CMD_IN_ENV% conda install -r requirements.txt"
-  - "%CMD_IN_ENV% pip freeze"
-  - "%CMD_IN_ENV% python setup.py develop"
+build_script: 
+  - conda config --set always_yes yes
+  - conda install -r requirements.txt
+  - pip freeze
+  - python setup.py develop"
 
 test_script:
   # Excluding test_sampling because it's failing on windows. #755
