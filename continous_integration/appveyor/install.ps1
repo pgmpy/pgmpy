@@ -173,7 +173,7 @@ function DownloadMiniconda ($python_version, $architecture) {
     if ($architecture -eq "32"){
         $platform_suffix = "x86"
     } else {
-        $platform_suffix = "x86_64
+        $platform_suffix = "x86_64"
     }
 
     if ($python_version -eq "3.4") {
