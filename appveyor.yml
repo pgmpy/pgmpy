@@ -1,34 +1,96 @@
-skip_tags: true
-clone_depth: 50
+# With infos from
+# http://tjelvarolsson.com/blog/how-to-continuously-test-your-python-code-on-windows-using-appveyor/
+# https://packaging.python.org/en/latest/appveyor/
+# https://github.com/rmcgibbo/python-appveyor-conda-example
 
-os: Visual Studio 2015
+# Backslashes in quotes need to be escaped: \ -> "\\"
+
+matrix:
+  fast_finish: true     # immediately finish build once one of the jobs fails.
 
 environment:
-  matrix:
-    - PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "x86_64"
-    - PYTHON_VERSION: "3.4"
-      PYTHON_ARCH: "x86_64"
-    - PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "x86_64"
+  global:
+    # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
+    # /E:ON and /V:ON options are not enabled in the batch script intepreter
+    # See: http://stackoverflow.com/a/13751649/163740
+    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\ci\\run_with_env.cmd"
+    clone_folder: C:\projects\pgmpy
 
+  matrix:
+
+    - CONDA_ROOT: "C:\\Miniconda3_64"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "35"
+      CONDA_NPY: "112"
+
+    - CONDA_ROOT: "C:\\Miniconda3_64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "27"
+      CONDA_NPY: "110"
+
+# We always use a 64-bit machine, but can build x86 distributions
+# with the PYTHON_ARCH variable (which is used by CMD_IN_ENV).
 platform:
     - x64
 
-build_script:
-  - ps: Start-FileDownload "https://repo.continuum.io/miniconda/Miniconda$env:PY_MAJOR_VER-latest-Windows-$env:PYTHON_ARCH.exe" C:\Miniconda.exe; echo "Finished downloading miniconda"
-  - cmd: C:\Miniconda.exe /S /D=C:\Py
-  - SET PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
-  - conda config --set always_yes yes
-  - conda update conda --quiet
-  - conda install numpy scipy pandas pip nose mock wrapt --quiet
-  - pip install pyparsing
-  - python setup.py develop
-  - set "GIT_DIR=%cd%"
+# all our python builds have to happen in tests_script...
+build: false
+
+install:
+  # cancel older builds for the same PR
+  - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
+        https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
+        Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
+        throw "There are newer queued builds for this pull request, failing early." }
+
+  # this installs the appropriate Miniconda (Py2/Py3, 32/64 bit)
+  # updates conda & installs: conda-build jinja2 anaconda-client
+  - powershell .\ci\appveyor\install.ps1
+  - SET PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%PATH%
+  - echo "install"
+  - cd
+  - ls -ltr
+
+  # this can conflict with git
+  - cmd: rmdir C:\cygwin /s /q
+
+  # install our build environment
+  - cmd: conda config --set show_channel_urls true --set always_yes true --set changeps1 false
+  - cmd: conda update -q conda
+  - cmd: conda config --set ssl_verify false
+
+  # add the pandas channel *before* defaults to have defaults take priority
+  - cmd: conda config --add channels conda-forge
+  - cmd: conda config --add channels pandas
+  - cmd: conda config --remove channels defaults
+  - cmd: conda config --add channels defaults
+
+  # this is now the downloaded conda...
+  - cmd: conda info -a
+
+  # create our env
+  - cmd: conda create -n pgmpy python=%PYTHON_VERSION%
+  - cmd: activate pgmpy
+  - cmd: echo "installing requirements from %REQ%"
+  - cmd: conda install -n pgmpy --file=requirements.txt
+  - cmd: conda update numpy scipy
+  - cmd: conda install nose mock
+  - cmd: conda list -n pgmpy
+  - cmd: echo "installing requirements from %REQ% - done"
+
+  # add some pip only reqs to the env
+  - cmd: echo "installing requirements from %REQ%"
+  - cmd: pip install pyparsing==2.2
+
+  # build em using the local source checkout in the correct windows env
+  - cmd: python setup.py install
 
 test_script:
-  # Excluding test_sampling because it's failing on windows. #755
-  - nosetests -v --exclude=test_sampling
+  # tests
+  - cmd: activate pgmpy
+  - cmd: nosetests -v --exclude=test_sampling
 
 notifications:
   - provider: Webhook
