@@ -33,6 +33,7 @@ install:
 
 build_script:
   - "%CMD_IN_ENV% pip install -r requirements.txt"
+  - "%CMD_IN_ENV% pip freeze"
   - "%CMD_IN_ENV% python setup.py develop"
 
 test_script:
