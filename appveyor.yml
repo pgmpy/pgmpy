@@ -20,7 +20,7 @@ environment:
       PYTHON_ARCH: "64"
 
 matrix:
-  fast_finish: False
+  fast_finish: True
 
 install:
   - "powershell ./continous_integration/appveyor/install.ps1"
