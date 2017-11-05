@@ -549,7 +549,10 @@ class MarkovModel(UndirectedGraph):
             clique_potential = DiscreteFactor(node, var_card, np.ones(np.product(var_card)))
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
-            clique_potential *= factor_product(*clique_factors)
+            # Checking if there's clique_factors, to handle the case when clique_factors
+            # is empty, otherwise factor_product with throw an error [ref #889]
+            if clique_factors:
+                clique_potential *= factor_product(*clique_factors)
             clique_trees.add_factors(clique_potential)
 
         if not all(is_used.values()):
