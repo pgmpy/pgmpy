@@ -112,6 +112,37 @@ class TestDirectedGraphCreation(unittest.TestCase):
         self.graph.add_edge('H', 'G')
         self.assertEqual(sorted(['A', 'H']), sorted(self.graph.get_roots()))
 
+    def test_get_descendents(self):
+        self.graph.add_edges_from([('A', 'B'), ('C', 'B'), ('B', 'D'),
+                                   ('C', 'E'), ('E', 'F')])
+        topo_nodes_c = self.graph.get_descendents(node='C')
+        self.assertEqual(sorted(topo_nodes_c), ['B', 'D', 'E', 'F'])
+        self.assertTrue(topo_nodes_c.index('B') < topo_nodes_c.index('D'))
+        self.assertTrue(topo_nodes_c.index('E') < topo_nodes_c.index('F'))
+
+        topo_nodes_a = self.graph.get_descendents(node='A')
+        self.assertEqual(sorted(topo_nodes_a), ['B', 'D'])
+        self.assertTrue(topo_nodes_a.index('B') < topo_nodes_a.index('D'))
+
+    def test_get_descendents_edge_case(self):
+        # Testing the case when multiple paths lead to some common variable
+        self.graph.add_edges_from([('A', 'B'), ('C', 'B'), ('C', 'E'),
+                                   ('B', 'D'), ('E', 'F'), ('D', 'G'),
+                                   ('F', 'H'), ('G', 'H')])
+        topo_nodes_c = self.graph.get_descendents(node='C')
+        self.assertEqual(sorted(topo_nodes_c), ['B', 'D', 'E', 'F', 'G', 'H'])
+        self.assertTrue(topo_nodes_c.index('B') < topo_nodes_c.index('D'))
+        self.assertTrue(topo_nodes_c.index('D') < topo_nodes_c.index('G'))
+        self.assertTrue(topo_nodes_c.index('G') < topo_nodes_c.index('H'))
+        self.assertTrue(topo_nodes_c.index('E') < topo_nodes_c.index('F'))
+        self.assertTrue(topo_nodes_c.index('F') < topo_nodes_c.index('H'))
+
+        topo_nodes_a = self.graph.get_descendents(node='A')
+        self.assertEqual(sorted(topo_nodes_a), ['B', 'D', 'G', 'H'])
+        self.assertTrue(topo_nodes_a.index('B') < topo_nodes_a.index('D'))
+        self.assertTrue(topo_nodes_a.index('D') < topo_nodes_a.index('G'))
+        self.assertTrue(topo_nodes_a.index('G') < topo_nodes_a.index('H'))
+
     def tearDown(self):
         del self.graph
 
