@@ -40,10 +40,7 @@ class VariableElimination(Inference):
 
         # Dealing with the case when variables is not provided.
         if not variables:
-            all_factors = []
-            for factor_li in self.factors.values():
-                all_factors.extend(factor_li)
-            return set(all_factors)
+            return {}
 
         eliminated_variables = set()
         working_factors = {node: {factor for factor in self.factors[node]}
