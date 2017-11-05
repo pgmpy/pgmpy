@@ -11,7 +11,7 @@ before_install:
     - free -m
     - df -h
     - ulimit -a
-install: source continous_integration/install.sh
+install: source ci/travis/install.sh
 script: nosetests --with-coverage --cover-package=pgmpy
 after_success:
     codecov
