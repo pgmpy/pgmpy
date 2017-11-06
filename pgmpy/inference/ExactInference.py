@@ -171,6 +171,9 @@ class VariableElimination(Inference):
         """
         Computes the MAP Query over the variables given the evidence.
 
+        Note: When multiple variables are passed, it returns the map_query for each
+        of them individually.
+
         Parameters
         ----------
         variables: list
@@ -195,8 +198,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
-        elimination_variables = set(self.variables) - set(evidence.keys()) if evidence else set()
-        final_distribution = self._variable_elimination(elimination_variables, 'maximize',
+        # TODO:Check the note in docstring. Change that behavior to return the joint MAP
+        final_distribution = self._variable_elimination(variables, 'marginalize',
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
         # To handle the case when no argument is passed then
@@ -661,6 +664,9 @@ class BeliefPropagation(Inference):
         """
         MAP Query method using belief propagation.
 
+        Note: When multiple variables are passed, it returns the map_query for each
+        of them individually.
+
         Parameters
         ----------
         variables: list
@@ -696,8 +702,29 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.map_query(variables=['J', 'Q'],
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
-        # If no variables are specified then run the MAP query for all the variables present in the model
-        if variables is None:
+        # TODO:Check the note in docstring. Change that behavior to return the joint MAP
+        if not variables:
             variables = set(self.variables)
 
-        return self._query(variables=variables, operation='maximize', evidence=evidence)
+        final_distribution = self._query(variables=variables, operation='marginalize', evidence=evidence)
+
+        # To handle the case when no argument is passed then
+        # _variable_elimination returns a dict.
+        if isinstance(final_distribution, dict):
+            final_distribution = final_distribution.values()
+        distribution = factor_product(*final_distribution)
+        argmax = np.argmax(distribution.values)
+        assignment = distribution.assignment([argmax])[0]
+
+        map_query_results = {}
+        for var_assignment in assignment:
+            var, value = var_assignment
+            map_query_results[var] = value
+
+        if not variables:
+            return map_query_results
+        else:
+            return_dict = {}
+            for var in variables:
+                return_dict[var] = map_query_results[var]
+            return return_dict
