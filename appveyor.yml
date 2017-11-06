@@ -75,7 +75,7 @@ install:
   - cmd: activate pgmpy
   - cmd: echo "installing requirements from %REQ%"
   - cmd: conda install -n pgmpy --file=requirements.txt
-  - cmd: conda update numpy scipy
+  - cmd: conda update scipy
   - cmd: conda install nose mock
   - cmd: conda list -n pgmpy
   - cmd: echo "installing requirements from %REQ% - done"
