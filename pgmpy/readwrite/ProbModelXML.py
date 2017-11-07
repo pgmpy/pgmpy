@@ -1030,7 +1030,9 @@ class ProbModelXMLReader(object):
         >>> reader.get_model()
         """
         if self.probnet.get('type') == "BayesianNetwork":
-            model = BayesianModel(self.probnet['edges'].keys())
+            model = BayesianModel()
+            model.add_nodes_from(self.probnet['Variables'].keys())
+            model.add_edges_from(self.probnet['edges'].keys())
 
             tabular_cpds = []
             cpds = self.probnet['Potentials']
@@ -1051,7 +1053,6 @@ class ProbModelXMLReader(object):
             for var in variables:
                 for prop_name, prop_value in self.probnet['Variables'][var].items():
                     model.node[var][prop_name] = prop_value
-
             edges = model.edges()
             for edge in edges:
                 for prop_name, prop_value in self.probnet['edges'][edge].items():
