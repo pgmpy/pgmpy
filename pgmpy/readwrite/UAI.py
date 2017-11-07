@@ -218,7 +218,9 @@ class UAIReader(object):
         >>> reader.get_model()
         """
         if self.network_type == 'BAYES':
-            model = BayesianModel(self.edges)
+            model = BayesianModel()
+            model.add_nodes_from(self.variables)
+            model.add_edges_from(self.edges)
 
             tabular_cpds = []
             for cpd in self.tables:

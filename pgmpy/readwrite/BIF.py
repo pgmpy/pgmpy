@@ -284,9 +284,10 @@ class BIFReader(object):
         <pgmpy.models.BayesianModel.BayesianModel object at 0x7f20af154320>
         """
         try:
-            model = BayesianModel(self.variable_edges)
-            model.name = self.network_name
+            model = BayesianModel()
             model.add_nodes_from(self.variable_names)
+            model.add_edges_from(self.variable_edges)
+            model.name = self.network_name
 
             tabular_cpds = []
             for var in sorted(self.variable_cpds.keys()):
