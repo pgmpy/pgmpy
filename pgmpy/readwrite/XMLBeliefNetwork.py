@@ -186,7 +186,9 @@ class XBNReader(object):
         """
         Returns an instance of Bayesian Model.
         """
-        model = BayesianModel(self.edges)
+        model = BayesianModel()
+        model.add_nodes_from(self.variables)
+        model.add_edges_from(self.edges)
         model.name = self.model_name
 
         tabular_cpds = []

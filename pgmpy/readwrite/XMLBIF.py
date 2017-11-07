@@ -177,7 +177,9 @@ class XMLBIFReader(object):
         return variable_property
 
     def get_model(self):
-        model = BayesianModel(self.get_edges())
+        model = BayesianModel()
+        model.add_nodes_from(self.variables)
+        model.add_edges_from(self.edge_list)
         model.name = self.network_name
 
         tabular_cpds = []
