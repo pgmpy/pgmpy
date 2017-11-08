@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as np_test
+from scipy.stats import expon
 
 from pgmpy.inference import VariableElimination
 from pgmpy.inference import BeliefPropagation
@@ -8,6 +9,7 @@ from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.models import JunctionTree
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.extern.six.moves import range
 
 
@@ -126,6 +128,18 @@ class TestVariableElimination(unittest.TestCase):
     def test_induced_width(self):
         result_width = self.bayesian_inference.induced_width(['G', 'Q', 'A', 'J', 'L', 'R'])
         self.assertEqual(2, result_width)
+
+    def test_query_continuous_factor(self):
+        model = BayesianModel([('x1', 'y')])
+        model.add_cpds(
+            ContinuousFactor(['y', 'x1'],
+                             lambda y, x1: expon.pdf(y - x1, scale=2)),
+            ContinuousFactor(['x1'],
+                             lambda x: expon.pdf(x, scale=3))
+        )
+        inferencer = VariableElimination(model)
+        result = inferencer.query(['y'])
+        self.assertGreater(result['y'].pdf(3), 0)
 
     def tearDown(self):
         del self.bayesian_inference

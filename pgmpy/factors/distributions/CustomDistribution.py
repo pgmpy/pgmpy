@@ -295,7 +295,10 @@ class CustomDistribution(BaseDistribution):
         0.24197072451914328
         """
         if len(variables) == 0:
-            raise ValueError("Shouldn't be calling marginalize over no variable.")
+            if inplace:
+                return
+            else:
+                return self.copy()
 
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type iterable, "
