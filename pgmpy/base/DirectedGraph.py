@@ -315,3 +315,27 @@ class DirectedGraph(nx.DiGraph):
         ['A', 'E']
         """
         return [node for node, in_degree in self.in_degree().items() if in_degree == 0]
+
+    def get_descendents(self, node):
+        """
+        Returns a list of nodes which are descendents of the given node in topological order.
+
+        Parameters
+        ----------
+        node: hashable object
+            The node whose descendents needs to be returned.
+
+        Returns
+        -------
+        all descendents: list
+            Returns a list of all the descendents of the node.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> graph = DirectedGraph([('A', 'B'), ('C', 'B'), ('B', 'D'), ('C', 'E'), ('E', 'F')])
+        >>> graph.get_descendents(node='C')
+        ['B', 'D', 'E', 'F']
+        """
+        descendants = nx.descendants(self, node)
+        return nx.topological_sort(self, nbunch=descendants)
