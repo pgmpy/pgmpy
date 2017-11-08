@@ -204,7 +204,7 @@ class BayesianModelSampling(Inference):
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
-        types = [(var_name, 'int') for var_name in self.topological_order]
+        types = [(var_name, 'float') for var_name in self.topological_order]
         types.append(('_weight', 'float'))
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled['_weight'] = np.ones(size)
@@ -238,7 +238,7 @@ class BayesianModelSampling(Inference):
                     sampled[node] = evidence_dict[node]
                     # do not need to update weight, because all sample will have the same weight
                 else:
-                    sampled[node] = cpd.sample(size)
+                    sampled[node] = cpd.sample(size, np.empty(0))
 
         return _return_samples(return_type, sampled)
 
