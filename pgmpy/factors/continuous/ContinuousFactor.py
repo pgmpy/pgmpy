@@ -67,8 +67,8 @@ class ContinuousFactor(BaseFactor):
                 distribution=pdf)
 
         else:
-            raise ValueError("pdf: Expected type: str or function, ",
-                             "Got: {instance}".format(instance=type(variables)))
+            raise ValueError("pdf: Expected type: str, CustomDistribution or function, ",
+                             "Got: {instance}".format(instance=type(pdf)))
 
     @property
     def pdf(self):
