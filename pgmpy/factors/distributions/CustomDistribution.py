@@ -374,10 +374,9 @@ class CustomDistribution(BaseDistribution):
             return phi
 
     def is_valid_cpd(self):
-        tol = 0.01
         return np.isclose(
-                          integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables], opts={'epsabs': tol})[0], 
-                          1, atol=tol)
+                          integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables], opts={'epsabs': 0.01})[0], 
+                          1, atol=0.011)
 
     def _operate(self, other, operation, inplace=True):
         """
