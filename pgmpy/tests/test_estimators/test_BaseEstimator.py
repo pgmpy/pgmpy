@@ -22,16 +22,16 @@ class TestBaseEstimator(unittest.TestCase):
     def test_state_count(self):
         e = BaseEstimator(self.d1)
         self.assertEqual(e.state_counts('A').values.tolist(), [[2], [1]])
-        self.assertEqual(e.state_counts('C', ['A', 'B']).values.tolist(),
+        self.assertEqual(e.state_counts('C', parents=('A', 'B')).values.tolist(),
                          [[0., 0., 1., 0.], [1., 1., 0., 0.]])
 
     def test_missing_data(self):
         e = BaseEstimator(self.d2, state_names={'C': [0, 1]}, complete_samples_only=False)
         self.assertEqual(e.state_counts('A', complete_samples_only=True).values.tolist(), [[0], [0]])
         self.assertEqual(e.state_counts('A').values.tolist(), [[1], [1]])
-        self.assertEqual(e.state_counts('C', parents=['A', 'B'], complete_samples_only=True).values.tolist(),
+        self.assertEqual(e.state_counts('C', parents=('A', 'B'), complete_samples_only=True).values.tolist(),
                          [[0, 0, 0, 0], [0, 0, 0, 0]])
-        self.assertEqual(e.state_counts('C', parents=['A', 'B']).values.tolist(),
+        self.assertEqual(e.state_counts('C', parents=('A', 'B')).values.tolist(),
                          [[0, 0, 0, 0], [1, 0, 0, 0]])
 
     def test_test_conditional_independence(self):

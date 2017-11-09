@@ -44,7 +44,7 @@ class K2Score(StructureScore):
 
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
-        state_counts = self.state_counts(variable, parents)
+        state_counts = self.state_counts(variable, tuple(parents))
 
         score = 0
         for parents_state in state_counts:  # iterate over df columns (only 1 if no parents)

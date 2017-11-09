@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from warnings import warn
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -54,7 +55,8 @@ class BaseEstimator(object):
         states = sorted(list(self.data.ix[:, variable].dropna().unique()))
         return states
 
-    def state_counts(self, variable, parents=[], complete_samples_only=None):
+    @lru_cache(maxsize=2056)
+    def state_counts(self, variable, parents=tuple(), complete_samples_only=None):
         """
         Return counts how often each state of 'variable' occured in the data.
         If a list of parents is provided, counting is done conditionally
@@ -104,12 +106,11 @@ class BaseEstimator(object):
         c1  2.0  0.0
         c2  0.0  1.0
         """
-
         # default for how to deal with missing data can be set in class constructor
         if complete_samples_only is None:
             complete_samples_only = self.complete_samples_only
         # ignores either any row containing NaN, or only those where the variable or its parents is NaN
-        data = self.data.dropna() if complete_samples_only else self.data.dropna(subset=[variable] + parents)
+        data = self.data.dropna() if complete_samples_only else self.data.dropna(subset=(variable,) + parents)
 
         if not parents:
             # count how often each state of 'variable' occured
@@ -332,7 +333,7 @@ class ParameterEstimator(BaseEstimator):
         """
 
         parents = sorted(self.model.get_parents(variable))
-        return super(ParameterEstimator, self).state_counts(variable, parents=parents, **kwargs)
+        return super(ParameterEstimator, self).state_counts(variable, parents=tuple(parents), **kwargs)
 
     def get_parameters(self):
         pass

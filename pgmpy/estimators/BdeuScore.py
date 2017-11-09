@@ -50,7 +50,7 @@ class BdeuScore(StructureScore):
 
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
-        state_counts = self.state_counts(variable, parents)
+        state_counts = self.state_counts(variable, tuple(parents))
         num_parents_states = float(len(state_counts.columns))
 
         score = 0
