@@ -9,7 +9,7 @@ from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 from pgmpy.extern.six.moves import map, range
-from pgmpy.sampling import _return_samples
+from pgmpy.sampling import _return_samples, _map_to_state_name
 
 
 State = namedtuple('State', ['var', 'state'])
@@ -29,6 +29,7 @@ class BayesianModelSampling(Inference):
     --------------
     forward_sample(size)
     """
+
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
             raise TypeError("Model expected type: BayesianModel, got type: ", type(model))
@@ -87,6 +88,7 @@ class BayesianModelSampling(Inference):
                 weights = cpd.values
             sampled[node] = sample_discrete(states, weights, size)
 
+        sampled = _map_to_state_name(self.model, sampled)
         return _return_samples(return_type, sampled)
 
     def pre_compute_reduce(self, variable):
@@ -158,6 +160,7 @@ class BayesianModelSampling(Inference):
 
             i += len(_sampled)
 
+        sampled = _map_to_state_name(self.model, sampled)
         return _return_samples(return_type, sampled)
 
     def likelihood_weighted_sample(self, evidence=None, size=1, return_type="dataframe"):
@@ -230,6 +233,7 @@ class BayesianModelSampling(Inference):
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
+        sampled = _map_to_state_name(self.model, sampled)
         return _return_samples(return_type, sampled)
 
 
@@ -268,7 +272,9 @@ class GibbsSampling(MarkovChain):
     1      0    0
     2      1    1
     """
+
     def __init__(self, model=None):
+        self.model = model
         super(GibbsSampling, self).__init__()
         if isinstance(model, BayesianModel):
             self._get_kernel_from_bayesian_model(model)
@@ -388,6 +394,7 @@ class GibbsSampling(MarkovChain):
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = np.array([st for var, st in self.state])
 
+        sampled = _map_to_state_name(self.model, sampled)
         return _return_samples(return_type, sampled)
 
     def generate_sample(self, start_state=None, size=1):
