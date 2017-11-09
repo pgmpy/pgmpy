@@ -1,5 +1,7 @@
 import numpy as np
+from numpy import random
 from scipy import integrate
+from scipy.special import logit
 
 from pgmpy.factors.distributions import BaseDistribution
 
@@ -374,9 +376,12 @@ class CustomDistribution(BaseDistribution):
             return phi
 
     def is_valid_cpd(self):
-        return np.isclose(
-                          integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables], opts={'epsabs': 0.01})[0], 
-                          1, atol=0.011)
+        random.seed(2017)
+        evidences = logit(random.rand(len(self.variables) - 1))
+        phi = lambda x: self.pdf(x, *evidences)
+        tol = 0.01
+        return np.isclose(integrate.quad(phi, -np.inf, np.inf, epsabs=tol)[0],
+                          1, atol=tol)
 
     def _operate(self, other, operation, inplace=True):
         """
