@@ -74,8 +74,8 @@ class Inference(object):
                 if isinstance(cpd, TabularCPD):
                     self.cardinality[node] = cpd.variable_card
                     cpd = cpd.to_factor()
-                for var in cpd.scope():
-                    self.factors[var].append(cpd)
+                    for var in cpd.scope():
+                        self.factors[var].append(cpd)
 
         elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
             self.cardinality = model.get_cardinality()
