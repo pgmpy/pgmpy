@@ -58,7 +58,7 @@ class BaseEstimator(object):
         states = sorted(list(self.data.ix[:, variable].dropna().unique()))
         return states
 
-    @lru_cache(maxsize=2056)
+    @lru_cache(maxsize=4096)
     def state_counts(self, variable, parents=tuple(), complete_samples_only=None):
         """
         Return counts how often each state of 'variable' occured in the data.

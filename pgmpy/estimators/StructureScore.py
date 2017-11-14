@@ -67,7 +67,7 @@ class StructureScore(BaseEstimator):
 
         score = 0
         for node in model.nodes():
-            score += self.local_score(node, model.predecessors(node))
+            score += self.local_score(node, tuple(model.predecessors(node)))
         score += self.structure_prior(model)
         return score
 

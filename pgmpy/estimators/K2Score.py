@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 from math import lgamma
+try:
+    from functools import lru_cache
+except ImportError:
+    from pgmpy.extern import lru_cache
 
 from pgmpy.estimators import StructureScore
 
@@ -38,6 +42,7 @@ class K2Score(StructureScore):
         """
         super(K2Score, self).__init__(data, **kwargs)
 
+    @lru_cache(maxsize=4096)
     def local_score(self, variable, parents):
         "Computes a score that measures how much a \
         given variable is \"influenced\" by a given list of potential parents."

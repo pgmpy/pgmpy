@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from itertools import permutations
+from warnings import warn
 
 import networkx as nx
 
@@ -63,7 +64,7 @@ class HillClimbSearch(StructureEstimator):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if max_indegree is None or len(new_parents) <= max_indegree:
-                        score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
+                        score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
                         yield(operation, score_delta)
 
         for (X, Y) in model.edges():  # (2) remove single edge
@@ -72,7 +73,7 @@ class HillClimbSearch(StructureEstimator):
                 old_parents = model.get_parents(Y)
                 new_parents = old_parents[:]
                 new_parents.remove(X)
-                score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
+                score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
                 yield(operation, score_delta)
 
         for (X, Y) in model.edges():  # (3) flip single edge
@@ -87,13 +88,13 @@ class HillClimbSearch(StructureEstimator):
                     new_Y_parents = old_Y_parents[:]
                     new_Y_parents.remove(X)
                     if max_indegree is None or len(new_X_parents) <= max_indegree:
-                        score_delta = (local_score(X, new_X_parents) +
-                                       local_score(Y, new_Y_parents) -
-                                       local_score(X, old_X_parents) -
-                                       local_score(Y, old_Y_parents))
+                        score_delta = (local_score(X, tuple(new_X_parents)) +
+                                       local_score(Y, tuple(new_Y_parents)) -
+                                       local_score(X, tuple(old_X_parents)) -
+                                       local_score(Y, tuple(old_Y_parents)))
                         yield(operation, score_delta)
 
-    def estimate(self, start=None, tabu_length=0, max_indegree=None):
+    def estimate(self, start=None, tabu_length=0, max_indegree=None, epsilon=1e-8, max_iter=1000):
         """
         Performs local hill climb search to estimates the `BayesianModel` structure
         that has optimal score, according to the scoring method supplied in the constructor.
@@ -104,13 +105,22 @@ class HillClimbSearch(StructureEstimator):
         ----------
         start: BayesianModel instance
             The starting point for the local search. By default a completely disconnected network is used.
+
         tabu_length: int
             If provided, the last `tabu_length` graph modifications cannot be reversed
             during the search procedure. This serves to enforce a wider exploration
             of the search space. Default value: 100.
+
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
+
+        epsilon: float
+            When the change in the score is smaller than epsilon, the structure is returned.
+
+        max_iter: int
+            The maximum number of iterations to run the convergence for. If the score 
+            doesn't converge withing max_iter returns the structure learned till that point.
 
         Returns
         -------
@@ -136,7 +146,6 @@ class HillClimbSearch(StructureEstimator):
         >>> est.estimate(max_indegree=1).edges()
         [('J', 'A'), ('B', 'J')]
         """
-        epsilon = 1e-8
         nodes = self.state_names.keys()
         if start is None:
             start = BayesianModel()
@@ -147,7 +156,7 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        while True:
+        for _ in range(max_iter):
             best_score_delta = 0
             best_operation = None
 
@@ -157,7 +166,7 @@ class HillClimbSearch(StructureEstimator):
                     best_score_delta = score_delta
 
             if best_operation is None or best_score_delta < epsilon:
-                break
+                return current_model
             elif best_operation[0] == '+':
                 current_model.add_edge(*best_operation[1])
                 tabu_list = ([('-', best_operation[1])] + tabu_list)[:tabu_length]
@@ -170,4 +179,5 @@ class HillClimbSearch(StructureEstimator):
                 current_model.add_edge(Y, X)
                 tabu_list = ([best_operation] + tabu_list)[:tabu_length]
 
+        warn("Couldn't converge. Returning results after {n_iter} iterations".format(n_iter=max_iter))
         return current_model
