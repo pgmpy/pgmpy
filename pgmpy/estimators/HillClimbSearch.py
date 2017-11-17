@@ -1,8 +1,12 @@
 #!/usr/bin/env python
-from itertools import permutations
+from itertools import permutations, chain
 from warnings import warn
 
 import networkx as nx
+from joblib import Parallel, delayed
+
+import numpy as np
+from tqdm import trange
 
 from pgmpy.estimators import StructureEstimator, K2Score
 from pgmpy.models import BayesianModel
@@ -43,7 +47,44 @@ class HillClimbSearch(StructureEstimator):
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
-    def _legal_operations(self, model, tabu_list=[], max_indegree=None):
+    @staticmethod
+    def _temp(arg, model, local_score, tabu_list=[], max_indegree=None):
+        op, X, Y = arg
+        if op == 1:
+            if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
+                if op not in tabu_list:
+                    old_parents = model.get_parents(Y)
+                    new_parents = old_parents + [X]
+                    if max_indegree is None or len(new_parents) <= max_indegree:
+                        score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
+                        return[op, score_delta, X, Y]
+        elif op == -1:
+            if op not in tabu_list:
+                old_parents = model.get_parents(Y)
+                new_parents = old_parents[:]
+                new_parents.remove(X)
+                score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
+                return [op, score_delta, X, Y]
+
+        elif op == 0:
+            new_edges = model.edges() + [(Y, X)]
+            new_edges.remove((X, Y))
+            if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
+                if op not in tabu_list and ('flip', (Y, X)) not in tabu_list:
+                    old_X_parents = model.get_parents(X)
+                    old_Y_parents = model.get_parents(Y)
+                    new_X_parents = old_X_parents + [Y]
+                    new_Y_parents = old_Y_parents[:]
+                    new_Y_parents.remove(X)
+                    if max_indegree is None or len(new_X_parents) <= max_indegree:
+                        score_delta = (local_score(X, tuple(new_X_parents)) +
+                                       local_score(Y, tuple(new_Y_parents)) -
+                                       local_score(X, tuple(old_X_parents)) -
+                                       local_score(Y, tuple(old_Y_parents)))
+                        return [op, score_delta, X, Y]
+        return ['2', '0', X, Y]
+
+    def _legal_operations(self, p, model, tabu_list=[], max_indegree=None):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -56,45 +97,52 @@ class HillClimbSearch(StructureEstimator):
         potential_new_edges = (set(permutations(nodes, 2)) -
                                set(model.edges()) -
                                set([(Y, X) for (X, Y) in model.edges()]))
+        potential_new_edges = map(lambda t: (1, t[0], t[1]), potential_new_edges)
+        edges_del = map(lambda t: (-1, t[0], t[1]), model.edges())
+        edges_flip = map(lambda t: (0, t[0], t[1]), model.edges())
+        scores = p(delayed(self._temp)(i, model, local_score) for i in chain(potential_new_edges, edges_del, edges_flip))
+        scores = np.array(scores)
+        # import pdb; pdb.set_trace()
+        ind = np.argmax(scores[:, 1])
+        return scores[ind, :]
+        # for (X, Y) in potential_new_edges:  # (1) add single edge
+        #     if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
+        #         operation = ('+', (X, Y))
+        #         if operation not in tabu_list:
+        #             old_parents = model.get_parents(Y)
+        #             new_parents = old_parents + [X]
+        #             if max_indegree is None or len(new_parents) <= max_indegree:
+        #                 score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
+        #                 yield(operation, score_delta)
 
-        for (X, Y) in potential_new_edges:  # (1) add single edge
-            if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
-                operation = ('+', (X, Y))
-                if operation not in tabu_list:
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
-                    if max_indegree is None or len(new_parents) <= max_indegree:
-                        score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
-                        yield(operation, score_delta)
+        # for (X, Y) in model.edges():  # (2) remove single edge
+        #     operation = ('-', (X, Y))
+        #     if operation not in tabu_list:
+        #         old_parents = model.get_parents(Y)
+        #         new_parents = old_parents[:]
+        #         new_parents.remove(X)
+        #         score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
+        #         yield(operation, score_delta)
 
-        for (X, Y) in model.edges():  # (2) remove single edge
-            operation = ('-', (X, Y))
-            if operation not in tabu_list:
-                old_parents = model.get_parents(Y)
-                new_parents = old_parents[:]
-                new_parents.remove(X)
-                score_delta = local_score(Y, tuple(new_parents)) - local_score(Y, tuple(old_parents))
-                yield(operation, score_delta)
+        # for (X, Y) in model.edges():  # (3) flip single edge
+        #     new_edges = model.edges() + [(Y, X)]
+        #     new_edges.remove((X, Y))
+        #     if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
+        #         operation = ('flip', (X, Y))
+        #         if operation not in tabu_list and ('flip', (Y, X)) not in tabu_list:
+        #             old_X_parents = model.get_parents(X)
+        #             old_Y_parents = model.get_parents(Y)
+        #             new_X_parents = old_X_parents + [Y]
+        #             new_Y_parents = old_Y_parents[:]
+        #             new_Y_parents.remove(X)
+        #             if max_indegree is None or len(new_X_parents) <= max_indegree:
+        #                 score_delta = (local_score(X, tuple(new_X_parents)) +
+        #                                local_score(Y, tuple(new_Y_parents)) -
+        #                                local_score(X, tuple(old_X_parents)) -
+        #                                local_score(Y, tuple(old_Y_parents)))
+        #                 yield(operation, score_delta)
 
-        for (X, Y) in model.edges():  # (3) flip single edge
-            new_edges = model.edges() + [(Y, X)]
-            new_edges.remove((X, Y))
-            if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
-                operation = ('flip', (X, Y))
-                if operation not in tabu_list and ('flip', (Y, X)) not in tabu_list:
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = old_Y_parents[:]
-                    new_Y_parents.remove(X)
-                    if max_indegree is None or len(new_X_parents) <= max_indegree:
-                        score_delta = (local_score(X, tuple(new_X_parents)) +
-                                       local_score(Y, tuple(new_Y_parents)) -
-                                       local_score(X, tuple(old_X_parents)) -
-                                       local_score(Y, tuple(old_Y_parents)))
-                        yield(operation, score_delta)
-
-    def estimate(self, start=None, tabu_length=0, max_indegree=None, epsilon=1e-8, max_iter=1000):
+    def estimate(self, start=None, tabu_length=0, max_indegree=None, epsilon=1e-6, max_iter=1000):
         """
         Performs local hill climb search to estimates the `BayesianModel` structure
         that has optimal score, according to the scoring method supplied in the constructor.
@@ -156,14 +204,20 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        for _ in range(max_iter):
+        p = Parallel(n_jobs=-1, backend='threading')
+        op_dict = {'1': '+', '-1': '-', '0': 'flip'}
+        for _ in trange(max_iter):
             best_score_delta = 0
             best_operation = None
 
-            for operation, score_delta in self._legal_operations(current_model, tabu_list, max_indegree):
-                if score_delta > best_score_delta:
-                    best_operation = operation
-                    best_score_delta = score_delta
+            # for operation, score_delta in self._legal_operations(current_model, tabu_list, max_indegree):
+            #     if score_delta > best_score_delta:
+            #         best_operation = operation
+            #         best_score_delta = score_delta
+
+            r = self._legal_operations(p, current_model, tabu_list, max_indegree)
+            best_operation = (op_dict[r[0]], (r[2], r[3]))
+            best_score_delta = float(r[1])
 
             if best_operation is None or best_score_delta < epsilon:
                 return current_model

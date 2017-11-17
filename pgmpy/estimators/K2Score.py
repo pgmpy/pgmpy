@@ -41,8 +41,8 @@ class K2Score(StructureScore):
         http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
         """
         super(K2Score, self).__init__(data, **kwargs)
-
-    @lru_cache(maxsize=4096)
+    
+    @lru_cache(maxsize=2048)
     def local_score(self, variable, parents):
         "Computes a score that measures how much a \
         given variable is \"influenced\" by a given list of potential parents."
