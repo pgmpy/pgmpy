@@ -43,3 +43,6 @@ class BaseDistribution(object):
         pass
     """
     pass
+
+class BaseConditionalDistribution(object):
+    pass
