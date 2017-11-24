@@ -299,7 +299,7 @@ class ContinuousFactor(BaseFactor):
             return phi
 
     def is_valid_cpd(self):
-        return self.distribution.is_valid_cpd()        
+        return self.distribution.is_valid_cpd()
 
     def _operate(self, other, operation, inplace=True):
         """

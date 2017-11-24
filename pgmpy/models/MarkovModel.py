@@ -181,7 +181,6 @@ class MarkovModel(UndirectedGraph):
         else:
             return self.factors
 
-
     def remove_factors(self, *factors):
         """
         Removes the given factors from the added factors.

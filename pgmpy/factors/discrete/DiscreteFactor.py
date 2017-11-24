@@ -712,8 +712,8 @@ class DiscreteFactor(BaseFactor):
 
     def is_valid_cpd(self):
         return np.allclose(self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten('C'),
-                            np.ones(np.product(self.cardinality[:0:-1])),
-                            atol=0.01)
+                           np.ones(np.product(self.cardinality[:0:-1])),
+                           atol=0.01)
 
     def __str__(self):
         return self._str(phi_or_p='phi', tablefmt='grid')
