@@ -24,7 +24,7 @@ setup(
     ],
     long_description="https://github.com/pgmpy/pgmpy/blob/dev/README.md",
     install_requires=[
-        "networkx >= 1.11",
+        "networkx >= 1.11,<2",
         "scipy >= 0.18.1",
         "numpy >= 1.11.3",
     ],
