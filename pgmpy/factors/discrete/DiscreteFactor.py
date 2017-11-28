@@ -379,6 +379,12 @@ class DiscreteFactor(BaseFactor):
         if not inplace:
             return phi
 
+    def pmf(self, states):
+        'The probability mass function of this discrete factor'
+        if len(states) != len(self.variables):
+            raise ValueError('All variables have to be assigned.')
+        return self.values[tuple(states)]
+
     @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """

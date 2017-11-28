@@ -96,6 +96,11 @@ class CustomDistribution(BaseDistribution):
     def variables(self, value):
         self._variables = value
 
+    def sample(self, size, evidence):
+        # TODO: infer the percentage point function (PPF) from PDF and use PPF and random
+        # number generator to draw samples
+        raise NotImplementedError('Work in progress, maybe you can help us out :D')
+
     def assignment(self, *x):
         """
         Returns the probability value of the PDF at the given parameter values.

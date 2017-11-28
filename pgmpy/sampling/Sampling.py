@@ -5,6 +5,8 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
@@ -90,6 +92,7 @@ class BayesianModelSampling(Inference):
         return _return_samples(return_type, sampled)
 
     def pre_compute_reduce(self, variable):
+        # TODO remove this method after all sampling methods support continuous factors
         variable_cpd = self.model.get_cpds(variable)
         variable_evid = variable_cpd.variables[:0:-1]
         cached_values = {}
@@ -201,34 +204,41 @@ class BayesianModelSampling(Inference):
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
-        types = [(var_name, 'int') for var_name in self.topological_order]
+        types = [(var_name, 'float') for var_name in self.topological_order]
         types.append(('_weight', 'float'))
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled['_weight'] = np.ones(size)
-        evidence_dict = {var: st for var, st in evidence}
+        evidence_dict = {var: st for var, st in evidence} if evidence else {}
 
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
-            evidence = cpd.get_evidence()
+            if isinstance(cpd, DiscreteFactor):
+                prob_func = cpd.pmf
+            elif isinstance(cpd, ContinuousFactor):
+                prob_func = cpd.pdf
+            parents = cpd.get_evidence()
 
-            if evidence:
-                evidence_values = np.vstack([sampled[i] for i in evidence])
-                cached_values = self.pre_compute_reduce(node)
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence_values.T))
+            if parents:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled['_weight'][i] *= weights[i][evidence_dict[node]]
+                    parent_set = set(parents)
+                    if len(parent_set - set(sampled.dtype.names)) == 0 and \
+                        len(parent_set - set(evidence_dict.keys())) > 0:
+                        # only update weights when not all parents are observed
+                        parent_values = np.vstack([sampled[i] for i in parents])
+                        for i in range(size):
+                            sampled['_weight'][i] *= prob_func(
+                                evidence_dict[node],
+                                *(parent_values[:, i]))
                 else:
-                    sampled[node] = sample_discrete(states, weights)
+                    parent_values = np.vstack([sampled[i] for i in parents])
+                    sampled[node] = cpd.sample(size, parent_values)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled['_weight'][i] *= cpd.values[evidence_dict[node]]
+                    # do not need to update weight, because all sample will have the same weight
                 else:
-                    sampled[node] = sample_discrete(states, cpd.values, size)
+                    sampled[node] = cpd.sample(size, np.empty(0))
 
         return _return_samples(return_type, sampled)
 
