@@ -5,6 +5,7 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.base import DirectedGraph
 
 
@@ -362,7 +363,7 @@ class DynamicBayesianNetwork(DirectedGraph):
          <TabularCPD representing P(('I', 1):2 | ('I', 0):2) at 0x7ff7f27e6668>]
         """
         for cpd in cpds:
-            if not isinstance(cpd, TabularCPD):
+            if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
                 raise ValueError('cpd should be an instance of TabularCPD')
 
             if set(cpd.variables) - set(cpd.variables).intersection(set(
