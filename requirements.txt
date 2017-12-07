@@ -5,3 +5,4 @@ pandas
 pyparsing
 wrapt
 joblib==0.11
+tqdm==4.19.4
