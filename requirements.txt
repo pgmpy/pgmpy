@@ -4,3 +4,4 @@ scipy
 pandas
 pyparsing
 wrapt
+joblib==0.11
