@@ -7,7 +7,7 @@ import numpy as np
 from numpy import linalg
 from scipy.stats import multivariate_normal
 
-from pgmpy.factors.distributions import BaseDistribution, BaseConditionalDistribution
+from pgmpy.factors import BaseDistribution 
 
 
 # TODO: Add support for non linear Gaussian Distributions

@@ -5,9 +5,9 @@ from __future__ import division
 import numpy as np
 
 from pgmpy.extern import six
-from pgmpy.factors.base import BaseFactor
+from pgmpy.factors import BaseFactor
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.factors.distributions import GaussianDistribution
+from pgmpy.factors.continuous.distributions import GaussianDistribution
 
 
 class LinearGaussianCPD(ContinuousFactor):

@@ -7,7 +7,6 @@ from .MarkovChain import MarkovChain
 from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
 from .NoisyOrModel import NoisyOrModel
-from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
@@ -17,5 +16,4 @@ __all__ = ['BayesianModel',
            'ClusterGraph',
            'DynamicBayesianNetwork',
            'MarkovChain',
-           'NaiveBayes',
-           'LinearGaussianBayesianNetwork']
+           'NaiveBayes']

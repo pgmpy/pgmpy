@@ -3,7 +3,7 @@ import unittest
 import numpy.testing as np_test
 
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.factors.distributions import GaussianDistribution
+from pgmpy.factors.continuous.distributions import GaussianDistribution
 
 
 class TestContinuousFactorInit(unittest.TestCase):

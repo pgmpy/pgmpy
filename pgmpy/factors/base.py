@@ -3,6 +3,9 @@ from abc import abstractmethod
 from pgmpy.extern.six.moves import reduce
 
 
+class BaseDistribution(object):
+    pass
+
 class BaseFactor(object):
     """
     Base class for Factors. Any Factor implementation should inherit this class.

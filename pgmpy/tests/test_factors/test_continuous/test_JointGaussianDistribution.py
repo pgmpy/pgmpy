@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors.distributions import GaussianDistribution as BGD
+from pgmpy.factors.continuous.distributions import GaussianDistribution as BGD
 from pgmpy.extern import six
 
 

@@ -1,5 +1,5 @@
 from pgmpy.factors.base import BaseFactor
-from pgmpy.factors.distributions import BaseDistribution
+from pgmpy.factors import BaseDistribution
 from pgmpy.extern import six
 
 class ContinuousFactor(BaseFactor):
@@ -57,7 +57,7 @@ class ContinuousFactor(BaseFactor):
                 elif 'cov' not in kwargs:
                     raise ValueError("If dist='gaussian', the argument `cov` must be passed.")
                 else:
-                    from pgmpy.factors.distributions import GaussianDistribution
+                    from pgmpy.factors.continuous.distributions import GaussianDistribution
                     self.dist = GaussianDistribution(variables=variables,
                                                      mean=kwargs['mean'],
                                                      cov=kwargs['cov'])
