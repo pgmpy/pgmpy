@@ -125,6 +125,10 @@ class TestDirectedGraphMoralization(unittest.TestCase):
         self.assertListEqual(sorted(self.graph.get_parents('grade')),
                              ['diff', 'intel'])
 
+    def test_get_children(self):
+        self.assertListEqual(sorted(self.graph.get_children('diff')),
+                             ['grade'])
+        
     def test_moralize(self):
         moral_graph = self.graph.moralize()
         self.assertListEqual(hf.recursive_sorted(moral_graph.edges()),

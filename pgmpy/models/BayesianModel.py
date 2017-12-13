@@ -997,3 +997,27 @@ class BayesianModel(DirectedGraph):
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
+
+    def markov_blanket(self, node):
+        """                                                       
+        Returns a markov blanket for a random variable.           
+                                                                  
+        Markov blanket is set of parents, children and the children's parents.                                       
+                                                                  
+        Examples                                                  
+        --------                                                  
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+                               ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
+        >>> bayes_model.markov_blanket('y') 
+        ['s', 'w', 'x', 'u', 'z', 'v']
+        """
+        children = self.get_children(node)
+        parents = self.get_parents(node)
+        blanket_nodes = list(children) + list(parents)
+        for child_node in children:
+            blanket_nodes = blanket_nodes + list(self.get_parents(child_node))
+        blanket_nodes = list(set(blanket_nodes))
+        blanket_nodes.remove(node)
+        return blanket_nodes

@@ -177,13 +177,18 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 
     def test_get_immoralities(self):
+        G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+                           ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
+        self.assertEqual(set(G.markov_blanket('y')), set(['s', 'w', 'x', 'u', 'z', 'v']))
+
+    def test_markov_blanet(self):
         G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
         self.assertEqual(G.get_immoralities(), {('w', 'x'), ('w', 'z')})
         G1 = BayesianModel([('x', 'y'), ('z', 'y'), ('z', 'x'), ('w', 'y')])
         self.assertEqual(G1.get_immoralities(), {('w', 'x'), ('w', 'z')})
         G2 = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y'), ('w', 'x')])
         self.assertEqual(G2.get_immoralities(), {('w', 'z')})
-
+        
     def test_is_iequivalent(self):
         G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
         self.assertRaises(TypeError, G.is_iequivalent, MarkovModel())
