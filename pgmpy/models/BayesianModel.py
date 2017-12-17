@@ -383,11 +383,11 @@ class BayesianModel(DirectedGraph):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
-                    raise ValueError("CPD associated with {node} doesn't have "
-                                     "proper parents associated with it.".format(node=node))
+                    raise ValueError("CPD associated with %s doesn't have "
+                                        "proper parents associated with it." % node)
                 if not cpd.is_valid_cpd():
-                    raise ValueError("Sum or integral of conditional probabilites for node {node}"
-                                     " is not equal to 1.".format(node=node))
+                    raise ValueError('Sum or integral of conditional probabilites for node %s'
+                                        ' is not equal to 1.' % node)
         return True
 
     def _get_ancestors_of(self, obs_nodes_list):
@@ -1022,3 +1022,4 @@ class BayesianModel(DirectedGraph):
         blanket_nodes = set(blanket_nodes)
         blanket_nodes.remove(node)
         return list(blanket_nodes)
+    
