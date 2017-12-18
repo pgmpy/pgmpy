@@ -176,6 +176,11 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G1.is_imap(JPD))
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 
+    def test_markov_blanet(self):
+        G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+                           ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
+        self.assertEqual(set(G.get_markov_blanket('y')), set(['s', 'w', 'x', 'u', 'z', 'v']))
+
     def test_get_immoralities(self):
         G = BayesianModel([('x', 'y'), ('z', 'y'), ('x', 'z'), ('w', 'y')])
         self.assertEqual(G.get_immoralities(), {('w', 'x'), ('w', 'z')})

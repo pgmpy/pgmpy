@@ -320,10 +320,12 @@ class DirectedGraph(nx.DiGraph):
         """
         Returns a list of children of node.
         Throws an error if the node is not present in the graph.
+        
         Parameters
         ----------
         node: string, int or any hashable python object.
             The node whose children would be returned.
+
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
