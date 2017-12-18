@@ -315,3 +315,25 @@ class DirectedGraph(nx.DiGraph):
         ['A', 'E']
         """
         return [node for node, in_degree in self.in_degree().items() if in_degree == 0]
+    
+    def get_children(self, node):
+        """
+        Returns a list of children of node.
+
+        Throws an error if the node is not present in the graph.
+
+        Parameters
+        ----------
+        node: string, int or any hashable python object.
+            The node whose children would be returned.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> g = DirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'), 
+                                      ('B', 'E'), ('B', 'F'), ('E', 'G')])
+        >>> g.children(node='B')
+        ['D', 'E', 'F']
+        """
+        return self.successors(node)
+    
