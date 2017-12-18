@@ -131,5 +131,9 @@ class TestDirectedGraphMoralization(unittest.TestCase):
                              [['diff', 'grade'], ['diff', 'intel'],
                               ['grade', 'intel']])
 
+    def test_get_children(self):
+        self.assertListEqual(sorted(self.graph.get_children('diff')),
+                             ['grade'])
+
     def tearDown(self):
         del self.graph
