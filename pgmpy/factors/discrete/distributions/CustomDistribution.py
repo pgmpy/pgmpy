@@ -5,68 +5,33 @@ from collections import namedtuple
 
 import numpy as np
 
-from pgmpy.factors.base import BaseFactor
+from pgmpy.factors import BaseDistribution
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
 from pgmpy.utils import StateNameInit, StateNameDecorator
 
-State = namedtuple('State', ['var', 'state'])
 
-
-class DiscreteFactor(BaseDistribution):
+class CustomDistribution(BaseDistribution):
     """
-    Base class for DiscreteFactor.
-
-    Public Methods
-    --------------
-    assignment(index)
-    get_cardinality(variable)
-    marginalize([variable_list])
-    normalize()
-    product(*DiscreteFactor)
-    reduce([variable_values_list])
+    Base class for Custom Discrete Distribution.
     """
-
     @StateNameInit()
-    def __init__(self, variables, cardinality, values):
+    def __init__(self, variables, cardinality, values, evidence=[], evidence_card=[]):
         """
-        Initialize a factor class.
-
-        Defined above, we have the following mapping from variable
-        assignments to the index of the row vector in the value field:
-
-        +-----+-----+-----+-------------------+
-        |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_0| x3_0|     phi.value(0)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_0| x3_1|     phi.value(1)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_1| x3_0|     phi.value(2)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_1| x3_1|     phi.value(3)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_0| x3_0|     phi.value(4)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_0| x3_1|     phi.value(5)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_1| x3_0|     phi.value(6)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_1| x3_1|     phi.value(7)  |
-        +-----+-----+-----+-------------------+
+        Initialize a Custom Discrete Distribution.
 
         Parameters
         ----------
         variables: list, array-like
-            List of variables in the scope of the factor.
+            List of variables in the scope of the distribution.
 
         cardinality: list, array_like
             List of cardinalities of each variable. `cardinality` array must have a value
             corresponding to each variable in `variables`.
 
         values: list, array_like
-            List of values of factor.
+            List of values of distribution.
             A DiscreteFactor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
             `variables` cycle through their values the fastest.
@@ -107,22 +72,24 @@ class DiscreteFactor(BaseDistribution):
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
 
-        self.variables = list(variables)
-        self.cardinality = np.array(cardinality, dtype=int)
-        self.values = values.reshape(self.cardinality)
+        self.variables = np.atleast_1d(variables)
+        self.cardinality = np.atleast_1d(cardinality)
+        self.evidence = np.atleast_1d(evidence)
+        self.evidence_card = np.atleast_1d(evidence_card)
+        self.values = values.reshape(np.append(self.cardinality, self.evidence_card))
 
     def scope(self):
         """
-        Returns the scope of the factor.
+        Returns the scope of the distribution.
 
         Returns
         -------
-        list: List of variable names in the scope of the factor.
+        list: List of variable names in the scope of the distribution.
 
         Examples
         --------
-        >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
+        >>> from pgmpy.factors.discrete import CustomDistribution
+        >>> phi = CustomDistribution(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12))
         >>> phi.scope()
         ['x1', 'x2', 'x3']
         """
@@ -130,12 +97,12 @@ class DiscreteFactor(BaseDistribution):
 
     def get_cardinality(self, variables):
         """
-        Returns cardinality of a given variable
+        Returns cardinality of variables.
 
         Parameters
         ----------
         variables: list, array-like
-                A list of variable names.
+                A list of variable names whose cardinalities are returned.
 
         Returns
         -------
@@ -143,8 +110,8 @@ class DiscreteFactor(BaseDistribution):
 
         Examples
         --------
-        >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> from pgmpy.factors.discrete import CustomDistribution 
+        >>> phi = CustomDistribution(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.get_cardinality(['x1'])
         {'x1': 2}
         >>> phi.get_cardinality(['x1', 'x2'])
@@ -196,39 +163,9 @@ class DiscreteFactor(BaseDistribution):
 
         return [[(key, val) for key, val in zip(self.variables, values)] for values in assignments]
 
-    def identity_factor(self):
-        """
-        Returns the identity factor.
-
-        Def: The identity factor of a factor has the same scope and cardinality as the original factor,
-             but the values for all the assignments is 1. When the identity factor is multiplied with
-             the factor it returns the factor itself.
-
-        Returns
-        -------
-        DiscreteFactor: The identity factor.
-
-        Examples
-        --------
-        >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi_identity = phi.identity_factor()
-        >>> phi_identity.variables
-        ['x1', 'x2', 'x3']
-        >>> phi_identity.values
-        array([[[ 1.,  1.],
-                [ 1.,  1.],
-                [ 1.,  1.]],
-
-               [[ 1.,  1.],
-                [ 1.,  1.],
-                [ 1.,  1.]]])
-        """
-        return DiscreteFactor(self.variables, self.cardinality, np.ones(self.values.size))
-
     def marginalize(self, variables, inplace=True):
         """
-        Modifies the factor with marginalized values.
+        Modifies the distribution with marginalized values.
 
         Parameters
         ----------

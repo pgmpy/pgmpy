@@ -1,4 +1,4 @@
-from .DiscreteFactor import State, DiscreteFactor
+from .DiscreteFactor import DiscreteFactor, State
 from .CPD import TabularCPD
 from .JointProbabilityDistribution import JointProbabilityDistribution
 
