@@ -417,6 +417,14 @@ class TestFactorMethods(unittest.TestCase):
                                6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi3 == phi4)
 
+    def test__repr__(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        self.assertEqual(repr(phi), "<DiscreteFactor representing phi(x1:2, x2:2) at {address}>"
+                         .format(address=hex(id(phi))))
+
+        self.assertEqual(repr(self.phi7), "<DiscreteFactor representing phi(x1:3, ('x2', 1):2) at {address}>"
+                         .format(address=hex(id(self.phi7))))
+
     def test_hash(self):
         phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = DiscreteFactor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
