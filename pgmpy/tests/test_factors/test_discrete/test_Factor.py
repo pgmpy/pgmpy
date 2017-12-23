@@ -270,6 +270,45 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod, expected_factor)
         self.assertEqual(prod.variables, expected_factor.variables)
 
+    def test_sum(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
+        summation = phi.sum(phi1, inplace=False)
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x4', 'x3'], [2, 2, 2, 2],
+                                         [0, 2, 1, 3, 1, 3, 2, 4, 2, 4, 3, 5, 3, 5, 4, 6])
+        self.assertEqual(summation, expected_factor)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3', 'x4'])
+
+        phi = DiscreteFactor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = DiscreteFactor(['x2', 'x3'], [2, 2], range(4))
+        summation = phi.sum(phi1, inplace=False)
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2],
+                                         [0, 1, 3, 4, 2, 3, 5, 6, 4, 5, 7, 8])
+        self.assertEqual(summation, expected_factor)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3'])
+
+        phi7_copy = self.phi7
+        phi7_copy.sum(self.phi8, inplace=True)
+        expected_factor = DiscreteFactor([self.var1, self.var2, self.var3], [3, 2, 2],
+                                         [5, 4, 7, 8, 6, 5, 10, 11, 11, 10, 13, 14])
+        self.assertEqual(expected_factor, phi7_copy)
+        self.assertEqual(phi7_copy.variables, [self.var1, self.var2, self.var3])
+
+    def test_factor_add(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
+        summation = phi + phi1
+        phi3 = DiscreteFactor(['x1','x2','x4','x3'], [2, 2, 2, 2],
+                              [0, 2, 1, 3, 1, 3, 2, 4, 2, 4, 3, 5, 3, 5, 4, 6])
+        self.assertEqual(phi3, summation)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3', 'x4'])
+
+        self.phi9 = self.phi9 + self.phi10
+        expected_factor = DiscreteFactor([self.var1, self.var3], [3, 2],
+                                         [6, 8, 7, 11, 12, 14])
+        self.assertEqual(self.phi9, expected_factor)
+        self.assertEqual(self.phi9.variables, [self.var1, self.var3])
+
     def test_product(self):
         phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
         phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
