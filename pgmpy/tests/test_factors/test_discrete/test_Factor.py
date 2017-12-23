@@ -440,6 +440,12 @@ class TestFactorMethods(unittest.TestCase):
     def test_maximize_typeerror(self):
         self.assertRaises(TypeError, self.phi.maximize, 'x1')
 
+    def test_copy(self):
+        phi_copy = self.phi.copy()
+        self.assertListEqual(self.phi.variables, phi_copy.variables)
+        np_test.assert_array_equal(self.phi.cardinality, phi_copy.cardinality)
+        np_test.assert_array_equal(self.phi.values, phi_copy.values)
+
     def tearDown(self):
         del self.phi
         del self.phi1
