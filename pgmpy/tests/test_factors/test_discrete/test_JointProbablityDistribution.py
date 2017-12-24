@@ -92,6 +92,14 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertEqual(self.jpd1.get_independencies([('x3', 0)]), independencies1)
         self.assertEqual(self.jpd2.get_independencies([('x3', 0)]), Independencies())
 
+    def test_copy(self):
+        jpd_copy = self.jpd.copy()
+        self.assertListEqual(jpd_copy.variables, self.jpd.variables)
+        np_test.assert_array_equal(self.jpd.cardinality, jpd_copy.cardinality)
+        np_test.assert_array_equal(self.jpd.values, jpd_copy.values)
+        jpd_copy.variables[1] = 'y'
+        self.assertFalse(jpd_copy.variables == self.jpd.variables)
+
     def test_minimal_imap(self):
         bm = self.jpd1.minimal_imap(order=['x1', 'x2', 'x3'])
         self.assertEqual(sorted(bm.edges()), sorted([('x1', 'x3'), ('x2', 'x3')]))
