@@ -230,5 +230,12 @@ class TestTabularCPDMethods(unittest.TestCase):
                                        np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
                                                  [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
 
+    def test_get_evidence(self):
+        cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+                             [0.1, 0.1],
+                             [0.8, 0.8]],evidence=['evil'], evidence_card=[2])
+        cpd_evidence = cpd.get_evidence()
+        self.assertListEqual(cpd_evidence, ['evil'])
+
     def tearDown(self):
         del self.cpd
