@@ -196,6 +196,16 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.cpd.reduce([('diff', 1)])
         np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
+    def test_to_factor(self):
+        cpd = TabularCPD('grade', 3, [[0.1, 0.1],
+                                      [0.1, 0.1],
+                                      [0.8, 0.8]],evidence=['evi1'], evidence_card=[2])
+        factor = cpd.to_factor()
+        expected_factor = DiscreteFactor(['grade','evi1'], [3, 2], [[0.1, 0.1],
+                                                                    [0.1, 0.1],
+                                                                    [0.8, 0.8]])
+        self.assertEqual(factor, expected_factor)
+
     def test_get_values(self):
         np_test.assert_array_equal(self.cpd.get_values(),
                                    np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
