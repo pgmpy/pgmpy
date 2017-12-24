@@ -131,6 +131,12 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         self.assertTrue(jpd.is_imap(G1))
         self.assertRaises(TypeError, jpd.is_imap, MarkovModel())
 
+    def test_to_factor(self):
+        prob = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        factor = prob.to_factor()
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12)/12)
+        self.assertEqual(factor, expected_factor)
+
     def tearDown(self):
         del self.jpd
         del self.jpd1
