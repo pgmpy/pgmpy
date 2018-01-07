@@ -1030,3 +1030,25 @@ class BayesianModel(DirectedGraph):
         blanket_nodes = set(blanket_nodes)
         blanket_nodes.remove(node)
         return list(blanket_nodes)
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            node_cpd_dict_self = {}
+            for i in self.cpds:
+                node_cpd_dict_self[i.variable] = i
+            for i in self.nodes():
+                if i not in node_cpd_dict_self:
+                    node_cpd_dict_self[i] = ''
+            node_cpd_dict_other = {}
+            for i in other.cpds:
+                node_cpd_dict_other[i.variable] = i
+            for i in other.nodes():
+                if i not in node_cpd_dict_other:
+                    node_cpd_dict_other[i] = ''
+            if self.edges() == other.edges() and node_cpd_dict_self == node_cpd_dict_other:
+                return True
+            else:
+                return False
+        else:
+            return False
+            
