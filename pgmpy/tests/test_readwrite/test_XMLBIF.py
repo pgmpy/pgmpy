@@ -54,6 +54,13 @@ TEST_FILE = """<?xml version="1.0"?>
 
 <!-- Variables -->
 <VARIABLE TYPE="nature">
+    <NAME>kid</NAME>
+    <OUTCOME>true</OUTCOME>
+    <OUTCOME>false</OUTCOME>
+    <PROPERTY>position = (100, 165)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
     <NAME>light_on</NAME>
     <OUTCOME>true</OUTCOME>
     <OUTCOME>false</OUTCOME>
@@ -90,6 +97,11 @@ TEST_FILE = """<?xml version="1.0"?>
 
 
 <!-- Probability distributions -->
+<DEFINITION>
+    <FOR>kid</FOR>
+    <TABLE>0.3 0.7 </TABLE>
+</DEFINITION>
+
 <DEFINITION>
     <FOR>light_on</FOR>
     <GIVEN>family_out</GIVEN>
@@ -130,7 +142,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         self.reader = XMLBIFReader(string=TEST_FILE)
 
     def test_get_variables(self):
-        var_expected = ['light_on', 'bowel_problem', 'dog_out',
+        var_expected = ['kid', 'light_on', 'bowel_problem', 'dog_out',
                         'hear_bark', 'family_out']
         self.assertListEqual(self.reader.variables, var_expected)
 
@@ -139,6 +151,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                            'dog_out': ['true', 'false'],
                            'family_out': ['true', 'false'],
                            'hear_bark': ['true', 'false'],
+                           'kid': ['true', 'false'],
                            'light_on': ['true', 'false']}
         states = self.reader.variable_states
         for variable in states_expected:
@@ -150,6 +163,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                             'dog_out': ['bowel_problem', 'family_out'],
                             'family_out': [],
                             'hear_bark': ['dog_out'],
+                            'kid': [],
                             'light_on': ['family_out']}
         parents = self.reader.variable_parents
         for variable in parents_expected:
@@ -173,6 +187,8 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                                                 [0.85]]),
                         'hear_bark': np.array([[0.7, 0.01],
                                                [0.3, 0.99]]),
+                        'kid': np.array([[0.3],
+                                        [0.7]]),
                         'light_on': np.array([[0.6, 0.05],
                                               [0.4, 0.95]])}
         cpd = self.reader.variable_CPD
@@ -185,6 +201,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
                              'dog_out': ['position = (155, 165)'],
                              'family_out': ['position = (112, 69)'],
                              'hear_bark': ['position = (154, 241)'],
+                             'kid': ['position = (100, 165)'],
                              'light_on': ['position = (73, 165)']}
         prop = self.reader.variable_property
         for variable in property_expected:
@@ -206,7 +223,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         self.reader = XMLBIFReader("dog_problem.xml")
 
     def test_get_variables(self):
-        var_expected = ['light_on', 'bowel_problem', 'dog_out',
+        var_expected = ['kid', 'light_on', 'bowel_problem', 'dog_out',
                         'hear_bark', 'family_out']
         self.assertListEqual(self.reader.variables, var_expected)
 
@@ -215,6 +232,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                            'dog_out': ['true', 'false'],
                            'family_out': ['true', 'false'],
                            'hear_bark': ['true', 'false'],
+                           'kid': ['true', 'false'],
                            'light_on': ['true', 'false']}
         states = self.reader.variable_states
         for variable in states_expected:
@@ -226,6 +244,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                             'dog_out': ['bowel_problem', 'family_out'],
                             'family_out': [],
                             'hear_bark': ['dog_out'],
+                            'kid': [],
                             'light_on': ['family_out']}
         parents = self.reader.variable_parents
         for variable in parents_expected:
@@ -249,6 +268,8 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                                                 [0.85]]),
                         'hear_bark': np.array([[0.7, 0.01],
                                                [0.3, 0.99]]),
+                        'kid': np.array([[0.3],
+                                        [0.7]]),
                         'light_on': np.array([[0.6, 0.05],
                                               [0.4, 0.95]])}
         cpd = self.reader.variable_CPD
@@ -261,6 +282,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
                              'dog_out': ['position = (155, 165)'],
                              'family_out': ['position = (112, 69)'],
                              'hear_bark': ['position = (154, 241)'],
+                             'kid': ['position = (100, 165)'],
                              'light_on': ['position = (73, 165)']}
         prop = self.reader.variable_property
         for variable in property_expected:
