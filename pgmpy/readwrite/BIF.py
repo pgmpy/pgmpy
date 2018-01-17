@@ -1,4 +1,5 @@
 import re
+import collections
 from string import Template
 
 import numpy
@@ -466,6 +467,7 @@ $properties}\n""")
         property_tag = {}
         for variable in sorted(variables):
             properties = self.model.node[variable]
+            properties = collections.OrderedDict(sorted(properties.items()))
             property_tag[variable] = []
             for prop, val in properties.items():
                 property_tag[variable].append(str(prop) + " = " + str(val))
