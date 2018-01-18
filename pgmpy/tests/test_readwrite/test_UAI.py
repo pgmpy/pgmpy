@@ -77,11 +77,15 @@ class TestUAIReader(unittest.TestCase):
 class TestUAIWriter(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
+        variables = ['kid', 'bowel-problem', 'dog-out',
+                     'family-out', 'hear-bark', 'light-on']
         edges = [['family-out', 'dog-out'],
                  ['bowel-problem', 'dog-out'],
                  ['family-out', 'light-on'],
                  ['dog-out', 'hear-bark']]
-        cpds = {'bowel-problem': np.array([[0.01],
+        cpds = {'kid': np.array([[0.3],
+                                 [0.7]]),
+                'bowel-problem': np.array([[0.01],
                                            [0.99]]),
                 'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
                                      [0.9, 0.1, 0.3, 0.7]]),
@@ -91,18 +95,23 @@ class TestUAIWriter(unittest.TestCase):
                                        [0.01, 0.99]]),
                 'light-on': np.array([[0.6, 0.4],
                                       [0.05, 0.95]])}
-        states = {'bowel-problem': ['true', 'false'],
+        states = {'kid': ['true', 'false'],
+                  'bowel-problem': ['true', 'false'],
                   'dog-out': ['true', 'false'],
                   'family-out': ['true', 'false'],
                   'hear-bark': ['true', 'false'],
                   'light-on': ['true', 'false']}
-        parents = {'bowel-problem': [],
+        parents = {'kid': [],
+                   'bowel-problem': [],
                    'dog-out': ['bowel-problem', 'family-out'],
                    'family-out': [],
                    'hear-bark': ['dog-out'],
                    'light-on': ['family-out']}
 
-        self.bayesmodel = BayesianModel(edges)
+        self.bayesmodel = BayesianModel()
+        self.bayesmodel.add_nodes_from(variables)
+        self.bayesmodel.add_edges_from(edges)
+
 
         tabular_cpds = []
         for var, values in cpds.items():
@@ -125,7 +134,7 @@ class TestUAIWriter(unittest.TestCase):
         factors = []
         for table in tables:
             variables = table[0]
-            cardinality = [int(domain[var]) for var in variables]
+            cardinality = [int(domain[  var]) for var in variables]
             values = list(map(float, table[1]))
             factor = DiscreteFactor(variables, cardinality, values)
             factors.append(factor)
@@ -134,14 +143,15 @@ class TestUAIWriter(unittest.TestCase):
 
     def test_bayes_model(self):
         self.expected_bayes_file = """BAYES
-5
-2 2 2 2 2
-5
+6
+2 2 2 2 2 2
+6
 1 0
 3 2 0 1
 1 2
 2 1 3
-2 2 4
+1 4
+2 2 5
 
 2
 0.01 0.99
@@ -151,6 +161,8 @@ class TestUAIWriter(unittest.TestCase):
 0.15 0.85
 4
 0.7 0.3 0.01 0.99
+2
+0.3 0.7
 4
 0.6 0.4 0.05 0.95"""
         self.assertEqual(str(self.bayeswriter.__str__()), str(self.expected_bayes_file))
