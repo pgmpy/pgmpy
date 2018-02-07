@@ -22,19 +22,21 @@ class TestBayesianEstimator(unittest.TestCase):
         self.est3 = BayesianEstimator(self.m1, self.d2)
 
     def test_estimate_cpd_dirichlet(self):
-        cpd_A = self.est1.estimate_cpd('A',  prior_type="dirichlet", pseudo_counts=[0, 1])
+        cpd_A = self.est1.estimate_cpd('A',  prior_type="dirichlet", pseudo_counts=[[0], [1]])
         self.assertEqual(cpd_A, TabularCPD('A', 2, [[0.5], [0.5]]))
 
-        cpd_B = self.est1.estimate_cpd('B',  prior_type="dirichlet", pseudo_counts=[9, 3])
+        cpd_B = self.est1.estimate_cpd('B',  prior_type="dirichlet", pseudo_counts=[[9], [3]])
         self.assertEqual(cpd_B, TabularCPD('B', 2, [[11.0/15], [4.0/15]]))
 
-        cpd_C = self.est1.estimate_cpd('C',  prior_type="dirichlet", pseudo_counts=[0.4, 0.6])
+        cpd_C = self.est1.estimate_cpd('C',  prior_type="dirichlet", pseudo_counts=[[0.4, 0.4, 0.4, 0.4],
+                                                                                    [0.6, 0.6, 0.6, 0.6]])
         self.assertEqual(cpd_C, TabularCPD('C', 2, [[0.2, 0.2, 0.7, 0.4],
                                                     [0.8, 0.8, 0.3, 0.6]],
                                            evidence=['A', 'B'], evidence_card=[2, 2]))
 
     def test_estimate_cpd_improper_prior(self):
-        cpd_C = self.est1.estimate_cpd('C',  prior_type="dirichlet", pseudo_counts=[0, 0])
+        cpd_C = self.est1.estimate_cpd('C',  prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0],
+                                                                                    [0, 0, 0, 0]])
         cpd_C_correct = (TabularCPD('C', 2, [[0.0, 0.0, 1.0, np.NaN],
                                              [1.0, 1.0, 0.0, np.NaN]],
                                     evidence=['A', 'B'], evidence_card=[2, 2],
@@ -64,7 +66,8 @@ class TestBayesianEstimator(unittest.TestCase):
         self.assertSetEqual(set(self.est3.get_parameters()), cpds)
 
     def test_get_parameters2(self):
-        pseudo_counts = {'A': [1, 2, 3], 'B': [4, 5], 'C': [6, 7]}
+        pseudo_counts = {'A': [[1], [2], [3]], 'B': [[4], [5]], 'C': [[6, 6, 6, 6, 6, 6],
+                                                                      [7, 7, 7, 7, 7, 7]]}
         cpds = set([self.est3.estimate_cpd('A', prior_type="dirichlet", pseudo_counts=pseudo_counts['A']),
                     self.est3.estimate_cpd('B', prior_type="dirichlet", pseudo_counts=pseudo_counts['B']),
                     self.est3.estimate_cpd('C', prior_type="dirichlet", pseudo_counts=pseudo_counts['C'])])
