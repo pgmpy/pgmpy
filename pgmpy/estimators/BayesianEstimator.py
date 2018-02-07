@@ -27,8 +27,9 @@ class BayesianEstimator(ParameterEstimator):
         prior_type: 'dirichlet', 'BDeu', or 'K2'
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
-                'pseudo_counts' = dirichlet hyperparameters; a dict containing, for each variable, a list
-                 with a "virtual" count for each variable state, that is added to the state counts.
+                'pseudo_counts' = dirichlet hyperparameters; a dict containing, for each variable, a 2-D
+                 array of the shape (node_card, product of parents_card) with a "virtual" count for each 
+                 variable state in the CPD, that is added to the state counts.
                  (lexicographic ordering of states assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
                 must be specified instead of 'pseudo_counts'. This is equivalent to
@@ -65,7 +66,7 @@ class BayesianEstimator(ParameterEstimator):
         for node in self.model.nodes():
             _equivalent_sample_size = equivalent_sample_size[node] if isinstance(equivalent_sample_size, dict) else \
                                       equivalent_sample_size
-            _pseudo_counts = pseudo_counts[node] if isinstance(pseudo_counts, dict) else pseudo_counts
+            _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
 
             cpd = self.estimate_cpd(node,
                                     prior_type=prior_type,
@@ -87,8 +88,9 @@ class BayesianEstimator(ParameterEstimator):
         prior_type: 'dirichlet', 'BDeu', 'K2',
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
-                'pseudo_counts' = dirichlet hyperparameters; a list or dict
-                 with a "virtual" count for each variable state.
+                'pseudo_counts' = dirichlet hyperparameters; 2-D array of shape
+                 (node_card, product of parents_card) with a "virtual" count for 
+                 each variable state in the CPD.
                  The virtual counts are added to the actual state counts found in the data.
                  (if a list is provided, a lexicographic ordering of states is assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
@@ -126,22 +128,23 @@ class BayesianEstimator(ParameterEstimator):
         node_cardinality = len(self.state_names[node])
         parents = sorted(self.model.get_parents(node))
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
+        cpd_shape = (node_cardinality, np.prod(parents_cardinalities, dtype=int))
 
         if prior_type == 'K2':
-            pseudo_counts = [1] * node_cardinality
+            pseudo_counts = np.ones(cpd_shape, dtype=int)
         elif prior_type == 'BDeu':
             alpha = float(equivalent_sample_size) / (node_cardinality * np.prod(parents_cardinalities))
-            pseudo_counts = [alpha] * node_cardinality
+            pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
         elif prior_type == 'dirichlet':
-            if not len(pseudo_counts) == node_cardinality:
-                raise ValueError("'pseudo_counts' should have length {0}".format(node_cardinality))
-            if isinstance(pseudo_counts, dict):
-                pseudo_counts = sorted(pseudo_counts.values())
+            pseudo_counts = np.array(pseudo_counts)
+            if pseudo_counts.shape != cpd_shape:
+                raise ValueError("The shape of pseudo_counts must be: {shape}".format(
+                   shape=str(cpd_shape)))
         else:
             raise ValueError("'prior_type' not specified")
 
         state_counts = self.state_counts(node)
-        bayesian_counts = (state_counts.T + pseudo_counts).T
+        bayesian_counts = state_counts + pseudo_counts
 
         cpd = TabularCPD(node, node_cardinality, np.array(bayesian_counts),
                          evidence=parents,
