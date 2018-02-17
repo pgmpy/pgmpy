@@ -16,10 +16,14 @@ class CustomDistribution(BaseDistribution):
     """
     Base class for Custom Discrete Distribution.
     """
-    @StateNameInit()
+#     @StateNameInit()
     def __init__(self, variables, cardinality, values, evidence=[], evidence_card=[]):
         """
-        Initialize a Custom Discrete Distribution.
+        Initialize a Custom Discrete Distribution. The class doesn't represent a distribution
+        in a true sense as it is also used for DiscreteFactor class. Therefore the values
+        don't have to sum to 1. Designed for handling two use cases, one in case of DiscreteFactor
+        when there is no evidence and TabularCPD in which case there is an evidence in which case
+        it considers a joint distribution over variables and evidence variables.
 
         Parameters
         ----------
@@ -30,11 +34,17 @@ class CustomDistribution(BaseDistribution):
             List of cardinalities of each variable. `cardinality` array must have a value
             corresponding to each variable in `variables`.
 
-        values: list, array_like
+        values: list, array-like
             List of values of distribution.
             A DiscreteFactor's values are stored in a row vector in the value
             using an ordering such that the left-most variables as defined in
             `variables` cycle through their values the fastest.
+
+        evidence: list, array-like
+            List of evidence variables in the distribution.
+
+        evidence_card: list, array-like
+            List of cardinalities of variables in evidence.
 
         Examples
         --------
@@ -65,18 +75,24 @@ class CustomDistribution(BaseDistribution):
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
 
-        if values.size != np.product(cardinality):
+        if values.size != np.product(cardinality) * np.product(evidence_card):
             raise ValueError("Values array must be of size: {size}".format(
-                size=np.product(cardinality)))
+                size=np.product(cardinality)*np.prod(evidence_card)))
 
-        if len(set(variables)) != len(variables):
+        if len(set(variables)) != len(variables) or len(set(evidence)) != len(evidence):
             raise ValueError("Variable names cannot be same")
 
-        self.variables = np.atleast_1d(variables)
-        self.cardinality = np.atleast_1d(cardinality)
+        if set(variables).intersection(set(evidence)):
+            raise ValueError("Same variable can't be in both variables and evidence")
+
+        if len(evidence_card) != len(evidence):
+            raise ValueError("Number of elements in evidence_card must be equal to the number of"
+                             "variables in evidence")
+        self.variables = np.atleast_1d(np.append(variables, evidence))
+        self.cardinality = np.atleast_1d(np.append(cardinality, evidence_card))
         self.evidence = np.atleast_1d(evidence)
         self.evidence_card = np.atleast_1d(evidence_card)
-        self.values = values.reshape(np.append(self.cardinality, self.evidence_card))
+        self.values = values.reshape(self.cardinality)
 
     def scope(self):
         """
@@ -95,7 +111,7 @@ class CustomDistribution(BaseDistribution):
         """
         return self.variables
 
-    def get_cardinality(self, variables):
+    def get_cardinality(self, variables=None):
         """
         Returns cardinality of variables.
 
@@ -123,9 +139,14 @@ class CustomDistribution(BaseDistribution):
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope")
 
-        return {var: self.cardinality[self.variables.index(var)] for var in variables}
+        if variables is None:
+            variables = self.variables
 
-    @StateNameDecorator(argument=None, return_val=True)
+        variables_list = list(self.variables) # Converting just for indexing in next step.
+
+        return {var: self.cardinality[variables_list.index(var)] for var in variables}
+
+#    @StateNameDecorator(argument=None, return_val=True)
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.

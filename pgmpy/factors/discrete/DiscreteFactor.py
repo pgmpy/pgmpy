@@ -54,6 +54,10 @@ class DiscreteFactor(BaseFactor):
             using an ordering such that the left-most variables as defined in
             `variables` cycle through their values the fastest.
 
+        dist: instance of BaseDistribution
+            Instead of passing variables, cardianlity and values, just a distribution
+            can be passed.
+
         Examples
         --------
         >>> import numpy as np
@@ -76,9 +80,12 @@ class DiscreteFactor(BaseFactor):
         +------+------+------+-----------------+
         """
         # TODO: Deal with the case when dist is not None. Also add conditions.
-        self.dist = CustomDistribution(variables=variables,
-                                       cardinality=cardinality,
-                                       values=values)
+        if dist is None:
+            self.dist = CustomDistribution(variables=variables,
+                                           cardinality=cardinality,
+                                           values=values)
+        else:
+            self.dist = dist
 
     def scope(self):
         """
@@ -257,7 +264,7 @@ class DiscreteFactor(BaseFactor):
             DiscreteFactor to be multiplied.
 
         inplace: boolean
-            If inplace=True, modifies the factor itself, else returns a new 
+            If inplace=True, modifies the factor itself, else returns a new
             factor instance.
 
         Returns

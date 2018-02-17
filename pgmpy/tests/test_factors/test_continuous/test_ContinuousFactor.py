@@ -53,7 +53,7 @@ class TestContinuousFactorMethods(unittest.TestCase):
         self.assertEqual(list(marginal_phi.dist.evidence), [])
         np_test.assert_almost_equal(marginal_phi.dist.mean, [[1], [1]])
         np_test.assert_almost_equal(marginal_phi.dist.cov, [[1, 0], [0, 1]])
-        
+
         marginal_phi_c = self.phi_c.marginalize(['X', 'Z'], inplace=False)
         self.assertEqual(list(marginal_phi_c.dist.variables), ['Y'])
         self.assertEqual(list(marginal_phi_c.dist.evidence), [])

@@ -20,15 +20,15 @@ class TestFactorInit(unittest.TestCase):
 
     def test_class_init(self):
         phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-        self.assertEqual(phi.variables, ['x1', 'x2', 'x3'])
-        np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
-        np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
+        self.assertEqual(list(phi.dist.variables), ['x1', 'x2', 'x3'])
+        np_test.assert_array_equal(list(phi.dist.cardinality), np.array([2, 2, 2]))
+        np_test.assert_array_equal(phi.dist.values, np.ones(8).reshape(2, 2, 2))
 
     def test_class_init1(self):
         phi = DiscreteFactor([1, 2, 3], [2, 3, 2], np.arange(12))
-        self.assertEqual(phi.variables, [1, 2, 3])
-        np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
-        np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
+        self.assertEqual(list(phi.dist.variables), [1, 2, 3])
+        np_test.assert_array_equal(list(phi.dist.cardinality), np.array([2, 3, 2]))
+        np_test.assert_array_equal(phi.dist.values, np.arange(12).reshape(2, 3, 2))
 
     def test_class_init_sizeerror(self):
         self.assertRaises(ValueError, DiscreteFactor, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(9))
@@ -54,7 +54,7 @@ class TestFactorMethods(unittest.TestCase):
 
         self.tup1 = ('x1', 'x2')
         self.tup2 = ('x2', 'x3')
-        self.tup3 = ('x3', (1, 'x4'))
+        self.tup3 = ('x3', 'x4')
         self.phi4 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 3, 4], np.random.uniform(3, 10, size=24))
         self.phi5 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24))
 
