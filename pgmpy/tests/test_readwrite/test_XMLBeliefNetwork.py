@@ -56,6 +56,11 @@ class TestXBNReader(unittest.TestCase):
                                 <STATENAME>Present</STATENAME>
                                 <STATENAME>Absent</STATENAME>
                              </VAR>
+                             <VAR NAME="f" TYPE="discrete" XPOS="13440" YPOS="10489">
+                                <DESCRIPTION>(f) Asthma</DESCRIPTION>
+                                <STATENAME>Present</STATENAME>
+                                <STATENAME>Absent</STATENAME>
+                             </VAR>
                           </VARIABLES>
                           <STRUCTURE>
                              <ARC PARENT="a" CHILD="b"/>
@@ -114,6 +119,12 @@ class TestXBNReader(unittest.TestCase):
                                    <DPI INDEXES=" 1 "> 0.6 0.4</DPI>
                                 </DPIS>
                              </DIST>
+                             <DIST TYPE="discrete">
+                                <PRIVATE NAME="f"/>
+                                <DPIS>
+                                   <DPI> 0.3 0.7</DPI>
+                                </DPIS>
+                             </DIST>
                           </DISTRIBUTIONS>
                        </BNMODEL>
                     </ANALYSISNOTEBOOK>"""
@@ -147,8 +158,8 @@ class TestXBNReader(unittest.TestCase):
         self.assertEqual(properties['CREATOR'], "Microsoft Research DTAS")
 
     def test_get_variables(self):
-        self.assertListEqual(sorted(list(self.reader_string.get_variables())), ['a', 'b', 'c', 'd', 'e'])
-        self.assertListEqual(sorted(list(self.reader_file.get_variables())), ['a', 'b', 'c', 'd', 'e'])
+        self.assertListEqual(sorted(list(self.reader_string.get_variables())), ['a', 'b', 'c', 'd', 'e', 'f'])
+        self.assertListEqual(sorted(list(self.reader_file.get_variables())), ['a', 'b', 'c', 'd', 'e', 'f'])
         self.assertEqual(self.reader_string.get_variables()['a']['TYPE'], 'discrete')
         self.assertEqual(self.reader_string.get_variables()['a']['XPOS'], '13495')
         self.assertEqual(self.reader_string.get_variables()['a']['YPOS'], '10465')
@@ -170,6 +181,7 @@ class TestXBNReader(unittest.TestCase):
         self.assertEqual(distribution['a']['TYPE'], 'discrete')
         self.assertListEqual(distribution['b']['CONDSET'], ['a'])
         np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
+        np_test.assert_array_equal(distribution['f']['DPIS'], np.array([[0.3, 0.7]]))
         np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
         np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
         np_test.assert_array_equal(distribution['d']['DPIS'],
@@ -182,6 +194,7 @@ class TestXBNReader(unittest.TestCase):
         self.assertEqual(distribution['a']['TYPE'], 'discrete')
         self.assertListEqual(distribution['b']['CONDSET'], ['a'])
         np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
+        np_test.assert_array_equal(distribution['f']['DPIS'], np.array([[0.3, 0.7]]))
         np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
         np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
         np_test.assert_array_equal(distribution['d']['DPIS'],
@@ -213,6 +226,11 @@ class TestXBNReader(unittest.TestCase):
                                'YPOS': '13240',
                                'XPOS': '17305',
                                'TYPE': 'discrete'},
+                         'f': {'STATES': ['Present', 'Absent'],
+                               'DESCRIPTION': '(f) Asthma',
+                               'YPOS': '10489',
+                               'XPOS': '13440',
+                               'TYPE': 'discrete'},      
                          'd': {'STATES': ['Present', 'Absent'],
                                'DESCRIPTION': '(d) Coma',
                                'YPOS': '12985',
@@ -222,6 +240,8 @@ class TestXBNReader(unittest.TestCase):
                                         [0.2, 0.8]]),
                          'e': np.array([[0.8, 0.2],
                                         [0.6, 0.4]]),
+                         'f': np.array([[0.3],
+                                        [0.7]]),
                          'c': np.array([[0.2, 0.8],
                                         [0.05, 0.95]]),
                          'a': np.array([[0.2],
@@ -257,12 +277,19 @@ class TestXBNWriter(unittest.TestCase):
                        'YPOS': '13240',
                        'XPOS': '17305',
                        'TYPE': 'discrete'},
+                 'f': {'STATES': ['Present', 'Absent'],
+                       'DESCRIPTION': '(f) Asthma',
+                       'YPOS': '10489',
+                       'XPOS': '13440',
+                       'TYPE': 'discrete'},        
                  'd': {'STATES': ['Present', 'Absent'],
                        'DESCRIPTION': '(d) Coma',
                        'YPOS': '12985',
                        'XPOS': '13960',
                        'TYPE': 'discrete'}}
-        model = BayesianModel([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')])
+        model = BayesianModel()
+        model.add_nodes_from(['a', 'b', 'c', 'd', 'e', 'f'])
+        model.add_edges_from([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')])
         cpd_distribution = {'a': {'TYPE': 'discrete',
                                   'DPIS': np.array([[0.2, 0.8]])},
                             'e': {'TYPE': 'discrete',
@@ -270,6 +297,8 @@ class TestXBNWriter(unittest.TestCase):
                                                     [0.6, 0.4]]),
                                   'CONDSET': ['c'],
                                   'CARDINALITY': [2]},
+                            'f': {'TYPE': 'discrete',
+                                  'DPIS': np.array([[0.3, 0.7]])},      
                             'b': {'TYPE': 'discrete',
                                   'DPIS': np.array([[0.8, 0.2],
                                                     [0.2, 0.8]]),
@@ -335,6 +364,11 @@ class TestXBNWriter(unittest.TestCase):
         <STATENAME>Present</STATENAME>
         <STATENAME>Absent</STATENAME>
       </VAR>
+      <VAR NAME="f" TYPE="discrete" XPOS="13440" YPOS="10489">
+        <DESCRIPTION DESCRIPTION="(f) Asthma"/>
+        <STATENAME>Present</STATENAME>
+        <STATENAME>Absent</STATENAME>
+      </VAR>
     </VARIABLES>
     <STRUCTURE>
       <ARC CHILD="b" PARENT="a"/>
@@ -392,6 +426,12 @@ class TestXBNWriter(unittest.TestCase):
         <CONDSET>
           <CONDELEM NAME="c"/>
         </CONDSET>
+      </DIST>
+      <DIST TYPE="discrete">
+        <PRIVATE NAME="f"/>
+        <DPIS>
+          <DPI> 0.3 0.7</DPI>
+        </DPIS>
       </DIST>
     </DISTRIBUTIONS>
   </BNMODEL>

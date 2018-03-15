@@ -180,12 +180,17 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
 class TestBIFWriter(unittest.TestCase):
 
     def setUp(self):
+        variables = ['kid', 'bowel-problem', 'dog-out',
+                     'family-out', 'hear-bark', 'light-on']
+
         edges = [['family-out', 'dog-out'],
                  ['bowel-problem', 'dog-out'],
                  ['family-out', 'light-on'],
                  ['dog-out', 'hear-bark']]
 
-        cpds = {'bowel-problem': np.array([[0.01],
+        cpds = {'kid': np.array([[0.3],
+                                 [0.7]]),
+                'bowel-problem': np.array([[0.01],
                                            [0.99]]),
                 'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
                                      [0.9, 0.1, 0.3, 0.7]]),
@@ -196,25 +201,30 @@ class TestBIFWriter(unittest.TestCase):
                 'light-on': np.array([[0.6, 0.4],
                                       [0.05, 0.95]])}
 
-        states = {'bowel-problem': ['true', 'false'],
+        states = {'kid': ['true', 'false'],
+                  'bowel-problem': ['true', 'false'],
                   'dog-out': ['true', 'false'],
                   'family-out': ['true', 'false'],
                   'hear-bark': ['true', 'false'],
                   'light-on': ['true', 'false']}
 
-        parents = {'bowel-problem': [],
+        parents = {'kid': [],
+                   'bowel-problem': [],
                    'dog-out': ['family-out', 'bowel-problem'],
                    'family-out': [],
                    'hear-bark': ['dog-out'],
                    'light-on': ['family-out']}
 
-        properties = {'bowel-problem': ['position = (335, 99)'],
+        properties = {'kid': ['position = (100, 165)'],
+                      'bowel-problem': ['position = (335, 99)'],
                       'dog-out': ['position = (300, 195)'],
                       'family-out': ['position = (257, 99)'],
                       'hear-bark': ['position = (296, 268)'],
                       'light-on': ['position = (218, 195)']}
 
-        self.model = BayesianModel(edges)
+        self.model = BayesianModel()
+        self.model.add_nodes_from(variables)
+        self.model.add_edges_from(edges)
 
         tabular_cpds = []
         for var in sorted(cpds.keys()):
@@ -239,22 +249,32 @@ class TestBIFWriter(unittest.TestCase):
 variable bowel-problem {
     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
     property position = (335, 99) ;
+    property weight = None ;
 }
 variable dog-out {
     type discrete [ 2 ] { dog-out_0, dog-out_1 };
     property position = (300, 195) ;
+    property weight = None ;
 }
 variable family-out {
     type discrete [ 2 ] { family-out_0, family-out_1 };
     property position = (257, 99) ;
+    property weight = None ;
 }
 variable hear-bark {
     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
     property position = (296, 268) ;
+    property weight = None ;
+}
+variable kid {
+    type discrete [ 2 ] { kid_0, kid_1 };
+    property position = (100, 165) ;
+    property weight = None ;
 }
 variable light-on {
     type discrete [ 2 ] { light-on_0, light-on_1 };
     property position = (218, 195) ;
+    property weight = None ;
 }
 probability ( bowel-problem ) {
     table 0.01, 0.99 ;
@@ -267,6 +287,9 @@ probability ( family-out ) {
 }
 probability ( hear-bark | dog-out ) {
     table 0.7, 0.3, 0.01, 0.99 ;
+}
+probability ( kid ) {
+    table 0.3, 0.7 ;
 }
 probability ( light-on | family-out ) {
     table 0.6, 0.4, 0.05, 0.95 ;
