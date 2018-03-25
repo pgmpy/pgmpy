@@ -167,7 +167,7 @@ class BIFReader(object):
 
     def get_network_name(self):
         """
-        Retruns the name of the network
+        Returns the name of the network
 
         Example
         ---------------

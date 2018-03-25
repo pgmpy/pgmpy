@@ -66,7 +66,7 @@ class BaseDiscretizer(ABCMeta):
     def get_labels(self):
         """
         Returns a list of strings representing the values about
-        which the discretization method calculates the probabilty
+        which the discretization method calculates the probability
         masses.
 
         Default value is the points -
@@ -174,7 +174,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     ----------
     Klugman, S. A., Panjer, H. H. and Willmot, G. E.,
     Loss Models, From Data to Decisions, Fourth Edition,
-    Wiley, section 9.6.5.2 (Method of local monment matching) and
+    Wiley, section 9.6.5.2 (Method of local moment matching) and
     exercise 9.41.
 
     Examples

@@ -54,7 +54,7 @@ class LinearGaussianCPD(BaseFactor):
         evidence_variance: int, float
             The variance of the multivariate gaussian, X = ['x1', 'x2', ..., 'xn']
 
-        evidence: iterable of any hashabale python objects
+        evidence: iterable of any hashable python objects
             An iterable of the parents of the variable. None if there are no parents.
 
         beta (optional): iterable of int or float

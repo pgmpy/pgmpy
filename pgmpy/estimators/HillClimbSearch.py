@@ -53,7 +53,7 @@ class HillClimbSearch(StructureEstimator):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
-        see Koller & Fridman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
+        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
         If a number `max_indegree` is provided, only modifications that keep the number
         of parents for each node below `max_indegree` are considered. A list of
         edges can optionally be passed as `black_list` or `white_list` to exclude those
