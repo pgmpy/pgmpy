@@ -371,7 +371,7 @@ class MarkovChain(object):
     def is_stationarity(self, tolerance=0.2, sample=None):
         """
         Checks if the given markov chain is stationary and checks the steady state
-        probablity values for the state are consistent.
+        probability values for the state are consistent.
 
         Parameters:
         -----------

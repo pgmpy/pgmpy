@@ -44,7 +44,7 @@ class LinearGaussianCPD(BaseFactor):
         variance: int, float
             The variance of the variable defined.
 
-        evidence: iterable of any hashabale python objects
+        evidence: iterable of any hashable python objects
             An iterable of the parents of the variable. None if there are no parents.
 
         Examples

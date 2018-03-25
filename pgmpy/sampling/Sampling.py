@@ -240,7 +240,7 @@ class GibbsSampling(MarkovChain):
     Parameters:
     -----------
     model: BayesianModel or MarkovModel
-        Model from which variables are inherited and transition probabilites computed.
+        Model from which variables are inherited and transition probabilities computed.
 
     Public Methods:
     ---------------

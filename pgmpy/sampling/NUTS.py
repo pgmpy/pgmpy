@@ -264,7 +264,7 @@ class NoUTurnSampler(HamiltonianMCDA):
 
         stepsize: float , defaults to None
             The stepsize for proposing new values of position and momentum in simulate_dynamics
-            If None, then will be choosen suitably
+            If None, then will be chosen suitably
 
         Returns
         -------
@@ -478,14 +478,14 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             state in markov chain.
 
         num_adapt: int
-            The number of interations to run the adaptation of stepsize
+            The number of iterations to run the adaptation of stepsize
 
         num_samples: int
             Number of samples to be generated
 
         stepsize: float , defaults to None
             The stepsize for proposing new values of position and momentum in simulate_dynamics
-            If None, then will be choosen suitably
+            If None, then will be chosen suitably
 
         return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
@@ -563,14 +563,14 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             state in markov chain.
 
         num_adapt: int
-            The number of interations to run the adaptation of stepsize
+            The number of iterations to run the adaptation of stepsize
 
         num_samples: int
             Number of samples to be generated
 
         stepsize: float , defaults to None
             The stepsize for proposing new values of position and momentum in simulate_dynamics
-            If None, then will be choosen suitably
+            If None, then will be chosen suitably
 
         Returns
         -------

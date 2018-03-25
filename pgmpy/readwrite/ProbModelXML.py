@@ -448,7 +448,7 @@ class ProbModelXMLWriter(object):
         Parameters
         ----------
         criteria_dict: dict
-            Dictionary containing Deecision Criteria data.
+            Dictionary containing Decision Criteria data.
             For example: {'effectiveness': {}, 'cost': {}}
 
         Examples
@@ -472,7 +472,7 @@ class ProbModelXMLWriter(object):
             For example: {'role': 'Utility',
                           'Variables': ['D0', 'D1', 'C0', 'C1'],
                           'type': 'Tree/ADD',
-                          'UtilityVaribale': 'U1'}
+                          'UtilityVariable': 'U1'}
         parent_tag: etree Element
             etree element which would contain potential tag
             For example: <Element Potentials at 0x7f315fc44b08>
@@ -570,7 +570,7 @@ class ProbModelXMLWriter(object):
             For example: {'role': 'Utility',
                           'Variables': ['D0', 'D1', 'C0', 'C1'],
                           'type': 'Tree/ADD',
-                          'UtilityVaribale': 'U1'}
+                          'UtilityVariable': 'U1'}
         var: string
             New Element tag which needs to be added to the potential tag.
             For example: 'type'
@@ -944,7 +944,7 @@ class ProbModelXMLReader(object):
                 potential_dict['NumericValue'] = potential.find('NumericValue').text
         else:
             if potential.find('UtilityVariable') is not None:
-                potential_dict['UtilityVaribale'] = potential.find('UtilityVariable').attrib['name']
+                potential_dict['UtilityVariable'] = potential.find('UtilityVariable').attrib['name']
             if len(potential.findall('Variables/Variable')):
                 potential_dict['Variables'] = {}
                 var_list = []

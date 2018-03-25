@@ -10,7 +10,7 @@ from pgmpy.factors.distributions import GaussianDistribution
 
 class LinearGaussianBayesianNetwork(BayesianModel):
     """
-    A Linear Gaussain Bayesian Network is a Bayesian Network, all
+    A Linear Gaussian Bayesian Network is a Bayesian Network, all
     of whose variables are continuous, and where all of the CPDs
     are linear Gaussians.
 

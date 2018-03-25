@@ -72,5 +72,5 @@ class StructureScore(BaseEstimator):
         return score
 
     def structure_prior(self, model):
-        "A (log) prior distribution over models. Currently unused (= uniform)."
+        """A (log) prior distribution over models. Currently unused (= uniform)."""
         return 0

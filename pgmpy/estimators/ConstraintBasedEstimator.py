@@ -185,7 +185,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         """Estimates a BayesianModel from an Independencies()-object or a
         decision function for conditional independencies. This requires that
         the set of independencies admits a faithful representation (e.g. is a
-        set of d-seperation for some BN or is closed under the semi-graphoid
+        set of d-separation for some BN or is closed under the semi-graphoid
         axioms). See `build_skeleton`, `skeleton_to_pdag`, `pdag_to_dag` for
         details.
 
@@ -450,7 +450,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         If an Independencies-instance is passed, the contained IndependenceAssertions
         have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-seperations of some Bayesian network or
+        they are obtained as a set of d-separations of some Bayesian network or
         if the independence assertions are closed under the semi-graphoid axioms.
         Otherwise the procedure may fail to identify the correct structure.
 
