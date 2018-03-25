@@ -21,7 +21,7 @@ class ContinuousFactor(BaseFactor):
         variables: list or array-like
             The variables for wich the distribution is defined.
 
-        pdf: function
+        pdf: function or str
             The probability density function of the distribution.
 
         Examples
@@ -52,7 +52,7 @@ class ContinuousFactor(BaseFactor):
                 self.distribution = GaussianDistribution(
                     variables=variables,
                     mean=kwargs['mean'],
-                    covariance=kwargs['covariance'])
+                    cov=kwargs['covariance'])
             else:
                 raise NotImplementedError("{dist} distribution not supported.",
                                           "Please use CustomDistribution".
