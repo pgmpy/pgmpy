@@ -18,7 +18,7 @@ Basic Examples:
 .. toctree::
    :maxdepth: 3
 
-   Monte Hall Problem <https://github.com/pgmpy/pgmpy/blob/dev/examples/Monty%20Hall%20Problem.ipynb>
+   Monty Hall Problem <https://github.com/pgmpy/pgmpy/blob/dev/examples/Monty%20Hall%20Problem.ipynb>
    Creating a Bayesian Network in pgmpy <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Bayesian%20Network.ipynb>
    Inference in Bayesian Network using Asia model <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Bayesian%20Networks.ipynb>
    Learning from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20from%20data.ipynb>
