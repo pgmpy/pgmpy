@@ -227,7 +227,7 @@ class UAIReader(object):
     def get_model(self):
         """
         Returns an instance of Bayesian Model or Markov Model.
-        Varibles are in the pattern var_0, var_1, var_2 where var_0 is
+        Variables are in the pattern var_0, var_1, var_2 where var_0 is
         0th index variable, var_1 is 1st index variable.
 
         Return

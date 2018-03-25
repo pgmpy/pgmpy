@@ -222,7 +222,7 @@ class CanonicalDistribution(BaseDistribution):
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new CaninicalFactor object.
+            a new CanonicalFactor object.
 
         Returns
         -------

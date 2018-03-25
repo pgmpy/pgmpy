@@ -20,7 +20,7 @@ class ContinuousFactor(BaseFactor):
         Parameters
         ----------
         variables: list or array-like
-            The variables for wich the distribution is defined.
+            The variables for which the distribution is defined.
 
         pdf: function
             The probability density function of the distribution.
@@ -197,7 +197,7 @@ class ContinuousFactor(BaseFactor):
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new ContinuosFactor object.
+            a new ContinuousFactor object.
 
         Returns
         -------

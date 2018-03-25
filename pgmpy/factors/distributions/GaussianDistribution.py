@@ -242,7 +242,7 @@ class GaussianDistribution(BaseDistribution):
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
-            a new ContinuosFactor object.
+            a new ContinuousFactor object.
 
         Returns
         -------
@@ -380,7 +380,7 @@ class GaussianDistribution(BaseDistribution):
         u"""
         Returns an equivalent CanonicalDistribution object.
 
-        The formulas for calculating the cannonical factor parameters
+        The formulas for calculating the canonical factor parameters
         for N(μ; Σ) = C(K; h; g) are as follows -
 
         K = sigma^(-1)
