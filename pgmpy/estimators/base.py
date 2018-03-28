@@ -120,9 +120,12 @@ class BaseEstimator(object):
             # missing row    = some state of 'variable' did not occur in data
             # missing column = some state configuration of current 'variable's parents
             #                  did not occur in data
-            row_index = self.state_names[variable]
-            column_index = pd.MultiIndex.from_product(parents_states, names=parents)
-            state_counts = state_count_data.reindex(index=row_index, columns=column_index).fillna(0)
+            if len(parents) > 1:
+                row_index = self.state_names[variable]
+                column_index = pd.MultiIndex.from_product(parents_states, names=parents)
+                state_counts = state_count_data.reindex(index=row_index, columns=column_index).fillna(0)
+            else:
+                state_counts = state_count_data
 
         return state_counts
 
