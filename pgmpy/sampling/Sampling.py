@@ -327,7 +327,7 @@ class GibbsSampling(MarkovChain):
             scope = set(prod_cpd.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
                 states = [State(v, s) for v, s in zip(other_vars, tup) if v in scope]
-                prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
+                prod_cpd_reduced = prod_cpd.to_factor().reduce(states, inplace=False)
                 kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
             self.transition_models[var] = kernel
 
@@ -416,7 +416,7 @@ class GibbsSampling(MarkovChain):
 
         types = [(var_name, "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
-        sampled[0] = tuple([st for var, st in self.state])
+        sampled[0] = tuple(st for var, st in self.state)
         for i in tqdm(range(size - 1)):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
@@ -425,7 +425,7 @@ class GibbsSampling(MarkovChain):
                     self.transition_models[var][other_st],
                 )[0]
                 self.state[j] = State(var, next_st)
-            sampled[i + 1] = tuple([st for var, st in self.state])
+            sampled[i + 1] = tuple(st for var, st in self.state)
 
         return _return_samples(return_type, sampled)
 
