@@ -379,14 +379,14 @@ class GibbsSampling(MarkovChain):
 
         types = [(var_name, 'int') for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
-        sampled[0] = np.array([st for var, st in self.state])
+        sampled[0] = tuple(st for var, st in self.state)
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
                 next_st = sample_discrete(list(range(self.cardinalities[var])),
                                           self.transition_models[var][other_st])[0]
                 self.state[j] = State(var, next_st)
-            sampled[i + 1] = np.array([st for var, st in self.state])
+            sampled[i + 1] = tuple(st for var, st in self.state)
 
         return _return_samples(return_type, sampled)
 
