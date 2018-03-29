@@ -298,7 +298,7 @@ class GibbsSampling(MarkovChain):
             scope = set(prod_cpd.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
                 states = [State(v, s) for v, s in zip(other_vars, tup) if v in scope]
-                prod_cpd_reduced = prod_cpd.reduce(states, inplace=False)
+                prod_cpd_reduced = prod_cpd.to_factor().reduce(states, inplace=False)
                 kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
             self.transition_models[var] = kernel
 
