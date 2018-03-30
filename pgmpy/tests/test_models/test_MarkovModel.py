@@ -213,15 +213,12 @@ class TestMarkovModelMethods(unittest.TestCase):
         phi2 = DiscreteFactor(['Bob', 'Charles'], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([('Alice', 'Bob'), ('Bob', 'Charles')])
         self.graph.add_factors(phi1, phi2)
-
         factor_graph = self.graph.to_factor_graph()
         self.assertIsInstance(factor_graph, FactorGraph)
-        self.assertListEqual(sorted(factor_graph.nodes()),
-                             ['Alice', 'Bob', 'Charles', 'phi_Alice_Bob',
-                              'phi_Bob_Charles'])
-        self.assertListEqual(hf.recursive_sorted(factor_graph.edges()),
-                             [['Alice', 'phi_Alice_Bob'], ['Bob', 'phi_Alice_Bob'],
-                              ['Bob', 'phi_Bob_Charles'], ['Charles', 'phi_Bob_Charles']])
+        self.assertSetEqual(set(factor_graph.nodes()), set(['Alice', 'Bob', 'Charles', phi1, phi2]))
+        self.assertSetEqual(set(hf.recursive_frozenset(list(factor_graph.edges()))),
+                            set(hf.recursive_frozenset([('Alice', phi1), ('Bob', phi1),
+                                                        ('Bob', phi2), ('Charles', phi2)])))
         self.assertListEqual(factor_graph.get_factors(), [phi1, phi2])
 
     def test_factor_graph_raises_error(self):
