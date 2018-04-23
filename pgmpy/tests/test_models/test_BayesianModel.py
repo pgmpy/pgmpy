@@ -226,6 +226,22 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.G1.get_cpds, 'diff')
         self.assertRaises(ValueError, self.G1.get_cpds, 'grade')
 
+    def test__eq__(self):
+        other_equal = self.G.copy()
+        cpd_a = TabularCPD('a', 2, [[0.2], [0.8]])
+        cpd_b = TabularCPD('b', 2, [[0.3, 0.7], [0.7, 0.3]],
+                       evidence=['a'],
+                       evidence_card=[2])
+        cpd_c = TabularCPD('c', 2, [[0.3, 0.7], [0.7, 0.3]],
+                       evidence=['b'],
+                       evidence_card=[2])
+        self.G.add_cpds(cpd_c, cpd_a, cpd_b)
+        other_equal.add_cpds(cpd_b, cpd_a, cpd_c)
+        other_unequal.add_cpds(cpd_c, cpd_a)
+        assertTrue(self.G == other_equal)
+        assertFalse(self.G == other_unequal)
+        assertFalse(self.G == self.G1)
+
     def tearDown(self):
         del self.G
         del self.G1
