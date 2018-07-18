@@ -331,7 +331,7 @@ class GibbsSampling(MarkovChain):
             factor = factors_dict[var]
             scope = set(factor.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
-                states = [State(var, s) for var, s in zip(other_vars, tup) if var in scope]
+                states = [State(first_var, s) for first_var, s in zip(other_vars, tup) if first_var in scope]
                 reduced_factor = factor.reduce(states, inplace=False)
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
