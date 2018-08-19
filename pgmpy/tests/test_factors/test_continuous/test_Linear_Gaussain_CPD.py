@@ -1,12 +1,11 @@
 import unittest
-
 import numpy.testing as np_test
-
+import pandas as pd
 from pgmpy.factors.continuous import LinearGaussianCPD
 
 
 class TestLGCPD(unittest.TestCase):
-    @unittest.skip("TODO")
+   # @unittest.skip("TODO")
     def test_class_init(self):
         cpd1 = LinearGaussianCPD('x', [0.23], 0.56)
         self.assertEqual(cpd1.variable, 'x')
@@ -75,3 +74,8 @@ class TestLGCPD(unittest.TestCase):
         self.assertEqual(cpd1.__str__(), "P(x) = N(0.23; 0.56)")
         self.assertEqual(cpd2.__str__(), "P(y | x1, x2, x3) = N(1.0*x1 + "
                                          "4.56*x2 + 8.0*x3 + 0.67; 2)")
+        
+    def test_mle_fit(self):
+        cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
+        gbn_values = pd.read_csv('gbn_values.csv')
+        cpd.fit(gbn_values)
