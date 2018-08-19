@@ -220,6 +220,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         """
         For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
         """
+        
         raise NotImplementedError("fit method has not been implemented for LinearGaussianBayesianNetwork.")
 
     def predict(self, data):

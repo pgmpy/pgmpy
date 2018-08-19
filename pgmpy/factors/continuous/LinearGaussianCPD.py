@@ -79,6 +79,23 @@ class LinearGaussianCPD(BaseFactor):
         super(LinearGaussianCPD, self).__init__(variables, pdf='gaussian',
                                                 mean=self.beta_vector,
                                                 covariance=self.variance)
+        
+    def maximum_likelihood_estimator(data, state_names):
+        '''
+        Fit using MLE method
+        
+        '''
+        
+        
+    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
+        """
+        Determine βs from data
+        
+        """
+        if estimator == 'MLE':
+            self.maximum_likelihood_estimator(data, state_names)
+        elif estimator == 'MAP':
+            raise NotImplementedError("fit method has not been implemented using Maximum A-Priori (MAP)")
 
     @property
     def pdf(self):
