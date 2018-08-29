@@ -1,30 +1,41 @@
 import unittest
 import numpy.testing as np_test
 import pandas as pd
+import numpy as np
+
 from pgmpy.factors.continuous import LinearGaussianCPD
 
 
 class TestLGCPD(unittest.TestCase):
    # @unittest.skip("TODO")
     def test_class_init(self):
-        cpd1 = LinearGaussianCPD('x', [0.23], 0.56)
-        self.assertEqual(cpd1.variable, 'x')
-        self.assertEqual(cpd1.beta_0, 0.23)
-        self.assertEqual(cpd1.variance, 0.56)
+        mu = np.array([7, 13])
+        sigma = np.array([[4 , 3],
+                               [3 , 6]])
 
-        cpd2 = LinearGaussianCPD('y', [0.67, 1, 4.56, 8], 2,
-                                 ['x1', 'x2', 'x3'])
-        self.assertEqual(cpd2.variable, 'y')
-        self.assertEqual(cpd2.beta_0, 0.67)
-        self.assertEqual(cpd2.variance, 2)
-        self.assertEqual(cpd2.evidence, ['x1', 'x2', 'x3'])
-        np_test.assert_array_equal(cpd2.beta_vector, [1, 4.56, 8])
+        cpd1 = LinearGaussianCPD('Y', evidence_mean = mu, evidence_variance=sigma, 
+                                 evidence=['X1', 'X2'])
+        self.assertEqual(cpd1.variable, 'Y')
+        self.assertEqual(cpd1.evidence, ['X1', 'X2'])
 
-        self.assertRaises(ValueError, LinearGaussianCPD, 'x', [1, 1, 2], 2,
-                          ['a', 'b', 'c'])
-        self.assertRaises(ValueError, LinearGaussianCPD, 'x', [1, 1, 2, 3], 2,
-                          ['a', 'b'])
+    def test_maximum_likelihood_estimator(self):
+        # Obtain the X and Y which are jointly gaussian from the distribution
+        # beta = [2, 0.7, 0.3]
+        sigma_c = 4
+        
+        X_df = pd.read_csv('pgmpy/tests/test_factors/test_continuous/gbn_values_1.csv')
+        
+        mu = np.array([7, 13])
+        sigma = np.array([[4 , 3],
+                          [3 , 6]])
 
+        cpd1 = LinearGaussianCPD('Y', evidence_mean = mu, evidence_variance=sigma, 
+                                 evidence=['X1', 'X2'])
+        mean, variance = cpd1.fit(X_df, states=['(Y|X)', 'X1', 'X2'], estimator='MLE')
+        np_test.assert_allclose(mean, [ 2.361152,  0.693147,  0.276383], rtol=1e-03)
+        np_test.assert_allclose(variance, sigma_c, rtol=1e-1)
+        
+        
     @unittest.skip("TODO")
     def test_pdf(self):
         cpd1 = LinearGaussianCPD('x', [0.23], 0.56)
@@ -75,7 +86,7 @@ class TestLGCPD(unittest.TestCase):
         self.assertEqual(cpd2.__str__(), "P(y | x1, x2, x3) = N(1.0*x1 + "
                                          "4.56*x2 + 8.0*x3 + 0.67; 2)")
         
-    def test_mle_fit(self):
-        cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
-        gbn_values = pd.read_csv('gbn_values.csv')
-        cpd.fit(gbn_values)
+#    def test_mle_fit(self):
+#        cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
+#        gbn_values = pd.read_csv('gbn_values.csv')
+#        cpd.fit(gbn_values)
