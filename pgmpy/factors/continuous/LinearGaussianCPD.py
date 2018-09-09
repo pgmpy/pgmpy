@@ -10,7 +10,7 @@ from pgmpy.factors.base import BaseFactor
 
 
 class LinearGaussianCPD(BaseFactor):
-    """        
+    """
     # https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
     For, X -> Y the Linear Gaussian model assumes that the mean
     of Y is a linear function of mean of X and the variance of Y does
@@ -29,10 +29,17 @@ class LinearGaussianCPD(BaseFactor):
     In vector notation,
 
     p(Y |x) = N(β0 + β.T * x ; σ2)
-    
+
 
     """
-    def __init__(self, variable, evidence_mean, evidence_variance, evidence=[], beta=None):
+
+    def __init__(
+            self,
+            variable,
+            evidence_mean,
+            evidence_variance,
+            evidence=[],
+            beta=None):
         """
         Parameters
         ----------
@@ -41,13 +48,13 @@ class LinearGaussianCPD(BaseFactor):
             The variable whose CPD is defined.
 
         evidence_mean: Mean vector (numpy array) of the joint distribution, X
-        
+
         evidence_variance: int, float
             The variance of the multivariate gaussian, X = ['x1', 'x2', ..., 'xn']
 
         evidence: iterable of any hashabale python objects
             An iterable of the parents of the variable. None if there are no parents.
-            
+
         beta (optional): iterable of int or float
             An iterable representing the coefficient vector of the linear equation.
             The first term represents the constant term in the linear equation.
@@ -72,105 +79,121 @@ class LinearGaussianCPD(BaseFactor):
         self.variance = evidence_variance
         self.evidence = evidence
         self.sigma_yx = None
-        
+
         if beta is not None:
             self.beta = beta
             self.beta_0 = beta[0]
             self.beta_vector = np.asarray(beta[1:])
 
             if len(evidence) != len(beta) - 1:
-                raise ValueError("The number of variables in evidence must be one less than the length of the beta vector.")
+                raise ValueError(
+                    "The number of variables in evidence must be one less than the length of the beta vector.")
 
         variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(variables, pdf='gaussian',
                                                 mean=self.mean,
                                                 covariance=self.variance)
-    
-    def sumofproduct(self, xi, xj):
-        prod_xixj = xi*xj
+
+    def sum_of_product(self, xi, xj):
+        prod_xixj = xi * xj
         return np.sum(prod_xixj)
 
     def maximum_likelihood_estimator(self, data, states):
         '''
         Fit using MLE method.
-        
+
         Args:
             data: Dataframe of values containing samples from the conditional distribution, (Y|X)
             and corresponding X values.
             states: All the input states that are jointly gaussian.
-        
+
         Returns:
             beta, variance (tuple): Returns estimated betas and the variance.
-            
+
         '''
-        X_df = pd.DataFrame(data, columns = states)
+        x_df = pd.DataFrame(data, columns=states)
         x_len = len(self.evidence)
 
         sym_coefs = []
         for i in range(0, x_len):
-            sym_coefs.append('b' + str(i+1)+'_coef')
+            sym_coefs.append('b' + str(i + 1) + '_coef')
 
-        sum_X = X_df.sum()
-        X = [sum_X['(Y|X)']]
-        print(sum_X)
-        print(X)
+        sum_x = x_df.sum()
+        x = [sum_x['(Y|X)']]
         coef_matrix = pd.DataFrame(columns=sym_coefs)
-        
-        # First we compute just the coefficients of beta_1 to beta_N. 
+
+        # First we compute just the coefficients of beta_1 to beta_N.
         # Later we compute beta_0 and append it.
         for i in range(0, x_len):
-            X.append(self.sumofproduct(X_df['(Y|X)'], X_df[self.evidence[i]]))
-        
             for j in range(0, x_len):
-                coef_matrix.loc[i, sym_coefs[j]] = self.sumofproduct(X_df[self.evidence[i]], X_df[self.evidence[j]])
-    
-        
-        coef_matrix.insert(0, 'b0_coef', sum_X[self.evidence].values)
-        row_1 = np.append([len(X_df)], sum_X[self.evidence].values)
-        coef_matrix.loc[-1] = row_1 
+                coef_matrix.loc[i, sym_coefs[j]] = self.sum_of_product(
+                    x_df[self.evidence[i]], x_df[self.evidence[j]])
+
+        coef_matrix.insert(0, 'b0_coef', sum_x[self.evidence].values)
+        row_1 = np.append([len(x_df)], sum_x[self.evidence].values)
+        coef_matrix.loc[-1] = row_1
         coef_matrix.index = coef_matrix.index + 1  # shifting index
-        coef_matrix.sort_index(inplace=True) 
-        print(coef_matrix)
-        
+        coef_matrix.sort_index(inplace=True)
+
         beta_coef_matrix = np.matrix(coef_matrix.values, dtype='float')
         coef_inv = np.linalg.inv(beta_coef_matrix)
-        beta_est = np.array(np.matmul(coef_inv, np.transpose(X)))
+        beta_est = np.array(np.matmul(coef_inv, np.transpose(x)))
         self.beta = beta_est[0]
-        
+
         sigma_est = 0
-        M = len(X_df)
+        M = len(x_df)
         for i in range(0, x_len):
             for j in range(0, x_len):
-                sigma_est += self.beta[i+1]*self.beta[j+1]*(self.sumofproduct(X_df[self.evidence[i]], X_df[self.evidence[j]])/M - np.mean(X_df[self.evidence[i]])*np.mean(X_df[self.evidence[j]]))
-        
-        sigma_est = np.sqrt(self.sumofproduct(X_df['(Y|X)'], X_df['(Y|X)'])/M - np.mean(X_df['(Y|X)'])*np.mean(X_df['(Y|X)']) - sigma_est)
+                sigma_est += self.beta[i + 1] * self.beta[j + 1] * (self.sum_of_product(
+                    x_df[self.evidence[i]], x_df[self.evidence[j]]) / M - np.mean(x_df[self.evidence[i]]) * np.mean(x_df[self.evidence[j]]))
+
+        sigma_est = np.sqrt(
+            self.sum_of_product(
+                x_df['(Y|X)'],
+                x_df['(Y|X)']) /
+            M -
+            np.mean(
+                x_df['(Y|X)']) *
+            np.mean(
+                x_df['(Y|X)']) -
+            sigma_est)
         self.sigma_yx = sigma_est
         return self.beta, self.sigma_yx
-        
-    def fit(self, data, states, estimator=None, complete_samples_only=True, **kwargs):
+
+    def fit(
+            self,
+            data,
+            states,
+            estimator=None,
+            complete_samples_only=True,
+            **kwargs):
         """
         Determine βs from data
-        
+
         data: Dataframe containing samples from the conditional distribution, p(Y|X)
         estimator: 'MLE' or 'MAP'
         completely_samples_only: Are they downsampled or complete? Defaults to True
-        
+
         """
         if estimator == 'MLE':
             mean, variance = self.maximum_likelihood_estimator(data, states)
         elif estimator == 'MAP':
-            raise NotImplementedError("fit method has not been implemented using Maximum A-Priori (MAP)")
-            
+            raise NotImplementedError(
+                "fit method has not been implemented using Maximum A-Priori (MAP)")
+
         return mean, variance
-    
+
     @property
     def pdf(self):
 
         def _pdf(*args):
             # The first element of args is the value of the variable on which CPD is defined
-            # and the rest of the elements give the mean values of the parent variables.
-            mean = sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)]) + self.beta_0
-            return multivariate_normal.pdf(args[0], np.array(mean), np.array([[self.variance]]))
+            # and the rest of the elements give the mean values of the parent
+            # variables.
+            mean = sum([arg * coeff for (arg, coeff)
+                        in zip(args[1:], self.beta_vector)]) + self.beta_0
+            return multivariate_normal.pdf(
+                args[0], np.array(mean), np.array([[self.variance]]))
 
         return _pdf
 
@@ -205,7 +228,7 @@ class LinearGaussianCPD(BaseFactor):
                 parents=', '.join([str(var) for var in self.evidence]),
                 mu=" + ".join(["{coeff}*{parent}".format(
                     coeff=coeff, parent=parent) for coeff, parent in
-                                zip(self.beta_vector, self.evidence)]),
+                    zip(self.beta_vector, self.evidence)]),
                 b_0=str(self.beta_0),
                 sigma=str(self.variance))
         else:
