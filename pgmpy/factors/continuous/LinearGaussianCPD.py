@@ -11,35 +11,30 @@ from pgmpy.factors.base import BaseFactor
 
 class LinearGaussianCPD(BaseFactor):
     """
-    # https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
     For, X -> Y the Linear Gaussian model assumes that the mean
     of Y is a linear function of mean of X and the variance of Y does
     not depend on X.
 
     For example,
-    p(Y|X) = N(-2x + 0.9 ; 1)
-    Here, x is the mean of the variable X.
+    $ p(Y|X) = N(-2x + 0.9 ; 1) $
+    Here, $ x $ is the mean of the variable $ X $.
 
-    Let Y be a continuous variable with continuous parents
-    X1 ............ Xk . We say that Y has a linear Gaussian CPD
-    if there are parameters β0,.........βk and σ2 such that,
+    Let $ Y $ be a continuous variable with continuous parents
+    $ X1, X2, ..., Xk $. We say that $ Y $ has a linear Gaussian CPD
+    if there are parameters $ \beta_0, \beta_1, ..., \beta_k $
+    and $ \sigma_2 $ such that,
 
-    p(Y |x1.......xk) = N(β0 + x1*β1 + ......... + xk*βk ; σ2)
+    $ p(Y |x1, x2, ..., xk) = \mathcal{N}(\beta_0 + x1*\beta_1 + ......... + xk*\beta_k ; \sigma_2) $
 
     In vector notation,
 
-    p(Y |x) = N(β0 + β.T * x ; σ2)
+    $ p(Y |x) = \mathcal{N}(\beta_0 + \boldmath{β}.T * \boldmath{x} ; \sigma_2) $
 
 
+    Reference: https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
     """
 
-    def __init__(
-            self,
-            variable,
-            evidence_mean,
-            evidence_variance,
-            evidence=[],
-            beta=None):
+    def __init__(self, variable, evidence_mean, evidence_variance, evidence=[], beta=None):
         """
         Parameters
         ----------
@@ -99,18 +94,21 @@ class LinearGaussianCPD(BaseFactor):
         return np.sum(prod_xixj)
 
     def maximum_likelihood_estimator(self, data, states):
-        '''
+        """ 
         Fit using MLE method.
 
-        Args:
-            data: Dataframe of values containing samples from the conditional distribution, (Y|X)
+        Parameters
+        ----------
+        data: pandas.DataFrame or 2D array
+            Dataframe of values containing samples from the conditional distribution, (Y|X)
             and corresponding X values.
-            states: All the input states that are jointly gaussian.
 
-        Returns:
-            beta, variance (tuple): Returns estimated betas and the variance.
+        states: All the input states that are jointly gaussian.
 
-        '''
+        Returns
+        -------
+        beta, variance (tuple): Returns estimated betas and the variance.
+        """
         x_df = pd.DataFrame(data, columns=states)
         x_len = len(self.evidence)
 
@@ -138,7 +136,6 @@ class LinearGaussianCPD(BaseFactor):
 
         beta_coef_matrix = np.matrix(coef_matrix.values, dtype='float')
         coef_inv = np.linalg.inv(beta_coef_matrix)
-        print(coef_inv, np.transpose(x))
         beta_est = np.array(np.matmul(coef_inv, np.transpose(x)))
         self.beta = beta_est[0]
 
@@ -172,9 +169,14 @@ class LinearGaussianCPD(BaseFactor):
         """
         Determine βs from data
 
-        data: Dataframe containing samples from the conditional distribution, p(Y|X)
-        estimator: 'MLE' or 'MAP'
-        completely_samples_only: Are they downsampled or complete? Defaults to True
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            Dataframe containing samples from the conditional distribution, p(Y|X)
+            estimator: 'MLE' or 'MAP'
+
+        completely_samples_only: boolean (True or False)
+            Are they downsampled or complete? Defaults to True
 
         """
         if estimator == 'MLE':
