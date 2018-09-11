@@ -23,7 +23,7 @@ class TestLGCPD(unittest.TestCase):
         # beta = [2, 0.7, 0.3]
         sigma_c = 4
         
-        X_df = pd.read_csv('pgmpy/tests/test_factors/test_continuous/gbn_values_1.csv')
+        x_df = pd.read_csv('pgmpy/tests/test_factors/test_continuous/gbn_values_1.csv')
         
         mu = np.array([7, 13])
         sigma = np.array([[4 , 3],
@@ -31,7 +31,7 @@ class TestLGCPD(unittest.TestCase):
 
         cpd1 = LinearGaussianCPD('Y', evidence_mean = mu, evidence_variance=sigma, 
                                  evidence=['X1', 'X2'])
-        mean, variance = cpd1.fit(X_df, states=['(Y|X)', 'X1', 'X2'], estimator='MLE')
+        mean, variance = cpd1.fit(x_df, states=['(Y|X)', 'X1', 'X2'], estimator='MLE')
         np_test.assert_allclose(mean, [ 2.361152,  0.693147,  0.276383], rtol=1e-03)
         np_test.assert_allclose(variance, sigma_c, rtol=1e-1)
         

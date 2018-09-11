@@ -125,6 +125,7 @@ class LinearGaussianCPD(BaseFactor):
         # First we compute just the coefficients of beta_1 to beta_N.
         # Later we compute beta_0 and append it.
         for i in range(0, x_len):
+            x.append(self.sum_of_product(x_df['(Y|X)'], x_df[self.evidence[i]]))
             for j in range(0, x_len):
                 coef_matrix.loc[i, sym_coefs[j]] = self.sum_of_product(
                     x_df[self.evidence[i]], x_df[self.evidence[j]])
@@ -137,21 +138,22 @@ class LinearGaussianCPD(BaseFactor):
 
         beta_coef_matrix = np.matrix(coef_matrix.values, dtype='float')
         coef_inv = np.linalg.inv(beta_coef_matrix)
+        print(coef_inv, np.transpose(x))
         beta_est = np.array(np.matmul(coef_inv, np.transpose(x)))
         self.beta = beta_est[0]
 
         sigma_est = 0
-        M = len(x_df)
+        x_len_df = len(x_df)
         for i in range(0, x_len):
             for j in range(0, x_len):
                 sigma_est += self.beta[i + 1] * self.beta[j + 1] * (self.sum_of_product(
-                    x_df[self.evidence[i]], x_df[self.evidence[j]]) / M - np.mean(x_df[self.evidence[i]]) * np.mean(x_df[self.evidence[j]]))
+                    x_df[self.evidence[i]], x_df[self.evidence[j]]) / x_len_df - np.mean(x_df[self.evidence[i]]) * np.mean(x_df[self.evidence[j]]))
 
         sigma_est = np.sqrt(
             self.sum_of_product(
                 x_df['(Y|X)'],
                 x_df['(Y|X)']) /
-            M -
+            x_len_df -
             np.mean(
                 x_df['(Y|X)']) *
             np.mean(
