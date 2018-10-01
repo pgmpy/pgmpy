@@ -47,7 +47,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
     def estimate(self, significance_level=0.01):
         """
-        Estimates a BayesianModel for the data set, using the PC contraint-based
+        Estimates a BayesianModel for the data set, using the PC constraint-based
         structure learning algorithm. Independencies are identified from the
         data set using a chi-squared statistic with the acceptance threshold of
         `significance_level`. PC identifies a partially directed acyclic graph (PDAG), given
