@@ -380,7 +380,7 @@ class Mplp(Inference):
                     of iterations.
 
         max_triplets: integer
-                      Maximum number of triplets that can be added atmost in one iteration.
+                      Maximum number of triplets that can be added at most in one iteration.
 
         prolong: bool
                 It sets the continuation of tightening after all the triplets are exhausted

@@ -56,7 +56,7 @@ class BaseEstimator(object):
 
     def state_counts(self, variable, parents=[], complete_samples_only=None):
         """
-        Return counts how often each state of 'variable' occured in the data.
+        Return counts how often each state of 'variable' occurred in the data.
         If a list of parents is provided, counting is done conditionally
         for each state configuration of the parents.
 
@@ -280,7 +280,7 @@ class ParameterEstimator(BaseEstimator):
 
     def state_counts(self, variable, **kwargs):
         """
-        Return counts how often each state of 'variable' occured in the data.
+        Return counts how often each state of 'variable' occurred in the data.
         If the variable has parents, counting is done conditionally
         for each state configuration of the parents.
 

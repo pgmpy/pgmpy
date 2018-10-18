@@ -359,7 +359,7 @@ class BeliefPropagation(Inference):
         sending_clique: node (as the operation is on junction tree, node should be a tuple)
             Node sending the message
         recieving_clique: node (as the operation is on junction tree, node should be a tuple)
-            Node recieving the message
+            Node receiving the message
         operation: str ('marginalize' | 'maximize')
             The operation to do for passing messages between nodes.
 
@@ -391,9 +391,9 @@ class BeliefPropagation(Inference):
         operation: str ('marginalize' | 'maximize')
             The operation to do for passing messages between nodes.
             if operation == marginalize, it checks whether the junction tree is calibrated or not
-            else if operation == maximize, it checks whether the juction tree is max calibrated or not
+            else if operation == maximize, it checks whether the junction tree is max calibrated or not
 
-        Formally, at convergence or at calibration this condition would be satisified for
+        Formally, at convergence or at calibration this condition would be satisfied for
 
         .. math:: \sum_{C_i - S_{i, j}} \beta_i = \sum_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
 

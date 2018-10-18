@@ -282,7 +282,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
             'role': 'Utility',
             'Variables': {'D0': ['D1', 'C0', 'C1']},
             'type': 'Tree/ADD',
-            'UtilityVaribale': 'U1',
+            'UtilityVariable': 'U1',
             'Branches': [{
                 'Potential': {
                     'type': 'Tree/ADD',
@@ -670,7 +670,7 @@ class TestProbModelXMLWriter(unittest.TestCase):
                             'Potentials': [{'role': 'Utility',
                                             'Variables': {'D0': ['D1', 'C0', 'C1']},
                                             'type': 'Tree/ADD',
-                                            'UtilityVaribale': 'U1',
+                                            'UtilityVariable': 'U1',
                                             'Branches': [{
                                                 'Potential': {
                                                     'type': 'Tree/ADD',

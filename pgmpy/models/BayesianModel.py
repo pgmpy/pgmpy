@@ -516,7 +516,7 @@ class BayesianModel(DirectedGraph):
         """
         def dfs(node):
             """
-            Returns the descendents of node.
+            Returns the descendants of node.
 
             Since Bayesian Networks are acyclic, this is a very simple dfs
             which does not remember which nodes it has visited.
