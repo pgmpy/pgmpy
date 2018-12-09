@@ -101,6 +101,7 @@ class BaseEstimator(object):
         """
 
         # default for how to deal with missing data can be set in class constructor
+        parents = list(parents)
         if complete_samples_only is None:
             complete_samples_only = self.complete_samples_only
         # ignores either any row containing NaN, or only those where the variable or its parents is NaN

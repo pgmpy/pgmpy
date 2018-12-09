@@ -57,11 +57,11 @@ class HillClimbSearch(StructureEstimator):
                                set([(Y, X) for (X, Y) in model.edges()]))
 
         for (X, Y) in potential_new_edges:  # (1) add single edge
-            if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
+            if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
                 operation = ('+', (X, Y))
                 if operation not in tabu_list:
                     old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
+                    new_parents = list(old_parents) + [X]
                     if max_indegree is None or len(new_parents) <= max_indegree:
                         score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
                         yield(operation, score_delta)
@@ -70,19 +70,19 @@ class HillClimbSearch(StructureEstimator):
             operation = ('-', (X, Y))
             if operation not in tabu_list:
                 old_parents = model.get_parents(Y)
-                new_parents = old_parents[:]
+                new_parents = list(old_parents)[:]
                 new_parents.remove(X)
                 score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
                 yield(operation, score_delta)
 
         for (X, Y) in model.edges():  # (3) flip single edge
-            new_edges = model.edges() + [(Y, X)]
+            new_edges = list(model.edges()) + [(Y, X)]
             new_edges.remove((X, Y))
             if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
                 operation = ('flip', (X, Y))
                 if operation not in tabu_list and ('flip', (Y, X)) not in tabu_list:
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
+                    old_X_parents = list(model.get_parents(X))
+                    old_Y_parents = list(model.get_parents(Y))
                     new_X_parents = old_X_parents + [Y]
                     new_Y_parents = old_Y_parents[:]
                     new_Y_parents.remove(X)

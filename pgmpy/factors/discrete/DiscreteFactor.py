@@ -374,7 +374,10 @@ class DiscreteFactor(BaseFactor):
         """
         phi = self if inplace else self.copy()
 
-        phi.values = phi.values / phi.values.sum()
+        if phi.values.sum():
+            phi.values = phi.values / phi.values.sum()
+        else :
+            phi.values = np.zeros(phi.cardinality)
 
         if not inplace:
             return phi
@@ -710,15 +713,13 @@ class DiscreteFactor(BaseFactor):
         # because __init__ methods does that.
         return DiscreteFactor(self.scope(), self.cardinality, self.values)
 
-    def is_valid_cpd(self):
-        return np.allclose(self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten('C'),
-                           np.ones(np.product(self.cardinality[:0:-1])),
-                           atol=0.01)
-
     def __str__(self):
-        return self._str(phi_or_p='phi', tablefmt='grid')
+        if six.PY2:
+            return self._str(phi_or_p='phi', tablefmt="psql")
+        else:
+            return self._str(phi_or_p='phi')
 
-    def _str(self, phi_or_p="phi", tablefmt="grid", print_state_names=True):
+    def _str(self, phi_or_p="phi", tablefmt="fancy_grid", print_state_names=True):
         """
         Generate the string from `__str__` method.
 
@@ -755,8 +756,7 @@ class DiscreteFactor(BaseFactor):
     def __repr__(self):
         var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
                               for var, card in zip(self.variables, self.cardinality)])
-        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(
-            address=hex(id(self)), var_card=var_card)
+        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(address=hex(id(self)), var_card=var_card)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
@@ -816,3 +816,4 @@ class DiscreteFactor(BaseFactor):
                                                                       phi.cardinality[axis])
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
+
