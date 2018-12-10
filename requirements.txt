@@ -1,6 +1,6 @@
 networkx==1.11
-numpy==1.11.3
-scipy==0.18.1
+numpy==1.15.2
+scipy==1.1.0
 pandas==0.19.2
 pyparsing==2.2.1
 wrapt==1.10.11
