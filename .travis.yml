@@ -1,20 +1,19 @@
-language: python
-virtualenv:
-    system_site_packages: false
-env:
-    - DISTRIB="conda" PYTHON_VERSION="3.5" COVERAGE="true"
-    - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
-    - DISTRIB="conda" PYTHON_VERSION="2.7" COVERAGE="true"
+        language: python
+        virtualenv:
+            system_site_packages: false
+        env:
+            - DISTRIB="conda" PYTHON_VERSION="3.5" COVERAGE="true"
+            - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
 
-before_install:
-    - uname -a
-    - free -m
-    - df -h
-    - ulimit -a
-install: source ci/travis/install.sh
-script: nosetests --with-coverage --cover-package=pgmpy
-after_success:
-    codecov
+        before_install:
+            - uname -a
+            - free -m
+            - df -h
+            - ulimit -a
+        install: source ci/travis/install.sh
+        script: nosetests --with-coverage --cover-package=pgmpy
+        after_success:
+            codecov
 notifications:
     email: false
     webhooks:
