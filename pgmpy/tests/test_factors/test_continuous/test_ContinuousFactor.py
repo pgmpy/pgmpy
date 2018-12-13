@@ -1,11 +1,14 @@
+from __future__ import division
+
 import unittest
 
 import numpy as np
 import numpy.testing as np_test
-from scipy.special import beta
+from scipy.special import beta,gamma
 from scipy.stats import multivariate_normal
 
 from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.continuous.discretize import RoundingDiscretizer, UnbiasedDiscretizer
 
 
 class TestContinuousFactor(unittest.TestCase):
@@ -371,6 +374,28 @@ class TestContinuousFactorMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.phi1.__truediv__, self.phi4)
         self.assertRaises(ValueError, self.phi2.__truediv__, self.phi3)
         self.assertRaises(ValueError, self.phi2.__truediv__, self.phi4)
+
+    def test_discretize(self):
+
+        univariate_pdf1 = lambda x: np.exp(-x*x/2) / (np.sqrt(2*np.pi))
+        univariate_normal = ContinuousFactor(['x'], univariate_pdf1)
+        results1 = univariate_normal.discretize(RoundingDiscretizer, low=-1, high=1,
+                                                cardinality=4)
+        results1 = [round(i, 6) for i in results1]
+
+        univariate_pdf2 = lambda x: 2*np.exp(-2*x) if x >= 0 else 0
+        univariate_exp = ContinuousFactor(['x'], univariate_pdf2)
+        results2 = univariate_exp.discretize(UnbiasedDiscretizer, low=0, high=5, cardinality=5)
+        results2 = [round(i, 6) for i in results2]
+
+        univariate_pdf3 = lambda x: 1 / (2*gamma(5/2)) * (x/2)**(5/2-1) * np.exp(-x/2)  # chi with 5 degree of freedom
+        univariate_chi = ContinuousFactor(['x'], univariate_pdf3)
+        results3 = univariate_chi.discretize(RoundingDiscretizer, low=0, high=1, cardinality=3)
+        results3 = [round(i, 6) for i in results3]
+
+        np.testing.assert_almost_equal(results1, [0.059167, 0.085531, 0.0, -0.085531],decimal=4)
+        np.testing.assert_almost_equal(results2, [-2.120911, -0.115055, 0.198042, 0.033288, 0.004727], decimal=4)
+        np.testing.assert_almost_equal(results3, [0.008325, 0.028291, 0.030074], decimal=4)
 
     def test_copy(self):
         copy1 = self.phi1.copy()
