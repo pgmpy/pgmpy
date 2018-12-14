@@ -9,12 +9,13 @@ from pgmpy.data import Data
 
 class TestData(unittest.TestCase):
     def setUp(self):
-        self.random_values = np.random.randint(low=0, high=2, size=(10000, 5))
-        self.random_df = pd.DataFrame(self.random_value, columns=['A', 'B', 'C', 'D', 'E'])
+        self.random_values = np.random.randint(low=0, high=2, size=(1000000, 5))
+        self.random_df = pd.DataFrame(self.random_values, columns=['A', 'B', 'C', 'D', 'E'])
         self.random_data = Data(self.random_df)
 
         self.dep_df = self.random_df.copy()
         self.dep_df['dep_col'] = self.dep_df.E * 2
+        self.dep_data = Data(self.dep_df)
 
     def test_init(self):
         data = Data(self.random_values, variables=['A', 'B', 'C', 'D', 'E'])
@@ -43,7 +44,7 @@ class TestData(unittest.TestCase):
                                           [0, 0, 0, 0, 0.25]]),
                                atol=0.01)
 
-        cov_matrix_dep = self.random_data.col_matrix()
+        cov_matrix_dep = self.dep_data.cov_matrix()
         np_test.assert_allclose(cov_matrix_dep.values,
                                 np.array([[0.25, 0, 0, 0, 0, 0],
                                           [0, 0.25, 0, 0, 0, 0],
