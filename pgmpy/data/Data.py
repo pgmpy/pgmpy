@@ -92,6 +92,16 @@ class Data(object):
                 p_value = 1.0 - stats.chi2.cdf(x=chi_stat, df=dof)
             return chi_stat, p_value, dof
 
+    def cov_matrix(self):
+        """
+        Returns the covariance matrix of the given dataset
+
+        Returns
+        -------
+        pd.DataFrame: Dataframe with the covarince values.
+        """
+        return self.data.cov()
+
 
 def get_dataset(dataset):
     """
