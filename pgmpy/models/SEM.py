@@ -39,3 +39,43 @@ class SEM(DirectedGraph):
                 self.observed.add(node)
 
         self.err_corr = err_corr
+
+    def get_params(self):
+        """
+        Get the parameters B, \Gamma, \Phi from the graph structure
+
+        Returns
+        -------
+        B: np.array
+        \Gamma: np.array
+        \Phi: np.array
+        """
+        pass
+
+    def set_params(self, B, gamma, phi):
+        """
+        Sets the parameter values to the graph structure.
+
+        Parameters
+        ----------
+        B: np.array
+        \Gamma: np.array
+        \Phi: np.array
+
+        """
+        pass
+
+    def get_ivs(self, X, Y):
+        """
+        Returns the Instrumental variables for the relation X -> Y
+
+        Parameters
+        ----------
+        X: The observed variable name
+        Y: The observed variable name
+
+        Returns
+        -------
+        set: The set of Instrumental Variables for the predicted value.
+        """
+        pass
