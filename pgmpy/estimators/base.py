@@ -115,6 +115,8 @@ class BaseEstimator(object):
             parents_states = [self.state_names[parent] for parent in parents]
             # count how often each state of 'variable' occured, conditional on parents' states
             state_count_data = data.groupby([variable] + parents).size().unstack(parents)
+            if not isinstance(state_count_data.columns, pd.MultiIndex):
+                state_count_data.columns = pd.MultiIndex.from_arrays([state_count_data.columns])
 
             # reindex rows & columns to sort them and to add missing ones
             # missing row    = some state of 'variable' did not occur in data
