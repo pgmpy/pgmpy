@@ -98,6 +98,11 @@ class BaseEstimator(object):
         C
         c1  1   1   0   0
         c2  0   0   1   0
+        >>> estimator.state_counts('C', parents=['A'])
+        A    a1   a2
+        C
+        c1  2.0  0.0
+        c2  0.0  1.0
         """
 
         # default for how to deal with missing data can be set in class constructor
@@ -211,6 +216,8 @@ class BaseEstimator(object):
         row_index = self.state_names[X]
         column_index = pd.MultiIndex.from_product(
                             [self.state_names[Y]] + [self.state_names[Z] for Z in Zs], names=[Y]+Zs)
+        if not isinstance(XYZ_state_counts.columns, pd.MultiIndex):
+            XYZ_state_counts.columns = pd.MultiIndex.from_arrays([XYZ_state_counts.columns])
         XYZ_state_counts = XYZ_state_counts.reindex(index=row_index,    columns=column_index).fillna(0)
 
         # compute the expected frequency/state_count table if X _|_ Y | Zs:
