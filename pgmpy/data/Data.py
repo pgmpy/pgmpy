@@ -30,18 +30,20 @@ class Data(object):
         Examples
         --------
         >>> from pgmpy.data import Data
-        >>> df = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                                     columns=['A', 'B', 'C', 'D', 'E'])
+        >>> raw_data = np.random.randint(low=0, high=2, size=(1000, 5))
+        >>> data_from_raw = Data(raw_data, columns=['A', 'B', 'C', 'D', 'E'])
+        >>> df = pd.DataFrame(data, columns=['A', 'B', 'C', 'D', 'E'])
+        >>> data_from_df = Data(df)
         """
         if isinstance(data, pd.DataFrame):
             self.data = data
-            self.variables = data.columns
+            if variables:
+                data.columns = variables
         else:
             data = np.array(data)
             if data.ndim != 2:
                 raise ValueError("data must be a 2-D array or a pandas.DataFrame instance")
             self.data = pd.DataFrame(data, columns=variables)
-            self.variables = variables
 
     def test_independence(self, var1, var2, conditioned_vars=[], test='chi-square'):
         """
@@ -55,12 +57,40 @@ class Data(object):
         var2: str or int
             The second variable when testing for the condition: var1 _|_ var2 | conditioned_vars
 
-        test: str
-            The type of test. Options are:
-                1. 'chi-square': Chi-Squared test
-
         conditioned_vars: list
             List of conditioned variables in the condition: var1 _|_ var2 | conditioned_vars.
+
+        test: str
+            The type of test. Options are:
+            Discrete Categorical Variables:
+                1. 'mi':
+                2. 'mi-adf':
+                3. 'mc-mi':
+                4. 'smc-mi':
+                5. 'sp-mi':
+                6. 'mi-sh':
+                7. 'x2':
+                8. 'x2-adf':
+                9. 'mc-x2':
+                10. 'smc-x2':
+                11. 'sp-x2':
+            Discrete Ordered Variables:
+                1. 'jt':
+                2. 'mc-jt':
+                3. 'smc-jt':
+            Continuous Variables (Normal Distributed Variables):
+                1. 'cor':
+                2. 'mc-cor':
+                3. 'smc-cor':
+                4. 'zf':
+                5. 'mc-zf':
+                6. 'smc-zf':
+                7. 'mi-g':
+                8. 'mc-mi-g':
+                9. 'smc-mi-g':
+                10. 'mi-g-sh':
+            Hybrid Variables:
+                1. 'mi-cg':
 
         Examples
         --------
@@ -161,6 +191,7 @@ def get_dataset(dataset):
     pgmpy.models instance: An instance of one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
+    raise NotImplementedError("Not implemented yet")
     dataset_links = {
         'asia': 'http://www.bnlearn.com/bnrepository/asia/asia.bif.gz',
         'cancer': 'http://www.bnlearn.com/bnrepository/cancer/cancer.bif.gz',
