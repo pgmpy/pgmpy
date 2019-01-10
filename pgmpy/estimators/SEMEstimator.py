@@ -15,8 +15,9 @@ class SEMEstimator(object):
 
         self.model = model
 
-    def get_ols_fn(self, cov_mat, sigma_yy, sigma_yx, sigma_xx):
-        pass
+    def get_ols_fn(self, S, sigma):
+        return (sigma.logdet().clamp(min=1e-4) + (S @ sigma.inverse()).trace() - S.logdet() -
+                (len(self.model.y)+ len(self.model.x)))
 
     def get_uls_fn(self):
         pass
@@ -24,7 +25,7 @@ class SEMEstimator(object):
     def get_gls_fn(self):
         pass
 
-    def fit(self, data, method):
+    def fit(self, data, method, max_iter=1000):
         """
         Estimate the parameters of the model from the data.
 
@@ -44,11 +45,11 @@ class SEMEstimator(object):
         -------
             pgmpy.model.SEM instance: Instance of the model with estimated parameters
         """
-        if not isinstance(data, [pd.DataFrame, Data]):
+        if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
-                             theta_del_mask, psi_mask) = self.model.get_masks()
+         theta_del_mask, psi_mask) = self.model.get_masks()
 
         # Initialize varibles for optimization
         # TODO: Move next line into a separate file to get machine parameters.
@@ -62,40 +63,57 @@ class SEMEstimator(object):
 
         gamma = torch.randn(*gamma_mask.shape, device=device, dtype=dtype, requires_grad=True)
         gamma_mask = torch.tensor(gamma_mask, device=device, dtype=dtype, requires_grad=False)
-        gamma = torch.mul(gamma, gamma_mask)
+        gamma_masked = torch.mul(gamma, gamma_mask)
 
         wedge_y = torch.randn(*wedge_y_mask.shape, device=device, dtype=dtype, requires_grad=True)
         wedge_y_mask = torch.tensor(wedge_y_mask, device=device, dtype=dtype, requires_grad=False)
-        wedge_y = torch.mul(wedge_y, wedge_y_mask)
+        wedge_y_masked = torch.mul(wedge_y, wedge_y_mask)
 
         wedge_x = torch.randn(*wedge_x_mask.shape, device=device, dtype=dtype, requires_grad=True)
         wedge_x_mask = torch.tensor(wedge_x_mask, device=device, dtype=dtype, requires_grad=False)
-        wedge_x = torch.mul(wedge_x, wedge_x_mask)
+        wedge_x_masked = torch.mul(wedge_x, wedge_x_mask)
 
         phi = torch.randn(*phi_mask.shape, device=device, dtype=dtype, requires_grad=True)
         phi_mask = torch.tensor(phi_mask, device=device, dtype=dtype, requires_grad=False)
-        phi = torch.mul(phi, phi_mask)
+        phi_masked = torch.mul(phi, phi_mask)
 
         theta_e = torch.randn(*theta_e_mask.shape, device=device, dtype=dtype, requires_grad=True)
         theta_e_mask = torch.tensor(theta_e_mask, device=device, dtype=dtype, requires_grad=False)
-        theta_e = torch.mul(theta_e, theta_e_mask)
+        theta_e_masked = torch.mul(theta_e, theta_e_mask)
 
         theta_del = torch.randn(*theta_del_mask.shape, device=device, dtype=dtype, requires_grad=True)
         theta_del_mask = torch.tensor(theta_del_mask, device=device, dtype=dtype, requires_grad=False)
-        theta_del = torch.mul(theta_del, theta_del_mask)
+        theta_del_masked = torch.mul(theta_del, theta_del_mask)
 
         psi = torch.randn(*psi_mask.shape, device=device, dtype=dtype, requires_grad=True)
         psi_mask = torch.tensor(psi_mask, device=device, dtype=dtype, requires_grad=False)
-        psi = torch.mul(psi, psi_mask)
+        psi_masked = torch.mul(psi, psi_mask)
 
         # Compute model implied covariance matrix
-        sigma_yy = wedge_y @ B_inv @ (gamma @ phi @ gamma.t() + psi) @ B_inv.t() @ wedge_y.t() + theta_e
-        sigma_yx = wedge_y @ B_inv @ gamma @ phi @ wedge_x.t()
+        sigma_yy = wedge_y_masked @ B_inv @ (gamma_masked @ phi_masked @ gamma_masked.t() + psi_masked) @ B_inv.t() @ wedge_y_masked.t() + theta_e_masked
+        sigma_yx = wedge_y_masked @ B_inv @ gamma_masked @ phi_masked @ wedge_x_masked.t()
         sigma_xy = sigma_yx.t()
-        sigma_xx = wedge_x @ phi @ wedge_x.t() + theta_del
+        sigma_xx = wedge_x_masked @ phi_masked @ wedge_x_masked.t() + theta_del_masked
+
+        # Concatenate all the sigma's in a single covariance matrix.
+        y_len, x_len = (len(self.model.y), len(self.model.x))
+        sigma = torch.zeros(y_len + x_len, y_len + x_len, device=device, dtype=dtype, requires_grad=False)
+        sigma[:y_len, :y_len] = sigma_yy
+        sigma[:y_len, y_len:] = sigma_yx
+        sigma[y_len:, :y_len] = sigma_xy
+        sigma[y_len:, y_len:] = sigma_xx
+
+        masks = dict(zip(['B_mask', 'gamma_mask', 'wedge_y_mask', 'wedge_x_mask', 'phi_mask',
+                          'theta_e_mask', 'theta_del_mask', 'psi_mask'],
+                         [B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask,
+                          theta_e_mask, theta_del_mask, psi_mask]))
+
+        variable_order = self.model.y + self.model.x
+        S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
+        S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
         if method == 'ols':
-            minimization_fun = self.get_ols_fn(cov_mat, sigma_yy, sigma_yx, sigma_xx)
+            minimization_fun = self.get_ols_fn
 
         elif method == 'uls':
             minimization_fun = self.get_uls_fn()
@@ -105,3 +123,16 @@ class SEMEstimator(object):
 
         elif method == '2sls':
             raise NotImplementedError("2-SLS is not implemented yet")
+
+        lr = 1e-4
+        #optim = torch.optim.Adam([B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi], lr=lr)
+        #optim = torch.optim.Adam([B], lr=lr)
+        for t in range(max_iter):
+            loss = minimization_fun(S, sigma)
+            print(S.logdet(), sigma.logdet(), loss.item())
+            loss.backward(retain_graph=True)
+            with torch.no_grad():
+                B -= (lr * B.grad)
+                B.grad.zero_()
+
+        return B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi
