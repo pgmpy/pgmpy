@@ -125,8 +125,8 @@ class SEM(DirectedGraph):
         theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
         psi_mask = err_adj_matrix[p+q:, p+q:]
 
-        return (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask,
-                theta_e_mask, theta_del_mask, psi_mask)
+        return (B_mask.T, gamma_mask.T, wedge_y_mask.T, wedge_x_mask.T, phi_mask.T,
+                theta_e_mask.T, theta_del_mask.T, psi_mask.T)
 
     def get_params(self):
         """
