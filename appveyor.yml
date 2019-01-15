@@ -21,14 +21,16 @@ environment:
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
       CONDA_PY: "34"
-      CONDA_NPY: "115"
 
     - CONDA_ROOT: "C:\\Miniconda3_64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       CONDA_PY: "35"
-      CONDA_NPY: "115"
 
+    - CONDA_ROOT: "C:\\Miniconda3_64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "36"
 
 # We always use a 64-bit machine, but can build x86 distributions
 # with the PYTHON_ARCH variable (which is used by CMD_IN_ENV).
