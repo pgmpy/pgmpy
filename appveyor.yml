@@ -17,18 +17,20 @@ environment:
     clone_folder: C:\projects\pgmpy
 
   matrix:
+    - CONDA_ROOT: "C:\\Miniconda3_64"
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "64"
+      CONDA_PY: "37"
 
     - CONDA_ROOT: "C:\\Miniconda3_64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
-      CONDA_PY: "35"
-      CONDA_NPY: "112"
+      CONDA_PY: "37"
 
     - CONDA_ROOT: "C:\\Miniconda3_64"
-      PYTHON_VERSION: "2.7"
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      CONDA_PY: "27"
-      CONDA_NPY: "110"
+      CONDA_PY: "37"
 
 # We always use a 64-bit machine, but can build x86 distributions
 # with the PYTHON_ARCH variable (which is used by CMD_IN_ENV).
@@ -74,15 +76,13 @@ install:
   - cmd: conda create -n pgmpy python=%PYTHON_VERSION%
   - cmd: activate pgmpy
   - cmd: echo "installing requirements from %REQ%"
+  - cmd: conda install mkl
+  - cmd: conda install -c conda-forge mkl_fft 
   - cmd: conda install -n pgmpy --file=requirements.txt
-  - cmd: conda update scipy
   - cmd: conda install nose mock
+  - cmd: conda install -c defaults intel-openmp -f
   - cmd: conda list -n pgmpy
   - cmd: echo "installing requirements from %REQ% - done"
-
-  # add some pip only reqs to the env
-  - cmd: echo "installing requirements from %REQ%"
-  - cmd: pip install pyparsing==2.2
 
   # build em using the local source checkout in the correct windows env
   - cmd: python setup.py install

@@ -262,7 +262,7 @@ class HamiltonianMC(object):
 
             # Genrating sample
             position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
-            samples[i] = position_m
+            samples[i] = tuple(position_m)
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
@@ -503,7 +503,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
             # Genrating sample
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
-            samples[i] = position_m
+            samples[i] = tuple(position_m)
 
             # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
