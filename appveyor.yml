@@ -77,14 +77,9 @@ install:
   - cmd: activate pgmpy
   - cmd: echo "installing requirements from %REQ%"
   - cmd: conda install -n pgmpy --file=requirements.txt
-  - cmd: conda update scipy
   - cmd: conda install nose mock
   - cmd: conda list -n pgmpy
   - cmd: echo "installing requirements from %REQ% - done"
-
-  # add some pip only reqs to the env
-  - cmd: echo "installing requirements from %REQ%"
-  - cmd: pip install pyparsing==2.2
 
   # build em using the local source checkout in the correct windows env
   - cmd: python setup.py install
