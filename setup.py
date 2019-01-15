@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pgmpy",
-    version="0.1.6",
+    version="0.1.7",
     description="A library for Probabilistic Graphical Models",
     packages=find_packages(exclude=['tests']),
     author="Ankur Ankan",
@@ -24,8 +24,8 @@ setup(
     ],
     long_description="https://github.com/pgmpy/pgmpy/blob/dev/README.md",
     install_requires=[
-        "networkx >= 1.11",
-        "scipy >= 0.18.1",
-        "numpy >= 1.11.3",
+        "networkx >= 1.11, <1.12",
+        "scipy >= 1.0.0",
+        "numpy >= 1.14.0",
     ],
 )
