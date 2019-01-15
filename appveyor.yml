@@ -78,11 +78,12 @@ install:
   - cmd: echo "installing requirements from %REQ%"
   - cmd: conda install -n pgmpy --file=requirements.txt
   - cmd: conda install nose mock
+  - cmd: conda install -c defaults intel-openmp -f
   - cmd: conda list -n pgmpy
   - cmd: echo "installing requirements from %REQ% - done"
 
   # build em using the local source checkout in the correct windows env
-  #  - cmd: python setup.py install
+  - cmd: python setup.py install
 
 test_script:
   # tests
