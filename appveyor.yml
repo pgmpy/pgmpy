@@ -76,6 +76,7 @@ install:
   - cmd: conda create -n pgmpy python=%PYTHON_VERSION%
   - cmd: activate pgmpy
   - cmd: echo "installing requirements from %REQ%"
+  - cmd: conda install mkl mkl-fft intel-openmp numpy
   - cmd: conda install -n pgmpy --file=requirements.txt
   - cmd: conda install nose mock
   - cmd: conda install -c defaults intel-openmp -f
