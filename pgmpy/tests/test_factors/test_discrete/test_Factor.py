@@ -7,11 +7,9 @@ import numpy.testing as np_test
 from pgmpy.extern.six.moves import range
 
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors import factor_divide
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete.CPD import TabularCPD
-from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 
@@ -272,6 +270,45 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod, expected_factor)
         self.assertEqual(prod.variables, expected_factor.variables)
 
+    def test_sum(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
+        summation = phi.sum(phi1, inplace=False)
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x4', 'x3'], [2, 2, 2, 2],
+                                         [0, 2, 1, 3, 1, 3, 2, 4, 2, 4, 3, 5, 3, 5, 4, 6])
+        self.assertEqual(summation, expected_factor)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3', 'x4'])
+
+        phi = DiscreteFactor(['x1', 'x2'], [3, 2], range(6))
+        phi1 = DiscreteFactor(['x2', 'x3'], [2, 2], range(4))
+        summation = phi.sum(phi1, inplace=False)
+        expected_factor = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2],
+                                         [0, 1, 3, 4, 2, 3, 5, 6, 4, 5, 7, 8])
+        self.assertEqual(summation, expected_factor)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3'])
+
+        phi7_copy = self.phi7
+        phi7_copy.sum(self.phi8, inplace=True)
+        expected_factor = DiscreteFactor([self.var1, self.var2, self.var3], [3, 2, 2],
+                                         [5, 4, 7, 8, 6, 5, 10, 11, 11, 10, 13, 14])
+        self.assertEqual(expected_factor, phi7_copy)
+        self.assertEqual(phi7_copy.variables, [self.var1, self.var2, self.var3])
+
+    def test_factor_add(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
+        phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
+        summation = phi + phi1
+        phi3 = DiscreteFactor(['x1','x2','x4','x3'], [2, 2, 2, 2],
+                              [0, 2, 1, 3, 1, 3, 2, 4, 2, 4, 3, 5, 3, 5, 4, 6])
+        self.assertEqual(phi3, summation)
+        self.assertEqual(sorted(summation.variables), ['x1', 'x2', 'x3', 'x4'])
+
+        self.phi9 = self.phi9 + self.phi10
+        expected_factor = DiscreteFactor([self.var1, self.var3], [3, 2],
+                                         [6, 8, 7, 11, 12, 14])
+        self.assertEqual(self.phi9, expected_factor)
+        self.assertEqual(self.phi9.variables, [self.var1, self.var3])
+
     def test_product(self):
         phi = DiscreteFactor(['x1', 'x2'], [2, 2], range(4))
         phi1 = DiscreteFactor(['x3', 'x4'], [2, 2], range(4))
@@ -380,6 +417,14 @@ class TestFactorMethods(unittest.TestCase):
                                6, 7, 8, 18, 19, 20, 9, 10, 11, 21, 22, 23])
         self.assertTrue(phi3 == phi4)
 
+    def test__repr__(self):
+        phi = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
+        self.assertEqual(repr(phi), "<DiscreteFactor representing phi(x1:2, x2:2) at {address}>"
+                         .format(address=hex(id(phi))))
+
+        self.assertEqual(repr(self.phi7), "<DiscreteFactor representing phi(x1:3, ('x2', 1):2) at {address}>"
+                         .format(address=hex(id(self.phi7))))
+
     def test_hash(self):
         phi1 = DiscreteFactor(['x1', 'x2'], [2, 2], [1, 2, 3, 4])
         phi2 = DiscreteFactor(['x2', 'x1'], [2, 2], [1, 3, 2, 4])
@@ -442,6 +487,12 @@ class TestFactorMethods(unittest.TestCase):
     def test_maximize_typeerror(self):
         self.assertRaises(TypeError, self.phi.maximize, 'x1')
 
+    def test_copy(self):
+        phi_copy = self.phi.copy()
+        self.assertListEqual(self.phi.variables, phi_copy.variables)
+        np_test.assert_array_equal(self.phi.cardinality, phi_copy.cardinality)
+        np_test.assert_array_equal(self.phi.values, phi_copy.values)
+
     def tearDown(self):
         del self.phi
         del self.phi1
@@ -470,340 +521,9 @@ class TestHash:
         return isinstance(other, self.__class__) and self.x == other.x and self.y == other.y
 
 
-class TestTabularCPDInit(unittest.TestCase):
-
-    def test_cpd_init(self):
-        cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1]])
-        self.assertEqual(cpd.variable, 'grade')
-        self.assertEqual(cpd.variable_card, 3)
-        self.assertEqual(list(cpd.variables), ['grade'])
-        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
-        np_test.assert_array_almost_equal(cpd.values, np.array([0.1, 0.1, 0.1]))
-
-        values = [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                  [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                  [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]
-
-        evidence = ['intel', 'diff']
-        evidence_card = [3, 2]
-
-        valid_value_inputs = [values, np.asarray(values)]
-        valid_evidence_inputs = [evidence, set(evidence), np.asarray(evidence)]
-        valid_evidence_card_inputs = [evidence_card, np.asarray(evidence_card)]
-
-        for value in valid_value_inputs:
-            for evidence in valid_evidence_inputs:
-                for evidence_card in valid_evidence_card_inputs:
-                    cpd = TabularCPD('grade', 3, values, evidence=['intel', 'diff'], evidence_card=[3, 2])
-                    self.assertEqual(cpd.variable, 'grade')
-                    self.assertEqual(cpd.variable_card, 3)
-                    np_test.assert_array_equal(cpd.cardinality, np.array([3, 3, 2]))
-                    self.assertListEqual(list(cpd.variables), ['grade', 'intel', 'diff'])
-                    np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                                     0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-                                                                     0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(3, 3, 2))
-
-        cpd = TabularCPD('grade', 3, [[0.1, 0.1],
-                                      [0.1, 0.1],
-                                      [0.8, 0.8]],
-                         evidence=['evi1'], evidence_card=[2.0])
-        self.assertEqual(cpd.variable, 'grade')
-        self.assertEqual(cpd.variable_card, 3)
-        np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
-        self.assertListEqual(list(cpd.variables), ['grade', 'evi1'])
-        np_test.assert_array_equal(cpd.values, np.array([0.1, 0.1,
-                                                         0.1, 0.1,
-                                                         0.8, 0.8]).reshape(3, 2))
-
-    def test_cpd_init_event_card_not_int(self):
-        self.assertRaises(TypeError, TabularCPD, 'event', '2', [[0.1, 0.9]])
-
-    def test_cpd_init_cardinality_not_specified(self):
-        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                          ['evi1', 'evi2'], [5])
-        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                          ['evi1', 'evi2'], [5.0])
-        self.assertRaises(ValueError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                          ['evi1'], [5, 6])
-        self.assertRaises(TypeError, TabularCPD, 'event', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                          'evi1', [5, 6])
-
-    def test_cpd_init_value_not_2d(self):
-        self.assertRaises(TypeError, TabularCPD, 'event', 3, [[[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                                               [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]],
-                          ['evi1', 'evi2'], [5, 6])
 
 
-class TestTabularCPDMethods(unittest.TestCase):
 
-    def setUp(self):
-        self.cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                           [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                           [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                              evidence=['intel', 'diff'], evidence_card=[3, 2])
-
-        self.cpd2 = TabularCPD('J', 2, [[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
-                                        [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]],
-                               evidence=['A', 'B', 'C'], evidence_card=[2, 2, 2])
-
-    def test_marginalize_1(self):
-        self.cpd.marginalize(['diff'])
-        self.assertEqual(self.cpd.variable, 'grade')
-        self.assertEqual(self.cpd.variable_card, 3)
-        self.assertListEqual(list(self.cpd.variables), ['grade', 'intel'])
-        np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
-        np_test.assert_array_equal(self.cpd.values.ravel(), np.array([0.1, 0.1, 0.1,
-                                                                      0.1, 0.1, 0.1,
-                                                                      0.8, 0.8, 0.8]))
-
-    def test_marginalize_2(self):
-        self.assertRaises(ValueError, self.cpd.marginalize, ['grade'])
-
-    def test_marginalize_3(self):
-        copy_cpd = self.cpd.copy()
-        copy_cpd.marginalize(['intel', 'diff'])
-        self.cpd.marginalize(['intel'])
-        self.cpd.marginalize(['diff'])
-        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
-
-    def test_normalize(self):
-        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
-                                       ['intel', 'diff'], [2, 2])
-        cpd_un_normalized.normalize()
-        np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([[[0.63636364, 0.33333333],
-                                                                               [0.6, 0.2]],
-                                                                              [[0.36363636, 0.66666667],
-                                                                               [0.4, 0.8]]]))
-
-    def test_normalize_not_in_place(self):
-        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
-                                       ['intel', 'diff'], [2, 2])
-        np_test.assert_array_almost_equal(cpd_un_normalized.normalize(inplace=False).values,
-                                          np.array([[[0.63636364, 0.33333333],
-                                                     [0.6, 0.2]],
-                                                    [[0.36363636, 0.66666667],
-                                                     [0.4, 0.8]]]))
-
-    def test_normalize_original_safe(self):
-        cpd_un_normalized = TabularCPD('grade', 2, [[0.7, 0.2, 0.6, 0.2], [0.4, 0.4, 0.4, 0.8]],
-                                       ['intel', 'diff'], [2, 2])
-        cpd_un_normalized.normalize(inplace=False)
-        np_test.assert_array_almost_equal(cpd_un_normalized.values, np.array([[[0.7, 0.2], [0.6, 0.2]],
-                                                                              [[0.4, 0.4], [0.4, 0.8]]]))
-
-    def test__repr__(self):
-        grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                               evidence=['intel', 'diff'], evidence_card=[3, 2])
-        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        diff_cpd = TabularCPD('grade', 3, [[0.1, 0.1], [0.1, 0.1],  [0.8, 0.8]], evidence=['diff'], evidence_card=[2])
-        self.assertEqual(repr(grade_cpd), '<TabularCPD representing P(grade:3 | intel:3, diff:2) at {address}>'
-                         .format(address=hex(id(grade_cpd))))
-        self.assertEqual(repr(intel_cpd), '<TabularCPD representing P(intel:3) at {address}>'
-                         .format(address=hex(id(intel_cpd))))
-        self.assertEqual(repr(diff_cpd), '<TabularCPD representing P(grade:3 | diff:2) at {address}>'
-                         .format(address=hex(id(diff_cpd))))
-
-    def test_copy(self):
-        copy_cpd = self.cpd.copy()
-        np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
-
-    def test_copy_original_safe(self):
-        copy_cpd = self.cpd.copy()
-        copy_cpd.reorder_parents(['diff', 'intel'])
-        np_test.assert_array_equal(self.cpd.get_values(),
-                                   np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
-
-    def test_reduce_1(self):
-        self.cpd.reduce([('diff', 0)])
-        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1],
-                                                                    [0.1, 0.1, 0.1],
-                                                                    [0.8, 0.8, 0.8]]))
-
-    def test_reduce_2(self):
-        self.cpd.reduce([('intel', 0)])
-        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1],
-                                                                    [0.1, 0.1],
-                                                                    [0.8, 0.8]]))
-
-    def test_reduce_3(self):
-        self.cpd.reduce([('intel', 0), ('diff', 0)])
-        np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1],
-                                                                    [0.1],
-                                                                    [0.8]]))
-
-    def test_reduce_4(self):
-        self.assertRaises(ValueError, self.cpd.reduce, [('grade', 0)])
-
-    def test_reduce_5(self):
-        copy_cpd = self.cpd.copy()
-        copy_cpd.reduce([('intel', 2), ('diff', 1)])
-        self.cpd.reduce([('intel', 2)])
-        self.cpd.reduce([('diff', 1)])
-        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
-
-    def test_get_values(self):
-        np_test.assert_array_equal(self.cpd.get_values(),
-                                   np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                             [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
-
-    def test_reorder_parents_inplace(self):
-        new_vals = self.cpd2.reorder_parents(['B', 'A', 'C'])
-        np_test.assert_array_equal(new_vals, np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
-                                                       [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
-        np_test.assert_array_equal(self.cpd2.get_values(),
-                                   np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
-                                             [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
-
-    def test_reorder_parents(self):
-        new_vals = self.cpd2.reorder_parents(['B', 'A', 'C'])
-        np_test.assert_array_equal(new_vals, np.array([[0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
-                                                       [0.1, 0.7, 0.2, 0.2, 0.1, 0.7, 0.6, 0.6]]))
-
-    def test_reorder_parents_no_effect(self):
-        self.cpd2.reorder_parents(['C', 'A', 'B'], inplace=False)
-        np_test.assert_array_equal(self.cpd2.get_values(),
-                                   np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
-                                             [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
-
-    def test_reorder_parents_warning(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            self.cpd2.reorder_parents(['A', 'B', 'C'], inplace=False)
-            assert("Same ordering provided as current" in str(w[-1].message))
-            np_test.assert_array_equal(self.cpd2.get_values(),
-                                       np.array([[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
-                                                 [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]]))
-
-    def tearDown(self):
-        del self.cpd
-
-
-class TestJointProbabilityDistributionInit(unittest.TestCase):
-
-    def test_jpd_init(self):
-        jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], np.ones(12) / 12)
-        np_test.assert_array_equal(jpd.cardinality, np.array([2, 3, 2]))
-        np_test.assert_array_equal(jpd.values, np.ones(12).reshape(2, 3, 2) / 12)
-        self.assertEqual(jpd.get_cardinality(['x1', 'x2', 'x3']), {'x1': 2, 'x2': 3, 'x3': 2})
-
-    def test_jpd_init_exception(self):
-        self.assertRaises(ValueError, JPD, ['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-
-
-class TestJointProbabilityDistributionMethods(unittest.TestCase):
-
-    def setUp(self):
-        self.jpd = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
-        self.jpd1 = JPD(['x1', 'x2', 'x3'], [2, 3, 2], values=np.ones(12) / 12)
-        self.jpd2 = JPD(['x1', 'x2', 'x3'], [2, 2, 3],
-                        [0.126, 0.168, 0.126, 0.009, 0.045, 0.126, 0.252, 0.0224, 0.0056, 0.06, 0.036, 0.024])
-        self.jpd3 = JPD(['x1', 'x2', 'x3'], [2, 2, 2],
-                        [5.0e-04, 5.225e-04, 0.00, 8.9775e-03, 9.9e-03, 5.39055e-02, 0.00, 9.261945e-01])
-
-    def test_jpd_marginal_distribution_list(self):
-        self.jpd.marginal_distribution(['x1', 'x2'])
-        np_test.assert_array_almost_equal(self.jpd.values,
-                                          np.array([[0.16666667, 0.16666667, 0.16666667],
-                                                    [0.16666667, 0.16666667, 0.16666667]]))
-        np_test.assert_array_equal(self.jpd.cardinality, np.array([2, 3]))
-        dic = {'x1': 2, 'x2': 3}
-        self.assertEqual(self.jpd.get_cardinality(['x1', 'x2']), dic)
-        self.assertEqual(self.jpd.scope(), ['x1', 'x2'])
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-        new_jpd = self.jpd1.marginal_distribution(['x1', 'x2'], inplace=False)
-        self.assertTrue(self.jpd1 != self.jpd)
-        self.assertTrue(new_jpd == self.jpd)
-
-    def test_marginal_distribution_str(self):
-        self.jpd.marginal_distribution('x1')
-        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
-        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-        self.assertEqual(self.jpd.scope(), ['x1'])
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-        new_jpd = self.jpd1.marginal_distribution('x1', inplace=False)
-        self.assertTrue(self.jpd1 != self.jpd)
-        self.assertTrue(self.jpd == new_jpd)
-
-    def test_conditional_distribution_list(self):
-        self.jpd = self.jpd1.copy()
-        self.jpd.conditional_distribution([('x1', 1), ('x2', 0)])
-        np_test.assert_array_almost_equal(self.jpd.values, np.array([0.5, 0.5]))
-        np_test.assert_array_equal(self.jpd.cardinality, np.array([2]))
-        self.assertEqual(self.jpd.scope(), ['x3'])
-        np_test.assert_almost_equal(np.sum(self.jpd.values), 1)
-        new_jpd = self.jpd1.conditional_distribution([('x1', 1), ('x2', 0)], inplace=False)
-        self.assertTrue(self.jpd1 != self.jpd)
-        self.assertTrue(self.jpd == new_jpd)
-
-    def test_check_independence(self):
-        self.assertTrue(self.jpd2.check_independence(['x1'], ['x2']))
-        self.assertRaises(TypeError, self.jpd2.check_independence, 'x1', ['x2'])
-        self.assertRaises(TypeError, self.jpd2.check_independence, ['x1'], 'x2')
-        self.assertRaises(TypeError, self.jpd2.check_independence, ['x1'], ['x2'], 'x3')
-        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
-        self.assertFalse(self.jpd2.check_independence(['x1'], ['x2'], [('x3', 0)]))
-        self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
-        self.assertTrue(self.jpd1.check_independence(['x1'], ['x2'], [('x3', 1)]))
-        self.assertTrue(self.jpd3.check_independence(['x1'], ['x2'], ('x3',), condition_random_variable=True))
-
-    def test_get_independencies(self):
-        independencies = Independencies(['x1', 'x2'], ['x2', 'x3'], ['x3', 'x1'])
-        independencies1 = Independencies(['x1', 'x2'])
-        self.assertEqual(self.jpd1.get_independencies(), independencies)
-        self.assertEqual(self.jpd2.get_independencies(), independencies1)
-        self.assertEqual(self.jpd1.get_independencies([('x3', 0)]), independencies1)
-        self.assertEqual(self.jpd2.get_independencies([('x3', 0)]), Independencies())
-
-    def test_minimal_imap(self):
-        bm = self.jpd1.minimal_imap(order=['x1', 'x2', 'x3'])
-        self.assertEqual(sorted(bm.edges()), sorted([('x1', 'x3'), ('x2', 'x3')]))
-        bm = self.jpd1.minimal_imap(order=['x2', 'x3', 'x1'])
-        self.assertEqual(sorted(bm.edges()), sorted([('x2', 'x1'), ('x3', 'x1')]))
-        bm = self.jpd2.minimal_imap(order=['x1', 'x2', 'x3'])
-        self.assertEqual(bm.edges(), [])
-        bm = self.jpd2.minimal_imap(order=['x1', 'x2'])
-        self.assertEqual(bm.edges(), [])
-
-    def test_repr(self):
-        self.assertEqual(repr(self.jpd1), '<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>'.format(
-            address=hex(id(self.jpd1))))
-
-    def test_is_imap(self):
-        G1 = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
-        diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
-        intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
-        grade_cpd = TabularCPD('grade', 3,
-                               [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                               evidence=['diff', 'intel'],
-                               evidence_card=[2, 3])
-        G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
-        val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
-               0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
-        jpd = JPD(['diff', 'intel', 'grade'], [2, 3, 3], val)
-        self.assertTrue(jpd.is_imap(G1))
-        self.assertRaises(TypeError, jpd.is_imap, MarkovModel())
-
-    def tearDown(self):
-        del self.jpd
-        del self.jpd1
-        del self.jpd2
-        del self.jpd3
 
 #
 # class TestTreeCPDInit(unittest.TestCase):
