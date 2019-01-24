@@ -45,6 +45,7 @@ class HillClimbSearch(StructureEstimator):
         else:
             self.scoring_method = K2Score(data, **kwargs)
 
+        self.p = Parallel(n_jobs=-1, backend='threading')
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
     @staticmethod
@@ -82,9 +83,8 @@ class HillClimbSearch(StructureEstimator):
                                        local_score(X, tuple(old_X_parents)) -
                                        local_score(Y, tuple(old_Y_parents)))
                         return [op, score_delta, X, Y]
-        return ['2', '0', X, Y]
 
-    def _legal_operations(self, p, model, tabu_list=[], max_indegree=None):
+    def _legal_operations(self, model, tabu_list=[], max_indegree=None):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -97,14 +97,12 @@ class HillClimbSearch(StructureEstimator):
         potential_new_edges = (set(permutations(nodes, 2)) -
                                set(model.edges()) -
                                set([(Y, X) for (X, Y) in model.edges()]))
-        potential_new_edges = map(lambda t: (1, t[0], t[1]), potential_new_edges)
-        edges_del = map(lambda t: (-1, t[0], t[1]), model.edges())
-        edges_flip = map(lambda t: (0, t[0], t[1]), model.edges())
-        scores = p(delayed(self._temp)(i, model, local_score) for i in chain(potential_new_edges, edges_del, edges_flip))
-        scores = np.array(scores)
-        # import pdb; pdb.set_trace()
-        ind = np.argmax(scores[:, 1])
-        return scores[ind, :]
+        potential_new_edges = list(map(lambda t: (1, t[0], t[1]), potential_new_edges))
+        edges_del = list(map(lambda t: (-1, t[0], t[1]), model.edges()))
+        edges_flip = list(map(lambda t: (0, t[0], t[1]), model.edges()))
+        scores = self.p(delayed(self._temp)(i, model, local_score) for i in chain(potential_new_edges, edges_del, edges_flip))
+        scores = np.array(list(filter(lambda t: t != None, scores)))
+        return scores
         # for (X, Y) in potential_new_edges:  # (1) add single edge
         #     if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
         #         operation = ('+', (X, Y))
@@ -204,9 +202,8 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        p = Parallel(n_jobs=-1, backend='threading')
         op_dict = {'1': '+', '-1': '-', '0': 'flip'}
-        for _ in trange(max_iter):
+        for _ in range(max_iter):
             best_score_delta = 0
             best_operation = None
 
@@ -215,7 +212,10 @@ class HillClimbSearch(StructureEstimator):
             #         best_operation = operation
             #         best_score_delta = score_delta
 
-            r = self._legal_operations(p, current_model, tabu_list, max_indegree)
+            scores = self._legal_operations(current_model, tabu_list, max_indegree)
+            r = scores[np.argmax(scores[:, 1]), :]
+            if r[0] == '2':
+                best_operation = None
             best_operation = (op_dict[r[0]], (r[2], r[3]))
             best_score_delta = float(r[1])
 
