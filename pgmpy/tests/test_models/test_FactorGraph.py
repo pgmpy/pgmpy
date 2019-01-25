@@ -25,7 +25,7 @@ class TestFactorGraphCreation(unittest.TestCase):
 
     def test_add_single_node(self):
         self.graph.add_node('phi1')
-        self.assertEqual(self.graph.nodes(), ['phi1'])
+        self.assertEqual(list(self.graph.nodes()), ['phi1'])
 
     def test_add_multiple_nodes(self):
         self.graph.add_nodes_from(['a', 'b', 'phi1'])

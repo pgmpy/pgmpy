@@ -140,13 +140,13 @@ class TestGibbsSampling(unittest.TestCase):
     def test_get_kernel_from_bayesian_model(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_bayesian_model(self.bayesian_model)
-        self.assertListEqual(list(gibbs.variables), self.bayesian_model.nodes())
+        self.assertListEqual(list(gibbs.variables), list(self.bayesian_model.nodes()))
         self.assertDictEqual(gibbs.cardinalities, {'diff': 2, 'intel': 2, 'grade': 3})
 
     def test_get_kernel_from_markov_model(self):
         gibbs = GibbsSampling()
         gibbs._get_kernel_from_markov_model(self.markov_model)
-        self.assertListEqual(list(gibbs.variables), self.markov_model.nodes())
+        self.assertListEqual(list(gibbs.variables), list(self.markov_model.nodes()))
         self.assertDictEqual(gibbs.cardinalities, {'A': 2, 'B': 3, 'C': 4, 'D': 2})
 
     def test_sample(self):

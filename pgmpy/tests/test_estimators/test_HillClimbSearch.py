@@ -68,10 +68,10 @@ class TestBaseEstimator(unittest.TestCase):
     def test_estimate_rand(self):
         est1 = self.est_rand.estimate()
         self.assertSetEqual(set(est1.nodes()), set(['A', 'B', 'C']))
-        self.assertTrue(est1.edges() == [('B', 'C')] or est1.edges() == [('C', 'B')])
+        self.assertTrue(list(est1.edges()) == [('B', 'C')] or list(est1.edges()) == [('C', 'B')])
 
         est2 = self.est_rand.estimate(start=BayesianModel([('A', 'B'), ('A', 'C')]))
-        self.assertTrue(est2.edges() == [('B', 'C')] or est2.edges() == [('C', 'B')])
+        self.assertTrue(list(est2.edges()) == [('B', 'C')] or list(est2.edges()) == [('C', 'B')])
 
     def test_estimate_titanic(self):
         self.assertSetEqual(set(self.est_titanic2.estimate().edges()),

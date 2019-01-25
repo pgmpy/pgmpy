@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as np_test
+import networkx as nx
 
 from pgmpy.readwrite import BIFReader, BIFWriter
 from pgmpy.models import BayesianModel
@@ -168,8 +169,12 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
         for cpd_index in range(0, len(cpds_expected)):
             np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
                                        cpds_expected[cpd_index])
-        self.assertDictEqual(model.node, node_expected)
-        self.assertDictEqual(model.edge, edge_expected)
+        self.assertDictEqual(dict(model.node), node_expected)
+        if nx.__version__.startswith('1'):
+            self.assertDictEqual(model.edge, edge_expected)
+        else:
+            self.assertDictEqual(dict(model.adj), edge_expected)
+
         self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 

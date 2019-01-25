@@ -97,6 +97,13 @@ class UndirectedGraph(nx.Graph):
         >>> G.node['A']
         {'weight': None}
         """
+        # Check for networkx 2.0 syntax
+        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
+            node, attrs = node
+            if attrs.get('weight', None) is not None:
+                attrs['weight'] = weight
+        else:
+            attrs = {'weight': weight}
         super(UndirectedGraph, self).add_node(node, weight=weight)
 
     def add_nodes_from(self, nodes, weights=None):

@@ -57,7 +57,7 @@ class HillClimbSearch(StructureEstimator):
                                set([(Y, X) for (X, Y) in model.edges()]))
 
         for (X, Y) in potential_new_edges:  # (1) add single edge
-            if nx.is_directed_acyclic_graph(nx.DiGraph(model.edges() + [(X, Y)])):
+            if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
                 operation = ('+', (X, Y))
                 if operation not in tabu_list:
                     old_parents = model.get_parents(Y)
@@ -76,7 +76,7 @@ class HillClimbSearch(StructureEstimator):
                 yield(operation, score_delta)
 
         for (X, Y) in model.edges():  # (3) flip single edge
-            new_edges = model.edges() + [(Y, X)]
+            new_edges = list(model.edges()) + [(Y, X)]
             new_edges.remove((X, Y))
             if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
                 operation = ('flip', (X, Y))

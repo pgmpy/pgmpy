@@ -12,7 +12,7 @@ class TestJunctionTreeCreation(unittest.TestCase):
 
     def test_add_single_node(self):
         self.graph.add_node(('a', 'b'))
-        self.assertListEqual(self.graph.nodes(), [('a', 'b')])
+        self.assertListEqual(list(self.graph.nodes()), [('a', 'b')])
 
     def test_add_single_node_raises_error(self):
         self.assertRaises(TypeError, self.graph.add_node, 'a')

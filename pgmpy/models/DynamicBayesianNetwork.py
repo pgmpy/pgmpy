@@ -126,7 +126,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_nodes_from(['A', 'B', 'C'])
-        >>> dbn.nodes()
+        >>> sorted(dbn.nodes())
         ['B', 'A', 'C']
         """
         return list(set([node for node, timeslice in
@@ -158,8 +158,8 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> model = DBN()
         >>> model.add_nodes_from(['D', 'I'])
         >>> model.add_edge(('D',0), ('I',0))
-        >>> model.edges()
-        [(('D', 1), ('I', 1)), (('D', 0), ('I', 0))]
+        >>> sorted(model.edges())
+        [(('D', 0), ('I', 0)), (('D', 1), ('I', 1))]
         """
         try:
             if len(start) != 2 or len(end) != 2:

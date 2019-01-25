@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 import unittest
 
 from pgmpy.readwrite import UAIReader, UAIWriter
@@ -62,8 +63,12 @@ class TestUAIReader(unittest.TestCase):
                       'var_1': {'weight': None}},
             'var_1': {'var_2': {'weight': None},
                       'var_0': {'weight': None}}}
+
         self.assertListEqual(sorted(model.nodes()), sorted(['var_0', 'var_2', 'var_1']))
-        self.assertDictEqual(model.edge, edge_expected)
+        if nx.__version__.startswith('1'):
+            self.assertDictEqual(dict(model.edge), edge_expected)
+        else:
+            self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -71,7 +76,7 @@ class TestUAIReader(unittest.TestCase):
                          'var_15': {}, 'var_0': {}, 'var_9': {}, 'var_7': {},
                          'var_6': {}, 'var_13': {}, 'var_10': {}, 'var_12': {},
                          'var_1': {}, 'var_11': {}, 'var_2': {}, 'var_4': {}}
-        self.assertDictEqual(model.node, node_expected)
+        self.assertDictEqual(dict(model.node), node_expected)
 
 
 class TestUAIWriter(unittest.TestCase):

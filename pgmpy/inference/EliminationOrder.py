@@ -82,6 +82,7 @@ class BaseEliminationOrder:
         """
         if not nodes:
             nodes = self.bayesian_model.nodes()
+        nodes = set(nodes)
 
         ordering = []
         while nodes:
@@ -122,7 +123,7 @@ class MinNeighbours(BaseEliminationOrder):
         The cost of a eliminating a node is the number of neighbors it has in the
         current graph.
         """
-        return len(self.moralized_model.neighbors(node))
+        return len(list(self.moralized_model.neighbors(node)))
 
 
 class MinWeight(BaseEliminationOrder):

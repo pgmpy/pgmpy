@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 
 try:
     from lxml import etree
@@ -204,8 +205,12 @@ class XBNReader(object):
 
         model.add_cpds(*tabular_cpds)
 
-        for var, properties in self.variables.items():
-            model.node[var] = properties
+        if nx.__version__.startswith('1'):
+            for var, properties in self.variables.items():
+                model.node[var] = properties
+        else:
+            for var, properties in self.variables.items():
+                model._node[var] = properties
 
         return model
 

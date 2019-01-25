@@ -18,8 +18,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_class_init_with_data_string(self):
         self.g = NaiveBayes([('a', 'b'), ('a', 'c')])
-        six.assertCountEqual(self, self.g.nodes(), ['a', 'b', 'c'])
-        six.assertCountEqual(self, self.g.edges(), [('a', 'b'), ('a', 'c')])
+        six.assertCountEqual(self, list(self.g.nodes()), ['a', 'b', 'c'])
+        six.assertCountEqual(self, list(self.g.edges()), [('a', 'b'), ('a', 'c')])
         self.assertEqual(self.g.parent_node, 'a')
         self.assertSetEqual(self.g.children_nodes, {'b', 'c'})
 
@@ -29,8 +29,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_class_init_with_data_nonstring(self):
         self.g = NaiveBayes([(1, 2), (1, 3)])
-        six.assertCountEqual(self, self.g.nodes(), [1, 2, 3])
-        six.assertCountEqual(self, self.g.edges(), [(1, 2), (1, 3)])
+        six.assertCountEqual(self, list(self.g.nodes()), [1, 2, 3])
+        six.assertCountEqual(self, list(self.g.edges()), [(1, 2), (1, 3)])
         self.assertEqual(self.g.parent_node, 1)
         self.assertSetEqual(self.g.children_nodes, {2, 3})
 
@@ -40,32 +40,32 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_add_node_string(self):
         self.G.add_node('a')
-        self.assertListEqual(self.G.nodes(), ['a'])
+        self.assertListEqual(list(self.G.nodes()), ['a'])
 
     def test_add_node_nonstring(self):
         self.G.add_node(1)
-        self.assertListEqual(self.G.nodes(), [1])
+        self.assertListEqual(list(self.G.nodes()), [1])
 
     def test_add_nodes_from_string(self):
         self.G.add_nodes_from(['a', 'b', 'c', 'd'])
-        six.assertCountEqual(self, self.G.nodes(), ['a', 'b', 'c', 'd'])
+        six.assertCountEqual(self, list(self.G.nodes()), ['a', 'b', 'c', 'd'])
 
     def test_add_nodes_from_non_string(self):
         self.G.add_nodes_from([1, 2, 3, 4])
-        six.assertCountEqual(self, self.G.nodes(), [1, 2, 3, 4])
+        six.assertCountEqual(self, list(self.G.nodes()), [1, 2, 3, 4])
 
     def test_add_edge_string(self):
         self.G.add_edge('a', 'b')
-        six.assertCountEqual(self, self.G.nodes(), ['a', 'b'])
-        self.assertListEqual(self.G.edges(), [('a', 'b')])
+        six.assertCountEqual(self, list(self.G.nodes()), ['a', 'b'])
+        self.assertListEqual(list(self.G.edges()), [('a', 'b')])
         self.assertEqual(self.G.parent_node, 'a')
         self.assertSetEqual(self.G.children_nodes, {'b'})
 
         self.G.add_nodes_from(['c', 'd'])
         self.G.add_edge('a', 'c')
         self.G.add_edge('a', 'd')
-        six.assertCountEqual(self, self.G.nodes(), ['a', 'b', 'c', 'd'])
-        six.assertCountEqual(self, self.G.edges(), [('a', 'b'), ('a', 'c'), ('a', 'd')])
+        six.assertCountEqual(self, list(self.G.nodes()), ['a', 'b', 'c', 'd'])
+        six.assertCountEqual(self, list(self.G.edges()), [('a', 'b'), ('a', 'c'), ('a', 'd')])
         self.assertEqual(self.G.parent_node, 'a')
         self.assertSetEqual(self.G.children_nodes, {'b', 'c', 'd'})
 
@@ -77,16 +77,16 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_add_edge_nonstring(self):
         self.G.add_edge(1, 2)
-        six.assertCountEqual(self, self.G.nodes(), [1, 2])
-        self.assertListEqual(self.G.edges(), [(1, 2)])
+        six.assertCountEqual(self, list(self.G.nodes()), [1, 2])
+        self.assertListEqual(list(self.G.edges()), [(1, 2)])
         self.assertEqual(self.G.parent_node, 1)
         self.assertSetEqual(self.G.children_nodes, {2})
 
         self.G.add_nodes_from([3, 4])
         self.G.add_edge(1, 3)
         self.G.add_edge(1, 4)
-        six.assertCountEqual(self, self.G.nodes(), [1, 2, 3, 4])
-        six.assertCountEqual(self, self.G.edges(), [(1, 2), (1, 3), (1, 4)])
+        six.assertCountEqual(self, list(self.G.nodes()), [1, 2, 3, 4])
+        six.assertCountEqual(self, list(self.G.edges()), [(1, 2), (1, 3), (1, 4)])
         self.assertEqual(self.G.parent_node, 1)
         self.assertSetEqual(self.G.children_nodes, {2, 3, 4})
 
@@ -106,16 +106,16 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_update_node_parents_bm_constructor(self):
         self.g = NaiveBayes([('a', 'b'), ('a', 'c')])
-        self.assertListEqual(self.g.predecessors('a'), [])
-        self.assertListEqual(self.g.predecessors('b'), ['a'])
-        self.assertListEqual(self.g.predecessors('c'), ['a'])
+        self.assertListEqual(list(self.g.predecessors('a')), [])
+        self.assertListEqual(list(self.g.predecessors('b')), ['a'])
+        self.assertListEqual(list(self.g.predecessors('c')), ['a'])
 
     def test_update_node_parents(self):
         self.G.add_nodes_from(['a', 'b', 'c'])
         self.G.add_edges_from([('a', 'b'), ('a', 'c')])
-        self.assertListEqual(self.G.predecessors('a'), [])
-        self.assertListEqual(self.G.predecessors('b'), ['a'])
-        self.assertListEqual(self.G.predecessors('c'), ['a'])
+        self.assertListEqual(list(self.G.predecessors('a')), [])
+        self.assertListEqual(list(self.G.predecessors('b')), ['a'])
+        self.assertListEqual(list(self.G.predecessors('c')), ['a'])
 
     def tearDown(self):
         del self.G

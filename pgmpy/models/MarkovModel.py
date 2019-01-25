@@ -391,7 +391,7 @@ class MarkovModel(UndirectedGraph):
             deletion of the node
             """
             graph_working_copy = nx.Graph(graph_copy.edges())
-            neighbors = graph_working_copy.neighbors(node)
+            neighbors = list(graph_working_copy.neighbors(node))
             graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
             clique_dict = nx.cliques_containing_node(graph_working_copy,
                                                      nodes=([node] + neighbors))
@@ -654,7 +654,7 @@ class MarkovModel(UndirectedGraph):
 
         # create an ordering of the nodes based on the ordering of the clique
         # in which it appeared first
-        root_node = junction_tree.nodes()[0]
+        root_node = next(iter(junction_tree.nodes()))
         bfs_edges = nx.bfs_edges(junction_tree, root_node)
         for node in root_node:
             var_clique_dict[node] = root_node

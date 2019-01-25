@@ -104,6 +104,7 @@ class BaseEstimator(object):
         c1  2.0  0.0
         c2  0.0  1.0
         """
+        parents = list(parents)
 
         # default for how to deal with missing data can be set in class constructor
         if complete_samples_only is None:

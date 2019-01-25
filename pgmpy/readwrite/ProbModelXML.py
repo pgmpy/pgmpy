@@ -263,7 +263,7 @@ def get_probmodel_data(model):
     model_data['probnet']['edges'] = {}
     edges = model.edges()
     for edge in edges:
-        model_data['probnet']['edges'][str(edge)] = model.edge[edge[0]][edge[1]]
+        model_data['probnet']['edges'][str(edge)] = model.adj[edge[0]][edge[1]]
 
     model_data['probnet']['Potentials'] = []
     cpds = model.get_cpds()
@@ -1054,9 +1054,15 @@ class ProbModelXMLReader(object):
                 for prop_name, prop_value in self.probnet['Variables'][var].items():
                     model.node[var][prop_name] = prop_value
             edges = model.edges()
-            for edge in edges:
-                for prop_name, prop_value in self.probnet['edges'][edge].items():
-                    model.edge[edge[0]][edge[1]][prop_name] = prop_value
+
+            if nx.__version__.startswith('1'):
+                for edge in edges:
+                    for prop_name, prop_value in self.probnet['edges'][edge].items():
+                        model.edge[edge[0]][edge[1]][prop_name] = prop_value
+            else:
+                for edge in edges:
+                    for prop_name, prop_value in self.probnet['edges'][edge].items():
+                        model.adj[edge[0]][edge[1]][prop_name] = prop_value
             return model
         else:
             raise ValueError("Please specify only Bayesian Network.")

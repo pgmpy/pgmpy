@@ -519,9 +519,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         graph = UndirectedGraph(combinations(nodes, 2))
         lim_neighbors = 0
         separating_sets = dict()
-        while not all([len(graph.neighbors(node)) < lim_neighbors for node in nodes]):
+        while not all([len(list(graph.neighbors(node))) < lim_neighbors for node in nodes]):
             for node in nodes:
-                for neighbor in graph.neighbors(node):
+                for neighbor in list(graph.neighbors(node)):
                     # search if there is a set of neighbors (of size lim_neighbors)
                     # that makes X and Y independent:
                     for separating_set in combinations(set(graph.neighbors(node)) - set([neighbor]), lim_neighbors):

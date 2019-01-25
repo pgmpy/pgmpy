@@ -30,7 +30,7 @@ class TestMarkovModelCreation(unittest.TestCase):
 
     def test_add_node_string(self):
         self.graph.add_node('a')
-        self.assertListEqual(self.graph.nodes(), ['a'])
+        self.assertListEqual(list(self.graph.nodes()), ['a'])
 
     def test_add_node_nonstring(self):
         self.graph.add_node(1)
@@ -80,7 +80,7 @@ class TestMarkovModelCreation(unittest.TestCase):
 
     def test_number_of_neighbors(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
-        self.assertEqual(len(self.graph.neighbors('b')), 2)
+        self.assertEqual(len(list(self.graph.neighbors('b'))), 2)
 
     def tearDown(self):
         del self.graph
@@ -256,7 +256,7 @@ class TestMarkovModelMethods(unittest.TestCase):
 
     def test_markov_blanket(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
-        self.assertListEqual(self.graph.markov_blanket('a'), ['b'])
+        self.assertListEqual(list(self.graph.markov_blanket('a')), ['b'])
         self.assertListEqual(sorted(self.graph.markov_blanket('b')),
                              ['a', 'c'])
 
@@ -548,8 +548,8 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
         # Basic sanity checks to ensure the graph was copied correctly
         self.assertEqual(len(copy.nodes()), 2)
-        self.assertListEqual(copy.neighbors('a'), ['b'])
-        self.assertListEqual(copy.neighbors('b'), ['a'])
+        self.assertListEqual(list(copy.neighbors('a')), ['b'])
+        self.assertListEqual(list(copy.neighbors('b')), ['a'])
 
         # Modify the original graph ...
         self.graph.add_nodes_from(['c'])
@@ -557,10 +557,10 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
         # ... and ensure none of those changes get propagated
         self.assertEqual(len(copy.nodes()), 2)
-        self.assertListEqual(copy.neighbors('a'), ['b'])
-        self.assertListEqual(copy.neighbors('b'), ['a'])
+        self.assertListEqual(list(copy.neighbors('a')), ['b'])
+        self.assertListEqual(list(copy.neighbors('b')), ['a'])
         with self.assertRaises(nx.NetworkXError):
-            copy.neighbors('c')
+            list(copy.neighbors('c'))
 
         # Ensure the copy has no factors at this point
         self.assertEqual(len(copy.get_factors()), 0)
@@ -571,12 +571,12 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
         # The factors should not get copied over
         with self.assertRaises(AssertionError):
-            self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+            self.assertListEqual(list(copy.get_factors()), self.graph.get_factors())
 
         # Create a fresh copy
         del copy
         copy = self.graph.copy()
-        self.assertListEqual(copy.get_factors(), self.graph.get_factors())
+        self.assertListEqual(list(copy.get_factors()), self.graph.get_factors())
 
         # If we change factors in the original, it should not be passed to the clone
         phi1.values = np.array([[0.5, 0.5], [0.5, 0.5]])
@@ -589,15 +589,15 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
         # Ensure an unconnected node gets copied over as well
         self.assertEqual(len(copy.nodes()), 4)
-        self.assertListEqual(self.graph.neighbors('a'), ['b'])
+        self.assertListEqual(list(self.graph.neighbors('a')), ['b'])
         self.assertTrue('a' in self.graph.neighbors('b'))
         self.assertTrue('c' in self.graph.neighbors('b'))
-        self.assertListEqual(self.graph.neighbors('c'), ['b'])
-        self.assertListEqual(self.graph.neighbors('d'), [])
+        self.assertListEqual(list(self.graph.neighbors('c')), ['b'])
+        self.assertListEqual(list(self.graph.neighbors('d')), [])
 
         # Verify that changing the copied model should not update the original
         copy.add_nodes_from(['e'])
-        self.assertListEqual(copy.neighbors('e'), [])
+        self.assertListEqual(list(copy.neighbors('e')), [])
         with self.assertRaises(nx.NetworkXError):
             self.graph.neighbors('e')
 

@@ -20,11 +20,11 @@ class TestUndirectedGraphCreation(unittest.TestCase):
 
     def test_add_node_string(self):
         self.graph.add_node('a')
-        self.assertListEqual(self.graph.nodes(), ['a'])
+        self.assertListEqual(list(self.graph.nodes()), ['a'])
 
     def test_add_node_nonstring(self):
         self.graph.add_node(1)
-        self.assertListEqual(self.graph.nodes(), [1])
+        self.assertListEqual(list(self.graph.nodes()), [1])
 
     def test_add_nodes_from_string(self):
         self.graph.add_nodes_from(['a', 'b', 'c', 'd'])
@@ -78,7 +78,7 @@ class TestUndirectedGraphCreation(unittest.TestCase):
 
     def test_number_of_neighbors(self):
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
-        self.assertEqual(len(self.graph.neighbors('b')), 2)
+        self.assertEqual(len(list(self.graph.neighbors('b'))), 2)
 
     def tearDown(self):
         del self.graph

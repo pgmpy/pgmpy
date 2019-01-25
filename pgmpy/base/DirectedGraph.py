@@ -87,7 +87,7 @@ class DirectedGraph(nx.DiGraph):
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_node(node='A')
-        >>> G.nodes()
+        >>> sorted(G.nodes())
         ['A']
 
         Adding a node with some weight.
@@ -99,6 +99,15 @@ class DirectedGraph(nx.DiGraph):
         >>> G.node['A']
         {'weight': None}
         """
+
+        # Check for networkx 2.0 syntax
+        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
+            node, attrs = node
+            if attrs.get('weight', None) is not None:
+                attrs['weight'] = weight
+        else:
+            attrs = {'weight': weight}
+
         super(DirectedGraph, self).add_node(node, weight=weight)
 
     def add_nodes_from(self, nodes, weights=None):
@@ -122,7 +131,7 @@ class DirectedGraph(nx.DiGraph):
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph()
         >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
-        >>> G.nodes()
+        >>> sorted(G.nodes())
         ['A', 'B', 'C']
 
         Adding nodes with weights:
@@ -260,10 +269,10 @@ class DirectedGraph(nx.DiGraph):
         --------
         >>> from pgmpy.base import DirectedGraph
         >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
-        >>> G.parents(node='grade')
+        >>> G.get_parents(node='grade')
         ['diff', 'intel']
         """
-        return self.predecessors(node)
+        return list(self.predecessors(node))
 
     def moralize(self):
         """
@@ -303,6 +312,18 @@ class DirectedGraph(nx.DiGraph):
         return [node for node, out_degree in self.out_degree_iter() if
                 out_degree == 0]
 
+    def out_degree_iter(self, nbunch=None, weight=None):
+        if nx.__version__.startswith('1'):
+            return super(DirectedGraph, self).out_degree_iter(nbunch, weight)
+        else:
+            return iter(self.out_degree(nbunch, weight))
+
+    def in_degree_iter(self, nbunch=None, weight=None):
+        if nx.__version__.startswith('1'):
+            return super(DirectedGraph, self).in_degree_iter(nbunch, weight)
+        else:
+            return iter(self.in_degree(nbunch, weight))
+
     def get_roots(self):
         """
         Returns a list of roots of the graph.
@@ -314,13 +335,13 @@ class DirectedGraph(nx.DiGraph):
         >>> graph.get_roots()
         ['A', 'E']
         """
-        return [node for node, in_degree in self.in_degree().items() if in_degree == 0]
-    
+        return [node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0]
+
     def get_children(self, node):
         """
         Returns a list of children of node.
         Throws an error if the node is not present in the graph.
-        
+
         Parameters
         ----------
         node: string, int or any hashable python object.
@@ -329,10 +350,9 @@ class DirectedGraph(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DirectedGraph
-        >>> g = DirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'), 
+        >>> g = DirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'),
                                       ('B', 'E'), ('B', 'F'), ('E', 'G')])
-        >>> g.children(node='B')
+        >>> g.get_children(node='B')
         ['D', 'E', 'F']
         """
-        return self.successors(node)
-    
+        return list(self.successors(node))

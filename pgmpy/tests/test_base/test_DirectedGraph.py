@@ -4,6 +4,7 @@ import unittest
 
 from pgmpy.base import DirectedGraph
 import pgmpy.tests.help_functions as hf
+import networkx as nx
 
 
 class TestDirectedGraphCreation(unittest.TestCase):
@@ -21,7 +22,7 @@ class TestDirectedGraphCreation(unittest.TestCase):
 
     def test_add_node_string(self):
         self.graph.add_node('a')
-        self.assertListEqual(self.graph.nodes(), ['a'])
+        self.assertListEqual(list(self.graph.nodes()), ['a'])
 
     def test_add_node_nonstring(self):
         self.graph.add_node(1)
@@ -49,7 +50,7 @@ class TestDirectedGraphCreation(unittest.TestCase):
     def test_add_edge_string(self):
         self.graph.add_edge('d', 'e')
         self.assertListEqual(sorted(self.graph.nodes()), ['d', 'e'])
-        self.assertListEqual(self.graph.edges(), [('d', 'e')])
+        self.assertListEqual(list(self.graph.edges()), [('d', 'e')])
         self.graph.add_nodes_from(['a', 'b', 'c'])
         self.graph.add_edge('a', 'b')
         self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
@@ -76,28 +77,38 @@ class TestDirectedGraphCreation(unittest.TestCase):
 
     def test_add_edge_weight(self):
         self.graph.add_edge('a', 'b', weight=0.3)
-        self.assertEqual(self.graph.edge['a']['b']['weight'], 0.3)
+        if nx.__version__.startswith('1'):
+            self.assertEqual(self.graph.edge['a']['b']['weight'], 0.3)
+        else:
+            self.assertEqual(self.graph.adj['a']['b']['weight'], 0.3)
 
     def test_add_edges_from_weight(self):
         self.graph.add_edges_from([('b', 'c'), ('c', 'd')], weights=[0.5, 0.6])
-        self.assertEqual(self.graph.edge['b']['c']['weight'], 0.5)
-        self.assertEqual(self.graph.edge['c']['d']['weight'], 0.6)
+        if nx.__version__.startswith('1'):
+            self.assertEqual(self.graph.edge['b']['c']['weight'], 0.5)
+            self.assertEqual(self.graph.edge['c']['d']['weight'], 0.6)
 
-        self.graph.add_edges_from([('e', 'f')])
-        self.assertEqual(self.graph.edge['e']['f']['weight'], None)
+            self.graph.add_edges_from([('e', 'f')])
+            self.assertEqual(self.graph.edge['e']['f']['weight'], None)
+        else:
+            self.assertEqual(self.graph.adj['b']['c']['weight'], 0.5)
+            self.assertEqual(self.graph.adj['c']['d']['weight'], 0.6)
+
+            self.graph.add_edges_from([('e', 'f')])
+            self.assertEqual(self.graph.adj['e']['f']['weight'], None)
 
     def test_update_node_parents_bm_constructor(self):
         self.graph = DirectedGraph([('a', 'b'), ('b', 'c')])
-        self.assertListEqual(self.graph.predecessors('a'), [])
-        self.assertListEqual(self.graph.predecessors('b'), ['a'])
-        self.assertListEqual(self.graph.predecessors('c'), ['b'])
+        self.assertListEqual(list(self.graph.predecessors('a')), [])
+        self.assertListEqual(list(self.graph.predecessors('b')), ['a'])
+        self.assertListEqual(list(self.graph.predecessors('c')), ['b'])
 
     def test_update_node_parents(self):
         self.graph.add_nodes_from(['a', 'b', 'c'])
         self.graph.add_edges_from([('a', 'b'), ('b', 'c')])
-        self.assertListEqual(self.graph.predecessors('a'), [])
-        self.assertListEqual(self.graph.predecessors('b'), ['a'])
-        self.assertListEqual(self.graph.predecessors('c'), ['b'])
+        self.assertListEqual(list(self.graph.predecessors('a')), [])
+        self.assertListEqual(list(self.graph.predecessors('b')), ['a'])
+        self.assertListEqual(list(self.graph.predecessors('c')), ['b'])
 
     def test_get_leaves(self):
         self.graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'),

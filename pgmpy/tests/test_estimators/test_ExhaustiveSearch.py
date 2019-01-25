@@ -40,13 +40,13 @@ class TestBaseEstimator(unittest.TestCase):
     def test_estimate_rand(self):
         est = self.est_rand.estimate()
         self.assertSetEqual(set(est.nodes()), set(['A', 'B', 'C']))
-        self.assertTrue(est.edges() == [('B', 'C')] or est.edges() == [('C', 'B')])
+        self.assertTrue(list(est.edges()) == [('B', 'C')] or list(est.edges()) == [('C', 'B')])
 
         est_bdeu = self.est_rand.estimate()
-        self.assertTrue(est_bdeu.edges() == [('B', 'C')] or est_bdeu.edges() == [('C', 'B')])
+        self.assertTrue(list(est_bdeu.edges()) == [('B', 'C')] or list(est_bdeu.edges()) == [('C', 'B')])
 
         est_bic = self.est_rand.estimate()
-        self.assertTrue(est_bic.edges() == [('B', 'C')] or est_bic.edges() == [('C', 'B')])
+        self.assertTrue(list(est_bic.edges()) == [('B', 'C')] or list(est_bic.edges()) == [('C', 'B')])
 
     def test_estimate_titanic(self):
         e1 = self.est_titanic.estimate()

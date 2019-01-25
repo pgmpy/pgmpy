@@ -356,7 +356,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def assert_models_equivelent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
-            self.assertListEqual(expected.get_parents(node), got.get_parents(node))
+            self.assertListEqual(list(expected.get_parents(node)), list(got.get_parents(node)))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
             np_test.assert_array_equal(cpds_expected.values, cpds_got.values)

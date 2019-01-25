@@ -3,6 +3,7 @@ import warnings
 
 import numpy as np
 import numpy.testing as np_test
+import networkx as nx
 
 from pgmpy.readwrite import XMLBeliefNetwork
 from pgmpy.models import BayesianModel
@@ -230,7 +231,7 @@ class TestXBNReader(unittest.TestCase):
                                'DESCRIPTION': '(f) Asthma',
                                'YPOS': '10489',
                                'XPOS': '13440',
-                               'TYPE': 'discrete'},      
+                               'TYPE': 'discrete'},
                          'd': {'STATES': ['Present', 'Absent'],
                                'DESCRIPTION': '(d) Coma',
                                'YPOS': '12985',
@@ -252,7 +253,7 @@ class TestXBNReader(unittest.TestCase):
             np_test.assert_array_equal(cpd.get_values(), cpds_expected[cpd.variable])
         self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'),
                                                             ('c', 'd'), ('c', 'e')]))
-        self.assertDictEqual(model.node, node_expected)
+        self.assertDictEqual(dict(model.node), node_expected)
 
 
 class TestXBNWriter(unittest.TestCase):
@@ -281,7 +282,7 @@ class TestXBNWriter(unittest.TestCase):
                        'DESCRIPTION': '(f) Asthma',
                        'YPOS': '10489',
                        'XPOS': '13440',
-                       'TYPE': 'discrete'},        
+                       'TYPE': 'discrete'},
                  'd': {'STATES': ['Present', 'Absent'],
                        'DESCRIPTION': '(d) Coma',
                        'YPOS': '12985',
@@ -298,7 +299,7 @@ class TestXBNWriter(unittest.TestCase):
                                   'CONDSET': ['c'],
                                   'CARDINALITY': [2]},
                             'f': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.3, 0.7]])},      
+                                  'DPIS': np.array([[0.3, 0.7]])},
                             'b': {'TYPE': 'discrete',
                                   'DPIS': np.array([[0.8, 0.2],
                                                     [0.2, 0.8]]),
@@ -329,8 +330,12 @@ class TestXBNWriter(unittest.TestCase):
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        for var, properties in nodes.items():
-            model.node[var] = properties
+        if nx.__version__.startswith('1'):
+            for var, properties in nodes.items():
+                model.node[var] = properties
+        else:
+            for var, properties in nodes.items():
+                model._node[var] = properties
 
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
