@@ -525,7 +525,7 @@ class BayesianModel(DirectedGraph):
             visit = [node]
             while visit:
                 n = visit.pop()
-                neighbors = self.neighbors(n)
+                neighbors = list(self.neighbors(n))
                 visit.extend(neighbors)
                 descendents.extend(neighbors)
             return descendents
