@@ -5,6 +5,7 @@
             - DISTRIB="conda" PYTHON_VERSION="3.4" COVERAGE="true"
             - DISTRIB="conda" PYTHON_VERSION="3.5" COVERAGE="true"
             - DISTRIB="conda" PYTHON_VERSION="3.6" COVERAGE="true"
+            - DISTRIB="conda" PYTHON_VERSION="3.7" COVERAGE="true"
 
         before_install:
             - uname -a
