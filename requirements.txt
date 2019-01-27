@@ -1,4 +1,4 @@
-networkx==1.11
+networkx
 numpy
 scipy
 pandas
