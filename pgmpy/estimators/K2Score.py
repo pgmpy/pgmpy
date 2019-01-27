@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 from math import lgamma
-try:
-    from functools import lru_cache
-except ImportError:
-    from pgmpy.extern import lru_cache
+from functools import lru_cache
 
 from pgmpy.estimators import StructureScore
 

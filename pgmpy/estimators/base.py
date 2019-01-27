@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 from warnings import warn
-try:
-    from functools import lru_cache
-except ImportError:
-    from pgmpy.extern import lru_cache
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
