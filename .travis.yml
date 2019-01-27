@@ -13,7 +13,7 @@
             - df -h
             - ulimit -a
         install: source ci/travis/install.sh
-        script: nosetests --with-coverage --cover-package=pgmpy
+        script: nosetests -v --with-coverage --cover-package=pgmpy
         after_success:
             codecov
 notifications:
