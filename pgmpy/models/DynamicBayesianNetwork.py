@@ -117,7 +117,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         for node in nodes:
             self.add_node(node)
 
-    def nodes(self):
+    def _nodes(self):
         """
         Returns the list of nodes present in the network
 
@@ -126,7 +126,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
         >>> dbn = DBN()
         >>> dbn.add_nodes_from(['A', 'B', 'C'])
-        >>> sorted(dbn.nodes())
+        >>> sorted(dbn._nodes())
         ['B', 'A', 'C']
         """
         return list(set([node for node, timeslice in
@@ -314,7 +314,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError("The timeslice should be a positive value greater than or equal to zero")
 
-        return [(node, time_slice) for node in self.nodes()]
+        return [(node, time_slice) for node in self._nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -583,7 +583,7 @@ class DynamicBayesianNetwork(DirectedGraph):
         [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7f13961a3320>]
         """
         dbn = DynamicBayesianNetwork()
-        dbn.add_nodes_from(self.nodes())
+        dbn.add_nodes_from(self._nodes())
         dbn.add_edges_from(self.edges())
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)

@@ -590,7 +590,7 @@ class BeliefPropagation(Inference):
 
         # Selecting a node is root node. Root node would be having only one neighbor
         if len(subtree.nodes()) == 1:
-            root_node = subtree.nodes()[0]
+            root_node = list(subtree.nodes())[0]
         else:
             root_node = tuple(filter(lambda x: len(list(subtree.neighbors(x))) == 1, subtree.nodes()))[0]
         clique_potential_list = [self.clique_beliefs[root_node]]

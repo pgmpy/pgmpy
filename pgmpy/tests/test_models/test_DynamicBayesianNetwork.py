@@ -13,16 +13,16 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
 
     def test_add_single_node(self):
         self.network.add_node('a')
-        self.assertListEqual(self.network.nodes(), ['a'])
+        self.assertListEqual(self.network._nodes(), ['a'])
 
     def test_add_multiple_nodes(self):
         self.network.add_nodes_from(['a', 'b', 'c'])
-        self.assertListEqual(sorted(self.network.nodes()), ['a', 'b', 'c'])
+        self.assertListEqual(sorted(self.network._nodes()), ['a', 'b', 'c'])
 
     def test_add_single_edge_with_timeslice(self):
         self.network.add_edge(('a', 0), ('b', 0))
         self.assertListEqual(sorted(self.network.edges()), [(('a', 0), ('b', 0)), (('a', 1), ('b', 1))])
-        self.assertListEqual(sorted(self.network.nodes()), ['a', 'b'])
+        self.assertListEqual(sorted(self.network._nodes()), ['a', 'b'])
 
     def test_add_edge_with_different_number_timeslice(self):
         self.network.add_edge(('a', 2), ('b', 2))
@@ -153,7 +153,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.network.add_cpds(cpd)
         copy = self.network.copy()
         self.assertIsInstance(copy, DynamicBayesianNetwork)
-        self.assertListEqual(sorted(self.network.nodes()), sorted(copy.nodes()))
+        self.assertListEqual(sorted(self.network._nodes()), sorted(copy._nodes()))
         self.assertListEqual(sorted(self.network.edges()), sorted(copy.edges()))
         self.assertListEqual(self.network.get_cpds(), copy.get_cpds())
         self.assertListEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
@@ -169,7 +169,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         copy.add_node('Z')
         self.network.add_edge(('A', 0), ('D', 0))
         copy.add_edge(('Z', 0), ('D', 0))
-        self.assertNotEqual(sorted(self.network.nodes()), sorted(copy.nodes()))
+        self.assertNotEqual(sorted(self.network._nodes()), sorted(copy._nodes()))
         self.assertNotEqual(sorted(self.network.edges()), sorted(copy.edges()))
         self.assertNotEqual(self.network.get_cpds(), copy.get_cpds())
         self.assertNotEqual(sorted(self.network.get_intra_edges()), sorted(copy.get_intra_edges()))
