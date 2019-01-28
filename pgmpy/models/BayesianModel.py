@@ -280,7 +280,7 @@ class BayesianModel(DirectedGraph):
         >>> student.add_cpds(cpd)
         >>> student.get_cpds()
         """
-        if node:
+        if node is not None:
             if node not in self.nodes():
                 raise ValueError('Node not present in the Directed Graph')
             for cpd in self.cpds:
