@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 from warnings import warn
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
 from scipy.stats import chisquare
+
+from pgmpy.utils.decorators import convert_args_tuple
 
 
 class BaseEstimator(object):
@@ -54,6 +57,8 @@ class BaseEstimator(object):
         states = sorted(list(self.data.ix[:, variable].dropna().unique()))
         return states
 
+    @convert_args_tuple
+    @lru_cache(maxsize=2048)
     def state_counts(self, variable, parents=[], complete_samples_only=None):
         """
         Return counts how often each state of 'variable' occured in the data.
