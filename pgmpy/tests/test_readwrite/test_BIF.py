@@ -111,6 +111,51 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
             np_test.assert_array_equal(cpd_expected[variable],
                                        cpd[variable])
 
+    def test_get_values_reordered(self):
+
+        cancer_values1 = BIFReader(string="""
+network unknown {
+}
+variable Pollution {
+  type discrete [ 2 ] { low, high };
+}
+variable Smoker {
+  type discrete [ 2 ] { True, False };
+}
+variable Cancer {
+  type discrete [ 2 ] { True, False };
+}
+probability ( Cancer | Pollution, Smoker ) {
+  (low, True) 0.03, 0.97;
+  (low, False) 0.001, 0.999;
+  (high, True) 0.05, 0.95;
+  (high, False) 0.02, 0.98;
+}
+        """).get_values()
+
+        cancer_values2 = BIFReader(string="""
+network unknown {
+}
+variable Pollution {
+  type discrete [ 2 ] { low, high };
+}
+variable Smoker {
+  type discrete [ 2 ] { True, False };
+}
+variable Cancer {
+  type discrete [ 2 ] { True, False };
+}
+probability ( Cancer | Pollution, Smoker ) {
+  (low, True) 0.03, 0.97;
+  (high, True) 0.05, 0.95;
+  (low, False) 0.001, 0.999;
+  (high, False) 0.02, 0.98;
+}
+        """).get_values()
+
+        for var in cancer_values1:
+            np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
+
     def test_get_parents(self):
 
         parents_expected = {'bowel-problem': [],
