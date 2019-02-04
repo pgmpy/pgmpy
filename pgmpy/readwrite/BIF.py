@@ -95,7 +95,7 @@ class BIFReader(object):
         # 1.00 or 1 or 1.00. 0.00 or 9.8e-5 etc
         num_expr = Word(nums + '-' + '+' + 'e' + 'E' + '.') + Suppress(Optional(","))
         probability_expr = Suppress('probability') + Suppress('(') + OneOrMore(word_expr) + Suppress(')')
-        optional_expr = Suppress('(') + Suppress(OneOrMore(word_expr2)) + Suppress(')')
+        optional_expr = Suppress('(') + OneOrMore(word_expr2) + Suppress(')')
         probab_attributes = optional_expr | Suppress('table')
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 
@@ -237,21 +237,31 @@ class BIFReader(object):
          """
         variable_cpds = {}
         for block in self.probability_block():
-            name = self.probability_expr.searchString(block)[0][0]
+            names = self.probability_expr.searchString(block)
+            var_name, parents = names[0][0], names[0][1:]
             cpds = self.cpd_expr.searchString(block)
-            arr = [float(j) for i in cpds for j in i]
             if 'table' in block:
+                arr = [float(j) for i in cpds for j in i]
                 arr = numpy.array(arr)
-                arr = arr.reshape((len(self.variable_states[name]),
-                                   arr.size // len(self.variable_states[name])))
+                arr = arr.reshape((len(self.variable_states[var_name]),
+                                   arr.size // len(self.variable_states[var_name])))
             else:
-                length = len(self.variable_states[name])
-                reshape_arr = [[] for i in range(length)]
-                for i, val in enumerate(arr):
-                    reshape_arr[i % length].append(val)
-                arr = reshape_arr
+                length = sum(len(self.variable_states[var]) for var in parents)
+                arr = [[0 for j in range(length)] for i in self.variable_states[var_name]]
+                length = len(self.variable_states[var_name])
+                # Required for offset computation of values
+                index_map = {}
+                for i, p in enumerate(parents):
+                    index_map[p] = len(parents)-i
+                for prob_line in cpds:
+                    states = prob_line[:len(parents)]
+                    vals = [float(i) for i in prob_line[len(parents):]]
+                    offset = sum(index_map[parents[i]]*self.variable_states[parents[i]].index(states[i])
+                                 for i in range(len(states)))
+                    for i, val in enumerate(vals):
+                        arr[i][offset] = val
                 arr = numpy.array(arr)
-            variable_cpds[name] = arr
+            variable_cpds[var_name] = arr
 
         return variable_cpds
 
