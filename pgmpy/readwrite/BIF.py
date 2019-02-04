@@ -249,14 +249,10 @@ class BIFReader(object):
                 length = sum(len(self.variable_states[var]) for var in parents)
                 arr = [[0 for j in range(length)] for i in self.variable_states[var_name]]
                 length = len(self.variable_states[var_name])
-                # Required for offset computation of values
-                index_map = {}
-                for i, p in enumerate(parents):
-                    index_map[p] = len(parents)-i
                 for prob_line in cpds:
                     states = prob_line[:len(parents)]
                     vals = [float(i) for i in prob_line[len(parents):]]
-                    offset = sum(index_map[parents[i]]*self.variable_states[parents[i]].index(states[i])
+                    offset = sum((len(parents)-i)*self.variable_states[parents[i]].index(states[i])
                                  for i in range(len(states)))
                     for i, val in enumerate(vals):
                         arr[i][offset] = val
