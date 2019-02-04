@@ -110,7 +110,6 @@ class SEMEstimator(object):
         #sigma[y_len:, y_len:] = sigma_xx
         sigma = torch.cat((torch.cat((sigma_yy, sigma_yx), 1), torch.cat((sigma_xy, sigma_xx), 1)), 0)
 
-        import pdb; pdb.set_trace()
         masks = dict(zip(['B_mask', 'gamma_mask', 'wedge_y_mask', 'wedge_x_mask', 'phi_mask',
                           'theta_e_mask', 'theta_del_mask', 'psi_mask'],
                          [B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask,
@@ -135,7 +134,6 @@ class SEMEstimator(object):
         lr = 1e-1
         optim = torch.optim.Adam([B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi], lr=lr)
         #optim = torch.optim.Adam([B], lr=lr)
-        import pdb; pdb.set_trace()
         for t in range(max_iter):
             loss = minimization_fun(S, sigma).log()
             print(S.logdet(), sigma.logdet(), loss.item())

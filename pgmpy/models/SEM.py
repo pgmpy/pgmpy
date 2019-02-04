@@ -17,23 +17,55 @@ class SEM(DirectedGraph):
         """
         Parameters
         ----------
-        ebunch: Array of tuples of type (u, v, parameter)
-        latents: list of nodes
-            List of nodes which are latent. By default all others are considered observed.
-        err_corr: dict of correlations
+        ebunch: list / array-like
+            Each tuple can be of two possible shape:
+                1. (u, v): This would add an edge from u to v without setting any parameter
+                           for the edge.
+                2. (u, v, parameter): This would add an edge from u to v and set the edge
+                            parameter to `parameter`.
 
+        latents: list / array-like
+            List of nodes which are latent. By default all others are considered observed.
+
+        err_corr: dict
+            Dict of correlation between the error terms in the model.
+
+        Examples
+        --------
         """
         super(SEM, self).__init__()
 
-        # Assign all the attributes
-        # TODO: Check if ebunch has len 3 for each element in ebunch.
+        # Check and make ebunch uniform (len 3 tuples)
+        if ebunch:
+            u_ebunch = []
+            for t in ebunch:
+                if len(t) == 3:
+                    u_ebunch.append(t)
+                elif len(t) == 2:
+                    u_ebunch.append((t[0], t[1], np.NaN))
+                else:
+                    raise ValueError("Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
+                                                            t=t, shape=len(t)))
+
+        # Initialize attributes latents and observed
         self.latents = set(latents)
         self.observed = set()
 
+        # Create the full graph structure. Adds new latent variable whenever observed --> latent
+        # edge to convert to standard LISREL notation.
         self.graph = nx.DiGraph()
-        if ebunch:
-            for (u, v) in ebunch:
-                self.graph.add_edge(u, v, weight=np.NaN)
+        if u_ebunch:
+            mapping = {}
+            for u, v, w in u_ebunch:
+                self.graph.add_edge(u, v, weight=w)
+                if (u not in self.latents) and (v in self.latents):
+                    mapping[u] = '_l_' + u
+                elif (u not in self.latents) and (v not in self.latents):
+                    mapping[u] = '_l_' + u
+            self.latents.update(mapping.values())
+            self.graph = nx.relabel_nodes(self.graph, mapping, copy=False)
+            for u, v in mapping.items():
+                self.graph.add_edge(v, u, weight=1.0)
 
         for node, di in self.graph.node.items():
             if node in self.latents:
@@ -64,6 +96,7 @@ class SEM(DirectedGraph):
         for endo in self.eta:
             self.y.extend([x for x in self.graph.neighbors(endo) if not x in self.latents])
 
+        # Create a graph for correlation between error terms
         self.err_graph = nx.Graph(err_corr)
         # Add all the variables from y, x and \eta
         self.err_graph.add_nodes_from(self.observed)
