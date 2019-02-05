@@ -15,50 +15,50 @@ class TestBIFReader(unittest.TestCase):
     def setUp(self):
 
         self.reader = BIFReader(string="""
-// Bayesian Network in the Interchange Format
-// Produced by BayesianNetworks package in JavaBayes
-// Output created Sun Nov 02 17:49:49 GMT+00:00 1997
-// Bayesian network
-network "Dog-Problem" { //5 variables and 5 probability distributions
-        property "credal-set constant-density-bounded 1.1" ;
-}
-variable  "light-on" { //2 values
-        type discrete[2] {  "true"  "false" };
-        property "position = (218, 195)" ;
-}
-variable  "bowel-problem" { //2 values
-        type discrete[2] {  "true"  "false" };
-        property "position = (335, 99)" ;
-}
-variable  "dog-out" { //2 values
-        type discrete[2] {  "true"  "false" };
-        property "position = (300, 195)" ;
-}
-variable  "hear-bark" { //2 values
-        type discrete[2] {  "true"  "false" };
-        property "position = (296, 268)" ;
-}
-variable  "family-out" { //2 values
-        type discrete[2] {  "true"  "false" };
-        property "position = (257, 99)" ;
-}
-probability (  "light-on"  "family-out" ) { //2 variable(s) and 4 values
-        (true) 0.6 0.4 ;
-        (false) 0.05 0.95 ;
-}
-probability (  "bowel-problem" ) { //1 variable(s) and 2 values
-        table 0.01 0.99 ;
-}
-probability (  "dog-out"  "bowel-problem"  "family-out" ) { //3 variable(s) and 8 values
-        table 0.99 0.97 0.9 0.3 0.01 0.03 0.1 0.7 ;
-}
-probability (  "hear-bark"  "dog-out" ) { //2 variable(s) and 4 values
-        table 0.7 0.01 0.3 0.99 ;
-}
-probability (  "family-out" ) { //1 variable(s) and 2 values
-        table 0.15 0.85 ;
-}
-""")
+                // Bayesian Network in the Interchange Format
+                // Produced by BayesianNetworks package in JavaBayes
+                // Output created Sun Nov 02 17:49:49 GMT+00:00 1997
+                // Bayesian network
+                network "Dog-Problem" { //5 variables and 5 probability distributions
+                        property "credal-set constant-density-bounded 1.1" ;
+                }
+                variable  "light-on" { //2 values
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (218, 195)" ;
+                }
+                variable  "bowel-problem" { //2 values
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (335, 99)" ;
+                }
+                variable  "dog-out" { //2 values
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (300, 195)" ;
+                }
+                variable  "hear-bark" { //2 values
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (296, 268)" ;
+                }
+                variable  "family-out" { //2 values
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (257, 99)" ;
+                }
+                probability (  "light-on"  "family-out" ) { //2 variable(s) and 4 values
+                        (true) 0.6 0.4 ;
+                        (false) 0.05 0.95 ;
+                }
+                probability (  "bowel-problem" ) { //1 variable(s) and 2 values
+                        table 0.01 0.99 ;
+                }
+                probability (  "dog-out"  "bowel-problem"  "family-out" ) { //3 variable(s) and 8 values
+                        table 0.99 0.97 0.9 0.3 0.01 0.03 0.1 0.7 ;
+                }
+                probability (  "hear-bark"  "dog-out" ) { //2 variable(s) and 4 values
+                        table 0.7 0.01 0.3 0.99 ;
+                }
+                probability (  "family-out" ) { //1 variable(s) and 2 values
+                        table 0.15 0.85 ;
+                }
+                """)
 
     def test_network_name(self):
 
@@ -114,44 +114,42 @@ probability (  "family-out" ) { //1 variable(s) and 2 values
     def test_get_values_reordered(self):
 
         cancer_values1 = BIFReader(string="""
-network unknown {
-}
-variable Pollution {
-  type discrete [ 2 ] { low, high };
-}
-variable Smoker {
-  type discrete [ 2 ] { True, False };
-}
-variable Cancer {
-  type discrete [ 2 ] { True, False };
-}
-probability ( Cancer | Pollution, Smoker ) {
-  (low, True) 0.03, 0.97;
-  (low, False) 0.001, 0.999;
-  (high, True) 0.05, 0.95;
-  (high, False) 0.02, 0.98;
-}
-        """).get_values()
+                network unknown {
+                }
+                variable Pollution {
+                  type discrete [ 2 ] { low, high };
+                }
+                variable Smoker {
+                  type discrete [ 2 ] { True, False };
+                }
+                variable Cancer {
+                  type discrete [ 2 ] { True, False };
+                }
+                probability ( Cancer | Pollution, Smoker ) {
+                  (low, True) 0.03, 0.97;
+                  (low, False) 0.001, 0.999;
+                  (high, True) 0.05, 0.95;
+                  (high, False) 0.02, 0.98;
+                }""").get_values()
 
         cancer_values2 = BIFReader(string="""
-network unknown {
-}
-variable Pollution {
-  type discrete [ 2 ] { low, high };
-}
-variable Smoker {
-  type discrete [ 2 ] { True, False };
-}
-variable Cancer {
-  type discrete [ 2 ] { True, False };
-}
-probability ( Cancer | Pollution, Smoker ) {
-  (low, True) 0.03, 0.97;
-  (high, True) 0.05, 0.95;
-  (low, False) 0.001, 0.999;
-  (high, False) 0.02, 0.98;
-}
-        """).get_values()
+                network unknown {
+                }
+                variable Pollution {
+                  type discrete [ 2 ] { low, high };
+                }
+                variable Smoker {
+                  type discrete [ 2 ] { True, False };
+                }
+                variable Cancer {
+                  type discrete [ 2 ] { True, False };
+                }
+                probability ( Cancer | Pollution, Smoker ) {
+                  (low, True) 0.03, 0.97;
+                  (high, True) 0.05, 0.95;
+                  (low, False) 0.001, 0.999;
+                  (high, False) 0.02, 0.98;
+                }""").get_values()
 
         for var in cancer_values1:
             np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
