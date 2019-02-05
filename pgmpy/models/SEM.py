@@ -102,6 +102,36 @@ class SEM(DirectedGraph):
         self.err_graph.add_nodes_from(self.observed)
         self.err_graph.add_nodes_from(self.eta)
 
+    def _masks(self, weight):
+        p, q, m, n = (len(self.y), len(self.x), len(self.eta), len(self.xi))
+
+        nodelist = self.y + self.x + self.eta + self.xi
+        adj_matrix = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=weight)
+
+        B_mask = adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        gamma_mask = adj_matrix[p+q+m:, p+q:p+q+m]
+        wedge_y_mask = adj_matrix[p+q:p+q+m, 0:p]
+        wedge_x_mask = adj_matrix[p+q+m:, p:p+q]
+        phi_mask = np.ones((n, 1))
+
+        err_nodelist = self.y + self.x + self.eta
+        err_adj_matrix = nx.to_numpy_matrix(self.err_graph, nodelist=err_nodelist,
+                                            weight=weight)
+        theta_e_mask = err_adj_matrix[:p, :p]
+        theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
+        psi_mask = err_adj_matrix[p+q:, p+q:]
+
+        return (B_mask.T, gamma_mask.T, wedge_y_mask.T, wedge_x_mask.T, phi_mask.T,
+                theta_e_mask.T, theta_del_mask.T, psi_mask.T)
+
+    def get_fixed_masks(self):
+        """
+        Returns a fixed mask of all the algebriac parameters of the model.
+        A fixed mask has the fixed value when the parameter is fixed otherwise
+        has a value of 0.
+        """
+        return(self._masks(weight='weight'))
+
     def get_masks(self):
         """
         Returns masks of all the algebriac parameters of the model.
@@ -139,27 +169,11 @@ class SEM(DirectedGraph):
         # y     B   \Gamma  \wedge_y
         # x                         \wedge_x
         # eta
-        # xi 
-        p, q, m, n = (len(self.y), len(self.x), len(self.eta), len(self.xi))
-
-        nodelist = self.y + self.x + self.eta + self.xi
-        adj_matrix = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=None)
-
-        B_mask = adj_matrix[p+q:p+q+m, p+q:p+q+m]
-        gamma_mask = adj_matrix[p+q+m:, p+q:p+q+m]
-        wedge_y_mask = adj_matrix[p+q:p+q+m, 0:p]
-        wedge_x_mask = adj_matrix[p+q+m:, p:p+q]
-        phi_mask = np.ones((n, 1))
-
-        err_nodelist = self.y + self.x + self.eta
-        err_adj_matrix = nx.to_numpy_matrix(self.err_graph, nodelist=err_nodelist,
-                                            weight=None)
-        theta_e_mask = err_adj_matrix[:p, :p]
-        theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
-        psi_mask = err_adj_matrix[p+q:, p+q:]
-
-        return (B_mask.T, gamma_mask.T, wedge_y_mask.T, wedge_x_mask.T, phi_mask.T,
-                theta_e_mask.T, theta_del_mask.T, psi_mask.T)
+        # xi
+        masks_arr = []
+        for mask, fixed_mask in zip(self._masks(weight=None), self._masks(weight='weight')):
+            masks_arr.append(np.multiply(np.where(fixed_mask != 0, 0.0, 1.0), mask))
+        return tuple(masks_arr)
 
     def get_params(self):
         """
