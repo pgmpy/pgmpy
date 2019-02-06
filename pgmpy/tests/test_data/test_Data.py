@@ -7,6 +7,7 @@ import pandas as pd
 from pgmpy.data import Data
 
 
+@unittest.skip
 class TestData(unittest.TestCase):
     def setUp(self):
         self.random_values = np.random.randint(low=0, high=2, size=(1000000, 5))
