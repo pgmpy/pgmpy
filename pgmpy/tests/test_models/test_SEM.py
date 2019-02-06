@@ -7,6 +7,7 @@ from pgmpy.models import SEM
 
 class TestSEMInit(unittest.TestCase):
     def setUp(self):
+        # TODO: Add tests for fixed parameters in error correlations.
         self.lisrel = SEM(ebunch=[('xi1', 'x1'),
                                   ('xi1', 'x2'),
                                   ('xi1', 'x3'),
@@ -141,6 +142,8 @@ class TestSEMInit(unittest.TestCase):
         self.assertListEqual(sorted(self.lisrel.err_graph.edges()),
                              [('y1', 'y5'), ('y2', 'y4'), ('y2', 'y6'),
                               ('y3', 'y7'), ('y4', 'y8'), ('y6', 'y8')])
+        for edge in self.lisrel.err_graph.edges():
+            self.assertDictEqual(self.lisrel.err_graph.edges[edge], {'weight': np.NaN})
 
     def test_non_lisrel_init(self):
         self.assertSetEqual(self.non_lisrel.latents, {'eta1', 'eta2', 'xi1', '_l_y1', '_l_y4'})
@@ -186,6 +189,8 @@ class TestSEMInit(unittest.TestCase):
                               'y3', 'y4', 'y5'])
         self.assertListEqual(sorted(self.non_lisrel.err_graph.edges()),
                              [('y1', 'y2'), ('y2', 'y3')])
+        for edge in self.lisrel.err_graph.edges():
+            self.assertDictEqual(self.lisrel.err_graph.edges[edge], {'weight': np.NaN})
 
     def test_lisrel_param_init(self):
         self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'x1')], {'weight': 0.1})
@@ -218,12 +223,48 @@ class TestSEMInit(unittest.TestCase):
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'y1')], {'weight': 1.0})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y4', 'y4')], {'weight': 1.0})
 
-    def test_get_masks(self):
+    def test_lisrel_get_fixed_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.lisrel.get_fixed_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0., 0.],
+                                           [0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[0.],
+                                               [0.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.],
+                                                 [0., 0.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[0.],
+                                                 [0.],
+                                                 [0.]]))
+
+        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(theta_e_mask,
+                         np.array([[0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask,
+                         np.array([[0., 0., 0.],
+                                   [0., 0., 0.],
+                                   [0., 0., 0.]]))
+        npt.assert_equal(psi_mask,
+                         np.array([[0., 0.],
+                                   [0., 0.]]))
+
+    def test_lisrel_get_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
          theta_del_mask, psi_mask) = self.lisrel.get_masks(sort_vars=True)
 
-        # TODO: This might fail if the order of variables in self.x, self.y, self.eta, self.xi
-        #       etc changes. Make these tests robust to that.
         npt.assert_equal(B_mask, np.array([[0., 0.],
                                            [1., 0.]]))
         npt.assert_equal(gamma_mask, np.array([[1.],
@@ -258,5 +299,214 @@ class TestSEMInit(unittest.TestCase):
                          np.array([[0., 0.],
                                    [0., 0.]]))
 
-    def test_get_fixed_masks(self):
-        pass
+    def test_non_lisrel_get_fixed_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.non_lisrel.get_fixed_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0., 0., 0., 0.],
+                                           [0., 0., 0., 0.],
+                                           [0., 0., 0., 0.],
+                                           [0., 0., 0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[0.],
+                                               [0.],
+                                               [0.],
+                                               [0.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[1., 0., 0., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 1., 0., 0.],
+                                                 [0., 0., 0., 0.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[0.],
+                                                 [0.]]))
+
+        npt.assert_equal(phi_mask, np.array([[0.]]))
+
+        npt.assert_equal(theta_e_mask, np.array([[0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
+                                                   [0., 0.]]))
+        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.]]))
+
+    def test_non_lisrel_get_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.non_lisrel.get_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0., 1., 0., 0.],
+                                           [0., 0., 0., 0.],
+                                           [1., 0., 0., 0.],
+                                           [1., 0., 0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[1.],
+                                               [1.],
+                                               [1.],
+                                               [0.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[0., 0., 0., 0.],
+                                                 [0., 0., 1., 0.],
+                                                 [0., 0., 1., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 0., 0., 1.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[1.],
+                                                 [1.]]))
+
+        npt.assert_equal(phi_mask, np.array([[1.]]))
+
+        npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
+                                                 [1., 0., 1., 0., 0.],
+                                                 [0., 1., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
+                                                   [0., 0.]]))
+        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.]]))
+
+    def test_lisrel_fixed_param_get_fixed_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.lisrel_params.get_fixed_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0. , 0.],
+                                           [0.9, 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[0.],
+                                               [1.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[0.5, 0. ],
+                                                 [0. , 0. ],
+                                                 [0.7, 0. ],
+                                                 [0. , 0. ],
+                                                 [0. , 1.1],
+                                                 [0. , 0. ],
+                                                 [0. , 1.3],
+                                                 [0. , 1.4]]))
+        npt.assert_equal(wedge_x_mask, np.array([[0.1],
+                                                 [0.2],
+                                                 [0.3]]))
+
+        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(theta_e_mask,
+                         np.array([[0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask,
+                         np.array([[0., 0., 0.],
+                                   [0., 0., 0.],
+                                   [0., 0., 0.]]))
+        npt.assert_equal(psi_mask,
+                         np.array([[0., 0.],
+                                   [0., 0.]]))
+
+    def test_lisrel_fixed_param_get_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.lisrel_params.get_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0., 0.],
+                                           [0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[1.],
+                                               [0.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[0., 0.],
+                                                 [1., 0.],
+                                                 [0., 0.],
+                                                 [1., 0.],
+                                                 [0., 0.],
+                                                 [0., 1.],
+                                                 [0., 0.],
+                                                 [0., 0.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[0.],
+                                                 [0.],
+                                                 [0.]]))
+
+        npt.assert_equal(phi_mask, np.array([[1.]]))
+        npt.assert_equal(theta_e_mask,
+                         np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 0., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 1., 0.],
+                                   [0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [1., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [0., 0., 1., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 1., 0., 1., 0., 0.]]))
+        npt.assert_equal(theta_del_mask,
+                         np.array([[0., 0., 0.],
+                                   [0., 0., 0.],
+                                   [0., 0., 0.]]))
+        npt.assert_equal(psi_mask,
+                         np.array([[0., 0.],
+                                   [0., 0.]]))
+
+    def test_non_lisrel_param_get_fixed_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.non_lisrel_params.get_fixed_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0. , 0.6, 0., 0.],
+                                           [0. , 0. , 0., 0.],
+                                           [0. , 0. , 0., 0.],
+                                           [0.7, 0. , 0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[0.2],
+                                               [0. ],
+                                               [0. ],
+                                               [0. ]]))
+        npt.assert_equal(wedge_y_mask, np.array([[1., 0., 0. , 0.],
+                                                 [0., 0., 1. , 0.],
+                                                 [0., 0., 1.1, 0.],
+                                                 [0., 1., 0. , 0.],
+                                                 [0., 0., 0. , 0.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[0.],
+                                                 [0.5]]))
+
+        npt.assert_equal(phi_mask, np.array([[0.]]))
+
+        npt.assert_equal(theta_e_mask, np.array([[0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
+                                                   [0., 0.]]))
+        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.]]))
+
+    def test_non_lisrel_params_get_masks(self):
+        (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
+         theta_del_mask, psi_mask) = self.non_lisrel_params.get_masks(sort_vars=True)
+
+        npt.assert_equal(B_mask, np.array([[0., 0., 0., 0.],
+                                           [0., 0., 0., 0.],
+                                           [1., 0., 0., 0.],
+                                           [0., 0., 0., 0.]]))
+        npt.assert_equal(gamma_mask, np.array([[0.],
+                                               [1.],
+                                               [1.],
+                                               [0.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[0., 0., 0., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 0., 0., 0.],
+                                                 [0., 0., 0., 1.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[1.],
+                                                 [0.]]))
+
+        npt.assert_equal(phi_mask, np.array([[1.]]))
+
+        npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
+                                                 [1., 0., 1., 0., 0.],
+                                                 [0., 1., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.],
+                                                 [0., 0., 0., 0., 0.]]))
+        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
+                                                   [0., 0.]]))
+        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.],
+                                             [0., 0., 0., 0.]]))

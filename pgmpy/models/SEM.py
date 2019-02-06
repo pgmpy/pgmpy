@@ -223,7 +223,11 @@ class SEM(DirectedGraph):
         """
         Returns masks of all the algebriac parameters of the model.
         A mask is a matrix with a value of 0's and 1's where 0 signifies
-        no edge between the variables and 1 signifies an edge.
+        no edge or a fixed parameter edge  between the variables and 1
+        signifies an edge without a fixed value.
+
+        While learning only the parameters with corresponing values of 1 in the
+        mask will be learned.
 
         Parameters
         ----------
