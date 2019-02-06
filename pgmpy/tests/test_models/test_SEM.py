@@ -50,15 +50,15 @@ class TestSEMInit(unittest.TestCase):
         self.lisrel_params = SEM(ebunch=[('xi1', 'x1', 0.1),
                                          ('xi1', 'x2', 0.2),
                                          ('xi1', 'x3', 0.3),
-                                         ('xi1', 'eta1', 0.4),
+                                         ('xi1', 'eta1'),
                                          ('eta1', 'y1', 0.5),
-                                         ('eta1', 'y2', 0.6),
+                                         ('eta1', 'y2'),
                                          ('eta1', 'y3', 0.7),
-                                         ('eta1', 'y4', 0.8),
+                                         ('eta1', 'y4'),
                                          ('eta1', 'eta2', 0.9),
                                          ('xi1', 'eta2', 1.0),
                                          ('eta2', 'y5', 1.1),
-                                         ('eta2', 'y6', 1.2),
+                                         ('eta2', 'y6'),
                                          ('eta2', 'y7', 1.3),
                                          ('eta2', 'y8', 1.4)],
                                  latents=['xi1', 'eta1', 'eta2'],
@@ -71,15 +71,15 @@ class TestSEMInit(unittest.TestCase):
                                            'y7': {'y3'},
                                            'y8': {'y4', 'y6'}})
 
-        self.non_lisrel_params = SEM(ebunch=[('xi1', 'eta1', 0.1),
+        self.non_lisrel_params = SEM(ebunch=[('xi1', 'eta1'),
                                              ('xi1', 'y1', 0.2),
-                                             ('xi1', 'y4', 0.3),
-                                             ('xi1', 'x1', 0.4),
+                                             ('xi1', 'y4'),
+                                             ('xi1', 'x1'),
                                              ('xi1', 'x2', 0.5),
                                              ('y4', 'y1', 0.6),
                                              ('y1', 'eta2', 0.7),
-                                             ('eta2', 'y5', 0.8),
-                                             ('y1', 'eta1', 0.9),
+                                             ('eta2', 'y5'),
+                                             ('y1', 'eta1'),
                                              ('eta1', 'y2', 1.0),
                                              ('eta1', 'y3', 1.1)],
                                      latents=['xi1', 'eta1', 'eta2'],
@@ -191,28 +191,28 @@ class TestSEMInit(unittest.TestCase):
         self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'x1')], {'weight': 0.1})
         self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'x2')], {'weight': 0.2})
         self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'x3')], {'weight': 0.3})
-        self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'eta1')], {'weight': 0.4})
+        self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'eta1')], {'weight': np.NaN})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y1')], {'weight': 0.5})
-        self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y2')], {'weight': 0.6})
+        self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y2')], {'weight': np.NaN})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y3')], {'weight': 0.7})
-        self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y4')], {'weight': 0.8})
+        self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'y4')], {'weight': np.NaN})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta1', 'eta2')], {'weight': 0.9})
         self.assertDictEqual(self.lisrel_params.graph.edges[('xi1', 'eta2')], {'weight': 1.0})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta2', 'y5')], {'weight': 1.1})
-        self.assertDictEqual(self.lisrel_params.graph.edges[('eta2', 'y6')], {'weight': 1.2})
+        self.assertDictEqual(self.lisrel_params.graph.edges[('eta2', 'y6')], {'weight': np.NaN})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta2', 'y7')], {'weight': 1.3})
         self.assertDictEqual(self.lisrel_params.graph.edges[('eta2', 'y8')], {'weight': 1.4})
 
     def test_non_lisrel_param_init(self):
-        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', 'eta1')], {'weight': 0.1})
+        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', 'eta1')], {'weight': np.NaN})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', '_l_y1')], {'weight': 0.2})
-        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', '_l_y4')], {'weight': 0.3})
-        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', 'x1')], {'weight': 0.4})
+        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', '_l_y4')], {'weight': np.NaN})
+        self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', 'x1')], {'weight': np.NaN})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('xi1', 'x2')], {'weight': 0.5})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y4', '_l_y1')], {'weight': 0.6})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'eta2')], {'weight': 0.7})
-        self.assertDictEqual(self.non_lisrel_params.graph.edges[('eta2', 'y5')], {'weight': 0.8})
-        self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'eta1')], {'weight': 0.9})
+        self.assertDictEqual(self.non_lisrel_params.graph.edges[('eta2', 'y5')], {'weight': np.NaN})
+        self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'eta1')], {'weight': np.NaN})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('eta1', 'y2')], {'weight': 1.0})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('eta1', 'y3')], {'weight': 1.1})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'y1')], {'weight': 1.0})
@@ -220,16 +220,26 @@ class TestSEMInit(unittest.TestCase):
 
     def test_get_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
-         theta_del_mask, psi_mask) = self.lisrel.get_masks()
+         theta_del_mask, psi_mask) = self.lisrel.get_masks(sort_vars=True)
 
         # TODO: This might fail if the order of variables in self.x, self.y, self.eta, self.xi
         #       etc changes. Make these tests robust to that.
         npt.assert_equal(B_mask, np.array([[0., 0.],
                                            [1., 0.]]))
-        npt.assert_equal(gamma_mask, np.array([[1., 1.]]))
-        npt.assert_equal(wedge_y_mask, np.array([[1., 1., 1., 1., 0., 0., 0., 0.],
-                                                 [0., 0., 0., 0., 1., 1., 1., 1.]]))
-        npt.assert_equal(wedge_x_mask, np.array([[1., 1., 1.]]))
+        npt.assert_equal(gamma_mask, np.array([[1.],
+                                               [1.]]))
+        npt.assert_equal(wedge_y_mask, np.array([[1., 0.],
+                                                 [1., 0.],
+                                                 [1., 0.],
+                                                 [1., 0.],
+                                                 [0., 1.],
+                                                 [0., 1.],
+                                                 [0., 1.],
+                                                 [0., 1.]]))
+        npt.assert_equal(wedge_x_mask, np.array([[1.],
+                                                 [1.],
+                                                 [1.]]))
+
         npt.assert_equal(phi_mask, np.array([[1.]]))
         npt.assert_equal(theta_e_mask,
                          np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
@@ -247,3 +257,6 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(psi_mask,
                          np.array([[0., 0.],
                                    [0., 0.]]))
+
+    def test_get_fixed_masks(self):
+        pass
