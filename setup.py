@@ -13,8 +13,8 @@ setup(
     license="MIT",
     classifiers=[
         "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Intended Audience :: Developers",
         "Operating System :: Unix",
         "Operating System :: POSIX",
@@ -23,9 +23,5 @@ setup(
         "Topic :: Scientific/Engineering"
     ],
     long_description="https://github.com/pgmpy/pgmpy/blob/dev/README.md",
-    install_requires=[
-        "networkx",
-        "scipy",
-        "numpy",
-    ],
+    install_requires=[],
 )
