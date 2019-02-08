@@ -35,6 +35,7 @@ class TestSEMEstimator(unittest.TestCase):
         self.data = pd.read_csv('pgmpy/tests/test_estimators/testdata/PoliticalDemocracy.csv',
                                 index_col=0, header=0)
 
-    # def test_ml_estimator(self):
-    #     estimator = SEMEstimator(self.G)
-    #     B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.data, method='ols')
+    def test_ml_estimator(self):
+        estimator = SEMEstimator(self.G)
+        B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.data, method='ols')
+        print(B)

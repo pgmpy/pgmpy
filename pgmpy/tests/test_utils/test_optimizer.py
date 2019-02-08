@@ -12,8 +12,7 @@ class TestOptimize(unittest.TestCase):
         self.A = torch.randn(5, 5, device=device, dtype=dtype, requires_grad=True)
         self.B = torch.ones(5, 5, device=device, dtype=dtype, requires_grad=False)
 
-    @staticmethod
-    def loss_fn(params, loss_params):
+    def loss_fn(self, params, loss_params):
         A = params['A']
         B = loss_params['B']
 
