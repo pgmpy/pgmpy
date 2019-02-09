@@ -272,29 +272,28 @@ class SEM(DirectedGraph):
             masks_arr.append(np.multiply(np.where(fixed_mask != 0, 0.0, 1.0), mask))
         return tuple(masks_arr)
 
-    def get_params(self):
-        """
-        Get the parameters B, \Gamma, \Phi from the graph structure
+    def _iv_transformations(self, X, Y, indicators={}):
+        graph_copy = self.graph.copy()
+        err_graph_copy = self.err_graph.copy()
 
-        Returns
-        -------
-        B: np.array
-        \Gamma: np.array
-        \Phi: np.array
-        """
-        pass
+        x_parent = set(graph_copy.predecessors(X))
+        y_parent = set(graph_copy.predecessors(Y))
+        common_parents = x_parent.intersection(y_parent)
 
-    def set_params(self, B, gamma, phi):
-        """
-        Sets the parameter values to the graph structure.
+        if common_parents:
+            graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
+            err_graph_copy.add_edge(X, Y)
 
-        Parameters
-        ----------
-        B: np.array
-        \Gamma: np.array
-        \Phi: np.array
+        else:
+            parent_latent = y_parent.pop()
+            graph_copy.remove_edge(parent_latent, Y)
+            y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
+            err_graph_copy.add_edges_from([(indicators[p], Y) for p in y_parent_parent])
+            err_graph_copy.add_edge(parent_latent, Y)
 
-        """
+        return graph_copy, err_graph_copy
+
+    def _get_ancestral_iv(self, X, Y):
         pass
 
     def get_ivs(self, X, Y):
