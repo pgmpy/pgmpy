@@ -34,7 +34,7 @@ class SEMEstimator(object):
         """
         Computes the implied covariance matrix from the given parameters.
         """
-        B_masked = torch.mul(B, self.masks['B']) + self.fixed_masks['B']
+        B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B']).tril_(diagonal=-1)
         B_inv = (self.B_eye - B_masked).inverse()
         gamma_masked = torch.mul(gamma, self.masks['gamma']) + self.fixed_masks['gamma']
         wedge_y_masked = torch.mul(wedge_y, self.masks['wedge_y']) + self.fixed_masks['wedge_y']
