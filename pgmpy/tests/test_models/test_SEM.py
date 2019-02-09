@@ -536,3 +536,23 @@ class TestSEMInit(unittest.TestCase):
                                              [0., 0., 0., 0.],
                                              [0., 0., 0., 0.],
                                              [0., 0., 0., 0.]]))
+
+    def test_iv_transformations(self):
+        graph, err_graph = self.lisrel._iv_transformations('y1', 'y2')
+        self.assertTrue(('y1', 'y2') in err_graph.edges)
+        self.assertFalse(('eta1', 'y2') in graph.edges)
+
+        graph, err_graph = self.lisrel._iv_transformations('y1', 'y3')
+        self.assertTrue(('y1', 'y3') in err_graph.edges)
+        self.assertFalse(('eta1', 'y3') in graph.edges)
+
+        graph, err_graph = self.lisrel._iv_transformations('x1', 'y1', indicators={'xi1': 'x1'})
+        self.assertTrue(('eta1', 'y1') in err_graph.edges)
+        self.assertTrue(('x1', 'y1') in err_graph.edges)
+        self.assertFalse(('eta1', 'y1') in graph.edges)
+
+        graph, err_graph = self.lisrel._iv_transformations('x1', 'y5', indicators={'xi1': 'x1', 'eta1': 'y1'})
+        self.assertTrue(('y1', 'y5') in err_graph.edges)
+        self.assertTrue(('eta2', 'y5') in err_graph.edges)
+        self.assertTrue(('x1', 'y5') in err_graph.edges)
+        self.assertFalse(('eta2', 'y5') in graph.edges)
