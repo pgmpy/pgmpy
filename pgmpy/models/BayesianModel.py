@@ -999,11 +999,11 @@ class BayesianModel(DirectedGraph):
         return model_copy
 
     def get_markov_blanket(self, node):
-        """                                                       
+        """
         Returns a markov blanket for a random variable. In the case
-        of Bayesian Networks, the markov blanket is the set of 
-        node's parents, its children and its children's other parents. 
-        
+        of Bayesian Networks, the markov blanket is the set of
+        node's parents, its children and its children's other parents.
+
         Returns
         -------
         list(blanket_nodes): List of nodes contained in Markov Blanket
@@ -1012,14 +1012,14 @@ class BayesianModel(DirectedGraph):
         ----------
         node: string, int or any hashable python object.
               The node whose markov blanket would be returned.
-                                                                  
-        Examples                                                  
-        --------                                                  
+
+        Examples
+        --------
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                                ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y') 
+        >>> bayes_model.get_markov_blanket('y')
         ['s', 'w', 'x', 'u', 'z', 'v']
         """
         children = self.get_children(node)
