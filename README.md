@@ -1,5 +1,3 @@
-## Please make sure that the you are using the exact versions of dependencies as mentioned in requirements.txt. 
-
 pgmpy
 =====
 [![Build Status](https://travis-ci.org/pgmpy/pgmpy.svg?style=flat)](https://travis-ci.org/pgmpy/pgmpy)
