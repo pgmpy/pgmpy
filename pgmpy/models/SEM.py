@@ -92,15 +92,20 @@ class SEM(DirectedGraph):
         self.x = []
         self.y = []
         for exo in self.xi:
-            self.x.extend([x for x in self.graph.neighbors(exo) if not x in self.latents])
+            self.x.extend([x for x in self.graph.neighbors(exo) if x not in self.latents])
         for endo in self.eta:
-            self.y.extend([x for x in self.graph.neighbors(endo) if not x in self.latents])
+            self.y.extend([x for x in self.graph.neighbors(endo) if x not in self.latents])
+
+        # Remove duplicate elements from self.y and self.x. Also remove elements from self.x which are in self.y
+        self.y = list(set(self.y))
+        self.x = list(set(self.x) - set(self.x).intersection(set(self.y)))
 
         # Create a graph for correlation between error terms and
         # add all variables from y, x and \eta
         self.err_graph = nx.Graph(err_corr)
         self.err_graph.add_nodes_from(self.observed)
         self.err_graph.add_nodes_from(self.eta)
+        self.err_graph.add_nodes_from(self.xi)
 
         # Set error correlations to np.NaN if not specified to be fixed.
         for edge in self.err_graph.edges:
@@ -127,6 +132,17 @@ class SEM(DirectedGraph):
         Returns
         -------
         np.ndarray: Adjecency matrix of model's graph structure.
+
+        Variable Name Reference
+        -----------------------
+        B: Effect matrix of eta on eta
+        \gamma: Effect matrix of xi on eta
+        \wedge_y: Effect matrix of eta on y
+        \wedge_x: Effect matrix of xi on x
+        \phi: Covariance matrix of xi
+        \psi: Covariance matrix of eta errors
+        \theta_e: Covariance matrix of y errors
+        \theta_del: Covariance matrix of x errors
         """
         # Arrage the adjecency matrix in order y, x, eta, xi and then slice masks from it.
         #       y(p)   x(q)   eta(m)  xi(n)
@@ -159,17 +175,18 @@ class SEM(DirectedGraph):
         wedge_y_mask = adj_matrix[0:p, p+q:p+q+m]
         wedge_x_mask = adj_matrix[p:p+q, p+q+m:]
 
-        if weight is None:
-            phi_mask = np.ones((n, 1))
-        elif weight == 'weight':
-            phi_mask = np.zeros((n, 1))
+        # if weight is None:
+        #     phi_mask = np.ones((n, 1))
+        # elif weight == 'weight':
+        #     phi_mask = np.zeros((n, 1))
 
-        err_nodelist = y_vars + x_vars + eta_vars
+        err_nodelist = y_vars + x_vars + eta_vars + xi_vars
         err_adj_matrix = nx.to_numpy_matrix(self.err_graph, nodelist=err_nodelist,
                                             weight=weight)
         theta_e_mask = err_adj_matrix[:p, :p]
         theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
-        psi_mask = err_adj_matrix[p+q:, p+q:]
+        psi_mask = err_adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        phi_mask = err_adj_matrix[p+q+m:, p+q+m:]
 
         return (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask,
                 theta_e_mask, theta_del_mask, psi_mask)
