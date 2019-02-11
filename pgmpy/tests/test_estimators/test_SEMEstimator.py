@@ -35,20 +35,19 @@ class TestSEMEstimator(unittest.TestCase):
         self.demo_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/democracy1989a.csv',
                                      index_col=0, header=0)
 
-        self.union = SEM(ebunch=[('x1', 'y3'),
-                                 ('x2', 'y2'),
-                                 ('x2', 'y1'),
-                                 ('y1', 'y2'),
-                                 ('y1', 'y3'),
-                                 ('y2', 'y3')],
+        self.union = SEM(ebunch=[('yrsmill', 'unionsen'),
+                                 ('age', 'laboract'),
+                                 ('age', 'deferenc'),
+                                 ('deferenc', 'laboract'),
+                                 ('deferenc', 'unionsen'),
+                                 ('laboract', 'unionsen')],
                          latents=[],
-                         err_corr={'x1': {'x2'},
-                                   'x2': {'x1'}})
+                         err_corr={'yrsmill': {'age'},
+                                   'age': {'yrsmill'}})
 
         self.union_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/union1989b.csv',
                                       index_col=0, header=0)
 
-    @unittest.skip
     def test_demo_estimator(self):
         estimator = SEMEstimator(self.demo)
         B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.demo_data, method='ols')
