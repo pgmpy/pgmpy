@@ -34,7 +34,7 @@ class SEMEstimator(object):
         """
         Computes the implied covariance matrix from the given parameters.
         """
-        B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B']).tril_(diagonal=-1)
+        B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B'])
         B_inv = (self.B_eye - B_masked).inverse()
         gamma_masked = torch.mul(gamma, self.masks['gamma']) + self.fixed_masks['gamma']
         wedge_y_masked = torch.mul(wedge_y, self.masks['wedge_y']) + self.fixed_masks['wedge_y']
@@ -58,7 +58,10 @@ class SEMEstimator(object):
         sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
                                       params['wedge_x'], params['phi'], params['theta_e'],
                                       params['theta_del'], params['psi'])
-        return (sigma.logdet().clamp(min=1e-4) + (S @ sigma.inverse()).trace() - S.logdet() -
+
+        sigma_zeros_shape = sigma[sigma == 0].shape
+        sigma[sigma == 0] = 10e-4 * (torch.randn(sigma_zeros_shape))
+        return (sigma.det().clamp(min=1e-4).log() + (S @ sigma.inverse()).trace() - S.logdet() -
                 (len(self.model.y)+ len(self.model.x)))
 
     def get_uls_fn(self):
@@ -90,6 +93,11 @@ class SEMEstimator(object):
         if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
+        if not sorted(data.columns) == sorted(self.model.observed):
+            raise ValueError("""The column names data do not match the variables in the model. Expected: 
+                                {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
+                                                                 got=sorted(data.columns)))
+
         B = torch.rand(*self.masks['B'].shape, device=device, dtype=dtype, requires_grad=True)
         gamma = torch.rand(*self.masks['gamma'].shape, device=device, dtype=dtype, requires_grad=True)
         wedge_y = torch.rand(*self.masks['wedge_y'].shape, device=device, dtype=dtype, requires_grad=True)
@@ -117,14 +125,5 @@ class SEMEstimator(object):
 
         elif method == '2sls':
             raise NotImplementedError("2-SLS is not implemented yet")
-
-        # lr = 1e-1
-        # optim = torch.optim.Adam([B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi], lr=lr)
-        # #optim = torch.optim.Adam([B], lr=lr)
-        # for t in range(max_iter):
-        #     loss = minimization_fun(S, sigma).log()
-        #     print(S.logdet(), sigma.logdet(), loss.item())
-        #     loss.backward(retain_graph=False)
-        #     optim.step()
 
         return B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi
