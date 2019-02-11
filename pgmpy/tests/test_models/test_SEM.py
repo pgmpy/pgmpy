@@ -138,22 +138,23 @@ class TestSEMInit(unittest.TestCase):
         self.assertListEqual(sorted(self.lisrel.x), ['x1', 'x2', 'x3'])
 
         self.assertListEqual(sorted(self.lisrel.err_graph.nodes()),
-                             ['eta1', 'eta2', 'x1', 'x2', 'x3', 'y1', 'y2', 'y3',
+                             ['eta1', 'eta2', 'x1', 'x2', 'x3', 'xi1', 'y1', 'y2', 'y3',
                               'y4', 'y5', 'y6', 'y7', 'y8'])
         npt.assert_equal(nx.to_numpy_matrix(self.lisrel.err_graph, nodelist=sorted(self.lisrel.err_graph.nodes()), weight=None),
-                         np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
-                                   [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.]]))
+                         np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.]]))
 
         for edge in self.lisrel.err_graph.edges():
             self.assertDictEqual(self.lisrel.err_graph.edges[edge], {'weight': np.NaN})
@@ -198,22 +199,23 @@ class TestSEMInit(unittest.TestCase):
         self.assertListEqual(sorted(self.non_lisrel.x), ['x1', 'x2'])
 
         self.assertListEqual(sorted(self.non_lisrel.err_graph.nodes()),
-                             sorted(['_l_y1', '_l_y4', 'eta1', 'eta2', 'x1', 'x2', 'y1', 'y2',
+                             sorted(['_l_y1', '_l_y4', 'eta1', 'eta2', 'x1', 'x2', 'xi1', 'y1', 'y2',
                                      'y3', 'y4', 'y5']))
         npt.assert_equal(nx.to_numpy_matrix(self.non_lisrel.err_graph,
                                             nodelist=sorted(self.non_lisrel.err_graph.nodes()),
                                             weight=None),
-                         np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]))
+                         np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]))
 
         for edge in self.non_lisrel.err_graph.edges():
             self.assertDictEqual(self.non_lisrel.err_graph.edges[edge], {'weight': np.NaN})
@@ -307,7 +309,7 @@ class TestSEMInit(unittest.TestCase):
                                                  [1.],
                                                  [1.]]))
 
-        npt.assert_equal(phi_mask, np.array([[1.]]))
+        npt.assert_equal(phi_mask, np.array([[0.]]))
         npt.assert_equal(theta_e_mask,
                          np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
                                    [0., 0., 0., 1., 0., 1., 0., 0.],
@@ -379,7 +381,7 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(wedge_x_mask, np.array([[1.],
                                                  [1.]]))
 
-        npt.assert_equal(phi_mask, np.array([[1.]]))
+        npt.assert_equal(phi_mask, np.array([[0.]]))
 
         npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
                                                  [1., 0., 1., 0., 0.],
@@ -451,7 +453,7 @@ class TestSEMInit(unittest.TestCase):
                                                  [0.],
                                                  [0.]]))
 
-        npt.assert_equal(phi_mask, np.array([[1.]]))
+        npt.assert_equal(phi_mask, np.array([[0.]]))
         npt.assert_equal(theta_e_mask,
                          np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
                                    [0., 0., 0., 1., 0., 1., 0., 0.],
@@ -523,7 +525,7 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(wedge_x_mask, np.array([[1.],
                                                  [0.]]))
 
-        npt.assert_equal(phi_mask, np.array([[1.]]))
+        npt.assert_equal(phi_mask, np.array([[0.]]))
 
         npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
                                                  [1., 0., 1., 0., 0.],
