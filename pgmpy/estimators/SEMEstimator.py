@@ -59,9 +59,9 @@ class SEMEstimator(object):
                                       params['wedge_x'], params['phi'], params['theta_e'],
                                       params['theta_del'], params['psi'])
 
-        sigma_zeros_shape = sigma[sigma == 0].shape
-        sigma[sigma == 0] = 10e-4 * (torch.randn(sigma_zeros_shape))
-        return (sigma.det().clamp(min=1e-4).log() + (S @ sigma.inverse()).trace() - S.logdet() -
+        u, s, v = sigma.svd()
+        sigma_inv = v.t() @ torch.diag(1/s) @ u.t()
+        return (sigma.det().clamp(min=1e-4).log() + (S @ sigma_inv).trace() - S.logdet() -
                 (len(self.model.y)+ len(self.model.x)))
 
     def get_uls_fn(self):
