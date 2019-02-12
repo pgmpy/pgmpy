@@ -558,3 +558,9 @@ class TestSEMInit(unittest.TestCase):
         self.assertTrue(('eta2', 'y5') in err_graph.edges)
         self.assertTrue(('x1', 'y5') in err_graph.edges)
         self.assertFalse(('eta2', 'y5') in graph.edges)
+
+    def test_active_trail_nodes(self):
+        self.model = SEM([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        #self.assertSetEqual(self.model.active_trail_nodes(['D'])['D'], {'D', 'G', 'L'})
+        import pdb; pdb.set_trace()
+        self.assertSetEqual(self.model.active_trail_nodes(['D'], observed=['G'])['D'], {'D', 'I', 'S'})
