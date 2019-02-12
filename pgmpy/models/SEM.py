@@ -183,6 +183,10 @@ class SEM(DirectedGraph):
         err_nodelist = y_vars + x_vars + eta_vars + xi_vars
         err_adj_matrix = nx.to_numpy_matrix(self.err_graph, nodelist=err_nodelist,
                                             weight=weight)
+
+        if not weight == 'weight':
+            np.fill_diagonal(err_adj_matrix, 1.0)
+
         theta_e_mask = err_adj_matrix[:p, :p]
         theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
         psi_mask = err_adj_matrix[p+q:p+q+m, p+q:p+q+m]
@@ -313,6 +317,77 @@ class SEM(DirectedGraph):
     def _get_ancestral_iv(self, X, Y):
         pass
 
+    def active_trail_nodes(self, variables, observed=None):
+        """
+        Returns a dictionary with the given variables as keys and all the nodes reachable
+        from that respective variable as values.
+
+        Parameters
+        ----------
+
+        variables: str or array like
+            variables whose active trails are to be found.
+
+        observed : List of nodes (optional)
+            If given the active trails would be computed assuming these nodes to be observed.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> student = BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.active_trail_nodes('diff')
+        {'diff': {'diff', 'grades'}}
+        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
+        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+
+        References
+        ----------
+        Details of the algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
+        """
+        if observed:
+            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
+        else:
+            observed_list = []
+
+        ancestors_list = set()
+        for node in observed_list:
+            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.graph, node))
+
+        # Direction of flow of information
+        # up ->  from parent to child
+        # down -> from child to parent
+
+        active_trails = {}
+        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
+            visit_list = set()
+            visit_list.add((start, 'up'))
+            traversed_list = set()
+            active_nodes = set()
+            while visit_list:
+                node, direction = visit_list.pop()
+                if (node, direction) not in traversed_list:
+                    if (node not in observed_list) and (node not in self.latents):
+                        active_nodes.add(node)
+                    traversed_list.add((node, direction))
+                    if direction == 'up' and node not in observed_list:
+                        for parent in self.graph.predecessors(node):
+                            visit_list.add((parent, 'up'))
+                        for child in self.graph.successors(node):
+                            visit_list.add((child, 'down'))
+                    elif direction == 'down':
+                        if node not in observed_list:
+                            for child in self.graph.successors(node):
+                                visit_list.add((child, 'down'))
+                        if node in ancestors_list:
+                            for parent in self.graph.predecessors(node):
+                                visit_list.add((parent, 'up'))
+            active_trails[start] = active_nodes
+        return active_trails
+
     def get_ivs(self, X, Y):
         """
         Returns the Instrumental variables for the relation X -> Y
@@ -326,4 +401,4 @@ class SEM(DirectedGraph):
         -------
         set: The set of Instrumental Variables for the predicted value.
         """
-        pass
+        pass 
