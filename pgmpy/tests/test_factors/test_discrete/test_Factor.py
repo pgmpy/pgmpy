@@ -558,7 +558,6 @@ class TestTabularCPDMethods(unittest.TestCase):
                                         [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]],
                                evidence=['A', 'B', 'C'], evidence_card=[2, 2, 2])
 
-
     def test_marginalize_1(self):
         self.cpd.marginalize(['diff'])
         self.assertEqual(self.cpd.variable, 'grade')
