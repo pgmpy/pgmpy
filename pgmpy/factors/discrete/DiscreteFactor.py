@@ -708,7 +708,7 @@ class DiscreteFactor(BaseFactor):
         """
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
-        return DiscreteFactor(self.scope(), self.cardinality, self.values)
+        return DiscreteFactor(self.scope(), self.cardinality, self.values, state_names=self.state_names)
 
     def is_valid_cpd(self):
         return np.allclose(self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten('C'),

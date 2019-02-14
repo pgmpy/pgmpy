@@ -546,14 +546,18 @@ class TestTabularCPDInit(unittest.TestCase):
 class TestTabularCPDMethods(unittest.TestCase):
 
     def setUp(self):
+        sn = {'intel': ['low', 'medium', 'high'], 
+              'diff': ['low', 'high'], 
+              'grade' : ['grade(0)', 'grade(1)', 'grade(2)', 'grade(3)', 'grade(4)', 'grade(5)']}
         self.cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]],
-                              evidence=['intel', 'diff'], evidence_card=[3, 2])
+                              evidence=['intel', 'diff'], evidence_card=[3, 2], state_names = sn)
 
         self.cpd2 = TabularCPD('J', 2, [[0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
                                         [0.1, 0.7, 0.1, 0.7, 0.2, 0.2, 0.6, 0.6]],
                                evidence=['A', 'B', 'C'], evidence_card=[2, 2, 2])
+
 
     def test_marginalize_1(self):
         self.cpd.marginalize(['diff'])
@@ -625,6 +629,9 @@ class TestTabularCPDMethods(unittest.TestCase):
                                    np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                              [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                              [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]]))
+    def test_copy_state_names(self):
+        copy_cpd = self.cpd.copy()
+        self.assertEqual(self.cpd.state_names, copy_cpd.state_names)
 
     def test_reduce_1(self):
         self.cpd.reduce([('diff', 0)])
