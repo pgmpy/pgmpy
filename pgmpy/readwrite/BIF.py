@@ -234,7 +234,7 @@ class BIFReader(object):
                                 [0.3, 0.99]]),
         'light-on': np.array([[0.6, 0.05],
                             [0.4, 0.95]])}
-         """
+        """
         variable_cpds = {}
         for block in self.probability_block():
             names = self.probability_expr.searchString(block)
@@ -246,8 +246,8 @@ class BIFReader(object):
                 arr = arr.reshape((len(self.variable_states[var_name]),
                                    arr.size // len(self.variable_states[var_name])))
             else:
-                length = sum(len(self.variable_states[var]) for var in parents)
-                arr = [[0 for j in range(length)] for i in self.variable_states[var_name]]
+                arr_length = numpy.prod([len(self.variable_states[var]) for var in parents])
+                arr = [[0 for j in range(arr_length)] for i in self.variable_states[var_name]]
                 length = len(self.variable_states[var_name])
                 for prob_line in cpds:
                     states = prob_line[:len(parents)]

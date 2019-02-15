@@ -60,6 +60,8 @@ class TestBIFReader(unittest.TestCase):
                 }
                 """)
 
+        self.water_model = BIFReader('pgmpy/tests/test_readwrite/testdata/water.bif')
+
     def test_network_name(self):
 
         name_expected = 'Dog-Problem'
@@ -220,6 +222,12 @@ class TestBIFReader(unittest.TestCase):
 
         self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
+
+    def test_water_model(self):
+        model = self.water_model.get_model()
+        self.assertEqual(len(model.nodes()), 32)
+        self.assertEqual(len(model.edges()), 66)
+        self.assertEqual(len(model.get_cpds()), 32)
 
     def tearDown(self):
         del self.reader
