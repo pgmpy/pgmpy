@@ -5,7 +5,7 @@ import torch
 from pgmpy.models import SEM
 from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
-from pgmpy.utils import optimize
+from pgmpy.utils import optimize, pinverse
 
 
 class SEMEstimator(object):
@@ -35,7 +35,7 @@ class SEMEstimator(object):
         Computes the implied covariance matrix from the given parameters.
         """
         B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B'])
-        B_inv = (self.B_eye - B_masked).inverse()
+        B_inv = pinverse(self.B_eye - B_masked)
         gamma_masked = torch.mul(gamma, self.masks['gamma']) + self.fixed_masks['gamma']
         wedge_y_masked = torch.mul(wedge_y, self.masks['wedge_y']) + self.fixed_masks['wedge_y']
         wedge_x_masked = torch.mul(wedge_x, self.masks['wedge_x']) + self.fixed_masks['wedge_x']
@@ -59,9 +59,7 @@ class SEMEstimator(object):
                                       params['wedge_x'], params['phi'], params['theta_e'],
                                       params['theta_del'], params['psi'])
 
-        u, s, v = sigma.svd()
-        sigma_inv = v.t() @ torch.diag(1/s) @ u.t()
-        return (sigma.det().clamp(min=1e-4).log() + (S @ sigma_inv).trace() - S.logdet() -
+        return (sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() -
                 (len(self.model.y)+ len(self.model.x)))
 
     def get_uls_fn(self):
@@ -94,7 +92,7 @@ class SEMEstimator(object):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
         if not sorted(data.columns) == sorted(self.model.observed):
-            raise ValueError("""The column names data do not match the variables in the model. Expected: 
+            raise ValueError("""The column names data do not match the variables in the model. Expected:
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
 
@@ -112,10 +110,14 @@ class SEMEstimator(object):
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
         if method == 'ols':
-            return optimize(self.ols_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
+            params = optimize(self.ols_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
                                                    'wedge_x': wedge_x, 'phi': phi, 'theta_e':
                                                    theta_e, 'theta_del': theta_del, 'psi': psi},
-                            loss_args={'S': S}, opt='lbfgs')
+                            loss_args={'S': S}, opt='adam')
+            for key, value in params.items():
+                params[key] = value * self.masks[key] + self.fixed_masks[key]
+
+            return params
 
         elif method == 'uls':
             minimization_fun = self.get_uls_fn()
@@ -126,4 +128,3 @@ class SEMEstimator(object):
         elif method == '2sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
-        return B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi
