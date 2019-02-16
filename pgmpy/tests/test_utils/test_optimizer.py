@@ -1,9 +1,10 @@
 import unittest
 
 import torch
+import numpy as np
 import numpy.testing as npt
 
-from pgmpy.utils import optimize
+from pgmpy.utils import optimize, pinverse
 from pgmpy.global_vars import device, dtype
 
 
@@ -27,3 +28,17 @@ class TestOptimize(unittest.TestCase):
             params = optimize(self.loss_fn, params={'A': A}, loss_args={'B': B}, opt=opt, max_iter=int(1e6))
 
             npt.assert_almost_equal(B, params['A'].detach().numpy(), decimal=2)
+
+
+class Testpinverse(unittest.TestCase):
+    def test_pinverse(self):
+        mat = np.random.randn(5, 5)
+        np_inv = np.linalg.pinv(mat)
+        inv = pinverse(torch.tensor(mat))
+        npt.assert_array_almost_equal(np_inv, inv.numpy())
+
+    def test_pinverse_zeros(self):
+        mat = np.zeros((5, 5))
+        np_inv = np.linalg.pinv(mat)
+        inv = pinverse(torch.tensor(mat))
+        npt.assert_array_almost_equal(np_inv, inv)
