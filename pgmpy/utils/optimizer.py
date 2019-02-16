@@ -1,11 +1,28 @@
 import warnings
 from math import isclose
 
+import torch
+optim = torch.optim
 
-from torch import optim
 
+def pinverse(t):
+    """
+    Computes the pseudo-inverse of a matrix using SVD.
 
-def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_delta=1e-6):
+    Parameters
+    ----------
+    t: torch.tensor
+        The matrix whose inverse is to be calculated.
+
+    Returns
+    -------
+    torch.tensor: Inverse of the matrix `t`.
+    """
+    u, s, v = t.svd()
+    t_inv = v @ torch.diag(torch.where(s!=0, 1/s, s)) @ u.t()
+    return t_inv
+
+def optimize(loss_fn, params={'lr': 0.1}, loss_args={}, opt='adam', max_iter=10000, exit_delta=1e-2):
     """
     Generic function to optimize loss functions.
 
@@ -73,6 +90,7 @@ def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_
             opt.zero_grad()
             loss = loss_fn(params, loss_args)
             loss.backward()
+            print(loss.item())
             return loss
         opt.step(closure=closure)
 
