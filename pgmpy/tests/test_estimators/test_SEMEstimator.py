@@ -63,11 +63,11 @@ class TestSEMEstimator(unittest.TestCase):
         estimator = SEMEstimator(self.demo)
         B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.demo_data, method='ols')
 
-    @unittest.skip
     def test_union_estimator(self):
         estimator = SEMEstimator(self.union)
-        B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.union_data, method='ols')
+        params = estimator.fit(self.union_data, method='ols')
 
+    @unittest.skip
     def test_custom_estimator(self):
         estimator = SEMEstimator(self.custom)
-        B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.custom_data, method='ols')
+        params = estimator.fit(self.custom_data, method='ols')
