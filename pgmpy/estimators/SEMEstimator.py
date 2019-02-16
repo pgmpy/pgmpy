@@ -68,7 +68,7 @@ class SEMEstimator(object):
     def get_gls_fn(self):
         pass
 
-    def fit(self, data, method, max_iter=1000):
+    def fit(self, data, method, opt='adam', exit_delta=1e-4, max_iter=1000):
         """
         Estimate the parameters of the model from the data.
 
@@ -113,7 +113,7 @@ class SEMEstimator(object):
             params = optimize(self.ols_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
                                                    'wedge_x': wedge_x, 'phi': phi, 'theta_e':
                                                    theta_e, 'theta_del': theta_del, 'psi': psi},
-                            loss_args={'S': S}, opt='adam')
+                            loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
             for key, value in params.items():
                 params[key] = value * self.masks[key] + self.fixed_masks[key]
 

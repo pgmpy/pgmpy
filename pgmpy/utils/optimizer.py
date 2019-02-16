@@ -22,7 +22,7 @@ def pinverse(t):
     t_inv = v @ torch.diag(torch.where(s!=0, 1/s, s)) @ u.t()
     return t_inv
 
-def optimize(loss_fn, params={'lr': 0.1}, loss_args={}, opt='adam', max_iter=10000, exit_delta=1e-2):
+def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_delta=1e-4):
     """
     Generic function to optimize loss functions.
 

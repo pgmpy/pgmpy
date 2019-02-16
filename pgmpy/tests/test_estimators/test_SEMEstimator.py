@@ -13,10 +13,11 @@ class TestSEMEstimator(unittest.TestCase):
                                   ('b', 'c')],
                           latents=[],
                           err_corr={})
-        a = np.random.randn(1000)
-        b = 3 * a + np.random.normal(loc=0, scale=0.1, size=1000)
-        c = 2 * b + np.random.normal(loc=0, scale=0.2, size=1000)
+        a = np.random.randn(10**6)
+        b = a + np.random.normal(loc=0, scale=0.1, size=10**6)
+        c = b + np.random.normal(loc=0, scale=0.2, size=10**6)
         self.custom_data = pd.DataFrame({'a': a, 'b': b, 'c': c})
+        self.custom_data -= self.custom_data.mean(axis=0)
 
         self.demo = SEM(ebunch=[('xi1', 'x1'),
                                 ('xi1', 'x2'),
@@ -65,9 +66,12 @@ class TestSEMEstimator(unittest.TestCase):
 
     def test_union_estimator(self):
         estimator = SEMEstimator(self.union)
-        params = estimator.fit(self.union_data, method='ols')
+        params = estimator.fit(self.union_data, method='ols', max_iter=10**6, exit_delta=1e-1)
+        B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
+                                      params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
 
-    @unittest.skip
     def test_custom_estimator(self):
         estimator = SEMEstimator(self.custom)
-        params = estimator.fit(self.custom_data, method='ols')
+        params = estimator.fit(self.custom_data, method='ols', max_iter=10**6, opt='adam')
+        B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
+                                      params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
