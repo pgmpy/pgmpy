@@ -90,7 +90,6 @@ def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_
             opt.zero_grad()
             loss = loss_fn(params, loss_args)
             loss.backward()
-            print(loss.item())
             return loss
         opt.step(closure=closure)
 
