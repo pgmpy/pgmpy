@@ -53,7 +53,28 @@ class SEMEstimator(object):
         sigma = torch.cat((torch.cat((sigma_yy, sigma_yx), 1), torch.cat((sigma_xy, sigma_xx), 1)), 0)
         return sigma
 
-    def ols_loss(self, params, loss_args):
+    def ml_loss(self, params, loss_args):
+        """
+        Method to compute the Maximum Likelihood loss function. The optimizer calls this
+        method after each iteration with updated params to compute the new loss.
+
+        The fitting function for ML is:
+            $$ F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q) $$
+
+        Parameters
+        ----------
+        params: dict
+            params contain all the variables which are updated in each iteration of the
+            optimization.
+
+        loss_args: dict
+            loss_args contain all the variable which are not updated in each iteration but
+            are required to compute the loss.
+
+        Returns
+        -------
+        torch.tensor: The loss value for the given params and loss_args
+        """
         S = loss_args['S']
         sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
                                       params['wedge_x'], params['phi'], params['theta_e'],
@@ -62,13 +83,64 @@ class SEMEstimator(object):
         return (sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() -
                 (len(self.model.y)+ len(self.model.x)))
 
-    def get_uls_fn(self):
-        pass
+    def uls_loss(self, params, loss_args):
+        """
+        Method to compute the Unweighted Least Squares fitting function. The optimizer calls
+        this method after each iteration with updated params to compute the new loss.
 
-    def get_gls_fn(self):
-        pass
+        The fitting function for ML is:
+            $$ F_{ULS} = tr[(S - \Sigma(\theta))^2] $$
 
-    def fit(self, data, method, opt='adam', exit_delta=1e-4, max_iter=1000):
+        Parameters
+        ----------
+        params: dict
+            params contain all the variables which are updated in each iteration of the
+            optimization.
+
+        loss_args: dict
+            loss_args contain all the variable which are not updated in each iteration but
+            are required to compute the loss.
+
+        Returns
+        -------
+        torch.tensor: The loss value for the given params and loss_args
+        """
+        S = loss_args['S']
+        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
+                                      params['wedge_x'], params['phi'], params['theta_e'],
+                                      params['theta_del'], params['psi'])
+        return (S - sigma).pow(2).trace()
+
+    def gls_loss(self, params, loss_args):
+        """
+        Method to compute the Weighted Least Squares fitting function. The optimizer calls
+        this method after each iteration with updated params to compute the new loss.
+
+        The fitting function for ML is:
+            $$ F_{ULS} = tr \{ [(S - \Sigma(\theta)) W^{-1}]^2 \} $$
+
+        Parameters
+        ----------
+        params: dict
+            params contain all the variables which are updated in each iteration of the
+            optimization.
+
+        loss_args: dict
+            loss_args contain all the variable which are not updated in each iteration but
+            are required to compute the loss.
+
+        Returns
+        -------
+        torch.tensor: The loss value for the given params and loss_args
+        """
+        S = loss_args['S']
+        W_inv = pinverse(loss_args['W'])
+        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
+                                      params['wedge_x'], params['phi'], params['theta_e'],
+                                      params['theta_del'], params['psi'])
+        return ((S - sigma) @ W_inv).pow(2).trace()
+
+    def fit(self, data, method, opt='adam', exit_delta=1e-4, max_iter=1000, **kwargs):
         """
         Estimate the parameters of the model from the data.
 
@@ -77,12 +149,20 @@ class SEMEstimator(object):
         data: pandas DataFrame or pgmpy.data.Data instance
             The data from which to estimate the parameters of the model.
 
-        method: str ("ols"|"uls"|"gls"|"2sls")
+        method: str ("ml"|"uls"|"gls"|"2sls")
             The fitting function to use.
-            OLS: Ordinary Least Squares/Maximum Likelihood
+            ML : Maximum Likelihood
             ULS: Unweighted Least Squares
             GLS: Generalized Least Squares
             2sls: 2-SLS estimator
+
+        **kwargs: dict
+            Extra parameters required in case of some estimators.
+            GLS:
+                W: np.array (n x n) where n is the number of observe variables.
+            2sls:
+                x:
+                y:
 
         Returns
         -------
@@ -109,22 +189,35 @@ class SEMEstimator(object):
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
-        if method == 'ols':
-            params = optimize(self.ols_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
+        if method.lower() == 'ml':
+            params = optimize(self.ml_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
                                                    'wedge_x': wedge_x, 'phi': phi, 'theta_e':
                                                    theta_e, 'theta_del': theta_del, 'psi': psi},
                             loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
             for key, value in params.items():
                 params[key] = value * self.masks[key] + self.fixed_masks[key]
 
-            return params
+        elif method.lower() == 'uls':
+            params = optimize(self.uls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
+                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
+                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
+                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
 
-        elif method == 'uls':
-            minimization_fun = self.get_uls_fn()
+            for key, value in params.items():
+                params[key] = value * self.masks[key] + self.fixed_masks[key]
 
-        elif method == 'gls':
-            minimization_fun = self.get_gls_fn()
+        elif method.lower() == 'gls':
+            W = torch.tensor(kwargs['W'], device=device, dtype=dtype, requires_grad=False)
+            params = optimize(self.gls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
+                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
+                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
+                              loss_args={'S': S, 'W': W}, opt=opt, exit_delta=exit_delta,
+                              max_iter=max_iter)
 
-        elif method == '2sls':
+            for key, value in params.items():
+                params[key] = value * self.masks[key] + self.fixed_masks[key]
+
+        elif method.lower() == '2sls' or method.lower() == '2-sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
+        return params

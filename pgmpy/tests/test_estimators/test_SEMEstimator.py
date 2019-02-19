@@ -62,16 +62,25 @@ class TestSEMEstimator(unittest.TestCase):
     @unittest.skip
     def test_demo_estimator(self):
         estimator = SEMEstimator(self.demo)
-        B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.demo_data, method='ols')
+        B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi = estimator.fit(self.demo_data, method='ml')
 
+    @unittest.skip
     def test_union_estimator(self):
         estimator = SEMEstimator(self.union)
-        params = estimator.fit(self.union_data, method='ols', max_iter=10**6, exit_delta=1e-1)
+        params = estimator.fit(self.union_data, method='ml', max_iter=10**6, exit_delta=1e-1)
         B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
                                       params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
 
     def test_custom_estimator(self):
         estimator = SEMEstimator(self.custom)
-        params = estimator.fit(self.custom_data, method='ols', max_iter=10**6, opt='adam')
+        params = estimator.fit(self.custom_data, method='ml', max_iter=10**6, opt='lbfgs')
+        B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
+                                      params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
+
+        params = estimator.fit(self.custom_data, method='uls', max_iter=10**6, opt='lbfgs')
+        B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
+                                      params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
+
+        params = estimator.fit(self.custom_data, method='gls', max_iter=10**6, opt='lbfgs', W=np.ones((3, 3)))
         B, gamma, wedge_y, wedge_x = (params['B'].detach().numpy(), params['gamma'].detach().numpy(),
                                       params['wedge_y'].detach().numpy(), params['wedge_x'].detach().numpy())
