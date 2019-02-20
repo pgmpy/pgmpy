@@ -168,6 +168,7 @@ class SEMEstimator(object):
         -------
             pgmpy.model.SEM instance: Instance of the model with estimated parameters
         """
+        # Check if given arguements are valid
         if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
@@ -176,6 +177,7 @@ class SEMEstimator(object):
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
 
+        # Initialize random values as the initial values for the optimization
         B = torch.rand(*self.masks['B'].shape, device=device, dtype=dtype, requires_grad=True)
         gamma = torch.rand(*self.masks['gamma'].shape, device=device, dtype=dtype, requires_grad=True)
         wedge_y = torch.rand(*self.masks['wedge_y'].shape, device=device, dtype=dtype, requires_grad=True)
@@ -185,10 +187,12 @@ class SEMEstimator(object):
         theta_del = torch.rand(*self.masks['theta_del'].shape, device=device, dtype=dtype, requires_grad=True)
         psi = torch.rand(*self.masks['psi'].shape, device=device, dtype=dtype, requires_grad=True)
 
+        # Compute the covariance of the data
         variable_order = self.model.y + self.model.x
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
+        # Optimize the parameters
         if method.lower() == 'ml':
             params = optimize(self.ml_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
                                                    'wedge_x': wedge_x, 'phi': phi, 'theta_e':
@@ -220,4 +224,5 @@ class SEMEstimator(object):
         elif method.lower() == '2sls' or method.lower() == '2-sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
-        return params
+        # Update the model with the learned params
+        self.model.set_params({key: value.detach().numpy() for key, value in params.items()})
