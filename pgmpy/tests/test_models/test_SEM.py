@@ -559,8 +559,85 @@ class TestSEMInit(unittest.TestCase):
         self.assertTrue(('x1', 'y5') in err_graph.edges)
         self.assertFalse(('eta2', 'y5') in graph.edges)
 
+    @unittest.skip
     def test_active_trail_nodes(self):
         self.model = SEM([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
         #self.assertSetEqual(self.model.active_trail_nodes(['D'])['D'], {'D', 'G', 'L'})
-        import pdb; pdb.set_trace()
         self.assertSetEqual(self.model.active_trail_nodes(['D'], observed=['G'])['D'], {'D', 'I', 'S'})
+
+    def test_set_params(self):
+        B = np.array([[0. , 0.],
+                      [0.1, 0.]])
+        gamma = np.array([[0.3],
+                          [0.2]])
+        wedge_y = np.array([[1.1, 0. ],
+                            [1.2, 0. ],
+                            [1.3, 0. ],
+                            [1.4, 0. ],
+                            [0. , 0.7],
+                            [0. , 0.8],
+                            [0. , 0.9],
+                            [0. , 1.0]])
+        wedge_x = np.array([[0.4],
+                            [0.5],
+                            [0.6]])
+        phi = np.array([[3.4]])
+        psi = np.array([[2.9, 0. ],
+                        [0. , 3.0]])
+        theta_e = np.array([[2.1, 0. , 0. , 0. , 1.5, 0. , 0. , 0. ],
+                            [0. , 2.2, 0. , 1.9, 0. , 1.6, 0. , 0. ],
+                            [0. , 0. , 2.3, 0. , 0. , 0. , 1.7, 0. ],
+                            [0. , 1.9, 0. , 2.4, 0. , 0. , 0. , 1.8],
+                            [1.5, 0. , 0. , 0. , 2.5, 0. , 0. , 0. ],
+                            [0. , 1.6, 0. , 0. , 0. , 2.6, 0. , 2.0],
+                            [0. , 0. , 1.7, 0. , 0. , 0. , 2.7, 0. ],
+                            [0. , 0. , 0. , 1.8, 0. , 2.0, 0. , 2.8]], dtype=float)
+
+        theta_del = np.array([[3.1, 0. , 0. ],
+                              [0. , 3.2, 0. ],
+                              [0. , 0. , 3.3]])
+
+        params = {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
+                  'phi': phi, 'psi': psi, 'theta_e': theta_e, 'theta_del': theta_del}
+        self.lisrel.set_params(params)
+
+        self.assertEqual(self.lisrel.graph.edges['eta1', 'eta2']['weight'], 0.1)
+        self.assertEqual(self.lisrel.graph.edges['xi1', 'eta2']['weight'], 0.2)
+        self.assertEqual(self.lisrel.graph.edges['xi1', 'eta1']['weight'], 0.3)
+        self.assertEqual(self.lisrel.graph.edges['xi1', 'x1']['weight'], 0.4)
+        self.assertEqual(self.lisrel.graph.edges['xi1', 'x2']['weight'], 0.5)
+        self.assertEqual(self.lisrel.graph.edges['xi1', 'x3']['weight'], 0.6)
+        self.assertEqual(self.lisrel.graph.edges['eta2', 'y5']['weight'], 0.7)
+        self.assertEqual(self.lisrel.graph.edges['eta2', 'y6']['weight'], 0.8)
+        self.assertEqual(self.lisrel.graph.edges['eta2', 'y7']['weight'], 0.9)
+        self.assertEqual(self.lisrel.graph.edges['eta2', 'y8']['weight'], 1.0)
+        self.assertEqual(self.lisrel.graph.edges['eta1', 'y1']['weight'], 1.1)
+        self.assertEqual(self.lisrel.graph.edges['eta1', 'y2']['weight'], 1.2)
+        self.assertEqual(self.lisrel.graph.edges['eta1', 'y3']['weight'], 1.3)
+        self.assertEqual(self.lisrel.graph.edges['eta1', 'y4']['weight'], 1.4)
+        self.assertEqual(self.lisrel.err_graph.edges['y1', 'y5']['weight'], 1.5)
+        self.assertEqual(self.lisrel.err_graph.edges['y5', 'y1']['weight'], 1.5)
+        self.assertEqual(self.lisrel.err_graph.edges['y2', 'y6']['weight'], 1.6)
+        self.assertEqual(self.lisrel.err_graph.edges['y6', 'y2']['weight'], 1.6)
+        self.assertEqual(self.lisrel.err_graph.edges['y3', 'y7']['weight'], 1.7)
+        self.assertEqual(self.lisrel.err_graph.edges['y7', 'y3']['weight'], 1.7)
+        self.assertEqual(self.lisrel.err_graph.edges['y4', 'y8']['weight'], 1.8)
+        self.assertEqual(self.lisrel.err_graph.edges['y8', 'y4']['weight'], 1.8)
+        self.assertEqual(self.lisrel.err_graph.edges['y2', 'y4']['weight'], 1.9)
+        self.assertEqual(self.lisrel.err_graph.edges['y4', 'y2']['weight'], 1.9)
+        self.assertEqual(self.lisrel.err_graph.edges['y6', 'y8']['weight'], 2.0)
+        self.assertEqual(self.lisrel.err_graph.edges['y8', 'y6']['weight'], 2.0)
+        self.assertEqual(self.lisrel.err_graph.nodes['y1']['var'], 2.1)
+        self.assertEqual(self.lisrel.err_graph.nodes['y2']['var'], 2.2)
+        self.assertEqual(self.lisrel.err_graph.nodes['y3']['var'], 2.3)
+        self.assertEqual(self.lisrel.err_graph.nodes['y4']['var'], 2.4)
+        self.assertEqual(self.lisrel.err_graph.nodes['y5']['var'], 2.5)
+        self.assertEqual(self.lisrel.err_graph.nodes['y6']['var'], 2.6)
+        self.assertEqual(self.lisrel.err_graph.nodes['y7']['var'], 2.7)
+        self.assertEqual(self.lisrel.err_graph.nodes['y8']['var'], 2.8)
+        self.assertEqual(self.lisrel.err_graph.nodes['eta1']['var'], 2.9)
+        self.assertEqual(self.lisrel.err_graph.nodes['eta2']['var'], 3.0)
+        self.assertEqual(self.lisrel.err_graph.nodes['x1']['var'], 3.1)
+        self.assertEqual(self.lisrel.err_graph.nodes['x2']['var'], 3.2)
+        self.assertEqual(self.lisrel.err_graph.nodes['x3']['var'], 3.3)
+
