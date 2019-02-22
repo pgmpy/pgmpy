@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
 from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.independencies import Independencies
@@ -18,7 +18,7 @@ from pgmpy.extern.six.moves import range, reduce
 from pgmpy.models.MarkovModel import MarkovModel
 
 
-class BayesianModel(DirectedGraph):
+class BayesianModel(DAG):
     """
     Base class for bayesian model.
 

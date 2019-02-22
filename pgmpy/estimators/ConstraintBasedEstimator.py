@@ -240,7 +240,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Parameters
         ----------
-        pdag: DirectedGraph
+        pdag: DAG
             A directed acyclic graph pattern, consisting in (acyclic) directed edges
             as well as "undirected" edges, represented as both-way edges between
             nodes.
@@ -264,7 +264,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.base import DirectedGraph
+        >>> from pgmpy.base import DAG
         >>> from pgmpy.estimators import ConstraintBasedEstimator
         >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
         >>> data['C'] = data['A'] - data['B']
@@ -277,12 +277,12 @@ class ConstraintBasedEstimator(StructureEstimator):
         [('B', 'C'), ('A', 'D'), ('A', 'C')]
 
         >>> # pdag_to_dag is static:
-        ... pdag1 = DirectedGraph([('A', 'B'), ('C', 'B'), ('C', 'D'), ('D', 'C'), ('D', 'A'), ('A', 'D')])
+        ... pdag1 = DAG([('A', 'B'), ('C', 'B'), ('C', 'D'), ('D', 'C'), ('D', 'A'), ('A', 'D')])
         >>> ConstraintBasedEstimator.pdag_to_dag(pdag1).edges()
         [('D', 'C'), ('C', 'B'), ('A', 'B'), ('A', 'D')]
 
         >>> # example of a pdag with no faithful extension:
-        ... pdag2 = DirectedGraph([('A', 'B'), ('A', 'C'), ('B', 'C'), ('C', 'B')])
+        ... pdag2 = DAG([('A', 'B'), ('A', 'C'), ('B', 'C'), ('C', 'B')])
         >>> ConstraintBasedEstimator.pdag_to_dag(pdag2).edges()
         UserWarning: PDAG has no faithful extension (= no oriented DAG with the same v-structures as PDAG).
         Remaining undirected PDAG edges oriented arbitrarily.
@@ -354,7 +354,7 @@ class ConstraintBasedEstimator(StructureEstimator):
     @staticmethod
     def skeleton_to_pdag(skel, separating_sets):
         """Orients the edges of a graph skeleton based on information from
-        `separating_sets` to form a DAG pattern (DirectedGraph).
+        `separating_sets` to form a DAG pattern (DAG).
 
         Parameters
         ----------
@@ -369,7 +369,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
-        pdag: DirectedGraph
+        pdag: DAG
             An estimate for the DAG pattern of the BN underlying the data. The
             graph might contain some nodes with both-way edges (X->Y and Y->X).
             Any completion by (removing one of the both-way edges for each such
