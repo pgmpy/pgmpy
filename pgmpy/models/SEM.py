@@ -576,13 +576,21 @@ class SEM(DirectedGraph):
 
         for u, v in self.err_graph.edges:
             if u in eta and v in eta:
-                psi[eta.index(u), eta.index(v)] = self.err_graph.edges[u, v]['weight']
+                u_index, v_index = eta.index(u), eta.index(v)
+                psi[u_index, v_index] = self.err_graph.edges[u, v]['weight']
+                psi[v_index, u_index] = self.err_graph.edges[u, v]['weight']
             elif u in xi and v in xi:
-                phi[xi.index(u), xi.index(v)] = self.err_graph.edges[u, v]['weight']
+                u_index, v_index = xi.index(u), xi.index(v)
+                phi[u_index, v_index] = self.err_graph.edges[u, v]['weight']
+                phi[v_index, u_index] = self.err_graph.edges[u, v]['weight']
             elif u in y and v in y:
-                theta_e[y.index(u), y.index(v)] = self.err_graph.edges[u, v]['weight']
+                u_index, v_index = y.index(u), y.index(v)
+                theta_e[u_index, v_index] = self.err_graph.edges[u, v]['weight']
+                theta_e[v_index, u_index] = self.err_graph.edges[u, v]['weight']
             elif u in x and v in x:
-                theta_del[x.index(u), x.index(v)] = self.err_graph.edges[u, v]['weight']
+                u_index, v_index = x.index(u), x.index(v)
+                theta_del[u_index, v_index] = self.err_graph.edges[u, v]['weight']
+                theta_del[v_index, u_index] = self.err_graph.edges[u, v]['weight']
 
         return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
                 'psi': psi, 'phi': phi, 'theta_e': theta_e, 'theta_del': theta_del}
