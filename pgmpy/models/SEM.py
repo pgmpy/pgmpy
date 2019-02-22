@@ -5,6 +5,11 @@ import numpy as np
 import warnings
 
 from pgmpy.base import DirectedGraph
+from pgmpy.global_vars import HAS_PANDAS
+
+
+if HAS_PANDAS:
+    import pandas as pd
 
 
 class SEM(DirectedGraph):
@@ -639,26 +644,26 @@ class SEM(DirectedGraph):
         data_arr[:, m:m+n] = xi_data
 
         # Generate x
-        x_data = params['wedge_x'] @ xi_data + x_error
+        x_data = xi_data @ params['wedge_x'].T + x_error
         data_arr[:, m+n+p:] = x_data
 
         # Generate eta
         topo_sort = nx.algorithms.dag.topological_sort(self.latent_struct)
         for node in topo_sort:
             if node in eta:
-                data_node = (params['B'] @ data_arr[:, :m] +
-                             params['gamma'] @ data_arr[:, m:m+n] + eta_error)
+                data_node = (data_arr[:, :m] @ params['B'].T +
+                            data_arr[:, m:m+n] @ params['gamma'].T + eta_error)
                 data_arr[:, eta.index(node)] = data_node[:, eta.index(node)]
 
         # Generate y
-        y_data = params['wedge_y'] @ data_arr[:, :m] + y_error
+        y_data = data_arr[:, :m] @ params['wedge_y'].T + y_error
         data_arr[:, m+n:m+n+p] = y_data
 
         # Postprocess data before returning
         all_vars = eta + xi + y + x
         if only_observed:
             all_latents = set(self.latents).union(
-                [var[3:] if var.startswith('_l_') for var in self.latents])
+                [var[3:] for var in self.latents if var.startswith('_l_')])
             if HAS_PANDAS:
                 full_df = pd.DataFrame(data_arr, columns=all_vars)
                 return full_df.iloc[:, ~full_df.columns.isin(all_latents)]
