@@ -374,11 +374,11 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.base import DAG
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
+        >>> G = DAG([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                                ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y')
+        >>> G.get_markov_blanket('y')
         ['s', 'w', 'x', 'u', 'z', 'v']
         """
         children = self.get_children(node)
