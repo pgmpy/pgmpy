@@ -2,20 +2,20 @@
 
 import unittest
 
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
 import networkx as nx
 
 
-class TestDirectedGraphCreation(unittest.TestCase):
+class TestDAGCreation(unittest.TestCase):
     def setUp(self):
-        self.graph = DirectedGraph()
+        self.graph = DAG()
 
     def test_class_init_without_data(self):
-        self.assertIsInstance(self.graph, DirectedGraph)
+        self.assertIsInstance(self.graph, DAG)
 
     def test_class_init_with_data_string(self):
-        self.graph = DirectedGraph([('a', 'b'), ('b', 'c')])
+        self.graph = DAG([('a', 'b'), ('b', 'c')])
         self.assertListEqual(sorted(self.graph.nodes()), ['a', 'b', 'c'])
         self.assertListEqual(hf.recursive_sorted(self.graph.edges()),
                              [['a', 'b'], ['b', 'c']])
@@ -98,7 +98,7 @@ class TestDirectedGraphCreation(unittest.TestCase):
             self.assertEqual(self.graph.adj['e']['f']['weight'], None)
 
     def test_update_node_parents_bm_constructor(self):
-        self.graph = DirectedGraph([('a', 'b'), ('b', 'c')])
+        self.graph = DAG([('a', 'b'), ('b', 'c')])
         self.assertListEqual(list(self.graph.predecessors('a')), [])
         self.assertListEqual(list(self.graph.predecessors('b')), ['a'])
         self.assertListEqual(list(self.graph.predecessors('c')), ['b'])
@@ -127,9 +127,9 @@ class TestDirectedGraphCreation(unittest.TestCase):
         del self.graph
 
 
-class TestDirectedGraphMoralization(unittest.TestCase):
+class TestDAGMoralization(unittest.TestCase):
     def setUp(self):
-        self.graph = DirectedGraph()
+        self.graph = DAG()
         self.graph.add_edges_from([('diff', 'grade'), ('intel', 'grade')])
 
     def test_get_parents(self):

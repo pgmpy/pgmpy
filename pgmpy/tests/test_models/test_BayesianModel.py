@@ -551,7 +551,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         del self.model_disconnected
 
 
-class TestDirectedGraphCPDOperations(unittest.TestCase):
+class TestDAGCPDOperations(unittest.TestCase):
 
     def setUp(self):
         self.graph = BayesianModel()

@@ -5,10 +5,10 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DAG
 
 
-class DynamicBayesianNetwork(DirectedGraph):
+class DynamicBayesianNetwork(DAG):
     def __init__(self, ebunch=None):
         """
         Base class for Dynamic Bayesian Network

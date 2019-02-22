@@ -7,7 +7,7 @@ import networkx as nx
 from pgmpy.base import UndirectedGraph
 
 
-class DirectedGraph(nx.DiGraph):
+class DAG(nx.DiGraph):
     """
     Base class for all Directed Graphical Models.
 
@@ -23,10 +23,10 @@ class DirectedGraph(nx.DiGraph):
 
     Examples
     --------
-    Create an empty DirectedGraph with no nodes and no edges
+    Create an empty DAG with no nodes and no edges
 
-    >>> from pgmpy.base import DirectedGraph
-    >>> G = DirectedGraph()
+    >>> from pgmpy.base import DAG
+    >>> G = DAG()
 
     G can be grown in several ways:
 
@@ -68,7 +68,7 @@ class DirectedGraph(nx.DiGraph):
     """
 
     def __init__(self, ebunch=None):
-        super(DirectedGraph, self).__init__(ebunch)
+        super(DAG, self).__init__(ebunch)
 
     def add_node(self, node, weight=None):
         """
@@ -84,8 +84,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph()
+        >>> from pgmpy.base import DAG
+        >>> G = DAG()
         >>> G.add_node(node='A')
         >>> sorted(G.nodes())
         ['A']
@@ -108,7 +108,7 @@ class DirectedGraph(nx.DiGraph):
         else:
             attrs = {'weight': weight}
 
-        super(DirectedGraph, self).add_node(node, weight=weight)
+        super(DAG, self).add_node(node, weight=weight)
 
     def add_nodes_from(self, nodes, weights=None):
         """
@@ -128,8 +128,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph()
+        >>> from pgmpy.base import DAG
+        >>> G = DAG()
         >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
         >>> sorted(G.nodes())
         ['A', 'B', 'C']
@@ -172,8 +172,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph()
+        >>> from pgmpy.base import DAG
+        >>> G = DAG()
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edge(u='Alice', v='Bob')
         >>> G.nodes()
@@ -193,7 +193,7 @@ class DirectedGraph(nx.DiGraph):
         >>> G.edge['Ankur']['Maria']
         {'weight': 0.1}
         """
-        super(DirectedGraph, self).add_edge(u, v, weight=weight)
+        super(DAG, self).add_edge(u, v, weight=weight)
 
     def add_edges_from(self, ebunch, weights=None):
         """
@@ -217,8 +217,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph()
+        >>> from pgmpy.base import DAG
+        >>> G = DAG()
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> G.nodes()
@@ -267,8 +267,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[('diff', 'grade'), ('intel', 'grade')])
         >>> G.get_parents(node='grade')
         ['diff', 'intel']
         """
@@ -276,7 +276,7 @@ class DirectedGraph(nx.DiGraph):
 
     def moralize(self):
         """
-        Removes all the immoralities in the DirectedGraph and creates a moral
+        Removes all the immoralities in the DAG and creates a moral
         graph (UndirectedGraph).
 
         A v-structure X->Z<-Y is an immorality if there is no directed edge
@@ -284,8 +284,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[('diff', 'grade'), ('intel', 'grade')])
         >>> moral_graph = G.moralize()
         >>> moral_graph.edges()
         [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
@@ -304,8 +304,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> graph = DirectedGraph([('A', 'B'), ('B', 'C'), ('B', 'D')])
+        >>> from pgmpy.base import DAG
+        >>> graph = DAG([('A', 'B'), ('B', 'C'), ('B', 'D')])
         >>> graph.get_leaves()
         ['C', 'D']
         """
@@ -314,13 +314,13 @@ class DirectedGraph(nx.DiGraph):
 
     def out_degree_iter(self, nbunch=None, weight=None):
         if nx.__version__.startswith('1'):
-            return super(DirectedGraph, self).out_degree_iter(nbunch, weight)
+            return super(DAG, self).out_degree_iter(nbunch, weight)
         else:
             return iter(self.out_degree(nbunch, weight))
 
     def in_degree_iter(self, nbunch=None, weight=None):
         if nx.__version__.startswith('1'):
-            return super(DirectedGraph, self).in_degree_iter(nbunch, weight)
+            return super(DAG, self).in_degree_iter(nbunch, weight)
         else:
             return iter(self.in_degree(nbunch, weight))
 
@@ -330,8 +330,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> graph = DirectedGraph([('A', 'B'), ('B', 'C'), ('B', 'D'), ('E', 'B')])
+        >>> from pgmpy.base import DAG
+        >>> graph = DAG([('A', 'B'), ('B', 'C'), ('B', 'D'), ('E', 'B')])
         >>> graph.get_roots()
         ['A', 'E']
         """
@@ -349,8 +349,8 @@ class DirectedGraph(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import DirectedGraph
-        >>> g = DirectedGraph(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'),
+        >>> from pgmpy.base import DAG
+        >>> g = DAG(ebunch=[('A', 'B'), ('C', 'B'), ('B', 'D'),
                                       ('B', 'E'), ('B', 'F'), ('E', 'G')])
         >>> g.get_children(node='B')
         ['D', 'E', 'F']
