@@ -5,6 +5,8 @@ import itertools
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.independencies import Independencies
+
 
 
 class DAG(nx.DiGraph):
