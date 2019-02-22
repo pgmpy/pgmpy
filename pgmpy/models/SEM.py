@@ -294,7 +294,26 @@ class SEM(DirectedGraph):
             masks_arr.append(np.multiply(np.where(fixed_mask != 0, 0.0, 1.0), mask))
         return tuple(masks_arr)
 
-    def _iv_transformations(self, X, Y, indicators={}):
+    def _iv_transformations(self, X, Y, scaling_indicators={}):
+        """
+        Transforms the graph structure of SEM so that the d-separation criterion is
+        applicable for finding IVs. The method transforms the graph for finding MIIV
+        for the estimation of X \rightarrow Y given the scaling indicator for all the
+        parent latent variables.
+
+        Parameters
+        ----------
+        X: node
+            The explantory variable.
+        Y: node
+            The dependent variable.
+
+        Returns
+        -------
+        nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
+                              graph.
+        """
+
         graph_copy = self.graph.copy()
         err_graph_copy = self.err_graph.copy()
 
@@ -310,7 +329,7 @@ class SEM(DirectedGraph):
             parent_latent = y_parent.pop()
             graph_copy.remove_edge(parent_latent, Y)
             y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
-            err_graph_copy.add_edges_from([(indicators[p], Y) for p in y_parent_parent])
+            err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
             err_graph_copy.add_edge(parent_latent, Y)
 
         return graph_copy, err_graph_copy
@@ -401,6 +420,9 @@ class SEM(DirectedGraph):
         Returns
         -------
         set: The set of Instrumental Variables for the predicted value.
+
+        Examples
+        --------
         """
         pass
 
@@ -439,6 +461,9 @@ class SEM(DirectedGraph):
         Returns
         -------
         None
+
+        Examples
+        --------
         """
         expected_keys = {'B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi'}
 
@@ -497,3 +522,71 @@ class SEM(DirectedGraph):
             for u, v in self.err_graph.subgraph(x).edges:
                 self.err_graph.edges[u, v]['weight'] = params['theta_del'][x.index(v), x.index(u)]
 
+    def get_params(self):
+        """
+        Gets parameters from the graph structure to the standard LISREL matrix representation.
+
+        Returns
+        -------
+        dict: Dict with the keys B, gamma, wedge_y, wedge_x, theta_e, theta_del, phi and psi.
+
+        Examples
+        --------
+        """
+        eta, m = sorted(self.eta), len(self.eta)
+        xi, n = sorted(self.xi), len(self.xi)
+        y, p = sorted(self.y), len(self.y)
+        x, q = sorted(self.x), len(self.x)
+
+        # Set values in relation matrices.
+        B = np.zeros((m, m))
+        gamma = np.zeros((m, n))
+        wedge_y = np.zeros((p, m))
+        wedge_x = np.zeros((q, n))
+
+        for u, v in self.graph.edges:
+            if u in eta and v in eta:
+                B[eta.index(v), eta.index(u)] = self.graph.edges[u, v]['weight']
+            elif u in xi and v in eta:
+                gamma[eta.index(v), xi.index(u)] = self.graph.edges[u, v]['weight']
+            elif u in xi and v in x:
+                wedge_x[x.index(v), xi.index(u)] = self.graph.edges[u, v]['weight']
+            elif u in eta and v in y:
+                wedge_y[y.index(v), eta.index(u)] = self.graph.edges[u, v]['weight']
+
+        # Set values in covariance matrices.
+        psi = np.zeros((m, m))
+        phi = np.zeros((n, n))
+        theta_e = np.zeros((p, p))
+        theta_del = np.zeros((q, q))
+
+        for node in self.err_graph.nodes:
+            if node in eta:
+                index = eta.index(node)
+                psi[index, index] = self.err_graph.nodes[node]['var']
+            elif node in xi:
+                index = xi.index(node)
+                phi[index, index] = self.err_graph.nodes[node]['var']
+            elif node in y:
+                index = y.index(node)
+                theta_e[index, index] = self.err_graph.nodes[node]['var']
+            elif node in x:
+                index = x.index(node)
+                theta_del[index, index] = self.err_graph.nodes[node]['var']
+
+        for u, v in self.err_graph.edges:
+            if u in eta and v in eta:
+                psi[eta.index(u), eta.index(v)] = self.err_graph.edges[u, v]['weight']
+            elif u in xi and v in xi:
+                phi[xi.index(u), xi.index(v)] = self.err_graph.edges[u, v]['weight']
+            elif u in y and v in y:
+                theta_e[y.index(u), y.index(v)] = self.err_graph.edges[u, v]['weight']
+            elif u in x and v in x:
+                theta_del[x.index(u), x.index(v)] = self.err_graph.edges[u, v]['weight']
+
+        return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
+                'psi': psi, 'phi': phi, 'theta_e': theta_e, 'theta_del': theta_del}
+
+
+    def sample(n=100):
+        pass
