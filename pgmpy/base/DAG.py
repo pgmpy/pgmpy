@@ -5,6 +5,7 @@ import itertools
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.independencies import Independencies
 
 
 class DAG(nx.DiGraph):
@@ -356,3 +357,38 @@ class DAG(nx.DiGraph):
         ['D', 'E', 'F']
         """
         return list(self.successors(node))
+
+    def get_independencies(self, latex=False):
+        """
+        Computes independencies in the Bayesian Network, by checking d-seperation.
+
+        Parameters
+        ----------
+        latex: boolean
+            If latex=True then latex string of the independence assertion
+            would be created.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> chain = DAG([('X', 'Y'), ('Y', 'Z')])
+        >>> chain.get_independencies()
+        (X _|_ Z | Y)
+        (Z _|_ X | Y)
+        """
+        independencies = Independencies()
+        for start in (self.nodes()):
+            rest = set(self.nodes()) - {start}
+            for r in range(len(rest)):
+                for observed in itertools.combinations(rest, r):
+                    d_seperated_variables = rest - set(observed) - set(
+                        self.active_trail_nodes(start, observed=observed)[start])
+                    if d_seperated_variables:
+                        independencies.add_assertions([start, d_seperated_variables, observed])
+
+        independencies.reduce()
+
+        if not latex:
+            return independencies
+        else:
+            return independencies.latex_string()
