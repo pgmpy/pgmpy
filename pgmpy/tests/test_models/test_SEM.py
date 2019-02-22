@@ -89,6 +89,41 @@ class TestSEMInit(unittest.TestCase):
                                                'y2': {'y1', 'y3'},
                                                'y3': {'y2'}})
 
+
+        # Parameterization for lisrel model
+        B = np.array([[0. , 0.],
+                      [0.1, 0.]])
+        gamma = np.array([[0.3],
+                          [0.2]])
+        wedge_y = np.array([[1.1, 0. ],
+                            [1.2, 0. ],
+                            [1.3, 0. ],
+                            [1.4, 0. ],
+                            [0. , 0.7],
+                            [0. , 0.8],
+                            [0. , 0.9],
+                            [0. , 1.0]])
+        wedge_x = np.array([[0.4],
+                            [0.5],
+                            [0.6]])
+        phi = np.array([[3.4]])
+        psi = np.array([[2.9, 0. ],
+                        [0. , 3.0]])
+        theta_e = np.array([[2.1, 0. , 0. , 0. , 1.5, 0. , 0. , 0. ],
+                            [0. , 2.2, 0. , 1.9, 0. , 1.6, 0. , 0. ],
+                            [0. , 0. , 2.3, 0. , 0. , 0. , 1.7, 0. ],
+                            [0. , 1.9, 0. , 2.4, 0. , 0. , 0. , 1.8],
+                            [1.5, 0. , 0. , 0. , 2.5, 0. , 0. , 0. ],
+                            [0. , 1.6, 0. , 0. , 0. , 2.6, 0. , 2.0],
+                            [0. , 0. , 1.7, 0. , 0. , 0. , 2.7, 0. ],
+                            [0. , 0. , 0. , 1.8, 0. , 2.0, 0. , 2.8]], dtype=float)
+
+        theta_del = np.array([[3.1, 0. , 0. ],
+                              [0. , 3.2, 0. ],
+                              [0. , 0. , 3.3]])
+        self.params = {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
+                       'phi': phi, 'psi': psi, 'theta_e': theta_e, 'theta_del': theta_del}
+
     def test_lisrel_init(self):
         self.assertSetEqual(self.lisrel.latents, {'xi1', 'eta1', 'eta2'})
         self.assertSetEqual(self.lisrel.observed, {'x1', 'x2', 'x3', 'y1', 'y2', 'y3',
@@ -566,40 +601,7 @@ class TestSEMInit(unittest.TestCase):
         self.assertSetEqual(self.model.active_trail_nodes(['D'], observed=['G'])['D'], {'D', 'I', 'S'})
 
     def test_set_params(self):
-        B = np.array([[0. , 0.],
-                      [0.1, 0.]])
-        gamma = np.array([[0.3],
-                          [0.2]])
-        wedge_y = np.array([[1.1, 0. ],
-                            [1.2, 0. ],
-                            [1.3, 0. ],
-                            [1.4, 0. ],
-                            [0. , 0.7],
-                            [0. , 0.8],
-                            [0. , 0.9],
-                            [0. , 1.0]])
-        wedge_x = np.array([[0.4],
-                            [0.5],
-                            [0.6]])
-        phi = np.array([[3.4]])
-        psi = np.array([[2.9, 0. ],
-                        [0. , 3.0]])
-        theta_e = np.array([[2.1, 0. , 0. , 0. , 1.5, 0. , 0. , 0. ],
-                            [0. , 2.2, 0. , 1.9, 0. , 1.6, 0. , 0. ],
-                            [0. , 0. , 2.3, 0. , 0. , 0. , 1.7, 0. ],
-                            [0. , 1.9, 0. , 2.4, 0. , 0. , 0. , 1.8],
-                            [1.5, 0. , 0. , 0. , 2.5, 0. , 0. , 0. ],
-                            [0. , 1.6, 0. , 0. , 0. , 2.6, 0. , 2.0],
-                            [0. , 0. , 1.7, 0. , 0. , 0. , 2.7, 0. ],
-                            [0. , 0. , 0. , 1.8, 0. , 2.0, 0. , 2.8]], dtype=float)
-
-        theta_del = np.array([[3.1, 0. , 0. ],
-                              [0. , 3.2, 0. ],
-                              [0. , 0. , 3.3]])
-
-        params = {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
-                  'phi': phi, 'psi': psi, 'theta_e': theta_e, 'theta_del': theta_del}
-        self.lisrel.set_params(params)
+        self.lisrel.set_params(self.params)
 
         self.assertEqual(self.lisrel.graph.edges['eta1', 'eta2']['weight'], 0.1)
         self.assertEqual(self.lisrel.graph.edges['xi1', 'eta2']['weight'], 0.2)
@@ -642,40 +644,7 @@ class TestSEMInit(unittest.TestCase):
         self.assertEqual(self.lisrel.err_graph.nodes['x3']['var'], 3.3)
 
     def test_get_params(self):
-        B = np.array([[0. , 0.],
-                      [0.1, 0.]])
-        gamma = np.array([[0.3],
-                          [0.2]])
-        wedge_y = np.array([[1.1, 0. ],
-                            [1.2, 0. ],
-                            [1.3, 0. ],
-                            [1.4, 0. ],
-                            [0. , 0.7],
-                            [0. , 0.8],
-                            [0. , 0.9],
-                            [0. , 1.0]])
-        wedge_x = np.array([[0.4],
-                            [0.5],
-                            [0.6]])
-        phi = np.array([[3.4]])
-        psi = np.array([[2.9, 0. ],
-                        [0. , 3.0]])
-        theta_e = np.array([[2.1, 0. , 0. , 0. , 1.5, 0. , 0. , 0. ],
-                            [0. , 2.2, 0. , 1.9, 0. , 1.6, 0. , 0. ],
-                            [0. , 0. , 2.3, 0. , 0. , 0. , 1.7, 0. ],
-                            [0. , 1.9, 0. , 2.4, 0. , 0. , 0. , 1.8],
-                            [1.5, 0. , 0. , 0. , 2.5, 0. , 0. , 0. ],
-                            [0. , 1.6, 0. , 0. , 0. , 2.6, 0. , 2.0],
-                            [0. , 0. , 1.7, 0. , 0. , 0. , 2.7, 0. ],
-                            [0. , 0. , 0. , 1.8, 0. , 2.0, 0. , 2.8]], dtype=float)
-
-        theta_del = np.array([[3.1, 0. , 0. ],
-                              [0. , 3.2, 0. ],
-                              [0. , 0. , 3.3]])
-
-        params = {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
-                  'phi': phi, 'psi': psi, 'theta_e': theta_e, 'theta_del': theta_del}
-        self.lisrel.set_params(params)
+        self.lisrel.set_params(self.params)
 
         new_params = self.lisrel.get_params()
         npt.assert_equal(B, new_params['B'])
@@ -687,3 +656,7 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(theta_e, new_params['theta_e'])
         npt.assert_equal(theta_del, new_params['theta_del'])
 
+    def test_sample(self):
+        self.lisrel.set_params(self.params)
+        self.assertEqual(self.lisrel.sample(n_samples=100, only_observed=True).shape, (100, 11))
+        self.assertEqual(self.lisrel.sample(n_samples=100, only_observed=False).shape, (100, 14))

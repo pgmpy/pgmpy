@@ -595,6 +595,78 @@ class SEM(DirectedGraph):
         return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
                 'psi': psi, 'phi': phi, 'theta_e': theta_e, 'theta_del': theta_del}
 
+    def sample(self, n_samples=100, only_observed=True):
+        """
+        Samples datapoints from the fully specified model.
 
-    def sample(n=100):
-        pass
+        Parameters
+        ----------
+        n_samples: int
+            The number of data samples to be generated.
+
+        only_observed: boolean
+            If True: Returns the generated samples only for observed variables in the model.
+            If False: Returns the generated samples for all the variables (including latents)
+                      in the model.
+
+        Returns
+        -------
+        pd.DataFrame: A dataframe object of the shape (n x (len(self.x + self.y)).
+                      If pandas is not installed returns a 2-D numpy array with the
+                      columns in the order sorted(self.x) + sorted(self.y).
+        """
+        eta, m = sorted(self.eta), len(self.eta)
+        xi, n = sorted(self.xi), len(self.xi)
+        y, p = sorted(self.y), len(self.y)
+        x, q = sorted(self.x), len(self.x)
+
+        # Initialize empty array to fill values in. The order of columns is eta, xi, y, x.
+        data_arr = np.zeros((n_samples, (m+n+p+q)))
+
+        # Get the parameters of the model in form of matrices.
+        params = self.get_params()
+
+        # Generate error terms
+        y_error = np.random.multivariate_normal(mean=[0]*p, cov=params['theta_e'], size=n_samples)
+        x_error = np.random.multivariate_normal(mean=[0]*q, cov=params['theta_del'], size=n_samples)
+        eta_error = np.random.multivariate_normal(mean=[0]*m, cov=params['psi'], size=n_samples)
+        xi_error = np.random.multivariate_normal(mean=[0]*n, cov=params['phi'], size=n_samples)
+
+        # Generate random xi.
+        xi_data = np.random.randn(n_samples, n)
+        xi_data -= xi_data.mean(axis=0) # Make the generated data 0 mean
+        xi_data += xi_error
+        data_arr[:, m:m+n] = xi_data
+
+        # Generate x
+        x_data = params['wedge_x'] @ xi_data + x_error
+        data_arr[:, m+n+p:] = x_data
+
+        # Generate eta
+        topo_sort = nx.algorithms.dag.topological_sort(self.latent_struct)
+        for node in topo_sort:
+            if node in eta:
+                data_node = (params['B'] @ data_arr[:, :m] +
+                             params['gamma'] @ data_arr[:, m:m+n] + eta_error)
+                data_arr[:, eta.index(node)] = data_node[:, eta.index(node)]
+
+        # Generate y
+        y_data = params['wedge_y'] @ data_arr[:, :m] + y_error
+        data_arr[:, m+n:m+n+p] = y_data
+
+        # Postprocess data before returning
+        all_vars = eta + xi + y + x
+        if only_observed:
+            all_latents = set(self.latents).union(
+                [var[3:] if var.startswith('_l_') for var in self.latents])
+            if HAS_PANDAS:
+                full_df = pd.DataFrame(data_arr, columns=all_vars)
+                return full_df.iloc[:, ~full_df.columns.isin(all_latents)]
+            else:
+                latent_indexes = [all_vars.index(var) for var in all_latents]
+                return np.delete(data_arr, latent_indexes, axis=1)
+        else:
+            if HAS_PANDAS:
+                return pd.DataFrame(data_arr, columns=all_vars)
+            else:
+                return data_arr
