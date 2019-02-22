@@ -494,50 +494,6 @@ class BayesianModel(DAG):
             active_trails[start] = active_nodes
         return active_trails
 
-    def local_independencies(self, variables):
-        """
-        Returns an instance of Independencies containing the local independencies
-        of each of the variables.
-
-        Parameters
-        ----------
-        variables: str or array like
-            variables whose local independencies are to be found.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
-        >>>                         ('grade', 'letter'), ('intel', 'SAT')])
-        >>> ind = student.local_independencies('grade')
-        >>> ind
-        (grade _|_ SAT | diff, intel)
-        """
-        def dfs(node):
-            """
-            Returns the descendents of node.
-
-            Since Bayesian Networks are acyclic, this is a very simple dfs
-            which does not remember which nodes it has visited.
-            """
-            descendents = []
-            visit = [node]
-            while visit:
-                n = visit.pop()
-                neighbors = list(self.neighbors(n))
-                visit.extend(neighbors)
-                descendents.extend(neighbors)
-            return descendents
-
-        independencies = Independencies()
-        for variable in variables if isinstance(variables, (list, tuple)) else [variables]:
-            non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
-            parents = set(self.get_parents(variable))
-            if non_descendents - parents:
-                independencies.add_assertions([variable, non_descendents - parents, parents])
-        return independencies
-
     def is_active_trail(self, start, end, observed=None):
         """
         Returns True if there is any active trail between start and end node
@@ -999,11 +955,11 @@ class BayesianModel(DAG):
         return model_copy
 
     def get_markov_blanket(self, node):
-        """                                                       
+        """
         Returns a markov blanket for a random variable. In the case
-        of Bayesian Networks, the markov blanket is the set of 
-        node's parents, its children and its children's other parents. 
-        
+        of Bayesian Networks, the markov blanket is the set of
+        node's parents, its children and its children's other parents.
+
         Returns
         -------
         list(blanket_nodes): List of nodes contained in Markov Blanket
@@ -1012,14 +968,14 @@ class BayesianModel(DAG):
         ----------
         node: string, int or any hashable python object.
               The node whose markov blanket would be returned.
-                                                                  
-        Examples                                                  
-        --------                                                  
+
+        Examples
+        --------
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                                ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y') 
+        >>> bayes_model.get_markov_blanket('y')
         ['s', 'w', 'x', 'u', 'z', 'v']
         """
         children = self.get_children(node)
