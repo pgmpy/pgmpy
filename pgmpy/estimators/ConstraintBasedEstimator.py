@@ -4,7 +4,7 @@ from warnings import warn
 from itertools import combinations
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.models import BayesianModel
+from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.independencies import Independencies, IndependenceAssertion
 
@@ -12,11 +12,11 @@ from pgmpy.independencies import Independencies, IndependenceAssertion
 class ConstraintBasedEstimator(StructureEstimator):
     def __init__(self, data, **kwargs):
         """
-        Class for constraint-based estimation of BayesianModels from a given
+        Class for constraint-based estimation of DAGs from a given
         data set. Identifies (conditional) dependencies in data set using
         chi_square dependency test and uses the PC algorithm to estimate a DAG
         pattern that satisfies the identified dependencies. The DAG pattern can
-        then be completed to a faithful BayesianModel, if possible.
+        then be completed to a faithful DAG, if possible.
 
         Parameters
         ----------
@@ -47,12 +47,12 @@ class ConstraintBasedEstimator(StructureEstimator):
 
     def estimate(self, significance_level=0.01):
         """
-        Estimates a BayesianModel for the data set, using the PC constraint-based
+        Estimates a DAG for the data set, using the PC constraint-based
         structure learning algorithm. Independencies are identified from the
         data set using a chi-squared statistic with the acceptance threshold of
         `significance_level`. PC identifies a partially directed acyclic graph (PDAG), given
         that the tested independencies admit a faithful Bayesian network representation.
-        This method returns a BayesianModel that is a completion of this PDAG.
+        This method returns a DAG that is a completion of this PDAG.
 
         Parameters
         ----------
@@ -66,8 +66,8 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
-        model: BayesianModel()-instance
-            An estimate for the BayesianModel for the data set (not yet parametrized).
+        model: DAG()-instance
+            An estimate for the DAG for the data set (not yet parametrized).
 
         Reference
         ---------
@@ -182,7 +182,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
     @staticmethod
     def estimate_from_independencies(nodes, independencies):
-        """Estimates a BayesianModel from an Independencies()-object or a
+        """Estimates a DAG from an Independencies()-object or a
         decision function for conditional independencies. This requires that
         the set of independencies admits a faithful representation (e.g. is a
         set of d-seperation for some BN or is closed under the semi-graphoid
@@ -203,12 +203,12 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
-        model: BayesianModel instance
+        model: DAG instance
 
         Examples
         --------
         >>> from pgmpy.estimators import ConstraintBasedEstimator
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import DAG
         >>> from pgmpy.independencies import Independencies
 
         >>> ind = Independencies(['B', 'C'], ['A', ['B', 'C'], 'D'])
@@ -217,7 +217,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> print(skel.edges())
         [('B', 'D'), ('A', 'D'), ('C', 'D')]
 
-        >>> model = BayesianModel([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
+        >>> model = DAG([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
         >>> skel = ConstraintBasedEstimator.estimate_from_independencies(model.nodes(), model.get_independencies())
         >>> print(skel.edges())
         [('B', 'C'), ('A', 'C'), ('C', 'E'), ('D', 'B')]
@@ -247,7 +247,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         Returns
         -------
-        dag: BayesianModel
+        dag: DAG
             A faithful orientation of pdag, if one exists. Otherwise any
             fully orientated DAG/BayesianModel with the structure of pdag.
 
@@ -290,7 +290,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
 
         pdag = pdag.copy()
-        dag = BayesianModel()
+        dag = DAG()
         dag.add_nodes_from(pdag.nodes())
 
         # add already directed edges of pdag to dag
@@ -337,11 +337,11 @@ class ConstraintBasedEstimator(StructureEstimator):
     @staticmethod
     def model_to_pdag(model):
         """Construct the DAG pattern (representing the I-equivalence class) for
-        a given BayesianModel. This is the "inverse" to pdag_to_dag.
+        a given DAG. This is the "inverse" to pdag_to_dag.
         """
 
-        if not isinstance(model, BayesianModel):
-            raise TypeError("model: Expected BayesianModel instance, " +
+        if not isinstance(model, DAG):
+            raise TypeError("model: Expected DAG instance, " +
                             "got type {model_type}".format(model_type=type(model)))
 
         skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
@@ -486,7 +486,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         Examples
         --------
         >>> from pgmpy.estimators import ConstraintBasedEstimator
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import DAG
         >>> from pgmpy.independencies import Independencies
 
         >>> # build skeleton from list of independencies:
@@ -498,8 +498,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> print(skel.edges())
         [('A', 'D'), ('B', 'D'), ('C', 'D')]
 
-        >>> # build skeleton from d-seperations of BayesianModel:
-        ... model = BayesianModel([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
+        >>> # build skeleton from d-seperations of DAG:
+        ... model = DAG([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
         >>> skel, sep_sets = ConstraintBasedEstimator.build_skeleton(model.nodes(), model.get_independencies())
         >>> print(skel.edges())
         [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')]
