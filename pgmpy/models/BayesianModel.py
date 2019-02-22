@@ -390,110 +390,6 @@ class BayesianModel(DAG):
                                      " is not equal to 1.".format(node=node))
         return True
 
-    def _get_ancestors_of(self, obs_nodes_list):
-        """
-        Returns a dictionary of all ancestors of all the observed nodes including the
-        node itself.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> model = BayesianModel([('D', 'G'), ('I', 'G'), ('G', 'L'),
-        ...                        ('I', 'L')])
-        >>> model._get_ancestors_of('G')
-        {'D', 'G', 'I'}
-        >>> model._get_ancestors_of(['G', 'I'])
-        {'D', 'G', 'I'}
-        """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
-
-        for node in obs_nodes_list:
-            if node not in self.nodes():
-                raise ValueError('Node {s} not in not in graph'.format(s=node))
-
-        ancestors_list = set()
-        nodes_list = set(obs_nodes_list)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
-        return ancestors_list
-
-    def active_trail_nodes(self, variables, observed=None):
-        """
-        Returns a dictionary with the given variables as keys and all the nodes reachable
-        from that respective variable as values.
-
-        Parameters
-        ----------
-
-        variables: str or array like
-            variables whose active trails are to be found.
-
-        observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be observed.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.active_trail_nodes('diff')
-        {'diff': {'diff', 'grades'}}
-        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
-        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
-
-        References
-        ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
-        """
-        if observed:
-            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
-        else:
-            observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
-
-        # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
-
-        active_trails = {}
-        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
-            visit_list = set()
-            visit_list.add((start, 'up'))
-            traversed_list = set()
-            active_nodes = set()
-            while visit_list:
-                node, direction = visit_list.pop()
-                if (node, direction) not in traversed_list:
-                    if node not in observed_list:
-                        active_nodes.add(node)
-                    traversed_list.add((node, direction))
-                    if direction == 'up' and node not in observed_list:
-                        for parent in self.predecessors(node):
-                            visit_list.add((parent, 'up'))
-                        for child in self.successors(node):
-                            visit_list.add((child, 'down'))
-                    elif direction == 'down':
-                        if node not in observed_list:
-                            for child in self.successors(node):
-                                visit_list.add((child, 'down'))
-                        if node in ancestors_list:
-                            for parent in self.predecessors(node):
-                                visit_list.add((parent, 'up'))
-            active_trails[start] = active_nodes
-        return active_trails
-
     def local_independencies(self, variables):
         """
         Returns an instance of Independencies containing the local independencies
@@ -999,11 +895,11 @@ class BayesianModel(DAG):
         return model_copy
 
     def get_markov_blanket(self, node):
-        """                                                       
+        """
         Returns a markov blanket for a random variable. In the case
-        of Bayesian Networks, the markov blanket is the set of 
-        node's parents, its children and its children's other parents. 
-        
+        of Bayesian Networks, the markov blanket is the set of
+        node's parents, its children and its children's other parents.
+
         Returns
         -------
         list(blanket_nodes): List of nodes contained in Markov Blanket
@@ -1012,14 +908,14 @@ class BayesianModel(DAG):
         ----------
         node: string, int or any hashable python object.
               The node whose markov blanket would be returned.
-                                                                  
-        Examples                                                  
-        --------                                                  
+
+        Examples
+        --------
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'), 
+        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                                ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y') 
+        >>> bayes_model.get_markov_blanket('y')
         ['s', 'w', 'x', 'u', 'z', 'v']
         """
         children = self.get_children(node)
