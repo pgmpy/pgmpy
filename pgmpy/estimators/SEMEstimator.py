@@ -224,5 +224,42 @@ class SEMEstimator(object):
         elif method.lower() == '2sls' or method.lower() == '2-sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
+        # Compute goodness of fit statistics.
+        N = data.shape[0]
+        sample_cov = S.detach().numpy()
+        sigma_hat = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'], params['wedge_x'],
+                                          params['phi'], params['theta_e'], params['theta_del'],
+                                          params['psi']).detach().numpy()
+        residual = sample_cov - sigma_hat
+
+        norm_residual = np.zeros(residual.shape)
+        for i in range(norm_residual.shape[0]):
+            for j in range(norm_residual.shape[1]):
+                norm_residual[i, j] = (sample_cov[i, j] - sigma_hat[i, j]) / np.sqrt(
+                                      ((sigma_hat[i, i] * sigma_hat[j, j]) + (sigma_hat[i, j]**2)) / N)
+
+        # Compute chi-square value.
+        likelihood_ratio = -(N-1) * (np.log(np.linalg.det(sigma_hat)) + (np.linalg.inv(sigma_hat) @ S).trace() -
+                                     np.log(np.linalg.det(S)) - S.shape[0])
+        if method.lower() == 'ml':
+            error = self.ml_loss(params, loss_args={'S': S})
+        elif method.lower() == 'uls':
+            error = self.uls_loss(params, loss_args={'S': S})
+        elif method.lower() == 'gls':
+            error = self.gls_loss(params, loss_args={'S': S, 'W': W})
+        chi_square = likelihood_ratio / error.detach().numpy()
+
+        # TODO: Compute the degree of freedom.
+
+        summary = {'Sample Size': N,
+                   'Sample Covariance': sample_cov,
+                   'Model Implied Covariance': sigma_hat,
+                   'Residual': residual,
+                   'Normalized Residual': norm_residual,
+                   'chi_square': chi_square,
+                  }
+
         # Update the model with the learned params
         self.model.set_params({key: value.detach().numpy() for key, value in params.items()})
+
+        return summary
