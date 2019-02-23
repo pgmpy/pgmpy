@@ -250,6 +250,11 @@ class SEMEstimator(object):
         chi_square = likelihood_ratio / error.detach().numpy()
 
         # TODO: Compute the degree of freedom.
+        free_params = (self.masks['B'].sum() + self.masks['gamma'].sum() + self.masks['wedge_y'].sum() +
+                       self.masks['wedge_x'].sum() + self.masks['phi'].tril().sum() +
+                       self.masks['theta_e'].tril().sum() + self.masks['theta_del'].tril().sum() +
+                       self.masks['psi'].tril().sum())
+        dof = ((S.shape[0] * (S.shape[0]+1)) / 2) - free_params
 
         summary = {'Sample Size': N,
                    'Sample Covariance': sample_cov,
@@ -257,6 +262,7 @@ class SEMEstimator(object):
                    'Residual': residual,
                    'Normalized Residual': norm_residual,
                    'chi_square': chi_square,
+                   'dof': dof
                   }
 
         # Update the model with the learned params
