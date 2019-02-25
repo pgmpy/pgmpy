@@ -123,6 +123,12 @@ class TestDAGCreation(unittest.TestCase):
         self.graph.add_edge('H', 'G')
         self.assertEqual(sorted(['A', 'H']), sorted(self.graph.get_roots()))
 
+    def test_init_with_cycle(self):
+        self.assertRaises(ValueError, DAG, [('a', 'a')])
+        self.assertRaises(ValueError, DAG, [('a', 'b'), ('b', 'a')])
+        self.assertRaises(ValueError, DAG, [('a', 'b'), ('b', 'c'),
+                                           ('c', 'a')])
+
     def tearDown(self):
         del self.graph
 
