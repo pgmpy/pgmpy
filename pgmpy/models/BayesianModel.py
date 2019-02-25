@@ -434,40 +434,6 @@ class BayesianModel(DAG):
                 independencies.add_assertions([variable, non_descendents - parents, parents])
         return independencies
 
-    def is_active_trail(self, start, end, observed=None):
-        """
-        Returns True if there is any active trail between start and end node
-
-        Parameters
-        ----------
-        start : Graph Node
-
-        end : Graph Node
-
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
-        False
-        >>> student.is_active_trail('grades', 'sat')
-        True
-        """
-        if end in self.active_trail_nodes(start, observed)[start]:
-            return True
-        else:
-            return False
-
     def get_independencies(self, latex=False):
         """
         Computes independencies in the Bayesian Network, by checking d-seperation.
@@ -749,31 +715,6 @@ class BayesianModel(DAG):
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
-    def get_immoralities(self):
-        """
-        Finds all the immoralities in the model
-        A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
-
-        Returns
-        -------
-        set: A set of all the immoralities in the model
-
-        Examples
-        ---------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
-        ...                         ('intel', 'SAT'), ('grade', 'letter')])
-        >>> student.get_immoralities()
-        {('diff','intel')}
-        """
-        immoralities = set()
-        for node in self.nodes():
-            for parents in itertools.combinations(self.predecessors(node), 2):
-                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
-                    immoralities.add(tuple(sorted(parents)))
-        return immoralities
-
     def is_iequivalent(self, model):
         """
         Checks whether the given model is I-equivalent
@@ -893,36 +834,3 @@ class BayesianModel(DAG):
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
-
-    def get_markov_blanket(self, node):
-        """
-        Returns a markov blanket for a random variable. In the case
-        of Bayesian Networks, the markov blanket is the set of
-        node's parents, its children and its children's other parents.
-
-        Returns
-        -------
-        list(blanket_nodes): List of nodes contained in Markov Blanket
-
-        Parameters
-        ----------
-        node: string, int or any hashable python object.
-              The node whose markov blanket would be returned.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> from pgmpy.factors.discrete import TabularCPD
-        >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
-                               ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y')
-        ['s', 'w', 'x', 'u', 'z', 'v']
-        """
-        children = self.get_children(node)
-        parents = self.get_parents(node)
-        blanket_nodes = children + parents
-        for child_node in children:
-            blanket_nodes.extend(self.get_parents(child_node))
-        blanket_nodes = set(blanket_nodes)
-        blanket_nodes.remove(node)
-        return list(blanket_nodes)

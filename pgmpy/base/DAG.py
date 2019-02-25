@@ -357,20 +357,103 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
+    def get_immoralities(self):
+        """
+        Finds all the immoralities in the model
+        A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
+
+        Returns
+        -------
+        set: A set of all the immoralities in the model
+
+        Examples
+        ---------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
+        ...                         ('intel', 'SAT'), ('grade', 'letter')])
+        >>> student.get_immoralities()
+        {('diff','intel')}
+        """
+        immoralities = set()
+        for node in self.nodes():
+            for parents in itertools.combinations(self.predecessors(node), 2):
+                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
+                    immoralities.add(tuple(sorted(parents)))
+        return immoralities
+
+    def is_active_trail(self, start, end, observed=None):
+        """
+        Returns True if there is any active trail between start and end node
+        Parameters
+        ----------
+        start : Graph Node
+        end : Graph Node
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_active_trail('diff', 'intel')
+        False
+        >>> student.is_active_trail('grades', 'sat')
+        True
+        """
+        if end in self.active_trail_nodes(start, observed)[start]:
+            return True
+        else:
+            return False
+
+    def get_markov_blanket(self, node):
+        """
+        Returns a markov blanket for a random variable. In the case
+        of Bayesian Networks, the markov blanket is the set of
+        node's parents, its children and its children's other parents.
+
+        Returns
+        -------
+        list(blanket_nodes): List of nodes contained in Markov Blanket
+
+        Parameters
+        ----------
+        node: string, int or any hashable python object.
+              The node whose markov blanket would be returned.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> G = DAG([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
+                               ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
+        >>> G.get_markov_blanket('y')
+        ['s', 'w', 'x', 'u', 'z', 'v']
+        """
+        children = self.get_children(node)
+        parents = self.get_parents(node)
+        blanket_nodes = children + parents
+        for child_node in children:
+            blanket_nodes.extend(self.get_parents(child_node))
+        blanket_nodes = set(blanket_nodes)
+        blanket_nodes.remove(node)
+        return list(blanket_nodes)
+
     def active_trail_nodes(self, variables, observed=None):
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
-
         Parameters
         ----------
-
         variables: str or array like
             variables whose active trails are to be found.
-
         observed : List of nodes (optional)
             If given the active trails would be computed assuming these nodes to be observed.
-
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -381,7 +464,6 @@ class DAG(nx.DiGraph):
         {'diff': {'diff', 'grades'}}
         >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
         {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
-
         References
         ----------
         Details of the algorithm can be found in 'Probabilistic Graphical Model
@@ -429,12 +511,10 @@ class DAG(nx.DiGraph):
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
-
         Parameters
         ----------
         obs_nodes_list: string, list-type
             name of all the observed nodes
-
         Examples
         --------
         >>> from pgmpy.base import DAG
