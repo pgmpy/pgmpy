@@ -344,23 +344,23 @@ class TestSEMInit(unittest.TestCase):
                                                  [1.],
                                                  [1.]]))
 
-        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(phi_mask, np.array([[1.]]))
         npt.assert_equal(theta_e_mask,
-                         np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
-                                   [0., 0., 0., 1., 0., 1., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 1., 0.],
-                                   [0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [1., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [0., 0., 1., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 1., 0., 1., 0., 0.]]))
+                         np.array([[1., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 1., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 1., 0., 0., 0., 1., 0.],
+                                   [0., 1., 0., 1., 0., 0., 0., 1.],
+                                   [1., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 1., 0., 0., 0., 1., 0., 1.],
+                                   [0., 0., 1., 0., 0., 0., 1., 0.],
+                                   [0., 0., 0., 1., 0., 1., 0., 1.]]))
         npt.assert_equal(theta_del_mask,
-                         np.array([[0., 0., 0.],
-                                   [0., 0., 0.],
-                                   [0., 0., 0.]]))
+                         np.array([[1., 0., 0.],
+                                   [0., 1., 0.],
+                                   [0., 0., 1.]]))
         npt.assert_equal(psi_mask,
-                         np.array([[0., 0.],
-                                   [0., 0.]]))
+                         np.array([[1., 0.],
+                                   [0., 1.]]))
 
     def test_non_lisrel_get_fixed_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
@@ -416,19 +416,19 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(wedge_x_mask, np.array([[1.],
                                                  [1.]]))
 
-        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(phi_mask, np.array([[1.]]))
 
-        npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
-                                                 [1., 0., 1., 0., 0.],
-                                                 [0., 1., 0., 0., 0.],
-                                                 [0., 0., 0., 0., 0.],
-                                                 [0., 0., 0., 0., 0.]]))
-        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
-                                                   [0., 0.]]))
-        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
-                                             [0., 0., 0., 0.],
-                                             [0., 0., 0., 0.],
-                                             [0., 0., 0., 0.]]))
+        npt.assert_equal(theta_e_mask, np.array([[1., 1., 0., 0., 0.],
+                                                 [1., 1., 1., 0., 0.],
+                                                 [0., 1., 1., 0., 0.],
+                                                 [0., 0., 0., 1., 0.],
+                                                 [0., 0., 0., 0., 1.]]))
+        npt.assert_equal(theta_del_mask, np.array([[1., 0.],
+                                                   [0., 1.]]))
+        npt.assert_equal(psi_mask, np.array([[1., 0., 0., 0.],
+                                             [0., 1., 0., 0.],
+                                             [0., 0., 1., 0.],
+                                             [0., 0., 0., 1.]]))
 
     def test_lisrel_fixed_param_get_fixed_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
@@ -488,23 +488,23 @@ class TestSEMInit(unittest.TestCase):
                                                  [0.],
                                                  [0.]]))
 
-        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(phi_mask, np.array([[1.]]))
         npt.assert_equal(theta_e_mask,
-                         np.array([[0., 0., 0., 0., 1., 0., 0., 0.],
-                                   [0., 0., 0., 1., 0., 1., 0., 0.],
-                                   [0., 0., 0., 0., 0., 0., 1., 0.],
-                                   [0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [1., 0., 0., 0., 0., 0., 0., 0.],
-                                   [0., 1., 0., 0., 0., 0., 0., 1.],
-                                   [0., 0., 1., 0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 1., 0., 1., 0., 0.]]))
+                         np.array([[1., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 1., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 1., 0., 0., 0., 1., 0.],
+                                   [0., 1., 0., 1., 0., 0., 0., 1.],
+                                   [1., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 1., 0., 0., 0., 1., 0., 1.],
+                                   [0., 0., 1., 0., 0., 0., 1., 0.],
+                                   [0., 0., 0., 1., 0., 1., 0., 1.]]))
         npt.assert_equal(theta_del_mask,
-                         np.array([[0., 0., 0.],
-                                   [0., 0., 0.],
-                                   [0., 0., 0.]]))
+                         np.array([[1., 0., 0.],
+                                   [0., 1., 0.],
+                                   [0., 0., 1.]]))
         npt.assert_equal(psi_mask,
-                         np.array([[0., 0.],
-                                   [0., 0.]]))
+                         np.array([[1., 0.],
+                                   [0., 1.]]))
 
     def test_non_lisrel_param_get_fixed_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
@@ -562,17 +562,17 @@ class TestSEMInit(unittest.TestCase):
 
         npt.assert_equal(phi_mask, np.array([[1.]]))
 
-        npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
-                                                 [1., 0., 1., 0., 0.],
-                                                 [0., 1., 0., 0., 0.],
-                                                 [0., 0., 0., 0., 0.],
-                                                 [0., 0., 0., 0., 0.]]))
-        npt.assert_equal(theta_del_mask, np.array([[0., 0.],
-                                                   [0., 0.]]))
-        npt.assert_equal(psi_mask, np.array([[0., 0., 0., 0.],
-                                             [0., 0., 0., 0.],
-                                             [0., 0., 0., 0.],
-                                             [0., 0., 0., 0.]]))
+        npt.assert_equal(theta_e_mask, np.array([[1., 1., 0., 0., 0.],
+                                                 [1., 1., 1., 0., 0.],
+                                                 [0., 1., 1., 0., 0.],
+                                                 [0., 0., 0., 1., 0.],
+                                                 [0., 0., 0., 0., 1.]]))
+        npt.assert_equal(theta_del_mask, np.array([[1., 0.],
+                                                   [0., 1.]]))
+        npt.assert_equal(psi_mask, np.array([[1., 0., 0., 0.],
+                                             [0., 1., 0., 0.],
+                                             [0., 0., 1., 0.],
+                                             [0., 0., 0., 1.]]))
 
     def test_iv_transformations(self):
         graph, err_graph = self.lisrel._iv_transformations('y1', 'y2')
