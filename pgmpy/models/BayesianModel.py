@@ -819,31 +819,6 @@ class BayesianModel(DAG):
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
-    def get_immoralities(self):
-        """
-        Finds all the immoralities in the model
-        A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
-
-        Returns
-        -------
-        set: A set of all the immoralities in the model
-
-        Examples
-        ---------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
-        ...                         ('intel', 'SAT'), ('grade', 'letter')])
-        >>> student.get_immoralities()
-        {('diff','intel')}
-        """
-        immoralities = set()
-        for node in self.nodes():
-            for parents in itertools.combinations(self.predecessors(node), 2):
-                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
-                    immoralities.add(tuple(sorted(parents)))
-        return immoralities
-
     def is_iequivalent(self, model):
         """
         Checks whether the given model is I-equivalent

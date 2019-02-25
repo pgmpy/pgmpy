@@ -357,6 +357,60 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
+    def get_immoralities(self):
+        """
+        Finds all the immoralities in the model
+        A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
+
+        Returns
+        -------
+        set: A set of all the immoralities in the model
+
+        Examples
+        ---------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
+        ...                         ('intel', 'SAT'), ('grade', 'letter')])
+        >>> student.get_immoralities()
+        {('diff','intel')}
+        """
+        immoralities = set()
+        for node in self.nodes():
+            for parents in itertools.combinations(self.predecessors(node), 2):
+                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
+                    immoralities.add(tuple(sorted(parents)))
+        return immoralities
+
+    def is_active_trail(self, start, end, observed=None):
+        """
+        Returns True if there is any active trail between start and end node
+        Parameters
+        ----------
+        start : Graph Node
+        end : Graph Node
+        observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed.
+        additional_observed : List of nodes (optional)
+            If given the active trail would be computed assuming these nodes to be observed along with
+            the nodes marked as observed in the model.
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> student = DAG()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
+        ...                         ('intel', 'sat')])
+        >>> student.is_active_trail('diff', 'intel')
+        False
+        >>> student.is_active_trail('grades', 'sat')
+        True
+        """
+        if end in self.active_trail_nodes(start, observed)[start]:
+            return True
+        else:
+            return False
+
     def get_markov_blanket(self, node):
         """
         Returns a markov blanket for a random variable. In the case
