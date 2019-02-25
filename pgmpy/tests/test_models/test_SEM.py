@@ -595,12 +595,6 @@ class TestSEMInit(unittest.TestCase):
         self.assertTrue(('x1', 'y5') in err_graph.edges)
         self.assertFalse(('eta2', 'y5') in graph.edges)
 
-    @unittest.skip
-    def test_active_trail_nodes(self):
-        self.model = SEM([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
-        #self.assertSetEqual(self.model.active_trail_nodes(['D'])['D'], {'D', 'G', 'L'})
-        self.assertSetEqual(self.model.active_trail_nodes(['D'], observed=['G'])['D'], {'D', 'I', 'S'})
-
     def test_set_params(self):
         self.lisrel.set_params(self.params)
 
@@ -689,3 +683,15 @@ class TestSEMInit(unittest.TestCase):
             self.assertTrue((node, node[1:4]) in self.lisrel.full_graph_struct.edges)
             self.assertTrue((node, '.'+node[4:]) in self.lisrel.full_graph_struct.edges)
 
+    def test_active_trail_nodes(self):
+        nodes = list(self.lisrel.observed)
+        lisrel_trails = self.lisrel.active_trail_nodes(nodes)
+        for node in nodes:
+            self.assertEqual(lisrel_trails[node], set(nodes))
+
+        nodes = list(self.non_lisrel.observed)
+        nonlisrel_trails = self.non_lisrel.active_trail_nodes(nodes)
+        for node in nodes:
+            self.assertEqual(nonlisrel_trails[node], set(nodes))
+
+        #TODO: Add robust tests for active trail nodes.

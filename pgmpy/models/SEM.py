@@ -604,7 +604,7 @@ class SEM(DirectedGraph):
 
         ancestors_list = set()
         for node in observed_list:
-            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.graph, node))
+            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.full_graph_struct, node))
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -619,7 +619,7 @@ class SEM(DirectedGraph):
             while visit_list:
                 node, direction = visit_list.pop()
                 if (node, direction) not in traversed_list:
-                    if (node not in observed_list) and (node not in self.latents):
+                    if (node not in observed_list) and (not node.startswith('.')) and (node not in self.latents):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
                     if direction == 'up' and node not in observed_list:
