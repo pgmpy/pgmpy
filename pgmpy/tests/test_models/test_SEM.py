@@ -663,4 +663,29 @@ class TestSEMInit(unittest.TestCase):
         self.assertEqual(self.lisrel.sample(n_samples=100, only_observed=False).shape, (100, 14))
 
     def test_get_full_structure(self):
-        pass 
+        self.assertTrue({'y1', 'y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8',
+                         'x1', 'x2', 'x3', 'xi1', 'eta1', 'eta2',
+                         '.y1', '.y2', '.y3', '.y4', '.y5', '.y6', '.y7', '.y8',
+                         '.x1', '.x2', '.x3', '.eta1', '.eta2', '.xi1'}.issubset(
+                             set(self.lisrel.full_graph_struct.nodes)))
+
+        for node in (set(self.lisrel.full_graph_struct.nodes) -
+                        {'..y1y5', '..y5y1', '..y2y6', '..y6y2', '..y3y7', '..y7y3', '..y4y8',
+                         '..y8y4', '..y2y4', '..y4y2', '..y6y8', '..y8y6'}):
+            self.assertFalse(node.startswith('..'))
+
+        self.assertTrue({('eta1', 'y1'), ('eta1', 'y2'), ('eta1', 'y3'), ('eta1', 'y4'),
+                         ('eta2', 'y5'), ('eta2', 'y6'), ('eta2', 'y7'), ('eta2', 'y8'),
+                         ('xi1', 'eta1'), ('xi1', 'eta2'), ('eta1', 'eta2'), ('xi1', 'x1'),
+                         ('xi1', 'x2'), ('xi1', 'x3'), ('.x1', 'x1'), ('.x2', 'x2'),
+                         ('.x3', 'x3'), ('.y1', 'y1'), ('.y2', 'y2'), ('.y3', 'y3'),
+                         ('.y4', 'y4'), ('.y5', 'y5'), ('.y6', 'y6'), ('.y7', 'y7'),
+                         ('.y8', 'y8'), ('.eta1', 'eta1'), ('.eta2', 'eta2'),
+                         ('.xi1', 'xi1')}.issubset(self.lisrel.full_graph_struct.edges))
+
+        covar_nodes = [node for node in self.lisrel.full_graph_struct.nodes
+                       if node.startswith('..')]
+        for node in covar_nodes:
+            self.assertTrue((node, node[1:4]) in self.lisrel.full_graph_struct.edges)
+            self.assertTrue((node, '.'+node[4:]) in self.lisrel.full_graph_struct.edges)
+

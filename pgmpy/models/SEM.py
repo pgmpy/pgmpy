@@ -553,6 +553,12 @@ class SEM(DirectedGraph):
         """
         Creates a directed graph by joining `self.graph` and `self.err_graph`.
         Adds new nodes to replace undirected edges with two directed edges.
+
+        Returns
+        -------
+        nx.DiGraph: A full directed graph strucuture with error nodes starting
+                    with `.` and bidirected edges replaced with common cause
+                    nodes starting with `..`.
         """
         graph_copy = self.graph.copy()
         mapping_dict = {'.'+str(node):node for node in self.err_graph.nodes}
