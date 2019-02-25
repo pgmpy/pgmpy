@@ -113,10 +113,15 @@ class SEM(DirectedGraph):
         self.err_graph.add_nodes_from(self.eta)
         self.err_graph.add_nodes_from(self.xi)
 
-        # Set error correlations to np.NaN if not specified to be fixed.
+        # Set error correlations and variance to np.NaN if not specified to be fixed.
         for edge in self.err_graph.edges:
             if not 'weight' in self.err_graph.edges[edge].keys():
                 self.err_graph.edges[edge]['weight'] = np.NaN
+                # TODO: Add a way to specify err var in arguments.
+                self.err_graph.nodes[node]['var'] = np.NaN
+
+        # Get the full graph structure.
+        self.full_graph_struct = self.get_full_graph_struct()
 
     def _masks(self, weight, sort_vars=False):
         """
@@ -298,138 +303,6 @@ class SEM(DirectedGraph):
                                     self._masks(weight='weight', sort_vars=sort_vars)):
             masks_arr.append(np.multiply(np.where(fixed_mask != 0, 0.0, 1.0), mask))
         return tuple(masks_arr)
-
-    def _iv_transformations(self, X, Y, scaling_indicators={}):
-        """
-        Transforms the graph structure of SEM so that the d-separation criterion is
-        applicable for finding IVs. The method transforms the graph for finding MIIV
-        for the estimation of X \rightarrow Y given the scaling indicator for all the
-        parent latent variables.
-
-        Parameters
-        ----------
-        X: node
-            The explantory variable.
-        Y: node
-            The dependent variable.
-
-        Returns
-        -------
-        nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
-                              graph.
-        """
-
-        graph_copy = self.graph.copy()
-        err_graph_copy = self.err_graph.copy()
-
-        x_parent = set(graph_copy.predecessors(X))
-        y_parent = set(graph_copy.predecessors(Y))
-        common_parents = x_parent.intersection(y_parent)
-
-        if common_parents:
-            graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
-            err_graph_copy.add_edge(X, Y)
-
-        else:
-            parent_latent = y_parent.pop()
-            graph_copy.remove_edge(parent_latent, Y)
-            y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
-            err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
-            err_graph_copy.add_edge(parent_latent, Y)
-
-        return graph_copy, err_graph_copy
-
-    def _get_ancestral_iv(self, X, Y):
-        pass
-
-    def active_trail_nodes(self, variables, observed=None):
-        """
-        Returns a dictionary with the given variables as keys and all the nodes reachable
-        from that respective variable as values.
-
-        Parameters
-        ----------
-
-        variables: str or array like
-            variables whose active trails are to be found.
-
-        observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be observed.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.active_trail_nodes('diff')
-        {'diff': {'diff', 'grades'}}
-        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
-        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
-
-        References
-        ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
-        """
-        if observed:
-            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
-        else:
-            observed_list = []
-
-        ancestors_list = set()
-        for node in observed_list:
-            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.graph, node))
-
-        # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
-
-        active_trails = {}
-        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
-            visit_list = set()
-            visit_list.add((start, 'up'))
-            traversed_list = set()
-            active_nodes = set()
-            while visit_list:
-                node, direction = visit_list.pop()
-                if (node, direction) not in traversed_list:
-                    if (node not in observed_list) and (node not in self.latents):
-                        active_nodes.add(node)
-                    traversed_list.add((node, direction))
-                    if direction == 'up' and node not in observed_list:
-                        for parent in self.graph.predecessors(node):
-                            visit_list.add((parent, 'up'))
-                        for child in self.graph.successors(node):
-                            visit_list.add((child, 'down'))
-                    elif direction == 'down':
-                        if node not in observed_list:
-                            for child in self.graph.successors(node):
-                                visit_list.add((child, 'down'))
-                        if node in ancestors_list:
-                            for parent in self.graph.predecessors(node):
-                                visit_list.add((parent, 'up'))
-            active_trails[start] = active_nodes
-        return active_trails
-
-    def get_ivs(self, X, Y):
-        """
-        Returns the Instrumental variables for the relation X -> Y
-
-        Parameters
-        ----------
-        X: The observed variable name
-        Y: The observed variable name
-
-        Returns
-        -------
-        set: The set of Instrumental Variables for the predicted value.
-
-        Examples
-        --------
-        """
-        pass
 
     def set_params(self, params):
         """
@@ -675,3 +548,148 @@ class SEM(DirectedGraph):
                 return pd.DataFrame(data_arr, columns=all_vars)
             else:
                 return data_arr
+
+    def get_full_graph_struct(self):
+        """
+        Creates a directed graph by joining `self.graph` and `self.err_graph`.
+        Adds new nodes to replace undirected edges with two directed edges.
+        """
+        graph_copy = self.graph.copy()
+        mapping_dict = {'.'+str(node):node for node in self.err_graph.nodes}
+
+        full_graph = self.graph.copy()
+        full_graph.add_edges_from([(u, v) for u, v in mapping_dict.items()])
+        for u, v in self.err_graph.edges:
+            cov_node = '..'+str(u)+str(v)
+            full_graph.add_edges_from([(cov_node, u), (cov_node, v)])
+
+        return full_graph
+
+    def active_trail_nodes(self, variables, observed=None):
+        """
+        Returns a dictionary with the given variables as keys and all the nodes reachable
+        from that respective variable as values.
+
+        Parameters
+        ----------
+
+        variables: str or array like
+            variables whose active trails are to be found.
+
+        observed : List of nodes (optional)
+            If given the active trails would be computed assuming these nodes to be observed.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> student = BayesianModel()
+        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
+        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
+        >>> student.active_trail_nodes('diff')
+        {'diff': {'diff', 'grades'}}
+        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
+        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+
+        References
+        ----------
+        Details of the algorithm can be found in 'Probabilistic Graphical Model
+        Principles and Techniques' - Koller and Friedman
+        Page 75 Algorithm 3.1
+        """
+        if observed:
+            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
+        else:
+            observed_list = []
+
+        ancestors_list = set()
+        for node in observed_list:
+            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.graph, node))
+
+        # Direction of flow of information
+        # up ->  from parent to child
+        # down -> from child to parent
+
+        active_trails = {}
+        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
+            visit_list = set()
+            visit_list.add((start, 'up'))
+            traversed_list = set()
+            active_nodes = set()
+            while visit_list:
+                node, direction = visit_list.pop()
+                if (node, direction) not in traversed_list:
+                    if (node not in observed_list) and (node not in self.latents):
+                        active_nodes.add(node)
+                    traversed_list.add((node, direction))
+                    if direction == 'up' and node not in observed_list:
+                        for parent in self.graph.predecessors(node):
+                            visit_list.add((parent, 'up'))
+                        for child in self.graph.successors(node):
+                            visit_list.add((child, 'down'))
+                    elif direction == 'down':
+                        if node not in observed_list:
+                            for child in self.graph.successors(node):
+                                visit_list.add((child, 'down'))
+                        if node in ancestors_list:
+                            for parent in self.graph.predecessors(node):
+                                visit_list.add((parent, 'up'))
+            active_trails[start] = active_nodes
+        return active_trails
+
+    def get_ivs(self, X, Y):
+        """
+        Returns the Instrumental variables for the relation X -> Y
+
+        Parameters
+        ----------
+        X: The observed variable name
+        Y: The observed variable name
+
+        Returns
+        -------
+        set: The set of Instrumental Variables for the predicted value.
+
+        Examples
+        --------
+        """
+        pass
+
+    def _iv_transformations(self, X, Y, scaling_indicators={}):
+        """
+        Transforms the graph structure of SEM so that the d-separation criterion is
+        applicable for finding IVs. The method transforms the graph for finding MIIV
+        for the estimation of X \rightarrow Y given the scaling indicator for all the
+        parent latent variables.
+
+        Parameters
+        ----------
+        X: node
+            The explantory variable.
+        Y: node
+            The dependent variable.
+
+        Returns
+        -------
+        nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
+                              graph.
+        """
+
+        graph_copy = self.graph.copy()
+        err_graph_copy = self.err_graph.copy()
+
+        x_parent = set(graph_copy.predecessors(X))
+        y_parent = set(graph_copy.predecessors(Y))
+        common_parents = x_parent.intersection(y_parent)
+
+        if common_parents:
+            graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
+            err_graph_copy.add_edge(X, Y)
+
+        else:
+            parent_latent = y_parent.pop()
+            graph_copy.remove_edge(parent_latent, Y)
+            y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
+            err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
+            err_graph_copy.add_edge(parent_latent, Y)
+
+        return graph_copy, err_graph_copy
