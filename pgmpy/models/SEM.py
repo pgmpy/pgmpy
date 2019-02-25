@@ -675,8 +675,8 @@ class SEM(DirectedGraph):
                               graph.
         """
         full_graph = self.full_graph_struct.copy()
-        x_parent = set(graph_copy.predecessors(X))
-        y_parent = set(graph_copy.predecessors(Y))
+        x_parent = set(self.graph.predecessors(X))
+        y_parent = set(self.graph.predecessors(Y))
         common_parents = x_parent.intersection(y_parent)
 
         if common_parents:
