@@ -715,44 +715,6 @@ class BayesianModel(DAG):
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
 
-    def is_iequivalent(self, model):
-        """
-        Checks whether the given model is I-equivalent
-
-        Two graphs G1 and G2 are said to be I-equivalent if they have same skeleton
-        and have same set of immoralities.
-
-        Note: For same skeleton different names of nodes can work but for immoralities
-        names of nodes must be same
-
-        Parameters
-        ----------
-        model : A Bayesian model object, for which you want to check I-equivalence
-
-        Returns
-        --------
-        boolean : True if both are I-equivalent, False otherwise
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel()
-        >>> G.add_edges_from([('V', 'W'), ('W', 'X'),
-        ...                   ('X', 'Y'), ('Z', 'Y')])
-        >>> G1 = BayesianModel()
-        >>> G1.add_edges_from([('W', 'V'), ('X', 'W'),
-        ...                    ('X', 'Y'), ('Z', 'Y')])
-        >>> G.is_iequivalent(G1)
-        True
-
-        """
-        if not isinstance(model, BayesianModel):
-            raise TypeError('model must be an instance of Bayesian Model')
-        skeleton = nx.algorithms.isomorphism.GraphMatcher(self.to_undirected(), model.to_undirected())
-        if skeleton.is_isomorphic() and self.get_immoralities() == model.get_immoralities():
-            return True
-        return False
-
     def is_imap(self, JPD):
         """
         Checks whether the bayesian model is Imap of given JointProbabilityDistribution
