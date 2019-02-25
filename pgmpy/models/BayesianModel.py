@@ -390,41 +390,6 @@ class BayesianModel(DAG):
                                      " is not equal to 1.".format(node=node))
         return True
 
-    def get_independencies(self, latex=False):
-        """
-        Computes independencies in the Bayesian Network, by checking d-seperation.
-
-        Parameters
-        ----------
-        latex: boolean
-            If latex=True then latex string of the independence assertion
-            would be created.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> chain = BayesianModel([('X', 'Y'), ('Y', 'Z')])
-        >>> chain.get_independencies()
-        (X _|_ Z | Y)
-        (Z _|_ X | Y)
-        """
-        independencies = Independencies()
-        for start in (self.nodes()):
-            rest = set(self.nodes()) - {start}
-            for r in range(len(rest)):
-                for observed in itertools.combinations(rest, r):
-                    d_seperated_variables = rest - set(observed) - set(
-                        self.active_trail_nodes(start, observed=observed)[start])
-                    if d_seperated_variables:
-                        independencies.add_assertions([start, d_seperated_variables, observed])
-
-        independencies.reduce()
-
-        if not latex:
-            return independencies
-        else:
-            return independencies.latex_string()
-
     def to_markov_model(self):
         """
         Converts bayesian model to markov model. The markov model created would
