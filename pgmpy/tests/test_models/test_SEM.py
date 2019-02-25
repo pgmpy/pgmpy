@@ -560,7 +560,7 @@ class TestSEMInit(unittest.TestCase):
         npt.assert_equal(wedge_x_mask, np.array([[1.],
                                                  [0.]]))
 
-        npt.assert_equal(phi_mask, np.array([[0.]]))
+        npt.assert_equal(phi_mask, np.array([[1.]]))
 
         npt.assert_equal(theta_e_mask, np.array([[0., 1., 0., 0., 0.],
                                                  [1., 0., 1., 0., 0.],
@@ -583,12 +583,13 @@ class TestSEMInit(unittest.TestCase):
         self.assertTrue(('y1', 'y3') in err_graph.edges)
         self.assertFalse(('eta1', 'y3') in graph.edges)
 
-        graph, err_graph = self.lisrel._iv_transformations('x1', 'y1', indicators={'xi1': 'x1'})
+        graph, err_graph = self.lisrel._iv_transformations('x1', 'y1', scaling_indicators={'xi1': 'x1'})
         self.assertTrue(('eta1', 'y1') in err_graph.edges)
         self.assertTrue(('x1', 'y1') in err_graph.edges)
         self.assertFalse(('eta1', 'y1') in graph.edges)
 
-        graph, err_graph = self.lisrel._iv_transformations('x1', 'y5', indicators={'xi1': 'x1', 'eta1': 'y1'})
+        graph, err_graph = self.lisrel._iv_transformations('x1', 'y5',
+                                                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
         self.assertTrue(('y1', 'y5') in err_graph.edges)
         self.assertTrue(('eta2', 'y5') in err_graph.edges)
         self.assertTrue(('x1', 'y5') in err_graph.edges)
@@ -647,16 +648,19 @@ class TestSEMInit(unittest.TestCase):
         self.lisrel.set_params(self.params)
 
         new_params = self.lisrel.get_params()
-        npt.assert_equal(B, new_params['B'])
-        npt.assert_equal(gamma, new_params['gamma'])
-        npt.assert_equal(wedge_y, new_params['wedge_y'])
-        npt.assert_equal(wedge_x, new_params['wedge_x'])
-        npt.assert_equal(phi, new_params['phi'])
-        npt.assert_equal(psi, new_params['psi'])
-        npt.assert_equal(theta_e, new_params['theta_e'])
-        npt.assert_equal(theta_del, new_params['theta_del'])
+        npt.assert_equal(self.params['B'], new_params['B'])
+        npt.assert_equal(self.params['gamma'], new_params['gamma'])
+        npt.assert_equal(self.params['wedge_y'], new_params['wedge_y'])
+        npt.assert_equal(self.params['wedge_x'], new_params['wedge_x'])
+        npt.assert_equal(self.params['phi'], new_params['phi'])
+        npt.assert_equal(self.params['psi'], new_params['psi'])
+        npt.assert_equal(self.params['theta_e'], new_params['theta_e'])
+        npt.assert_equal(self.params['theta_del'], new_params['theta_del'])
 
     def test_sample(self):
         self.lisrel.set_params(self.params)
         self.assertEqual(self.lisrel.sample(n_samples=100, only_observed=True).shape, (100, 11))
         self.assertEqual(self.lisrel.sample(n_samples=100, only_observed=False).shape, (100, 14))
+
+    def test_get_full_structure(self):
+        pass 
