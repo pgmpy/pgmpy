@@ -361,7 +361,7 @@ class DAG(nx.DiGraph):
 
     def get_independencies(self, latex=False):
         """
-        Computes independencies in the Bayesian Network, by checking d-seperation.
+        Computes independencies in the DAG, by checking d-seperation.
 
         Parameters
         ----------
