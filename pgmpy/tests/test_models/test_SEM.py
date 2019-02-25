@@ -695,3 +695,12 @@ class TestSEMInit(unittest.TestCase):
             self.assertEqual(nonlisrel_trails[node], set(nodes))
 
         #TODO: Add robust tests for active trail nodes.
+
+    def test_get_ivs(self):
+        self.assertEqual(self.lisrel.get_ivs('y1', 'y2'), {'x1', 'x2', 'x3', 'y3', 'y7', 'y8'})
+        self.assertEqual(self.lisrel.get_ivs('y5', 'y8'), {'x1', 'x2', 'x3', 'y1', 'y2', 'y3', 'y7'})
+        self.assertEqual(self.lisrel.get_ivs('x1', 'y1', scaling_indicators={'xi1': 'x1'}),
+                         {'x2', 'x3'})
+        self.assertEqual(self.lisrel.get_ivs('x1', 'y5', scaling_indicators={'eta1': 'y1', 'xi1': 'x1'}),
+                         {'x2', 'x3', 'y2', 'y3', 'y4'})
+
