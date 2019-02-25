@@ -674,23 +674,41 @@ class SEM(DirectedGraph):
         nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
                               graph.
         """
-
-        graph_copy = self.graph.copy()
-        err_graph_copy = self.err_graph.copy()
-
+        full_graph = self.full_graph_struct.copy()
         x_parent = set(graph_copy.predecessors(X))
         y_parent = set(graph_copy.predecessors(Y))
         common_parents = x_parent.intersection(y_parent)
 
         if common_parents:
-            graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
-            err_graph_copy.add_edge(X, Y)
+            full_graph.remove_edges_from([(parent, Y) for parent in common_parents])
+            full_graph.add_edge('.'+str(X), Y)
 
         else:
             parent_latent = y_parent.pop()
-            graph_copy.remove_edge(parent_latent, Y)
+            full_graph.remove_edge(parent_latent, Y)
             y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
-            err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
-            err_graph_copy.add_edge(parent_latent, Y)
+            full_graph.add_edges_from([('.'+str(scaling_indicators[p]), Y) for p in y_parent_parent])
+            full_graph.add_edge('.'+str(parent_latent), Y)
 
-        return graph_copy, err_graph_copy
+        return full_graph
+
+        #### Kept for reference. Original working one.
+        # graph_copy = self.graph.copy()
+        # err_graph_copy = self.err_graph.copy()
+
+        # x_parent = set(graph_copy.predecessors(X))
+        # y_parent = set(graph_copy.predecessors(Y))
+        # common_parents = x_parent.intersection(y_parent)
+
+        # if common_parents:
+        #     graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
+        #     err_graph_copy.add_edge(X, Y)
+
+        # else:
+        #     parent_latent = y_parent.pop()
+        #     graph_copy.remove_edge(parent_latent, Y)
+        #     y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
+        #     err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
+        #     err_graph_copy.add_edge(parent_latent, Y)
+
+        # return graph_copy, err_graph_copy
