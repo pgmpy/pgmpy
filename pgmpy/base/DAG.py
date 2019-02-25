@@ -457,7 +457,7 @@ class DAG(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> student = BayesianModel()
+        >>> student = DAG()
         >>> student.add_nodes_from(['diff', 'intel', 'grades'])
         >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
         >>> student.active_trail_nodes('diff')
