@@ -8,13 +8,13 @@ import networkx as nx
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators import K2Score
 from pgmpy.utils.mathext import powerset
-from pgmpy.models import BayesianModel
+from pgmpy.base import DAG
 
 
 class ExhaustiveSearch(StructureEstimator):
     def __init__(self, data, scoring_method=None, **kwargs):
         """
-        Search class for exhaustive searches over all BayesianModels with a given set of variables.
+        Search class for exhaustive searches over all DAGs with a given set of variables.
         Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
 
         Parameters
@@ -152,14 +152,14 @@ class ExhaustiveSearch(StructureEstimator):
 
     def estimate(self):
         """
-        Estimates the `BayesianModel` structure that fits best to the given data set,
+        Estimates the `DAG` structure that fits best to the given data set,
         according to the scoring method supplied in the constructor.
         Exhaustively searches through all models. Only estimates network structure, no parametrization.
 
         Returns
         -------
-        model: `BayesianModel` instance
-            A `BayesianModel` with maximal score.
+        model: `DAG` instance
+            A `DAG` with maximal score.
 
         Examples
         --------
@@ -172,14 +172,14 @@ class ExhaustiveSearch(StructureEstimator):
         >>> est = ExhaustiveSearch(data)
         >>> best_model = est.estimate()
         >>> best_model
-        <pgmpy.models.BayesianModel.BayesianModel object at 0x7f695c535470>
+        <pgmpy.base.DAG.DAG object at 0x7f695c535470>
         >>> best_model.edges()
         [('B', 'C')]
         """
 
         best_dag = max(self.all_dags(), key=self.scoring_method.score)
 
-        best_model = BayesianModel()
+        best_model = DAG()
         best_model.add_nodes_from(sorted(best_dag.nodes()))
         best_model.add_edges_from(sorted(best_dag.edges()))
         return best_model

@@ -6,10 +6,12 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
 from pgmpy.independencies import Independencies
 from pgmpy.estimators import BayesianEstimator, BaseEstimator, MaximumLikelihoodEstimator
+from pgmpy.base import DAG
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -177,7 +179,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 
     def test_markov_blanet(self):
-        G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
+        G = DAG([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                            ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
         self.assertEqual(set(G.get_markov_blanket('y')), set(['s', 'w', 'x', 'u', 'z', 'v']))
 
@@ -236,17 +238,19 @@ class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([('d', 'g'), ('i', 'g'), ('g', 'l'),
                                 ('i', 's')])
+        self.G2 = DAG([('d', 'g'), ('i', 'g'), ('g', 'l'),
+                                ('i', 's')])
 
     def test_active_trail_nodes(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes('d')['d']), ['d', 'g', 'l'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('i')['i']), ['g', 'i', 'l', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'i'])['d']), ['d', 'g', 'l'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes('d')['d']), ['d', 'g', 'l'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes('i')['i']), ['g', 'i', 'l', 's'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes(['d', 'i'])['d']), ['d', 'g', 'l'])
 
     def test_active_trail_nodes_args(self):
-        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'l'], observed='g')['d']), ['d', 'i', 's'])
-        self.assertEqual(sorted(self.G.active_trail_nodes(['d', 'l'], observed='g')['l']), ['l'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['i', 'l'])['s']), ['s'])
-        self.assertEqual(sorted(self.G.active_trail_nodes('s', observed=['d', 'l'])['s']), ['g', 'i', 's'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes(['d', 'l'], observed='g')['d']), ['d', 'i', 's'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes(['d', 'l'], observed='g')['l']), ['l'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes('s', observed=['i', 'l'])['s']), ['s'])
+        self.assertEqual(sorted(self.G2.active_trail_nodes('s', observed=['d', 'l'])['s']), ['g', 'i', 's'])
 
     def test_is_active_trail_triplets(self):
         self.assertTrue(self.G.is_active_trail('d', 'l'))
