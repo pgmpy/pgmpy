@@ -640,7 +640,7 @@ class SEM(DirectedGraph):
             active_trails[start] = active_nodes
         return active_trails
 
-    def get_ivs(self, X, Y):
+    def get_ivs(self, X, Y, scaling_indicators={}):
         """
         Returns the Instrumental variables for the relation X -> Y
 
@@ -658,7 +658,7 @@ class SEM(DirectedGraph):
         """
         transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
-        return (d_connected[Y] - d_connected[X])
+        return (d_connected[X] - d_connected[Y])
 
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
