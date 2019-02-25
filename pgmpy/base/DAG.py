@@ -5,6 +5,8 @@ import itertools
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
+from pgmpy.independencies import Independencies
+
 
 
 class DAG(nx.DiGraph):
@@ -357,6 +359,49 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
+    def local_independencies(self, variables):
+        """
+        Returns an instance of Independencies containing the local independencies
+        of each of the variables.
+
+        Parameters
+        ----------
+        variables: str or array like
+            variables whose local independencies are to be found.
+
+        Examples
+        --------
+        >>> from pgmpy.models import DAG
+        >>> student = DAG()
+        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
+        >>>                         ('grade', 'letter'), ('intel', 'SAT')])
+        >>> ind = student.local_independencies('grade')
+        >>> ind
+        (grade _|_ SAT | diff, intel)
+        """
+        def dfs(node):
+            """
+            Returns the descendents of node.
+
+            This is a very simple dfs
+            which does not remember which nodes it has visited.
+            """
+            descendents = []
+            visit = [node]
+            while visit:
+                n = visit.pop()
+                neighbors = list(self.neighbors(n))
+                visit.extend(neighbors)
+                descendents.extend(neighbors)
+            return descendents
+
+        independencies = Independencies()
+        for variable in variables if isinstance(variables, (list, tuple)) else [variables]:
+            non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
+            parents = set(self.get_parents(variable))
+            if non_descendents - parents:
+                independencies.add_assertions([variable, non_descendents - parents, parents])
+        return independencies
 
     def is_iequivalent(self, model):
         """
