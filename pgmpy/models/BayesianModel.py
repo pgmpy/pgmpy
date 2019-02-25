@@ -538,40 +538,6 @@ class BayesianModel(DAG):
                 independencies.add_assertions([variable, non_descendents - parents, parents])
         return independencies
 
-    def is_active_trail(self, start, end, observed=None):
-        """
-        Returns True if there is any active trail between start and end node
-
-        Parameters
-        ----------
-        start : Graph Node
-
-        end : Graph Node
-
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
-        False
-        >>> student.is_active_trail('grades', 'sat')
-        True
-        """
-        if end in self.active_trail_nodes(start, observed)[start]:
-            return True
-        else:
-            return False
-
     def get_independencies(self, latex=False):
         """
         Computes independencies in the Bayesian Network, by checking d-seperation.
