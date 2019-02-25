@@ -71,6 +71,18 @@ class DAG(nx.DiGraph):
 
     def __init__(self, ebunch=None):
         super(DAG, self).__init__(ebunch)
+        cycles = []
+        try:
+            cycles = list(nx.find_cycle(self))
+        except nx.NetworkXNoCycle:
+            pass
+        else:
+            out_str =  'Cycles are not allowed in a DAG.'
+            out_str += '\nEdges indicating the path taken for a loop: '
+            out_str += ''.join(['({0},{1}) '.format(u, v) for (u,v) in cycles])
+            raise ValueError(out_str)
+
+
 
     def add_node(self, node, weight=None):
         """
