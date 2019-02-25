@@ -357,7 +357,6 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-<<<<<<< HEAD
     def get_markov_blanket(self, node):
         """
         Returns a markov blanket for a random variable. In the case
@@ -372,29 +371,10 @@ class DAG(nx.DiGraph):
         ----------
         node: string, int or any hashable python object.
               The node whose markov blanket would be returned.
-=======
-    def is_active_trail(self, start, end, observed=None):
-        """
-        Returns True if there is any active trail between start and end node
-
-        Parameters
-        ----------
-        start : Graph Node
-
-        end : Graph Node
-
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
->>>>>>> d79d41a89fc0932e650c9c83a95bb71777886f21
 
         Examples
         --------
         >>> from pgmpy.base import DAG
-<<<<<<< HEAD
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> G = DAG([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
                                ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
@@ -409,18 +389,3 @@ class DAG(nx.DiGraph):
         blanket_nodes = set(blanket_nodes)
         blanket_nodes.remove(node)
         return list(blanket_nodes)
-=======
-        >>> student = DAG()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
-        False
-        >>> student.is_active_trail('grades', 'sat')
-        True
-        """
-        if end in self.active_trail_nodes(start, observed)[start]:
-            return True
-        else:
-            return False
->>>>>>> d79d41a89fc0932e650c9c83a95bb71777886f21
