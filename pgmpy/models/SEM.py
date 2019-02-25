@@ -566,7 +566,7 @@ class SEM(DirectedGraph):
 
         return full_graph
 
-    def active_trail_nodes(self, variables, observed=None):
+    def active_trail_nodes(self, variables, observed=None, graph_struct=None):
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -597,6 +597,9 @@ class SEM(DirectedGraph):
         Principles and Techniques' - Koller and Friedman
         Page 75 Algorithm 3.1
         """
+        if not graph_struct:
+            graph_struct = self.full_graph_struct
+
         if observed:
             observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
         else:
@@ -604,7 +607,7 @@ class SEM(DirectedGraph):
 
         ancestors_list = set()
         for node in observed_list:
-            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(self.full_graph_struct, node))
+            ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(graph_struct, node))
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -623,16 +626,16 @@ class SEM(DirectedGraph):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
                     if direction == 'up' and node not in observed_list:
-                        for parent in self.graph.predecessors(node):
+                        for parent in graph_struct.predecessors(node):
                             visit_list.add((parent, 'up'))
-                        for child in self.graph.successors(node):
+                        for child in graph_struct.successors(node):
                             visit_list.add((child, 'down'))
                     elif direction == 'down':
                         if node not in observed_list:
-                            for child in self.graph.successors(node):
+                            for child in graph_struct.successors(node):
                                 visit_list.add((child, 'down'))
                         if node in ancestors_list:
-                            for parent in self.graph.predecessors(node):
+                            for parent in graph_struct.predecessors(node):
                                 visit_list.add((parent, 'up'))
             active_trails[start] = active_nodes
         return active_trails
@@ -653,7 +656,9 @@ class SEM(DirectedGraph):
         Examples
         --------
         """
-        pass
+        transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+        d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
+        return (d_connected[Y] - d_connected[X])
 
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
@@ -691,24 +696,3 @@ class SEM(DirectedGraph):
             full_graph.add_edge('.'+str(parent_latent), Y)
 
         return full_graph
-
-        #### Kept for reference. Original working one.
-        # graph_copy = self.graph.copy()
-        # err_graph_copy = self.err_graph.copy()
-
-        # x_parent = set(graph_copy.predecessors(X))
-        # y_parent = set(graph_copy.predecessors(Y))
-        # common_parents = x_parent.intersection(y_parent)
-
-        # if common_parents:
-        #     graph_copy.remove_edges_from([(parent, Y) for parent in common_parents])
-        #     err_graph_copy.add_edge(X, Y)
-
-        # else:
-        #     parent_latent = y_parent.pop()
-        #     graph_copy.remove_edge(parent_latent, Y)
-        #     y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
-        #     err_graph_copy.add_edges_from([(scaling_indicators[p], Y) for p in y_parent_parent])
-        #     err_graph_copy.add_edge(parent_latent, Y)
-
-        # return graph_copy, err_graph_copy
