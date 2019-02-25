@@ -186,11 +186,6 @@ class SEM(DirectedGraph):
         wedge_y_mask = adj_matrix[0:p, p+q:p+q+m]
         wedge_x_mask = adj_matrix[p:p+q, p+q+m:]
 
-        # if weight is None:
-        #     phi_mask = np.ones((n, 1))
-        # elif weight == 'weight':
-        #     phi_mask = np.zeros((n, 1))
-
         err_nodelist = y_vars + x_vars + eta_vars + xi_vars
         err_adj_matrix = nx.to_numpy_matrix(self.err_graph, nodelist=err_nodelist,
                                             weight=weight)
@@ -567,7 +562,7 @@ class SEM(DirectedGraph):
         full_graph.add_edges_from([(u, v) for u, v in mapping_dict.items()])
         for u, v in self.err_graph.edges:
             cov_node = '..'+str(u)+str(v)
-            full_graph.add_edges_from([(cov_node, u), (cov_node, v)])
+            full_graph.add_edges_from([(cov_node, '.'+str(u)), (cov_node, '.'+str(v))])
 
         return full_graph
 
