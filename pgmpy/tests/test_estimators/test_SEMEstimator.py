@@ -64,10 +64,9 @@ class TestSEMEstimator(unittest.TestCase):
         estimator = SEMEstimator(self.demo)
         summary = estimator.fit(self.demo_data, method='ml')
 
-    @unittest.skip
     def test_union_estimator(self):
         estimator = SEMEstimator(self.union)
-        summary = estimator.fit(self.union_data, method='ml', max_iter=10**6, exit_delta=1e-1)
+        summary = estimator.fit(self.union_data, method='ml', opt='adam', max_iter=10**6, exit_delta=1e-1)
 
     def test_custom_estimator(self):
         estimator = SEMEstimator(self.custom)

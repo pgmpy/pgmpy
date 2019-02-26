@@ -660,6 +660,17 @@ class SEM(DirectedGraph):
         d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
         return (d_connected[X] - d_connected[Y])
 
+    # def get_acesteral_ivs(self, X, Y, scaling_indicators={}):
+    #     transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+
+    #     if (X, Y) in transformed_graph.edges:
+    #         G_c = transformed_graph.removed_edge(X, Y)
+    #     else:
+    #         G_c = transformed_graph
+
+    #     nearest_separator = self._nearest_separator(G_c, X, Y)
+    #     if (nearest_separator is None) or (nearest_separator.intersection(G_c.descendants(Y)
+
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
         Transforms the graph structure of SEM so that the d-separation criterion is
