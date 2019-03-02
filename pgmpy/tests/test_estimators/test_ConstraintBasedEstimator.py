@@ -2,11 +2,12 @@ import unittest
 
 import pandas as pd
 import numpy as np
+import networkx as nx
 
 from pgmpy.estimators import ConstraintBasedEstimator
 from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianModel
-from pgmpy.base import DirectedGraph, UndirectedGraph
+from pgmpy.base import DAG, UndirectedGraph
 
 
 class TestConstraintBasedEstimator(unittest.TestCase):
@@ -54,18 +55,18 @@ class TestConstraintBasedEstimator(unittest.TestCase):
                             set([('A', 'B'), ('B', 'A'), ('A', 'C'), ('C', 'A')]))
 
     def test_pdag_to_dag(self):
-        pdag1 = DirectedGraph([('A', 'B'), ('C', 'B'), ('C', 'D'), ('D', 'C'), ('D', 'A'), ('A', 'D')])
+        pdag1 = nx.DiGraph([('A', 'B'), ('C', 'B'), ('C', 'D'), ('D', 'C'), ('D', 'A'), ('A', 'D')])
         dag1 = ConstraintBasedEstimator.pdag_to_dag(pdag1)
         self.assertTrue(('A', 'B') in dag1.edges() and
                         ('C', 'B') in dag1.edges() and
                         len(dag1.edges()) == 4)
 
-        pdag2 = DirectedGraph([('B', 'C'), ('D', 'A'), ('A', 'D'), ('A', 'C')])
+        pdag2 = nx.DiGraph([('B', 'C'), ('D', 'A'), ('A', 'D'), ('A', 'C')])
         dag2 = ConstraintBasedEstimator.pdag_to_dag(pdag2)
         self.assertTrue(set(dag2.edges()) == set([('B', 'C'), ('A', 'D'), ('A', 'C')]) or
                         set(dag2.edges()) == set([('B', 'C'), ('D', 'A'), ('A', 'C')]))
 
-        pdag3 = DirectedGraph([('B', 'C'), ('D', 'C'), ('C', 'D'), ('A', 'C')])
+        pdag3 = nx.DiGraph([('B', 'C'), ('D', 'C'), ('C', 'D'), ('A', 'C')])
         dag3 = ConstraintBasedEstimator.pdag_to_dag(pdag3)
         self.assertSetEqual(set([('B', 'C'), ('C', 'D'), ('A', 'C')]),
                             set(dag3.edges()))

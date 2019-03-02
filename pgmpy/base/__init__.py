@@ -1,5 +1,5 @@
 from .UndirectedGraph import UndirectedGraph
-from .DirectedGraph import DirectedGraph
+from .DAG import DAG
 
 __all__ = ['UndirectedGraph',
-           'DirectedGraph', ]
+           'DAG', ]
