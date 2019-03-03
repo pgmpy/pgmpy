@@ -28,6 +28,13 @@ if [[ "$DISTRIB" == "conda" ]]; then
 	conda create -n testenv python=$PYTHON_VERSION --file requirements.txt
         source activate testenv
 	conda install nose mock
+	# Possible workaround for pytorch installation issue
+	conda uninstall pytorch
+	conda uninstall libtorch
+	pip uninstall torch
+	pip uninstall torch
+	conda install pytorch cuda80 -c soumith
+	# End workaround
 fi
 
 if [[ "$COVERAGE" == "true" ]]; then
