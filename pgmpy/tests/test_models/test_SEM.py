@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import networkx as nx
+from networkx.algorithms.dag import ancestors
 import numpy.testing as npt
 
 from pgmpy.models import SEM
@@ -704,3 +705,19 @@ class TestSEMInit(unittest.TestCase):
         self.assertEqual(self.lisrel.get_ivs('x1', 'y5', scaling_indicators={'eta1': 'y1', 'xi1': 'x1'}),
                          {'x2', 'x3', 'y2', 'y3', 'y4'})
 
+    def test_nearest_separator(self):
+        # Test case taken from Figure 2 of:
+        # Van Der Zander, B., Textor, J., & Liskiewicz, M. (2015, June). Efficiently 
+        # finding conditional instruments for causal inference. In Twenty-Fourth International
+        # Joint Conference on Artificial Intelligence.
+        model = SEM(ebunch=[('A', 'Z'), ('B', 'Z'), ('A', 'C'), ('C', 'B'), ('D', 'A'),
+                            ('U2', 'D'), ('U2', 'Y'), ('B', 'U1'), ('U1', 'Y')], latents=['U1', 'U2'])
+        moral_graph = model.moralize()
+        n_separators = model._nearest_separator(moral_graph, 'Y', 'Z')
+        self.assertEqual(model._nearest_separator(moral_graph, 'Y', 'Z'), {'_l_B', '_l_D'})
+
+    def test_conditional_iv(self):
+        model = SEM(ebunch=[('A', 'Z'), ('B', 'Z'), ('A', 'C'), ('C', 'B'), ('D', 'A'),
+                            ('U2', 'D'), ('U2', 'Y'), ('B', 'U1'), ('U1', 'Y')], latents=['U1', 'U2'])
+        conditions = model.get_conditional_ivs('Y', 'Z', scaling_indicators={'_l_D': 'D', '_l_A': 'A',
+                                                                             '_l_C': 'C', '_l_B': 'B'})

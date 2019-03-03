@@ -3,6 +3,9 @@
 import networkx as nx
 import numpy as np
 import warnings
+import itertools
+
+from networkx.algorithms.dag import descendants
 
 from pgmpy.base import DirectedGraph
 from pgmpy.global_vars import HAS_PANDAS
@@ -651,7 +654,7 @@ class SEM(DirectedGraph):
             graph_struct = self.full_graph_struct
 
         if observed:
-            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
+            observed_list = observed if isinstance(observed, (list, tuple, set)) else [observed]
         else:
             observed_list = []
 
@@ -715,6 +718,47 @@ class SEM(DirectedGraph):
         d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
         return (d_connected[X] - d_connected[Y])
 
+    def moralize(self, graph=None):
+        """
+        Removes all the immoralities in the DirectedGraph and creates a moral
+        graph (UndirectedGraph).
+
+        A v-structure X->Z<-Y is an immorality if there is no directed edge
+        between X and Y.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DirectedGraph
+        >>> G = DirectedGraph(ebunch=[('diff', 'grade'), ('intel', 'grade')])
+        >>> moral_graph = G.moralize()
+        >>> moral_graph.edges()
+        [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
+        """
+        if not graph:
+            graph = self.full_graph_struct
+
+        moral_graph = graph.to_undirected()
+
+        for node in graph.nodes():
+            moral_graph.add_edges_from(
+                itertools.combinations(graph.predecessors(node), 2))
+
+        return moral_graph
+
+    def _nearest_separator(self, G, Y, Z):
+        W = set()
+        for path in nx.all_simple_paths(G, Y, Z):
+            path_set = set(path)
+            if (len(path) >= 3) and not (W & path_set):
+                for index in range(1, len(path)-1):
+                    if (path[index] in self.observed) or (path[index].startswith('_l_')):
+                        W.add(path[index])
+                        break
+        if Y not in self.active_trail_nodes([Z], observed=W)[Z]:
+            return W
+        else:
+            return None
+
     def get_conditional_ivs(self, X, Y, scaling_indicators={}):
         """
         Returns the conditional IVs for the relation X -> Y
@@ -751,9 +795,16 @@ class SEM(DirectedGraph):
         else:
             G_c = transformed_graph
 
-        nearest_separator = self._nearest_separator(G_c, X, Y)
-        if (nearest_separator is None) or (nearest_separator.intersection(G_c.descendants(Y))):
-            pass
+        instruments = []
+        for Z in (self.observed - {X, Y}):
+            W = self._nearest_separator(self.moralize(graph=G_c), Y, Z)
+            if (W is None) or (W.intersection(descendants(G_c, Y))) or (X in W) or ('_l_'+str(X) in W):
+                continue
+            elif X in self.active_trail_nodes([Z], observed=W, graph_struct=G_c)[Z]:
+                instruments.append((Z, W))
+            else:
+                continue
+        return instruments
 
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
