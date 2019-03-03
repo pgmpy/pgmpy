@@ -18,6 +18,47 @@ class SEM(DirectedGraph):
 
     All the nodes by default has an associated error term and doesn't need to be specified.
     Each edge has the linear parameter.
+
+    Attributes
+    ----------
+    lantents: list
+        A list of all the latent variables in the model except the error terms.
+
+    observed: list
+        A list of all the oberved variables in the model.
+
+    graph: nx.DirectedGraph
+        A directed graph representing the structure of the model. This attribute
+        doesn't include the error terms in the model. The parameters of the model
+        are stored as the `weight` key of each edge.
+
+    latent_struct: nx.DirectedGraph
+        A directed graph on only the latent variables (excluding error terms) of
+        the model.
+
+    eta: list
+        A list of endogenous latent variables (except error terms).
+
+    xi: list
+        A list of exogenous latent variables (except error terms).
+
+    y: list
+        A list of indicators/observed variables for variables in `eta`.
+
+    x: list
+        A list of indictor/observed variables for variables in `xi`.
+
+    err_graph: nx.Graph
+        An undirected graph representing the relations between the error
+        terms of the model. The error terms use the same name as variables themselves.
+
+    full_graph_struct: nx.DirectedGraph
+        A directed graph representing the full structure of the model. The error terms
+        start with a `.`. New nodes are inserted for covariance relations and their name
+        starts with `..`.
+
+    Methods
+    -------
     """
     def __init__(self, ebunch=None, latents=[], err_corr={}):
         """
@@ -57,7 +98,7 @@ class SEM(DirectedGraph):
         self.latents = set(latents)
         self.observed = set()
 
-        # Create the full graph structure. Adds new latent variable whenever observed --> latent
+        # Create graph structure. Adds new latent variable whenever observed --> latent
         # edge to convert to standard LISREL notation.
         self.graph = nx.DiGraph()
         if u_ebunch:
@@ -144,8 +185,8 @@ class SEM(DirectedGraph):
         -------
         np.ndarray: Adjecency matrix of model's graph structure.
 
-        Variable Name Reference
-        -----------------------
+        Notes
+        -----
         B: Effect matrix of eta on eta
         \gamma: Effect matrix of xi on eta
         \wedge_y: Effect matrix of eta on y
@@ -154,6 +195,9 @@ class SEM(DirectedGraph):
         \psi: Covariance matrix of eta errors
         \theta_e: Covariance matrix of y errors
         \theta_del: Covariance matrix of x errors
+
+        Examples
+        --------
         """
         # Arrage the adjecency matrix in order y, x, eta, xi and then slice masks from it.
         #       y(p)   x(q)   eta(m)  xi(n)
@@ -487,6 +531,9 @@ class SEM(DirectedGraph):
         pd.DataFrame: A dataframe object of the shape (n x (len(self.x + self.y)).
                       If pandas is not installed returns a 2-D numpy array with the
                       columns in the order sorted(self.x) + sorted(self.y).
+
+        Examples
+        --------
         """
         eta, m = sorted(self.eta), len(self.eta)
         xi, n = sorted(self.xi), len(self.xi)
@@ -554,6 +601,9 @@ class SEM(DirectedGraph):
         nx.DiGraph: A full directed graph strucuture with error nodes starting
                     with `.` and bidirected edges replaced with common cause
                     nodes starting with `..`.
+
+        Examples
+        --------
         """
         graph_copy = self.graph.copy()
         mapping_dict = {'.'+str(node):node for node in self.err_graph.nodes}
@@ -646,8 +696,13 @@ class SEM(DirectedGraph):
 
         Parameters
         ----------
-        X: The observed variable name
-        Y: The observed variable name
+        X: node
+            The observed variable name
+        Y: node
+            The observed variable name
+        scaling_indicators: dict
+            A dict representing which observed variable to use as scaling indicator for
+            the latent variables.
 
         Returns
         -------
@@ -660,16 +715,45 @@ class SEM(DirectedGraph):
         d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
         return (d_connected[X] - d_connected[Y])
 
-    # def get_acesteral_ivs(self, X, Y, scaling_indicators={}):
-    #     transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+    def get_conditional_ivs(self, X, Y, scaling_indicators={}):
+        """
+        Returns the conditional IVs for the relation X -> Y
 
-    #     if (X, Y) in transformed_graph.edges:
-    #         G_c = transformed_graph.removed_edge(X, Y)
-    #     else:
-    #         G_c = transformed_graph
+        Parameters
+        ----------
+        X: node
+            The observed variable's name
 
-    #     nearest_separator = self._nearest_separator(G_c, X, Y)
-    #     if (nearest_separator is None) or (nearest_separator.intersection(G_c.descendants(Y)
+        Y: node
+            The oberved variable's name
+
+        scaling_indicators: dict
+            A dict representing which observed variable to use as scaling indicator for
+            the latent variables.
+
+        Returns
+        -------
+        set: Set of 2-tuples representing tuple[0] is an IV for X -> Y given tuple[1].
+
+        References
+        ----------
+        .. [1] Van Der Zander, B., Textor, J., & Liskiewicz, M. (2015, June). Efficiently finding
+               conditional instruments for causal inference. In Twenty-Fourth International Joint
+               Conference on Artificial Intelligence.
+
+        Examples
+        --------
+        """
+        transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+
+        if (X, Y) in transformed_graph.edges:
+            G_c = transformed_graph.removed_edge(X, Y)
+        else:
+            G_c = transformed_graph
+
+        nearest_separator = self._nearest_separator(G_c, X, Y)
+        if (nearest_separator is None) or (nearest_separator.intersection(G_c.descendants(Y))):
+            pass
 
     def _iv_transformations(self, X, Y, scaling_indicators={}):
         """
@@ -689,6 +773,9 @@ class SEM(DirectedGraph):
         -------
         nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
                               graph.
+
+        Examples
+        --------
         """
         full_graph = self.full_graph_struct.copy()
         x_parent = set(self.graph.predecessors(X))
