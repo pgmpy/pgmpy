@@ -167,6 +167,10 @@ class SEMEstimator(object):
         Returns
         -------
             pgmpy.model.SEM instance: Instance of the model with estimated parameters
+
+        References
+        ----------
+        .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
         """
         # Check if given arguements are valid
         if not isinstance(data, (pd.DataFrame, Data)):
@@ -249,7 +253,6 @@ class SEMEstimator(object):
             error = self.gls_loss(params, loss_args={'S': S, 'W': W})
         chi_square = likelihood_ratio / error.detach().numpy()
 
-        # TODO: Compute the degree of freedom.
         free_params = (self.masks['B'].sum() + self.masks['gamma'].sum() + self.masks['wedge_y'].sum() +
                        self.masks['wedge_x'].sum()) 
         dof = ((S.shape[0] * (S.shape[0]+1)) / 2) - free_params
