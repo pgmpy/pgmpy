@@ -287,6 +287,19 @@ class TestSEMInit(unittest.TestCase):
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y1', 'y1')], {'weight': 1.0})
         self.assertDictEqual(self.non_lisrel_params.graph.edges[('_l_y4', 'y4')], {'weight': 1.0})
 
+    def test_get_scaling_indicators(self):
+        lisrel_indicators = self.lisrel.get_scaling_indicators()
+        self.assertTrue(lisrel_indicators['eta1'] in ['y1', 'y2', 'y3', 'y4'])
+        self.assertTrue(lisrel_indicators['eta2'] in ['y5', 'y6', 'y7', 'y8'])
+        self.assertTrue(lisrel_indicators['xi1'] in ['x1', 'x2', 'x3'])
+
+        non_lisrel_indicators = self.non_lisrel.get_scaling_indicators()
+        self.assertTrue(non_lisrel_indicators['xi1'] in ['x1', 'x2'])
+        self.assertTrue(non_lisrel_indicators['eta1'] in ['y2', 'y3'])
+        self.assertTrue(non_lisrel_indicators['eta2'] in ['y5'])
+        self.assertTrue(non_lisrel_indicators['_l_y1'] in ['y1'])
+        self.assertTrue(non_lisrel_indicators['_l_y4'] in ['y4'])
+
     def test_lisrel_get_fixed_masks(self):
         (B_mask, gamma_mask, wedge_y_mask, wedge_x_mask, phi_mask, theta_e_mask,
          theta_del_mask, psi_mask) = self.lisrel.get_fixed_masks(sort_vars=True)

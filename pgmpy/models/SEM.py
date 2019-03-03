@@ -167,6 +167,22 @@ class SEM(DirectedGraph):
         # Get the full graph structure.
         self.full_graph_struct = self.get_full_graph_struct()
 
+    def get_scaling_indicators(self):
+        """
+        Assigns random scaling indicators to latent variables
+        """
+        scaling_indicators = {}
+        for var in self.latents:
+            if var.startswith('_l_'):
+                scaling_indicators[var] = var[3:]
+            else:
+                for neighbor in self.graph.neighbors(var):
+                    if neighbor in self.observed:
+                        scaling_indicators[var] = neighbor
+                        continue
+
+        return scaling_indicators
+
     def _masks(self, weight, sort_vars=False):
         """
         This method is called by `get_fixed_masks` and `get_masks` methods.
