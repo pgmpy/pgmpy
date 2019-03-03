@@ -30,9 +30,7 @@ if [[ "$DISTRIB" == "conda" ]]; then
 	conda install nose mock
 	# Possible workaround for pytorch installation issue
 	conda uninstall pytorch
-	conda uninstall libtorch
-	pip uninstall torch
-	pip uninstall torch
+	pip uninstall torch -qqq
 	conda install pytorch cuda80 -c soumith
 	# End workaround
 fi
