@@ -59,10 +59,10 @@ class TestSEMEstimator(unittest.TestCase):
         self.union_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/union1989b.csv',
                                       index_col=0, header=0)
 
-    def test_get_initial_values(self):
+    def test_get_init_values(self):
         demo_estimator = SEMEstimator(self.demo)
         for method in ['random', 'std']:
-            init_values = demo_estimator.get_initial_values(data=self.demo_data, method=method)
+            init_values = demo_estimator.get_init_values(data=self.demo_data, method=method)
 
             m, n, p, q = len(self.demo.eta), len(self.demo.xi), len(self.demo.y), len(self.demo.x)
             self.assertEqual(init_values['B'].shape, (m, m))
@@ -75,7 +75,7 @@ class TestSEMEstimator(unittest.TestCase):
             self.assertEqual(init_values['phi'].shape, (n, n))
 
             union_estimator = SEMEstimator(self.union)
-            init_values = union_estimator.get_initial_values(data=self.union_data, method=method)
+            init_values = union_estimator.get_init_values(data=self.union_data, method=method)
             m, n, p, q = len(self.union.eta), len(self.union.xi), len(self.union.y), len(self.union.x)
             self.assertEqual(init_values['B'].shape, (m, m))
             self.assertEqual(init_values['gamma'].shape, (m, n))
