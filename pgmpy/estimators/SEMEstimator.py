@@ -153,10 +153,10 @@ class SEMEstimator(object):
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
         a = 0.4
         scaling_vars = self.model.get_scaling_indicators()
-        eta, m = sorted(self.eta), len(self.eta)
-        xi, n = sorted(self.xi), len(self.xi)
-        y, p = sorted(self.y), len(self.y)
-        x, q = sorted(self.x), len(self.x)
+        eta, m = sorted(self.model.eta), len(self.model.eta)
+        xi, n = sorted(self.model.xi), len(self.model.xi)
+        y, p = sorted(self.model.y), len(self.model.y)
+        x, q = sorted(self.model.x), len(self.model.x)
 
         if method == 'random':
             B = np.random.rand(m, m)
@@ -207,16 +207,19 @@ class SEMEstimator(object):
                 for j in range(i):
                     theta_e[i, j] = theta_e[j, i] = a * np.sqrt(theta_e[i, i] * theta_e[j, j])
 
-            theta_del = a * data.loc[:, x].cov()
+            theta_del = a * data.loc[:, x].cov().values
 
             psi = np.random.rand(m, m)
             for i in range(m):
-                psi[i, i] = a * ((data.loc[:, scaling_vars[i]].std())**2)
+                psi[i, i] = a * ((data.loc[:, scaling_vars[eta[i]]].std())**2)
             for i in range(m):
                 for j in range(i):
                     psi[i, j] = psi[j, i] = a * np.sqrt(psi[i, i] * psi[j, j])
 
-            phi = a * data.loc[:, [scaling_vars[i] for i in xi]].cov()
+            phi = a * data.loc[:, [scaling_vars[i] for i in xi]].cov().values
+
+        elif method.lower() == 'iv':
+            raise NotImplementedError("IV initialization not supported yet.")
 
         return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
                 'theta_e': theta_e, 'theta_del': theta_del, 'psi': psi, 'phi': phi}
@@ -263,7 +266,7 @@ class SEMEstimator(object):
                                                                  got=sorted(data.columns)))
 
         # Initialize the values of parameters as tensors.
-        init_values = self.get_init_values(data, method=)
+        init_values = self.get_init_values(data, method=init_values.lower())
         B = torch.tensor(init_values['B'], device=device, dtype=dtype, requires_grad=True)
         gamma = torch.tensor(init_values['gamma'], device=device, dtype=dtype, requires_grad=True)
         wedge_y = torch.tensor(init_values['wedge_y'], device=device, dtype=dtype, requires_grad=True)
@@ -272,9 +275,6 @@ class SEMEstimator(object):
         theta_e = torch.tensor(init_values['theta_e'], device=device, dtype=dtype, requires_grad=True)
         theta_del = torch.tensor(init_values['theta_del'], device=device, dtype=dtype, requires_grad=True)
         psi = torch.tensor(init_values['psi'], device=device, dtype=dtype, requires_grad=True)
-
-        elif init_values.lower() == 'iv':
-            raise NotImplementedError("IV initialization not supported yet.")
 
         # Compute the covariance of the data
         variable_order = self.model.y + self.model.x
