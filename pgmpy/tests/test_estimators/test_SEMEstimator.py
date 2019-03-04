@@ -59,17 +59,54 @@ class TestSEMEstimator(unittest.TestCase):
         self.union_data = pd.read_csv('pgmpy/tests/test_estimators/testdata/union1989b.csv',
                                       index_col=0, header=0)
 
+    def test_get_initial_values(self):
+        demo_estimator = SEMEstimator(self.demo)
+        for method in ['random', 'std']:
+            init_values = demo_estimator.get_initial_values(data=self.demo_data, method=method)
+
+            m, n, p, q = len(self.demo.eta), len(self.demo.xi), len(self.demo.y), len(self.demo.x)
+            self.assertEqual(init_values['B'].shape, (m, m))
+            self.assertEqual(init_values['gamma'].shape, (m, n))
+            self.assertEqual(init_values['wedge_y'].shape, (p, m))
+            self.assertEqual(init_values['wedge_x'].shape, (q, n))
+            self.assertEqual(init_values['theta_e'].shape, (p, p))
+            self.assertEqual(init_values['theta_del'].shape, (q, q))
+            self.assertEqual(init_values['psi'].shape, (m, m))
+            self.assertEqual(init_values['phi'].shape, (n, n))
+
+            union_estimator = SEMEstimator(self.union)
+            init_values = union_estimator.get_initial_values(data=self.union_data, method=method)
+            m, n, p, q = len(self.union.eta), len(self.union.xi), len(self.union.y), len(self.union.x)
+            self.assertEqual(init_values['B'].shape, (m, m))
+            self.assertEqual(init_values['gamma'].shape, (m, n))
+            self.assertEqual(init_values['wedge_y'].shape, (p, m))
+            self.assertEqual(init_values['wedge_x'].shape, (q, n))
+            self.assertEqual(init_values['theta_e'].shape, (p, p))
+            self.assertEqual(init_values['theta_del'].shape, (q, q))
+            self.assertEqual(init_values['psi'].shape, (m, m))
+            self.assertEqual(init_values['phi'].shape, (n, n))
+
     @unittest.skip
-    def test_demo_estimator(self):
+    def test_demo_estimator_random_init(self):
         estimator = SEMEstimator(self.demo)
         summary = estimator.fit(self.demo_data, method='ml')
 
-    def test_union_estimator(self):
+    def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union)
         summary = estimator.fit(self.union_data, method='ml', opt='adam', max_iter=10**6, exit_delta=1e-1)
 
-    def test_custom_estimator(self):
+    def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom)
         summary = estimator.fit(self.custom_data, method='ml', max_iter=10**6, opt='adam')
         summary = estimator.fit(self.custom_data, method='uls', max_iter=10**6, opt='adam')
         summary = estimator.fit(self.custom_data, method='gls', max_iter=10**6, opt='adam', W=np.ones((3, 3)))
+
+    def test_union_estimator_std_init(self):
+        estimator = SEMEstimator(self.union)
+        summary = estimator.fit(self.union_data, method='ml', opt='adam', init_values ='std',
+                                max_iter=10**6, exit_delta=1e-1)
+
+    def test_custom_estimator_std_init(self):
+        estimator = SEMEstimator(self.custom)
+        summary = estimator.fit(self.custom_data, method='ml', init_values='std', max_iter=10**6, opt='adam')
+

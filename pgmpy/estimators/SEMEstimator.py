@@ -59,7 +59,7 @@ class SEMEstimator(object):
         method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-            $$ F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q) $$
+        .. math:: F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q)
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class SEMEstimator(object):
         this method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-            $$ F_{ULS} = tr[(S - \Sigma(\theta))^2] $$
+        .. math:: F_{ULS} = tr[(S - \Sigma(\theta))^2]
 
         Parameters
         ----------
@@ -117,7 +117,7 @@ class SEMEstimator(object):
         this method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-            $$ F_{ULS} = tr \{ [(S - \Sigma(\theta)) W^{-1}]^2 \} $$
+        .. math:: F_{ULS} = tr \{ [(S - \Sigma(\theta)) W^{-1}]^2 \}
 
         Parameters
         ----------
@@ -140,7 +140,88 @@ class SEMEstimator(object):
                                       params['theta_del'], params['psi'])
         return ((S - sigma) @ W_inv).pow(2).trace()
 
-    def fit(self, data, method, opt='adam', exit_delta=1e-4, max_iter=1000, **kwargs):
+    def get_init_values(self, data, method):
+        """
+        Computes the starting values for the optimizer.
+
+        Reference
+        ---------
+        .. [1] Table 4C.1: Bollen, K. (2014). Structural Equations with Latent Variables.
+                New York, NY: John Wiley & Sons.
+
+        """
+        # Initialize all the values even if the edge doesn't exist, masks would take care of that.
+        a = 0.4
+        scaling_vars = self.model.get_scaling_indicators()
+        eta, m = sorted(self.eta), len(self.eta)
+        xi, n = sorted(self.xi), len(self.xi)
+        y, p = sorted(self.y), len(self.y)
+        x, q = sorted(self.x), len(self.x)
+
+        if method == 'random':
+            B = np.random.rand(m, m)
+            gamma = np.random.rand(m, n)
+            wedge_y = np.random.rand(p, m)
+            wedge_x = np.random.rand(q, n)
+            theta_e = np.random.rand(p, p)
+            theta_del = np.random.rand(q, q)
+            psi = np.random.rand(m, m)
+            phi = np.random.rand(n, n)
+
+        elif method == 'std':
+            B = np.random.rand(m, m)
+            for i in range(m):
+                for j in range(m):
+                    if i != j:
+                        B[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
+                                       data.loc[:, scaling_vars[eta[j]]].std())
+
+            gamma = np.random.rand(m, n)
+            for i in range(m):
+                for j in range(n):
+                    gamma[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
+                                       data.loc[:, scaling_vars[xi[j]]].std())
+
+            wedge_y = np.random.rand(p, m)
+            for i in range(p):
+                for j in range(m):
+                    if scaling_vars[eta[j]] == y[i]:
+                        wedge_y[i, j] = 1.0
+                    else:
+                        wedge_y[i, j] = a * (data.loc[:, y[i]].std() /
+                                             data.loc[:, scaling_vars[eta[j]]].std())
+
+            wedge_x = np.random.rand(q, n)
+            for i in range(q):
+                for j in range(n):
+                    if scaling_vars[xi[j]] == x[i]:
+                        wedge_x[i, j] = 1.0
+                    else:
+                        wedge_x[i, j] = a * (data.loc[:, x[i]].std() /
+                                             data.loc[:, scaling_vars[xi[j]]].std())
+
+            theta_e = np.random.rand(p, p)
+            for i in range(p):
+                theta_e[i, i] = a * ((data.loc[:, y[i]].std())**2)
+            for i in range(p):
+                for j in range(i):
+                    theta_e[i, j] = theta_e[j, i] = a * np.sqrt(theta_e[i, i] * theta_e[j, j])
+
+            theta_del = a * data.loc[:, x].cov()
+
+            psi = np.random.rand(m, m)
+            for i in range(m):
+                psi[i, i] = a * ((data.loc[:, scaling_vars[i]].std())**2)
+            for i in range(m):
+                for j in range(i):
+                    psi[i, j] = psi[j, i] = a * np.sqrt(psi[i, i] * psi[j, j])
+
+            phi = a * data.loc[:, [scaling_vars[i] for i in xi]].cov()
+
+        return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
+                'theta_e': theta_e, 'theta_del': theta_del, 'psi': psi, 'phi': phi}
+
+    def fit(self, data, method, opt='adam', init_values='random', exit_delta=1e-4, max_iter=1000, **kwargs):
         """
         Estimate the parameters of the model from the data.
 
@@ -181,15 +262,19 @@ class SEMEstimator(object):
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
 
-        # Initialize random values as the initial values for the optimization
-        B = torch.rand(*self.masks['B'].shape, device=device, dtype=dtype, requires_grad=True)
-        gamma = torch.rand(*self.masks['gamma'].shape, device=device, dtype=dtype, requires_grad=True)
-        wedge_y = torch.rand(*self.masks['wedge_y'].shape, device=device, dtype=dtype, requires_grad=True)
-        wedge_x = torch.rand(*self.masks['wedge_x'].shape, device=device, dtype=dtype, requires_grad=True)
-        phi = torch.rand(*self.masks['phi'].shape, device=device, dtype=dtype, requires_grad=True)
-        theta_e = torch.rand(*self.masks['theta_e'].shape, device=device, dtype=dtype, requires_grad=True)
-        theta_del = torch.rand(*self.masks['theta_del'].shape, device=device, dtype=dtype, requires_grad=True)
-        psi = torch.rand(*self.masks['psi'].shape, device=device, dtype=dtype, requires_grad=True)
+        # Initialize the values of parameters as tensors.
+        init_values = self.get_init_values(data, method=)
+        B = torch.tensor(init_values['B'], device=device, dtype=dtype, requires_grad=True)
+        gamma = torch.tensor(init_values['gamma'], device=device, dtype=dtype, requires_grad=True)
+        wedge_y = torch.tensor(init_values['wedge_y'], device=device, dtype=dtype, requires_grad=True)
+        wedge_x = torch.tensor(init_values['wedge_x'], device=device, dtype=dtype, requires_grad=True)
+        phi = torch.tensor(init_values['phi'], device=device, dtype=dtype, requires_grad=True)
+        theta_e = torch.tensor(init_values['theta_e'], device=device, dtype=dtype, requires_grad=True)
+        theta_del = torch.tensor(init_values['theta_del'], device=device, dtype=dtype, requires_grad=True)
+        psi = torch.tensor(init_values['psi'], device=device, dtype=dtype, requires_grad=True)
+
+        elif init_values.lower() == 'iv':
+            raise NotImplementedError("IV initialization not supported yet.")
 
         # Compute the covariance of the data
         variable_order = self.model.y + self.model.x
