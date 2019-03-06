@@ -74,11 +74,11 @@ class VariableElimination(Inference):
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [factor for factor in working_factors[var]
-                       if not set(factor.variables).intersection(eliminated_variables)]
+                       if not set(factor.scope()).intersection(eliminated_variables)]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)([var], inplace=False)
             del working_factors[var]
-            for variable in phi.variables:
+            for variable in phi.scope():
                 working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
@@ -86,7 +86,7 @@ class VariableElimination(Inference):
         for node in working_factors:
             factors = working_factors[node]
             for factor in factors:
-                if not set(factor.variables).intersection(eliminated_variables):
+                if not set(factor.scope()).intersection(eliminated_variables):
                     final_distribution.add(factor)
 
         query_var_factor = {}

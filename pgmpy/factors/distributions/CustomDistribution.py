@@ -1,5 +1,7 @@
 import numpy as np
+from numpy import random
 from scipy import integrate
+from scipy.special import logit
 
 from pgmpy.factors.distributions import BaseDistribution
 
@@ -295,7 +297,10 @@ class CustomDistribution(BaseDistribution):
         0.24197072451914328
         """
         if len(variables) == 0:
-            raise ValueError("Shouldn't be calling marginalize over no variable.")
+            if inplace:
+                return
+            else:
+                return self.copy()
 
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError("variables: Expected type iterable, "
@@ -371,7 +376,12 @@ class CustomDistribution(BaseDistribution):
             return phi
 
     def is_valid_cpd(self):
-        return np.isclose(integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables])[0], 1)
+        random.seed(2017)
+        evidences = logit(random.rand(len(self.variables) - 1))
+        phi = lambda x: self.pdf(x, *evidences)
+        tol = 0.01
+        return np.isclose(integrate.quad(phi, -np.inf, np.inf, epsabs=tol)[0],
+                          1, atol=tol)
 
     def _operate(self, other, operation, inplace=True):
         """
