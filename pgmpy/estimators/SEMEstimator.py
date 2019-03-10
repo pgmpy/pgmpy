@@ -13,21 +13,23 @@ class SEMEstimator(object):
     Base class of SEM estimators. All the estimators inherit this class.
     """
     def __init__(self, model):
-        if not isinstance(model, SEM):
-            raise ValueError("model should be an instance of SEM class. Got type: {t}".format(t=type(model)))
-
-        self.model = model
+        if isinstance(model, SEMGraph):
+            self.model = model.to_lisrel()
+        elif isinstance(model, SEMLISREL):
+            self.model = model
+        else:
+            raise ValueError("""model should be an instance of either SEMGraph or SEMLISREL class.
+                                Got type: {t}""".format(t=type(model)))
 
         # Initialize mask tensors
-        masks = self.model.get_masks()
-        fixed_masks = self.model.get_fixed_masks()
         self.masks = {}
         self.fixed_masks = {}
         model_params = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
-        for i, model_param in enumerate(model_params):
-            self.masks[model_param] = torch.tensor(masks[i], device=device, dtype=dtype, requires_grad=False)
-            self.fixed_masks[model_param] = torch.tensor(fixed_masks[i], device=device, dtype=dtype,
-                                                         requires_grad=False)
+        for p_name in model_params:
+            self.masks[p_name] = torch.tensor(self.model.masks[p_name], device=device,
+                                              dtype=dtype, requires_grad=False)
+            self.fixed_masks[p_name] = torch.tensor(self.model.fixed_params[p_name], device=device,
+                                                    dtype=dtype, requires_grad=False)
         self.B_eye = torch.eye(self.masks['B'].shape[0], device=device, dtype=dtype, requires_grad=False)
 
     def _get_implied_cov(self, B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi):
