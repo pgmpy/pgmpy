@@ -1,11 +1,71 @@
+import numpy as np
+
+
 class SEMLISREL:
     """
     Base class for algebraic representation of Structural Equation Models(SEMs).
     """
-    def __init__(self, str_model=None, params=None, fixed_params=None):
-        pass
+    def __init__(self, str_model=None, var_names=None, params=None, fixed_params=None):
+        """
+        Initializes SEMLISREL model. The LISREL notation is defined as:
+        ..math::
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\Gamma \xi} + mathbf{\zeta} \\
+            \mathbf{y} = \mathbf{\wedge_y \eta} + \mathbf{\epsilon} \\
+            \mathbf{x} = \mathbf{\wedge_x \xi} + \mathbf{\delta}
 
-    def to_SEMGraph(self, params):
+        where :math:`\mathbf{\eta}` is the set of endogenous variables, :math:`\mathbf{\xi}`
+        is the set of exogeneous variables, :math:`\mathbf{y}` and :math:`\mathbf{x}` are the
+        set of measurement variables for :math:`\mathbf{\eta}` and :math:`\mathbf{\xi}`
+        respectively. :math:`\mathbf{\zeta}`, :math:`\mathbf{\epsilon}`, and :math:`\mathbf{\delta}`
+        are the error terms for :math:`\mathbf{\eta}`, :math:`\mathbf{y}`, and :math:`\mathbf{x}`
+        respectively.
+
+        Parameters
+        ----------
+        str_model: str (default: None)
+            A `lavaan` style multiline set of regression equation representing the model.
+            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+
+            If None requires `var_names` and `params` to be specified.
+
+        var_names: dict (default: None)
+            A dict with the keys: eta, xi, y, and x. Each keys should have a list as the value
+            with the name of variables.
+
+        params: dict (default: None)
+            A dict of LISREL representation non-zero parameters. Must contain the following
+            keys: B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, and psi.
+
+            If None `str_model` must be specified.
+
+        fixed_params: dict (default: None)
+            A dict of fixed values for parameters. The shape of the parameters should be same
+            as params.
+
+            If None all the parameters are learnable.
+        """
+        if str_model:
+            raise NotImplementedError("Specification of model as a string is not supported yet")
+
+        param_names = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
+
+        # Check if params has all the keys and sanitize fixed params.
+        for p_name in param_names:
+            if p_name not in params.keys():
+                raise ValueError("params must have the parameter {p_name}".format(p_name=p_name))
+            if p_name not in fixed_params.keys():
+                fixed_params[p_name] = np.zeros(params[p_name].shape)
+
+        self.var_names = var_names
+        self.params = params
+        self.fixed_params = fixed_params
+
+        # Masks represent the parameters which need to be learnt while training.
+        self.masks = {}
+        for key in self.params.keys():
+            self.masks[key] = np.where((self.params[key] == 1) & (self.fixed_params[key] == 0), 1, 0)
+
+    def to_SEMGraph(self):
         """
         Sets the params in the graph structure. The model is defined as:
 
@@ -44,59 +104,83 @@ class SEMLISREL:
         Examples
         --------
         """
-        expected_keys = {'B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi'}
-
-        # Check if all parameters are present.
-        missing_keys = expected_keys - set(params.keys())
-        if missing_keys:
-            warnings.warn("Key(s): {key} not found in params. Skipping setting it.".format(key=missing_keys))
+        # Edges to use to inialize SEMGraph.
+        ebunch = []
+        err_ebunch = []
+        err_var = {}
 
         # Sort the variable names so that it gets correct values assigned
-        eta = sorted(self.eta)
-        xi = sorted(self.xi)
-        y = sorted(self.y)
-        x = sorted(self.x)
+        eta = self.var_names['eta']
+        xi = self.var_names['xi']
+        y = self.var_names['y']
+        x = self.var_names['x']
 
-        # Set the values
-        if 'B' not in missing_keys:
-            for u, v in self.graph.subgraph(self.eta).edges:
-                self.graph.edges[u, v]['weight'] = params['B'][eta.index(v), eta.index(u)]
+        # Add edges and weights
+        for i, u_var in enumerate(eta):
+            for j, v_var in enumerate(eta)):
+                if self.params['B'][i, j] == 1:
+                    ebunch.append((v_var, u_var,
+                                   np.NaN if self.fixed_params['B'][i, j]==0 else self.fixed_params['B'][i, j]))
 
-        if 'gamma' not in missing_keys:
-            for u, v in [(u, v) for v in self.eta for u in self.xi]:
-                if (u, v) in self.graph.edges:
-                    self.graph.edges[u, v]['weight'] = params['gamma'][eta.index(v), xi.index(u)]
+        for i, u_var in enumerate(eta):
+            for j, v_var in enumerate(xi):
+                if self.params['gamma'][i, j] == 1:
+                    ebunch.append(
+                        (v_var, u_var,
+                         np.NaN if self.fixed_params['gamma'][i, j]==0 else self.fixed_params['gamma'][i, j]))
 
-        if 'wedge_y' not in missing_keys:
-            for u, v in [(u, v) for v in self.y for u in self.eta]:
-                if (u, v) in self.graph.edges:
-                    self.graph.edges[u, v]['weight'] = params['wedge_y'][y.index(v), eta.index(u)]
+        for i, u_var in enumerate(y):
+            for j, v_var in enumerate(eta):
+                if self.parms['wedge_y'][i, j] == 1:
+                    ebunch.append((v_var, u_var, np.NaN if self.fixed_params['wedge_y'][i, j]==0
+                                   else self.fixed_params['wedge_y'][i, j]))
 
-        if 'wedge_x' not in missing_keys:
-            for u, v in [(u, v) for v in x for u in xi]:
-                if (u, v) in self.graph.edges:
-                    self.graph.edges[u, v]['weight'] = params['wedge_x'][x.index(v), xi.index(u)]
+        for i, u_var in enumerate(x):
+            for j, v_var in enumerate(xi):
+                if self.params['wedge_x'][i, j] == 1:
+                    ebunch.append((v_var, u_var, np.NaN if self.fixed_params['wedge_x'][i, j]==0
+                                   else self.fixed_params['wedge_x'][i, j]))
 
-        if 'phi' not in missing_keys:
-            for index, node in enumerate(xi):
-                self.err_graph.nodes[node]['var'] = params['phi'][index, index]
-            for u, v in self.err_graph.subgraph(xi).edges:
-                self.err_graph.edges[u, v]['weight'] = params['phi'][xi.index(v), xi.index(u)]
+        for i, u_var in enumerate(xi):
+            for j, v_var in enumerate(xi):
+                if i == j:
+                    err_var[u_var] = np.NaN if self.fixed_params['phi'][i, j]==0 else
+                                     self.fixed_params['phi'][i, j]
+                else:
+                    err_ebunch.append(u_var, v_var, np.NaN if self.fixed_params['phi'][i, j]==0 else
+                                      self.fixed_params['phi'][i, j])
 
-        if 'psi' not in missing_keys:
-            for index, node in enumerate(eta):
-                self.err_graph.nodes[node]['var'] = params['psi'][index, index]
-            for u, v in self.err_graph.subgraph(eta).edges:
-                self.err_graph.edges[u, v]['weight'] = params['psi'][eta.index(v), eta.index(u)]
+        for i, u_var in enumerate(eta):
+            for j, v_var in enumerate(eta):
+                if i == j:
+                    err_var[u_var] = np.NaN if self.fixed_params['psi'][i, j]==0 else
+                                     self.fixed_params['psi'][i, j]
+                else:
+                    err_ebunch.append(u_var, v_var, np.NaN if self.fixed_params['psi'][i, j]==0 else
+                                      self.fixed_params['psi'][i, j])
 
-        if 'theta_e' not in missing_keys:
-            for index, node in enumerate(y):
-                self.err_graph.nodes[node]['var'] = params['theta_e'][index, index]
-            for u, v in self.err_graph.subgraph(y).edges:
-                self.err_graph.edges[u, v]['weight'] = params['theta_e'][y.index(v), y.index(u)]
+        for i, u_var in enumerate(y):
+            for j, v_var in enumerate(y):
+                if i == j:
+                    err_var[u_var] = np.NaN if self.fixed_params['theta_e'][i, j]==0 else
+                                     self.fixed_params['theta_e'][i, j]
+                else:
+                    err_ebunch.append(u_var, v_var, np.NaN if self.fixed_params['theta_e'][i, j]==0 else
+                                      self.fixed_params['theta_e'][i, j])
 
-        if 'theta_del' not in missing_keys:
-            for index, node in enumerate(x):
-                self.err_graph.node[node]['var'] = params['theta_del'][index, index]
-            for u, v in self.err_graph.subgraph(x).edges:
-                self.err_graph.edges[u, v]['weight'] = params['theta_del'][x.index(v), x.index(u)]
+        for i, u_var in enumerate(x):
+            for j, v_var in enumerate(x):
+                if i == j:
+                    err_var[u_var] = np.NaN if self.fixed_params['theta_del'][i, j]==0 else
+                                     self.fixed_params['theta_del'][i, j]
+                else:
+                    err_ebunch.append(u_var, v_var, np.NaN if self.fixed_params['theta_del'][i, j]==0 else
+                                      self.fixed_params['theta_del'][i, j])
+
+        # Construct the SEMGraph object and return it.
+        from pgmpy.models import SEMGraph
+        sem_graph = SEMGraph(ebunch=ebunch, latents=eta+xi, err_corr=err_ebunch)
+        for node in sem_graph.err_graph.nodes():
+            sem_graph.err_graph[node]['var'] = err_var[node]
+
+        return sem_graph

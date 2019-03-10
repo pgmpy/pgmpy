@@ -35,7 +35,7 @@ class SEMGraph(DirectedGraph):
         An undirected graph representing the relations between the error terms of the model.
         The error terms use the same name as variables themselves.
     """
-    def __init__(self, ebunch=[], latents=[], err_corr=[]):
+    def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
         """
         Initializes `SEMGraph` object.
 
@@ -55,10 +55,11 @@ class SEMGraph(DirectedGraph):
             List of tuples representing edges between error terms. It can be of the following forms:
                 1. (u, v): Add correlation between error terms of `u` and `v`. Doesn't set any variance or
                            covariance values.
-                2. ((u, u_var), (v, v_var), covar): Adds correlation between the error terms of `u` and `v`.
-                           Also sets the variance of `u`'s and `v`'s error term to `u_var` and `v_var`
-                           respectively, and the covariance to `covar`. Pass `np.NaN` for any of these values
-                           in case it shouldn't be set.
+                2. (u, v, covar): Adds correlation between the error terms of `u` and `v` and sets the
+                                  parameter to `covar`.
+
+        err_var: dict
+            Dict of the form (var: variance).
 
         Examples
         --------
@@ -86,7 +87,7 @@ class SEMGraph(DirectedGraph):
         [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
             media/File:Example_Structural_equation_model.svg
         """
-        super(SEM, self).__init__()
+        super(SEMGraph, self).__init__()
 
         # Construct the graph and set the parameters.
         self.graph = nx.DiGraph()
@@ -100,7 +101,7 @@ class SEMGraph(DirectedGraph):
                                                         t=t, shape=len(t)))
 
         self.latents = set(latents)
-        self.observed = set(self.graph.nodes()) - self.latents()
+        self.observed = set(self.graph.nodes()) - self.latents
 
         # Construct the error graph and set the parameters.
         self.err_graph = nx.Graph()
@@ -109,22 +110,14 @@ class SEMGraph(DirectedGraph):
             if len(t) == 2:
                 self.err_graph.add_edge(t[0], t[1])
             elif len(t) == 3:
-                try:
-                    if isinstance(t[0], str) and isinstance(t[1], str):
-                        self.err_graph.nodes[t[0][0]]['var'] = np.NaN
-                        self.err_graph.nodes[t[1][0]]['var'] = np.NaN
-                    else:
-                        self.err_graph.nodes[t[0][0]]['var'] = t[0][1]
-                        self.err_graph.nodes[t[1][0]]['var'] = t[1][1]
-
-                    self.err_graph.add_edge(t[0][0], t[1][0], weight=t[2])
-                except KeyError:
-                    raise ValueError("{t} not in expected shape. Please refer to the documentation".format(t=t))
+                self.err_graph.add_edge(t[0], t[1], weight=t[2])
             else:
                 raise ValueError("Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
                                                         t=t, shape=len(t)))
+        for var in self.err_graph.nodes():
+            self.err_graph.nodes[var] = err_var[var] if var in err_var.keys() else np.NaN
 
-        self.full_graph = self._get_full_graph_struct()
+        self.full_graph_struct = self._get_full_graph_struct()
 
 
     def _get_full_graph_struct(self):
@@ -196,7 +189,7 @@ class SEMGraph(DirectedGraph):
             raise ValueError("Expected struct to be str or nx.DiGraph. Got {t}".format(t=type(struct)))
 
         ancestors_list = set()
-        for node in observed_list:
+        for node in observed:
             ancestors_list = ancestors_list.union(nx.algorithms.dag.ancestors(graph_struct, node))
 
         # Direction of flow of information
@@ -212,16 +205,16 @@ class SEMGraph(DirectedGraph):
             while visit_list:
                 node, direction = visit_list.pop()
                 if (node, direction) not in traversed_list:
-                    if (node not in observed_list) and (not node.startswith('.')) and (node not in self.latents):
+                    if (node not in observed) and (not node.startswith('.')) and (node not in self.latents):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
-                    if direction == 'up' and node not in observed_list:
+                    if direction == 'up' and node not in observed:
                         for parent in graph_struct.predecessors(node):
                             visit_list.add((parent, 'up'))
                         for child in graph_struct.successors(node):
                             visit_list.add((child, 'down'))
                     elif direction == 'down':
-                        if node not in observed_list:
+                        if node not in observed:
                             for child in graph_struct.successors(node):
                                 visit_list.add((child, 'down'))
                         if node in ancestors_list:
@@ -292,7 +285,7 @@ class SEMGraph(DirectedGraph):
         --------
         """
         transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
-        d_connected = self.active_trail_nodes([X, Y], graph_struct=transformed_graph)
+        d_connected = self.active_trail_nodes([X, Y], struct=transformed_graph)
         return (d_connected[X] - d_connected[Y])
 
     def moralize(self, graph='full'):
@@ -454,5 +447,6 @@ class SEMGraph(DirectedGraph):
                 theta_del[u_index, v_index] = self.err_graph.edges[u, v]['weight']
                 theta_del[v_index, u_index] = self.err_graph.edges[u, v]['weight']
 
+        from pgmpy.models import SEMLISREL
         return SEMLISREL(B=B, gamma=gamma, wedge_y=wedge_y, wedge_x=wedge_x,
                          psi=psi, phi=phi, theta_e=theta_e, theta_del=theta_del)
