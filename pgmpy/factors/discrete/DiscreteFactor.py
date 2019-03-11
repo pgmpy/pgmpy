@@ -495,7 +495,7 @@ class DiscreteFactor(BaseFactor):
             if extra_vars:
                 slice_ = [slice(None)] * len(phi.variables)
                 slice_.extend([np.newaxis] * len(extra_vars))
-                phi.values = phi.values[slice_]
+                phi.values = phi.values[tuple(slice_)]
 
                 phi.variables.extend(extra_vars)
 
@@ -507,7 +507,7 @@ class DiscreteFactor(BaseFactor):
             if extra_vars:
                 slice_ = [slice(None)] * len(phi1.variables)
                 slice_.extend([np.newaxis] * len(extra_vars))
-                phi1.values = phi1.values[slice_]
+                phi1.values = phi1.values[tuple(slice_)]
 
                 phi1.variables.extend(extra_vars)
                 # No need to modify cardinality as we don't need it.
