@@ -247,32 +247,34 @@ class SEMGraph(DirectedGraph):
         ----------
         X: node
             The explantory variable.
+
         Y: node
             The dependent variable.
 
         Returns
         -------
-        nx.DiGraph, nx.Graph: The transformed latent graph and the transformed error
-                              graph.
+        nx.DiGraph: The transformed full graph structure.
 
         Examples
         --------
         """
         full_graph = self.full_graph_struct.copy()
-        x_parent = set(self.graph.predecessors(X))
-        y_parent = set(self.graph.predecessors(Y))
-        common_parents = x_parent.intersection(y_parent)
 
-        if common_parents:
-            full_graph.remove_edges_from([(parent, Y) for parent in common_parents])
-            full_graph.add_edge('.'+X, Y)
+        if not (X, Y) in full_graph.edges():
+            raise ValueError("The edge from {X} -> {Y} doesn't exist in the graph".format(
+                                                                                    X=X, Y=Y))
 
+        if Y in self.latents:
+            full_graph.add_edge('.'+Y, scaling_indicators[Y])
+            dependent_var = scaling_indicators[Y]
         else:
-            parent_latent = y_parent.pop()
-            full_graph.remove_edge(parent_latent, Y)
-            y_parent_parent = set(self.latent_struct.predecessors(parent_latent))
-            full_graph.add_edges_from([('.'+scaling_indicators[p], Y) for p in y_parent_parent])
-            full_graph.add_edge('.'+parent_latent, Y)
+            dependent_var = Y
+
+        full_graph.remove_edges_from(self.graph.in_edges(Y))
+
+        for parent_y in self.graph.predecessors(Y):
+            if parent_y in self.latents:
+                full_graph.add_edge('.'+scaling_indicators[parent_y], dependent_var)
 
         return full_graph
 
@@ -283,12 +285,16 @@ class SEMGraph(DirectedGraph):
         Parameters
         ----------
         X: node
-            The observed variable name
+            The variable name (observed or latent)
+
         Y: node
-            The observed variable name
-        scaling_indicators: dict
+            The variable name (observed or latent)
+
+        scaling_indicators: dict (optional)
             A dict representing which observed variable to use as scaling indicator for
             the latent variables.
+            If not given the method automatically selects one of the measurement variables
+            at random as the scaling indicator.
 
         Returns
         -------
@@ -297,6 +303,9 @@ class SEMGraph(DirectedGraph):
         Examples
         --------
         """
+        if not scaling_indicators:
+            scaling_indicators = self.get_scaling_indicators()
+
         transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         d_connected = self.active_trail_nodes([X, Y], struct=transformed_graph)
         return (d_connected[X] - d_connected[Y])
