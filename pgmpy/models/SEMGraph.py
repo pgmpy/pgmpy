@@ -69,7 +69,8 @@ class SEMGraph(DirectedGraph):
         ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
         ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
         ...                latents=[],
-        ...                err_corr=[('yrsmill', 'age')])
+        ...                err_corr=[('yrsmill', 'age')],
+        ...                err_var={})
 
         Defining a model (Education [2]) with all the parameters set. For not setting any
         parameter `np.NaN` can be explicitly passed.
@@ -78,7 +79,8 @@ class SEMGraph(DirectedGraph):
         ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
         ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
         ...                    latents=['intelligence', 'academic'],
-        ...                    err_corr=[])
+        ...                    err_corr=[]
+        ...                    err_var={})
 
         References
         ----------
@@ -108,17 +110,16 @@ class SEMGraph(DirectedGraph):
         self.err_graph.add_nodes_from(self.graph.nodes())
         for t in err_corr:
             if len(t) == 2:
-                self.err_graph.add_edge(t[0], t[1])
+                self.err_graph.add_edge(t[0], t[1], weight=np.NaN)
             elif len(t) == 3:
                 self.err_graph.add_edge(t[0], t[1], weight=t[2])
             else:
                 raise ValueError("Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
                                                         t=t, shape=len(t)))
         for var in self.err_graph.nodes():
-            self.err_graph.nodes[var] = err_var[var] if var in err_var.keys() else np.NaN
+            self.err_graph.nodes[var]['weight'] = err_var[var] if var in err_var.keys() else np.NaN
 
         self.full_graph_struct = self._get_full_graph_struct()
-
 
     def _get_full_graph_struct(self):
         """
@@ -151,6 +152,18 @@ class SEMGraph(DirectedGraph):
             full_graph.add_edges_from([(cov_node, '.' + u), (cov_node, '.'+ v)])
 
         return full_graph
+
+    def get_scaling_indicators(self):
+        """
+        Returns a random scaling indicator for each latent variable in the model.
+        """
+        scaling_indicators = {}
+        for node in self.latents:
+            for neighbor in self.graph.neighbors(node):
+                if neighbor in self.observed:
+                    scaling_indicators[node] = neighbor
+                    break
+        return scaling_indicators
 
     def active_trail_nodes(self, variables, observed=[], struct='full'):
         """
@@ -377,6 +390,229 @@ class SEMGraph(DirectedGraph):
                 continue
         return instruments
 
+    @staticmethod
+    def __masks(graph, err_graph, weight, var):
+        """
+        This method is called by `get_fixed_masks` and `get_masks` methods.
+
+        Parameters
+        ----------
+        weight: None | 'weight'
+            If None: Returns a 1.0 for an edge in the graph else 0.0
+            If 'weight': Returns the weight if a weight is assigned to an edge
+                    else 0.0
+
+        var: dict
+            Dict with keys eta, xi, y, and x representing the variables in them.
+
+        Returns
+        -------
+        np.ndarray: Adjecency matrix of model's graph structure.
+
+        Notes
+        -----
+        B: Effect matrix of eta on eta
+        \gamma: Effect matrix of xi on eta
+        \wedge_y: Effect matrix of eta on y
+        \wedge_x: Effect matrix of xi on x
+        \phi: Covariance matrix of xi
+        \psi: Covariance matrix of eta errors
+        \theta_e: Covariance matrix of y errors
+        \theta_del: Covariance matrix of x errors
+
+        Examples
+        --------
+        """
+        # Arrage the adjecency matrix in order y, x, eta, xi and then slice masks from it.
+        #       y(p)   x(q)   eta(m)  xi(n)
+        # y
+        # x
+        # eta \wedge_y          B
+        # xi         \wedge_x \Gamma
+        # 
+        # But here we are slicing from the transpose of adjecency because we want incoming
+        # edges instead of outgoing because parameters come before variables in equations.
+        # 
+        #       y(p)   x(q)   eta(m)  xi(n)
+        # y                  \wedge_y
+        # x                          \wedge_x
+        # eta                   B    \Gamma
+        # xi
+        y_vars, x_vars, eta_vars, xi_vars = var['y'], var['x'], var['eta'], var['xi']
+
+        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
+
+        nodelist = y_vars + x_vars + eta_vars + xi_vars
+        adj_matrix = nx.to_numpy_matrix(graph, nodelist=nodelist, weight=weight).T
+
+        B_mask = adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        gamma_mask = adj_matrix[p+q:p+q+m, p+q+m:]
+        wedge_y_mask = adj_matrix[0:p, p+q:p+q+m]
+        wedge_x_mask = adj_matrix[p:p+q, p+q+m:]
+
+        err_nodelist = y_vars + x_vars + eta_vars + xi_vars
+        err_adj_matrix = nx.to_numpy_matrix(err_graph, nodelist=err_nodelist,
+                                            weight=weight)
+
+        if not weight == 'weight':
+            np.fill_diagonal(err_adj_matrix, 1.0)
+
+        theta_e_mask = err_adj_matrix[:p, :p]
+        theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
+        psi_mask = err_adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        phi_mask = err_adj_matrix[p+q+m:, p+q+m:]
+
+        return {'B': B_mask, 'gamma': gamma_mask, 'wedge_y': wedge_y_mask, 'wedge_x': wedge_x_mask,
+                'phi': phi_mask, 'theta_e': theta_e_mask, 'theta_del': theta_del_mask, 'psi': psi_mask}
+
+#     @staticmethod
+#     def __get_masks(graph, err_graph, var):
+#         """
+#         Returns masks of all the algebriac parameters of the model.
+#         A mask is a matrix with a value of 0's and 1's where 0 signifies
+#         no edge or a fixed parameter edge  between the variables and 1
+#         signifies an edge without a fixed value.
+# 
+#         While learning only the parameters with corresponing values of 1 in the
+#         mask will be learned.
+# 
+#         Parameters
+#         ----------
+#         sort_vars: Boolean
+#             If True: Individually sorts variables in x, y, eta and xi, and then
+#                     creates the adjecency matrix.
+#             If False: Directly uses the order of variables in self.x, self.y,
+#                     self.eta and self.xi to compute the adjecency matrix.
+# 
+#         Returns
+#         -------
+#         B_mask: np.ndarray (shape m x m)
+#             Mask for B matrix.
+# 
+#         gamma_mask: np.ndarray (shape m x n)
+#             Mask for \Gamma matrix.
+# 
+#         wedge_y_mask: np.ndarray (shape p x m)
+#             Mask for \wedge_y matrix.
+# 
+#         wedge_x_mask: np.ndarray (shape q x n)
+#             Mask for \wedge_x matrix.
+# 
+#         phi_mask: np.ndarray (shape n x 1)
+#             Mask for \phi matrix.
+# 
+#         theta_e_mask: np.ndarray (shape p x p)
+#             Mask for \theta_\epsilon matrix.
+# 
+#         theta_del_mask: np.ndarray (shape q x q)
+#             Mask for \theta_\delta matrix.
+# 
+#         psi_mask: np.ndarray (shape m x m)
+#             Mask for \psi matrix
+# 
+#         Examples
+#         --------
+#         """
+#         pass
+#         # masks_arr = []
+#         # for mask, fixed_mask in zip(SEMGraph.__masks(
+#         #                                 graph=graph, err_graph=err_graph, weight=None, var=var),
+#         #                             SEMGraph.__masks(
+#         #                                 graph=graph, err_graph=err_graph, weight='weight', var=var)):
+#         #     masks_arr.append(np.multiply(np.where(fixed_mask != 0, 0.0, 1.0), mask))
+#         # return tuple(masks_arr)
+# 
+#     @staticmethod
+#     def __get_fixed_masks(graph, err_graph, var):
+#         """
+#         Returns a fixed mask of all the algebriac parameters of the model.
+#         A fixed mask has the fixed value when the parameter is fixed otherwise
+#         has a value of 0.
+# 
+#         Parameters
+#         ----------
+#         sort_vars: Boolean
+#             If True: Individually sorts variables in x, y, eta and xi, and then
+#                     creates the adjecency matrix.
+#             If False: Directly uses the order of variables in self.x, self.y,
+#                     self.eta and self.xi to compute the adjecency matrix.
+# 
+#         Returns
+#         -------
+#         B_mask: np.ndarray (shape m x m)
+#             Mask for B matrix.
+# 
+#         gamma_mask: np.ndarray (shape m x n)
+#             Mask for \Gamma matrix.
+# 
+#         wedge_y_mask: np.ndarray (shape p x m)
+#             Mask for \wedge_y matrix.
+# 
+#         wedge_x_mask: np.ndarray (shape q x n)
+#             Mask for \wedge_x matrix.
+# 
+#         phi_mask: np.ndarray (shape n x 1)
+#             Mask for \phi matrix.
+# 
+#         theta_e_mask: np.ndarray (shape p x p)
+#             Mask for \theta_\epsilon matrix.
+# 
+#         theta_del_mask: np.ndarray (shape q x q)
+#             Mask for \theta_\delta matrix.
+# 
+#         psi_mask: np.ndarray (shape m x m)
+#             Mask for \psi matrix
+# 
+#         Examples
+#         --------
+#         """
+#         return(self.__masks(graph=graph, err_graph=err_graph, weight='weight', var=var))
+
+    def __to_standard_lisrel(self):
+        """
+        Converts the model structure into the standard LISREL notation of latent structure and
+        measurement structure by adding new latent variables
+        """
+        lisrel_err_graph = self.err_graph.copy()
+        lisrel_latents = self.latents.copy()
+        lisrel_observed = self.observed.copy()
+
+        # Add new latent nodes to convert it to LISREL format.
+        mapping = {}
+        for u, v in self.graph.edges:
+            if (u not in self.latents) and (v in self.latents):
+                mapping[u] = '_l_' + u
+            elif (u not in self.latents) and (v not in self.latents):
+                mapping[u] = '_l_' + u
+        lisrel_latents.update(mapping.values())
+        lisrel_graph = nx.relabel_nodes(self.graph, mapping, copy=True)
+        for u, v in mapping.items():
+            lisrel_graph.add_edge(v, u, weight=1.0)
+
+        # Get values of eta, xi, y, x
+        latent_struct = lisrel_graph.subgraph(lisrel_latents)
+        latent_indegree = lisrel_graph.in_degree()
+
+        eta = []
+        xi = []
+        for node in latent_struct.nodes():
+            if latent_indegree[node]:
+                eta.append(node)
+            else:
+                xi.append(node)
+
+        x = []
+        y = []
+        for exo in xi:
+            x.extend([x for x in lisrel_graph.neighbors(exo) if x not in lisrel_latents])
+        for endo in eta:
+            y.extend([y for y in lisrel_graph.neighbors(endo) if y not in lisrel_latents])
+
+        y = list(set(y))
+        x = list(set(x) - set(x).intersection(set(y)))
+
+        return (lisrel_graph, lisrel_err_graph, {'eta': eta, 'xi': xi, 'y': y, 'x': x})
+
     def to_lisrel(self):
         """
         Gets parameters from the graph structure to the standard LISREL matrix representation.
@@ -388,65 +624,10 @@ class SEMGraph(DirectedGraph):
         Examples
         --------
         """
-        eta, m = sorted(self.eta), len(self.eta)
-        xi, n = sorted(self.xi), len(self.xi)
-        y, p = sorted(self.y), len(self.y)
-        x, q = sorted(self.x), len(self.x)
+        lisrel_graph, lisrel_err_graph, var = self.__to_standard_lisrel()
 
-        # Set values in relation matrices.
-        B = np.zeros((m, m))
-        gamma = np.zeros((m, n))
-        wedge_y = np.zeros((p, m))
-        wedge_x = np.zeros((q, n))
-
-        for u, v in self.graph.edges:
-            if u in eta and v in eta:
-                B[eta.index(v), eta.index(u)] = self.graph.edges[u, v]['weight']
-            elif u in xi and v in eta:
-                gamma[eta.index(v), xi.index(u)] = self.graph.edges[u, v]['weight']
-            elif u in xi and v in x:
-                wedge_x[x.index(v), xi.index(u)] = self.graph.edges[u, v]['weight']
-            elif u in eta and v in y:
-                wedge_y[y.index(v), eta.index(u)] = self.graph.edges[u, v]['weight']
-
-        # Set values in covariance matrices.
-        psi = np.zeros((m, m))
-        phi = np.zeros((n, n))
-        theta_e = np.zeros((p, p))
-        theta_del = np.zeros((q, q))
-
-        for node in self.err_graph.nodes:
-            if node in eta:
-                index = eta.index(node)
-                psi[index, index] = self.err_graph.nodes[node]['var']
-            elif node in xi:
-                index = xi.index(node)
-                phi[index, index] = self.err_graph.nodes[node]['var']
-            elif node in y:
-                index = y.index(node)
-                theta_e[index, index] = self.err_graph.nodes[node]['var']
-            elif node in x:
-                index = x.index(node)
-                theta_del[index, index] = self.err_graph.nodes[node]['var']
-
-        for u, v in self.err_graph.edges:
-            if u in eta and v in eta:
-                u_index, v_index = eta.index(u), eta.index(v)
-                psi[u_index, v_index] = self.err_graph.edges[u, v]['weight']
-                psi[v_index, u_index] = self.err_graph.edges[u, v]['weight']
-            elif u in xi and v in xi:
-                u_index, v_index = xi.index(u), xi.index(v)
-                phi[u_index, v_index] = self.err_graph.edges[u, v]['weight']
-                phi[v_index, u_index] = self.err_graph.edges[u, v]['weight']
-            elif u in y and v in y:
-                u_index, v_index = y.index(u), y.index(v)
-                theta_e[u_index, v_index] = self.err_graph.edges[u, v]['weight']
-                theta_e[v_index, u_index] = self.err_graph.edges[u, v]['weight']
-            elif u in x and v in x:
-                u_index, v_index = x.index(u), x.index(v)
-                theta_del[u_index, v_index] = self.err_graph.edges[u, v]['weight']
-                theta_del[v_index, u_index] = self.err_graph.edges[u, v]['weight']
+        edges_mask = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
+        fixed_mask = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
 
         from pgmpy.models import SEMLISREL
-        return SEMLISREL(B=B, gamma=gamma, wedge_y=wedge_y, wedge_x=wedge_x,
-                         psi=psi, phi=phi, theta_e=theta_e, theta_del=theta_del)
+        return SEMLISREL(var_names=var, params=edges_mask, fixed_params=fixed_mask)
