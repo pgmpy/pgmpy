@@ -344,7 +344,7 @@ class SEMGraph(DirectedGraph):
             path_set = set(path)
             if (len(path) >= 3) and not (W & path_set):
                 for index in range(1, len(path)-1):
-                    if (path[index] in self.observed) or (path[index].startswith('_l_')):
+                    if path[index] in self.observed:
                         W.add(path[index])
                         break
         if Y not in self.active_trail_nodes([Z], observed=W)[Z]:
