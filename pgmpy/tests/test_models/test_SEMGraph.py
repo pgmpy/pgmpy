@@ -335,3 +335,19 @@ class TestSEMGraph(unittest.TestCase):
         self.assertTrue(('.eta2', 'y5') in full_graph.edges())
         self.assertTrue(('.x1', 'y5') in full_graph.edges())
         self.assertFalse(('eta2', 'y5') in full_graph.edges())
+
+        # TODO: Add more tests for other models.
+
+    def test_get_ivs(self):
+        scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
+
+        self.assertEqual(self.demo.get_ivs('eta1', 'y2', scaling_indicators=scale),
+                         {'x1', 'x2', 'x3', 'y3', 'y7', 'y8'})
+        self.assertEqual(self.demo.get_ivs('eta2', 'y8', scaling_indicators=scale),
+                         {'x1', 'x2', 'x3', 'y2', 'y3', 'y7'})
+        self.assertEqual(self.demo.get_ivs('xi1', 'eta1', scaling_indicators=scale),
+                         {'x2', 'x3'})
+        self.assertEqual(self.demo.get_ivs('xi1', 'eta2', scaling_indicators=scale),
+                         {'x2', 'x3', 'y2', 'y3', 'y4'})
+
+        # TODO: Add more tests for other models.
