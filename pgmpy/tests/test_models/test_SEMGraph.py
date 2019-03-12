@@ -254,12 +254,62 @@ class TestSEMGraph(unittest.TestCase):
     def test_to_lisrel(self):
         demo_lisrel = self.demo.to_lisrel()
         union_lisrel = self.union.to_lisrel()
-        demo_param_lisrel = self.demo_params.to_lisrel()
+        demo_params_lisrel = self.demo_params.to_lisrel()
         custom_lisrel = self.custom.to_lisrel()
 
         demo_graph = demo_lisrel.to_SEMGraph()
         union_graph = union_lisrel.to_SEMGraph()
-        demo_params_graph = demo_param_lisrel.to_SEMGraph()
-        custom_lisrel_graph = custom_lisrel.to_SEMGraph()
+        demo_params_graph = demo_params_lisrel.to_SEMGraph()
+        custom_graph = custom_lisrel.to_SEMGraph()
 
-        # Test if both graphs are the same.
+        # Test demo
+        self.assertSetEqual(set(self.demo.graph.nodes()), set(demo_graph.graph.nodes()))
+        self.assertSetEqual(set(self.demo.graph.edges()), set(demo_graph.graph.edges()))
+        self.assertSetEqual(set(self.demo.err_graph.nodes()), set(demo_graph.err_graph.nodes()))
+        self.assertSetEqual(set(self.demo.err_graph.edges()), set(demo_graph.err_graph.edges()))
+        self.assertSetEqual(set(self.demo.full_graph_struct.nodes()),
+                            set(demo_graph.full_graph_struct.nodes()))
+        self.assertSetEqual(set(self.demo.full_graph_struct.edges()),
+                            set(demo_graph.full_graph_struct.edges()))
+        self.assertSetEqual(self.demo.latents, demo_graph.latents)
+        self.assertSetEqual(self.demo.observed, demo_graph.observed)
+
+        # Test union
+        self.assertSetEqual(set(self.union.graph.nodes()), set(union_graph.graph.nodes()))
+        self.assertSetEqual(set(self.union.graph.edges()), set(union_graph.graph.edges()))
+        self.assertSetEqual(set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes()))
+        self.assertSetEqual(set(self.union.err_graph.edges()), set(union_graph.err_graph.edges()))
+        self.assertSetEqual(set(self.union.full_graph_struct.nodes()),
+                            set(union_graph.full_graph_struct.nodes()))
+        self.assertSetEqual(set(self.union.full_graph_struct.edges()),
+                            set(union_graph.full_graph_struct.edges()))
+        self.assertSetEqual(self.union.latents, union_graph.latents)
+        self.assertSetEqual(self.union.observed, union_graph.observed)
+
+        # Test demo_params
+        self.assertSetEqual(set(self.demo_params.graph.nodes()),
+                            set(demo_params_graph.graph.nodes()))
+        self.assertSetEqual(set(self.demo_params.graph.edges()),
+                            set(demo_params_graph.graph.edges()))
+        self.assertSetEqual(set(self.demo_params.err_graph.nodes()),
+                            set(demo_params_graph.err_graph.nodes()))
+        self.assertSetEqual(set(self.demo_params.err_graph.edges()),
+                            set(demo_params_graph.err_graph.edges()))
+        self.assertSetEqual(set(self.demo_params.full_graph_struct.nodes()),
+                            set(demo_params_graph.full_graph_struct.nodes()))
+        self.assertSetEqual(set(self.demo_params.full_graph_struct.edges()),
+                            set(demo_params_graph.full_graph_struct.edges()))
+        self.assertSetEqual(self.demo_params.latents, demo_params_graph.latents)
+        self.assertSetEqual(self.demo_params.observed, demo_params_graph.observed)
+
+        # Test demo
+        self.assertSetEqual(set(self.custom.graph.nodes()), set(custom_graph.graph.nodes()))
+        self.assertSetEqual(set(self.custom.graph.edges()), set(custom_graph.graph.edges()))
+        self.assertSetEqual(set(self.custom.err_graph.nodes()), set(custom_graph.err_graph.nodes()))
+        self.assertSetEqual(set(self.custom.err_graph.edges()), set(custom_graph.err_graph.edges()))
+        self.assertSetEqual(set(self.custom.full_graph_struct.nodes()),
+                            set(custom_graph.full_graph_struct.nodes()))
+        self.assertSetEqual(set(self.custom.full_graph_struct.edges()),
+                            set(custom_graph.full_graph_struct.edges()))
+        self.assertSetEqual(self.custom.latents, custom_graph.latents)
+        self.assertSetEqual(self.custom.observed, custom_graph.observed)
