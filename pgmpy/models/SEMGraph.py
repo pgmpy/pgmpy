@@ -148,7 +148,7 @@ class SEMGraph(DirectedGraph):
         mapping_dict = {'.'+node: node for node in self.err_graph.nodes}
         full_graph.add_edges_from([(u, v) for u, v in mapping_dict.items()])
         for u, v in self.err_graph.edges:
-            cov_node = '..' + u + v
+            cov_node = '..' + ''.join(sorted([u, v]))
             full_graph.add_edges_from([(cov_node, '.' + u), (cov_node, '.'+ v)])
 
         return full_graph
@@ -532,8 +532,8 @@ class SEMGraph(DirectedGraph):
         """
         lisrel_graph, lisrel_err_graph, var = self.__to_standard_lisrel()
 
-        edges_mask = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
-        fixed_mask = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
+        edges_masks = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
+        fixed_masks = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
 
         from pgmpy.models import SEMLISREL
-        return SEMLISREL(var_names=var, params=edges_mask, fixed_params=fixed_mask)
+        return SEMLISREL(var_names=var, params=edges_masks, fixed_masks=fixed_masks)

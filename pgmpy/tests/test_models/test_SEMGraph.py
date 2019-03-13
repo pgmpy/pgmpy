@@ -266,7 +266,8 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(set(self.demo.graph.nodes()), set(demo_graph.graph.nodes()))
         self.assertSetEqual(set(self.demo.graph.edges()), set(demo_graph.graph.edges()))
         self.assertSetEqual(set(self.demo.err_graph.nodes()), set(demo_graph.err_graph.nodes()))
-        self.assertSetEqual(set(self.demo.err_graph.edges()), set(demo_graph.err_graph.edges()))
+        self.assertSetEqual(set([tuple(sorted(edge)) for edge in self.demo.err_graph.edges()]),
+                            set([tuple(sorted(edge)) for edge in demo_graph.err_graph.edges()]))
         self.assertSetEqual(set(self.demo.full_graph_struct.nodes()),
                             set(demo_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.demo.full_graph_struct.edges()),
@@ -275,10 +276,12 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(self.demo.observed, demo_graph.observed)
 
         # Test union
+        import pdb; pdb.set_trace()
         self.assertSetEqual(set(self.union.graph.nodes()), set(union_graph.graph.nodes()))
         self.assertSetEqual(set(self.union.graph.edges()), set(union_graph.graph.edges()))
         self.assertSetEqual(set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes()))
-        self.assertSetEqual(set(self.union.err_graph.edges()), set(union_graph.err_graph.edges()))
+        self.assertSetEqual(set([tuple(sorted(edge)) for edge in self.union.err_graph.edges()]),
+                            set([tuple(sorted(edge)) for edge in union_graph.err_graph.edges()]))
         self.assertSetEqual(set(self.union.full_graph_struct.nodes()),
                             set(union_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.union.full_graph_struct.edges()),

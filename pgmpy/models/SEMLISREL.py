@@ -99,6 +99,7 @@ class SEMLISREL:
         >>> from pgmpy.models import SEMGraph
         # TODO: Finish this example.
         """
+        import pdb; pdb.set_trace()
         mapping = {}
         for node in chain(self.var_names['xi'], self.var_names['eta']):
             if node.startswith('_l_'):
@@ -106,7 +107,6 @@ class SEMLISREL:
 
         for u, v in mapping.items():
             graph.remove_node(v)
-            graph.remove_edge(u, v)
 
         return nx.relabel_nodes(graph, mapping, copy=True)
 
@@ -129,8 +129,8 @@ class SEMLISREL:
 
         p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
 
-        graph_adj_matrix = np.zeros(p+q+m+n, p+q+m+n)
-        err_graph_adj_matrix = np.zeros(p+q+m+n, p+q+m+n)
+        graph_adj_matrix = np.zeros((p+q+m+n, p+q+m+n))
+        err_graph_adj_matrix = np.zeros((p+q+m+n, p+q+m+n))
 
         # Replacing non fixed edges with np.NaN as networkx assumes that as edges as well
         # and sets weights to NaN.
@@ -151,6 +151,9 @@ class SEMLISREL:
         err_graph_adj_matrix[p:p+q, p:p+q] = adj_sub_matrices['theta_del']
         err_graph_adj_matrix[p+q:p+q+m, p+q:p+q+m] = adj_sub_matrices['psi']
         err_graph_adj_matrix[p+q+m:, p+q+m:] = adj_sub_matrices['phi']
+        # To remove self edges on error terms because of variance fill diagonal with 0.
+        np.fill_diagonal(err_graph_adj_matrix, 0)
+
         err_graph = nx.convert_matrix.from_numpy_matrix(err_graph_adj_matrix.T, create_using=nx.Graph)
         err_graph = nx.relabel_nodes(err_graph, mapping=node_dict)
 
@@ -161,7 +164,7 @@ class SEMLISREL:
         from pgmpy.models import SEMGraph
         sem_graph = SEMGraph(ebunch=minimal_graph.edges(),
                              latents=list(filter(lambda t: not t.startswith('_l_'), eta_vars+xi_vars)),
-                             err_corr=minimal_err_graph.edges(),
+                             err_corr=err_graph.edges(),
                              err_var=err_var)
         return sem_graph
 
