@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pgmpy.models import SEM
+from pgmpy.models import SEM, SEMGraph, SEMLISREL
 from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
