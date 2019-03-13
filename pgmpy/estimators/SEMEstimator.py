@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pgmpy.models import SEM, SEMGraph, SEMLISREL
+from pgmpy.models import SEMGraph, SEMLISREL
 from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
@@ -28,7 +28,7 @@ class SEMEstimator(object):
         for p_name in model_params:
             self.masks[p_name] = torch.tensor(self.model.masks[p_name], device=device,
                                               dtype=dtype, requires_grad=False)
-            self.fixed_masks[p_name] = torch.tensor(self.model.fixed_params[p_name], device=device,
+            self.fixed_masks[p_name] = torch.tensor(self.model.fixed_masks[p_name], device=device,
                                                     dtype=dtype, requires_grad=False)
         self.B_eye = torch.eye(self.masks['B'].shape[0], device=device, dtype=dtype, requires_grad=False)
 
@@ -262,7 +262,7 @@ class SEMEstimator(object):
         if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
-        if not sorted(data.columns) == sorted(self.model.observed):
+        if not sorted(data.columns) == sorted(self.model.var_names['x'] + self.model.var_names['y']):
             raise ValueError("""The column names data do not match the variables in the model. Expected:
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
@@ -279,7 +279,7 @@ class SEMEstimator(object):
         psi = torch.tensor(init_values['psi'], device=device, dtype=dtype, requires_grad=True)
 
         # Compute the covariance of the data
-        variable_order = self.model.y + self.model.x
+        variable_order = self.model.var_names['y'] + self.model.var_names['x']
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 

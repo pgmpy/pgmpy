@@ -270,13 +270,14 @@ class SEMGraph(DirectedGraph):
         else:
             dependent_var = Y
 
-        full_graph.remove_edges_from(self.graph.in_edges(Y))
+        # TODO: Find if it should be `Y` or `dependent_var`.
+        full_graph.remove_edges_from(self.graph.in_edges(dependent_var))
 
         for parent_y in self.graph.predecessors(Y):
             if parent_y in self.latents:
                 full_graph.add_edge('.'+scaling_indicators[parent_y], dependent_var)
 
-        return full_graph
+        return full_graph, dependent_var
 
     def get_ivs(self, X, Y, scaling_indicators={}):
         """
@@ -306,9 +307,9 @@ class SEMGraph(DirectedGraph):
         if not scaling_indicators:
             scaling_indicators = self.get_scaling_indicators()
 
-        transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
-        d_connected = self.active_trail_nodes([X, Y], struct=transformed_graph)
-        return (d_connected[X] - d_connected[Y])
+        transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+        d_connected = self.active_trail_nodes([X, dependent_var], struct=transformed_graph)
+        return (d_connected[X] - d_connected[dependent_var])
 
     def moralize(self, graph='full'):
         """
@@ -381,10 +382,10 @@ class SEMGraph(DirectedGraph):
         Examples
         --------
         """
-        transformed_graph = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
+        transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
 
         if (X, Y) in transformed_graph.edges:
-            G_c = transformed_graph.removed_edge(X, Y)
+            G_c = transformed_graph.remove_edge(X, Y)
         else:
             G_c = transformed_graph
 

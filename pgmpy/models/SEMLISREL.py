@@ -99,7 +99,6 @@ class SEMLISREL:
         >>> from pgmpy.models import SEMGraph
         # TODO: Finish this example.
         """
-        import pdb; pdb.set_trace()
         mapping = {}
         for node in chain(self.var_names['xi'], self.var_names['eta']):
             if node.startswith('_l_'):
