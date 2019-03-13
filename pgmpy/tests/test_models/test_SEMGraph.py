@@ -276,7 +276,6 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(self.demo.observed, demo_graph.observed)
 
         # Test union
-        import pdb; pdb.set_trace()
         self.assertSetEqual(set(self.union.graph.nodes()), set(union_graph.graph.nodes()))
         self.assertSetEqual(set(self.union.graph.edges()), set(union_graph.graph.edges()))
         self.assertSetEqual(set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes()))
@@ -320,20 +319,20 @@ class TestSEMGraph(unittest.TestCase):
     def test_iv_transformations(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
-        full_graph = self.demo._iv_transformations(X='eta1', Y='y2', scaling_indicators=scale)
+        full_graph, _ = self.demo._iv_transformations(X='eta1', Y='y2', scaling_indicators=scale)
         self.assertTrue(('.y1', 'y2') in full_graph.edges)
         self.assertFalse(('eta1', 'y2') in full_graph.edges)
 
-        full_graph = self.demo._iv_transformations(X='eta1', Y='y3', scaling_indicators=scale)
+        full_graph, _ = self.demo._iv_transformations(X='eta1', Y='y3', scaling_indicators=scale)
         self.assertTrue(('.y1', 'y3') in full_graph.edges)
         self.assertFalse(('eta1', 'y3') in full_graph.edges)
 
-        full_graph = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
+        full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
         self.assertTrue(('.eta1', 'y1') in full_graph.edges())
         self.assertTrue(('.x1', 'y1') in full_graph.edges())
         self.assertFalse(('eta1', 'y1') in full_graph.edges())
 
-        full_graph = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
+        full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta2', scaling_indicators=scale)
         self.assertTrue(('.y1', 'y5') in full_graph.edges())
         self.assertTrue(('.eta2', 'y5') in full_graph.edges())
         self.assertTrue(('.x1', 'y5') in full_graph.edges())
@@ -354,3 +353,10 @@ class TestSEMGraph(unittest.TestCase):
                          {'x2', 'x3', 'y2', 'y3', 'y4'})
 
         # TODO: Add more tests for other models.
+
+    def test_get_conditional_ivs(self):
+        small_test_model = SEMGraph(ebunch=[('X', 'Y'), ('I', 'X'), ('W', 'I')],
+                                    latents=[],
+                                    err_corr=[('W', 'Y')],
+                                    err_var={})
+        self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', 'W')])
