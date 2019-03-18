@@ -352,6 +352,17 @@ class TestSEMGraph(unittest.TestCase):
         self.assertEqual(self.demo.get_ivs('xi1', 'eta2', scaling_indicators=scale),
                          {'x2', 'x3', 'y2', 'y3', 'y4'})
 
+        self.assertEqual(self.union.get_ivs('yrsmill', 'unionsen'), set())
+        self.assertEqual(self.union.get_ivs('deferenc', 'unionsen'), set())
+        self.assertEqual(self.union.get_ivs('laboract', 'unionsen'), set())
+        self.assertEqual(self.union.get_ivs('deferenc', 'laboract'), set())
+        self.assertEqual(self.union.get_ivs('age', 'laboract'), {'yrsmill'})
+        self.assertEqual(self.union.get_ivs('age', 'deferenc'), set())
+
+        scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
+        self.assertEqual(self.custom.get_ivs(), set())
+        self.assertEqual(self.custom.get_ivs(), set())
+
         # TODO: Add more tests for other models.
 
     def test_get_conditional_ivs(self):
@@ -360,3 +371,12 @@ class TestSEMGraph(unittest.TestCase):
                                     err_corr=[('W', 'Y')],
                                     err_var={})
         self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', 'W')])
+
+        self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
+                         {('age', ('laboract', 'deferenc'))})
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), {})
+        self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
+                         {('age', ('yrsmill', 'deferenc'))})
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), {})
+        self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), {})
+        self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), {})
