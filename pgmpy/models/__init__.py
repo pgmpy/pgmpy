@@ -8,8 +8,7 @@ from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
 from .NoisyOrModel import NoisyOrModel
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
-from .SEMGraph import SEMGraph
-from .SEMLISREL import SEMLISREL
+from .SEM import SEMGraph, SEMLISREL
 
 __all__ = ['BayesianModel',
            'NoisyOrModel',
