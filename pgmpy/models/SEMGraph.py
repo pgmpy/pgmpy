@@ -271,7 +271,8 @@ class SEMGraph(DirectedGraph):
             dependent_var = Y
 
         # TODO: Find if it should be `Y` or `dependent_var`.
-        full_graph.remove_edges_from(self.graph.in_edges(dependent_var))
+        # full_graph.remove_edges_from(self.graph.in_edges(dependent_var))
+        full_graph.remove_edge(X, Y)
 
         for parent_y in self.graph.predecessors(Y):
             if parent_y in self.latents:
