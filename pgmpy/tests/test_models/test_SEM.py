@@ -436,25 +436,25 @@ class TestSEMGraph(unittest.TestCase):
     def test_get_ivs(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
-        self.assertEqual(self.demo.get_ivs('eta1', 'y2', scaling_indicators=scale),
-                         {'x1', 'x2', 'x3', 'y3', 'y7', 'y8'})
-        self.assertEqual(self.demo.get_ivs('eta2', 'y8', scaling_indicators=scale),
-                         {'x1', 'x2', 'x3', 'y2', 'y3', 'y7'})
-        self.assertEqual(self.demo.get_ivs('xi1', 'eta1', scaling_indicators=scale),
-                         {'x2', 'x3'})
-        self.assertEqual(self.demo.get_ivs('xi1', 'eta2', scaling_indicators=scale),
-                         {'x2', 'x3', 'y2', 'y3', 'y4'})
+        self.assertSetEqual(self.demo.get_ivs('eta1', 'y2', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y3', 'y7', 'y8'})
+        self.assertSetEqual(self.demo.get_ivs('eta2', 'y8', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y2', 'y3', 'y7'})
+        self.assertSetEqual(self.demo.get_ivs('xi1', 'eta1', scaling_indicators=scale),
+                            {'x2', 'x3'})
+        self.assertSetEqual(self.demo.get_ivs('xi1', 'eta2', scaling_indicators=scale),
+                            {'x2', 'x3', 'y2', 'y3', 'y4'})
 
-        self.assertEqual(self.union.get_ivs('yrsmill', 'unionsen'), set())
-        self.assertEqual(self.union.get_ivs('deferenc', 'unionsen'), set())
-        self.assertEqual(self.union.get_ivs('laboract', 'unionsen'), set())
-        self.assertEqual(self.union.get_ivs('deferenc', 'laboract'), set())
-        self.assertEqual(self.union.get_ivs('age', 'laboract'), {'yrsmill'})
-        self.assertEqual(self.union.get_ivs('age', 'deferenc'), set())
+        self.assertSetEqual(self.union.get_ivs('yrsmill', 'unionsen'), set())
+        self.assertSetEqual(self.union.get_ivs('deferenc', 'unionsen'), set())
+        self.assertSetEqual(self.union.get_ivs('laboract', 'unionsen'), set())
+        self.assertSetEqual(self.union.get_ivs('deferenc', 'laboract'), set())
+        self.assertSetEqual(self.union.get_ivs('age', 'laboract'), {'yrsmill'})
+        self.assertSetEqual(self.union.get_ivs('age', 'deferenc'), set())
 
         scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
-        self.assertEqual(self.custom.get_ivs(), set())
-        self.assertEqual(self.custom.get_ivs(), set())
+        self.assertSetEqual(self.custom.get_ivs(), set())
+        self.assertSetEqual(self.custom.get_ivs(), set())
 
         # TODO: Add more tests for other models.
 
