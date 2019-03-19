@@ -13,36 +13,6 @@ if HAS_PANDAS:
     import pandas as pd
 
 
-class SEM(DirectedGraph):
-    """
-    Base class for Structural Equation Models. Internally calls `SEMGraph` and `SEMLISREL`.
-    """
-    def __init__(self, lavaan_str=None, ebunch=[], latents=[], err_corr=[],
-                 err_var={}, var_names=None, params=None, fixed_masks=None):
-        """
-        Initialize a `SEM` object. A model can be initialized using either lavaan syntax, LISREL parameters,
-        or a graph structure.
-        """
-        if lavaan_str:
-            # Create a SEMGraph model using the lavaan str.
-            raise NotImplementedError("Lavaan syntax is not supported yet.")
-        elif ebunch:
-            self.model = SEMGraph(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
-        elif var_names:
-            self.model = SEMLISREL(var_names=var_names, params=params, fixed_masks=fixed_masks).to_SEMGraph()
-
-    @classmethod
-    def from_lavaan(cls, lavaan_str):
-        return cls(lavaan_str=lavaan_str)
-
-    @classmethod
-    def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
-        return cls(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
-
-    @classmethod
-    def from_lisrel(cls, var_names, params, fixed_masks=None):
-        return cls(var_names=var_names, params=params, fixed_masks=fixed_masks)
-
 class SEMGraph(DirectedGraph):
     """
     Base class for graphical representation of Structural Equation Models(SEMs).
@@ -734,3 +704,178 @@ class SEMLISREL:
                              err_var=err_var)
         return sem_graph
 
+
+class SEM(SEMGraph):
+    """
+    Class for representing Structural Equation Models. This class is a wrapper over
+    `SEMGraph` and `SEMLISREL` to provide a consistent API over the different representations.
+
+    Attributes
+    ----------
+    model: SEMGraph instance
+        A graphical representation of the model.
+    """
+    def __init__(self, lavaan_str=None, ebunch=[], latents=[], err_corr=[],
+                 err_var={}, var_names=None, params=None, fixed_masks=None):
+        """
+        Initialize a `SEM` object. Prefered way to initialize the object is to use one of
+        the `from_lavaan`, `from_graph`, or `from_lisrel` methods.
+
+        There are three possible ways to initialize the model:
+            1. Lavaan syntax: `lavaan_str` needs to be specified.
+            2. Graph structure: `ebunch`, `latents`, `err_corr`, and `err_var` need to specified.
+            3. LISREL syntax: `var_names`, `params`, and `fixed_masks` need to be specified.
+
+        Parameters
+        ----------
+        For parameter details, check docstrings for `from_lavaan`, `from_graph`, and `from_lisrel`
+        methods.
+
+        See Also
+        --------
+        from_lavaan: Initialize a model using lavaan syntax.
+        from_graph: Initialize a model using graph structure.
+        from_lisrel: Initialize a model using LISREL syntax.
+        """
+        if lavaan_str:
+            # Create a SEMGraph model using the lavaan str.
+            raise NotImplementedError("Lavaan syntax is not supported yet.")
+        elif ebunch:
+            super(SEM, self).__init__(ebunch=ebunch, latents=latents,
+                                      err_corr=err_corr, err_var=err_var)
+        elif var_names:
+            model = SEMLISREL(var_names=var_names, params=params, fixed_masks=fixed_masks).to_SEMGraph()
+            # Initialize an empty SEMGraph instance and set the properties.
+            # TODO: Boilerplate code, find a better way to do this.
+            super(SEM, self).__init__(ebunch=[], latents=[], err_corr=[], err_var={})
+            self.graph = model.graph
+            self.latents = model.latents
+            self.obseved = model.observed
+            self.err_graph = model.err_graph
+            self.full_graph_struct = model.full_graph_struct
+
+    @classmethod
+    def from_lavaan(cls, lavaan_str):
+        """
+        Initializes a `SEM` instance using lavaan syntax.
+
+        Parameters
+        ----------
+        str_model: str (default: None)
+            A `lavaan` style multiline set of regression equation representing the model.
+            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+
+            If None requires `var_names` and `params` to be specified.
+
+        Examples
+        --------
+        """
+        return cls(lavaan_str=lavaan_str)
+
+    @classmethod
+    def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
+        """
+        Initializes a `SEM` instance using graphical structure.
+
+        Parameters
+        ----------
+        ebunch: list/array-like
+            List of edges in form of tuples. Each tuple can be of two possible shape:
+                1. (u, v): This would add an edge from u to v without setting any parameter
+                           for the edge.
+                2. (u, v, parameter): This would add an edge from u to v and set the edge's
+                            parameter to `parameter`.
+
+        latents: list/array-like
+            List of nodes which are latent. All other variables are considered observed.
+
+        err_corr: list/array-like
+            List of tuples representing edges between error terms. It can be of the following forms:
+                1. (u, v): Add correlation between error terms of `u` and `v`. Doesn't set any variance or
+                           covariance values.
+                2. (u, v, covar): Adds correlation between the error terms of `u` and `v` and sets the
+                                  parameter to `covar`.
+
+        err_var: dict
+            Dict of the form (var: variance).
+
+        Examples
+        --------
+        Defining a model (Union sentiment model[1]) without setting any paramaters.
+        >>> from pgmpy.models import SEM
+        >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
+        ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
+        ...                              ('age', 'laboract'), ('deferenc', 'laboract')],
+        ...                      latents=[],
+        ...                      err_corr=[('yrsmill', 'age')],
+        ...                      err_var={})
+
+        Defining a model (Education [2]) with all the parameters set. For not setting any
+        parameter `np.NaN` can be explicitly passed.
+        >>> sem_edu = SEM.from_graph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
+        ...                                  ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
+        ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
+        ...                                  ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
+        ...                          latents=['intelligence', 'academic'],
+        ...                          err_corr=[]
+        ...                          err_var={})
+
+        References
+        ----------
+        [1] McDonald, A, J., & Clelland, D. A. (1984). Textile Workers and Union Sentiment.
+            Social Forces, 63(2), 502–521
+        [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
+            media/File:Example_Structural_equation_model.svg
+        """
+        return cls(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
+
+    @classmethod
+    def from_lisrel(cls, var_names, params, fixed_masks=None):
+        r"""
+        Initializes a `SEM` instance using LISREL notation. The LISREL notation is defined as:
+        ..math::
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\Gamma \xi} + mathbf{\zeta} \\
+            \mathbf{y} = \mathbf{\wedge_y \eta} + \mathbf{\epsilon} \\
+            \mathbf{x} = \mathbf{\wedge_x \xi} + \mathbf{\delta}
+
+        where :math:`\mathbf{\eta}` is the set of endogenous variables, :math:`\mathbf{\xi}`
+        is the set of exogeneous variables, :math:`\mathbf{y}` and :math:`\mathbf{x}` are the
+        set of measurement variables for :math:`\mathbf{\eta}` and :math:`\mathbf{\xi}`
+        respectively. :math:`\mathbf{\zeta}`, :math:`\mathbf{\epsilon}`, and :math:`\mathbf{\delta}`
+        are the error terms for :math:`\mathbf{\eta}`, :math:`\mathbf{y}`, and :math:`\mathbf{x}`
+        respectively.
+
+        Parameters
+        ----------
+        str_model: str (default: None)
+            A `lavaan` style multiline set of regression equation representing the model.
+            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+
+            If None requires `var_names` and `params` to be specified.
+
+        var_names: dict (default: None)
+            A dict with the keys: eta, xi, y, and x. Each keys should have a list as the value
+            with the name of variables.
+
+        params: dict (default: None)
+            A dict of LISREL representation non-zero parameters. Must contain the following
+            keys: B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, and psi.
+
+            If None `str_model` must be specified.
+
+        fixed_params: dict (default: None)
+            A dict of fixed values for parameters. The shape of the parameters should be same
+            as params.
+
+            If None all the parameters are learnable.
+
+        Returns
+        -------
+        pgmpy.models.SEM instance: An instance of the object with initalized values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMLISREL
+        # TODO: Finish this example
+        """
+        return cls(var_names=var_names, params=params, fixed_masks=fixed_masks)
