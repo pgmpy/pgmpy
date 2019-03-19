@@ -337,26 +337,36 @@ class TestSEMGraph(unittest.TestCase):
         # Test demo
         self.assertSetEqual(set(self.demo.graph.nodes()), set(demo_graph.graph.nodes()))
         self.assertSetEqual(set(self.demo.graph.edges()), set(demo_graph.graph.edges()))
+
         self.assertSetEqual(set(self.demo.err_graph.nodes()), set(demo_graph.err_graph.nodes()))
-        self.assertSetEqual(set([tuple(sorted(edge)) for edge in self.demo.err_graph.edges()]),
-                            set([tuple(sorted(edge)) for edge in demo_graph.err_graph.edges()]))
+        npt.assert_array_equal(nx.to_numpy_matrix(self.demo.err_graph,
+                                                  nodelist=sorted(self.demo.err_graph.nodes())),
+                               nx.to_numpy_matrix(demo_graph,
+                                                  nodelist=sorted(demo_graph.err_graph.nodes())))
+
         self.assertSetEqual(set(self.demo.full_graph_struct.nodes()),
                             set(demo_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.demo.full_graph_struct.edges()),
                             set(demo_graph.full_graph_struct.edges()))
+
         self.assertSetEqual(self.demo.latents, demo_graph.latents)
         self.assertSetEqual(self.demo.observed, demo_graph.observed)
 
         # Test union
         self.assertSetEqual(set(self.union.graph.nodes()), set(union_graph.graph.nodes()))
         self.assertSetEqual(set(self.union.graph.edges()), set(union_graph.graph.edges()))
+
         self.assertSetEqual(set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes()))
-        self.assertSetEqual(set([tuple(sorted(edge)) for edge in self.union.err_graph.edges()]),
-                            set([tuple(sorted(edge)) for edge in union_graph.err_graph.edges()]))
+        npt.assert_array_equal(nx.to_numpy_matrix(self.union.err_graph,
+                                                  nodelist=sorted(self.union.err_graph.nodes())),
+                               nx.to_numpy_matrix(union_graph,
+                                                  nodelist=sorted(union_graph.err_graph.nodes())))
+
         self.assertSetEqual(set(self.union.full_graph_struct.nodes()),
                             set(union_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.union.full_graph_struct.edges()),
                             set(union_graph.full_graph_struct.edges()))
+
         self.assertSetEqual(self.union.latents, union_graph.latents)
         self.assertSetEqual(self.union.observed, union_graph.observed)
 
@@ -365,26 +375,37 @@ class TestSEMGraph(unittest.TestCase):
                             set(demo_params_graph.graph.nodes()))
         self.assertSetEqual(set(self.demo_params.graph.edges()),
                             set(demo_params_graph.graph.edges()))
+
         self.assertSetEqual(set(self.demo_params.err_graph.nodes()),
                             set(demo_params_graph.err_graph.nodes()))
-        self.assertSetEqual(set(self.demo_params.err_graph.edges()),
-                            set(demo_params_graph.err_graph.edges()))
+        npt.assert_array_equal(nx.to_numpy_matrix(self.demo_params.err_graph,
+                                                  nodelist=sorted(self.demo_params.err_graph.nodes())),
+                               nx.to_numpy_matrix(demo_graph,
+                                                  nodelist=sorted(demo_params_graph.err_graph.nodes())))
+
         self.assertSetEqual(set(self.demo_params.full_graph_struct.nodes()),
                             set(demo_params_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.demo_params.full_graph_struct.edges()),
                             set(demo_params_graph.full_graph_struct.edges()))
+
         self.assertSetEqual(self.demo_params.latents, demo_params_graph.latents)
         self.assertSetEqual(self.demo_params.observed, demo_params_graph.observed)
 
         # Test demo
         self.assertSetEqual(set(self.custom.graph.nodes()), set(custom_graph.graph.nodes()))
         self.assertSetEqual(set(self.custom.graph.edges()), set(custom_graph.graph.edges()))
+
         self.assertSetEqual(set(self.custom.err_graph.nodes()), set(custom_graph.err_graph.nodes()))
-        self.assertSetEqual(set(self.custom.err_graph.edges()), set(custom_graph.err_graph.edges()))
+        npt.assert_array_equal(nx.to_numpy_matrix(self.custom.err_graph,
+                                                  nodelist=sorted(self.custom.err_graph.nodes())),
+                               nx.to_numpy_matrix(custom_graph,
+                                                  nodelist=sorted(custom_graph.err_graph.nodes())))
+
         self.assertSetEqual(set(self.custom.full_graph_struct.nodes()),
                             set(custom_graph.full_graph_struct.nodes()))
         self.assertSetEqual(set(self.custom.full_graph_struct.edges()),
                             set(custom_graph.full_graph_struct.edges()))
+
         self.assertSetEqual(self.custom.latents, custom_graph.latents)
         self.assertSetEqual(self.custom.observed, custom_graph.observed)
 
