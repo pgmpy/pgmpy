@@ -14,8 +14,34 @@ if HAS_PANDAS:
 
 
 class SEM(DirectedGraph):
-    def __init__(self):
-        pass
+    """
+    Base class for Structural Equation Models. Internally calls `SEMGraph` and `SEMLISREL`.
+    """
+    def __init__(self, lavaan_str=None, ebunch=[], latents=[], err_corr=[],
+                 err_var={}, var_names=None, params=None, fixed_masks=None):
+        """
+        Initialize a `SEM` object. A model can be initialized using either lavaan syntax, LISREL parameters,
+        or a graph structure.
+        """
+        if lavaan_str:
+            # Create a SEMGraph model using the lavaan str.
+            raise NotImplementedError("Lavaan syntax is not supported yet.")
+        elif ebunch:
+            self.model = SEMGraph(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
+        elif var_names:
+            self.model = SEMLISREL(var_names=var_names, params=params, fixed_masks=fixed_masks).to_SEMGraph()
+
+    @classmethod
+    def from_lavaan(cls, lavaan_str):
+        return cls(lavaan_str=lavaan_str)
+
+    @classmethod
+    def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
+        return cls(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
+
+    @classmethod
+    def from_lisrel(cls, var_names, params, fixed_masks=None):
+        return cls(var_names=var_names, params=params, fixed_masks=fixed_masks)
 
 class SEMGraph(DirectedGraph):
     """
