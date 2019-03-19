@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pgmpy.models import SEMGraph, SEMLISREL
+from pgmpy.models import SEMGraph, SEMLISREL, SEM
 from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
@@ -13,7 +13,7 @@ class SEMEstimator(object):
     Base class of SEM estimators. All the estimators inherit this class.
     """
     def __init__(self, model):
-        if isinstance(model, SEMGraph):
+        if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
         elif isinstance(model, SEMLISREL):
             self.model = model

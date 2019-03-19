@@ -4,16 +4,88 @@ import numpy as np
 import networkx as nx
 import numpy.testing as npt
 
-from pgmpy.models import SEMGraph
+from pgmpy.models import SEM, SEMGraph, SEMLISREL
 
-import unittest
-import unittest
 
-import numpy as np
-import networkx as nx
-import numpy.testing as npt
+class TestSEM(unittest.TestCase):
+    def test_from_graph(self):
+        self.demo = SEM.from_graph(ebunch=[('xi1', 'x1'),
+                                           ('xi1', 'x2'),
+                                           ('xi1', 'x3'),
+                                           ('xi1', 'eta1'),
+                                           ('eta1', 'y1'),
+                                           ('eta1', 'y2'),
+                                           ('eta1', 'y3'),
+                                           ('eta1', 'y4'),
+                                           ('eta1', 'eta2'),
+                                           ('xi1', 'eta2'),
+                                           ('eta2', 'y5'),
+                                           ('eta2', 'y6'),
+                                           ('eta2', 'y7'),
+                                           ('eta2', 'y8')],
+                                   latents=['xi1', 'eta1', 'eta2'],
+                                   err_corr=[('y1', 'y5'),
+                                             ('y2', 'y6'),
+                                             ('y2', 'y4'),
+                                             ('y3', 'y7'),
+                                             ('y4', 'y8'),
+                                             ('y6', 'y8')])
 
-from pgmpy.models import SEMGraph
+        self.assertSetEqual(self.demo.latents, {'xi1', 'eta1', 'eta2'})
+        self.assertSetEqual(self.demo.observed, {'x1', 'x2', 'x3', 'y1', 'y2', 'y3',
+                                                 'y4', 'y5', 'y6', 'y7', 'y8'})
+        self.assertListEqual(sorted(self.demo.graph.nodes()),
+                             ['eta1', 'eta2', 'x1', 'x2', 'x3', 'xi1', 'y1', 'y2', 'y3',
+                              'y4', 'y5', 'y6', 'y7', 'y8'])
+        self.assertListEqual(sorted(self.demo.graph.edges()),
+                             sorted([('eta1', 'eta2'), ('eta1', 'y1'), ('eta1', 'y2'),
+                                     ('eta1', 'y3'), ('eta1', 'y4'), ('eta2', 'y5'),
+                                     ('eta2', 'y6'), ('eta2', 'y7'), ('eta2', 'y8'),
+                                     ('xi1', 'eta1'), ('xi1', 'eta2'), ('xi1', 'x1'),
+                                     ('xi1', 'x2'), ('xi1', 'x3')]))
+
+        self.assertDictEqual(self.demo.graph.edges[('xi1', 'x1')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('xi1', 'x2')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('xi1', 'x3')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('xi1', 'eta1')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta1', 'y1')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta1', 'y2')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta1', 'y3')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta1', 'y4')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta1', 'eta2')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('xi1', 'eta2')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta2', 'y5')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta2', 'y6')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta2', 'y7')], {'weight': np.NaN})
+        self.assertDictEqual(self.demo.graph.edges[('eta2', 'y8')], {'weight': np.NaN})
+
+        npt.assert_equal(nx.to_numpy_matrix(self.demo.err_graph,
+                                            nodelist=sorted(self.demo.err_graph.nodes()), weight=None),
+                         np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
+                                   [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 1., 0., 0.]]))
+
+        for edge in self.demo.err_graph.edges():
+            self.assertDictEqual(self.demo.err_graph.edges[edge], {'weight': np.NaN})
+        for node in self.demo.err_graph.nodes():
+            self.assertDictEqual(self.demo.err_graph.nodes[node], {'weight': np.NaN})
+
+    def test_from_lavaan(self):
+        self.assertRaises(NotImplementedError, SEM.from_lavaan("Doesn't matter what I write here"))
+
+    def test_from_lisrel(self):
+        pass # TODO: Add this test when done writing the tests for SEMLISREL
 
 
 class TestSEMGraph(unittest.TestCase):
