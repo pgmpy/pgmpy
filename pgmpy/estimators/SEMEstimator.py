@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pandas as pd
 import torch
@@ -83,7 +85,7 @@ class SEMEstimator(object):
                                       params['theta_del'], params['psi'])
 
         return (sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() -
-                (len(self.model.y)+ len(self.model.x)))
+                (len(self.model.var_names['y'])+ len(self.model.var_names['x'])))
 
     def uls_loss(self, params, loss_args):
         """
@@ -154,11 +156,15 @@ class SEMEstimator(object):
         """
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
         a = 0.4
-        scaling_vars = self.model.get_scaling_indicators()
-        eta, m = sorted(self.model.eta), len(self.model.eta)
-        xi, n = sorted(self.model.xi), len(self.model.xi)
-        y, p = sorted(self.model.y), len(self.model.y)
-        x, q = sorted(self.model.x), len(self.model.x)
+        scaling_vars = self.model.to_SEMGraph().get_scaling_indicators()
+        eta, m = sorted(self.model.var_names['eta']), len(self.model.var_names['eta'])
+        xi, n = sorted(self.model.var_names['xi']), len(self.model.var_names['xi'])
+        y, p = sorted(self.model.var_names['y']), len(self.model.var_names['y'])
+        x, q = sorted(self.model.var_names['x']), len(self.model.var_names['x'])
+
+        for var in itertools.chain(eta, xi):
+            if var.startswith('_l_'):
+                scaling_vars[var] = var[3:]
 
         if method == 'random':
             B = np.random.rand(m, m)
@@ -341,7 +347,7 @@ class SEMEstimator(object):
         chi_square = likelihood_ratio / error.detach().numpy()
 
         free_params = (self.masks['B'].sum() + self.masks['gamma'].sum() + self.masks['wedge_y'].sum() +
-                       self.masks['wedge_x'].sum()) 
+                       self.masks['wedge_x'].sum())
         dof = ((S.shape[0] * (S.shape[0]+1)) / 2) - free_params
 
         summary = {'Sample Size': N,

@@ -717,6 +717,9 @@ class SEMLISREL:
                              err_var=err_var)
         return sem_graph
 
+    def set_params(self, params):
+        self.fixed_masks = params
+
 
 class SEM(SEMGraph):
     """
