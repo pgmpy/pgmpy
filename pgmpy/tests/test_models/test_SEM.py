@@ -82,7 +82,7 @@ class TestSEM(unittest.TestCase):
             self.assertDictEqual(self.demo.err_graph.nodes[node], {'weight': np.NaN})
 
     def test_from_lavaan(self):
-        self.assertRaises(NotImplementedError, SEM.from_lavaan("Doesn't matter what I write here"))
+        self.assertRaises(NotImplementedError, SEM.from_lavaan, "Doesn't matter what I write here")
 
     def test_from_lisrel(self):
         pass # TODO: Add this test when done writing the tests for SEMLISREL
