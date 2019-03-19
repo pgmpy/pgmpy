@@ -509,17 +509,29 @@ class SEMGraph(DirectedGraph):
             else:
                 xi.append(node)
 
-        x = []
-        y = []
+        x = set()
+        y = set()
         for exo in xi:
-            x.extend([x for x in lisrel_graph.neighbors(exo) if x not in lisrel_latents])
+            x.update([x for x in lisrel_graph.neighbors(exo) if x not in lisrel_latents])
         for endo in eta:
-            y.extend([y for y in lisrel_graph.neighbors(endo) if y not in lisrel_latents])
+            y.update([y for y in lisrel_graph.neighbors(endo) if y not in lisrel_latents])
 
-        y = list(set(y))
-        x = list(set(x) - set(x).intersection(set(y)))
+        # If some node has edges from both eta and xi, replace it with another latent variable 
+        # otherwise it won't get included in any of the matrices.
+        # TODO: Patchy work. Find a better solution.
+        common_elements = set(x).intersection(set(y))
+        if common_elements:
+            mapping = {}
+            for var in common_elements:
+                mapping[var] = '_l_' + var
+            lisrel_graph = nx.relabel_nodes(lisrel_graph, mapping, copy=True)
+            for u, v in mapping.items():
+                lisrel_graph.add_edge(u, v, weight=1.0)
+            eta.extend(mapping.values())
+            x = list(set(x) - common_elements)
+            y.update(common_elements)
 
-        return (lisrel_graph, lisrel_err_graph, {'eta': eta, 'xi': xi, 'y': y, 'x': x})
+        return (lisrel_graph, lisrel_err_graph, {'eta': eta, 'xi': xi, 'y': list(y), 'x': list(x)})
 
     def to_lisrel(self):
         """
@@ -698,6 +710,7 @@ class SEMLISREL:
         err_var = {node_dict[i]: err_graph_adj_matrix[i, i] for i in range(p+q+m+n)}
 
         from pgmpy.models import SEMGraph
+        # TODO: Add edge weights
         sem_graph = SEMGraph(ebunch=minimal_graph.edges(),
                              latents=list(filter(lambda t: not t.startswith('_l_'), eta_vars+xi_vars)),
                              err_corr=err_graph.edges(),
