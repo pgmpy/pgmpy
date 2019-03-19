@@ -259,7 +259,7 @@ class GibbsSampling(MarkovChain):
     >>> student.add_nodes_from(['intel', 'sat'])
     >>> student.add_edge('intel', 'sat')
     >>> student.add_cpds(intel_cpd, sat_cpd)
-    >>> from pgmpy.inference import GibbsSampling
+    >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
     Sample from it:
     >>> gibbs_chain.sample(size=3)
@@ -358,7 +358,7 @@ class GibbsSampling(MarkovChain):
         Examples:
         ---------
         >>> from pgmpy.factors import DiscreteFactor
-        >>> from pgmpy.inference import GibbsSampling
+        >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import MarkovModel
         >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
         >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
