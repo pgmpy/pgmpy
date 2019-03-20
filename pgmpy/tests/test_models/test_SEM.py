@@ -524,10 +524,77 @@ class TestSEMGraph(unittest.TestCase):
         self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), set())
         self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), set())
 
+    def test_iv_transformations_custom(self):
+        scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
+
+        full_graph, var = self.custom._iv_transformations('xi1', 'x2', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'x2')
+        self.assertTrue(('.x1', 'x2') in full_graph.edges())
+        self.assertFalse(('xi1', 'x2') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('xi1', 'y4', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y4')
+        self.assertTrue(('.x1', 'y4') in full_graph.edges())
+        self.assertFalse(('xi1', 'y4') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('xi1', 'y1', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y1')
+        self.assertTrue(('.x1', 'y1') in full_graph.edges())
+        self.assertFalse(('xi1', 'y1') in full_graph.edges())
+        self.assertFalse(('y4', 'y1') in full_graph.edges())
+        self.assertTrue(('.y4', 'y1') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('xi1', 'eta1', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y2')
+        self.assertTrue(('.eta1', 'y2') in full_graph.edges())
+        self.assertTrue(('.x1', 'y2') in full_graph.edges())
+        self.assertTrue(('.y1', 'y2') in full_graph.edges())
+        self.assertFalse(('y1', 'eta1') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta1') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('y1', 'eta1', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y2')
+        self.assertTrue(('.eta1', 'y2') in full_graph.edges())
+        self.assertTrue(('.x1', 'y2') in full_graph.edges())
+        self.assertTrue(('.y1', 'y2') in full_graph.edges())
+        self.assertFalse(('y1', 'eta1') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta1') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('y1', 'eta2', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y5')
+        self.assertTrue(('.y1', 'y5') in full_graph.edges())
+        self.assertTrue(('.eta2', 'y5') in full_graph.edges())
+        self.assertFalse(('y1', 'eta2') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('y4', 'y1', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y1')
+        self.assertFalse(('y4', 'y1') in full_graph.edges())
+
+        full_graph, var = self.custom._iv_transformations('eta1', 'y3', scaling_indicators=scale_custom)
+        self.assertEqual(var, 'y3')
+        self.assertTrue(('.y2', 'y3') in full_graph.edges())
+        self.assertFalse(('eta1', 'y3') in full_graph.edges())
+
     def test_get_ivs_custom(self):
         scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
-        self.assertSetEqual(self.custom.get_ivs(), set())
-        self.assertSetEqual(self.custom.get_ivs(), set())
+
+        self.assertSetEqual(self.custom.get_ivs('xi1', 'x2', scaling_indicators=scale_custom),
+                            {'y1', 'y2', 'y3', 'y4', 'y5'})
+        self.assertSetEqual(self.custom.get_ivs('xi1', 'y4', scaling_indicators=scale_custom),
+                            {'x2'})
+        self.assertSetEqual(self.custom.get_ivs('xi1', 'y1', scaling_indicators=scale_custom),
+                            {'x2'})
+        self.assertSetEqual(self.custom.get_ivs('xi1', 'eta1', scaling_indicators=scale_custom),
+                            {'x2', 'y4'})
+        # TODO: Investigate these three cases
+        # self.assertSetEqual(self.custom.get_ivs('y1', 'eta1', scaling_indicators=scale_custom),
+        #                     {'x2', 'y4'})
+        # self.assertSetEqual(self.custom.get_ivs('y1', 'eta2', scaling_indicators=scale_custom),
+        #                     {'x1', 'x2', 'y4'})
+        self.assertSetEqual(self.custom.get_ivs('y4', 'y1', scaling_indicators=scale_custom),
+                            set())
+        # self.assertSetEqual(self.custom.get_ivs('eta1', 'y3', scaling_indicators=scale_custom),
+        #                    {'x1', 'x2', 'y4'})
 
     def test_get_conditional_ivs(self):
         small_test_model = SEMGraph(ebunch=[('X', 'Y'), ('I', 'X'), ('W', 'I')],
