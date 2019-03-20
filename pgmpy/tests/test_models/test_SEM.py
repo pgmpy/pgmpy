@@ -412,27 +412,43 @@ class TestSEMGraph(unittest.TestCase):
     def test_iv_transformations(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
-        full_graph, _ = self.demo._iv_transformations(X='eta1', Y='y2', scaling_indicators=scale)
-        self.assertTrue(('.y1', 'y2') in full_graph.edges)
-        self.assertFalse(('eta1', 'y2') in full_graph.edges)
+        self.assertRaises(ValueError, self.demo._iv_transformations, 'x1', 'y1', scale)
 
-        full_graph, _ = self.demo._iv_transformations(X='eta1', Y='y3', scaling_indicators=scale)
-        self.assertTrue(('.y1', 'y3') in full_graph.edges)
-        self.assertFalse(('eta1', 'y3') in full_graph.edges)
+        for y in ['y2', 'y3', 'y4']:
+            full_graph, dependent_var = self.demo._iv_transformations(X='eta1', Y=y,
+                                                                      scaling_indicators=scale)
+            self.assertEqual(dependent_var, y)
+            self.assertTrue(('.y1', y) in full_graph.edges)
+            self.assertFalse(('eta1', y) in full_graph.edges)
 
-        full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
+        for y in ['y6', 'y7', 'y8']:
+            full_graph, dependent_var = self.demo._iv_transformations(X='eta2', Y=y,
+                                                                      scaling_indicators=scale)
+            self.assertEqual(dependent_var, y)
+            self.assertTrue(('.y5', y) in full_graph.edges)
+            self.assertFalse(('eta2', y) in full_graph.edges)
+
+        full_graph, dependent_var = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
+        self.assertEqual(dependent_var, 'y1')
         self.assertTrue(('.eta1', 'y1') in full_graph.edges())
         self.assertTrue(('.x1', 'y1') in full_graph.edges())
         self.assertFalse(('xi1', 'eta1') in full_graph.edges())
 
-        full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta2', scaling_indicators=scale)
+        full_graph, dependent_var = self.demo._iv_transformations(X='xi1', Y='eta2', scaling_indicators=scale)
+        self.assertEqual(dependent_var, 'y5')
         self.assertTrue(('.y1', 'y5') in full_graph.edges())
         self.assertTrue(('.eta2', 'y5') in full_graph.edges())
         self.assertTrue(('.x1', 'y5') in full_graph.edges())
         self.assertFalse(('eta1', 'eta2') in full_graph.edges())
-        self.assertFalse(('xi1', 'eta1') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta2') in full_graph.edges())
 
-        # TODO: Add more tests for other models.
+        full_graph, dependent_var = self.demo._iv_transformations(X='eta1', Y='eta2', scaling_indicators=scale)
+        self.assertEqual(dependent_var, 'y5')
+        self.assertTrue(('.y1', 'y5') in full_graph.edges())
+        self.assertTrue(('.eta2', 'y5') in full_graph.edges())
+        self.assertTrue(('.x1', 'y5') in full_graph.edges())
+        self.assertFalse(('eta1', 'eta2') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta2') in full_graph.edges())
 
     def test_get_ivs(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
