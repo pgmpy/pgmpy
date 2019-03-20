@@ -312,8 +312,14 @@ class SEMGraph(DirectedGraph):
             scaling_indicators = self.get_scaling_indicators()
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
-        d_connected = self.active_trail_nodes([X, dependent_var], struct=transformed_graph)
-        return (d_connected[X] - d_connected[dependent_var])
+        d_connected_x = self.active_trail_nodes([X], struct=transformed_graph)[X]
+
+        # Condition on X to block any paths going through X.
+        d_connected_y = self.active_trail_nodes([dependent_var], observed=[X],
+                                                struct=transformed_graph)[dependent_var]
+
+        # Remove {X, Y} because they can't be IV for X -> Y
+        return (d_connected_x - d_connected_y - {X, Y})
 
     def moralize(self, graph='full'):
         """

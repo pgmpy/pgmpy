@@ -409,7 +409,7 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(self.custom.latents, custom_graph.latents)
         self.assertSetEqual(self.custom.observed, custom_graph.observed)
 
-    def test_iv_transformations(self):
+    def test_iv_transformations_demo(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
         self.assertRaises(ValueError, self.demo._iv_transformations, 'x1', 'y1', scale)
@@ -450,30 +450,84 @@ class TestSEMGraph(unittest.TestCase):
         self.assertFalse(('eta1', 'eta2') in full_graph.edges())
         self.assertFalse(('xi1', 'eta2') in full_graph.edges())
 
-    def test_get_ivs(self):
+    def test_iv_transformations_union(self):
+        scale = {}
+        for u, v in self.union.graph.edges():
+            full_graph, dependent_var = self.union._iv_transformations(u, v, scaling_indicators=scale)
+            self.assertFalse((u, v) in full_graph.edges())
+            self.assertEqual(dependent_var, v)
+
+    def test_get_ivs_demo(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
         self.assertSetEqual(self.demo.get_ivs('eta1', 'y2', scaling_indicators=scale),
                             {'x1', 'x2', 'x3', 'y3', 'y7', 'y8'})
+        self.assertSetEqual(self.demo.get_ivs('eta1', 'y3', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y2', 'y4', 'y6', 'y8'})
+        self.assertSetEqual(self.demo.get_ivs('eta1', 'y4', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y3', 'y6', 'y7'})
+
+        self.assertSetEqual(self.demo.get_ivs('eta2', 'y6', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y3', 'y4', 'y7'})
+        self.assertSetEqual(self.demo.get_ivs('eta2', 'y7', scaling_indicators=scale),
+                            {'x1', 'x2', 'x3', 'y2', 'y4', 'y6', 'y8'})
         self.assertSetEqual(self.demo.get_ivs('eta2', 'y8', scaling_indicators=scale),
                             {'x1', 'x2', 'x3', 'y2', 'y3', 'y7'})
+
+        self.assertSetEqual(self.demo.get_ivs('xi1', 'x2', scaling_indicators=scale),
+                            {'x3', 'y1', 'y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8'})
+        self.assertSetEqual(self.demo.get_ivs('xi1', 'x3', scaling_indicators=scale),
+                            {'x2', 'y1', 'y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8'})
+
         self.assertSetEqual(self.demo.get_ivs('xi1', 'eta1', scaling_indicators=scale),
                             {'x2', 'x3'})
         self.assertSetEqual(self.demo.get_ivs('xi1', 'eta2', scaling_indicators=scale),
                             {'x2', 'x3', 'y2', 'y3', 'y4'})
+        self.assertSetEqual(self.demo.get_ivs('eta1', 'eta2', scaling_indicators=scale),
+                            {'x2', 'x3', 'y2', 'y3', 'y4'})
 
-        self.assertSetEqual(self.union.get_ivs('yrsmill', 'unionsen'), set())
-        self.assertSetEqual(self.union.get_ivs('deferenc', 'unionsen'), set())
-        self.assertSetEqual(self.union.get_ivs('laboract', 'unionsen'), set())
-        self.assertSetEqual(self.union.get_ivs('deferenc', 'laboract'), set())
-        self.assertSetEqual(self.union.get_ivs('age', 'laboract'), {'yrsmill'})
-        self.assertSetEqual(self.union.get_ivs('age', 'deferenc'), set())
+    unittest.skip("Conditional IV")
+    def test_get_conditional_ivs_demo(self):
+        scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta1', 'y2', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta1', 'y3', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta1', 'y4', scaling_indicators=scale), set())
+
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta2', 'y6', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta2', 'y7', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta2', 'y8', scaling_indicators=scale), set())
+
+        self.assertSetEqual(self.demo.get_conditional_ivs('xi1', 'x2', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('xi1', 'x3', scaling_indicators=scale), set())
+
+        self.assertSetEqual(self.demo.get_conditional_ivs('xi1', 'eta1', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('xi1', 'eta2', scaling_indicators=scale), set())
+        self.assertSetEqual(self.demo.get_conditional_ivs('eta1', 'eta2', scaling_indicators=scale), set())
+
+    def test_get_ivs_union(self):
+        scale = {}
+        self.assertSetEqual(self.union.get_ivs('yrsmill', 'unionsen', scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs('deferenc', 'unionsen', scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs('laboract', 'unionsen', scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs('deferenc', 'laboract', scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs('age', 'laboract', scaling_indicators=scale), {'yrsmill'})
+        self.assertSetEqual(self.union.get_ivs('age', 'deferenc', scaling_indicators=scale), {'yrsmill'})
+
+    def test_get_conditional_ivs_union(self):
+        self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
+                         {('age', ('laboract', 'deferenc'))})
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), set())
+        self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
+                         {('age', ('yrsmill', 'deferenc'))})
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), set())
+        self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), set())
+        self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), set())
+
+    def test_get_ivs_custom(self):
         scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
         self.assertSetEqual(self.custom.get_ivs(), set())
         self.assertSetEqual(self.custom.get_ivs(), set())
-
-        # TODO: Add more tests for other models.
 
     def test_get_conditional_ivs(self):
         small_test_model = SEMGraph(ebunch=[('X', 'Y'), ('I', 'X'), ('W', 'I')],
@@ -482,11 +536,3 @@ class TestSEMGraph(unittest.TestCase):
                                     err_var={})
         self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', 'W')])
 
-        self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
-                         {('age', ('laboract', 'deferenc'))})
-        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), {})
-        self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
-                         {('age', ('yrsmill', 'deferenc'))})
-        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), {})
-        self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), {})
-        self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), {})
