@@ -264,19 +264,22 @@ class SEMGraph(DirectedGraph):
             raise ValueError("The edge from {X} -> {Y} doesn't exist in the graph".format(
                                                                                     X=X, Y=Y))
 
-        if Y in self.latents:
+        if (X in self.observed) and (Y in self.observed):
+            full_graph.remove_edge(X, Y)
+            return full_graph, Y
+
+        elif Y in self.latents:
             full_graph.add_edge('.'+Y, scaling_indicators[Y])
             dependent_var = scaling_indicators[Y]
         else:
             dependent_var = Y
 
-        # TODO: Find if it should be `Y` or `dependent_var`.
-        full_graph.remove_edges_from(self.graph.in_edges(dependent_var))
-        # full_graph.remove_edge(X, dependent_var)
-
         for parent_y in self.graph.predecessors(Y):
+            full_graph.remove_edge(parent_y, Y)
             if parent_y in self.latents:
                 full_graph.add_edge('.'+scaling_indicators[parent_y], dependent_var)
+            else:
+                full_graph.add_edge('.'+parent_y, dependent_var)
 
         return full_graph, dependent_var
 
