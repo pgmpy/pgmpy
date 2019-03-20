@@ -423,13 +423,14 @@ class TestSEMGraph(unittest.TestCase):
         full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta1', scaling_indicators=scale)
         self.assertTrue(('.eta1', 'y1') in full_graph.edges())
         self.assertTrue(('.x1', 'y1') in full_graph.edges())
-        self.assertFalse(('eta1', 'y1') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta1') in full_graph.edges())
 
         full_graph, _ = self.demo._iv_transformations(X='xi1', Y='eta2', scaling_indicators=scale)
         self.assertTrue(('.y1', 'y5') in full_graph.edges())
         self.assertTrue(('.eta2', 'y5') in full_graph.edges())
         self.assertTrue(('.x1', 'y5') in full_graph.edges())
-        self.assertFalse(('eta2', 'y5') in full_graph.edges())
+        self.assertFalse(('eta1', 'eta2') in full_graph.edges())
+        self.assertFalse(('xi1', 'eta1') in full_graph.edges())
 
         # TODO: Add more tests for other models.
 
