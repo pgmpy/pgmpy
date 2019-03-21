@@ -226,13 +226,11 @@ class SEMGraph(DirectedGraph):
                             if parent not in avoid_nodes:
                                 visit_list.add((parent, 'up'))
                         for child in graph_struct.successors(node):
-                            if child not in avoid_nodes:
-                                visit_list.add((child, 'down'))
+                            visit_list.add((child, 'down'))
                     elif direction == 'down':
                         if node not in observed:
                             for child in graph_struct.successors(node):
-                                if child not in avoid_nodes:
-                                    visit_list.add((child, 'down'))
+                                visit_list.add((child, 'down'))
                         if node in ancestors_list:
                             for parent in graph_struct.predecessors(node):
                                 if parent not in avoid_nodes:
