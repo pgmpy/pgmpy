@@ -165,7 +165,7 @@ class SEMGraph(DirectedGraph):
                     break
         return scaling_indicators
 
-    def active_trail_nodes(self, variables, observed=[], struct='full'):
+    def active_trail_nodes(self, variables, observed=[], avoid_nodes=[], struct='full'):
         """
         Finds all the observed variables which are d-connected to `variables` in the `graph_struct`
         when `observed` variables are observed.
@@ -223,16 +223,20 @@ class SEMGraph(DirectedGraph):
                     traversed_list.add((node, direction))
                     if direction == 'up' and node not in observed:
                         for parent in graph_struct.predecessors(node):
-                            visit_list.add((parent, 'up'))
+                            if parent not in avoid_nodes:
+                                visit_list.add((parent, 'up'))
                         for child in graph_struct.successors(node):
-                            visit_list.add((child, 'down'))
+                            if child not in avoid_nodes:
+                                visit_list.add((child, 'down'))
                     elif direction == 'down':
                         if node not in observed:
                             for child in graph_struct.successors(node):
-                                visit_list.add((child, 'down'))
+                                if child not in avoid_nodes:
+                                    visit_list.add((child, 'down'))
                         if node in ancestors_list:
                             for parent in graph_struct.predecessors(node):
-                                visit_list.add((parent, 'up'))
+                                if parent not in avoid_nodes:
+                                    visit_list.add((parent, 'up'))
             active_trails[start] = active_nodes
         return active_trails
 
@@ -275,11 +279,10 @@ class SEMGraph(DirectedGraph):
             dependent_var = Y
 
         for parent_y in self.graph.predecessors(Y):
+            # Remove edge even when the parent is observed ????
             full_graph.remove_edge(parent_y, Y)
             if parent_y in self.latents:
                 full_graph.add_edge('.'+scaling_indicators[parent_y], dependent_var)
-            else:
-                full_graph.add_edge('.'+parent_y, dependent_var)
 
         return full_graph, dependent_var
 
@@ -312,14 +315,19 @@ class SEMGraph(DirectedGraph):
             scaling_indicators = self.get_scaling_indicators()
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
-        d_connected_x = self.active_trail_nodes([X], struct=transformed_graph)[X]
+        if X in self.latents:
+            explanatory_var = scaling_indicators[X]
+        else:
+            explanatory_var = X
+
+        d_connected_x = self.active_trail_nodes([explanatory_var], struct=transformed_graph)[explanatory_var]
 
         # Condition on X to block any paths going through X.
-        d_connected_y = self.active_trail_nodes([dependent_var], observed=[X],
+        d_connected_y = self.active_trail_nodes([dependent_var], avoid_nodes=[explanatory_var],
                                                 struct=transformed_graph)[dependent_var]
 
         # Remove {X, Y} because they can't be IV for X -> Y
-        return (d_connected_x - d_connected_y - {X, Y})
+        return (d_connected_x - d_connected_y - {dependent_var, explanatory_var})
 
     def moralize(self, graph='full'):
         """
