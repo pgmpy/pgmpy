@@ -18,7 +18,7 @@ class SEMGraph(DirectedGraph):
     Base class for graphical representation of Structural Equation Models(SEMs).
 
     All variables are by default assumed to have an associated error latent variable, therefore
-    they don't need to be specified in the graph.
+    they don't need to be specified.
 
     Attributes
     ----------
@@ -37,7 +37,7 @@ class SEMGraph(DirectedGraph):
     """
     def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
         """
-        Initializes `SEMGraph` object.
+        Initializes a `SEMGraph` object.
 
         Parameters
         ----------
@@ -58,8 +58,8 @@ class SEMGraph(DirectedGraph):
                 2. (u, v, covar): Adds correlation between the error terms of `u` and `v` and sets the
                                   parameter to `covar`.
 
-        err_var: dict
-            Dict of the form (var: variance).
+        err_var: dict (variable: variance)
+            Sets variance for the error terms in the model.
 
         Examples
         --------
@@ -80,7 +80,7 @@ class SEMGraph(DirectedGraph):
         ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
         ...                    latents=['intelligence', 'academic'],
         ...                    err_corr=[]
-        ...                    err_var={})
+        ...                    err_var={'intelligence': 1})
 
         References
         ----------
@@ -116,6 +116,8 @@ class SEMGraph(DirectedGraph):
             else:
                 raise ValueError("Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
                                                         t=t, shape=len(t)))
+
+        # Set the error variances
         for var in self.err_graph.nodes():
             self.err_graph.nodes[var]['weight'] = err_var[var] if var in err_var.keys() else np.NaN
 
@@ -155,7 +157,23 @@ class SEMGraph(DirectedGraph):
 
     def get_scaling_indicators(self):
         """
-        Returns a random scaling indicator for each latent variable in the model.
+        Returns a scaling indicator for each of the latent variables in the model.
+        The scaling indicator is chosen randomly among the observed measurement
+        variables of the latent variable.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
+        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
+        ...                  latents=['xi1', 'eta1'])
+        >>> model.get_scaling_indicators()
+        {'xi1': 'x1', 'eta1': 'y1'}
+
+        Returns
+        -------
+        dict: Returns a dict with latent variables as the key and their value being the
+                scaling indicator.
         """
         scaling_indicators = {}
         for node in self.latents:
@@ -178,13 +196,30 @@ class SEMGraph(DirectedGraph):
         observed : list/array-like
             If given the active trails would be computed assuming these nodes to be observed.
 
+        avoid_nodes: list/array-like
+            If specificed, the algorithm doesn't account for paths that have influence flowing
+            through the avoid node.
+
         struct: str or nx.DiGraph instance
-            If "full", is used considers correlation between error terms for computing d-connection.
+            If "full", considers correlation between error terms for computing d-connection.
             If "non_error", doesn't condised error correlations for computing d-connection.
-            If nx.DiGraph, finds d-connected variables on the given graph.
+            If instance of nx.DiGraph, finds d-connected variables on the given graph.
 
         Examples
         --------
+        >>> from pgmpy.models import SEM
+        >>> model = SEMGraph(ebunch=[('yrsmill', 'unionsen'), ('age', 'laboract'),
+        ...                          ('age', 'deferenc'), ('deferenc', 'laboract'),
+        ...                          ('deferenc', 'unionsen'), ('laboract', 'unionsen')],
+        ...                  latents=[],
+        ...                  err_corr=[('yrsmill', 'age')])
+        >>> model.active_trail_nodes('age')
+
+        Returns
+        -------
+        dict: {str: list}
+            Returns a dict with `variables` as the key and a list of d-connected variables as the
+            value.
 
         References
         ----------
@@ -253,12 +288,21 @@ class SEMGraph(DirectedGraph):
         Y: node
             The dependent variable.
 
+        scaling_indicators: dict
+            Scaling indicator for each latent variable in the model.
+
         Returns
         -------
         nx.DiGraph: The transformed full graph structure.
 
         Examples
         --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('xi1', 'eta1'), ('xi1', 'x1'), ('xi1', 'x2'),
+        ...                          ('eta1', 'y1'), ('eta1', 'y2')],
+        ...                  latents=['xi1', 'eta1'])
+        >>> model._iv_transformations('xi1', 'eta1',
+        ...                           scaling_indicators={'xi1': 'x1', 'eta1': 'y1'})
         """
         full_graph = self.full_graph_struct.copy()
 
@@ -286,7 +330,7 @@ class SEMGraph(DirectedGraph):
 
     def get_ivs(self, X, Y, scaling_indicators={}):
         """
-        Returns the Instrumental variables for the relation X -> Y
+        Returns the Instrumental variables(IVs) for the relation X -> Y
 
         Parameters
         ----------
@@ -304,10 +348,17 @@ class SEMGraph(DirectedGraph):
 
         Returns
         -------
-        set: The set of Instrumental Variables for the predicted value.
+        set: {str}
+            The set of Instrumental Variables for X -> Y.
 
         Examples
         --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y')],
+        ...                  latents=[],
+        ...                  err_corr=['X', 'Y'])
+        >>> model.get_ivs('X', 'Y')
+        {'I'}
         """
         if not scaling_indicators:
             scaling_indicators = self.get_scaling_indicators()
@@ -329,6 +380,7 @@ class SEMGraph(DirectedGraph):
 
     def moralize(self, graph='full'):
         """
+        TODO: This needs to go to a parent class.
         Removes all the immoralities in the DirectedGraph and creates a moral
         graph (UndirectedGraph).
 
@@ -734,6 +786,43 @@ class SEMLISREL:
 
     def set_params(self, params):
         self.fixed_masks = params
+
+#     def get_ivs(self, scaling_indicators):
+#         scaling_vars = set(scaling_indicators.values())
+# 
+#         key_to_var = {}
+#         var_to_key = {}
+#         for key, var in enumerate(itertools.chain(self.var_names['eta'], self.var_names['xi'],
+#                                              self.var_names['y'], self.var_names['x'])):
+#             key_to_var[key] = var
+#             var_to_key[var] = key
+# 
+#         y1 = [scaling_indicators[eta] for eta in self.var_names['eta']]
+#         y2 = [var for var in self.var_names['y'] if var not in y1]
+#         x1 = [scaling_indicators[xi] for xi in self.var_names['xi']]
+#         x2 = [var for var in self.var_names['x'] if var not in x1]
+# 
+#         eta = [var_to_key[var] for var in self.var_names['eta']]
+#         xi = [var_to_key[var] for var in self.var_names['xi']]
+#         y = [var_to_key[var] for var in self.var_names['y']]
+#         x = [var_to_key[var] for var in self.var_names['x']]
+# 
+#         wedge_y2 = self.adjeceny['wedge_y'][[i for i, _ in enumerate(y) if _ not in y1], :]
+#         wedge_x2 = self.adjeceny['wedge_x'][[i for i, _ in enumerate(x) if _ not in x1], :]
+# 
+#         n_observed = len(self.var_names['y']) + len(self.var_names['x'])
+#         n_latents = len(self.var_names['eta']) + len(self.var_names['xi'])
+# 
+#         C = {}
+#         T = {}
+# 
+#         for key, var in key_to_var.items():
+#             if key in y1:
+#                 C[key] = [key] + eta[y1.index(key)]
+#             elif key in y2:
+# 
+#             elif key in x2:
+
 
 
 class SEM(SEMGraph):
