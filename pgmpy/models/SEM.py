@@ -501,14 +501,14 @@ class SEMGraph(DirectedGraph):
         Examples
         --------
         """
-        # Arrage the adjecency matrix in order y, x, eta, xi and then slice masks from it.
+        # Arrage the adjacency matrix in order y, x, eta, xi and then slice masks from it.
         #       y(p)   x(q)   eta(m)  xi(n)
         # y
         # x
         # eta \wedge_y          B
         # xi         \wedge_x \Gamma
         # 
-        # But here we are slicing from the transpose of adjecency because we want incoming
+        # But here we are slicing from the transpose of adjacency because we want incoming
         # edges instead of outgoing because parameters come before variables in equations.
         # 
         #       y(p)   x(q)   eta(m)  xi(n)
@@ -685,13 +685,13 @@ class SEMLISREL:
                 fixed_masks[p_name] = np.zeros(params[p_name].shape)
 
         self.var_names = var_names
-        self.adjecency = params
+        self.adjacency = params
         self.fixed_masks = fixed_masks
 
         # Masks represent the parameters which need to be learnt while training.
         self.masks = {}
-        for key in self.adjecency.keys():
-            self.masks[key] = np.multiply(np.where(self.fixed_masks[key] != 0, 0.0, 1.0), self.adjecency[key])
+        for key in self.adjacency.keys():
+            self.masks[key] = np.multiply(np.where(self.fixed_masks[key] != 0, 0.0, 1.0), self.adjacency[key])
 
     def __to_minimal_graph(self, graph):
         """
