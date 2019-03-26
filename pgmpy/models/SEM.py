@@ -787,43 +787,6 @@ class SEMLISREL:
     def set_params(self, params):
         self.fixed_masks = params
 
-#     def get_ivs(self, scaling_indicators):
-#         scaling_vars = set(scaling_indicators.values())
-# 
-#         key_to_var = {}
-#         var_to_key = {}
-#         for key, var in enumerate(itertools.chain(self.var_names['eta'], self.var_names['xi'],
-#                                              self.var_names['y'], self.var_names['x'])):
-#             key_to_var[key] = var
-#             var_to_key[var] = key
-# 
-#         y1 = [scaling_indicators[eta] for eta in self.var_names['eta']]
-#         y2 = [var for var in self.var_names['y'] if var not in y1]
-#         x1 = [scaling_indicators[xi] for xi in self.var_names['xi']]
-#         x2 = [var for var in self.var_names['x'] if var not in x1]
-# 
-#         eta = [var_to_key[var] for var in self.var_names['eta']]
-#         xi = [var_to_key[var] for var in self.var_names['xi']]
-#         y = [var_to_key[var] for var in self.var_names['y']]
-#         x = [var_to_key[var] for var in self.var_names['x']]
-# 
-#         wedge_y2 = self.adjeceny['wedge_y'][[i for i, _ in enumerate(y) if _ not in y1], :]
-#         wedge_x2 = self.adjeceny['wedge_x'][[i for i, _ in enumerate(x) if _ not in x1], :]
-# 
-#         n_observed = len(self.var_names['y']) + len(self.var_names['x'])
-#         n_latents = len(self.var_names['eta']) + len(self.var_names['xi'])
-# 
-#         C = {}
-#         T = {}
-# 
-#         for key, var in key_to_var.items():
-#             if key in y1:
-#                 C[key] = [key] + eta[y1.index(key)]
-#             elif key in y2:
-# 
-#             elif key in x2:
-
-
 
 class SEM(SEMGraph):
     """
