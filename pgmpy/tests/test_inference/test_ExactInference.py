@@ -93,7 +93,7 @@ class TestVariableElimination(unittest.TestCase):
                                           np.array([0.772727, 0.227273]))
 
     def test_max_marginal(self):
-        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
+        np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['A','R','J','Q','G','L']), 0.0516, decimal=4)
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G']), 0.5714, decimal=4)
@@ -107,9 +107,8 @@ class TestVariableElimination(unittest.TestCase):
                                     0.3260, decimal=4)
 
     def test_map_query(self):
-        map_query = self.bayesian_inference.map_query()
-        self.assertDictEqual(map_query, {'A': 1, 'R': 1, 'J': 1, 'Q': 1, 'G': 0,
-                                         'L': 0})
+        map_query = self.bayesian_inference.map_query(['J','Q'])
+        self.assertDictEqual(map_query, {'Q': 1, 'J': 1})
 
     def test_map_query_with_evidence(self):
         map_query = self.bayesian_inference.map_query(['A', 'R', 'L'],
@@ -217,7 +216,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
                                           np.array([0.772727, 0.227273]))
 
     def test_max_marginal(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(), 0.1659, decimal=4)
+        np_test.assert_almost_equal(self.markov_inference.max_marginal(['A','R','J','Q','G','L']), 0.0516, decimal=4)
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(self.markov_inference.max_marginal(['G']), 0.5714, decimal=4)
@@ -231,8 +230,8 @@ class TestVariableEliminationMarkov(unittest.TestCase):
                                     0.3260, decimal=4)
 
     def test_map_query(self):
-        map_query = self.markov_inference.map_query()
-        self.assertDictEqual(map_query, {'A': 1, 'R': 1, 'J': 1, 'Q': 1, 'G': 0, 'L': 0})
+        map_query = self.markov_inference.map_query(['A','R','J','Q','G','L'])
+        self.assertDictEqual(map_query, {'A': 1, 'G': 0, 'J': 1, 'L': 0, 'Q': 1, 'R': 1})
 
     def test_map_query_with_evidence(self):
         map_query = self.markov_inference.map_query(['A', 'R', 'L'],

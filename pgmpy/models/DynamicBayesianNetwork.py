@@ -346,13 +346,13 @@ class DynamicBayesianNetwork(DAG):
         >>> d_i_cpd = TabularCPD(('D',1), 2, [[0.6, 0.3],
         ...                                   [0.4, 0.7]],
         ...                      evidence=[('D',0)],
-        ...                      evidence_card=2)
+        ...                      evidence_card=[2])
         >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
         >>> intel_cpd = TabularCPD(('I', 0), 2, [[0.7, 0.3]])
         >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
         ...                                    [0.5, 0.6]],
         ...                      evidence=[('I', 0)],
-        ...                      evidence_card=2)
+        ...                      evidence_card=[2])
         >>> dbn.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> dbn.get_cpds()
         [<TabularCPD representing P(('G', 0):3 | ('I', 0):2, ('D', 0):2) at 0x7ff7f27b0cf8>,
@@ -493,13 +493,13 @@ class DynamicBayesianNetwork(DAG):
         >>> d_i_cpd = TabularCPD(('D', 1), 2, [[0.6, 0.3],
         ...                                    [0.4, 0.7]],
         ...                      evidence=[('D', 0)],
-        ...                      evidence_card=2)
+        ...                      evidence_card=[2])
         >>> diff_cpd = TabularCPD(('D', 0), 2, [[0.6, 0.4]])
         >>> intel_cpd = TabularCPD(('I',0), 2, [[0.7, 0.3]])
         >>> i_i_cpd = TabularCPD(('I', 1), 2, [[0.5, 0.4],
         ...                                    [0.5, 0.6]],
         ...                      evidence=[('I', 0)],
-        ...                      evidence_card=2)
+        ...                      evidence_card=[2])
         >>> student.add_cpds(grade_cpd, d_i_cpd, diff_cpd, intel_cpd, i_i_cpd)
         >>> student.initialize_initial_state()
         """
