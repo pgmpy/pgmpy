@@ -677,6 +677,11 @@ class SEMLISREL:
 
         param_names = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
 
+        if not fixed_masks:
+            fixed_masks = {}
+            for p_name in param_names:
+                fixed_masks[p_name] = np.zeros(params[p_name].shape, dtype=int)
+
         # Check if params has all the keys and sanitize fixed params.
         for p_name in param_names:
             if p_name not in params.keys():
