@@ -23,39 +23,31 @@ class SEMEstimator(object):
             raise ValueError("""model should be an instance of either SEMGraph or SEMLISREL class.
                                 Got type: {t}""".format(t=type(model)))
 
-        # Initialize mask tensors
-        self.masks = {}
-        self.fixed_masks = {}
-        model_params = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
-        for p_name in model_params:
-            self.masks[p_name] = torch.tensor(self.model.masks[p_name], device=device,
-                                              dtype=dtype, requires_grad=False)
-            self.fixed_masks[p_name] = torch.tensor(self.model.fixed_masks[p_name], device=device,
-                                                    dtype=dtype, requires_grad=False)
-        self.B_eye = torch.eye(self.masks['B'].shape[0], device=device, dtype=dtype, requires_grad=False)
+        # Initialize trainable and fixed mask tensors
+        self.B_mask = torch.tensor(self.model.B_mask, device=device,
+                                   dtype=dtype, requires_grad=False)
+        self.zeta_mask = torch.tensor(self.model.zeta_mask, device=device,
+                                      dtype=dtype, requires_grad=False)
 
-    def _get_implied_cov(self, B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi):
+        self.B_fixed_mask = torch.tensor(self.model.B_fixed_mask, device=device,
+                                         dtype=dtype, requires_grad=False)
+        self.zeta_fixed_mask = torch.tensor(self.model.zeta_fixed_mask, device=device,
+                                            dtype=dtype, requires_grad=False)
+
+        wedge_y = torch.tensor(self.model.wedge_y, device=device,
+                               dtype=dtype, requires_grad=False)
+        self.B_eye = torch.eye(self.B_mask.shape[0], device=device,
+                               dtype=dtype, requires_grad=False)
+
+    def _get_implied_cov(self, B, zeta):
         """
         Computes the implied covariance matrix from the given parameters.
         """
-        B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B'])
+        B_masked = torch.mul(B, self.B_mask) + self.B_fixed_mask
         B_inv = pinverse(self.B_eye - B_masked)
-        gamma_masked = torch.mul(gamma, self.masks['gamma']) + self.fixed_masks['gamma']
-        wedge_y_masked = torch.mul(wedge_y, self.masks['wedge_y']) + self.fixed_masks['wedge_y']
-        wedge_x_masked = torch.mul(wedge_x, self.masks['wedge_x']) + self.fixed_masks['wedge_x']
-        phi_masked = torch.mul(phi, self.masks['phi']) + self.fixed_masks['phi']
-        theta_e_masked = torch.mul(theta_e, self.masks['theta_e']) + self.fixed_masks['theta_e']
-        theta_del_masked = torch.mul(theta_del, self.masks['theta_del']) + self.fixed_masks['theta_del']
-        psi_masked = torch.mul(psi, self.masks['psi']) + self.fixed_masks['psi']
+        zeta_masked = torch.mul(zeta, self.zeta_mask) + self.zeta_fixed_mask
 
-        sigma_yy = wedge_y_masked @ B_inv @ (gamma_masked @ phi_masked @ gamma_masked.t() + psi_masked) @ \
-                   B_inv.t() @ wedge_y_masked.t() + theta_e_masked
-        sigma_yx = wedge_y_masked @ B_inv @ gamma_masked @ phi_masked @ wedge_x_masked.t()
-        sigma_xy = sigma_yx.t()
-        sigma_xx = wedge_x_masked @ phi_masked @ wedge_x_masked.t() + theta_del_masked
-
-        sigma = torch.cat((torch.cat((sigma_yy, sigma_yx), 1), torch.cat((sigma_xy, sigma_xx), 1)), 0)
-        return sigma
+        return self.wedge_y @ B_inv @ zeta_masked @ B_inv.t() @ self.wedge_y.t()
 
     def ml_loss(self, params, loss_args):
         """
@@ -275,14 +267,8 @@ class SEMEstimator(object):
 
         # Initialize the values of parameters as tensors.
         init_values = self.get_init_values(data, method=init_values.lower())
-        B = torch.tensor(init_values['B'], device=device, dtype=dtype, requires_grad=True)
-        gamma = torch.tensor(init_values['gamma'], device=device, dtype=dtype, requires_grad=True)
-        wedge_y = torch.tensor(init_values['wedge_y'], device=device, dtype=dtype, requires_grad=True)
-        wedge_x = torch.tensor(init_values['wedge_x'], device=device, dtype=dtype, requires_grad=True)
-        phi = torch.tensor(init_values['phi'], device=device, dtype=dtype, requires_grad=True)
-        theta_e = torch.tensor(init_values['theta_e'], device=device, dtype=dtype, requires_grad=True)
-        theta_del = torch.tensor(init_values['theta_del'], device=device, dtype=dtype, requires_grad=True)
-        psi = torch.tensor(init_values['psi'], device=device, dtype=dtype, requires_grad=True)
+        B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
+        zeta = torch.tensor(zeta_init, device=device, dtype=dtype, requires_grad=True)
 
         # Compute the covariance of the data
         variable_order = self.model.var_names['y'] + self.model.var_names['x']
@@ -291,42 +277,31 @@ class SEMEstimator(object):
 
         # Optimize the parameters
         if method.lower() == 'ml':
-            params = optimize(self.ml_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                   'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                   theta_e, 'theta_del': theta_del, 'psi': psi},
-                            loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
+            params = optimize(self.ml_loss, params={'B': B, 'zeta': zeta},
+                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta,
+                              max_iter=max_iter)
 
         elif method.lower() == 'uls':
-            params = optimize(self.uls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
-                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
-
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
+            params = optimize(self.uls_loss, params={'B': B, 'zeta': zeta},
+                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta,
+                              max_iter=max_iter)
 
         elif method.lower() == 'gls':
             W = torch.tensor(kwargs['W'], device=device, dtype=dtype, requires_grad=False)
-            params = optimize(self.gls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
+            params = optimize(self.gls_loss, params={'B': B, 'zeta': zeta},
                               loss_args={'S': S, 'W': W}, opt=opt, exit_delta=exit_delta,
                               max_iter=max_iter)
-
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
 
         elif method.lower() == '2sls' or method.lower() == '2-sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
+        B = params['B'] * self.B_mask + self.B_fixed_mask
+        zeta = params['zeta'] * self.zeta_mask + self.zeta_fixed_mask
+
         # Compute goodness of fit statistics.
         N = data.shape[0]
         sample_cov = S.detach().numpy()
-        sigma_hat = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'], params['wedge_x'],
-                                          params['phi'], params['theta_e'], params['theta_del'],
-                                          params['psi']).detach().numpy()
+        sigma_hat = self._get_implied_cov(B, zeta).detach().numpy()
         residual = sample_cov - sigma_hat
 
         norm_residual = np.zeros(residual.shape)
