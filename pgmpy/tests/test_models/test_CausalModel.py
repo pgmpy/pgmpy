@@ -2,7 +2,7 @@ import unittest
 
 import networkx as nx
 
-from pgmpy.models import CausalModel
+from pgmpy.models.CausalModel import CausalModel
 import pgmpy.tests.help_functions as hf
 
 
@@ -99,9 +99,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
 class TestBackdoorPaths(unittest.TestCase):
     """
-    These tests are drawn from games presented in The Book of Why and
-    Causality by Judea Pearl.  They are small enough to be easy to 
-    confirm by hand.
+    These tests are drawn from games presented in The Book of Why by Judea Pearl.
+    They are small enough to be easy to confirm by hand.
     """
     def test_game1(self):
         game1 = CausalModel([('X', 'A'),
@@ -149,53 +148,5 @@ class TestBackdoorPaths(unittest.TestCase):
                             ('B', 'X')])
         deconfounders = game5.get_deconfounders(treatment="X",
                                                 outcome="Y",
-                                                maxdepth=2)
-        self.assertEqual(deconfounders, [('C',), ('A', 'B'), ('A', 'C'), ('B', 'C')])
-
-    def test_game6(self):
-        game6 = CausalModel([('A', 'X'),
-                            ('C', 'B'),
-                            ('C', 'Y'),
-                            ('X', 'Y'),
-                            ('B', 'X'),
-                            ("A", "Y")])
-        deconfounders = game6.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [('A', 'B'), ('A', 'C'), ('A', 'B', 'C')])
-
-    def test_game7(self):
-        game7 = CausalModel([('X', 'A'),
-                             ('C', 'B'),
-                             ('C', 'Y'),
-                             ('X', 'Y'),
-                             ('B', 'X'),
-                             ("A", "Y")])
-        deconfounders = game7.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [('B',), ('C',), ('B', 'C')])
-
-    def test_game8(self):
-        game8 = CausalModel([('A', 'C'),
-                            ('A', 'D'),
-                            ('B', 'D'),
-                            ('B', 'E'),
-                            ('C', 'X'),
-                            ("X", "F"),
-                            ("F", "Y"),
-                            ("E", "Y"),
-                            ("D", "X"),
-                            ("D", "Y")])
-        deconfounders = game8.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [('E', 'D'),
-                                        ('C', 'D'),
-                                        ('B', 'D'),
-                                        ('A', 'D'),
-                                        ('E', 'C', 'D'),
-                                        ('E', 'B', 'D'),
-                                        ('E', 'A', 'D'),
-                                        ('C', 'B', 'D'),
-                                        ('C', 'A', 'D'),
-                                        ('B', 'A', 'D'),
-                                        ('E', 'C', 'B', 'D'),
-                                        ('E', 'C', 'A', 'D'),
-                                        ('E', 'B', 'A', 'D'),
-                                        ('C', 'B', 'A', 'D'),
-                                        ('E', 'C', 'B', 'A', 'D')])
+                                                maxdepth=1)
+        self.assertEqual(sorted(deconfounders), sorted([('C',),]))

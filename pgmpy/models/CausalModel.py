@@ -61,12 +61,12 @@ class CausalModel(BayesianModel):
             The name of the variable we want to treat as the outcome.
         """
         active_backdoor_nodes = set()
-        bdroots = set(self.graph.get_parents(treatment))
+        bdroots = set(self.get_parents(treatment))
         for node in bdroots:
             active_backdoor_nodes = active_backdoor_nodes.union(
-                self.graph.active_trail_nodes(node, observed=treatment)[node])
+                self.active_trail_nodes(node, observed=treatment)[node])
         has_active_bdp = outcome in active_backdoor_nodes
-        bdg = self.graph.subgraph(active_backdoor_nodes)
+        bdg = self.subgraph(active_backdoor_nodes)
         return has_active_bdp, bdg, bdroots
 
     def get_possible_deconfounders(self, possible_nodes, maxdepth=None):
@@ -135,16 +135,16 @@ class CausalModel(BayesianModel):
     def get_deconfounders(self, treatment, outcome, maxdepth=None):
         """
         Return a list of all possible of deconfounding sets by backdoor
-        adjustment per Pearl, "Causality: Models, Reasoning, and Inference", 
+        adjustment per Pearl, "Causality: Models, Reasoning, and Inference",
         p.79 up to sets of size maxdepth.
 
         Parameters
         ----------
         treatment
         """
-        has_active_bdp, bdg, bdroots = self.check_active_backdoors(self.graph)
+        has_active_bdp, bdg, bdroots = self.check_active_backdoors(treatment, outcome)
         if has_active_bdp:
-            deconfounding_set = self.check_deconfounders(bdg, bdroots, maxdepth=maxdepth)
+            deconfounding_set = self.check_deconfounders(bdg, bdroots, treatment, outcome, maxdepth=maxdepth)
         else:
             deconfounding_set = []
         return deconfounding_set
