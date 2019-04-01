@@ -379,9 +379,11 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(set(self.demo_params.err_graph.nodes()),
                             set(demo_params_graph.err_graph.nodes()))
         npt.assert_array_equal(nx.to_numpy_matrix(self.demo_params.err_graph,
-                                                  nodelist=sorted(self.demo_params.err_graph.nodes())),
-                               nx.to_numpy_matrix(demo_graph,
-                                                  nodelist=sorted(demo_params_graph.err_graph.nodes())))
+                                                  nodelist=sorted(self.demo_params.err_graph.nodes()),
+                                                  weight=None),
+                               nx.to_numpy_matrix(demo_graph.err_graph,
+                                                  nodelist=sorted(demo_params_graph.err_graph.nodes()),
+                                                  weight=None))
 
         self.assertSetEqual(set(self.demo_params.full_graph_struct.nodes()),
                             set(demo_params_graph.full_graph_struct.nodes()))
@@ -623,5 +625,3 @@ class TESTSEMLISREL(unittest.TestCase):
                                        ('y6', 'y8')])
         self.demo_lisrel = self.demo.to_lisrel()
 
-    def test_get_ivs(self):
-        self.demo_lisrel.get_ivs()
