@@ -480,19 +480,19 @@ class SEMGraph(DirectedGraph):
         Examples
         --------
         """
-        nodelist = list(self.observed + self.latents)
+        nodelist = list(self.observed) + list(self.latents)
         graph_adj = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=None)
         graph_fixed = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight='weight')
 
         err_adj = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight=None)
         err_fixed = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight='weight')
 
-        wedge_y = np.zeros((len(self.observed), len(nodelist)))
+        wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
         for index, obs_var in enumerate(self.observed):
             wedge_y[index][nodelist.index(obs_var)] = 1.0
 
         from pgmpy.models import SEMLISREL
-        return SEMLISREL(eta=nodelist, B=graph_adj, zeta=err_adj, wedge_y=wedge_y,
+        return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
                          fixed_values={'B': graph_fixed, 'zeta': err_fixed})
 
 
@@ -547,8 +547,8 @@ class SEMLISREL:
         # TODO: Finish this example
         """
         self.eta = eta
-        self.B = B
-        self.zeta = zeta
+        self.B = np.array(B)
+        self.zeta = np.array(zeta)
         self.wedge_y = wedge_y
 
         if fixed_values:
@@ -576,16 +576,16 @@ class SEMLISREL:
         >>> model = SEMLISREL()
         # TODO: Finish this example
         """
-        graph = nx.relabel_nodes(nx.from_numpy_matrix(self.B),
+        graph = nx.relabel_nodes(nx.from_numpy_matrix(self.B.T, create_using=nx.DiGraph),
                                  mapping={i: self.eta[i] for i in range(self.B.shape[0])})
-        err_graph = nx.relabel_nodes(nx.from_numpy_matrix(self.zeta),
+        err_graph = nx.relabel_nodes(nx.from_numpy_matrix(self.zeta.T, create_using=nx.Graph),
                                      mapping={i: self.eta[i] for i in range(self.zeta.shape[0])})
 
         # Extract observed variables from `eta` using `wedge_y`
         observed = []
-        for row in self.wedge_y:
-            for index, i in enumerate(self.wedge_y[row]):
-                if i:
+        for row_i in range(self.wedge_y.shape[0]):
+            for index, val in enumerate(self.wedge_y[row_i]):
+                if val:
                     observed.append(self.eta[index])
         latents = set(self.eta) - set(observed)
 
