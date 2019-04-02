@@ -110,7 +110,7 @@ class CausalModel(BayesianModel):
             should be larger than the number of possible variables, but error
             catching will prvent it from being too large.
         """
-        nodes = set(bdgraph.nodes)
+        nodes = set(bdgraph.nodes())
         complete = []
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({'Y'}), maxdepth=maxdepth)
