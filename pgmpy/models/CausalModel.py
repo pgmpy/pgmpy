@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 
-import itertools
 from itertools import combinations
-from collections import defaultdict
-import logging
-from operator import mul
-
-import networkx as nx
-import numpy as np
-import pandas as pd
 
 from pgmpy.models.BayesianModel import BayesianModel
 
