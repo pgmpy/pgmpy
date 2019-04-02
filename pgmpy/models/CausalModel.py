@@ -111,7 +111,7 @@ class CausalModel(BayesianModel):
             catching will prvent it from being too large.
         """
         nodes = set(bdgraph.nodes())
-        complete = []
+        complete_sets = []
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({'Y'}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
@@ -121,8 +121,8 @@ class CausalModel(BayesianModel):
                 active[bd] = active.get(bd, 0) + a
             still_active = sum([val > 0 for val in active.values()])
             if still_active == 0:
-                complete.append(deconfounder)
-        return complete
+                complete_sets.append(deconfounder)
+        return complete_sets
 
     def get_deconfounders(self, treatment, outcome, maxdepth=None):
         """
@@ -130,9 +130,30 @@ class CausalModel(BayesianModel):
         adjustment per Pearl, "Causality: Models, Reasoning, and Inference",
         p.79 up to sets of size maxdepth.
 
+        TODO:
+          * We ultimately want an estimand which, per the backdoor and/or frontdoor 
+            crition deconfounds our indicated treatment outcome. This method should
+            either be expanded to include the frontdoor criterion and renamed to 
+            specify that it only does backdoor adjustment. 
+          * This method defaults to identifying all possible sets of deconfounders, 
+            but leaves a few interesting problems unsolved.  First, we don't necessarily
+            know if our graph is identifiable.  Since we use a DAG as the base, we don't
+            have to worry about the "bow" pattern which, per Causality by Pearl, will typically
+            result in an unidentifiable graph. 
+          * Another big problem comes from the unobserved variables.  Suppose even 
+            if we do identify a set of deconfounders, one or multiple of them might be unobserved.
+          * Finally, our users probably don't want to choose their estimand themselves, but
+            actually want a default decision rule implement.  Likely something like, "choose the 
+            estimand with the smallest number of observed factors."
+
         Parameters
         ----------
-        treatment
+        treatment : string
+            The name of the varaible we want to consider as the treatment.
+            We probably will want to eventually meausure the causal effect
+            of the treatment on the outcome.
+        outcomes : string
+            The name of the variable we want to treat as the outcome.
         """
         has_active_bdp, bdg, bdroots = self.check_active_backdoors(treatment, outcome)
         if has_active_bdp:
