@@ -551,6 +551,13 @@ class SEMLISREL:
         self.zeta = np.array(zeta)
         self.wedge_y = wedge_y
 
+        # Get the observed variables
+        self.y = []
+        for row_i in range(self.wedge_y.shape[0]):
+            for index, val in enumerate(self.wedge_y[row_i]):
+                if val:
+                    self.y.append(self.eta[index])
+
         if fixed_values:
             self.B_fixed_mask = fixed_values['B']
             self.zeta_fixed_mask = fixed_values['zeta']
@@ -580,14 +587,7 @@ class SEMLISREL:
                                  mapping={i: self.eta[i] for i in range(self.B.shape[0])})
         err_graph = nx.relabel_nodes(nx.from_numpy_matrix(self.zeta.T, create_using=nx.Graph),
                                      mapping={i: self.eta[i] for i in range(self.zeta.shape[0])})
-
-        # Extract observed variables from `eta` using `wedge_y`
-        observed = []
-        for row_i in range(self.wedge_y.shape[0]):
-            for index, val in enumerate(self.wedge_y[row_i]):
-                if val:
-                    observed.append(self.eta[index])
-        latents = set(self.eta) - set(observed)
+        latents = set(self.eta) - set(self.y)
 
         from pgmpy.models import SEMGraph
         # TODO: Add edge weights

@@ -34,8 +34,8 @@ class SEMEstimator(object):
         self.zeta_fixed_mask = torch.tensor(self.model.zeta_fixed_mask, device=device,
                                             dtype=dtype, requires_grad=False)
 
-        wedge_y = torch.tensor(self.model.wedge_y, device=device,
-                               dtype=dtype, requires_grad=False)
+        self.wedge_y = torch.tensor(self.model.wedge_y, device=device,
+                                    dtype=dtype, requires_grad=False)
         self.B_eye = torch.eye(self.B_mask.shape[0], device=device,
                                dtype=dtype, requires_grad=False)
 
@@ -72,12 +72,10 @@ class SEMEstimator(object):
         torch.tensor: The loss value for the given params and loss_args
         """
         S = loss_args['S']
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
 
         return (sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() -
-                (len(self.model.var_names['y'])+ len(self.model.var_names['x'])))
+                len(self.model.y))
 
     def uls_loss(self, params, loss_args):
         """
@@ -102,9 +100,7 @@ class SEMEstimator(object):
         torch.tensor: The loss value for the given params and loss_args
         """
         S = loss_args['S']
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
         return (S - sigma).pow(2).trace()
 
     def gls_loss(self, params, loss_args):
@@ -131,9 +127,7 @@ class SEMEstimator(object):
         """
         S = loss_args['S']
         W_inv = pinverse(loss_args['W'])
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
         return ((S - sigma) @ W_inv).pow(2).trace()
 
     def get_init_values(self, data, method):
@@ -149,25 +143,12 @@ class SEMEstimator(object):
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
         a = 0.4
         scaling_vars = self.model.to_SEMGraph().get_scaling_indicators()
-        eta, m = sorted(self.model.var_names['eta']), len(self.model.var_names['eta'])
-        xi, n = sorted(self.model.var_names['xi']), len(self.model.var_names['xi'])
-        y, p = sorted(self.model.var_names['y']), len(self.model.var_names['y'])
-        x, q = sorted(self.model.var_names['x']), len(self.model.var_names['x'])
-
-        for var in itertools.chain(eta, xi):
-            if var.startswith('_l_'):
-                scaling_vars[var] = var[3:]
-
         if method == 'random':
+            eta, m = self.model.eta, len(self.model.eta)
             B = np.random.rand(m, m)
-            gamma = np.random.rand(m, n)
-            wedge_y = np.random.rand(p, m)
-            wedge_x = np.random.rand(q, n)
-            theta_e = np.random.rand(p, p)
-            theta_del = np.random.rand(q, q)
-            psi = np.random.rand(m, m)
-            phi = np.random.rand(n, n)
+            zeta = np.random.rand(m, m)
 
+        #TODO: Get these values
         elif method == 'std':
             B = np.random.rand(m, m)
             for i in range(m):
@@ -221,8 +202,7 @@ class SEMEstimator(object):
         elif method.lower() == 'iv':
             raise NotImplementedError("IV initialization not supported yet.")
 
-        return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
-                'theta_e': theta_e, 'theta_del': theta_del, 'psi': psi, 'phi': phi}
+        return B, zeta
 
     def fit(self, data, method, opt='adam', init_values='random', exit_delta=1e-4, max_iter=1000, **kwargs):
         """
@@ -260,18 +240,18 @@ class SEMEstimator(object):
         if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
-        if not sorted(data.columns) == sorted(self.model.var_names['x'] + self.model.var_names['y']):
+        if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError("""The column names data do not match the variables in the model. Expected:
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
 
         # Initialize the values of parameters as tensors.
-        init_values = self.get_init_values(data, method=init_values.lower())
+        B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
         B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
         zeta = torch.tensor(zeta_init, device=device, dtype=dtype, requires_grad=True)
 
         # Compute the covariance of the data
-        variable_order = self.model.var_names['y'] + self.model.var_names['x']
+        variable_order = self.model.y
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
