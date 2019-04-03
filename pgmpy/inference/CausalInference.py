@@ -45,13 +45,13 @@ class CausalInference(Inference):
             The name of the variable we want to treat as the outcome.
         """
         active_backdoor_nodes = set()
-        bdroots = set(self.get_parents(treatment))
+        bdroots = set(self.model.get_parents(treatment))
         for node in bdroots:
             # See docstring, this method probably gives us extra nodes
             active_backdoor_nodes = active_backdoor_nodes.union(
-                self.active_trail_nodes(node, observed=treatment)[node])
+                self.model.active_trail_nodes(node, observed=treatment)[node])
         has_active_bdp = outcome in active_backdoor_nodes
-        bdg = self.subgraph(active_backdoor_nodes)
+        bdg = self.model.subgraph(active_backdoor_nodes)
         return has_active_bdp, bdg, bdroots
 
     def get_possible_deconfounders(self, possible_nodes, maxdepth=None):
