@@ -728,7 +728,7 @@ class SEM(SEMGraph):
         Examples
         --------
         """
-        return cls(lavaan_str=lavaan_str)
+        return cls(syntax='lavaan', lavaan_str=lavaan_str)
 
     @classmethod
     def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
@@ -785,7 +785,7 @@ class SEM(SEMGraph):
         [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
             media/File:Example_Structural_equation_model.svg
         """
-        return cls(ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
+        return cls(syntax='graph', ebunch=ebunch, latents=latents, err_corr=err_corr, err_var=err_var)
 
     @classmethod
     def from_lisrel(cls, var_names, params, fixed_masks=None):
