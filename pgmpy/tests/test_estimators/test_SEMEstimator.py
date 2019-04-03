@@ -65,33 +65,19 @@ class TestSEMEstimator(unittest.TestCase):
     def test_get_init_values(self):
         demo_estimator = SEMEstimator(self.demo)
         for method in ['random', 'std']:
-            init_values = demo_estimator.get_init_values(data=self.demo_data, method=method)
+            B_init, zeta_init = demo_estimator.get_init_values(data=self.demo_data, method=method)
 
             demo_lisrel = self.demo.to_lisrel()
-            m, n, p, q = (len(demo_lisrel.var_names['eta']), len(demo_lisrel.var_names['xi']),
-                          len(demo_lisrel.var_names['y']), len(demo_lisrel.var_names['x']))
-            self.assertEqual(init_values['B'].shape, (m, m))
-            self.assertEqual(init_values['gamma'].shape, (m, n))
-            self.assertEqual(init_values['wedge_y'].shape, (p, m))
-            self.assertEqual(init_values['wedge_x'].shape, (q, n))
-            self.assertEqual(init_values['theta_e'].shape, (p, p))
-            self.assertEqual(init_values['theta_del'].shape, (q, q))
-            self.assertEqual(init_values['psi'].shape, (m, m))
-            self.assertEqual(init_values['phi'].shape, (n, n))
+            m = len(demo_lisrel.eta)
+            self.assertEqual(B_init.shape, (m, m))
+            self.assertEqual(zeta_init.shape, (m, m))
 
             union_estimator = SEMEstimator(self.union)
-            init_values = union_estimator.get_init_values(data=self.union_data, method=method)
+            B_init, zeta_init = union_estimator.get_init_values(data=self.union_data, method=method)
             union_lisrel = self.union.to_lisrel()
-            m, n, p, q = (len(union_lisrel.var_names['eta']), len(union_lisrel.var_names['xi']),
-                          len(union_lisrel.var_names['y']), len(union_lisrel.var_names['x']))
-            self.assertEqual(init_values['B'].shape, (m, m))
-            self.assertEqual(init_values['gamma'].shape, (m, n))
-            self.assertEqual(init_values['wedge_y'].shape, (p, m))
-            self.assertEqual(init_values['wedge_x'].shape, (q, n))
-            self.assertEqual(init_values['theta_e'].shape, (p, p))
-            self.assertEqual(init_values['theta_del'].shape, (q, q))
-            self.assertEqual(init_values['psi'].shape, (m, m))
-            self.assertEqual(init_values['phi'].shape, (n, n))
+            m = len(union_lisrel.eta)
+            self.assertEqual(B_init.shape, (m, m))
+            self.assertEqual(zeta_init.shape, (m, m))
 
     @unittest.skip
     def test_demo_estimator_random_init(self):

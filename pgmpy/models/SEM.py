@@ -519,6 +519,7 @@ class SEMGraph(DirectedGraph):
         graph_fixed = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight='weight')
 
         err_adj = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight=None)
+        np.fill_diagonal(err_adj, 1.0)
         err_fixed = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight='weight')
 
         wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
