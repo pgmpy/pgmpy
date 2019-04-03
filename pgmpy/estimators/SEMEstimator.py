@@ -271,8 +271,7 @@ class SEMEstimator(object):
             error = self.gls_loss(params, loss_args={'S': S, 'W': W})
         chi_square = likelihood_ratio / error.detach().numpy()
 
-        free_params = (self.masks['B'].sum() + self.masks['gamma'].sum() + self.masks['wedge_y'].sum() +
-                       self.masks['wedge_x'].sum())
+        free_params = self.B_mask.sum()
         dof = ((S.shape[0] * (S.shape[0]+1)) / 2) - free_params
 
         summary = {'Sample Size': N,
