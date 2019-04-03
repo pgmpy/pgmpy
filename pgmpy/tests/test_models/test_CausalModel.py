@@ -100,7 +100,9 @@ class TestBaseModelCreation(unittest.TestCase):
 class TestBackdoorPaths(unittest.TestCase):
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl.
-    They are small enough to be easy to confirm by hand.
+
+    TODO:
+      * There should be tests for 
     """
     def test_game1(self):
         game1 = CausalModel([('X', 'A'),
@@ -133,9 +135,9 @@ class TestBackdoorPaths(unittest.TestCase):
 
     def test_game4(self):
         game4 = CausalModel([('A', 'X'),
-                              ('A', 'B'),
-                              ('C', 'B'),
-                              ('C', 'Y')])
+                             ('A', 'B'),
+                             ('C', 'B'),
+                             ('C', 'Y')])
         deconfounders = game4.get_deconfounders(treatment="X", outcome="Y")
         self.assertEqual(deconfounders, [])
 
@@ -149,4 +151,4 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = game5.get_deconfounders(treatment="X",
                                                 outcome="Y",
                                                 maxdepth=1)
-        self.assertEqual(sorted(deconfounders), sorted([('C',),]))
+        self.assertEqual(deconfounders, [('C',),])

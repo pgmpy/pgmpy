@@ -66,6 +66,10 @@ class CausalModel(BayesianModel):
         Generates the set of possible combinations of deconfounding variables
         up to a certain depth.
 
+        TODO:
+          * This is really not that great of a method... combinations from itertools 
+            is removing the obvious duplicates, but 
+
         Parameters
         ----------
         possible_nodes : set
@@ -113,11 +117,11 @@ class CausalModel(BayesianModel):
         nodes = set(bdgraph.nodes())
         complete_sets = []
         possible_deconfounders = self.get_possible_deconfounders(
-            nodes.difference({'Y'}), maxdepth=maxdepth)
+            nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
             active = {}
             for bd in bdroots:
-                a = int("Y" in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
+                a = int(outcome in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
                 active[bd] = active.get(bd, 0) + a
             still_active = sum([val > 0 for val in active.values()])
             if still_active == 0:
