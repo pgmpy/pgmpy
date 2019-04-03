@@ -284,6 +284,5 @@ class SEMEstimator(object):
                   }
 
         # Update the model with the learned params
-        self.model.set_params({key: value.detach().numpy() for key, value in params.items()})
-
+        self.model.set_params(B=params['B'].detach().numpy(), zeta=params['B'].detach().numpy())
         return summary
