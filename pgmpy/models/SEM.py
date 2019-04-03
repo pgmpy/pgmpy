@@ -600,6 +600,17 @@ class SEMLISREL:
         return sem_graph
 
     def set_params(self, B, zeta):
+        """
+        Sets the fixed parameters of the model.
+
+        Parameters
+        ----------
+        B: 2D array
+            The B matrix.
+
+        zeta: 2D array
+            The covariance matrix.
+        """
         self.B_fixed_mask = B
         self.zeta_fixed_mask = zeta
 
@@ -614,35 +625,42 @@ class SEM(SEMGraph):
     model: SEMGraph instance
         A graphical representation of the model.
     """
-    def __init__(self, lavaan_str=None, ebunch=[], latents=[], err_corr=[],
-                 err_var={}, var_names=None, params=None, fixed_masks=None):
+    def __init__(self, syntax, **kwargs):
         """
         Initialize a `SEM` object. Prefered way to initialize the object is to use one of
-        the `from_lavaan`, `from_graph`, or `from_lisrel` methods.
+        the `from_lavaan`, `from_graph`, `from_lisrel`, or `from_RAM` methods.
 
         There are three possible ways to initialize the model:
             1. Lavaan syntax: `lavaan_str` needs to be specified.
             2. Graph structure: `ebunch`, `latents`, `err_corr`, and `err_var` need to specified.
             3. LISREL syntax: `var_names`, `params`, and `fixed_masks` need to be specified.
+            4. Reticular Action Model (RAM/all-y) syntax: `var_names`, `B`, `zeta`, and `wedge_y`
+                                                            need to be specified.
 
         Parameters
         ----------
-        For parameter details, check docstrings for `from_lavaan`, `from_graph`, and `from_lisrel`
-        methods.
+        syntax: str (lavaan|graph|lisrel|ram)
+            The syntax used to initialize the model.
+
+        kwargs:
+            For parameter details, check docstrings for `from_lavaan`, `from_graph`, `from_lisrel`,
+            and `from_RAM` methods.
 
         See Also
         --------
         from_lavaan: Initialize a model using lavaan syntax.
         from_graph: Initialize a model using graph structure.
         from_lisrel: Initialize a model using LISREL syntax.
+        from_RAM: Initialize a model using Reticular Action Model(RAM/all-y) syntax.
         """
-        if lavaan_str:
+        if syntax.lower() == 'lavaan':
             # Create a SEMGraph model using the lavaan str.
             raise NotImplementedError("Lavaan syntax is not supported yet.")
-        elif ebunch:
-            super(SEM, self).__init__(ebunch=ebunch, latents=latents,
-                                      err_corr=err_corr, err_var=err_var)
-        elif var_names:
+        elif syntax.lower() == 'graph':
+            super(SEM, self).__init__(ebunch=kwargs['ebunch'], latents=kwargs['latents'],
+                                      err_corr=kwargs['err_corr'], err_var=kwargs['err_var'])
+        elif syntax.lower() == 'lisrel':
+
             model = SEMLISREL(var_names=var_names, params=params, fixed_masks=fixed_masks).to_SEMGraph()
             # Initialize an empty SEMGraph instance and set the properties.
             # TODO: Boilerplate code, find a better way to do this.
@@ -652,6 +670,13 @@ class SEM(SEMGraph):
             self.obseved = model.observed
             self.err_graph = model.err_graph
             self.full_graph_struct = model.full_graph_struct
+
+
+
+        elif syntax.lower() == 'ram':
+            model = SEMLISREL(eta=kwargs['var_names'], B=kwargs['B'],
+                              zeta=kwargs['zeta'], wedge_y=kwargs['wedge_y'],
+                              fixed_values=fixed_masks)
 
     @classmethod
     def from_lavaan(cls, lavaan_str):
@@ -777,7 +802,86 @@ class SEM(SEMGraph):
         >>> from pgmpy.models import SEMLISREL
         # TODO: Finish this example
         """
-        return cls(var_names=var_names, params=params, fixed_masks=fixed_masks)
+        eta = var_names['y'] + var_names['x'] + var_names['eta'] + var_names['xi']
+        m, n, p, q = len(var_names['y']), len(var_names['x']), len(var_names['eta']), len(var_names['xi'])
+
+        B = np.block([[np.zeros((m, m+n)), params['wedge_y'], np.zeros((m, q))],
+                      [np.zeros((n, m+n+p)), params['wedge_x']],
+                      [np.zeros((p, m+n)), params['B'], params['gamma']],
+                      [np.zeros((q, m+n+p+q))]])
+        zeta = np.block([[params['theta_e'], np.zeros((m, n+p+q))],
+                         [np.zeros((n, m)), params['theta_del'], np.zeros((n, p+q))],
+                         [np.zeros((p, m+n)), params['psi'], np.zeros((p, q))],
+                         [np.zeros((q, m+n+p)), params['phi']]])
+
+        B = np.block([[np.zeros((m, m+n)), fixed_params['wedge_y'], np.zeros((m, q))],
+                      [np.zeros((n, m+n+p)), fixed_params['wedge_x']],
+                      [np.zeros((p, m+n)), fixed_params['B'], fixed_params['gamma']],
+                      [np.zeros((q, m+n+p+q))]])
+        zeta = np.block([[fixed_params['theta_e'], np.zeros((m, n+p+q))],
+                         [np.zeros((n, m)), fixed_params['theta_del'], np.zeros((n, p+q))],
+                         [np.zeros((p, m+n)), fixed_params['psi'], np.zeros((p, q))],
+                         [np.zeros((q, m+n+p)), fixed_params['phi']]])
+        observed = var_names['y'] + var_names['x']
+
+        return cls.from_RAM(variables=eta, B=B, zeta=zeta, observed=observed,
+                            fixed_values={'B': B, 'zeta': zeta})
+
+    @classmethod
+    def from_RAM(cls, variables, B, zeta, observed=None, wedge_y=None, fixed_values=None):
+        r"""
+        Initializes a `SEM` instance using Reticular Action Model(RAM) notation. The model
+        is defined as:
+        ..math::
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\epsilon} \\
+            \mathbf{\y} = \wedge_y \mathbf{\eta}
+            \zeta = COV(\mathbf{\epsilon})
+
+        where :math:`\mathbf{\eta}` is the set of variables (both latent and observed),
+        :math:`\mathbf{\epsilon}` are the error terms, :math:`\mathbf{y}` is the set
+        of observed variables, :math:`\wedge_y` is a boolean array of the shape (no of
+        observed variables, no of total variables).
+
+        Parameters
+        ----------
+        variables: list, array-like
+            List of variables (both latent and observed) in the model.
+
+        B: 2-D boolean array (shape: `len(variables)` x `len(variables)`)
+            The non-zero parameters in :math:`B` matrix. Refer model definition in docstring for details.
+
+        zeta: 2-D boolean array (shape: `len(variables)` x `len(variables)`)
+            The non-zero parameters in :math:`\zeta` (error covariance) matrix. Refer model definition
+            in docstring for details.
+
+        observed: list, array-like (optional: Either `observed` or `wedge_y` needs to be specified)
+            List of observed variables in the model.
+
+        wedge_y: 2-D array (shape: no. observed x total vars) (optional: Either `observed` or `wedge_y`)
+            The :math:`\wedge_y` matrix. Refer model definition in docstring for details.
+
+        fixed_values: dict (optional)
+            If specified, fixes the parameter values and are not changed during estimation.
+            A dict with the keys B, zeta.
+
+        Returns
+        -------
+        pgmpy.models.SEM instance: An instance of the object with initialized values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEM
+        >>> SEM.from_RAM(TODO: Finish this)
+        """
+        if observed:
+            wedge_y = np.zeros((len(variables), len(observed)))
+            obs_dict = {var: index for index, var in enumerate(observed)}
+            all_dict = {var: index for index, var in enumerate(variables)}
+            for var in observed:
+                wedge_y[obs_dict[var], all_dict[var]] = 1
+
+        return cls(syntax='ram', var_names=variables, B=B, zeta=zeta,
+                   wedge_y=wedge_y, fixed_values=fixed_values)
 
     def fit(self):
         pass
