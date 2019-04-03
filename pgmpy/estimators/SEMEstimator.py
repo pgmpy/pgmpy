@@ -143,61 +143,31 @@ class SEMEstimator(object):
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
         a = 0.4
         scaling_vars = self.model.to_SEMGraph().get_scaling_indicators()
+        eta, m = self.model.eta, len(self.model.eta)
+
         if method == 'random':
-            eta, m = self.model.eta, len(self.model.eta)
             B = np.random.rand(m, m)
             zeta = np.random.rand(m, m)
 
-        #TODO: Get these values
         elif method == 'std':
+            # Add observed vars to `scaling_vars to point to itself. Trick to keep code short.
+            for observed_var in self.model.y:
+                scaling_vars[observed_var] = observed_var
+
             B = np.random.rand(m, m)
             for i in range(m):
                 for j in range(m):
-                    if i != j:
+                    if scaling_vars[eta[i]] == eta[j]:
+                        B[i, j] = 1.0
+                    elif i != j:
                         B[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
                                        data.loc[:, scaling_vars[eta[j]]].std())
-
-            gamma = np.random.rand(m, n)
+            zeta = np.random.rand(m, m)
             for i in range(m):
-                for j in range(n):
-                    gamma[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
-                                       data.loc[:, scaling_vars[xi[j]]].std())
-
-            wedge_y = np.random.rand(p, m)
-            for i in range(p):
+                zeta[i, i] = a * ((data.loc[:, scaling_vars[eta[i]]].std())**2)
+            for i in range(m):
                 for j in range(m):
-                    if scaling_vars[eta[j]] == y[i]:
-                        wedge_y[i, j] = 1.0
-                    else:
-                        wedge_y[i, j] = a * (data.loc[:, y[i]].std() /
-                                             data.loc[:, scaling_vars[eta[j]]].std())
-
-            wedge_x = np.random.rand(q, n)
-            for i in range(q):
-                for j in range(n):
-                    if scaling_vars[xi[j]] == x[i]:
-                        wedge_x[i, j] = 1.0
-                    else:
-                        wedge_x[i, j] = a * (data.loc[:, x[i]].std() /
-                                             data.loc[:, scaling_vars[xi[j]]].std())
-
-            theta_e = np.random.rand(p, p)
-            for i in range(p):
-                theta_e[i, i] = a * ((data.loc[:, y[i]].std())**2)
-            for i in range(p):
-                for j in range(i):
-                    theta_e[i, j] = theta_e[j, i] = a * np.sqrt(theta_e[i, i] * theta_e[j, j])
-
-            theta_del = a * data.loc[:, x].cov().values
-
-            psi = np.random.rand(m, m)
-            for i in range(m):
-                psi[i, i] = a * ((data.loc[:, scaling_vars[eta[i]]].std())**2)
-            for i in range(m):
-                for j in range(i):
-                    psi[i, j] = psi[j, i] = a * np.sqrt(psi[i, i] * psi[j, j])
-
-            phi = a * data.loc[:, [scaling_vars[i] for i in xi]].cov().values
+                    zeta[i, j] = zeta[j, i] = a * np.sqrt(zeta[i, i] * zeta[j, j])
 
         elif method.lower() == 'iv':
             raise NotImplementedError("IV initialization not supported yet.")
