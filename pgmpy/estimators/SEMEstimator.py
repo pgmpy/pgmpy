@@ -23,39 +23,31 @@ class SEMEstimator(object):
             raise ValueError("""model should be an instance of either SEMGraph or SEMLISREL class.
                                 Got type: {t}""".format(t=type(model)))
 
-        # Initialize mask tensors
-        self.masks = {}
-        self.fixed_masks = {}
-        model_params = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
-        for p_name in model_params:
-            self.masks[p_name] = torch.tensor(self.model.masks[p_name], device=device,
-                                              dtype=dtype, requires_grad=False)
-            self.fixed_masks[p_name] = torch.tensor(self.model.fixed_masks[p_name], device=device,
-                                                    dtype=dtype, requires_grad=False)
-        self.B_eye = torch.eye(self.masks['B'].shape[0], device=device, dtype=dtype, requires_grad=False)
+        # Initialize trainable and fixed mask tensors
+        self.B_mask = torch.tensor(self.model.B_mask, device=device,
+                                   dtype=dtype, requires_grad=False)
+        self.zeta_mask = torch.tensor(self.model.zeta_mask, device=device,
+                                      dtype=dtype, requires_grad=False)
 
-    def _get_implied_cov(self, B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, psi):
+        self.B_fixed_mask = torch.tensor(self.model.B_fixed_mask, device=device,
+                                         dtype=dtype, requires_grad=False)
+        self.zeta_fixed_mask = torch.tensor(self.model.zeta_fixed_mask, device=device,
+                                            dtype=dtype, requires_grad=False)
+
+        self.wedge_y = torch.tensor(self.model.wedge_y, device=device,
+                                    dtype=dtype, requires_grad=False)
+        self.B_eye = torch.eye(self.B_mask.shape[0], device=device,
+                               dtype=dtype, requires_grad=False)
+
+    def _get_implied_cov(self, B, zeta):
         """
         Computes the implied covariance matrix from the given parameters.
         """
-        B_masked = (torch.mul(B, self.masks['B']) + self.fixed_masks['B'])
+        B_masked = torch.mul(B, self.B_mask) + self.B_fixed_mask
         B_inv = pinverse(self.B_eye - B_masked)
-        gamma_masked = torch.mul(gamma, self.masks['gamma']) + self.fixed_masks['gamma']
-        wedge_y_masked = torch.mul(wedge_y, self.masks['wedge_y']) + self.fixed_masks['wedge_y']
-        wedge_x_masked = torch.mul(wedge_x, self.masks['wedge_x']) + self.fixed_masks['wedge_x']
-        phi_masked = torch.mul(phi, self.masks['phi']) + self.fixed_masks['phi']
-        theta_e_masked = torch.mul(theta_e, self.masks['theta_e']) + self.fixed_masks['theta_e']
-        theta_del_masked = torch.mul(theta_del, self.masks['theta_del']) + self.fixed_masks['theta_del']
-        psi_masked = torch.mul(psi, self.masks['psi']) + self.fixed_masks['psi']
+        zeta_masked = torch.mul(zeta, self.zeta_mask) + self.zeta_fixed_mask
 
-        sigma_yy = wedge_y_masked @ B_inv @ (gamma_masked @ phi_masked @ gamma_masked.t() + psi_masked) @ \
-                   B_inv.t() @ wedge_y_masked.t() + theta_e_masked
-        sigma_yx = wedge_y_masked @ B_inv @ gamma_masked @ phi_masked @ wedge_x_masked.t()
-        sigma_xy = sigma_yx.t()
-        sigma_xx = wedge_x_masked @ phi_masked @ wedge_x_masked.t() + theta_del_masked
-
-        sigma = torch.cat((torch.cat((sigma_yy, sigma_yx), 1), torch.cat((sigma_xy, sigma_xx), 1)), 0)
-        return sigma
+        return self.wedge_y @ B_inv @ zeta_masked @ B_inv.t() @ self.wedge_y.t()
 
     def ml_loss(self, params, loss_args):
         """
@@ -80,12 +72,10 @@ class SEMEstimator(object):
         torch.tensor: The loss value for the given params and loss_args
         """
         S = loss_args['S']
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
 
         return (sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() -
-                (len(self.model.var_names['y'])+ len(self.model.var_names['x'])))
+                len(self.model.y))
 
     def uls_loss(self, params, loss_args):
         """
@@ -110,9 +100,7 @@ class SEMEstimator(object):
         torch.tensor: The loss value for the given params and loss_args
         """
         S = loss_args['S']
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
         return (S - sigma).pow(2).trace()
 
     def gls_loss(self, params, loss_args):
@@ -139,9 +127,7 @@ class SEMEstimator(object):
         """
         S = loss_args['S']
         W_inv = pinverse(loss_args['W'])
-        sigma = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'],
-                                      params['wedge_x'], params['phi'], params['theta_e'],
-                                      params['theta_del'], params['psi'])
+        sigma = self._get_implied_cov(params['B'], params['zeta'])
         return ((S - sigma) @ W_inv).pow(2).trace()
 
     def get_init_values(self, data, method):
@@ -157,80 +143,36 @@ class SEMEstimator(object):
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
         a = 0.4
         scaling_vars = self.model.to_SEMGraph().get_scaling_indicators()
-        eta, m = sorted(self.model.var_names['eta']), len(self.model.var_names['eta'])
-        xi, n = sorted(self.model.var_names['xi']), len(self.model.var_names['xi'])
-        y, p = sorted(self.model.var_names['y']), len(self.model.var_names['y'])
-        x, q = sorted(self.model.var_names['x']), len(self.model.var_names['x'])
-
-        for var in itertools.chain(eta, xi):
-            if var.startswith('_l_'):
-                scaling_vars[var] = var[3:]
+        eta, m = self.model.eta, len(self.model.eta)
 
         if method == 'random':
             B = np.random.rand(m, m)
-            gamma = np.random.rand(m, n)
-            wedge_y = np.random.rand(p, m)
-            wedge_x = np.random.rand(q, n)
-            theta_e = np.random.rand(p, p)
-            theta_del = np.random.rand(q, q)
-            psi = np.random.rand(m, m)
-            phi = np.random.rand(n, n)
+            zeta = np.random.rand(m, m)
 
         elif method == 'std':
+            # Add observed vars to `scaling_vars to point to itself. Trick to keep code short.
+            for observed_var in self.model.y:
+                scaling_vars[observed_var] = observed_var
+
             B = np.random.rand(m, m)
             for i in range(m):
                 for j in range(m):
-                    if i != j:
+                    if scaling_vars[eta[i]] == eta[j]:
+                        B[i, j] = 1.0
+                    elif i != j:
                         B[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
                                        data.loc[:, scaling_vars[eta[j]]].std())
-
-            gamma = np.random.rand(m, n)
+            zeta = np.random.rand(m, m)
             for i in range(m):
-                for j in range(n):
-                    gamma[i, j] = a * (data.loc[:, scaling_vars[eta[i]]].std() /
-                                       data.loc[:, scaling_vars[xi[j]]].std())
-
-            wedge_y = np.random.rand(p, m)
-            for i in range(p):
+                zeta[i, i] = a * ((data.loc[:, scaling_vars[eta[i]]].std())**2)
+            for i in range(m):
                 for j in range(m):
-                    if scaling_vars[eta[j]] == y[i]:
-                        wedge_y[i, j] = 1.0
-                    else:
-                        wedge_y[i, j] = a * (data.loc[:, y[i]].std() /
-                                             data.loc[:, scaling_vars[eta[j]]].std())
-
-            wedge_x = np.random.rand(q, n)
-            for i in range(q):
-                for j in range(n):
-                    if scaling_vars[xi[j]] == x[i]:
-                        wedge_x[i, j] = 1.0
-                    else:
-                        wedge_x[i, j] = a * (data.loc[:, x[i]].std() /
-                                             data.loc[:, scaling_vars[xi[j]]].std())
-
-            theta_e = np.random.rand(p, p)
-            for i in range(p):
-                theta_e[i, i] = a * ((data.loc[:, y[i]].std())**2)
-            for i in range(p):
-                for j in range(i):
-                    theta_e[i, j] = theta_e[j, i] = a * np.sqrt(theta_e[i, i] * theta_e[j, j])
-
-            theta_del = a * data.loc[:, x].cov().values
-
-            psi = np.random.rand(m, m)
-            for i in range(m):
-                psi[i, i] = a * ((data.loc[:, scaling_vars[eta[i]]].std())**2)
-            for i in range(m):
-                for j in range(i):
-                    psi[i, j] = psi[j, i] = a * np.sqrt(psi[i, i] * psi[j, j])
-
-            phi = a * data.loc[:, [scaling_vars[i] for i in xi]].cov().values
+                    zeta[i, j] = zeta[j, i] = a * np.sqrt(zeta[i, i] * zeta[j, j])
 
         elif method.lower() == 'iv':
             raise NotImplementedError("IV initialization not supported yet.")
 
-        return {'B': B, 'gamma': gamma, 'wedge_y': wedge_y, 'wedge_x': wedge_x,
-                'theta_e': theta_e, 'theta_del': theta_del, 'psi': psi, 'phi': phi}
+        return B, zeta
 
     def fit(self, data, method, opt='adam', init_values='random', exit_delta=1e-4, max_iter=1000, **kwargs):
         """
@@ -268,65 +210,48 @@ class SEMEstimator(object):
         if not isinstance(data, (pd.DataFrame, Data)):
             raise ValueError("data must be a pandas DataFrame. Got type: {t}".format(t=type(data)))
 
-        if not sorted(data.columns) == sorted(self.model.var_names['x'] + self.model.var_names['y']):
+        if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError("""The column names data do not match the variables in the model. Expected:
                                 {expected}. Got: {got}""".format(expected=sorted(self.model.observed),
                                                                  got=sorted(data.columns)))
 
         # Initialize the values of parameters as tensors.
-        init_values = self.get_init_values(data, method=init_values.lower())
-        B = torch.tensor(init_values['B'], device=device, dtype=dtype, requires_grad=True)
-        gamma = torch.tensor(init_values['gamma'], device=device, dtype=dtype, requires_grad=True)
-        wedge_y = torch.tensor(init_values['wedge_y'], device=device, dtype=dtype, requires_grad=True)
-        wedge_x = torch.tensor(init_values['wedge_x'], device=device, dtype=dtype, requires_grad=True)
-        phi = torch.tensor(init_values['phi'], device=device, dtype=dtype, requires_grad=True)
-        theta_e = torch.tensor(init_values['theta_e'], device=device, dtype=dtype, requires_grad=True)
-        theta_del = torch.tensor(init_values['theta_del'], device=device, dtype=dtype, requires_grad=True)
-        psi = torch.tensor(init_values['psi'], device=device, dtype=dtype, requires_grad=True)
+        B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
+        B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
+        zeta = torch.tensor(zeta_init, device=device, dtype=dtype, requires_grad=True)
 
         # Compute the covariance of the data
-        variable_order = self.model.var_names['y'] + self.model.var_names['x']
+        variable_order = self.model.y
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
         S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
 
         # Optimize the parameters
         if method.lower() == 'ml':
-            params = optimize(self.ml_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                   'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                   theta_e, 'theta_del': theta_del, 'psi': psi},
-                            loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
+            params = optimize(self.ml_loss, params={'B': B, 'zeta': zeta},
+                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta,
+                              max_iter=max_iter)
 
         elif method.lower() == 'uls':
-            params = optimize(self.uls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
-                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta, max_iter=max_iter)
-
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
+            params = optimize(self.uls_loss, params={'B': B, 'zeta': zeta},
+                              loss_args={'S': S}, opt=opt, exit_delta=exit_delta,
+                              max_iter=max_iter)
 
         elif method.lower() == 'gls':
             W = torch.tensor(kwargs['W'], device=device, dtype=dtype, requires_grad=False)
-            params = optimize(self.gls_loss, params={'B': B, 'gamma': gamma, 'wedge_y': wedge_y,
-                                                     'wedge_x': wedge_x, 'phi': phi, 'theta_e':
-                                                     theta_e, 'theta_del': theta_del, 'psi': psi},
+            params = optimize(self.gls_loss, params={'B': B, 'zeta': zeta},
                               loss_args={'S': S, 'W': W}, opt=opt, exit_delta=exit_delta,
                               max_iter=max_iter)
-
-            for key, value in params.items():
-                params[key] = value * self.masks[key] + self.fixed_masks[key]
 
         elif method.lower() == '2sls' or method.lower() == '2-sls':
             raise NotImplementedError("2-SLS is not implemented yet")
 
+        B = params['B'] * self.B_mask + self.B_fixed_mask
+        zeta = params['zeta'] * self.zeta_mask + self.zeta_fixed_mask
+
         # Compute goodness of fit statistics.
         N = data.shape[0]
         sample_cov = S.detach().numpy()
-        sigma_hat = self._get_implied_cov(params['B'], params['gamma'], params['wedge_y'], params['wedge_x'],
-                                          params['phi'], params['theta_e'], params['theta_del'],
-                                          params['psi']).detach().numpy()
+        sigma_hat = self._get_implied_cov(B, zeta).detach().numpy()
         residual = sample_cov - sigma_hat
 
         norm_residual = np.zeros(residual.shape)
@@ -346,8 +271,7 @@ class SEMEstimator(object):
             error = self.gls_loss(params, loss_args={'S': S, 'W': W})
         chi_square = likelihood_ratio / error.detach().numpy()
 
-        free_params = (self.masks['B'].sum() + self.masks['gamma'].sum() + self.masks['wedge_y'].sum() +
-                       self.masks['wedge_x'].sum())
+        free_params = self.B_mask.sum()
         dof = ((S.shape[0] * (S.shape[0]+1)) / 2) - free_params
 
         summary = {'Sample Size': N,
@@ -360,6 +284,5 @@ class SEMEstimator(object):
                   }
 
         # Update the model with the learned params
-        self.model.set_params({key: value.detach().numpy() for key, value in params.items()})
-
+        self.model.set_params(B=params['B'].detach().numpy(), zeta=params['B'].detach().numpy())
         return summary

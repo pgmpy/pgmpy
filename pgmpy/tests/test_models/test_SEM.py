@@ -87,6 +87,9 @@ class TestSEM(unittest.TestCase):
     def test_from_lisrel(self):
         pass # TODO: Add this test when done writing the tests for SEMLISREL
 
+    def test_from_ram(self):
+        pass # TODO: Add this.
+
 
 class TestSEMGraph(unittest.TestCase):
     def setUp(self):
@@ -379,9 +382,11 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(set(self.demo_params.err_graph.nodes()),
                             set(demo_params_graph.err_graph.nodes()))
         npt.assert_array_equal(nx.to_numpy_matrix(self.demo_params.err_graph,
-                                                  nodelist=sorted(self.demo_params.err_graph.nodes())),
-                               nx.to_numpy_matrix(demo_graph,
-                                                  nodelist=sorted(demo_params_graph.err_graph.nodes())))
+                                                  nodelist=sorted(self.demo_params.err_graph.nodes()),
+                                                  weight=None),
+                               nx.to_numpy_matrix(demo_graph.err_graph,
+                                                  nodelist=sorted(demo_params_graph.err_graph.nodes()),
+                                                  weight=None))
 
         self.assertSetEqual(set(self.demo_params.full_graph_struct.nodes()),
                             set(demo_params_graph.full_graph_struct.nodes()))

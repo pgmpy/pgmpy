@@ -502,200 +502,75 @@ class SEMGraph(DirectedGraph):
                 continue
         return instruments
 
-    @staticmethod
-    def __masks(graph, err_graph, weight, var):
-        """
-        This method is called by `get_fixed_masks` and `get_masks` methods.
-
-        Parameters
-        ----------
-        weight: None | 'weight'
-            If None: Returns a 1.0 for an edge in the graph else 0.0
-            If 'weight': Returns the weight if a weight is assigned to an edge
-                    else 0.0
-
-        var: dict
-            Dict with keys eta, xi, y, and x representing the variables in them.
-
-        Returns
-        -------
-        np.ndarray: Adjecency matrix of model's graph structure.
-
-        Notes
-        -----
-        B: Effect matrix of eta on eta
-        \gamma: Effect matrix of xi on eta
-        \wedge_y: Effect matrix of eta on y
-        \wedge_x: Effect matrix of xi on x
-        \phi: Covariance matrix of xi
-        \psi: Covariance matrix of eta errors
-        \theta_e: Covariance matrix of y errors
-        \theta_del: Covariance matrix of x errors
-
-        Examples
-        --------
-        """
-        # Arrage the adjacency matrix in order y, x, eta, xi and then slice masks from it.
-        #       y(p)   x(q)   eta(m)  xi(n)
-        # y
-        # x
-        # eta \wedge_y          B
-        # xi         \wedge_x \Gamma
-        # 
-        # But here we are slicing from the transpose of adjacency because we want incoming
-        # edges instead of outgoing because parameters come before variables in equations.
-        # 
-        #       y(p)   x(q)   eta(m)  xi(n)
-        # y                  \wedge_y
-        # x                          \wedge_x
-        # eta                   B    \Gamma
-        # xi
-        y_vars, x_vars, eta_vars, xi_vars = var['y'], var['x'], var['eta'], var['xi']
-
-        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
-
-        nodelist = y_vars + x_vars + eta_vars + xi_vars
-        adj_matrix = nx.to_numpy_matrix(graph, nodelist=nodelist, weight=weight).T
-
-        B_mask = adj_matrix[p+q:p+q+m, p+q:p+q+m]
-        gamma_mask = adj_matrix[p+q:p+q+m, p+q+m:]
-        wedge_y_mask = adj_matrix[0:p, p+q:p+q+m]
-        wedge_x_mask = adj_matrix[p:p+q, p+q+m:]
-
-        err_nodelist = y_vars + x_vars + eta_vars + xi_vars
-        err_adj_matrix = nx.to_numpy_matrix(err_graph, nodelist=err_nodelist,
-                                            weight=weight)
-
-        if not weight == 'weight':
-            np.fill_diagonal(err_adj_matrix, 1.0)
-
-        theta_e_mask = err_adj_matrix[:p, :p]
-        theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
-        psi_mask = err_adj_matrix[p+q:p+q+m, p+q:p+q+m]
-        phi_mask = err_adj_matrix[p+q+m:, p+q+m:]
-
-        return {'B': B_mask, 'gamma': gamma_mask, 'wedge_y': wedge_y_mask, 'wedge_x': wedge_x_mask,
-                'phi': phi_mask, 'theta_e': theta_e_mask, 'theta_del': theta_del_mask, 'psi': psi_mask}
-
-    def __to_standard_lisrel(self):
-        """
-        Converts the model structure into the standard LISREL notation of latent structure and
-        measurement structure by adding new latent variables
-        """
-        lisrel_err_graph = self.err_graph.copy()
-        lisrel_latents = self.latents.copy()
-        lisrel_observed = self.observed.copy()
-
-        # Add new latent nodes to convert it to LISREL format.
-        mapping = {}
-        for u, v in self.graph.edges:
-            if (u not in self.latents) and (v in self.latents):
-                mapping[u] = '_l_' + u
-            elif (u not in self.latents) and (v not in self.latents):
-                mapping[u] = '_l_' + u
-        lisrel_latents.update(mapping.values())
-        lisrel_graph = nx.relabel_nodes(self.graph, mapping, copy=True)
-        for u, v in mapping.items():
-            lisrel_graph.add_edge(v, u, weight=1.0)
-
-        # Get values of eta, xi, y, x
-        latent_struct = lisrel_graph.subgraph(lisrel_latents)
-        latent_indegree = lisrel_graph.in_degree()
-
-        eta = []
-        xi = []
-        for node in latent_struct.nodes():
-            if latent_indegree[node]:
-                eta.append(node)
-            else:
-                xi.append(node)
-
-        x = set()
-        y = set()
-        for exo in xi:
-            x.update([x for x in lisrel_graph.neighbors(exo) if x not in lisrel_latents])
-        for endo in eta:
-            y.update([y for y in lisrel_graph.neighbors(endo) if y not in lisrel_latents])
-
-        # If some node has edges from both eta and xi, replace it with another latent variable 
-        # otherwise it won't get included in any of the matrices.
-        # TODO: Patchy work. Find a better solution.
-        common_elements = set(x).intersection(set(y))
-        if common_elements:
-            mapping = {}
-            for var in common_elements:
-                mapping[var] = '_l_' + var
-            lisrel_graph = nx.relabel_nodes(lisrel_graph, mapping, copy=True)
-            for u, v in mapping.items():
-                lisrel_graph.add_edge(u, v, weight=1.0)
-            eta.extend(mapping.values())
-            x = list(set(x) - common_elements)
-            y.update(common_elements)
-
-        return (lisrel_graph, lisrel_err_graph, {'eta': eta, 'xi': xi, 'y': list(y), 'x': list(x)})
-
     def to_lisrel(self):
         """
-        Gets parameters from the graph structure to the standard LISREL matrix representation.
+        Converts the model from a graphical representation to an equivalent algebraic
+        representation.
 
         Returns
         -------
-        dict: Dict with the keys B, gamma, wedge_y, wedge_x, theta_e, theta_del, phi and psi.
+        SEMLISREL instance: Instance of `SEMLISREL` representing the model.
 
         Examples
         --------
         """
-        lisrel_graph, lisrel_err_graph, var = self.__to_standard_lisrel()
+        nodelist = list(self.observed) + list(self.latents)
+        graph_adj = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=None)
+        graph_fixed = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight='weight')
 
-        edges_masks = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
-        fixed_masks = self.__masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
+        err_adj = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight=None)
+        np.fill_diagonal(err_adj, 1.0)
+        err_fixed = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight='weight')
+
+        wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
+        for index, obs_var in enumerate(self.observed):
+            wedge_y[index][nodelist.index(obs_var)] = 1.0
 
         from pgmpy.models import SEMLISREL
-        return SEMLISREL(var_names=var, params=edges_masks, fixed_masks=fixed_masks)
+        return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
+                         fixed_values={'B': graph_fixed, 'zeta': err_fixed})
 
 
 class SEMLISREL:
     """
-    Base class for algebraic representation of Structural Equation Models(SEMs).
+    Base class for algebraic representation of Structural Equation Models(SEMs). The model is
+    represented using the Reticular Action Model (RAM).
     """
-    def __init__(self, str_model=None, var_names=None, params=None, fixed_masks=None):
+    def __init__(self, eta=None, B=None, zeta=None, wedge_y=None, fixed_values=None):
         r"""
-        Initializes SEMLISREL model. The LISREL notation is defined as:
+        Initializes SEMLISREL model. The model is represented using the Reticular Action Model(RAM)
+        which is given as:
         ..math::
-            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\Gamma \xi} + mathbf{\zeta} \\
-            \mathbf{y} = \mathbf{\wedge_y \eta} + \mathbf{\epsilon} \\
-            \mathbf{x} = \mathbf{\wedge_x \xi} + \mathbf{\delta}
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\zeta}
+            \mathbf{y} = \mathbf{\wedge_y \eta}
 
-        where :math:`\mathbf{\eta}` is the set of endogenous variables, :math:`\mathbf{\xi}`
-        is the set of exogeneous variables, :math:`\mathbf{y}` and :math:`\mathbf{x}` are the
-        set of measurement variables for :math:`\mathbf{\eta}` and :math:`\mathbf{\xi}`
-        respectively. :math:`\mathbf{\zeta}`, :math:`\mathbf{\epsilon}`, and :math:`\mathbf{\delta}`
-        are the error terms for :math:`\mathbf{\eta}`, :math:`\mathbf{y}`, and :math:`\mathbf{x}`
-        respectively.
+        where :math:`\mathbf{\eta}` is the set of all the observed and latent variables in the
+        model, :math:`\mathbf{y}` are the set of observed variables, :math:`\mathbf{\zeta}` is
+        the error terms for :math:`\mathbf{\eta}`, and \mathbf{\wedge_y} is a boolean array to
+        select the observed variables from :math:`\mathbf{\eta}`.
 
         Parameters
         ----------
-        str_model: str (default: None)
-            A `lavaan` style multiline set of regression equation representing the model.
-            Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
+        The following set of parameters are used to set the learnable parameters in the model.
+        To specify the values of the parameter use the `fixed_values` parameter. Either `eta`,
+        `B`, `zeta`, and `wedge_y`, or `fixed_values` need to be specified.
 
-            If None requires `var_names` and `params` to be specified.
+        eta: list/array-like
+            The name of the variables in the model.
 
-        var_names: dict (default: None)
-            A dict with the keys: eta, xi, y, and x. Each keys should have a list as the value
-            with the name of variables.
+        B: 2-D array (boolean)
+            The learnable parameters in the `B` matrix.
 
-        params: dict (default: None)
-            A dict of LISREL representation non-zero parameters. Must contain the following
-            keys: B, gamma, wedge_y, wedge_x, phi, theta_e, theta_del, and psi.
+        zeta: 2-D array (boolean)
+            The learnable parameters in the covariance matrix of the error terms.
 
-            If None `str_model` must be specified.
+        wedge_y: 2-D array
+            The `wedge_y` matrix.
 
         fixed_params: dict (default: None)
-            A dict of fixed values for parameters. The shape of the parameters should be same
-            as params.
+            A dict of fixed values for parameters.
 
-            If None all the parameters are learnable.
+            If None all the parameters specified by `B`, and `zeta` are learnable.
 
         Returns
         -------
@@ -706,63 +581,28 @@ class SEMLISREL:
         >>> from pgmpy.models import SEMLISREL
         # TODO: Finish this example
         """
-        if str_model:
-            raise NotImplementedError("Specification of model as a string is not supported yet")
+        self.eta = eta
+        self.B = np.array(B)
+        self.zeta = np.array(zeta)
+        self.wedge_y = wedge_y
 
-        param_names = ['B', 'gamma', 'wedge_y', 'wedge_x', 'phi', 'theta_e', 'theta_del', 'psi']
+        # Get the observed variables
+        self.y = []
+        for row_i in range(self.wedge_y.shape[0]):
+            for index, val in enumerate(self.wedge_y[row_i]):
+                if val:
+                    self.y.append(self.eta[index])
 
-        if not fixed_masks:
-            fixed_masks = {}
-            for p_name in param_names:
-                fixed_masks[p_name] = np.zeros(params[p_name].shape, dtype=int)
-
-        # Check if params has all the keys and sanitize fixed params.
-        for p_name in param_names:
-            if p_name not in params.keys():
-                raise ValueError("params must have the parameter {p_name}".format(p_name=p_name))
-            if p_name not in fixed_masks.keys():
-                fixed_masks[p_name] = np.zeros(params[p_name].shape)
-
-        self.var_names = var_names
-        self.adjacency = params
-        self.fixed_masks = fixed_masks
+        if fixed_values:
+            self.B_fixed_mask = fixed_values['B']
+            self.zeta_fixed_mask = fixed_values['zeta']
+        else:
+            self.B_fixed_mask = np.zeros(self.B.shape)
+            self.zeta_fixed_mask = np.zeros(self.zeta.shape)
 
         # Masks represent the parameters which need to be learnt while training.
-        self.masks = {}
-        for key in self.adjacency.keys():
-            self.masks[key] = np.multiply(np.where(self.fixed_masks[key] != 0, 0.0, 1.0), self.adjacency[key])
-
-    def __to_minimal_graph(self, graph):
-        """
-        Takes a standard LISREL graph structure and removes all the extra added latents.
-
-        Parameters
-        ----------
-        graph: nx.DiGraph
-            The graph structure except for the error terms.
-
-        err_graph: nx.Graph
-            The error graph structure.
-
-        Returns
-        -------
-        nx.DiGraph: The graph structure after removing all the reducible latent terms
-                    which start with `_l_`.
-
-        Examples
-        --------
-        >>> from pgmpy.models import SEMGraph
-        # TODO: Finish this example.
-        """
-        mapping = {}
-        for node in itertools.chain(self.var_names['xi'], self.var_names['eta']):
-            if node.startswith('_l_'):
-                mapping[node] = node[3:]
-
-        for u, v in mapping.items():
-            graph.remove_node(v)
-
-        return nx.relabel_nodes(graph, mapping, copy=True)
+        self.B_mask = np.multiply(np.where(self.B_fixed_mask != 0, 0.0, 1.0), self.B)
+        self.zeta_mask = np.multiply(np.where(self.zeta_fixed_mask != 0, 0.0, 1.0), self.zeta)
 
     def to_SEMGraph(self):
         """
@@ -778,53 +618,35 @@ class SEMLISREL:
         >>> model = SEMLISREL()
         # TODO: Finish this example
         """
-        y_vars, x_vars, eta_vars, xi_vars = (self.var_names['y'], self.var_names['x'],
-                                             self.var_names['eta'], self.var_names['xi'])
-
-        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
-
-        graph_adj_matrix = np.zeros((p+q+m+n, p+q+m+n))
-        err_graph_adj_matrix = np.zeros((p+q+m+n, p+q+m+n))
-
-        # Replacing non fixed edges with np.NaN as networkx assumes that as edges as well
-        # and sets weights to NaN.
-        adj_sub_matrices = {}
-        for key in self.masks.keys():
-            adj_sub_matrices[key] = np.where((self.masks[key] + self.fixed_masks[key]) == 1,
-                                             np.NaN, self.masks[key] + self.fixed_masks[key])
-
-        node_dict = {i: node_name for i, node_name in enumerate(itertools.chain(y_vars, x_vars, eta_vars, xi_vars))}
-        graph_adj_matrix[p+q:p+q+m, p+q:p+q+m] = adj_sub_matrices['B']
-        graph_adj_matrix[p+q:p+q+m, p+q+m:] = adj_sub_matrices['gamma']
-        graph_adj_matrix[0:p, p+q:p+q+m] = adj_sub_matrices['wedge_y']
-        graph_adj_matrix[p:p+q, p+q+m:] = adj_sub_matrices['wedge_x']
-        graph = nx.convert_matrix.from_numpy_matrix(graph_adj_matrix.T, create_using=nx.DiGraph)
-        graph = nx.relabel_nodes(graph, mapping=node_dict)
-
-        err_graph_adj_matrix[:p, :p] = adj_sub_matrices['theta_e']
-        err_graph_adj_matrix[p:p+q, p:p+q] = adj_sub_matrices['theta_del']
-        err_graph_adj_matrix[p+q:p+q+m, p+q:p+q+m] = adj_sub_matrices['psi']
-        err_graph_adj_matrix[p+q+m:, p+q+m:] = adj_sub_matrices['phi']
-        # To remove self edges on error terms because of variance fill diagonal with 0.
-        np.fill_diagonal(err_graph_adj_matrix, 0)
-
-        err_graph = nx.convert_matrix.from_numpy_matrix(err_graph_adj_matrix.T, create_using=nx.Graph)
-        err_graph = nx.relabel_nodes(err_graph, mapping=node_dict)
-
-        minimal_graph = self.__to_minimal_graph(graph)
-
-        err_var = {node_dict[i]: err_graph_adj_matrix[i, i] for i in range(p+q+m+n)}
+        graph = nx.relabel_nodes(nx.from_numpy_matrix(self.B.T, create_using=nx.DiGraph),
+                                 mapping={i: self.eta[i] for i in range(self.B.shape[0])})
+        err_graph = nx.relabel_nodes(nx.from_numpy_matrix(self.zeta.T, create_using=nx.Graph),
+                                     mapping={i: self.eta[i] for i in range(self.zeta.shape[0])})
+        latents = set(self.eta) - set(self.y)
 
         from pgmpy.models import SEMGraph
         # TODO: Add edge weights
-        sem_graph = SEMGraph(ebunch=minimal_graph.edges(),
-                             latents=list(filter(lambda t: not t.startswith('_l_'), eta_vars+xi_vars)),
+        sem_graph = SEMGraph(ebunch=graph.edges(),
+                             latents=latents,
                              err_corr=err_graph.edges(),
-                             err_var=err_var)
+                             err_var={var: np.diag(self.zeta)[i]
+                                      for i, var in enumerate(self.eta)})
         return sem_graph
 
-    def set_params(self, params):
-        self.fixed_masks = params
+    def set_params(self, B, zeta):
+        """
+        Sets the fixed parameters of the model.
+
+        Parameters
+        ----------
+        B: 2D array
+            The B matrix.
+
+        zeta: 2D array
+            The covariance matrix.
+        """
+        self.B_fixed_mask = B
+        self.zeta_fixed_mask = zeta
 
 
 class SEM(SEMGraph):
@@ -837,35 +659,42 @@ class SEM(SEMGraph):
     model: SEMGraph instance
         A graphical representation of the model.
     """
-    def __init__(self, lavaan_str=None, ebunch=[], latents=[], err_corr=[],
-                 err_var={}, var_names=None, params=None, fixed_masks=None):
+    def __init__(self, syntax, **kwargs):
         """
         Initialize a `SEM` object. Prefered way to initialize the object is to use one of
-        the `from_lavaan`, `from_graph`, or `from_lisrel` methods.
+        the `from_lavaan`, `from_graph`, `from_lisrel`, or `from_RAM` methods.
 
         There are three possible ways to initialize the model:
             1. Lavaan syntax: `lavaan_str` needs to be specified.
             2. Graph structure: `ebunch`, `latents`, `err_corr`, and `err_var` need to specified.
             3. LISREL syntax: `var_names`, `params`, and `fixed_masks` need to be specified.
+            4. Reticular Action Model (RAM/all-y) syntax: `var_names`, `B`, `zeta`, and `wedge_y`
+                                                            need to be specified.
 
         Parameters
         ----------
-        For parameter details, check docstrings for `from_lavaan`, `from_graph`, and `from_lisrel`
-        methods.
+        syntax: str (lavaan|graph|lisrel|ram)
+            The syntax used to initialize the model.
+
+        kwargs:
+            For parameter details, check docstrings for `from_lavaan`, `from_graph`, `from_lisrel`,
+            and `from_RAM` methods.
 
         See Also
         --------
         from_lavaan: Initialize a model using lavaan syntax.
         from_graph: Initialize a model using graph structure.
         from_lisrel: Initialize a model using LISREL syntax.
+        from_RAM: Initialize a model using Reticular Action Model(RAM/all-y) syntax.
         """
-        if lavaan_str:
+        if syntax.lower() == 'lavaan':
             # Create a SEMGraph model using the lavaan str.
             raise NotImplementedError("Lavaan syntax is not supported yet.")
-        elif ebunch:
-            super(SEM, self).__init__(ebunch=ebunch, latents=latents,
-                                      err_corr=err_corr, err_var=err_var)
-        elif var_names:
+        elif syntax.lower() == 'graph':
+            super(SEM, self).__init__(ebunch=kwargs['ebunch'], latents=kwargs['latents'],
+                                      err_corr=kwargs['err_corr'], err_var=kwargs['err_var'])
+        elif syntax.lower() == 'lisrel':
+
             model = SEMLISREL(var_names=var_names, params=params, fixed_masks=fixed_masks).to_SEMGraph()
             # Initialize an empty SEMGraph instance and set the properties.
             # TODO: Boilerplate code, find a better way to do this.
@@ -875,6 +704,13 @@ class SEM(SEMGraph):
             self.obseved = model.observed
             self.err_graph = model.err_graph
             self.full_graph_struct = model.full_graph_struct
+
+
+
+        elif syntax.lower() == 'ram':
+            model = SEMLISREL(eta=kwargs['var_names'], B=kwargs['B'],
+                              zeta=kwargs['zeta'], wedge_y=kwargs['wedge_y'],
+                              fixed_values=fixed_masks)
 
     @classmethod
     def from_lavaan(cls, lavaan_str):
@@ -1000,7 +836,86 @@ class SEM(SEMGraph):
         >>> from pgmpy.models import SEMLISREL
         # TODO: Finish this example
         """
-        return cls(var_names=var_names, params=params, fixed_masks=fixed_masks)
+        eta = var_names['y'] + var_names['x'] + var_names['eta'] + var_names['xi']
+        m, n, p, q = len(var_names['y']), len(var_names['x']), len(var_names['eta']), len(var_names['xi'])
+
+        B = np.block([[np.zeros((m, m+n)), params['wedge_y'], np.zeros((m, q))],
+                      [np.zeros((n, m+n+p)), params['wedge_x']],
+                      [np.zeros((p, m+n)), params['B'], params['gamma']],
+                      [np.zeros((q, m+n+p+q))]])
+        zeta = np.block([[params['theta_e'], np.zeros((m, n+p+q))],
+                         [np.zeros((n, m)), params['theta_del'], np.zeros((n, p+q))],
+                         [np.zeros((p, m+n)), params['psi'], np.zeros((p, q))],
+                         [np.zeros((q, m+n+p)), params['phi']]])
+
+        B = np.block([[np.zeros((m, m+n)), fixed_params['wedge_y'], np.zeros((m, q))],
+                      [np.zeros((n, m+n+p)), fixed_params['wedge_x']],
+                      [np.zeros((p, m+n)), fixed_params['B'], fixed_params['gamma']],
+                      [np.zeros((q, m+n+p+q))]])
+        zeta = np.block([[fixed_params['theta_e'], np.zeros((m, n+p+q))],
+                         [np.zeros((n, m)), fixed_params['theta_del'], np.zeros((n, p+q))],
+                         [np.zeros((p, m+n)), fixed_params['psi'], np.zeros((p, q))],
+                         [np.zeros((q, m+n+p)), fixed_params['phi']]])
+        observed = var_names['y'] + var_names['x']
+
+        return cls.from_RAM(variables=eta, B=B, zeta=zeta, observed=observed,
+                            fixed_values={'B': B, 'zeta': zeta})
+
+    @classmethod
+    def from_RAM(cls, variables, B, zeta, observed=None, wedge_y=None, fixed_values=None):
+        r"""
+        Initializes a `SEM` instance using Reticular Action Model(RAM) notation. The model
+        is defined as:
+        ..math::
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\epsilon} \\
+            \mathbf{\y} = \wedge_y \mathbf{\eta}
+            \zeta = COV(\mathbf{\epsilon})
+
+        where :math:`\mathbf{\eta}` is the set of variables (both latent and observed),
+        :math:`\mathbf{\epsilon}` are the error terms, :math:`\mathbf{y}` is the set
+        of observed variables, :math:`\wedge_y` is a boolean array of the shape (no of
+        observed variables, no of total variables).
+
+        Parameters
+        ----------
+        variables: list, array-like
+            List of variables (both latent and observed) in the model.
+
+        B: 2-D boolean array (shape: `len(variables)` x `len(variables)`)
+            The non-zero parameters in :math:`B` matrix. Refer model definition in docstring for details.
+
+        zeta: 2-D boolean array (shape: `len(variables)` x `len(variables)`)
+            The non-zero parameters in :math:`\zeta` (error covariance) matrix. Refer model definition
+            in docstring for details.
+
+        observed: list, array-like (optional: Either `observed` or `wedge_y` needs to be specified)
+            List of observed variables in the model.
+
+        wedge_y: 2-D array (shape: no. observed x total vars) (optional: Either `observed` or `wedge_y`)
+            The :math:`\wedge_y` matrix. Refer model definition in docstring for details.
+
+        fixed_values: dict (optional)
+            If specified, fixes the parameter values and are not changed during estimation.
+            A dict with the keys B, zeta.
+
+        Returns
+        -------
+        pgmpy.models.SEM instance: An instance of the object with initialized values.
+
+        Examples
+        --------
+        >>> from pgmpy.models import SEM
+        >>> SEM.from_RAM(TODO: Finish this)
+        """
+        if observed:
+            wedge_y = np.zeros((len(variables), len(observed)))
+            obs_dict = {var: index for index, var in enumerate(observed)}
+            all_dict = {var: index for index, var in enumerate(variables)}
+            for var in observed:
+                wedge_y[obs_dict[var], all_dict[var]] = 1
+
+        return cls(syntax='ram', var_names=variables, B=B, zeta=zeta,
+                   wedge_y=wedge_y, fixed_values=fixed_values)
 
     def fit(self):
         pass
