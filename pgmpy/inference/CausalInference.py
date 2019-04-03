@@ -21,7 +21,11 @@ class CausalInference(Inference):
         The model that we'll perform inference over. 
     """
     def __init__(self, model=None):
-        super(CausalInference, self).__init__(model)
+        # Leaving this out for now.  It seems to be requiring CPDs to be
+        # associated with each factor, which isn't actually a requirement
+        # I want to enforce.
+        #super(CausalInference, self).__init__(model)
+        self.model = model
 
     def check_active_backdoors(self, treatment, outcome):
         """
