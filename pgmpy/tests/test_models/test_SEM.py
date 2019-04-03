@@ -486,7 +486,6 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(self.demo.get_ivs('eta1', 'eta2', scaling_indicators=scale),
                             {'x2', 'x3', 'y2', 'y3', 'y4'})
 
-    unittest.skip("Conditional IV")
     def test_get_conditional_ivs_demo(self):
         scale = {'eta1': 'y1', 'eta2': 'y5', 'xi1': 'x1'}
 
@@ -516,13 +515,13 @@ class TestSEMGraph(unittest.TestCase):
 
     def test_get_conditional_ivs_union(self):
         self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
-                         {('age', ('laboract', 'deferenc'))})
-        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), set())
+                         [('age', {'laboract', 'deferenc'})])
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), [])
         self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
-                         {('age', ('yrsmill', 'deferenc'))})
-        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), set())
-        self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), set())
-        self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), set())
+                         [('age', {'yrsmill', 'deferenc'})])
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), [])
+        self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), [])
+        self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), [])
 
     def test_iv_transformations_custom(self):
         scale_custom = {'eta1': 'y2', 'eta2': 'y5', 'xi1': 'x1'}
@@ -596,7 +595,7 @@ class TestSEMGraph(unittest.TestCase):
                                     latents=[],
                                     err_corr=[('W', 'Y')],
                                     err_var={})
-        self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', 'W')])
+        self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', {'W'})])
 
 class TESTSEMLISREL(unittest.TestCase):
     def setUp(self):
@@ -623,5 +622,3 @@ class TESTSEMLISREL(unittest.TestCase):
                                        ('y6', 'y8')])
         self.demo_lisrel = self.demo.to_lisrel()
 
-    def test_get_ivs(self):
-        self.demo_lisrel.get_ivs()

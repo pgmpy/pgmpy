@@ -396,6 +396,8 @@ class SEMGraph(DirectedGraph):
         """
         if graph == 'full':
             graph = self.full_graph_struct
+        elif isinstance(graph, nx.DiGraph):
+            graph = graph
         else:
             graph = self.graph
 
@@ -407,7 +409,7 @@ class SEMGraph(DirectedGraph):
 
         return moral_graph
 
-    def _nearest_separator(self, G, Y, Z):
+    def _nearest_separator(self, G, G_c, Y, Z):
         W = set()
         for path in nx.all_simple_paths(G, Y, Z):
             path_set = set(path)
@@ -416,7 +418,7 @@ class SEMGraph(DirectedGraph):
                     if path[index] in self.observed:
                         W.add(path[index])
                         break
-        if Y not in self.active_trail_nodes([Z], observed=W)[Z]:
+        if Y not in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
             return W
         else:
             return None
@@ -451,7 +453,6 @@ class SEMGraph(DirectedGraph):
         --------
         """
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
-
         if (X, Y) in transformed_graph.edges:
             G_c = transformed_graph.remove_edge(X, Y)
         else:
@@ -459,7 +460,7 @@ class SEMGraph(DirectedGraph):
 
         instruments = []
         for Z in (self.observed - {X, Y}):
-            W = self._nearest_separator(self.moralize(graph=G_c), Y, Z)
+            W = self._nearest_separator(self.moralize(graph=G_c), G_c, Y, Z)
             if (W is None) or (W.intersection(descendants(G_c, Y))) or (X in W):
                 continue
             elif X in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
