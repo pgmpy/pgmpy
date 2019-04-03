@@ -2,46 +2,38 @@
 
 from itertools import combinations
 
-from pgmpy.models.BayesianModel import BayesianModel
+from pgmpy.inference import Inference
 
 
-class CausalModel(BayesianModel):
+class CausalInference(Inference):
     """
-    Base class for causal models.
-
-    A models stores nodes and edges with conditional probability
-    distribution (cpd) and other attributes.
-
-    models hold directed edges.  Self loops are not allowed neither
-    multiple (parallel) edges.
-
-    Nodes can be any hashable python object.
-
-    Edges are represented as links between nodes.
-
-    Parameters
-    ----------
-    data : input graph
-        Data to initialize graph.  If data=None (default) an empty
-        graph is created.  The data can be an edge list, or any
-        NetworkX graph object.
-
-    This class extends BayesianModel will some of the essential features
-    in Causal models including:
+    This is an inference class for performing Causal Inference over
+    Bayesian Networks or Strucural Equation Models (eventually). 
+    
+    This class will accept queries of the form: P(Y | do(X)) and 
+    utilize it's method to provide an estimand which executes :
      * Identifying adjustment variables
      * Backdoor Adjustment
      * Front Door Adjustment
+    Parameters
+    ----------
+    model : instance of pgmpy Bayesian Network or SEM class
+        The model that we'll perform inference over. 
     """
-    def __init__(self, ebunch=None):
-        super(CausalModel, self).__init__()
-        if ebunch:
-            self.add_edges_from(ebunch)
+    def __init__(self, model=None):
+        super(CausalInference, self).__init__()
+        self.model = model
 
     def check_active_backdoors(self, treatment, outcome):
         """
         Checks each backdoor path to see if it's active.  Also
-        proves a complete set of nodes in the backdoor path so that
-        we can induce a subgraph on it.
+        provides (ideally) a complete set of nodes in the backdoor 
+        path so that we can induce a subgraph on it.
+
+        TODO:
+          * Our current method for getting the set of nodes in the 
+            backdoor path uses the .active_trail_nodes method from
+            the graph. 
 
         Parameters
         ----------
@@ -55,6 +47,7 @@ class CausalModel(BayesianModel):
         active_backdoor_nodes = set()
         bdroots = set(self.get_parents(treatment))
         for node in bdroots:
+            # See docstring, this method probably gives us extra nodes
             active_backdoor_nodes = active_backdoor_nodes.union(
                 self.active_trail_nodes(node, observed=treatment)[node])
         has_active_bdp = outcome in active_backdoor_nodes
