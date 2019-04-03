@@ -102,7 +102,8 @@ class TestBackdoorPaths(unittest.TestCase):
     These tests are drawn from games presented in The Book of Why by Judea Pearl.
 
     TODO:
-      * There should be tests for 
+      * Tests that can assert over sets of confoundering variables
+      * Tests that don't assume that X is the treatment and Y is the outcome
     """
     def test_game1(self):
         game1 = CausalModel([('X', 'A'),

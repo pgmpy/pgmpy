@@ -66,10 +66,6 @@ class CausalModel(BayesianModel):
         Generates the set of possible combinations of deconfounding variables
         up to a certain depth.
 
-        TODO:
-          * This is really not that great of a method... combinations from itertools 
-            is removing the obvious duplicates, but 
-
         Parameters
         ----------
         possible_nodes : set
@@ -94,6 +90,14 @@ class CausalModel(BayesianModel):
         if it deactivates all backdoor paths.
 
         We will want this to take into account observed/unobserved variables.
+
+        TODO:
+          * We can potentially improve this method by filtering possible_deconfounders
+            to exclude sets which include a known complete set of deconfounders. The
+            rationale is that, suppose we know that variable A is a deconfounder for 
+            X to Y.  Well then why would we evener consider set A, B?  After all, A is a 
+            smaller set and is only included because of the backdoor-adjustment, not
+            because we care about it's coefficient.  
 
         Parameters
         ----------
