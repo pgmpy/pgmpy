@@ -13,10 +13,11 @@ class TestBackdoorPaths(unittest.TestCase):
       * Tests that don't assume that X is the treatment and Y is the outcome
     """
     def test_game1(self):
-        game1 = BayesianModel([('X', 'A'),
-                               ('A', 'Y'),
-                               ('A', 'B')])
-        deconfounders = game1.get_deconfounders(treatment="X", outcome="Y")
+        game = BayesianModel([('X', 'A'),
+                              ('A', 'Y'),
+                              ('A', 'B')])
+        inference = CausalInference(model=game)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
         self.assertEqual(deconfounders, [])
 
     def test_game2(self):
@@ -27,7 +28,8 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('B', 'C'),
                                ('D', 'B'),
                                ('D', 'E')])
-        deconfounders = game2.get_deconfounders(treatment="X", outcome="Y")
+        inference = CausalInference(model=game2)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
         self.assertEqual(deconfounders, [])
 
     def test_game3(self):
@@ -36,7 +38,8 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('B', 'A'),
                                ('B', 'Y'),
                                ('B', 'X')])
-        deconfounders = game3.get_deconfounders(treatment="X",
+        inference = CausalInference(model=game3)
+        deconfounders = inference.get_deconfounders(treatment="X",
                                                 outcome="Y",
                                                 maxdepth=1)
         self.assertEqual(deconfounders, [('B',)])
@@ -46,7 +49,8 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('A', 'B'),
                                ('C', 'B'),
                                ('C', 'Y')])
-        deconfounders = game4.get_deconfounders(treatment="X", outcome="Y")
+        inference = CausalInference(model=game4)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
         self.assertEqual(deconfounders, [])
 
     def test_game5(self):
@@ -56,7 +60,8 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('C', 'Y'),
                                ('X', 'Y'),
                                ('B', 'X')])
-        deconfounders = game5.get_deconfounders(treatment="X",
+        inference = CausalInference(model=game5)
+        deconfounders = inference.get_deconfounders(treatment="X",
                                                 outcome="Y",
                                                 maxdepth=1)
         self.assertEqual(deconfounders, [('C',),])
