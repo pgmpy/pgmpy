@@ -18,7 +18,7 @@ class SEMGraph(DirectedGraph):
     Base class for graphical representation of Structural Equation Models(SEMs).
 
     All variables are by default assumed to have an associated error latent variable, therefore
-    they don't need to be specified.
+    doesn't need to be specified.
 
     Attributes
     ----------
@@ -30,10 +30,18 @@ class SEMGraph(DirectedGraph):
 
     graph: nx.DirectedGraph
         The graphical structure of the latent and observed variables except the error terms.
+        The parameteers are stored in the `weight` attribute of each edge.
 
-    err_corr: nx.Graph
+    err_graph: nx.Graph
         An undirected graph representing the relations between the error terms of the model.
-        The error terms use the same name as variables themselves.
+        The node of the graph has the same name as the variable but represents the error terms.
+        The variance is stored in the `weight` attribute of the node and the covariance is stored
+        in the `weight` attribute of the edge.
+
+    full_graph_struct: nx.DiGraph
+        Represents the full graph structure. The names of error terms starts with `.` and
+        new nodes are added for each correlation which starts with `..`.
+
     """
     def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
         """
@@ -410,6 +418,20 @@ class SEMGraph(DirectedGraph):
         return moral_graph
 
     def _nearest_separator(self, G, G_c, Y, Z):
+        """
+        Finds the set of nearest separators for Y and Z in G_c.
+        
+        Parameters
+        ----------
+        G: 
+        G_c:
+        Y:
+        Z:
+
+        Returns
+        -------
+        set or None:
+        """
         W = set()
         for path in nx.all_simple_paths(G, Y, Z):
             path_set = set(path)
@@ -435,9 +457,11 @@ class SEMGraph(DirectedGraph):
         Y: node
             The oberved variable's name
 
-        scaling_indicators: dict
+        scaling_indicators: dict (optional)
             A dict representing which observed variable to use as scaling indicator for
             the latent variables.
+            If not provided, automatically finds scaling indicators by randomly selecting
+            one of the measurement variables of each latent variable.
 
         Returns
         -------
@@ -451,7 +475,16 @@ class SEMGraph(DirectedGraph):
 
         Examples
         --------
+        >>> from pgmpy.models import SEMGraph
+        >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y'), ('W', 'I')],
+        ...                  latents=[],
+        ...                  err_corr=['W', 'Y'])
+        >>> model.get_ivs('X', 'Y')
+        [('I', {'W'})]
         """
+        if not scaling_indicators:
+            scaling_indicators = self.get_scaling_indicators()
+
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
             G_c = transformed_graph.remove_edge(X, Y)
