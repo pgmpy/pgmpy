@@ -87,6 +87,9 @@ class TestSEM(unittest.TestCase):
     def test_from_lisrel(self):
         pass # TODO: Add this test when done writing the tests for SEMLISREL
 
+    def test_from_ram(self):
+        pass # TODO: Add this.
+
 
 class TestSEMGraph(unittest.TestCase):
     def setUp(self):
