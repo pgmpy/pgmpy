@@ -21,8 +21,7 @@ class CausalInference(Inference):
         The model that we'll perform inference over. 
     """
     def __init__(self, model=None):
-        super(CausalInference, self).__init__()
-        self.model = model
+        super(CausalInference, self).__init__(model)
 
     def check_active_backdoors(self, treatment, outcome):
         """
