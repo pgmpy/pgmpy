@@ -98,3 +98,22 @@ class TestBackdoorPaths(unittest.TestCase):
         print(deconfounders)
         self.assertEqual(deconfounders, {frozenset({'C'}),
                                          frozenset({'A', 'B'})})
+
+    def test_game6(self):
+        game6 = BayesianModel([('X', 'F'),
+                               ('C', 'X'),
+                               ('A', 'C'),
+                               ('A', 'D'),
+                               ('B', 'D'),
+                               ('B', 'E'),
+                               ('D', 'X'),
+                               ('D', 'Y'),
+                               ('E', 'Y'),
+                               ('F', 'Y')])
+        inference = CausalInference(model=game6)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
+        print(deconfounders)
+        self.assertEqual(deconfounders, {frozenset({'C', 'D'}),
+                                         frozenset({'A', 'D'}),
+                                         frozenset({'D', 'E'}),
+                                         frozenset({'B', 'D'})})
