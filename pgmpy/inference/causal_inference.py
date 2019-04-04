@@ -111,13 +111,14 @@ class CausalInference(Inference):
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
+            seenbefore = False
             for cs in complete_sets:
-                seenbefore = False
                 if cs in deconfounder:
                     # For each new deconfounder, we want to check if we've already seen a complete set of deconfounders
                     # as a subset of the proposed deconfounding set. If we have, don't search the tree any further.
                     seenbefore = True
-            if seenbefore: continue
+            if seenbefore:
+                continue
             active = {}
             for bd in bdroots:
                 a = int(outcome in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
