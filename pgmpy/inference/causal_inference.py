@@ -82,12 +82,6 @@ class CausalInference(Inference):
         """This function explores each possible deconfounding set and determines if it deactivates all backdoor paths.
 
         We will want this to take into account observed/unobserved variables.
-
-        TODO:
-          * We can potentially improve this method by filtering possible_deconfounders to exclude sets which include a
-            known complete set of deconfounders. The rationale is that, suppose we know that variable A is a
-            deconfounder for X to Y.  Well then why would we evener consider set A, B?  After all, A is a smaller set
-            and is only included because of the backdoor-adjustment, not because we care about it's coefficient.
             
         Parameters
         ----------
@@ -113,8 +107,9 @@ class CausalInference(Inference):
         for deconfounder in possible_deconfounders:
             seenbefore = False
             for cs in complete_sets:
-                print("{} in {}: {}".format(cs, deconfounder, cs in set(deconfounder)))
-                if cs in set(deconfounder):
+                overlap = cs.intersection(set(deconfounder))
+                print("The overlap between {} in {} is {}".format(cs, deconfounder, overlap))
+                if overlap != set():
                     # For each new deconfounder, we want to check if we've already seen a complete set of deconfounders
                     # as a subset of the proposed deconfounding set. If we have, don't search the tree any further.
                     seenbefore = True
