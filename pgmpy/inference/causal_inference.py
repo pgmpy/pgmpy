@@ -105,13 +105,13 @@ class CausalInference(Inference):
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
+            # The next 10 lines are entirely dedicated to checking if the proposed deconfounder is a trivial extension
+            # a known deconfounding set. I think it might be better to try to filter possible_deconfounders as complete
+            # sets are found, but I haven't thought of a nice way to do that.
             seenbefore = False
             for cs in complete_sets:
                 overlap = cs.intersection(set(deconfounder))
-                print("The overlap between {} in {} is {}".format(cs, deconfounder, overlap))
                 if overlap != set():
-                    # For each new deconfounder, we want to check if we've already seen a complete set of deconfounders
-                    # as a subset of the proposed deconfounding set. If we have, don't search the tree any further.
                     seenbefore = True
             if seenbefore:
                 continue

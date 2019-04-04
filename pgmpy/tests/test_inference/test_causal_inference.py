@@ -5,34 +5,46 @@ from pgmpy.inference.causal_inference import CausalInference
 
 
 class TestCausalInferenceMethods(unittest.TestCase):
-    def setup(self):
-        self.game1 = BayesianModel([('X', 'A'),
-                                    ('A', 'Y'),
-                                    ('A', 'B')])
-        self.inference1 = CausalInference(self.game1)
 
-        self.game3 = BayesianModel([('X', 'Y'),
-                                    ('X', 'A'),
-                                    ('B', 'A'),
-                                    ('B', 'Y'),
-                                    ('B', 'X')])
-        self.inference3 = CausalInference(self.game3)
-
-        self.game5 = BayesianModel([('A', 'X'),
-                                    ('A', 'B'),
-                                    ('C', 'B'),
-                                    ('C', 'Y'),
-                                    ('X', 'Y'),
-                                    ('B', 'X')])
-        self.inference5 = CausalInference(self.game5)
-
-    def active_backdoor_game1(self):
-        active_bds, bdg, bdr = self.inference1.check_active_backdoors(treatment="X", outcome="Y")
+    def test_active_backdoor_game1(self):
+        game1 = BayesianModel([('X', 'A'),
+                               ('A', 'Y'),
+                               ('A', 'B')])
+        inference1 = CausalInference(game1)
+        active_bds, bdg, bdr = inference1.check_active_backdoors(treatment="X", outcome="Y")
         self.assertEqual(active_bds, False)
         self.assertEqual(bdr, set())
 
-    def teardown(self):
-        del self.game
+    def test_active_backdoor_game3(self):
+        game3 = BayesianModel([('X', 'Y'),
+                               ('X', 'A'),
+                               ('B', 'A'),
+                               ('B', 'Y'),
+                               ('B', 'X')])
+        inference3 = CausalInference(game3)
+        active_bds, bdg, bdr = inference3.check_active_backdoors(treatment="X", outcome="Y")
+        self.assertEqual(active_bds, True)
+        self.assertEqual(bdr, {"B"})
+
+    def test_active_backdoor_game5(self):
+        game5 = BayesianModel([('A', 'X'),
+                               ('A', 'B'),
+                               ('C', 'B'),
+                               ('C', 'Y'),
+                               ('X', 'Y'),
+                               ('B', 'X')])
+        inference5 = CausalInference(game5)
+        active_bds, bdg, bdr = inference5.check_active_backdoors(treatment="X", outcome="Y")
+        self.assertEqual(active_bds, True)
+        self.assertEqual(bdr, {"A", "B"})
+
+    def test_getting_possible_deconfounders(self):
+        game1 = BayesianModel([('X', 'A'),
+                               ('A', 'Y'),
+                               ('A', 'B')])
+        inference1 = CausalInference(game1)
+        combinations = inference1.get_possible_deconfounders({"A", "B", "X"})
+        self.assertEqual(combinations, [('B',), ('A',), ('X',), ('B', 'A'), ('B', 'X'), ('A', 'X'), ('B', 'A', 'X')])
 
 
 class TestBackdoorPaths(unittest.TestCase):
@@ -70,7 +82,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('B', 'Y'),
                                ('B', 'X')])
         inference = CausalInference(model=game3)
-        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y", maxdepth=1)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
         self.assertEqual(deconfounders, {frozenset({'B'})})
 
     def test_game4(self):
@@ -90,7 +102,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('X', 'Y'),
                                ('B', 'X')])
         inference = CausalInference(model=game5)
-        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y", maxdepth=2)
+        deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
         print(deconfounders)
         self.assertEqual(deconfounders, {frozenset({'C'}),
                                          frozenset({'A', 'B'})})
