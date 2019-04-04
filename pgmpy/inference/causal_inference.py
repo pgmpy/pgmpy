@@ -112,7 +112,7 @@ class CausalInference(Inference):
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
             seenbefore = False
-            deconfounder = set(deconfounder)
+            deconfounder = frozenset(deconfounder)
             for cs in complete_sets:
                 print("{} in {}: {}".format(cs, deconfounder, cs in deconfounder))
                 if cs in deconfounder:
