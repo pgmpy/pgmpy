@@ -50,7 +50,6 @@ class CausalInference(Inference):
         active_backdoor_nodes = set()
         bdroots = set(self.model.get_parents(treatment))
         for node in bdroots:
-            # See docstring, this method probably gives us extra nodes
             active_backdoor_nodes = active_backdoor_nodes.union(
                 self.model.active_trail_nodes(node, observed=treatment)[node])
         has_active_bdp = outcome in active_backdoor_nodes
@@ -115,7 +114,7 @@ class CausalInference(Inference):
             catching will prvent it from being too large.
         """
         nodes = set(bdgraph.nodes())
-        complete_sets = []
+        complete_sets = {}
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
@@ -125,7 +124,7 @@ class CausalInference(Inference):
                 active[bd] = active.get(bd, 0) + a
             still_active = sum([val > 0 for val in active.values()])
             if still_active == 0:
-                complete_sets.append(deconfounder)
+                complete_sets.add(frozenset(deconfounder))
         return complete_sets
 
     def get_deconfounders(self, treatment, outcome, maxdepth=None):
