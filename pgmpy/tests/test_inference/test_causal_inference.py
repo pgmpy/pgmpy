@@ -27,7 +27,9 @@ class TestCausalInferenceMethods(unittest.TestCase):
         self.inference5 = CausalInference(self.game5)
 
     def active_backdoor_game1(self):
-        self.inference1.check_active_backdoors(treatment="X", outcome="Y")
+        active_bds, bdg, bdr = self.inference1.check_active_backdoors(treatment="X", outcome="Y")
+        self.assertEqual(active_bds, False)
+        self.assertEqual(bdr, set())
 
     def teardown(self):
         del self.game
@@ -47,7 +49,7 @@ class TestBackdoorPaths(unittest.TestCase):
                               ('A', 'B')])
         inference = CausalInference(model=game1)
         deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [])
+        self.assertEqual(deconfounders, set())
 
     def test_game2(self):
         game2 = BayesianModel([('X', 'E'),
@@ -59,7 +61,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('D', 'E')])
         inference = CausalInference(model=game2)
         deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [])
+        self.assertEqual(deconfounders, set())
 
     def test_game3(self):
         game3 = BayesianModel([('X', 'Y'),
@@ -71,7 +73,7 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = inference.get_deconfounders(treatment="X",
                                                     outcome="Y",
                                                     maxdepth=1)
-        self.assertEqual(deconfounders, [('B',)])
+        self.assertEqual(deconfounders, {frozenset({'B'})})
 
     def test_game4(self):
         game4 = BayesianModel([('A', 'X'),
@@ -80,7 +82,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('C', 'Y')])
         inference = CausalInference(model=game4)
         deconfounders = inference.get_deconfounders(treatment="X", outcome="Y")
-        self.assertEqual(deconfounders, [])
+        self.assertEqual(deconfounders, set())
 
     def test_game5(self):
         game5 = BayesianModel([('A', 'X'),
@@ -93,4 +95,4 @@ class TestBackdoorPaths(unittest.TestCase):
         deconfounders = inference.get_deconfounders(treatment="X",
                                                     outcome="Y",
                                                     maxdepth=1)
-        self.assertEqual(deconfounders, [('C',), ])
+        self.assertEqual(deconfounders, {frozenset({'C'})})
