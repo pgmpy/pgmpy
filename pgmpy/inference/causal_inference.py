@@ -112,10 +112,9 @@ class CausalInference(Inference):
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
             seenbefore = False
-            deconfounder = frozenset(deconfounder)
             for cs in complete_sets:
-                print("{} in {}: {}".format(cs, deconfounder, cs in deconfounder))
-                if cs in deconfounder:
+                print("{} in {}: {}".format(cs, deconfounder, cs in set(deconfounder))
+                if cs in set(deconfounder):
                     # For each new deconfounder, we want to check if we've already seen a complete set of deconfounders
                     # as a subset of the proposed deconfounding set. If we have, don't search the tree any further.
                     seenbefore = True
