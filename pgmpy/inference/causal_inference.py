@@ -114,7 +114,7 @@ class CausalInference(Inference):
             catching will prvent it from being too large.
         """
         nodes = set(bdgraph.nodes())
-        complete_sets = {}
+        complete_sets = set()
         possible_deconfounders = self.get_possible_deconfounders(
             nodes.difference({outcome}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
@@ -162,5 +162,5 @@ class CausalInference(Inference):
         if has_active_bdp:
             deconfounding_set = self.check_deconfounders(bdg, bdroots, treatment, outcome, maxdepth=maxdepth)
         else:
-            deconfounding_set = []
+            deconfounding_set = set()
         return deconfounding_set
