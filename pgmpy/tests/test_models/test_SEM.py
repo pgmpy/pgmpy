@@ -597,12 +597,25 @@ class TestSEMGraph(unittest.TestCase):
         self.assertSetEqual(self.custom.get_ivs('eta1', 'y3', scaling_indicators=scale_custom),
                            {'x1', 'x2', 'y4'})
 
-    def test_get_conditional_ivs(self):
-        small_test_model = SEMGraph(ebunch=[('X', 'Y'), ('I', 'X'), ('W', 'I')],
-                                    latents=[],
-                                    err_corr=[('W', 'Y')],
-                                    err_var={})
-        self.assertEqual(small_test_model.get_conditional_ivs('X', 'Y'), [('I', {'W'})])
+    def test_small_model_ivs(self):
+        model1 = SEMGraph(ebunch=[('X', 'Y'), ('I', 'X'), ('W', 'I')],
+                          latents=[],
+                          err_corr=[('W', 'Y')],
+                          err_var={})
+        self.assertEqual(model1.get_conditional_ivs('X', 'Y'), [('I', {'W'})])
+
+        model2 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('w', 'z'), ('w', 'u'), ('u', 'x'), ('u', 'y')],
+                          latents=['u'])
+        import pdb; pdb.set_trace()
+        self.assertEqual(model2.get_conditional_ivs('x', 'y'), [('Z', {'W'})])
+
+        model3 = SEMGraph(ebunch=[('x', 'y'), ('u', 'x'), ('u', 'y'), ('z', 'x')],
+                          latents=['u'])
+        self.assertEqual(model3.get_ivs('x', 'y'), {'z'})
+
+        model4 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('u', 'x'), ('u', 'y')])
+        self.assertEqual(model4.get_conditional_ivs('x', 'y'), [('z', {'u'})])
+
 
 class TESTSEMLISREL(unittest.TestCase):
     def setUp(self):
