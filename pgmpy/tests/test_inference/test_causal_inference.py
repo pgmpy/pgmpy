@@ -38,14 +38,6 @@ class TestCausalInferenceMethods(unittest.TestCase):
         self.assertEqual(active_bds, True)
         self.assertEqual(bdr, {"A", "B"})
 
-    def test_getting_possible_deconfounders(self):
-        game1 = BayesianModel([('X', 'A'),
-                               ('A', 'Y'),
-                               ('A', 'B')])
-        inference1 = CausalInference(game1)
-        combinations = inference1.get_possible_deconfounders({"A", "B", "X"})
-        self.assertEqual(combinations, [('B',), ('A',), ('X',), ('B', 'A'), ('B', 'X'), ('A', 'X'), ('B', 'A', 'X')])
-
 
 class TestBackdoorPaths(unittest.TestCase):
     """

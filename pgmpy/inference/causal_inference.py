@@ -111,6 +111,7 @@ class CausalInference(Inference):
             seenbefore = False
             for cs in complete_sets:
                 overlap = cs.intersection(set(deconfounder))
+                print("Is {} a setset of {}? {}".format(cs, deconfounder, overlap != set()))
                 if overlap != set():
                     seenbefore = True
             if seenbefore:
