@@ -127,26 +127,29 @@ class CausalInference(Inference):
 
     def get_deconfounders(self, treatment, outcome, maxdepth=None):
         """
-        Return a list of all possible of deconfounding sets by backdoor
-        adjustment per Pearl, "Causality: Models, Reasoning, and Inference",
-        p.79 up to sets of size maxdepth.
+        Return a list of all possible of deconfounding sets by backdoor adjustment per Pearl, "Causality: Models,
+        Reasoning, and Inference", p.79 up to sets of size maxdepth.
 
         TODO:
-          * Backdoors is great, but what we really want to implement is Ilya Shpitser's identification algorithm. See
-            [this paper](https://arxiv.org/ftp/arxiv/papers/1206/1206.6876.pdf). This is an implementation in R as well
-            which [we can hopefully leverage.](https://cran.r-project.org/web/packages/causaleffect/index.html) I
-            haven't seen an implementation in python, but there may be one out there too.
-          * Acount for unobserved variables.
-          * Finally, our users probably don't want to choose their estimand themselves, but
-            actually want a default decision rule implement.  Likely something like, "choose the
-            estimand with the smallest number of observed factors."
+          * Backdoors are great, but the most general things we could implement would be Ilya Shpitser's ID and
+            IDC algorithms. See [his Ph.D. thesis for a full explanation]
+            (https://ftp.cs.ucla.edu/pub/stat_ser/shpitser-thesis.pdf). After doing a little reading it is clear
+            that we do not need to immediatly implement this.  However, in order for us to truly account for
+            unobserved variables, we will need not only these algorithms, but a more general implementation of a DAG.
+            Most DAGs do not allow for bidirected edges, but it is an important piece of notation which Pearl and
+            Shpitser use to denote graphs with latent variables.  So we would probably need to add a new model class
+            in order to fully capture these models.
+          * However, way prior to that we should just implement Backdoor, Frontdoor and Instrumental Variable 
+            adjustment. This combination of tools is very powerful by itself and if we simply assume that all varibles
+            in the graph are observed then we never have to work about non-identifiable graphs. 
+          * Users probably don't want to choose their estimand themselves, but actually want a default decision rule 
+            implement.  Likely something like, "choose the estimand with the smallest number of observed factors."
 
         Parameters
         ----------
         treatment : string
-            The name of the varaible we want to consider as the treatment.
-            We probably will want to eventually meausure the causal effect
-            of the treatment on the outcome.
+            The name of the varaible we want to consider as the treatment. We probably will want to eventually meausure
+            the causal effect of the treatment on the outcome.
         outcomes : string
             The name of the variable we want to treat as the outcome.
         """
