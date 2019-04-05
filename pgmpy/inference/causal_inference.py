@@ -53,7 +53,7 @@ class CausalInference(Inference):
 
         for set_node in self.set_nodes:
             # Nodes are set with the do-operator and thus cannont have parents
-            assert not nx.ancestors(self.model, set_node)
+            assert not nx.ancestors(self.dag, set_node)
 
         self.graph = self.dag.to_undirected()
 
@@ -166,6 +166,23 @@ class CausalInference(Inference):
             if still_active == 0:
                 complete_sets.add(frozenset(deconfounder))
         return complete_sets
+
+    def do(self, node):
+        """
+        Applies the do operator to the graph and returns a new Inference object with the transformed graph.
+
+        Defined by Pearl in Causality on p. 70, the do-operator, do(X = x) has the effect of removing all edges from
+        the parents of X and setting X to the given value x. 
+
+        Parameters
+        ----------
+        node : string
+            The name of the node to apply the do-operator to.
+        """
+        assert node in self.observed_variables
+        set_nodes = self.set_nodes | frozenset([node])
+        edges = [(a, b) for a, b in self.dag.edges() if b != node]
+        return CausalInference(model=BayesianModel(edges), latent_vars=self.unobserved_variables, set_nodes=set_nodes)
 
     def get_backdoor_deconfounders(self, X, Y, maxdepth=None):
         """

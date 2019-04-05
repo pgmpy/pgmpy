@@ -13,6 +13,21 @@ class TestCausalInferenceMethods(unittest.TestCase):
         inference1 = CausalInference(game1)
         self.assertEqual("CausalInference(A, B, X, Y)", inference1.__repr__())
 
+    def test_get_distribution(self):
+        game1 = BayesianModel([('X', 'A'),
+                               ('A', 'Y'),
+                               ('A', 'B')])
+        inference1 = CausalInference(game1)
+        output = inference1.get_distribution()
+        self.assertEqual("P(X)P(A|X)P(B|A)P(Y|A)", output)
+
+    def test_do_operator(self):
+        game1 = BayesianModel([('X', 'A'),
+                               ('A', 'Y'),
+                               ('A', 'B')])
+        inference1 = CausalInference(game1)
+        inference1.do("X")
+
     def test_active_backdoor_game1(self):
         game1 = BayesianModel([('X', 'A'),
                                ('A', 'Y'),
@@ -44,16 +59,6 @@ class TestCausalInferenceMethods(unittest.TestCase):
         active_bds, bdg, bdr = inference5.check_active_backdoors(X="X", Y="Y")
         self.assertEqual(active_bds, True)
         self.assertEqual(bdr, {"A", "B"})
-
-    def test_get_distribution(self):
-        game5 = BayesianModel([('A', 'X'),
-                               ('A', 'B'),
-                               ('C', 'B'),
-                               ('C', 'Y'),
-                               ('X', 'Y'),
-                               ('B', 'X')])
-        inference5 = CausalInference(game5)
-        inference5.get_distribution()
 
 
 class TestBackdoorPaths(unittest.TestCase):
