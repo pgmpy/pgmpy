@@ -69,7 +69,7 @@ class CausalInference(Inference):
         the CGM.
         """
         products = []
-        for node in nx.topological_sort(self.model):
+        for node in nx.topological_sort(self.dag):
             if node in self.set_nodes:
                 continue
 
