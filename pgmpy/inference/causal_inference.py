@@ -14,7 +14,7 @@ class CausalInference(Inference):
      * Identifying adjustment variables
      * Backdoor Adjustment
      * Front Door Adjustment
-    
+
     Parameters
     ----------
     model : instance of pgmpy Bayesian Network or SEM class
@@ -26,32 +26,28 @@ class CausalInference(Inference):
         # super(CausalInference, self).__init__(model)
         self.model = model
 
-    def check_active_backdoors(self, treatment, outcome):
+    def check_active_backdoors(self, X, Y):
         """
-        Checks each backdoor path to see if it's active.  Also
-        provides (ideally) a complete set of nodes in the backdoor
-        path so that we can induce a subgraph on it.
+        Checks each backdoor path to see if it's active.  Also provides (ideally) a complete set of nodes in the
+        backdoor path so that we can induce a subgraph on it.
 
         TODO:
-          * Our current method for getting the set of nodes in the
-            backdoor path uses the .active_trail_nodes method from
-            the graph.
+          * Our current method for getting the set of nodes in the backdoor path uses the .active_trail_nodes
+            method from the graph.
 
         Parameters
         ----------
-        treatment : string
-            The name of the varaible we want to consider as the treatment.
-            We probably will want to eventually meausure the causal effect
-            of the treatment on the outcome.
-        outcomes : string
-            The name of the variable we want to treat as the outcome.
+        X : string
+            The name of the variable we perform an intervention on.
+        Y : string
+            The name of the variable we want to measure given out intervention on X.
         """
         active_backdoor_nodes = set()
-        bdroots = set(self.model.get_parents(treatment))
+        bdroots = set(self.model.get_parents(X))
         for node in bdroots:
             active_backdoor_nodes = active_backdoor_nodes.union(
-                self.model.active_trail_nodes(node, observed=treatment)[node])
-        has_active_bdp = outcome in active_backdoor_nodes
+                self.model.active_trail_nodes(node, observed=X)[node])
+        has_active_bdp = Y in active_backdoor_nodes
         bdg = self.model.subgraph(active_backdoor_nodes)
         return has_active_bdp, bdg, bdroots
 
@@ -63,8 +59,6 @@ class CausalInference(Inference):
         ----------
         possible_nodes : set
             The set of nodes which we will draw our deconfounding sets from.
-        outcomes : string
-            The name of the variable we want to treat as the outcome.
         """
         possible_combinations = []
         if maxdepth is None:
@@ -78,24 +72,21 @@ class CausalInference(Inference):
                 possible_combinations += combinations(possible_nodes, i)
         return possible_combinations
 
-    def check_deconfounders(self, bdgraph, bdroots, treatment, outcome, maxdepth=None):
+    def check_deconfounders(self, bdgraph, bdroots, X, Y, maxdepth=None):
         """This function explores each possible deconfounding set and determines if it deactivates all backdoor paths.
 
         We will want this to take into account observed/unobserved variables.
-            
+
         Parameters
         ----------
         bdgraph : CausalGraph
-            The subgraph induced on all nodes present in the backdoor paths from the treatment to the outcome variable.
-            
+            The subgraph induced on all nodes present in the backdoor paths from x to y.
         bdroots : set
-            The parents of the treatment variable which are also the roots of all backdoor paths.
-            
-        treatment : string
-            The name of the varaible we want to consider as the treatment. We probably will want to eventually
-            meausure the causal effect of the treatment on the outcome.
-        outcomes : string
-            The name of the variable we want to treat as the outcome.
+            The parents of x which are also the roots of all backdoor paths.
+        X : string
+            The name of the variable we perform an intervention on.
+        Y : string
+            The name of the variable we want to measure given out intervention on X.
         maxdepth : int
             The maximum number of variables in a set of deconfounders. This should be larger than the number of
             possible variables, but error catching will prvent it from being too large.
@@ -103,29 +94,25 @@ class CausalInference(Inference):
         nodes = set(bdgraph.nodes())
         complete_sets = set()
         possible_deconfounders = self.get_possible_deconfounders(
-            nodes.difference({outcome}), maxdepth=maxdepth)
+            nodes.difference({Y}), maxdepth=maxdepth)
         for deconfounder in possible_deconfounders:
-            # The next 10 lines are entirely dedicated to checking if the proposed deconfounder is a trivial extension
-            # a known deconfounding set. I think it might be better to try to filter possible_deconfounders as complete
-            # sets are found, but I haven't thought of a nice way to do that.
             seenbefore = False
             for cs in complete_sets:
                 overlap = cs.intersection(set(deconfounder))
-                #print("Is {} a setset of {}? {}".format(cs, deconfounder, overlap != set()))
                 if overlap == cs:
                     seenbefore = True
             if seenbefore:
                 continue
             active = {}
             for bd in bdroots:
-                a = int(outcome in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
+                a = int(Y in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
                 active[bd] = active.get(bd, 0) + a
             still_active = sum([val > 0 for val in active.values()])
             if still_active == 0:
                 complete_sets.add(frozenset(deconfounder))
         return complete_sets
 
-    def get_deconfounders(self, treatment, outcome, maxdepth=None):
+    def get_deconfounders(self, X, Y, maxdepth=None):
         """
         Return a list of all possible of deconfounding sets by backdoor adjustment per Pearl, "Causality: Models,
         Reasoning, and Inference", p.79 up to sets of size maxdepth.
@@ -139,23 +126,24 @@ class CausalInference(Inference):
             Most DAGs do not allow for bidirected edges, but it is an important piece of notation which Pearl and
             Shpitser use to denote graphs with latent variables.  So we would probably need to add a new model class
             in order to fully capture these models.
-          * However, way prior to that we should just implement Backdoor, Frontdoor and Instrumental Variable 
+          * However, way prior to that we should just implement Backdoor, Frontdoor and Instrumental Variable
             adjustment. This combination of tools is very powerful by itself and if we simply assume that all varibles
-            in the graph are observed then we never have to work about non-identifiable graphs. 
-          * Users probably don't want to choose their estimand themselves, but actually want a default decision rule 
+            in the graph are observed then we never have to work about non-identifiable graphs.
+          * Users probably don't want to choose their estimand themselves, but actually want a default decision rule
             implement.  Likely something like, "choose the estimand with the smallest number of observed factors."
+            Or we could just fit an estimator to all of them.  This would be interesting in that it gives a natural
+            opportunity for robustness checks.
 
         Parameters
         ----------
-        treatment : string
-            The name of the varaible we want to consider as the treatment. We probably will want to eventually meausure
-            the causal effect of the treatment on the outcome.
-        outcomes : string
-            The name of the variable we want to treat as the outcome.
+        X : string
+            The name of the variable we perform an intervention on.
+        Y : string
+            The name of the variable we want to measure given out intervention on X.
         """
-        has_active_bdp, bdg, bdroots = self.check_active_backdoors(treatment, outcome)
+        has_active_bdp, bdg, bdroots = self.check_active_backdoors(X, Y)
         if has_active_bdp:
-            deconfounding_set = self.check_deconfounders(bdg, bdroots, treatment, outcome, maxdepth=maxdepth)
+            deconfounding_set = self.check_deconfounders(bdg, bdroots, X, Y, maxdepth=maxdepth)
         else:
             deconfounding_set = set()
         return deconfounding_set
