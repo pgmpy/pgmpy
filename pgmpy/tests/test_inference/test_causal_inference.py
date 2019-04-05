@@ -52,7 +52,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('A', 'Y'),
                                ('A', 'B')])
         inference = CausalInference(model=game1)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         self.assertEqual(deconfounders, set())
 
     def test_game2(self):
@@ -64,7 +64,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('D', 'B'),
                                ('D', 'E')])
         inference = CausalInference(model=game2)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         self.assertEqual(deconfounders, set())
 
     def test_game3(self):
@@ -74,7 +74,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('B', 'Y'),
                                ('B', 'X')])
         inference = CausalInference(model=game3)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         self.assertEqual(deconfounders, {frozenset({'B'})})
 
     def test_game4(self):
@@ -83,7 +83,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('C', 'B'),
                                ('C', 'Y')])
         inference = CausalInference(model=game4)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         self.assertEqual(deconfounders, set())
 
     def test_game5(self):
@@ -94,7 +94,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('X', 'Y'),
                                ('B', 'X')])
         inference = CausalInference(model=game5)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         print(deconfounders)
         self.assertEqual(deconfounders, {frozenset({'C'}),
                                          frozenset({'A', 'B'})})
@@ -111,7 +111,7 @@ class TestBackdoorPaths(unittest.TestCase):
                                ('E', 'Y'),
                                ('F', 'Y')])
         inference = CausalInference(model=game6)
-        deconfounders = inference.get_deconfounders(X="X", Y="Y")
+        deconfounders = inference.get_backdoor_deconfounders(X="X", Y="Y")
         print(deconfounders)
         self.assertEqual(deconfounders, {frozenset({'C', 'D'}),
                                          frozenset({'A', 'D'}),
