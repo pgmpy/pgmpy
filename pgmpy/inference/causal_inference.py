@@ -132,17 +132,11 @@ class CausalInference(Inference):
         p.79 up to sets of size maxdepth.
 
         TODO:
-          * We ultimately want an estimand which, per the backdoor and/or frontdoor
-            crition deconfounds our indicated treatment outcome. This method should
-            either be expanded to include the frontdoor criterion and renamed to
-            specify that it only does backdoor adjustment.
-          * This method defaults to identifying all possible sets of deconfounders,
-            but leaves a few interesting problems unsolved.  First, we don't necessarily
-            know if our graph is identifiable.  Since we use a DAG as the base, we don't
-            have to worry about the "bow" pattern which, per Causality by Pearl, will typically
-            result in an unidentifiable graph.
-          * Another big problem comes from the unobserved variables.  Suppose even
-            if we do identify a set of deconfounders, one or multiple of them might be unobserved.
+          * Backdoors is great, but what we really want to implement is Ilya Shpitser's identification algorithm. See
+            [this paper](https://arxiv.org/ftp/arxiv/papers/1206/1206.6876.pdf). This is an implementation in R as well
+            which [we can hopefully leverage.](https://cran.r-project.org/web/packages/causaleffect/index.html) I
+            haven't seen an implementation in python, but there may be one out there too.
+          * Acount for unobserved variables.
           * Finally, our users probably don't want to choose their estimand themselves, but
             actually want a default decision rule implement.  Likely something like, "choose the
             estimand with the smallest number of observed factors."
