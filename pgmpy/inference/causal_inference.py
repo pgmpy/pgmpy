@@ -32,7 +32,7 @@ class CausalInference(Inference):
     Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as a valuable
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels 
     """
-    def __init__(self, model=None, latent_vars=None, set_nodes=None):
+    def __init__(self, model, latent_vars=None, set_nodes=None):
         # Leaving this out for now.  Inference seems to be requiring CPDs to be associated with each factor, which
         # isn't actually a requirement I want to enforce.
         # super(CausalInference, self).__init__(model)
@@ -182,7 +182,12 @@ class CausalInference(Inference):
         assert node in self.observed_variables
         set_nodes = self.set_nodes | frozenset([node])
         edges = [(a, b) for a, b in self.dag.edges() if b != node]
-        return CausalInference(model=BayesianModel(edges), latent_vars=self.unobserved_variables, set_nodes=set_nodes)
+        dag_do_x = BayesianModel(edges)
+        for n in self.dag.nodes():
+            # Make sure isolated nodes aren't lost when new graph is created.
+            if n not in dag_do_x.nodes():
+                dag_do_x.add_node(n)
+        return CausalInference(model=dag_do_x, latent_vars=self.unobserved_variables, set_nodes=set_nodes)
 
     def get_backdoor_deconfounders(self, X, Y, maxdepth=None):
         """
@@ -227,7 +232,6 @@ class CausalInference(Inference):
         Per *Causality* by Pearl, the Z satisifies the front-door critierion if:
           (i)    Z intercepts all directed paths from X to Y
           (ii)   there is no back-door path from X to Z
-          (iii)  all back-door paths from Z to Y are blocked by X
-        
+          (iii)  all back-door paths from Z to Y are blocked by X       
         """
         pass

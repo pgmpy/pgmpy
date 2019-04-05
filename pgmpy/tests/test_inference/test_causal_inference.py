@@ -26,7 +26,8 @@ class TestCausalInferenceMethods(unittest.TestCase):
                                ('A', 'Y'),
                                ('A', 'B')])
         inference1 = CausalInference(game1)
-        inference1.do("X")
+        dag_do_x = inference1.do("X").dag
+        self.assertEqual(dag_do_x.nodes(), game1.nodes())
 
     def test_active_backdoor_game1(self):
         game1 = BayesianModel([('X', 'A'),
