@@ -28,9 +28,12 @@ class CausalInference(Inference):
         A list (or set/tuple) of nodes in the Bayesian Network which have been set to a specific value per the
         do-operator.
 
+    References
+    ----------
+    'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
 
     Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as a valuable
-    reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels 
+    reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
     def __init__(self, model, latent_vars=None, set_nodes=None):
         # Leaving this out for now.  Inference seems to be requiring CPDs to be associated with each factor, which
@@ -84,6 +87,12 @@ class CausalInference(Inference):
                 p = "P({}|{})".format(node, ",".join(parents))
             products.append(p)
         return "".join(products)
+
+    def is_d_separated(self, X, Y, Z=None):
+        return self.dag.is_active_trail(X, Y, observed=Z)
+
+    def get_all_backdoor_paths(self, X, Y):
+        pass
 
     def check_active_backdoors(self, X, Y):
         """
@@ -160,7 +169,7 @@ class CausalInference(Inference):
                 continue
             active = {}
             for bd in bdroots:
-                a = int(Y in bdgraph.active_trail_nodes(bd, observed=deconfounder)[bd])
+                a = int(bdgraph.is_active_trail(start=bd, end=Y, observed=deconfounder))
                 active[bd] = active.get(bd, 0) + a
             still_active = sum([val > 0 for val in active.values()])
             if still_active == 0:
@@ -172,7 +181,7 @@ class CausalInference(Inference):
         Applies the do operator to the graph and returns a new Inference object with the transformed graph.
 
         Defined by Pearl in Causality on p. 70, the do-operator, do(X = x) has the effect of removing all edges from
-        the parents of X and setting X to the given value x. 
+        the parents of X and setting X to the given value x.
 
         Parameters
         ----------
@@ -227,11 +236,49 @@ class CausalInference(Inference):
 
     def get_frontdoor_deconfounders(self, X, Y):
         """
-        Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y. 
+        Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y.
 
         Per *Causality* by Pearl, the Z satisifies the front-door critierion if:
           (i)    Z intercepts all directed paths from X to Y
           (ii)   there is no back-door path from X to Z
-          (iii)  all back-door paths from Z to Y are blocked by X       
+          (iii)  all back-door paths from Z to Y are blocked by X
         """
         pass
+
+
+def _variable_or_iterable_to_set(x):
+    """
+    Convert variable or iterable x to a frozenset.
+
+    If x is None, returns the empty set.
+
+    Arguments
+    ---------
+    x: None, str or Iterable[str]
+
+    Returns
+    -------
+    x: frozenset[str]
+
+    """
+    if x is None:
+        return frozenset([])
+
+    if isinstance(x, str):
+        return frozenset([x])
+
+    if not isinstance(x, Iterable) or not all(isinstance(xx, str) for xx in x):
+        raise ValueError(
+            "{} is expected to be either a string or an iterable of strings"
+            .format(x))
+
+    return frozenset(x)
+
+
+def _powerset(iterable):
+    """
+    https://docs.python.org/3/library/itertools.html#recipes
+    powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
+    """
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))

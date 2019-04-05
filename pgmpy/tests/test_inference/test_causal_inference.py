@@ -6,28 +6,22 @@ from pgmpy.inference.causal_inference import CausalInference
 
 class TestCausalInferenceMethods(unittest.TestCase):
 
-    def test_repr(self):
+    def test_display_methods(self):
         game1 = BayesianModel([('X', 'A'),
                                ('A', 'Y'),
                                ('A', 'B')])
         inference1 = CausalInference(game1)
         self.assertEqual("CausalInference(A, B, X, Y)", inference1.__repr__())
-
-    def test_get_distribution(self):
-        game1 = BayesianModel([('X', 'A'),
-                               ('A', 'Y'),
-                               ('A', 'B')])
-        inference1 = CausalInference(game1)
-        output = inference1.get_distribution()
-        self.assertEqual("P(X)P(A|X)P(B|A)P(Y|A)", output)
+        self.assertEqual("P(X)P(A|X)P(B|A)P(Y|A)", inference1.get_distribution())
 
     def test_do_operator(self):
         game1 = BayesianModel([('X', 'A'),
                                ('A', 'Y'),
                                ('A', 'B')])
         inference1 = CausalInference(game1)
-        dag_do_x = inference1.do("X").dag
-        self.assertEqual(dag_do_x.nodes(), game1.nodes())
+        dag_do_x = inference1.do("A").dag
+        self.assertEqual(set(dag_do_x.nodes()), set(game1.nodes()))
+        self.assertEqual(sorted(list(dag_do_x.edges())), [('A', 'B'), ('A', 'Y')])
 
     def test_active_backdoor_game1(self):
         game1 = BayesianModel([('X', 'A'),
@@ -36,6 +30,7 @@ class TestCausalInferenceMethods(unittest.TestCase):
         inference1 = CausalInference(game1)
         active_bds, bdg, bdr = inference1.check_active_backdoors(X="X", Y="Y")
         self.assertEqual(active_bds, False)
+        self.assertTrue(isinstance(bdg, BayesianModel))
         self.assertEqual(bdr, set())
 
     def test_active_backdoor_game3(self):
@@ -47,6 +42,7 @@ class TestCausalInferenceMethods(unittest.TestCase):
         inference3 = CausalInference(game3)
         active_bds, bdg, bdr = inference3.check_active_backdoors(X="X", Y="Y")
         self.assertEqual(active_bds, True)
+        self.assertTrue(isinstance(bdg, BayesianModel))
         self.assertEqual(bdr, {"B"})
 
     def test_active_backdoor_game5(self):
@@ -59,16 +55,14 @@ class TestCausalInferenceMethods(unittest.TestCase):
         inference5 = CausalInference(game5)
         active_bds, bdg, bdr = inference5.check_active_backdoors(X="X", Y="Y")
         self.assertEqual(active_bds, True)
+        self.assertTrue(isinstance(bdg, BayesianModel))
         self.assertEqual(bdr, {"A", "B"})
 
 
 class TestBackdoorPaths(unittest.TestCase):
     """
-    These tests are drawn from games presented in The Book of Why by Judea Pearl.
-
-    TODO:
-      * Tests that can assert over sets of confoundering variables
-      * Tests that don't assume that X is the treatment and Y is the outcome
+    These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called
+    Causal Games in the examples folder for further explanation about each of these.
     """
     def test_game1(self):
         game1 = BayesianModel([('X', 'A'),
