@@ -1,7 +1,7 @@
-networkx==1.11
-numpy==1.16.2
-scipy==0.18.1
-pandas==0.18.1
+networkx
+numpy
+scipy
+pandas
 pyparsing
 mock
 nose
