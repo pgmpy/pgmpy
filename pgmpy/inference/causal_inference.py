@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from itertools import combinations
+from collections import Iterable
+from itertools import combinations, chain
 
 import networkx as nx
 
@@ -88,94 +89,6 @@ class CausalInference(Inference):
             products.append(p)
         return "".join(products)
 
-    def is_d_separated(self, X, Y, Z=None):
-        return self.dag.is_active_trail(X, Y, observed=Z)
-
-    def get_all_backdoor_paths(self, X, Y):
-        pass
-
-    def check_active_backdoors(self, X, Y):
-        """
-        Checks each backdoor path to see if it's active.  Also provides (ideally) a complete set of nodes in the
-        backdoor path so that we can induce a subgraph on it.
-
-        Parameters
-        ----------
-        X : string
-            The name of the variable we perform an intervention on.
-        Y : string
-            The name of the variable we want to measure given out intervention on X.
-        """
-        active_backdoor_nodes = set()
-        bdroots = set(self.dag.get_parents(X))
-        for node in bdroots:
-            active_backdoor_nodes = active_backdoor_nodes.union(
-                self.dag.active_trail_nodes(node, observed=X)[node])
-        has_active_bdp = Y in active_backdoor_nodes
-        bdg = self.dag.subgraph(active_backdoor_nodes)
-        return has_active_bdp, bdg, bdroots
-
-    def get_possible_deconfounders(self, possible_nodes, maxdepth=None):
-        """
-        Generates the set of possible combinations of deconfounding variables up to a certain depth.
-
-        Parameters
-        ----------
-        possible_nodes : set
-            The set of nodes which we will draw our deconfounding sets from.
-        """
-        possible_combinations = []
-        if maxdepth is None:
-            for i in range(1, len(possible_nodes)+1):
-                possible_combinations += combinations(possible_nodes, i)
-        else:
-            # Just in case the depth is greater than what's possible, we norm the term to be the number of possible
-            # nodes at most.
-            maxdepth = min(len(possible_nodes), maxdepth)
-            for i in range(1, maxdepth+1):
-                possible_combinations += combinations(possible_nodes, i)
-        return possible_combinations
-
-    def check_deconfounders(self, bdgraph, bdroots, X, Y, maxdepth=None):
-        """This function explores each possible deconfounding set and determines if it deactivates all backdoor paths.
-
-        We will want this to take into account observed/unobserved variables.
-
-        Parameters
-        ----------
-        bdgraph : CausalGraph
-            The subgraph induced on all nodes present in the backdoor paths from x to y.
-        bdroots : set
-            The parents of x which are also the roots of all backdoor paths.
-        X : string
-            The name of the variable we perform an intervention on.
-        Y : string
-            The name of the variable we want to measure given out intervention on X.
-        maxdepth : int
-            The maximum number of variables in a set of deconfounders. This should be larger than the number of
-            possible variables, but error catching will prvent it from being too large.
-        """
-        nodes = set(bdgraph.nodes())
-        complete_sets = set()
-        possible_deconfounders = self.get_possible_deconfounders(
-            nodes.difference({Y}), maxdepth=maxdepth)
-        for deconfounder in possible_deconfounders:
-            seenbefore = False
-            for cs in complete_sets:
-                overlap = cs.intersection(set(deconfounder))
-                if overlap == cs:
-                    seenbefore = True
-            if seenbefore:
-                continue
-            active = {}
-            for bd in bdroots:
-                a = int(bdgraph.is_active_trail(start=bd, end=Y, observed=deconfounder))
-                active[bd] = active.get(bd, 0) + a
-            still_active = sum([val > 0 for val in active.values()])
-            if still_active == 0:
-                complete_sets.add(frozenset(deconfounder))
-        return complete_sets
-
     def do(self, node):
         """
         Applies the do operator to the graph and returns a new Inference object with the transformed graph.
@@ -198,7 +111,102 @@ class CausalInference(Inference):
                 dag_do_x.add_node(n)
         return CausalInference(model=dag_do_x, latent_vars=self.unobserved_variables, set_nodes=set_nodes)
 
-    def get_backdoor_deconfounders(self, X, Y, maxdepth=None):
+    def is_d_separated(self, X, Y, Z=None):
+        return self.dag.is_active_trail(X, Y, observed=Z)
+
+    def _check_d_separation(self, path, Z=None):
+        """
+        This function and ._classify_three_structure are a little duplicative with .active_trail_nodes in the DAG
+        class.  However, because we're leveraging nx.all_simple_paths we want a version of this function which
+        can operate directly on paths.
+
+        Parameters
+        ----------
+        path : networkx path object
+            This will typically be an output from nx.all_simple_paths
+        """
+        Z = _variable_or_iterable_to_set(Z)
+
+        if len(path) < 3:
+            return False
+
+        for a, b, c in zip(path[:-2], path[1:-1], path[2:]):
+            structure = self._classify_three_structure(a, b, c)
+
+            if structure in ("chain", "fork") and b in Z:
+                return True
+
+            if structure == "collider":
+                descendants = (nx.descendants(self.dag, b) | {b})
+                if not descendants & set(Z):
+                    return True
+
+        return False
+
+    def _classify_three_structure(self, a, b, c):
+        """
+        Classify three structure as a chain, fork or collider.
+        """
+        if self.dag.has_edge(a, b) and self.dag.has_edge(b, c):
+            return "chain"
+
+        if self.dag.has_edge(c, b) and self.dag.has_edge(b, a):
+            return "chain"
+
+        if self.dag.has_edge(a, b) and self.dag.has_edge(c, b):
+            return "collider"
+
+        if self.dag.has_edge(b, a) and self.dag.has_edge(b, c):
+            return "fork"
+
+        raise ValueError("Unsure how to classify ({},{},{})".format(a, b, c))
+
+    def get_all_backdoor_paths(self, X, Y):
+        """
+        Returns all backdoor paths from X to Y.
+        """
+        return [
+            path
+            for path in nx.all_simple_paths(self.graph, X, Y)
+            if len(path) > 2
+            and path[1] in self.dag.predecessors(X)
+        ]
+
+    def is_valid_backdoor_adjustment_set(self, X, Y, Z):
+        """
+        Test whether Z is a valid backdoor deconfoudning set for estimating the causal impact of X on Y.
+
+        Parameters
+        ----------
+        X: str
+            Intervention Variable
+        Y: str
+            Target Variable
+        Z: str or set[str]
+            Adjustment variables
+        """
+        z = _variable_or_iterable_to_set(Z)
+
+        assert X in self.observed_variables
+        assert Y in self.observed_variables
+        assert X not in z
+        assert Y not in z
+
+        if any([zz in nx.descendants(self.dag, X) for zz in Z]):
+            return False
+
+        unblocked_backdoor_paths = [
+            path
+            for path in self.get_all_backdoor_paths(X, Y)
+            if not self._check_d_separation(path, Z)
+        ]
+
+        if unblocked_backdoor_paths:
+            return False
+
+        return True
+
+    def get_all_backdoor_deconfounders(self, X, Y):
         """
         Return a list of all possible of deconfounding sets by backdoor adjustment per Pearl, "Causality: Models,
         Reasoning, and Inference", p.79 up to sets of size maxdepth.
@@ -227,12 +235,32 @@ class CausalInference(Inference):
         Y : string
             The name of the variable we want to measure given out intervention on X.
         """
-        has_active_bdp, bdg, bdroots = self.check_active_backdoors(X, Y)
-        if has_active_bdp:
-            deconfounding_set = self.check_deconfounders(bdg, bdroots, X, Y, maxdepth=maxdepth)
-        else:
-            deconfounding_set = set()
-        return deconfounding_set
+        assert X in self.observed_variables
+        assert Y in self.observed_variables
+
+        if all([
+            not self.dag.is_active_trail(p, Y, observed=X)
+            for p in self.dag.predecessors(X)
+        ]):
+            return frozenset([])
+
+        possible_adjustment_variables = (
+            set(self.observed_variables)
+            - {X} - {Y}
+            - set(nx.descendants(self.dag, X))
+        )
+
+        valid_adjustment_sets = []
+        for s in _powerset(possible_adjustment_variables):
+            if sum([
+                vs.intersection(set(s)) == vs
+                for vs in valid_adjustment_sets
+            ]) > 0:
+                continue
+            if self.is_valid_backdoor_adjustment_set(X, Y, s):
+                valid_adjustment_sets.append(frozenset(s))
+
+        return frozenset(valid_adjustment_sets)
 
     def get_frontdoor_deconfounders(self, X, Y):
         """
@@ -252,14 +280,9 @@ def _variable_or_iterable_to_set(x):
 
     If x is None, returns the empty set.
 
-    Arguments
+    Parameters
     ---------
-    x: None, str or Iterable[str]
-
-    Returns
-    -------
-    x: frozenset[str]
-
+    x : None, str or Iterable[str]
     """
     if x is None:
         return frozenset([])
