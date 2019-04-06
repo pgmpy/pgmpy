@@ -1,6 +1,6 @@
 # Contributing to pgmpy
 
-Hi! Thanks for your interest in contributing to [pgmpy](pgmpy — pgmpy 0.1.0 documentation).
+Hi! Thanks for your interest in contributing to [pgmpy](https://pgmpy.org).
 In this document we'll try to summarize everything that you need to know to do a good job.
 
 
