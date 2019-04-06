@@ -206,7 +206,7 @@ class CausalInference(Inference):
 
         return True
 
-    def _has_active_backdoors(self, X, Y):
+    def _has_no_active_backdoors(self, X, Y):
         return all([
             not self.dag.is_active_trail(p, Y, observed=X)
             for p in self.dag.predecessors(X)
@@ -244,7 +244,7 @@ class CausalInference(Inference):
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
-        if self._has_active_backdoors(X=X, Y=Y):
+        if self._has_no_active_backdoors(X=X, Y=Y):
             return frozenset([])
 
         possible_adjustment_variables = (
