@@ -206,6 +206,12 @@ class CausalInference(Inference):
 
         return True
 
+    def _has_active_backdoors(self, X, Y):
+        return all([
+            not self.dag.is_active_trail(p, Y, observed=X)
+            for p in self.dag.predecessors(X)
+        ])
+
     def get_all_backdoor_deconfounders(self, X, Y):
         """
         Return a list of all possible of deconfounding sets by backdoor adjustment per Pearl, "Causality: Models,
@@ -238,10 +244,7 @@ class CausalInference(Inference):
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
-        if all([
-            not self.dag.is_active_trail(p, Y, observed=X)
-            for p in self.dag.predecessors(X)
-        ]):
+        if self._has_active_backdoors(X=X, Y=Y):
             return frozenset([])
 
         possible_adjustment_variables = (
