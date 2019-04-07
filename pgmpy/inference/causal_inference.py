@@ -29,11 +29,16 @@ class CausalInference(Inference):
         A list (or set/tuple) of nodes in the Bayesian Network which have been set to a specific value per the
         do-operator.
 
+    Examples
+    --------
+    Create a small Bayesian Network.
+
+
     References
     ----------
     'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
 
-    Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as a valuable
+    Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as an invaluable
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
     def __init__(self, model, latent_vars=None, set_nodes=None):
@@ -69,8 +74,7 @@ class CausalInference(Inference):
 
     def get_distribution(self):
         """
-        Returns a string representing the factorized distribution implied by
-        the CGM.
+        Returns a string representing the factorized distribution implied by the CGM.
         """
         products = []
         for node in nx.topological_sort(self.dag):
@@ -174,7 +178,7 @@ class CausalInference(Inference):
 
     def is_valid_backdoor_adjustment_set(self, X, Y, Z):
         """
-        Test whether Z is a valid backdoor deconfoudning set for estimating the causal impact of X on Y.
+        Test whether Z is a valid backdoor adjustment set for estimating the causal impact of X on Y.
 
         Parameters
         ----------
@@ -212,10 +216,10 @@ class CausalInference(Inference):
             for p in self.dag.predecessors(X)
         ])
 
-    def get_all_backdoor_deconfounders(self, X, Y):
+    def get_all_backdoor_adjustment_sets(self, X, Y):
         """
-        Return a list of all possible of deconfounding sets by backdoor adjustment per Pearl, "Causality: Models,
-        Reasoning, and Inference", p.79 up to sets of size maxdepth.
+        Return a list of all possible of adjustment sets by backdoor adjustment per Pearl, "Causality: Models,
+        Reasoning, and Inference", p.79.
 
         TODO:
           * Backdoors are great, but the most general things we could implement would be Ilya Shpitser's ID and
@@ -237,9 +241,9 @@ class CausalInference(Inference):
         Parameters
         ----------
         X : string
-            The name of the variable we perform an intervention on.
+            The intervention variable.
         Y : string
-            The name of the variable we want to measure given out intervention on X.
+            The response variable.
         """
         assert X in self.observed_variables
         assert Y in self.observed_variables
@@ -255,17 +259,61 @@ class CausalInference(Inference):
 
         valid_adjustment_sets = []
         for s in _powerset(possible_adjustment_variables):
-            if any([
+            super_of_complete = any([
                 vs.intersection(set(s)) == vs
                 for vs in valid_adjustment_sets
-            ]):
+            ])
+            if super_of_complete:
                 continue
             if self.is_valid_backdoor_adjustment_set(X, Y, s):
                 valid_adjustment_sets.append(frozenset(s))
 
         return frozenset(valid_adjustment_sets)
 
-    def get_frontdoor_deconfounders(self, X, Y):
+    def is_valid_frontdoor_adjustment_set(self, X, Y, Z):
+        """
+        Test whether Z is a valid frontdoor adjustment set for estimating the causal impact of X on Y via the frontdoor
+        adjustment formula.
+
+        Parameters
+        ----------
+        X: str
+            Intervention Variable
+        Y: str
+            Target Variable
+        Z: set
+            Adjustment variables
+        """
+        Z = _variable_or_iterable_to_set(Z)
+
+        # 1. does z block all directed paths from x to y?
+        unblocked_directed_paths = [
+            path for path in
+            nx.all_simple_paths(self.dag, X, Y)
+            if not any(zz in path for zz in Z)
+        ]
+
+        if unblocked_directed_paths:
+            return False
+
+        # 2. no unblocked backdoor paths between x and z
+        unblocked_backdoor_paths_X_Z = [
+            path
+            for zz in Z
+            for path in self.get_all_backdoor_paths(X, zz)
+            if not self._check_d_separation(path, Z - {zz})
+        ]
+
+        if unblocked_backdoor_paths_X_Z:
+            return False
+
+        # 3. x is a valid backdoor adjustment set for z
+        if not all(self.is_valid_backdoor_adjustment_set(zz, Y, Z) for zz in Z):
+            return False
+
+        return True
+
+    def get_all_frontdoor_adjustment_sets(self, X, Y):
         """
         Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y.
 
@@ -274,7 +322,22 @@ class CausalInference(Inference):
           (ii)   there is no back-door path from X to Z
           (iii)  all back-door paths from Z to Y are blocked by X
         """
-        pass
+        assert X in self.observed_variables
+        assert Y in self.observed_variables
+
+        possible_adjustment_variables = (
+            set(self.observed_variables)
+            - {X} - {Y}
+        )
+
+        valid_adjustment_sets = frozenset(
+            [
+                frozenset(s)
+                for s in _powerset(possible_adjustment_variables)
+                if self.is_valid_frontdoor_adjustment_set(X, Y, s)
+            ])
+
+        return valid_adjustment_sets
 
 
 def _variable_or_iterable_to_set(x):
