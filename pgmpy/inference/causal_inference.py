@@ -189,12 +189,12 @@ class CausalInference(Inference):
         Z: str or set[str]
             Adjustment variables
         """
-        z = _variable_or_iterable_to_set(Z)
+        Z = _variable_or_iterable_to_set(Z)
 
         assert X in self.observed_variables
         assert Y in self.observed_variables
-        assert X not in z
-        assert Y not in z
+        assert X not in Z
+        assert Y not in Z
 
         if any([zz in nx.descendants(self.dag, X) for zz in Z]):
             return False
