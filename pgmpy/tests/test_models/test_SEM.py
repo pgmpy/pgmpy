@@ -607,7 +607,7 @@ class TestSEMGraph(unittest.TestCase):
         model2 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('w', 'z'), ('w', 'u'), ('u', 'x'), ('u', 'y')],
                           latents=['u'])
         import pdb; pdb.set_trace()
-        self.assertEqual(model2.get_conditional_ivs('x', 'y'), [('Z', {'W'})])
+        self.assertEqual(model2.get_conditional_ivs('x', 'y'), [('z', {'w'})])
 
         model3 = SEMGraph(ebunch=[('x', 'y'), ('u', 'x'), ('u', 'y'), ('z', 'x')],
                           latents=['u'])
