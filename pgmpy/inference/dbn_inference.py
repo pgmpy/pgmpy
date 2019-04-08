@@ -273,7 +273,7 @@ class DBNInference(Inference):
         self._update_belief(mid_bp, self.in_clique, marginalized_factor)
 
         if variable_dict[0]:
-            factor_values = start_bp.query(variable_dict[0], evidence=evidence_0)
+            factor_values = start_bp.query(variable_dict[0], evidence=evidence_0, joint=False)
         else:
             factor_values = {}
 
@@ -284,7 +284,7 @@ class DBNInference(Inference):
 
             if variable_dict[time_slice]:
                 variable_time = self._shift_nodes(variable_dict[time_slice], 1)
-                new_values = mid_bp.query(variable_time, evidence=evidence_time)
+                new_values = mid_bp.query(variable_time, evidence=evidence_time, joint=False)
                 changed_values = {}
                 for key in new_values.keys():
                     new_key = (key[0], time_slice)
@@ -375,7 +375,7 @@ class DBNInference(Inference):
 
             if variable_dict[time_slice]:
                 variable_time = self._shift_nodes(variable_dict[time_slice], 1)
-                new_values = mid_bp.query(variable_time, evidence=evidence_time)
+                new_values = mid_bp.query(variable_time, evidence=evidence_time, joint=False)
                 changed_values = {}
                 for key in new_values.keys():
                     new_key = (key[0], time_slice)
@@ -391,7 +391,7 @@ class DBNInference(Inference):
         self._update_belief(end_bp, self.start_interface_clique, potential_dict[0], out_clique_phi)
         evidence_0 = self._get_evidence(evidence, 0, 0)
         if variable_dict[0]:
-            factor_values.update(end_bp.query(variable_dict[0], evidence_0))
+            factor_values.update(end_bp.query(variable_dict[0], evidence_0, joint=False))
         return factor_values
 
     def query(self, variables, evidence=None, args='exact'):
