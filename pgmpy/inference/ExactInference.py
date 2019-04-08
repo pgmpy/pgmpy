@@ -9,14 +9,14 @@ from pgmpy.extern.six.moves import filter, range
 from pgmpy.extern.six import string_types
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
-from pgmpy.models import JunctionTree
+from pgmpy.models import JunctionTree, BayesianModel
 from pgmpy.utils import StateNameDecorator
 
 
 class VariableElimination(Inference):
 
     @StateNameDecorator(argument='evidence', return_val=None)
-    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None):
+    def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None, joint=True):
         """
         Implementation of a generalized variable elimination.
 
@@ -43,7 +43,10 @@ class VariableElimination(Inference):
             all_factors = []
             for factor_li in self.factors.values():
                 all_factors.extend(factor_li)
-            return set(all_factors)
+            if joint:
+                return factor_product(*set(all_factors))
+            else:
+                return set(all_factors)
 
         eliminated_variables = set()
         working_factors = {node: {factor for factor in self.factors[node]}
@@ -89,26 +92,38 @@ class VariableElimination(Inference):
                 if not set(factor.variables).intersection(eliminated_variables):
                     final_distribution.add(factor)
 
-        query_var_factor = {}
-        for query_var in variables:
-            phi = factor_product(*final_distribution)
-            query_var_factor[query_var] = phi.marginalize(list(set(variables) -
-                                                               set([query_var])),
-                                                          inplace=False).normalize(inplace=False)
-        return query_var_factor
+        if joint:
+            if isinstance(self.model, BayesianModel):
+                return factor_product(*final_distribution).normalize(inplace=False)
+            else:
+                return factor_product(*final_distribution)
+        else:
+            query_var_factor = {}
+            for query_var in variables:
+                phi = factor_product(*final_distribution)
+                query_var_factor[query_var] = phi.marginalize(list(set(variables) -
+                                                                   set([query_var])),
+                                                              inplace=False).normalize(inplace=False)
+            return query_var_factor
 
-    def query(self, variables, evidence=None, elimination_order=None):
+    def query(self, variables, evidence=None, elimination_order=None, joint=True):
         """
         Parameters
         ----------
         variables: list
             list of variables for which you want to compute the probability
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
+
+        joint: boolean (default: True)
+            If True, returns a Joint Distribution over `variables`.
+            If False, returns a dict of distributions over each of the `variables`.
 
         Examples
         --------
@@ -124,7 +139,8 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         return self._variable_elimination(variables, 'marginalize',
-                                          evidence=evidence, elimination_order=elimination_order)
+                                          evidence=evidence, elimination_order=elimination_order,
+                                          joint=joint)
 
     def max_marginal(self, variables=None, evidence=None, elimination_order=None):
         """
@@ -160,11 +176,7 @@ class VariableElimination(Inference):
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
 
-        # To handle the case when no argument is passed then
-        # _variable_elimination returns a dict.
-        if isinstance(final_distribution, dict):
-            final_distribution = final_distribution.values()
-        return np.max(factor_product(*final_distribution).values)
+        return np.max(final_distribution.values)
 
     @StateNameDecorator(argument=None, return_val=True)
     def map_query(self, variables=None, evidence=None, elimination_order=None):
@@ -202,13 +214,8 @@ class VariableElimination(Inference):
         final_distribution = self._variable_elimination(variables, 'marginalize',
                                                         evidence=evidence,
                                                         elimination_order=elimination_order)
-        # To handle the case when no argument is passed then
-        # _variable_elimination returns a dict.
-        if isinstance(final_distribution, dict):
-            final_distribution = final_distribution.values()
-        distribution = factor_product(*final_distribution)
-        argmax = np.argmax(distribution.values)
-        assignment = distribution.assignment([argmax])[0]
+        argmax = np.argmax(final_distribution.values)
+        assignment = final_distribution.assignment([argmax])[0]
 
         map_query_results = {}
         for var_assignment in assignment:
@@ -523,7 +530,7 @@ class BeliefPropagation(Inference):
         """
         self._calibrate_junction_tree(operation='maximize')
 
-    def _query(self, variables, operation, evidence=None):
+    def _query(self, variables, operation, evidence=None, joint=True):
         """
         This is a generalized query method that can be used for both query and map query.
 
@@ -615,11 +622,11 @@ class BeliefPropagation(Inference):
         # Sum product variable elimination on the subtree
         variable_elimination = VariableElimination(subtree)
         if operation == 'marginalize':
-            return variable_elimination.query(variables=variables, evidence=evidence)
+            return variable_elimination.query(variables=variables, evidence=evidence, joint=joint)
         elif operation == 'maximize':
             return variable_elimination.map_query(variables=variables, evidence=evidence)
 
-    def query(self, variables, evidence=None):
+    def query(self, variables, evidence=None, joint=True):
         """
         Query method using belief propagation.
 
@@ -627,9 +634,14 @@ class BeliefPropagation(Inference):
         ----------
         variables: list
             list of variables for which you want to compute the probability
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
+        joint: boolean
+            If True, returns a Joint Distribution over `variables`.
+            If False, returns a dict of distributions over each of the `variables`.
 
         Examples
         --------
@@ -658,7 +670,7 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.query(variables=['J', 'Q'],
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
-        return self._query(variables=variables, operation='marginalize', evidence=evidence)
+        return self._query(variables=variables, operation='marginalize', evidence=evidence, joint=joint)
 
     def map_query(self, variables=None, evidence=None):
         """
@@ -710,11 +722,8 @@ class BeliefPropagation(Inference):
 
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.
-        if isinstance(final_distribution, dict):
-            final_distribution = final_distribution.values()
-        distribution = factor_product(*final_distribution)
-        argmax = np.argmax(distribution.values)
-        assignment = distribution.assignment([argmax])[0]
+        argmax = np.argmax(final_distribution.values)
+        assignment = final_distribution.assignment([argmax])[0]
 
         map_query_results = {}
         for var_assignment in assignment:

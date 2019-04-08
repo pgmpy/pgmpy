@@ -191,7 +191,7 @@ class StateNameDecorator(unittest.TestCase):
     def test_inference_query_statename(self):
         inf_op1 = self.model2.query(['grade'], evidence={'intel': 'poor'})
         inf_op2 = self.model2.query(['grade'], evidence={'intel': 0})
-        req_op = {'grade': DiscreteFactor(['grade'], [3], np.array([0.1, 0.1, 0.8]))}
+        req_op = DiscreteFactor(['grade'], [3], np.array([0.1, 0.1, 0.8]))
 
         self.assertEqual(inf_op1, inf_op2)
         self.assertEqual(inf_op1, req_op)

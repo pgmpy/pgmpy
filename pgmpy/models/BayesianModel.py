@@ -625,7 +625,10 @@ class BayesianModel(DAG):
 
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
-            states_dict = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            full_distribution = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            states_dict = {}
+            for var in missing_variables:
+                states_dict[var] = full_distribution.marginalize(missing_variables - {var}, inplace=False)
             for k, v in states_dict.items():
                 for l in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][l]
