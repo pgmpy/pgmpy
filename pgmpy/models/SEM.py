@@ -417,30 +417,36 @@ class SEMGraph(DirectedGraph):
 
         return moral_graph
 
-    def _nearest_separator(self, G, G_c, Y, Z):
+    def _nearest_separator(self, G, Y, Z):
         """
-        Finds the set of nearest separators for Y and Z in G_c.
-        
+        Finds the set of nearest separators for `Y` and `Z` in `G`.
+
         Parameters
         ----------
-        G: 
-        G_c:
-        Y:
-        Z:
+        G: nx.DiGraph instance
+            The graph in which to the find the nearest separation for `Y` and `Z`.
+
+        Y: str
+            The variable name for which the separators are needed.
+
+        Z: str
+            The other variable for which the separators are needed.
 
         Returns
         -------
-        set or None:
+        set or None: If there is a nearest separator returns the set of separators else returns None.
         """
         W = set()
-        for path in nx.all_simple_paths(G, Y, Z):
+        ancestral_G = G.subgraph(nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z}))
+        M = self.moralize(graph=ancestral_G)
+        for path in nx.all_simple_paths(M, Y, Z):
             path_set = set(path)
             if (len(path) >= 3) and not (W & path_set):
                 for index in range(1, len(path)-1):
                     if path[index] in self.observed:
                         W.add(path[index])
                         break
-        if Y not in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
+        if Y not in self.active_trail_nodes([Z], observed=W, struct=ancestral_G)[Z]:
             return W
         else:
             return None
@@ -493,9 +499,12 @@ class SEMGraph(DirectedGraph):
 
         instruments = []
         for Z in (self.observed - {X, Y}):
-            W = self._nearest_separator(self.moralize(graph=G_c), G_c, Y, Z)
-            if (W is None) or (W.intersection(descendants(G_c, Y))) or (X in W):
+            W = self._nearest_separator(G_c, Y, Z)
+            # Condition to check if W d-separates Y from Z
+            if (not W) or (W.intersection(descendants(G_c, Y))) or (X in W):
                 continue
+
+            # Condition to check if X d-connected to I after conditioning on W.
             elif X in self.active_trail_nodes([Z], observed=W, struct=G_c)[Z]:
                 instruments.append((Z, W))
             else:
