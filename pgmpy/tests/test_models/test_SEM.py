@@ -522,12 +522,11 @@ class TestSEMGraph(unittest.TestCase):
         self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
                          [('age', {'laboract', 'deferenc'})])
         # Can't understand why this fails. Current one giving [('age', {'yrsmill', 'laboract'})]
-        # self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), [])
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), [])
         self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
                          [('age', {'yrsmill', 'deferenc'})])
         self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), [])
 
-        # Can't understand why this fails.
         self.assertEqual(self.union.get_conditional_ivs('age', 'laboract'), [('yrsmill', {'deferenc'})])
         self.assertEqual(self.union.get_conditional_ivs('age', 'deferenc'), [])
 
