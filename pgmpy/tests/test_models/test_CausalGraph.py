@@ -3,6 +3,17 @@ import unittest
 from pgmpy.models.CausalGraph import CausalGraph
 
 
+class TestCausalGraphEssentials(unittest.TestCase):
+    def test_null_graph(self):
+        self.assertTrue(isinstance(CausalGraph(), CausalGraph))
+
+    def test_graph_creation(self):
+        game1 = CausalGraph([('X', 'A'),
+                             ('A', 'Y'),
+                             ('A', 'B')])
+        self.assertTrue(isinstance(game1, CausalGraph))   
+
+
 class TestCausalGraphMethods(unittest.TestCase):
 
     def test_display_methods(self):
@@ -20,7 +31,14 @@ class TestCausalGraphMethods(unittest.TestCase):
         self.assertEqual(set(dag_do_x.nodes()), set(game1.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [('A', 'B'), ('A', 'Y')])
 
+    def test_is_d_separated(self):
+        game1 = CausalGraph([('X', 'A'),
+                             ('A', 'Y'),
+                             ('A', 'B')])
+        self.assertFalse(game1._is_d_separated("X", "Y", Z=None))
+        self.assertTrue(game1._is_d_separated("X", "Y", Z='A'))
 
+    
 class TestBackdoorPaths(unittest.TestCase):
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called
@@ -30,7 +48,8 @@ class TestBackdoorPaths(unittest.TestCase):
         game1 = CausalGraph([('X', 'A'),
                              ('A', 'Y'),
                              ('A', 'B')])
-        deconfounders = game1.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertTrue(game1.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game1.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game2(self):
@@ -41,7 +60,8 @@ class TestBackdoorPaths(unittest.TestCase):
                              ('B', 'C'),
                              ('D', 'B'),
                              ('D', 'E')])
-        deconfounders = game2.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertTrue(game2.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game2.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game3(self):
@@ -50,7 +70,8 @@ class TestBackdoorPaths(unittest.TestCase):
                              ('B', 'A'),
                              ('B', 'Y'),
                              ('B', 'X')])
-        deconfounders = game3.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertFalse(game3.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game3.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset({frozenset({'B'})}))
 
     def test_game4(self):
@@ -58,7 +79,8 @@ class TestBackdoorPaths(unittest.TestCase):
                              ('A', 'B'),
                              ('C', 'B'),
                              ('C', 'Y')])
-        deconfounders = game4.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertTrue(game4.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game4.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game5(self):
@@ -68,7 +90,8 @@ class TestBackdoorPaths(unittest.TestCase):
                              ('C', 'Y'),
                              ('X', 'Y'),
                              ('B', 'X')])
-        deconfounders = game5.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertFalse(game5.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game5.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset({frozenset({'C'}),
                                                    frozenset({'A', 'B'})}))
 
@@ -83,7 +106,8 @@ class TestBackdoorPaths(unittest.TestCase):
                              ('D', 'Y'),
                              ('E', 'Y'),
                              ('F', 'Y')])
-        deconfounders = game6.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+        self.assertFalse(game6.is_valid_backdoor_adjustment_set("X", "Y"))
+        deconfounders = game6.get_all_backdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset({frozenset({'C', 'D'}),
                                                    frozenset({'A', 'D'}),
                                                    frozenset({'D', 'E'}),
@@ -99,7 +123,7 @@ class TestFrontdoorPaths(unittest.TestCase):
         game1 = CausalGraph([('X', 'A'),
                              ('A', 'Y'),
                              ('A', 'B')])
-        deconfounders = game1.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
+        deconfounders = game1.get_all_frontdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset({frozenset(['A'])}))
 
     def test_game4(self):
@@ -107,7 +131,7 @@ class TestFrontdoorPaths(unittest.TestCase):
                              ('A', 'B'),
                              ('C', 'B'),
                              ('C', 'Y')])
-        deconfounders = game4.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
+        deconfounders = game4.get_all_frontdoor_adjustment_sets("X", "Y")
         self.assertEqual(deconfounders, frozenset())
 
     def test_game6(self):
@@ -121,7 +145,7 @@ class TestFrontdoorPaths(unittest.TestCase):
                              ('D', 'Y'),
                              ('E', 'Y'),
                              ('F', 'Y')])
-        adjustment_sets = game6.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
+        adjustment_sets = game6.get_all_frontdoor_adjustment_sets("X", "Y")
         self.assertEqual(adjustment_sets, frozenset({frozenset({'F'})}))
 
     def test_game7(self):
@@ -129,5 +153,5 @@ class TestFrontdoorPaths(unittest.TestCase):
                              ('A', 'Y'),
                              ('B', 'X'),
                              ('B', 'Y')])
-        adjustment_sets = game7.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
+        adjustment_sets = game7.get_all_frontdoor_adjustment_sets("X", "Y")
         self.assertEqual(adjustment_sets, frozenset({frozenset({'A'})}))

@@ -29,16 +29,8 @@ class CausalGraph(DAG):
         if ebunch:
             self.add_edges_from(ebunch)
 
-        if latent_vars is None:
-            self.latent_variables = frozenset()
-        else:
-            self.latent_variables = frozenset(latent_vars)
-
-        if set_nodes is None:
-            self.set_nodes = frozenset()
-        else:
-            self.set_nodes = frozenset(set_nodes)
-
+        self.latent_variables = _variable_or_iterable_to_set(latent_vars)
+        self.set_nodes = _variable_or_iterable_to_set(set_nodes)
         self.observed_variables = frozenset(self.nodes()).difference(self.latent_variables)
         self.graph = self.to_undirected()
 
@@ -84,14 +76,19 @@ class CausalGraph(DAG):
         """
         observed = [X]+list(Z) if Z else [X]
         return all([
+            # Are all parents of X d-separated from Y given X and Z?
             self._is_d_separated(p, Y, Z=observed)
             for p in self.predecessors(X)
         ])
 
     def get_all_backdoor_adjustment_sets(self, X, Y):
         """
-        Return a list of all possible of adjustment sets by backdoor adjustment per Pearl, "Causality: Models,
-        Reasoning, and Inference", p.79.
+        Returns a list of all adjustment sets per the back-door criterion. 
+        
+        Pearl defined the back-door criterion this way in "Causality: Models, Reasoning, and Inference", p.79:
+            A set of variables Z satisfies the back-door criterion relative to an ordered pair ofvariabies (Xi, Xj) in a DAG G if: 
+                (i) no node in Z is a descendant of Xi; and 
+                (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi. 
 
         TODO:
           * Backdoors are great, but the most general things we could implement would be Ilya Shpitser's ID and
@@ -186,7 +183,7 @@ class CausalGraph(DAG):
         """
         Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y.
 
-        Per *Causality* by Pearl, the Z satisifies the front-door critierion if:
+        Per *Causality* p.82 by Pearl, Z satisifies the front-door critierion if:
           (i)    Z intercepts all directed paths from X to Y
           (ii)   there is no backdoor path from X to Z
           (iii)  all back-door paths from Z to Y are blocked by X
@@ -199,8 +196,7 @@ class CausalGraph(DAG):
             - {X} - {Y}
         )
 
-        valid_adjustment_sets = frozenset(
-            [
+        valid_adjustment_sets = frozenset([           
                 frozenset(s)
                 for s in _powerset(possible_adjustment_variables)
                 if self.is_valid_frontdoor_adjustment_set(X, Y, s)
