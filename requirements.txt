@@ -4,3 +4,4 @@ scipy
 pandas
 pyparsing
 wrapt
+pytorch
