@@ -514,7 +514,8 @@ class SEMGraph(DirectedGraph):
     def to_lisrel(self):
         """
         Converts the model from a graphical representation to an equivalent algebraic
-        representation.
+        representation. This converts the model into a Reticular Action Model (RAM) model
+        representation which is implemented by `pgmpy.models.SEMLISREL` class.
 
         Returns
         -------
@@ -522,6 +523,19 @@ class SEMGraph(DirectedGraph):
 
         Examples
         --------
+        >>> from pgmpy.models import SEM
+        >>> sem = SEM.from_graph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
+        ...                              ('yrsmill', 'unionsen'), ('age', 'deferenc'),
+        ...                              ('age', 'laboract'), ('deferenc', 'laboract')],
+        ...                      latents=[],
+        ...                      err_corr=[('yrsmill', 'age')],
+        ...                      err_var={})
+        >>> sem.to_lisrel()
+        # TODO: Complete this.
+
+        See Also
+        --------
+        to_standard_lisrel: Converts to the standard lisrel format and returns the parameters.
         """
         nodelist = list(self.observed) + list(self.latents)
         graph_adj = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=None)
@@ -538,6 +552,47 @@ class SEMGraph(DirectedGraph):
         from pgmpy.models import SEMLISREL
         return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
                          fixed_values={'B': graph_fixed, 'zeta': err_fixed})
+
+    def to_standard_lisrel(self):
+        r"""
+        Transforms the model to the standard LISREL representation of latent and measurement
+        equations. The standard LISREL representation is given as:
+
+        ..math::
+            \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\Gamma \xi} + \mathbf{\zeta} \\
+            \mathbf{y} = \mathbf{\wedge_y \eta} + \mathbf{\epsilon} \\
+            \mathbf{x} = \mathbf{\wedge_x \xi} + \mathbf{\delta} \\
+            \mathbf{\Theta_e} = COV(\mathbf{\epsilon}) \\
+            \mathbf{\Theta_\delta} = COV(\mathbf{\delta}) \\
+            \mathbf{\Psi} = COV(\mathbf{\eta}) \\
+            \mathbf{\Phi} = COV(\mathbf{\xi}) \\
+
+        Since the standard LISREL representation has restrictions on the types of model,
+        this method adds extra latent variables with fixed loadings of `1` to make the model
+        consistent with the restrictions.
+
+        Returns
+        -------
+        var_names: dict (keys: eta, xi, y, x)
+            Returns the variable names in :math:`\mathbf{\eta}`, :math:`\mathbf{\xi}`,
+            :math:`\mathbf{y}`, :math:`\mathbf{x}`.
+
+        params: dict (keys: B, gamma, wedge_y, wedge_x, theta_e, theta_del, phi, psi)
+            Returns a boolean matrix for each of the parameters. A 1 in the matrix
+            represents that there is an edge in the model, 0 represents there is no edge.
+
+        fixed_values: dict (keys: B, gamma, wedge_y, wedge_x, theta_e, theta_del, phi, psi)
+            Returns a matrix for each of the parameters. A value in the matrix represents the
+            set value for the parameter in the model else it is 0.
+
+        See Also
+        --------
+        to_lisrel: Converts the model to `pgmpy.models.SEMLISREL` instance.
+
+        Examples
+        --------
+        TODO: Finish this.
+        """
 
 
 class SEMLISREL:
