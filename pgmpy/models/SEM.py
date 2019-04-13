@@ -553,6 +553,82 @@ class SEMGraph(DirectedGraph):
         return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
                          fixed_values={'B': graph_fixed, 'zeta': err_fixed})
 
+
+    @staticmethod
+    def __standard_lisrel_masks(graph, err_graph, weight, var):
+        """
+        This method is called by `get_fixed_masks` and `get_masks` methods.
+
+        Parameters
+        ----------
+        weight: None | 'weight'
+            If None: Returns a 1.0 for an edge in the graph else 0.0
+            If 'weight': Returns the weight if a weight is assigned to an edge
+                    else 0.0
+
+        var: dict
+            Dict with keys eta, xi, y, and x representing the variables in them.
+
+        Returns
+        -------
+        np.ndarray: Adjecency matrix of model's graph structure.
+
+        Notes
+        -----
+        B: Effect matrix of eta on eta
+        \gamma: Effect matrix of xi on eta
+        \wedge_y: Effect matrix of eta on y
+        \wedge_x: Effect matrix of xi on x
+        \phi: Covariance matrix of xi
+        \psi: Covariance matrix of eta errors
+        \theta_e: Covariance matrix of y errors
+        \theta_del: Covariance matrix of x errors
+
+        Examples
+        --------
+        """
+        # Arrage the adjacency matrix in order y, x, eta, xi and then slice masks from it.
+        #       y(p)   x(q)   eta(m)  xi(n)
+        # y
+        # x
+        # eta \wedge_y          B
+        # xi         \wedge_x \Gamma
+        # 
+        # But here we are slicing from the transpose of adjacency because we want incoming
+        # edges instead of outgoing because parameters come before variables in equations.
+        # 
+        #       y(p)   x(q)   eta(m)  xi(n)
+        # y                  \wedge_y
+        # x                          \wedge_x
+        # eta                   B    \Gamma
+        # xi
+        y_vars, x_vars, eta_vars, xi_vars = var['y'], var['x'], var['eta'], var['xi']
+
+        p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
+
+        nodelist = y_vars + x_vars + eta_vars + xi_vars
+        adj_matrix = nx.to_numpy_matrix(graph, nodelist=nodelist, weight=weight).T
+
+        B_mask = adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        gamma_mask = adj_matrix[p+q:p+q+m, p+q+m:]
+        wedge_y_mask = adj_matrix[0:p, p+q:p+q+m]
+        wedge_x_mask = adj_matrix[p:p+q, p+q+m:]
+
+        err_nodelist = y_vars + x_vars + eta_vars + xi_vars
+        err_adj_matrix = nx.to_numpy_matrix(err_graph, nodelist=err_nodelist,
+                                            weight=weight)
+
+        if not weight == 'weight':
+            np.fill_diagonal(err_adj_matrix, 1.0)
+
+        theta_e_mask = err_adj_matrix[:p, :p]
+        theta_del_mask = err_adj_matrix[p:p+q, p:p+q]
+        psi_mask = err_adj_matrix[p+q:p+q+m, p+q:p+q+m]
+        phi_mask = err_adj_matrix[p+q+m:, p+q+m:]
+
+        return {'B': B_mask, 'gamma': gamma_mask, 'wedge_y': wedge_y_mask, 'wedge_x': wedge_x_mask,
+                'phi': phi_mask, 'theta_e': theta_e_mask, 'theta_del': theta_del_mask, 'psi': psi_mask}
+
     def to_standard_lisrel(self):
         r"""
         Transforms the model to the standard LISREL representation of latent and measurement
@@ -593,6 +669,59 @@ class SEMGraph(DirectedGraph):
         --------
         TODO: Finish this.
         """
+        lisrel_err_graph = self.err_graph.copy()
+        lisrel_latents = self.latents.copy()
+        lisrel_observed = self.observed.copy()
+
+        # Add new latent nodes to convert it to LISREL format.
+        mapping = {}
+        for u, v in self.graph.edges:
+            if (u not in self.latents) and (v in self.latents):
+                mapping[u] = '_l_' + u
+            elif (u not in self.latents) and (v not in self.latents):
+                mapping[u] = '_l_' + u
+        lisrel_latents.update(mapping.values())
+        lisrel_graph = nx.relabel_nodes(self.graph, mapping, copy=True)
+        for u, v in mapping.items():
+            lisrel_graph.add_edge(v, u, weight=1.0)
+
+        # Get values of eta, xi, y, x
+        latent_struct = lisrel_graph.subgraph(lisrel_latents)
+        latent_indegree = lisrel_graph.in_degree()
+
+        eta = []
+        xi = []
+        for node in latent_struct.nodes():
+            if latent_indegree[node]:
+                eta.append(node)
+            else:
+                xi.append(node)
+
+        x = set()
+        y = set()
+        for exo in xi:
+            x.update([x for x in lisrel_graph.neighbors(exo) if x not in lisrel_latents])
+        for endo in eta:
+            y.update([y for y in lisrel_graph.neighbors(endo) if y not in lisrel_latents])
+
+        # If some node has edges from both eta and xi, replace it with another latent variable 
+        # otherwise it won't get included in any of the matrices.
+        # TODO: Patchy work. Find a better solution.
+        common_elements = set(x).intersection(set(y))
+        if common_elements:
+            mapping = {}
+            for var in common_elements:
+                mapping[var] = '_l_' + var
+            lisrel_graph = nx.relabel_nodes(lisrel_graph, mapping, copy=True)
+            for u, v in mapping.items():
+                lisrel_graph.add_edge(u, v, weight=1.0)
+            eta.extend(mapping.values())
+            x = list(set(x) - common_elements)
+            y.update(common_elements)
+
+        edges_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
+        fixed_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
+        return (edges_masks, fixed_masks, {'eta': eta, 'xi': xi, 'y': list(y), 'x': list(x)})
 
 
 class SEMLISREL:
