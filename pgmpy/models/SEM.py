@@ -437,7 +437,13 @@ class SEMGraph(DirectedGraph):
         set or None: If there is a nearest separator returns the set of separators else returns None.
         """
         W = set()
-        ancestral_G = G.subgraph(nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z}))
+        ancestral_G = G.subgraph(nx.ancestors(G, Y).union(nx.ancestors(G, Z)).union({Y, Z})).copy()
+
+        # Optimization: Remove all error nodes which don't have any correlation as it doesn't add any new path. If not removed it can create a lot of
+        # extra paths resulting in a much higher runtime.
+        err_nodes_to_remove = set(self.err_graph.nodes()) - set([node for edge in self.err_graph.edges() for node in edge])
+        ancestral_G.remove_nodes_from(['.' + node for node in err_nodes_to_remove])
+
         M = self.moralize(graph=ancestral_G)
         for path in nx.all_simple_paths(M, Y, Z):
             path_set = set(path)
