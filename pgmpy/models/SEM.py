@@ -445,13 +445,28 @@ class SEMGraph(DirectedGraph):
         ancestral_G.remove_nodes_from(['.' + node for node in err_nodes_to_remove])
 
         M = self.moralize(graph=ancestral_G)
-        for path in nx.all_simple_paths(M, Y, Z):
-            path_set = set(path)
-            if (len(path) >= 3) and not (W & path_set):
-                for index in range(1, len(path)-1):
-                    if path[index] in self.observed:
-                        W.add(path[index])
-                        break
+        visited = set()
+        to_visit = list(M.neighbors(Y))
+
+        # Another optimization over the original algo. Rather than going through all the paths does
+        # a DFS search to find a markov blanket of observed variables. This doesn't ensure minimal observed
+        # set.
+        while to_visit:
+            node = to_visit.pop()
+            if node == Z:
+                return None
+            visited.add(node)
+            if node in self.observed:
+                W.add(node)
+            else:
+                to_visit.extend([node for node in M.neighbors(node) if node not in visited])
+        # for path in nx.all_simple_paths(M, Y, Z):
+        #     path_set = set(path)
+        #     if (len(path) >= 3) and not (W & path_set):
+        #         for index in range(1, len(path)-1):
+        #             if path[index] in self.observed:
+        #                 W.add(path[index])
+        #                 break
         if Y not in self.active_trail_nodes([Z], observed=W, struct=ancestral_G)[Z]:
             return W
         else:
