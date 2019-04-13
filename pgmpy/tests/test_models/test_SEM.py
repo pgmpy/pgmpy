@@ -521,8 +521,11 @@ class TestSEMGraph(unittest.TestCase):
     def test_get_conditional_ivs_union(self):
         self.assertEqual(self.union.get_conditional_ivs('yrsmill', 'unionsen'),
                          [('age', {'laboract', 'deferenc'})])
-        # Can't understand why this fails. Current one giving [('age', {'yrsmill', 'laboract'})]
-        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'), [])
+        # This case wouldn't have conditonal IV if the Total effect between `deferenc` and 
+        # `unionsen` needs to be computed because one of the conditional variable lies on the 
+        # effect path.
+        self.assertEqual(self.union.get_conditional_ivs('deferenc', 'unionsen'),
+                         [('age', {'yrsmill', 'laboract'})])
         self.assertEqual(self.union.get_conditional_ivs('laboract', 'unionsen'),
                          [('age', {'yrsmill', 'deferenc'})])
         self.assertEqual(self.union.get_conditional_ivs('deferenc', 'laboract'), [])
@@ -612,9 +615,10 @@ class TestSEMGraph(unittest.TestCase):
                           latents=['u'])
         self.assertEqual(model3.get_ivs('x', 'y'), {'z'})
 
-        # TODO: Don't know how the algo should work in this case.
+        # The conditional algo shouldn't work in this case because the variable z is already
+        # an IV and nearest separator doesn't work because the ancestral graph is disconnected.
         model4 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('u', 'x'), ('u', 'y')])
-        self.assertEqual(model4.get_conditional_ivs('x', 'y'), [('z', {'u'})])
+        self.assertEqual(model4.get_conditional_ivs('x', 'y'), [])
 
 
 class TESTSEMLISREL(unittest.TestCase):
