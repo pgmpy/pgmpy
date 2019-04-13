@@ -3,6 +3,7 @@ from warnings import warn
 import numpy as np
 
 from pgmpy import HAS_PANDAS
+from pgmpy.models import BayesianModel
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 if HAS_PANDAS:
@@ -416,5 +417,37 @@ def _return_samples(return_type, samples):
         else:
             warn("Pandas installation not found. Returning numpy.recarray object")
             return samples
+    else:
+        return samples
+
+
+def _map_to_state_name(model, samples):
+    """
+        A utility function to map samples to corresponding state name
+    """
+    # Assuming all cpd in model either have state name or not
+
+    method = 'get_cpds' if isinstance(model, BayesianModel) else 'get_factors'
+
+    if getattr(model, method)(samples.dtype.names[0]).state_names is not None:
+
+        if '_weight' in samples.dtype.names:
+            index = len(samples.dtype.names) - 1
+            types = [(var_name, object) for var_name in samples.dtype.names[:-1]]
+            types.append(('_weight', 'float'))
+        else:
+            types = [(var_name, object) for var_name in samples.dtype.names]
+            index = len(samples.dtype)
+
+        named_samples = np.zeros(samples.size, dtype=types).view(np.recarray)
+
+        for node in samples.dtype.names[:index]:
+            cpd = getattr(model, method)(node)
+            named_samples[node] = np.array(list(map(lambda x: cpd.state_names[node][x], samples[node])))
+
+        if '_weight' in samples.dtype.names:
+            named_samples['_weight'] = samples['_weight']
+        return named_samples
+
     else:
         return samples
