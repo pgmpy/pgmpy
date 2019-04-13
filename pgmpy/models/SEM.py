@@ -719,8 +719,9 @@ class SEMGraph(DirectedGraph):
             x = list(set(x) - common_elements)
             y.update(common_elements)
 
-        edges_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var)
-        fixed_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var)
+        var_names = {'eta': eta, 'xi': xi, 'y': list(y), 'x': list(x)}
+        edges_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight=None, var=var_names)
+        fixed_masks = self.__standard_lisrel_masks(graph=lisrel_graph, err_graph=lisrel_err_graph, weight='weight', var=var_names)
         return (edges_masks, fixed_masks, {'eta': eta, 'xi': xi, 'y': list(y), 'x': list(x)})
 
 
