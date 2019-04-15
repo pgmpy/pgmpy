@@ -371,6 +371,9 @@ class SEMGraph(DirectedGraph):
         if not scaling_indicators:
             scaling_indicators = self.get_scaling_indicators()
 
+        if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
+            warnings.warn("{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`".format(Y=Y, X=X))
+
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if X in self.latents:
             explanatory_var = scaling_indicators[X]
@@ -511,6 +514,9 @@ class SEMGraph(DirectedGraph):
         """
         if not scaling_indicators:
             scaling_indicators = self.get_scaling_indicators()
+
+        if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
+            warnings.warn("{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`".format(Y=Y, X=X))
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
