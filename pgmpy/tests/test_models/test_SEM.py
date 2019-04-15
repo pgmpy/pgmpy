@@ -591,8 +591,9 @@ class TestSEMGraph(unittest.TestCase):
                             {'x2', 'y4'})
         self.assertSetEqual(self.custom.get_ivs('xi1', 'eta1', scaling_indicators=scale_custom),
                             {'x2', 'y4'})
+        # TODO: Test this and fix.
         self.assertSetEqual(self.custom.get_ivs('y1', 'eta1', scaling_indicators=scale_custom),
-                           {'x2', 'y4'})
+                            {'x2', 'y4', 'y5'})
         self.assertSetEqual(self.custom.get_ivs('y1', 'eta2', scaling_indicators=scale_custom),
                             {'x1', 'x2', 'y2', 'y3', 'y4'})
         self.assertSetEqual(self.custom.get_ivs('y4', 'y1', scaling_indicators=scale_custom),

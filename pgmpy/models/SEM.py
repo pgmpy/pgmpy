@@ -260,14 +260,15 @@ class SEMGraph(DirectedGraph):
             active_nodes = set()
             while visit_list:
                 node, direction = visit_list.pop()
+                if node in avoid_nodes:
+                    continue
                 if (node, direction) not in traversed_list:
                     if (node not in observed) and (not node.startswith('.')) and (node not in self.latents):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
                     if direction == 'up' and node not in observed:
                         for parent in graph_struct.predecessors(node):
-                            if parent not in avoid_nodes:
-                                visit_list.add((parent, 'up'))
+                            visit_list.add((parent, 'up'))
                         for child in graph_struct.successors(node):
                             visit_list.add((child, 'down'))
                     elif direction == 'down':
@@ -276,8 +277,7 @@ class SEMGraph(DirectedGraph):
                                 visit_list.add((child, 'down'))
                         if node in ancestors_list:
                             for parent in graph_struct.predecessors(node):
-                                if parent not in avoid_nodes:
-                                    visit_list.add((parent, 'up'))
+                                visit_list.add((parent, 'up'))
             active_trails[start] = active_nodes
         return active_trails
 
@@ -833,6 +833,7 @@ class SEMLISREL:
         >>> model = SEMLISREL()
         # TODO: Finish this example
         """
+
         err_var = {var: np.diag(self.zeta)[i] for i, var in enumerate(self.eta)}
         graph = nx.relabel_nodes(nx.from_numpy_matrix(self.B.T, create_using=nx.DiGraph),
                                  mapping={i: self.eta[i] for i in range(self.B.shape[0])})
