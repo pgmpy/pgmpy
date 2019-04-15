@@ -605,20 +605,18 @@ class TestSEMGraph(unittest.TestCase):
                           latents=[],
                           err_corr=[('W', 'Y')],
                           err_var={})
-        self.assertEqual(model1.get_conditional_ivs('X', 'Y'), [('I', {'W'})])
+        self.assertEqual(model1.get_conditional_ivs('X', 'Y'), [('I', {'W', 'Y'})])
 
         model2 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('w', 'z'), ('w', 'u'), ('u', 'x'), ('u', 'y')],
                           latents=['u'])
-        self.assertEqual(model2.get_conditional_ivs('x', 'y'), [('z', {'w'})])
+        self.assertEqual(model2.get_conditional_ivs('x', 'y'), [('z', {'y', 'w'})])
 
         model3 = SEMGraph(ebunch=[('x', 'y'), ('u', 'x'), ('u', 'y'), ('z', 'x')],
                           latents=['u'])
         self.assertEqual(model3.get_ivs('x', 'y'), {'z'})
 
-        # The conditional algo shouldn't work in this case because the variable z is already
-        # an IV and nearest separator doesn't work because the ancestral graph is disconnected.
         model4 = SEMGraph(ebunch=[('x', 'y'), ('z', 'x'), ('u', 'x'), ('u', 'y')])
-        self.assertEqual(model4.get_conditional_ivs('x', 'y'), [])
+        self.assertEqual(model4.get_conditional_ivs('x', 'y'), [('z', {'u'})])
 
 
 class TESTSEMLISREL(unittest.TestCase):
