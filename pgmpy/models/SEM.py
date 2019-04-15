@@ -833,10 +833,15 @@ class SEMLISREL:
         >>> model = SEMLISREL()
         # TODO: Finish this example
         """
+        err_var = {var: np.diag(self.zeta)[i] for i, var in enumerate(self.eta)}
         graph = nx.relabel_nodes(nx.from_numpy_matrix(self.B.T, create_using=nx.DiGraph),
                                  mapping={i: self.eta[i] for i in range(self.B.shape[0])})
-        err_graph = nx.relabel_nodes(nx.from_numpy_matrix(self.zeta.T, create_using=nx.Graph),
+        # Fill zeta diagonal with 0's as they represent variance and would add self loops in the graph.
+        zeta = self.zeta.copy()
+        np.fill_diagonal(zeta, 0)
+        err_graph = nx.relabel_nodes(nx.from_numpy_matrix(zeta.T, create_using=nx.Graph),
                                      mapping={i: self.eta[i] for i in range(self.zeta.shape[0])})
+
         latents = set(self.eta) - set(self.y)
 
         from pgmpy.models import SEMGraph
@@ -844,8 +849,7 @@ class SEMLISREL:
         sem_graph = SEMGraph(ebunch=graph.edges(),
                              latents=latents,
                              err_corr=err_graph.edges(),
-                             err_var={var: np.diag(self.zeta)[i]
-                                      for i, var in enumerate(self.eta)})
+                             err_var=err_var)
         return sem_graph
 
     def set_params(self, B, zeta):
