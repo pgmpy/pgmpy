@@ -671,3 +671,22 @@ class DAG(nx.DiGraph):
                 nodes_list.update(self.predecessors(node))
             ancestors_list.add(node)
         return ancestors_list
+
+    def do(self, node):
+        """
+        Applies the do operator to the graph and returns a new DAG with the transformed graph.
+
+        Defined by Pearl in Causality on p. 70, the do-operator, do(X = x) has the effect of removing all edges from
+        the parents of X and setting X to the given value x.
+
+        Parameters
+        ----------
+        node : string
+            The name of the node to apply the do-operator to.
+        """
+        assert node in self.nodes()
+        edges = [(a, b) for a, b in self.edges() if b != node]
+        dag_do_x = DAG(edges)
+        # Make sure disconnected nodes aren't lost
+        [dag_do_x.add_node(n) for n in self.nodes() if n not in dag_do_x.nodes()]
+        return dag_do_x

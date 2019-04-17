@@ -1,15 +1,13 @@
 import statsmodels.api as sm
 from statsmodels.api import OLS
 
-from pgmpy.models.CausalGraph import CausalGraph
-
 
 class LinearEstimator(object):
     """
     A simple linear model built on statmodels.
     """
     def __init__(self, graph, **kwargs):
-        assert isinstance(graph, CausalGraph)
+        pass
 
     def _model(self, X, Y, Z, data, **kwargs):
         exog = sm.add_constant(data[[X] + list(Z)])
