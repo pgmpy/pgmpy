@@ -740,7 +740,7 @@ class SEMGraph(DirectedGraph):
             for var in common_elements:
                 mapping[var] = '_l_' + var
             lisrel_graph = nx.relabel_nodes(lisrel_graph, mapping, copy=True)
-            for u, v in mapping.items():
+            for v, u in mapping.items():
                 lisrel_graph.add_edge(u, v, weight=1.0)
             eta.extend(mapping.values())
             x = list(set(x) - common_elements)
