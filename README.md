@@ -19,14 +19,23 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 Dependencies
 =============
 pgmpy has following non optional dependencies:
-- Python 2.7 or Python 3
-- NetworkX 1.11 
-- Scipy 0.18.0 
-- Numpy 1.11.1 
-- Pandas 0.18.1 
+- Python 3.4 or higher
+- NetworkX 2.x
+- Scipy 
+- Numpy
+- Pandas
 
 Installation
 =============
+The preferred way to install pgmpy is through the `dev` brach:
+```
+$ git clone https://github.com/pgmpy/pgmpy 
+$ cd pgmpy/
+$ pip install -r requirements.txt
+$ python setup.py install
+```
+
+pgmpy can also be installed using conda or pip. 
 Using conda:
 ```
 $ conda install -c ankurankan pgmpy
@@ -36,14 +45,6 @@ Using pip:
 ```
 $ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
 $ pip install pgmpy
-```
-
-Or for installing the latest codebase:
-```
-$ git clone https://github.com/pgmpy/pgmpy 
-$ cd pgmpy/
-$ pip install -r requirements.txt
-$ python setup.py install
 ```
 
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
