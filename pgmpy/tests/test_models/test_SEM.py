@@ -620,7 +620,8 @@ class TestSEMGraph(unittest.TestCase):
         self.assertEqual(model4.get_conditional_ivs('x', 'y'), [('z', {'u'})])
 
 
-class TESTSEMLISREL(unittest.TestCase):
+
+class TestSEMLISREL(unittest.TestCase):
     def setUp(self):
         self.demo = SEMGraph(ebunch=[('xi1', 'x1'),
                                      ('xi1', 'x2'),
@@ -645,3 +646,11 @@ class TESTSEMLISREL(unittest.TestCase):
                                        ('y6', 'y8')])
         self.demo_lisrel = self.demo.to_lisrel()
 
+        self.small_model = SEM.from_graph(ebunch=[('X', 'Y', 0.3), ('Y', 'Z', 0.4),
+                                                  ('U', 'Y', 0.2), ('U', 'Z', 0.5)],
+                                          latents=['U'],
+                                          err_var={'X': 0.2, 'Y': 0.5, 'Z': 0.8, 'U': 1.0})
+        self.small_model_lisrel = self.small_model.to_lisrel()
+
+    def test_generate_samples(self):
+        samples = self.small_model_lisrel.generate_samples(n_samples=100)

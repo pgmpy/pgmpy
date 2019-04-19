@@ -569,8 +569,15 @@ class SEMGraph(DirectedGraph):
         graph_fixed = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight='weight')
 
         err_adj = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight=None)
-        np.fill_diagonal(err_adj, 1.0)
+        np.fill_diagonal(err_adj, 1.0) # Variance exists for each error term.
         err_fixed = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight='weight')
+
+        # Add the variance of the error terms.
+        for index, node in enumerate(nodelist):
+            try:
+                err_fixed[index, index] = self.err_graph.nodes[node]['weight']
+            except KeyError:
+                err_fixed[index, index] = 0.
 
         wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
         for index, obs_var in enumerate(self.observed):
@@ -579,7 +586,6 @@ class SEMGraph(DirectedGraph):
         from pgmpy.models import SEMLISREL
         return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
                          fixed_values={'B': graph_fixed, 'zeta': err_fixed})
-
 
     @staticmethod
     def __standard_lisrel_masks(graph, err_graph, weight, var):
@@ -874,6 +880,33 @@ class SEMLISREL:
         self.B_fixed_mask = B
         self.zeta_fixed_mask = zeta
 
+    def generate_samples(self, n_samples=100):
+        """
+        Generates random samples from the model.
+
+        Parameters
+        ----------
+        n_samples: int
+            The number of samples to generate.
+
+        Returns
+        -------
+        pd.DataFrame: The genrated samples.
+        """
+        if (self.B_fixed_mask is None) or (self.zeta_fixed_mask is None):
+            raise ValueError("Parameters for the model has not been specified.")
+
+        B_inv = np.linalg.inv(np.eye(self.B_fixed_mask.shape[0]) - self.B_fixed_mask)
+        implied_cov = self.wedge_y @ self.B_fixed_mask @ self.zeta_fixed_mask @ B_inv.T @ self.wedge_y.T
+
+        # Check if implied covariance matrix is positive definite.
+        if not np.all(np.linalg.eigvals(implied_cov) > 0):
+            raise ValueError("The implied covariance matrix is not positive definite." +
+                             "Please check model parameters.")
+
+        return np.random.multivariate_normal(mean=[0 for i in range(implied_cov.shape[0])],
+                                             cov=implied_cov,
+                                             size=n_samples)
 
 class SEM(SEMGraph):
     """
