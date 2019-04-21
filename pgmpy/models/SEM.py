@@ -585,7 +585,7 @@ class SEMGraph(DirectedGraph):
 
         from pgmpy.models import SEMLISREL
         return SEMLISREL(eta=nodelist, B=graph_adj.T, zeta=err_adj.T, wedge_y=wedge_y,
-                         fixed_values={'B': graph_fixed, 'zeta': err_fixed})
+                         fixed_values={'B': graph_fixed.T, 'zeta': err_fixed.T})
 
     @staticmethod
     def __standard_lisrel_masks(graph, err_graph, weight, var):
