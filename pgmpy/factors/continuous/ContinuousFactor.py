@@ -380,13 +380,13 @@ class ContinuousFactor(BaseFactor):
         Parameters
         ----------
         other: ContinuousFactor
-            The ContinuousFactor to be multiplied.
+            The ContinuousFactor to be divided.
 
         Returns
         -------
         ContinuousFactor or None:
                         if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+                        if inplace=False returns a new `ContinuousFactor` instance.
 
         Example
         -------
