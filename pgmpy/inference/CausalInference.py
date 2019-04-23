@@ -46,7 +46,7 @@ class CausalInference(object):
     """
     def __init__(self, model, latent_vars=None, set_nodes=None):
         if not isinstance(model, BayesianModel):
-            print("We currently only support graphical model represented with the BayesianModel class.")
+            raise NotImplementedError("Bayesian Parameter Estimation is only implemented for BayesianModel")
         self.dag = model
         self.graph = self.dag.to_undirected()
         self.latent_variables = _variable_or_iterable_to_set(latent_vars)
@@ -109,8 +109,7 @@ class CausalInference(object):
             assert X in self.observed_variables
             assert Y in self.observed_variables
         except AssertionError:
-            print("Make sure that X and Y are observed in your graph")
-            return None
+            raise AssertionError("Make sure both X and Y are observed.")
 
         if self.is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
             return frozenset()
@@ -256,8 +255,12 @@ class CausalInference(object):
                 all:
                     Estimate the ATE from each identified estimand
         estimator_type: str
-            The type of model to be used to estimate the ATE.  Right now just linear is supported, but we'll add more
-            as use cases arise.
+            The type of model to be used to estimate the ATE.  
+            All of the linear regression classes in statsmodels are available including:
+                * GLS: generalized least squares for arbitrary covariance
+                * OLS: ordinary least square of i.i.d. errors
+                * WLS: weighted least squares for heteroskedastic error
+            Specify them with their acronym (e.g. "OLS") or simple "linear" as an alias for OLS.
         **kwargs: dict
             Keyward arguments specific to the selected estimator.
             linear:
