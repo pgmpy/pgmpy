@@ -897,7 +897,7 @@ class SEMLISREL:
             raise ValueError("Parameters for the model has not been specified.")
 
         B_inv = np.linalg.inv(np.eye(self.B_fixed_mask.shape[0]) - self.B_fixed_mask)
-        implied_cov = self.wedge_y @ self.B_fixed_mask @ self.zeta_fixed_mask @ B_inv.T @ self.wedge_y.T
+        implied_cov = self.wedge_y @ B_inv @ self.zeta_fixed_mask @ B_inv.T @ self.wedge_y.T
 
         # Check if implied covariance matrix is positive definite.
         if not np.all(np.linalg.eigvals(implied_cov) > 0):
