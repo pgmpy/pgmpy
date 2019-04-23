@@ -1,12 +1,9 @@
-from collections import Iterable
-from itertools import combinations, chain
-
-import networkx as nx
-
 import numpy as np
+import networkx as nx
 
 from pgmpy.models.BayesianModel import BayesianModel
 from pgmpy.estimators.LinearModel import LinearEstimator
+from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
 class CausalInference(object):
@@ -48,11 +45,12 @@ class CausalInference(object):
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
     def __init__(self, model, latent_vars=None, set_nodes=None):
-        assert isinstance(model, BayesianModel)
+        if not isinstance(model, BayesianModel):
+            print("We currently only support graphical model represented with the BayesianModel class.")
         self.dag = model
         self.graph = self.dag.to_undirected()
-        self.latent_variables = self._variable_or_iterable_to_set(latent_vars)
-        self.set_nodes = self._variable_or_iterable_to_set(set_nodes)
+        self.latent_variables = _variable_or_iterable_to_set(latent_vars)
+        self.set_nodes = _variable_or_iterable_to_set(set_nodes)
         self.observed_variables = frozenset(self.dag.nodes()).difference(self.latent_variables)
 
     def __repr__(self):
@@ -107,8 +105,12 @@ class CausalInference(object):
         Y: str
             Target Variable
         """
-        assert X in self.observed_variables
-        assert Y in self.observed_variables
+        try:
+            assert X in self.observed_variables
+            assert Y in self.observed_variables
+        except AssertionError:
+            print("Make sure that X and Y are observed in your graph")
+            return None
 
         if self.is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
             return frozenset()
@@ -120,7 +122,7 @@ class CausalInference(object):
         )
 
         valid_adjustment_sets = []
-        for s in self._powerset(possible_adjustment_variables):
+        for s in _powerset(possible_adjustment_variables):
             super_of_complete = any([
                 vs.intersection(set(s)) == vs
                 for vs in valid_adjustment_sets
@@ -146,7 +148,7 @@ class CausalInference(object):
         Z: set
             Adjustment variables
         """
-        Z = self._variable_or_iterable_to_set(Z)
+        Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
         directed_paths = list(nx.all_simple_paths(self.dag, X, Y))
@@ -199,7 +201,7 @@ class CausalInference(object):
 
         valid_adjustment_sets = frozenset([
                 frozenset(s)
-                for s in self._powerset(possible_adjustment_variables)
+                for s in _powerset(possible_adjustment_variables)
                 if self.is_valid_frontdoor_adjustment_set(X, Y, s)
             ])
 
@@ -284,39 +286,3 @@ class CausalInference(object):
             for s in adjustment_sets
         ]
         return np.mean(ate)
-
-    @staticmethod
-    def _variable_or_iterable_to_set(x):
-        """
-        Convert variable, set, or iterable x to a frozenset.
-
-        If x is None, returns the empty set.
-
-        Parameters
-        ---------
-        x : None, str or Iterable[str]
-        """
-        if x is None:
-            return frozenset([])
-
-        if isinstance(x, str):
-            return frozenset([x])
-
-        if isinstance(x, set):
-            return frozenset(x)
-
-        if not isinstance(x, Iterable) or not all(isinstance(xx, str) for xx in x):
-            raise ValueError(
-                "{} is expected to be either a string, set of strings, or an iterable of strings"
-                .format(x))
-
-        return frozenset(x)
-
-    @staticmethod
-    def _powerset(iterable):
-        """
-        https://docs.python.org/3/library/itertools.html#recipes
-        powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
-        """
-        s = list(iterable)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
