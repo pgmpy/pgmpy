@@ -905,7 +905,7 @@ class SEMLISREL:
                              "Please check model parameters.")
 
         # Get the order of observed variables
-        x_index, y_index = np.nonzero(wedge_y)
+        x_index, y_index = np.nonzero(self.wedge_y)
         observed = [self.eta[i] for i in y_index]
 
         # Generate samples and return a dataframe.

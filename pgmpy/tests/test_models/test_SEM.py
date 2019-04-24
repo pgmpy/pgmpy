@@ -773,11 +773,11 @@ class TestSEMLISREL(unittest.TestCase):
                                       'eta1': 3.956, 'eta2': 0.172})
         self.demo_lisrel = self.demo.to_lisrel()
 
-        self.small_model = SEM.from_graph(ebunch=[('X', 'Y', 0.3), ('Y', 'Z', 0.8),
-                                                  ('U', 'Y', 0.2), ('U', 'Z', 0.5)],
-                                          latents=['U'],
-                                          err_var={'X': 0.1, 'Y': 0.1, 'Z': 0.1, 'U': 0.1})
+        self.small_model = SEM.from_graph(ebunch=[('X', 'Y', 0.3)],
+                                          latents=[],
+                                          err_var={'X': 0.1, 'Y': 0.1})
         self.small_model_lisrel = self.small_model.to_lisrel()
 
     def test_generate_samples(self):
+        samples = self.small_model_lisrel.generate_samples(n_samples=100)
         samples = self.demo_lisrel.generate_samples(n_samples=100)
