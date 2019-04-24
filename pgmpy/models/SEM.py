@@ -904,9 +904,15 @@ class SEMLISREL:
             raise ValueError("The implied covariance matrix is not positive definite." +
                              "Please check model parameters.")
 
-        return np.random.multivariate_normal(mean=[0 for i in range(implied_cov.shape[0])],
-                                             cov=implied_cov,
-                                             size=n_samples)
+        # Get the order of observed variables
+        x_index, y_index = np.nonzero(wedge_y)
+        observed = [self.eta[i] for i in y_index]
+
+        # Generate samples and return a dataframe.
+        samples = np.random.multivariate_normal(mean=[0 for i in range(implied_cov.shape[0])],
+                                                cov=implied_cov,
+                                                size=n_samples)
+        return pd.DataFrame(samples, columns=observed)
 
 class SEM(SEMGraph):
     """
