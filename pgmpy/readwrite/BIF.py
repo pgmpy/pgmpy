@@ -297,10 +297,13 @@ class BIFReader(object):
             tabular_cpds = []
             for var in sorted(self.variable_cpds.keys()):
                 values = self.variable_cpds[var]
+                sn = {p_var: self.variable_states[p_var] for p_var in self.variable_parents[var]}
+                sn[var] = self.variable_states[var]
                 cpd = TabularCPD(var, len(self.variable_states[var]), values,
                                  evidence=self.variable_parents[var],
                                  evidence_card=[len(self.variable_states[evidence_var])
-                                                for evidence_var in self.variable_parents[var]])
+                                                for evidence_var in self.variable_parents[var]],
+                                 state_names=sn)
                 tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)

@@ -222,21 +222,14 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce_typeerror(self):
         self.assertRaises(TypeError, self.phi1.reduce, 'x10')
         self.assertRaises(TypeError, self.phi1.reduce, ['x10'])
-        self.assertRaises(TypeError, self.phi1.reduce, [('x1', 'x2')])
-        self.assertRaises(TypeError, self.phi1.reduce, [(0, 'x1')])
-        self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 'x1')])
-        self.assertRaises(TypeError, self.phi1.reduce, [(0.1, 0.1)])
-        self.assertRaises(TypeError, self.phi1.reduce, [('x1', 0.1)])
-
-        self.assertRaises(TypeError, self.phi5.reduce, [(('x1', 'x2'), 0), (('x2', 'x3'), 0.2)])
 
     def test_reduce_scopeerror(self):
-        self.assertRaises(ValueError, self.phi1.reduce, [('x4', 1)])
-        self.assertRaises(ValueError, self.phi5.reduce, [((('x1', 0.1), 0))])
+        self.assertRaises(KeyError, self.phi1.reduce, [('x4', 1)])
+        self.assertRaises(KeyError, self.phi5.reduce, [((('x1', 0.1), 0))])
 
     def test_reduce_sizeerror(self):
-        self.assertRaises(IndexError, self.phi1.reduce, [('x3', 5)])
-        self.assertRaises(IndexError, self.phi5.reduce, [(('x2', 'x3'), 3)])
+        self.assertRaises(KeyError, self.phi1.reduce, [('x3', 5)])
+        self.assertRaises(KeyError, self.phi5.reduce, [(('x2', 'x3'), 3)])
 
     def test_identity_factor(self):
         identity_factor = self.phi.identity_factor()
@@ -546,8 +539,8 @@ class TestTabularCPDInit(unittest.TestCase):
 class TestTabularCPDMethods(unittest.TestCase):
 
     def setUp(self):
-        sn = {'intel': ['low', 'medium', 'high'], 
-              'diff': ['low', 'high'], 
+        sn = {'intel': ['low', 'medium', 'high'],
+              'diff': ['low', 'high'],
               'grade' : ['grade(0)', 'grade(1)', 'grade(2)', 'grade(3)', 'grade(4)', 'grade(5)']}
         self.cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
                                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -633,31 +626,31 @@ class TestTabularCPDMethods(unittest.TestCase):
         self.assertEqual(self.cpd.state_names, copy_cpd.state_names)
 
     def test_reduce_1(self):
-        self.cpd.reduce([('diff', 0)])
+        self.cpd.reduce([('diff', 'low')])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1, 0.1],
                                                                     [0.1, 0.1, 0.1],
                                                                     [0.8, 0.8, 0.8]]))
 
     def test_reduce_2(self):
-        self.cpd.reduce([('intel', 0)])
+        self.cpd.reduce([('intel', 'low')])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1, 0.1],
                                                                     [0.1, 0.1],
                                                                     [0.8, 0.8]]))
 
     def test_reduce_3(self):
-        self.cpd.reduce([('intel', 0), ('diff', 0)])
+        self.cpd.reduce([('intel', 'low'), ('diff', 'low')])
         np_test.assert_array_equal(self.cpd.get_values(), np.array([[0.1],
                                                                     [0.1],
                                                                     [0.8]]))
 
     def test_reduce_4(self):
-        self.assertRaises(ValueError, self.cpd.reduce, [('grade', 0)])
+        self.assertRaises(ValueError, self.cpd.reduce, [('grade', 'grade(0)')])
 
     def test_reduce_5(self):
         copy_cpd = self.cpd.copy()
-        copy_cpd.reduce([('intel', 2), ('diff', 1)])
-        self.cpd.reduce([('intel', 2)])
-        self.cpd.reduce([('diff', 1)])
+        copy_cpd.reduce([('intel', 'high'), ('diff', 'low')])
+        self.cpd.reduce([('intel', 'high')])
+        self.cpd.reduce([('diff', 'high')])
         np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
 
     def test_get_values(self):

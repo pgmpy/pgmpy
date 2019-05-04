@@ -10,12 +10,9 @@ from pgmpy.extern.six import string_types
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import JunctionTree, BayesianModel
-from pgmpy.utils import StateNameDecorator
 
 
 class VariableElimination(Inference):
-
-    @StateNameDecorator(argument='evidence', return_val=None)
     def _variable_elimination(self, variables, operation, evidence=None, elimination_order=None, joint=True):
         """
         Implementation of a generalized variable elimination.
@@ -178,7 +175,6 @@ class VariableElimination(Inference):
 
         return np.max(final_distribution.values)
 
-    @StateNameDecorator(argument=None, return_val=True)
     def map_query(self, variables=None, evidence=None, elimination_order=None):
         """
         Computes the MAP Query over the variables given the evidence.

@@ -12,8 +12,6 @@ from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import range, zip
-from pgmpy.utils import StateNameInit
-from pgmpy.utils import StateNameDecorator
 
 
 class TabularCPD(DiscreteFactor):
@@ -99,9 +97,8 @@ class TabularCPD(DiscreteFactor):
     normalize()
     reduce([values_list])
     """
-    @StateNameInit()
     def __init__(self, variable, variable_card, values,
-                 evidence=None, evidence_card=None):
+                 evidence=None, evidence_card=None, state_names={}):
 
         self.variable = variable
         self.variable_card = None
@@ -130,7 +127,7 @@ class TabularCPD(DiscreteFactor):
             raise TypeError("Values must be a 2D list/array")
 
         super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
-                                         state_names=self.state_names)
+                                         state_names=state_names)
 
     def __repr__(self):
         var_str = '<TabularCPD representing P({var}:{card}'.format(
@@ -298,7 +295,6 @@ class TabularCPD(DiscreteFactor):
         if not inplace:
             return tabular_cpd
 
-    @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the cpd table to the context of given variable values.
@@ -349,7 +345,10 @@ class TabularCPD(DiscreteFactor):
         >>> factor
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
-        return DiscreteFactor(self.variables, self.cardinality, self.values)
+        return DiscreteFactor(variables=self.variables,
+                              cardinality=self.cardinality,
+                              values=self.values,
+                              state_names=self.state_names)
 
     def reorder_parents(self, new_order, inplace=True):
         """
