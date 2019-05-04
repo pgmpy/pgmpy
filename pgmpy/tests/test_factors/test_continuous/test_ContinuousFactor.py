@@ -6,6 +6,7 @@ from scipy.special import beta
 from scipy.stats import multivariate_normal
 
 from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.distributions import GaussianDistribution
 
 
 class TestContinuousFactor(unittest.TestCase):
@@ -30,6 +31,14 @@ class TestContinuousFactor(unittest.TestCase):
         phi3 = ContinuousFactor(['x', 'y', 'z'], self.pdf3)
         self.assertEqual(phi3.scope(), ['x', 'y', 'z'])
         self.assertEqual(phi3.pdf, self.pdf3)
+
+    def test_class_init_gaussian(self):
+        mean = np.array([1, -3, 4])
+        cov = np.array([[4, 2, -2], [2, 5, -5], [-2, -5, 8]])
+        phi1 = ContinuousFactor(['x1', 'x2', 'x3'], 'gaussian', mean=mean, covariance=cov)
+        self.assertIsInstance(phi1.distribution, GaussianDistribution)
+        self.assertListEqual(phi1.distribution.mean.tolist(), np.array([[1], [-3], [4]]).tolist())
+        self.assertListEqual(phi1.distribution.covariance.tolist(), cov.tolist())
 
     def test_class_init_typeerror(self):
         self.assertRaises(TypeError, ContinuousFactor, 'x y', self.pdf1)
