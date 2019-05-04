@@ -131,9 +131,15 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
         node_cardinality = len(self.state_names[node])
 
+        # Get the state names for the CPD
+        state_names = {node: list(state_counts.index)}
+        if parents:
+            state_names.update({state_counts.columns.names[i]: list(state_counts.columns.levels[i])
+                                for i in range(len(parents))})
+
         cpd = TabularCPD(node, node_cardinality, np.array(state_counts),
                          evidence=parents,
                          evidence_card=parents_cardinalities,
-                         state_names=self.state_names)
+                         state_names=state_names)
         cpd.normalize()
         return cpd

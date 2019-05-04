@@ -6,15 +6,14 @@ from collections import namedtuple
 import numpy as np
 
 from pgmpy.factors.base import BaseFactor
+from pgmpy.utils import StateNameMixin
 from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
-from pgmpy.utils import StateNameInit, StateNameDecorator
 
 State = namedtuple('State', ['var', 'state'])
 
-
-class DiscreteFactor(BaseFactor):
+class DiscreteFactor(BaseFactor, StateNameMixin):
     """
     Base class for DiscreteFactor.
 
@@ -28,8 +27,7 @@ class DiscreteFactor(BaseFactor):
     reduce([variable_values_list])
     """
 
-    @StateNameInit()
-    def __init__(self, variables, cardinality, values):
+    def __init__(self, variables, cardinality, values, state_names={}):
         """
         Initialize a factor class.
 
@@ -111,6 +109,9 @@ class DiscreteFactor(BaseFactor):
         self.cardinality = np.array(cardinality, dtype=int)
         self.values = values.reshape(self.cardinality)
 
+        # Set the state names
+        super(DiscreteFactor, self).store_state_names(variables, cardinality, state_names)
+
     def scope(self):
         """
         Returns the scope of the factor.
@@ -158,7 +159,6 @@ class DiscreteFactor(BaseFactor):
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
-    @StateNameDecorator(argument=None, return_val=True)
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
@@ -194,7 +194,8 @@ class DiscreteFactor(BaseFactor):
 
         assignments = assignments[:, ::-1]
 
-        return [[(key, val) for key, val in zip(self.variables, values)] for values in assignments]
+        return [[(key, self.get_state_names(key, val)) for key, val in zip(self.variables, values)] for
+                                                                            values in assignments]
 
     def identity_factor(self):
         """
@@ -224,7 +225,10 @@ class DiscreteFactor(BaseFactor):
                 [ 1.,  1.],
                 [ 1.,  1.]]])
         """
-        return DiscreteFactor(self.variables, self.cardinality, np.ones(self.values.size))
+        return DiscreteFactor(variables=self.variables,
+                              cardinality=self.cardinality,
+                              values=np.ones(self.values.size),
+                              state_names=self.state_names)
 
     def marginalize(self, variables, inplace=True):
         """
@@ -379,7 +383,6 @@ class DiscreteFactor(BaseFactor):
         if not inplace:
             return phi
 
-    @StateNameDecorator(argument='values', return_val=None)
     def reduce(self, values, inplace=True):
         """
         Reduces the factor to the context of given variable values.
@@ -413,12 +416,11 @@ class DiscreteFactor(BaseFactor):
         if isinstance(values, six.string_types):
             raise TypeError("values: Expected type list or array-like, got type str")
 
-        if (any(isinstance(value, six.string_types) for value in values) or
-                not all(isinstance(state, (int, np.integer)) for var, state in values)):
-            raise TypeError("values: must contain tuples or array-like elements of the form "
-                            "(hashable object, type int)")
+        if not all([isinstance(state_tuple, tuple) for state_tuple in values]):
+            raise TypeError("values: Expected type list of tuples, get type {type}", type(values[0]))
 
         phi = self if inplace else self.copy()
+        values = [(var, self.get_state_no(var, state_name)) for var, state_name in values]
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)
@@ -608,6 +610,7 @@ class DiscreteFactor(BaseFactor):
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values * phi1.values
+            phi.add_state_names(phi1)
 
         if not inplace:
             return phi
