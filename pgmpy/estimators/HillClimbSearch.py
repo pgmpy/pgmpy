@@ -4,13 +4,13 @@ from itertools import permutations
 import networkx as nx
 
 from pgmpy.estimators import StructureEstimator, K2Score
-from pgmpy.models import BayesianModel
+from pgmpy.base import DAG
 
 
 class HillClimbSearch(StructureEstimator):
     def __init__(self, data, scoring_method=None, **kwargs):
         """
-        Class for heuristic hill climb searches for BayesianModels, to learn
+        Class for heuristic hill climb searches for DAGs, to learn
         network structure from data. `estimate` attempts to find a model with optimal score.
 
         Parameters
@@ -95,14 +95,14 @@ class HillClimbSearch(StructureEstimator):
 
     def estimate(self, start=None, tabu_length=0, max_indegree=None):
         """
-        Performs local hill climb search to estimates the `BayesianModel` structure
+        Performs local hill climb search to estimates the `DAG` structure
         that has optimal score, according to the scoring method supplied in the constructor.
         Starts at model `start` and proceeds by step-by-step network modifications
         until a local maximum is reached. Only estimates network structure, no parametrization.
 
         Parameters
         ----------
-        start: BayesianModel instance
+        start: DAG instance
             The starting point for the local search. By default a completely disconnected network is used.
         tabu_length: int
             If provided, the last `tabu_length` graph modifications cannot be reversed
@@ -114,8 +114,8 @@ class HillClimbSearch(StructureEstimator):
 
         Returns
         -------
-        model: `BayesianModel` instance
-            A `BayesianModel` at a (local) score maximum.
+        model: `DAG` instance
+            A `DAG` at a (local) score maximum.
 
         Examples
         --------
@@ -139,10 +139,10 @@ class HillClimbSearch(StructureEstimator):
         epsilon = 1e-8
         nodes = self.state_names.keys()
         if start is None:
-            start = BayesianModel()
+            start = DAG()
             start.add_nodes_from(nodes)
-        elif not isinstance(start, BayesianModel) or not set(start.nodes()) == set(nodes):
-            raise ValueError("'start' should be a BayesianModel with the same variables as the data set, or 'None'.")
+        elif not isinstance(start, DAG) or not set(start.nodes()) == set(nodes):
+            raise ValueError("'start' should be a DAG with the same variables as the data set, or 'None'.")
 
         tabu_list = []
         current_model = start

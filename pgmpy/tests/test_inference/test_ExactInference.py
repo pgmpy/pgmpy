@@ -35,51 +35,55 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_query_single_variable(self):
         query_result = self.bayesian_inference.query(['J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.416, 0.584]))
 
     def test_query_multiple_variable(self):
         query_result = self.bayesian_inference.query(['Q', 'J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.4912, 0.5088]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.3744, 0.0416],
+                                                                       [0.1168, 0.4672]])))
 
     def test_query_single_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(variables=['J'],
                                                      evidence={'A': 0, 'R': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.60, 0.40]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.6, 0.4]))
 
     def test_query_multiple_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(variables=['J', 'Q'],
                                                      evidence={'A': 0, 'R': 0,
                                                                'G': 0, 'L': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.818182, 0.181818]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.772727, 0.227273]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.73636364, 0.08181818],
+                                                                       [0.03636364, 0.14545455]])))
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
         query_result = self.bayesian_inference.query(['J'])
         query_result = self.bayesian_inference.query(['J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=np.array([0.416, 0.584])))
 
         query_result = self.bayesian_inference.query(['Q', 'J'])
         query_result = self.bayesian_inference.query(['Q', 'J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.4912, 0.5088]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.3744, 0.0416],
+                                                                       [0.1168, 0.4672]])))
 
         query_result = self.bayesian_inference.query(variables=['J'],
                                                      evidence={'A': 0, 'R': 1})
         query_result = self.bayesian_inference.query(variables=['J'],
                                                      evidence={'A': 0, 'R': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.60, 0.40]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.6, 0.4]))
 
         query_result = self.bayesian_inference.query(variables=['J', 'Q'],
                                                      evidence={'A': 0, 'R': 0,
@@ -87,10 +91,10 @@ class TestVariableElimination(unittest.TestCase):
         query_result = self.bayesian_inference.query(variables=['J', 'Q'],
                                                      evidence={'A': 0, 'R': 0,
                                                                'G': 0, 'L': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.818182, 0.181818]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.772727, 0.227273]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.73636364, 0.08181818],
+                                                                       [0.03636364, 0.14545455]])))
 
     def test_max_marginal(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(), 0.1659, decimal=4)
@@ -100,11 +104,11 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_max_marginal_var1(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G', 'R']),
-                                    0.4055, decimal=4)
+                                    0.3740, decimal=4)
 
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(self.bayesian_inference.max_marginal(['G', 'R', 'A']),
-                                    0.3260, decimal=4)
+                                    0.3061, decimal=4)
 
     def test_map_query(self):
         map_query = self.bayesian_inference.map_query()
@@ -159,51 +163,55 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_query_single_variable(self):
         query_result = self.markov_inference.query(['J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=np.array([0.416, 0.584])))
 
     def test_query_multiple_variable(self):
         query_result = self.markov_inference.query(['Q', 'J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.4912, 0.5088]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['Q', 'J'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.3744, 0.1168],
+                                                                       [0.0416, 0.4672]])))
 
     def test_query_single_variable_with_evidence(self):
         query_result = self.markov_inference.query(variables=['J'],
                                                    evidence={'A': 0, 'R': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.60, 0.40]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.6, 0.4]))
 
     def test_query_multiple_variable_with_evidence(self):
         query_result = self.markov_inference.query(variables=['J', 'Q'],
                                                    evidence={'A': 0, 'R': 0,
                                                              'G': 0, 'L': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.818182, 0.181818]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.772727, 0.227273]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['Q', 'J'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.081, 0.004],
+                                                                       [0.009, 0.016]])))
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
         query_result = self.markov_inference.query(['J'])
         query_result = self.markov_inference.query(['J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=np.array([0.416, 0.584])))
 
         query_result = self.markov_inference.query(['Q', 'J'])
         query_result = self.markov_inference.query(['Q', 'J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.4912, 0.5088]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['Q', 'J'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.3744, 0.1168],
+                                                                       [0.0416, 0.4672]])))
 
         query_result = self.markov_inference.query(variables=['J'],
                                                    evidence={'A': 0, 'R': 1})
         query_result = self.markov_inference.query(variables=['J'],
                                                    evidence={'A': 0, 'R': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.60, 0.40]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.6, 0.4]))
 
         query_result = self.markov_inference.query(variables=['J', 'Q'],
                                                    evidence={'A': 0, 'R': 0,
@@ -211,24 +219,24 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         query_result = self.markov_inference.query(variables=['J', 'Q'],
                                                    evidence={'A': 0, 'R': 0,
                                                              'G': 0, 'L': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.818182, 0.181818]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.772727, 0.227273]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['Q', 'J'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.081, 0.004],
+                                                                       [0.009, 0.016]])))
 
     def test_max_marginal(self):
         np_test.assert_almost_equal(self.markov_inference.max_marginal(), 0.1659, decimal=4)
 
     def test_max_marginal_var(self):
-        np_test.assert_almost_equal(self.markov_inference.max_marginal(['G']), 0.5714, decimal=4)
+        np_test.assert_almost_equal(self.markov_inference.max_marginal(['G']), 0.1659, decimal=4)
 
     def test_max_marginal_var1(self):
         np_test.assert_almost_equal(self.markov_inference.max_marginal(['G', 'R']),
-                                    0.4055, decimal=4)
+                                    0.1659, decimal=4)
 
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(self.markov_inference.max_marginal(['G', 'R', 'A']),
-                                    0.3260, decimal=4)
+                                    0.1659, decimal=4)
 
     def test_map_query(self):
         map_query = self.markov_inference.map_query()
@@ -355,33 +363,35 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_query_single_variable(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(['J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=[0.416, 0.584]))
 
     def test_query_multiple_variable(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(['Q', 'J'])
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.416, 0.584]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.4912, 0.5088]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.3744, 0.0416],
+                                                                       [0.1168, 0.4672]])))
 
     def test_query_single_variable_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(variables=['J'],
                                                 evidence={'A': 0, 'R': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.60, 0.40]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J'],
+                                                      cardinality=[2],
+                                                      values=np.array([0.072, 0.048])))
 
     def test_query_multiple_variable_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(variables=['J', 'Q'],
                                                 evidence={'A': 0, 'R': 0,
                                                           'G': 0, 'L': 1})
-        np_test.assert_array_almost_equal(query_result['J'].values,
-                                          np.array([0.818182, 0.181818]))
-        np_test.assert_array_almost_equal(query_result['Q'].values,
-                                          np.array([0.772727, 0.227273]))
+        self.assertEqual(query_result, DiscreteFactor(variables=['J', 'Q'],
+                                                      cardinality=[2, 2],
+                                                      values=np.array([[0.003888, 0.000432],
+                                                                       [0.000192, 0.000768]])))
 
     def test_map_query(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)

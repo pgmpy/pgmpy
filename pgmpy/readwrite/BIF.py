@@ -1,8 +1,9 @@
 import re
 import collections
 from string import Template
+from itertools import product
 
-import numpy
+import numpy as np
 from pyparsing import Word, alphanums, Suppress, Optional, CharsNotIn, Group, nums, ZeroOrMore, OneOrMore,\
     cppStyleComment, printables
 
@@ -234,29 +235,26 @@ class BIFReader(object):
                                 [0.3, 0.99]]),
         'light-on': np.array([[0.6, 0.05],
                             [0.4, 0.95]])}
-         """
+        """
         variable_cpds = {}
         for block in self.probability_block():
             names = self.probability_expr.searchString(block)
             var_name, parents = names[0][0], names[0][1:]
             cpds = self.cpd_expr.searchString(block)
             if 'table' in block:
-                arr = [float(j) for i in cpds for j in i]
-                arr = numpy.array(arr)
+                arr = np.array([float(j) for i in cpds for j in i])
                 arr = arr.reshape((len(self.variable_states[var_name]),
                                    arr.size // len(self.variable_states[var_name])))
             else:
-                length = sum(len(self.variable_states[var]) for var in parents)
-                arr = [[0 for j in range(length)] for i in self.variable_states[var_name]]
-                length = len(self.variable_states[var_name])
+                arr_length = np.prod([len(self.variable_states[var]) for var in parents])
+                arr = np.zeros((len(self.variable_states[var_name]), arr_length))
+                values_dict = {}
                 for prob_line in cpds:
                     states = prob_line[:len(parents)]
                     vals = [float(i) for i in prob_line[len(parents):]]
-                    offset = sum((len(parents)-i)*self.variable_states[parents[i]].index(states[i])
-                                 for i in range(len(states)))
-                    for i, val in enumerate(vals):
-                        arr[i][offset] = val
-                arr = numpy.array(arr)
+                    values_dict[tuple(states)] = vals
+                for index, combination in enumerate(product(*[self.variable_states[var] for var in parents])):
+                    arr[:, index] = values_dict[combination]
             variable_cpds[var_name] = arr
 
         return variable_cpds

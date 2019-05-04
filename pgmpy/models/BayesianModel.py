@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
 from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.independencies import Independencies
@@ -18,7 +18,7 @@ from pgmpy.extern.six.moves import range, reduce
 from pgmpy.models.MarkovModel import MarkovModel
 
 
-class BayesianModel(DirectedGraph):
+class BayesianModel(DAG):
     """
     Base class for bayesian model.
 
@@ -390,223 +390,6 @@ class BayesianModel(DirectedGraph):
                                      " is not equal to 1.".format(node=node))
         return True
 
-    def _get_ancestors_of(self, obs_nodes_list):
-        """
-        Returns a dictionary of all ancestors of all the observed nodes including the
-        node itself.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> model = BayesianModel([('D', 'G'), ('I', 'G'), ('G', 'L'),
-        ...                        ('I', 'L')])
-        >>> model._get_ancestors_of('G')
-        {'D', 'G', 'I'}
-        >>> model._get_ancestors_of(['G', 'I'])
-        {'D', 'G', 'I'}
-        """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
-
-        for node in obs_nodes_list:
-            if node not in self.nodes():
-                raise ValueError('Node {s} not in not in graph'.format(s=node))
-
-        ancestors_list = set()
-        nodes_list = set(obs_nodes_list)
-        while nodes_list:
-            node = nodes_list.pop()
-            if node not in ancestors_list:
-                nodes_list.update(self.predecessors(node))
-            ancestors_list.add(node)
-        return ancestors_list
-
-    def active_trail_nodes(self, variables, observed=None):
-        """
-        Returns a dictionary with the given variables as keys and all the nodes reachable
-        from that respective variable as values.
-
-        Parameters
-        ----------
-
-        variables: str or array like
-            variables whose active trails are to be found.
-
-        observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be observed.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades')])
-        >>> student.active_trail_nodes('diff')
-        {'diff': {'diff', 'grades'}}
-        >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
-        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
-
-        References
-        ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
-        """
-        if observed:
-            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
-        else:
-            observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
-
-        # Direction of flow of information
-        # up ->  from parent to child
-        # down -> from child to parent
-
-        active_trails = {}
-        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
-            visit_list = set()
-            visit_list.add((start, 'up'))
-            traversed_list = set()
-            active_nodes = set()
-            while visit_list:
-                node, direction = visit_list.pop()
-                if (node, direction) not in traversed_list:
-                    if node not in observed_list:
-                        active_nodes.add(node)
-                    traversed_list.add((node, direction))
-                    if direction == 'up' and node not in observed_list:
-                        for parent in self.predecessors(node):
-                            visit_list.add((parent, 'up'))
-                        for child in self.successors(node):
-                            visit_list.add((child, 'down'))
-                    elif direction == 'down':
-                        if node not in observed_list:
-                            for child in self.successors(node):
-                                visit_list.add((child, 'down'))
-                        if node in ancestors_list:
-                            for parent in self.predecessors(node):
-                                visit_list.add((parent, 'up'))
-            active_trails[start] = active_nodes
-        return active_trails
-
-    def local_independencies(self, variables):
-        """
-        Returns an instance of Independencies containing the local independencies
-        of each of the variables.
-
-        Parameters
-        ----------
-        variables: str or array like
-            variables whose local independencies are to be found.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
-        >>>                         ('grade', 'letter'), ('intel', 'SAT')])
-        >>> ind = student.local_independencies('grade')
-        >>> ind
-        (grade _|_ SAT | diff, intel)
-        """
-        def dfs(node):
-            """
-            Returns the descendents of node.
-
-            Since Bayesian Networks are acyclic, this is a very simple dfs
-            which does not remember which nodes it has visited.
-            """
-            descendents = []
-            visit = [node]
-            while visit:
-                n = visit.pop()
-                neighbors = list(self.neighbors(n))
-                visit.extend(neighbors)
-                descendents.extend(neighbors)
-            return descendents
-
-        independencies = Independencies()
-        for variable in variables if isinstance(variables, (list, tuple)) else [variables]:
-            non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
-            parents = set(self.get_parents(variable))
-            if non_descendents - parents:
-                independencies.add_assertions([variable, non_descendents - parents, parents])
-        return independencies
-
-    def is_active_trail(self, start, end, observed=None):
-        """
-        Returns True if there is any active trail between start and end node
-
-        Parameters
-        ----------
-        start : Graph Node
-
-        end : Graph Node
-
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
-        >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
-        ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
-        False
-        >>> student.is_active_trail('grades', 'sat')
-        True
-        """
-        if end in self.active_trail_nodes(start, observed)[start]:
-            return True
-        else:
-            return False
-
-    def get_independencies(self, latex=False):
-        """
-        Computes independencies in the Bayesian Network, by checking d-seperation.
-
-        Parameters
-        ----------
-        latex: boolean
-            If latex=True then latex string of the independence assertion
-            would be created.
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> chain = BayesianModel([('X', 'Y'), ('Y', 'Z')])
-        >>> chain.get_independencies()
-        (X _|_ Z | Y)
-        (Z _|_ X | Y)
-        """
-        independencies = Independencies()
-        for start in (self.nodes()):
-            rest = set(self.nodes()) - {start}
-            for r in range(len(rest)):
-                for observed in itertools.combinations(rest, r):
-                    d_seperated_variables = rest - set(observed) - set(
-                        self.active_trail_nodes(start, observed=observed)[start])
-                    if d_seperated_variables:
-                        independencies.add_assertions([start, d_seperated_variables, observed])
-
-        independencies.reduce()
-
-        if not latex:
-            return independencies
-        else:
-            return independencies.latex_string()
-
     def to_markov_model(self):
         """
         Converts bayesian model to markov model. The markov model created would
@@ -842,7 +625,10 @@ class BayesianModel(DirectedGraph):
 
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
-            states_dict = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            full_distribution = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            states_dict = {}
+            for var in missing_variables:
+                states_dict[var] = full_distribution.marginalize(missing_variables - {var}, inplace=False)
             for k, v in states_dict.items():
                 for l in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][l]
@@ -852,69 +638,6 @@ class BayesianModel(DirectedGraph):
     def get_factorized_product(self, latex=False):
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
-
-    def get_immoralities(self):
-        """
-        Finds all the immoralities in the model
-        A v-structure X -> Z <- Y is an immorality if there is no direct edge between X and Y .
-
-        Returns
-        -------
-        set: A set of all the immoralities in the model
-
-        Examples
-        ---------
-        >>> from pgmpy.models import BayesianModel
-        >>> student = BayesianModel()
-        >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
-        ...                         ('intel', 'SAT'), ('grade', 'letter')])
-        >>> student.get_immoralities()
-        {('diff','intel')}
-        """
-        immoralities = set()
-        for node in self.nodes():
-            for parents in itertools.combinations(self.predecessors(node), 2):
-                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
-                    immoralities.add(tuple(sorted(parents)))
-        return immoralities
-
-    def is_iequivalent(self, model):
-        """
-        Checks whether the given model is I-equivalent
-
-        Two graphs G1 and G2 are said to be I-equivalent if they have same skeleton
-        and have same set of immoralities.
-
-        Note: For same skeleton different names of nodes can work but for immoralities
-        names of nodes must be same
-
-        Parameters
-        ----------
-        model : A Bayesian model object, for which you want to check I-equivalence
-
-        Returns
-        --------
-        boolean : True if both are I-equivalent, False otherwise
-
-        Examples
-        --------
-        >>> from pgmpy.models import BayesianModel
-        >>> G = BayesianModel()
-        >>> G.add_edges_from([('V', 'W'), ('W', 'X'),
-        ...                   ('X', 'Y'), ('Z', 'Y')])
-        >>> G1 = BayesianModel()
-        >>> G1.add_edges_from([('W', 'V'), ('X', 'W'),
-        ...                    ('X', 'Y'), ('Z', 'Y')])
-        >>> G.is_iequivalent(G1)
-        True
-
-        """
-        if not isinstance(model, BayesianModel):
-            raise TypeError('model must be an instance of Bayesian Model')
-        skeleton = nx.algorithms.isomorphism.GraphMatcher(self.to_undirected(), model.to_undirected())
-        if skeleton.is_isomorphic() and self.get_immoralities() == model.get_immoralities():
-            return True
-        return False
 
     def is_imap(self, JPD):
         """

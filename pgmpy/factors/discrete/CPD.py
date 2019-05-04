@@ -234,7 +234,7 @@ class TabularCPD(DiscreteFactor):
         evidence = self.variables[1:] if len(self.variables) > 1 else None
         evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
         return TabularCPD(self.variable, self.variable_card, self.get_values(),
-                          evidence, evidence_card)
+                          evidence, evidence_card, state_names=self.state_names)
 
     def normalize(self, inplace=True):
         """
