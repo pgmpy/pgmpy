@@ -195,8 +195,8 @@ class CausalInference(object):
 
         # 1. Z intercepts all directed paths from X to Y
         unblocked_directed_paths = [
-            path for path in
-            directed_paths
+            path
+            for path in directed_paths
             if not any(zz in path for zz in Z)
         ]
 
@@ -248,9 +248,9 @@ class CausalInference(object):
         )
 
         valid_adjustment_sets = frozenset([
-                frozenset(s)
-                for s in _powerset(possible_adjustment_variables)
-                if self.is_valid_frontdoor_adjustment_set(X, Y, s)
+            frozenset(s)
+            for s in _powerset(possible_adjustment_variables)
+            if self.is_valid_frontdoor_adjustment_set(X, Y, s)
         ])
 
         return valid_adjustment_sets
@@ -329,6 +329,19 @@ class CausalInference(object):
             linear:
               missing: str
                 Available options are "none", "drop", or "raise"
+
+        Returns
+        -------
+        float: The average treatment effect
+
+        Examples
+        --------
+        >>> game1 = BayesianModel([('X', 'A'),
+                                   ('A', 'Y'),
+                                   ('A', 'B')])
+        >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
+        >>> inference = CausalInference(model=game1)
+        >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         """
         valid_estimators = ['linear']
         try:

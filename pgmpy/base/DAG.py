@@ -691,10 +691,10 @@ class DAG(nx.DiGraph):
         Examples
         --------
         Initialize a DAG
-        >>> self.graph = DAG()
-        >>> self.graph.add_edges_from([('X', 'A'),
-                                       ('A', 'Y'),
-                                       ('A', 'B')])
+        >>> graph = DAG()
+        >>> graph.add_edges_from([('X', 'A'),
+                                  ('A', 'Y'),
+                                  ('A', 'B')])
         Applying the do-operator will return a new DAG with the desired structure.
         >>> graph_do_A = self.graph.do('A')
         Which we can verify is missing the edges we would expect.
@@ -706,8 +706,8 @@ class DAG(nx.DiGraph):
         Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
         """
         assert node in self.nodes()
-        edges = [(a, b) for a, b in self.edges() if b != node]
-        dag_do_x = DAG(edges)
-        # Make sure disconnected nodes aren't lost
-        [dag_do_x.add_node(n) for n in self.nodes() if n not in dag_do_x.nodes()]
+        dag_do_x = self.copy()
+        parents = list(dag_do_x.predecessors(node))
+        for parent in parents:
+            dag_do_x.remove_edge(parent, node)
         return dag_do_x
