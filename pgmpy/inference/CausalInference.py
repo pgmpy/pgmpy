@@ -18,9 +18,10 @@ class CausalInference(object):
 
     Parameters
     ----------
-    model : CausalGraph
+    model: CausalGraph
         The model that we'll perform inference over.
-    set_nodes : list[node:str] or None
+
+    set_nodes: list[node:str] or None
         A list (or set/tuple) of nodes in the Bayesian Network which have been set to a specific value per the
         do-operator.
 
@@ -46,7 +47,7 @@ class CausalInference(object):
     """
     def __init__(self, model, latent_vars=None, set_nodes=None):
         if not isinstance(model, BayesianModel):
-            raise NotImplementedError("Bayesian Parameter Estimation is only implemented for BayesianModel")
+            raise NotImplementedError("Causal Inference is only implemented for BayesianModels at this time.")
         self.dag = model
         self.graph = self.dag.to_undirected()
         self.latent_variables = _variable_or_iterable_to_set(latent_vars)
@@ -60,7 +61,7 @@ class CausalInference(object):
     def _is_d_separated(self, X, Y, Z=None):
         return not self.dag.is_active_trail(X, Y, observed=Z)
 
-    def is_valid_backdoor_adjustment_set(self, X, Y, Z=None):
+    def is_valid_backdoor_adjustment_set(self, X, Y, Z=[]):
         """
         Test whether Z is a valid backdoor adjustment set for estimating the causal impact of X on Y.
 
@@ -68,26 +69,40 @@ class CausalInference(object):
         ----------
         X: str
             Intervention Variable
+
         Y: str
             Target Variable
+
         Z: str or set[str]
             Adjustment variables
+
+        Returns
+        -------
+        boolean: True if Z is a valid backdoor adjustment set.
+
+        Examples
+        --------
+        >>> game1 = BayesianModel([('X', 'A'),
+                                   ('A', 'Y'),
+                                   ('A', 'B')])
+        >>> inference = CausalInference(game1)
+        >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
+        True
         """
-        observed = [X]+list(Z) if Z else [X]
-        return all([
-            # Are all parents of X d-separated from Y given X and Z?
-            self._is_d_separated(p, Y, Z=observed)
-            for p in self.dag.predecessors(X)
-        ])
+        Z_ = list(Z)
+        observed = [X] + Z_
+        parents_d_sep = []
+        for p in self.dag.predecessors(X):
+            parents_d_sep.append(self._is_d_separated(p, Y, Z=observed))
+        return all(parents_d_sep)
 
     def get_all_backdoor_adjustment_sets(self, X, Y):
         """
         Returns a list of all adjustment sets per the back-door criterion.
 
-        Pearl defined the back-door criterion this way in "Causality: Models, Reasoning, and Inference", p.79:
-            A set of variables Z satisfies the back-door criterion relative to an ordered pair ofvariabies (Xi, Xj) in a DAG G if:
-                (i) no node in Z is a descendant of Xi; and
-                (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
+        A set of variables Z satisfies the back-door criterion relative to an ordered pair ofvariabies (Xi, Xj) in a DAG G if:
+            (i) no node in Z is a descendant of Xi; and
+            (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
 
         TODO:
           * Backdoors are great, but the most general things we could implement would be Ilya Shpitser's ID and
@@ -102,8 +117,26 @@ class CausalInference(object):
         ----------
         X: str
             Intervention Variable
+
+        Returns
+        -------
+        frozenset: A frozenset of frozensets
+
         Y: str
             Target Variable
+
+        Examples
+        --------
+        >>> game1 = BayesianModel([('X', 'A'),
+                                   ('A', 'Y'),
+                                   ('A', 'B')])
+        >>> inference = CausalInference(game1)
+        >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
+        frozenset([])
+
+        References
+        ----------
+        "Causality: Models, Reasoning, and Inference", Judea Pearl (2000). p.79.
         """
         try:
             assert X in self.observed_variables
@@ -122,11 +155,10 @@ class CausalInference(object):
 
         valid_adjustment_sets = []
         for s in _powerset(possible_adjustment_variables):
-            super_of_complete = any([
-                vs.intersection(set(s)) == vs
-                for vs in valid_adjustment_sets
-            ])
-            if super_of_complete:
+            super_of_complete = []
+            for vs in valid_adjustment_sets:
+                super_of_complete.append(vs.intersection(set(s)) == vs)
+            if any(super_of_complete):
                 continue
             if self.is_valid_backdoor_adjustment_set(X, Y, s):
                 valid_adjustment_sets.append(frozenset(s))
@@ -142,10 +174,16 @@ class CausalInference(object):
         ----------
         X: str
             Intervention Variable
+
         Y: str
             Target Variable
+
         Z: set
             Adjustment variables
+
+        Returns
+        -------
+        boolean: True if Z is a valid frontdoor adjustment set.
         """
         Z = _variable_or_iterable_to_set(Z)
 
@@ -176,7 +214,10 @@ class CausalInference(object):
             return False
 
         # 3. All back-door paths from Z to Y are blocked by X
-        if not all([self.is_valid_backdoor_adjustment_set(zz, Y, X) for zz in Z]):
+        valid_backdoor_sets = []
+        for zz in Z:
+            valid_backdoor_sets.append(self.is_valid_backdoor_adjustment_set(zz, Y, X))
+        if not all(valid_backdoor_sets):
             return False
 
         return True
@@ -185,10 +226,18 @@ class CausalInference(object):
         """
         Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y.
 
-        Per *Causality* p.82 by Pearl, Z satisifies the front-door critierion if:
+        Z satisifies the front-door critierion if:
           (i)    Z intercepts all directed paths from X to Y
           (ii)   there is no backdoor path from X to Z
           (iii)  all back-door paths from Z to Y are blocked by X
+
+        Returns
+        -------
+        frozenset: a frozenset of frozensets
+
+        References
+        ----------
+        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.82.
         """
         assert X in self.observed_variables
         assert Y in self.observed_variables
@@ -202,7 +251,7 @@ class CausalInference(object):
                 frozenset(s)
                 for s in _powerset(possible_adjustment_variables)
                 if self.is_valid_frontdoor_adjustment_set(X, Y, s)
-            ])
+        ])
 
         return valid_adjustment_sets
 
@@ -227,40 +276,54 @@ class CausalInference(object):
             products.append(p)
         return "".join(products)
 
-    def simple_decision(self, adjustment_sets):
+    def simple_decision(self, adjustment_sets=[]):
         """
-        Implements a simple decision rule to select a set from all calculated adjustment sets.
+        Selects the smallest set from provided adjustment sets.
+
+        Parameters
+        ----------
+        adjustment_sets: iterable
+            A frozenset or list of valid adjustment sets
+
+        Returns
+        -------
+        frozenset
         """
         adjustment_list = list(adjustment_sets)
-        if (adjustment_list is None) | (adjustment_list == []):
+        if adjustment_list == []:
             return frozenset([])
         return adjustment_list[np.argmin(adjustment_list)]
 
     def estimate_ate(self, X, Y, data, estimand_strategy="smallest", estimator_type="linear", **kwargs):
         """
-        Estimate the average treatment effect of X on Y.
+        Estimate the average treatment effect (ATE) of X on Y.
 
         Parameters
         ----------
         X: str
             Intervention Variable
+
         Y: str
             Target Variable
+
         data: pandas DataFrame
             All observed data for this Bayesian Network.
+
         estimand_strategy: str or frozenset
             Either specify a specific backdoor adjustment set or a strategy.  The available options are:
                 smallest:
                     Use the smallest estimand of observed variables
                 all:
                     Estimate the ATE from each identified estimand
+
         estimator_type: str
-            The type of model to be used to estimate the ATE.  
+            The type of model to be used to estimate the ATE.
             All of the linear regression classes in statsmodels are available including:
                 * GLS: generalized least squares for arbitrary covariance
                 * OLS: ordinary least square of i.i.d. errors
                 * WLS: weighted least squares for heteroskedastic error
             Specify them with their acronym (e.g. "OLS") or simple "linear" as an alias for OLS.
+
         **kwargs: dict
             Keyward arguments specific to the selected estimator.
             linear:

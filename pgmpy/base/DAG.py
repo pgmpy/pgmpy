@@ -676,13 +676,34 @@ class DAG(nx.DiGraph):
         """
         Applies the do operator to the graph and returns a new DAG with the transformed graph.
 
-        Defined by Pearl in Causality on p. 70, the do-operator, do(X = x) has the effect of removing all edges from
-        the parents of X and setting X to the given value x.
+        The do-operator, do(X = x) has the effect of removing all edges from the parents of X and setting X to the
+        given value x.
 
         Parameters
         ----------
         node : string
             The name of the node to apply the do-operator to.
+
+        Returns
+        -------
+        DAG: A new instance of DAG modified by the do-operator
+
+        Examples
+        --------
+        Initialize a DAG
+        >>> self.graph = DAG()
+        >>> self.graph.add_edges_from([('X', 'A'),
+                                       ('A', 'Y'),
+                                       ('A', 'B')])
+        Applying the do-operator will return a new DAG with the desired structure.
+        >>> graph_do_A = self.graph.do('A')
+        Which we can verify is missing the edges we would expect.
+        >>> graph_do_A.edges
+        [('A', 'B'), ('A', 'Y')]
+
+        References
+        ----------
+        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
         """
         assert node in self.nodes()
         edges = [(a, b) for a, b in self.edges() if b != node]

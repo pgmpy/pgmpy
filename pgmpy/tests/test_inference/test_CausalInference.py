@@ -25,6 +25,7 @@ class TestCausalGraphMethods(unittest.TestCase):
     def test_backdoor_validation(self):
         self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")
 
+
 class TestBackdoorPaths(unittest.TestCase):
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called
