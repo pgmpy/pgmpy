@@ -75,6 +75,7 @@ install:
   # create our env
   - cmd: conda create -n pgmpy python=%PYTHON_VERSION%
   - cmd: activate pgmpy
+  - cmd: conda config --env --add channels pytorch
   - cmd: echo "installing requirements from %REQ%"
   - cmd: conda install mkl
   - cmd: conda install -c conda-forge mkl_fft 
