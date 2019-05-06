@@ -154,3 +154,16 @@ class TestDAGMoralization(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestDoOperator(unittest.TestCase):
+    def setUp(self):
+        self.graph = DAG()
+        self.graph.add_edges_from([('X', 'A'), 
+                                   ('A', 'Y'),
+                                   ('A', 'B')])
+
+    def test_do(self):
+        dag_do_x = self.graph.do("A")
+        self.assertEqual(set(dag_do_x.nodes()), set(self.graph.nodes()))
+        self.assertEqual(sorted(list(dag_do_x.edges())), [('A', 'B'), ('A', 'Y')])

@@ -6,3 +6,4 @@ pyparsing
 mock
 nose
 wrapt
+statsmodels
