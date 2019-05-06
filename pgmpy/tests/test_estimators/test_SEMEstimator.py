@@ -84,21 +84,25 @@ class TestSEMEstimator(unittest.TestCase):
         estimator = SEMEstimator(self.demo)
         summary = estimator.fit(self.demo_data, method='ml')
 
+    @unittest.skip
     def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(self.union_data, method='ml', opt='adam', max_iter=10**6, exit_delta=1e-1)
 
+    @unittest.skip
     def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(self.custom_data, method='ml', max_iter=10**6, opt='adam')
         summary = estimator.fit(self.custom_data, method='uls', max_iter=10**6, opt='adam')
         summary = estimator.fit(self.custom_data, method='gls', max_iter=10**6, opt='adam', W=np.ones((3, 3)))
 
+    @unittest.skip
     def test_union_estimator_std_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(self.union_data, method='ml', opt='adam', init_values ='std',
                                 max_iter=10**6, exit_delta=1e-1)
 
+    @unittest.skip
     def test_custom_estimator_std_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(self.custom_data, method='ml', init_values='std', max_iter=10**6, opt='adam')
