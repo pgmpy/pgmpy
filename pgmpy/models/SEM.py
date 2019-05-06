@@ -5,7 +5,7 @@ import itertools
 
 from networkx.algorithms.dag import descendants
 
-from pgmpy.base import DirectedGraph
+from pgmpy.base import DAG
 from pgmpy.global_vars import HAS_PANDAS
 
 
@@ -13,7 +13,7 @@ if HAS_PANDAS:
     import pandas as pd
 
 
-class SEMGraph(DirectedGraph):
+class SEMGraph(DAG):
     """
     Base class for graphical representation of Structural Equation Models(SEMs).
 
