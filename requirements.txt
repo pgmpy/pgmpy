@@ -5,3 +5,4 @@ pandas
 pyparsing
 wrapt
 pytorch
+statsmodels
