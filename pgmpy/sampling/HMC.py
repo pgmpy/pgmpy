@@ -6,6 +6,7 @@ from __future__ import division
 from math import sqrt
 
 import numpy as np
+from tqdm import tqdm
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF, _return_samples
@@ -258,7 +259,7 @@ class HamiltonianMC(object):
         position_m = initial_pos
 
         lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
-        for i in range(1, num_samples):
+        for i in tqdm(range(1, num_samples)):
 
             # Genrating sample
             position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
@@ -499,7 +500,7 @@ class HamiltonianMCDA(HamiltonianMC):
         samples[0] = tuple(initial_pos)
         position_m = initial_pos
 
-        for i in range(1, num_samples):
+        for i in tqdm(range(1, num_samples)):
 
             # Genrating sample
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)

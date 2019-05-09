@@ -3,6 +3,7 @@ import itertools
 
 import networkx as nx
 import numpy as np
+from tqdm import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
@@ -75,7 +76,9 @@ class BayesianModelSampling(Inference):
         types = [(var_name, 'int') for var_name in self.topological_order]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
 
-        for node in self.topological_order:
+        pbar = tqdm(self.topological_order)
+        for node in pbar:
+            pbar.set_description("Generating for node: {node}".format(node=node))
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
@@ -146,6 +149,8 @@ class BayesianModelSampling(Inference):
         sampled = np.zeros(0, dtype=types).view(np.recarray)
         prob = 1
         i = 0
+
+        pbar = tqdm(total=size)
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
             _sampled = self.forward_sample(_size, 'recarray')
@@ -157,6 +162,8 @@ class BayesianModelSampling(Inference):
             sampled = np.append(sampled, _sampled)[:size]
 
             i += len(_sampled)
+            pbar.update(len(_sampled))
+        pbar.close()
 
         return _return_samples(return_type, sampled)
 
@@ -380,7 +387,7 @@ class GibbsSampling(MarkovChain):
         types = [(var_name, 'int') for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled[0] = tuple([st for var, st in self.state])
-        for i in range(size - 1):
+        for i in tqdm(range(size - 1)):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
                 next_st = sample_discrete(list(range(self.cardinalities[var])),

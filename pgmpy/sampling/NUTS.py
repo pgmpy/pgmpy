@@ -3,6 +3,7 @@
 from __future__ import division
 
 import numpy as np
+from tqdm import tqdm
 
 from pgmpy.sampling import HamiltonianMCDA, LeapFrog, _return_samples
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
@@ -242,7 +243,7 @@ class NoUTurnSampler(HamiltonianMCDA):
         samples[0] = tuple(initial_pos)
         position_m = initial_pos
 
-        for i in range(1, num_samples):
+        for i in tqdm(range(1, num_samples)):
             # Genrating sample
             position_m = self._sample(position_m, stepsize)
             samples[i] = tuple(position_m)
@@ -539,7 +540,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         samples[0] = tuple(initial_pos)
         position_m = initial_pos
 
-        for i in range(1, num_samples):
+        for i in tqdm(range(1, num_samples)):
 
             position_m, alpha, n_alpha = self._sample(position_m, stepsize)
             samples[i] = tuple(position_m)
