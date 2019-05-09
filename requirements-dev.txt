@@ -7,3 +7,5 @@ mock
 nose
 wrapt
 statsmodels
+torch
+tqdm

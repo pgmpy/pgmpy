@@ -4,6 +4,6 @@ scipy
 pandas
 pyparsing
 wrapt
-pytorch
+torch
 statsmodels
 tqdm
