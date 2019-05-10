@@ -1,0 +1,40 @@
+{% set name = "pgmpy" %}
+{% set version = "0.1.7" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: 668a34220342f211d4112c48b64ad696a3592b4758f9e3aac3553f968ed231b7 
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --ignore-installed -vv"
+
+requirements:
+  host:
+    - pip
+    - python
+  run:
+    - python
+    - networkx
+    - numpy
+    - scipy
+    - pandas
+    - pyparsing
+    - wrapt
+    - pytorch
+    - statsmodels
+
+test:
+  imports:
+    - pgmpy
+
+about:
+  home: http://pgmpy.org/
+  license: MIT
+  license_family: MIT
+  summary: Python Library for Probabilistic Graphical Models
+
