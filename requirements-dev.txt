@@ -7,3 +7,4 @@ mock
 nose
 wrapt
 statsmodels
+black
