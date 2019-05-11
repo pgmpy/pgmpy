@@ -52,46 +52,52 @@ class HillClimbSearch(StructureEstimator):
 
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
-        potential_new_edges = (set(permutations(nodes, 2)) -
-                               set(model.edges()) -
-                               set([(Y, X) for (X, Y) in model.edges()]))
+        potential_new_edges = (
+            set(permutations(nodes, 2))
+            - set(model.edges())
+            - set([(Y, X) for (X, Y) in model.edges()])
+        )
 
         for (X, Y) in potential_new_edges:  # (1) add single edge
             if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
-                operation = ('+', (X, Y))
+                operation = ("+", (X, Y))
                 if operation not in tabu_list:
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
                     if max_indegree is None or len(new_parents) <= max_indegree:
-                        score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
-                        yield(operation, score_delta)
+                        score_delta = local_score(Y, new_parents) - local_score(
+                            Y, old_parents
+                        )
+                        yield (operation, score_delta)
 
         for (X, Y) in model.edges():  # (2) remove single edge
-            operation = ('-', (X, Y))
+            operation = ("-", (X, Y))
             if operation not in tabu_list:
                 old_parents = model.get_parents(Y)
                 new_parents = old_parents[:]
                 new_parents.remove(X)
                 score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
-                yield(operation, score_delta)
+                yield (operation, score_delta)
 
         for (X, Y) in model.edges():  # (3) flip single edge
             new_edges = list(model.edges()) + [(Y, X)]
             new_edges.remove((X, Y))
             if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
-                operation = ('flip', (X, Y))
-                if operation not in tabu_list and ('flip', (Y, X)) not in tabu_list:
+                operation = ("flip", (X, Y))
+                if operation not in tabu_list and ("flip", (Y, X)) not in tabu_list:
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
                     new_X_parents = old_X_parents + [Y]
                     new_Y_parents = old_Y_parents[:]
                     new_Y_parents.remove(X)
                     if max_indegree is None or len(new_X_parents) <= max_indegree:
-                        score_delta = (local_score(X, new_X_parents) +
-                                       local_score(Y, new_Y_parents) -
-                                       local_score(X, old_X_parents) -
-                                       local_score(Y, old_Y_parents))
-                        yield(operation, score_delta)
+                        score_delta = (
+                            local_score(X, new_X_parents)
+                            + local_score(Y, new_Y_parents)
+                            - local_score(X, old_X_parents)
+                            - local_score(Y, old_Y_parents)
+                        )
+                        yield (operation, score_delta)
 
     def estimate(self, start=None, tabu_length=0, max_indegree=None):
         """
@@ -142,7 +148,9 @@ class HillClimbSearch(StructureEstimator):
             start = DAG()
             start.add_nodes_from(nodes)
         elif not isinstance(start, DAG) or not set(start.nodes()) == set(nodes):
-            raise ValueError("'start' should be a DAG with the same variables as the data set, or 'None'.")
+            raise ValueError(
+                "'start' should be a DAG with the same variables as the data set, or 'None'."
+            )
 
         tabu_list = []
         current_model = start
@@ -151,20 +159,22 @@ class HillClimbSearch(StructureEstimator):
             best_score_delta = 0
             best_operation = None
 
-            for operation, score_delta in self._legal_operations(current_model, tabu_list, max_indegree):
+            for operation, score_delta in self._legal_operations(
+                current_model, tabu_list, max_indegree
+            ):
                 if score_delta > best_score_delta:
                     best_operation = operation
                     best_score_delta = score_delta
 
             if best_operation is None or best_score_delta < epsilon:
                 break
-            elif best_operation[0] == '+':
+            elif best_operation[0] == "+":
                 current_model.add_edge(*best_operation[1])
-                tabu_list = ([('-', best_operation[1])] + tabu_list)[:tabu_length]
-            elif best_operation[0] == '-':
+                tabu_list = ([("-", best_operation[1])] + tabu_list)[:tabu_length]
+            elif best_operation[0] == "-":
                 current_model.remove_edge(*best_operation[1])
-                tabu_list = ([('+', best_operation[1])] + tabu_list)[:tabu_length]
-            elif best_operation[0] == 'flip':
+                tabu_list = ([("+", best_operation[1])] + tabu_list)[:tabu_length]
+            elif best_operation[0] == "flip":
                 X, Y = best_operation[1]
                 current_model.remove_edge(X, Y)
                 current_model.add_edge(Y, X)

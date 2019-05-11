@@ -12,6 +12,7 @@ class Data(object):
     """
     Base Data class.
     """
+
     def __init__(self, data, variables=None):
         """
         Data class for representing and doing stastical tests on data.
@@ -39,11 +40,13 @@ class Data(object):
         else:
             data = np.array(data)
             if data.ndim != 2:
-                raise ValueError("data must be a 2-D array or a pandas.DataFrame instance")
+                raise ValueError(
+                    "data must be a 2-D array or a pandas.DataFrame instance"
+                )
             self.data = pd.DataFrame(data, columns=variables)
             self.variables = variables
 
-    def test_independence(self, var1, var2, conditioned_vars=[], test='chi-square'):
+    def test_independence(self, var1, var2, conditioned_vars=[], test="chi-square"):
         """
         Test the conditon (var1 _|_ var2 | conditioned_vars) in the data.
 
@@ -70,21 +73,24 @@ class Data(object):
         >>> df.test_independence(var1='A', var2='B', test='chi-square')
         >>> df.test_independence(var1='A', var2='B', conditioned_vars=['C', 'D'], test='chi-square')
         """
-        if test == 'chi-square':
+        if test == "chi-square":
             if not conditioned_vars:
                 observed = pd.crosstab(self.data[var1], self.data[var2])
                 chi_stat, p_value, dof, _ = stats.chi2_contingency(observed)
 
             else:
-                observed_combinations = self.data.groupby(conditioned_vars).size().reset_index()
+                observed_combinations = (
+                    self.data.groupby(conditioned_vars).size().reset_index()
+                )
                 chi_stat = 0
                 dof = 0
                 for combination in range(len(observed_combinations)):
                     df_conditioned = self.data.copy()
                     for condition_var in conditioned_vars:
                         df_conditioned = df_conditioned.loc[
-                            df_conditioned.loc[:, condition_var] ==
-                            observed_combinations.loc[combination, condition_var]]
+                            df_conditioned.loc[:, condition_var]
+                            == observed_combinations.loc[combination, condition_var]
+                        ]
                     observed = pd.crosstab(df_conditioned[var1], df_conditioned[var2])
                     chi, _, freedom, _ = stats.chi2_contingency(observed)
                     chi_stat += chi
@@ -162,45 +168,45 @@ def get_dataset(dataset):
                            depending on the type of dataset.
     """
     dataset_links = {
-        'asia': 'http://www.bnlearn.com/bnrepository/asia/asia.bif.gz',
-        'cancer': 'http://www.bnlearn.com/bnrepository/cancer/cancer.bif.gz',
-        'earthquake': 'http://www.bnlearn.com/bnrepository/earthquake/earthquake.bif.gz',
-        'sachs': 'http://www.bnlearn.com/bnrepository/sachs/sachs.bif.gz',
-        'survey': 'http://www.bnlearn.com/bnrepository/survey/survey.bif.gz',
-        'alarm': 'http://www.bnlearn.com/bnrepository/alarm/alarm.bif.gz',
-        'barley': 'http://www.bnlearn.com/bnrepository/barley/barley.bif.gz',
-        'child': 'http://www.bnlearn.com/bnrepository/child/child.bif.gz',
-        'insurance': 'http://www.bnlearn.com/bnrepository/insurance/insurance.bif.gz',
-        'mildew': 'http://www.bnlearn.com/bnrepository/mildew/mildew.bif.gz',
-        'water': 'http://www.bnlearn.com/bnrepository/water/water.bif.gz',
-        'hailfinder': 'http://www.bnlearn.com/bnrepository/hailfinder/hailfinder.bif.gz',
-        'hepar2': 'http://www.bnlearn.com/bnrepository/hepar2/hepar2.bif.gz',
-        'win95pts': 'http://www.bnlearn.com/bnrepository/win95pts/win95pts.bif.gz',
-        'andes': 'http://www.bnlearn.com/bnrepository/andes/andes.bif.gz',
-        'diabetes': 'http://www.bnlearn.com/bnrepository/diabetes/diabetes.bif.gz',
-        'link': 'http://www.bnlearn.com/bnrepository/link/link.bif.gz',
-        'munin1': 'http://www.bnlearn.com/bnrepository/munin4/munin1.bif.gz',
-        'munin2': 'http://www.bnlearn.com/bnrepository/munin4/munin2.bif.gz',
-        'munin3': 'http://www.bnlearn.com/bnrepository/munin4/munin3.bif.gz',
-        'munin4': 'http://www.bnlearn.com/bnrepository/munin4/munin4.bif.gz',
-        'pathfinder': 'http://www.bnlearn.com/bnrepository/pathfinder/pathfinder.bif.gz',
-        'pigs': 'http://www.bnlearn.com/bnrepository/pigs/pigs.bif.gz',
-        'munin': 'http://www.bnlearn.com/bnrepository/munin/munin.bif.gz',
-        'ecoli70': '',
-        'magic-niab': '',
-        'magic-irri': '',
-        'arth150': '',
-        'sangiovese': '',
-        'mehra': '',
+        "asia": "http://www.bnlearn.com/bnrepository/asia/asia.bif.gz",
+        "cancer": "http://www.bnlearn.com/bnrepository/cancer/cancer.bif.gz",
+        "earthquake": "http://www.bnlearn.com/bnrepository/earthquake/earthquake.bif.gz",
+        "sachs": "http://www.bnlearn.com/bnrepository/sachs/sachs.bif.gz",
+        "survey": "http://www.bnlearn.com/bnrepository/survey/survey.bif.gz",
+        "alarm": "http://www.bnlearn.com/bnrepository/alarm/alarm.bif.gz",
+        "barley": "http://www.bnlearn.com/bnrepository/barley/barley.bif.gz",
+        "child": "http://www.bnlearn.com/bnrepository/child/child.bif.gz",
+        "insurance": "http://www.bnlearn.com/bnrepository/insurance/insurance.bif.gz",
+        "mildew": "http://www.bnlearn.com/bnrepository/mildew/mildew.bif.gz",
+        "water": "http://www.bnlearn.com/bnrepository/water/water.bif.gz",
+        "hailfinder": "http://www.bnlearn.com/bnrepository/hailfinder/hailfinder.bif.gz",
+        "hepar2": "http://www.bnlearn.com/bnrepository/hepar2/hepar2.bif.gz",
+        "win95pts": "http://www.bnlearn.com/bnrepository/win95pts/win95pts.bif.gz",
+        "andes": "http://www.bnlearn.com/bnrepository/andes/andes.bif.gz",
+        "diabetes": "http://www.bnlearn.com/bnrepository/diabetes/diabetes.bif.gz",
+        "link": "http://www.bnlearn.com/bnrepository/link/link.bif.gz",
+        "munin1": "http://www.bnlearn.com/bnrepository/munin4/munin1.bif.gz",
+        "munin2": "http://www.bnlearn.com/bnrepository/munin4/munin2.bif.gz",
+        "munin3": "http://www.bnlearn.com/bnrepository/munin4/munin3.bif.gz",
+        "munin4": "http://www.bnlearn.com/bnrepository/munin4/munin4.bif.gz",
+        "pathfinder": "http://www.bnlearn.com/bnrepository/pathfinder/pathfinder.bif.gz",
+        "pigs": "http://www.bnlearn.com/bnrepository/pigs/pigs.bif.gz",
+        "munin": "http://www.bnlearn.com/bnrepository/munin/munin.bif.gz",
+        "ecoli70": "",
+        "magic-niab": "",
+        "magic-irri": "",
+        "arth150": "",
+        "sangiovese": "",
+        "mehra": "",
     }
 
     if dataset not in dataset_links.keys():
         raise ValueError("dataset should be one of the options")
-    if dataset_links[dataset] == '':
+    if dataset_links[dataset] == "":
         raise NotImplementedError("The specified dataset isn't supported")
 
     filename, _ = urlretrieve(dataset_links[dataset])
-    with gzip.open(filename, 'rb') as f:
+    with gzip.open(filename, "rb") as f:
         content = f.read()
     reader = BIFReader(content)
     return reader.get_model()

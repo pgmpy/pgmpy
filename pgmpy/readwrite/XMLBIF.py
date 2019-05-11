@@ -50,12 +50,12 @@ class XMLBIFReader(object):
         >>> reader = XMLBIFReader("xmlbif_test.xml")
         """
         if path:
-            self.network = etree.ElementTree(file=path).getroot().find('NETWORK')
+            self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
         elif string:
-            self.network = etree.fromstring(string.encode('utf-8')).find('NETWORK')
+            self.network = etree.fromstring(string.encode("utf-8")).find("NETWORK")
         else:
             raise ValueError("Must specify either path or string")
-        self.network_name = self.network.find('NAME').text
+        self.network_name = self.network.find("NAME").text
         self.variables = self.get_variables()
         self.variable_parents = self.get_parents()
         self.edge_list = self.get_edges()
@@ -73,7 +73,9 @@ class XMLBIFReader(object):
         >>> reader.get_variables()
         ['light-on', 'bowel-problem', 'dog-out', 'hear-bark', 'family-out']
         """
-        variables = [variable.find('NAME').text for variable in self.network.findall('VARIABLE')]
+        variables = [
+            variable.find("NAME").text for variable in self.network.findall("VARIABLE")
+        ]
         return variables
 
     def get_edges(self):
@@ -89,8 +91,11 @@ class XMLBIFReader(object):
          ['bowel-problem', 'dog-out'],
          ['dog-out', 'hear-bark']]
         """
-        edge_list = [[value, key] for key in self.variable_parents
-                     for value in self.variable_parents[key]]
+        edge_list = [
+            [value, key]
+            for key in self.variable_parents
+            for value in self.variable_parents[key]
+        ]
         return edge_list
 
     def get_states(self):
@@ -107,8 +112,12 @@ class XMLBIFReader(object):
          'hear-bark': ['true', 'false'],
          'light-on': ['true', 'false']}
         """
-        variable_states = {variable.find('NAME').text: [outcome.text for outcome in variable.findall('OUTCOME')]
-                           for variable in self.network.findall('VARIABLE')}
+        variable_states = {
+            variable.find("NAME").text: [
+                outcome.text for outcome in variable.findall("OUTCOME")
+            ]
+            for variable in self.network.findall("VARIABLE")
+        }
         return variable_states
 
     def get_parents(self):
@@ -125,8 +134,12 @@ class XMLBIFReader(object):
          'hear-bark': ['dog-out'],
          'light-on': ['family-out']}
         """
-        variable_parents = {definition.find('FOR').text: [edge.text for edge in definition.findall('GIVEN')]
-                            for definition in self.network.findall('DEFINITION')}
+        variable_parents = {
+            definition.find("FOR").text: [
+                edge.text for edge in definition.findall("GIVEN")
+            ]
+            for definition in self.network.findall("DEFINITION")
+        }
         return variable_parents
 
     def get_values(self):
@@ -148,13 +161,20 @@ class XMLBIFReader(object):
          'light-on': array([[ 0.6 ,  0.4 ],
                             [ 0.05,  0.95]])}
         """
-        variable_CPD = {definition.find('FOR').text: list(map(float, table.text.split()))
-                        for definition in self.network.findall('DEFINITION')
-                        for table in definition.findall('TABLE')}
+        variable_CPD = {
+            definition.find("FOR").text: list(map(float, table.text.split()))
+            for definition in self.network.findall("DEFINITION")
+            for table in definition.findall("TABLE")
+        }
         for variable in variable_CPD:
             arr = np.array(variable_CPD[variable])
-            arr = arr.reshape((len(self.variable_states[variable]),
-                               arr.size // len(self.variable_states[variable])), order='F')
+            arr = arr.reshape(
+                (
+                    len(self.variable_states[variable]),
+                    arr.size // len(self.variable_states[variable]),
+                ),
+                order="F",
+            )
             variable_CPD[variable] = arr
         return variable_CPD
 
@@ -172,8 +192,12 @@ class XMLBIFReader(object):
          'hear-bark': ['position = (154, 241)'],
          'light-on': ['position = (73, 165)']}
         """
-        variable_property = {variable.find('NAME').text: [property.text for property in variable.findall('PROPERTY')]
-                             for variable in self.network.findall('VARIABLE')}
+        variable_property = {
+            variable.find("NAME").text: [
+                property.text for property in variable.findall("PROPERTY")
+            ]
+            for variable in self.network.findall("VARIABLE")
+        }
         return variable_property
 
     def get_model(self):
@@ -184,10 +208,18 @@ class XMLBIFReader(object):
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
-            evidence_card = [len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]]
-            cpd = TabularCPD(var, len(self.variable_states[var]), values,
-                             evidence=self.variable_parents[var],
-                             evidence_card=evidence_card, state_names=self.get_states())
+            evidence_card = [
+                len(self.variable_states[evidence_var])
+                for evidence_var in self.variable_parents[var]
+            ]
+            cpd = TabularCPD(
+                var,
+                len(self.variable_states[var]),
+                values,
+                evidence=self.variable_parents[var],
+                evidence_card=evidence_card,
+                state_names=self.get_states(),
+            )
             tabular_cpds.append(cpd)
 
         model.add_cpds(*tabular_cpds)
@@ -195,7 +227,7 @@ class XMLBIFReader(object):
         for node, properties in self.variable_property.items():
             for prop in properties:
                 if prop is not None:
-                    prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                    prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
                     model.node[node][prop_name] = prop_value
 
         return model
@@ -206,7 +238,7 @@ class XMLBIFWriter(object):
     Base class for writing XMLBIF network file format.
     """
 
-    def __init__(self, model, encoding='utf-8', prettyprint=True):
+    def __init__(self, model, encoding="utf-8", prettyprint=True):
         """
         Initialise a XMLBIFWriter object.
 
@@ -230,12 +262,12 @@ class XMLBIFWriter(object):
         self.encoding = encoding
         self.prettyprint = prettyprint
 
-        self.xml = etree.Element("BIF", attrib={'VERSION': '0.3'})
-        self.network = etree.SubElement(self.xml, 'NETWORK')
+        self.xml = etree.Element("BIF", attrib={"VERSION": "0.3"})
+        self.network = etree.SubElement(self.xml, "NETWORK")
         if self.model.name:
-            etree.SubElement(self.network, 'NAME').text = self.model.name
+            etree.SubElement(self.network, "NAME").text = self.model.name
         else:
-            etree.SubElement(self.network, 'NAME').text = "UNTITLED"
+            etree.SubElement(self.network, "NAME").text = "UNTITLED"
 
         self.variables = self.get_variables()
         self.states = self.get_states()
@@ -293,7 +325,9 @@ class XMLBIFWriter(object):
         variables = self.model.nodes()
         variable_tag = {}
         for var in sorted(variables):
-            variable_tag[var] = etree.SubElement(self.network, "VARIABLE", attrib={'TYPE': 'nature'})
+            variable_tag[var] = etree.SubElement(
+                self.network, "VARIABLE", attrib={"TYPE": "nature"}
+            )
             etree.SubElement(variable_tag[var], "NAME").text = var
         return variable_tag
 
@@ -337,7 +371,11 @@ class XMLBIFWriter(object):
         numbers and underscores.
         """
         s = str(state_name)
-        s_fixed = pp.CharsNotIn(pp.alphanums + "_").setParseAction(pp.replaceWith("_")).transformString(s)
+        s_fixed = (
+            pp.CharsNotIn(pp.alphanums + "_")
+            .setParseAction(pp.replaceWith("_"))
+            .transformString(s)
+        )
         if not s_fixed[0].isalpha():
             s_fixed = "state" + s_fixed
         return s_fixed
@@ -420,10 +458,12 @@ class XMLBIFWriter(object):
         definition_tag = self.definition
         table_tag = {}
         for cpd in cpds:
-            table_tag[cpd.variable] = etree.SubElement(definition_tag[cpd.variable], "TABLE")
-            table_tag[cpd.variable].text = ''
+            table_tag[cpd.variable] = etree.SubElement(
+                definition_tag[cpd.variable], "TABLE"
+            )
+            table_tag[cpd.variable].text = ""
             for val in cpd.get_values().ravel(order="F"):
-                table_tag[cpd.variable].text += str(val) + ' '
+                table_tag[cpd.variable].text += str(val) + " "
 
         return table_tag
 
@@ -440,5 +480,5 @@ class XMLBIFWriter(object):
         >>> writer = XMLBIFWriter(model)
         >>> writer.write_xmlbif(test_file)
         """
-        with open(filename, 'w') as fout:
+        with open(filename, "w") as fout:
             fout.write(self.__str__())

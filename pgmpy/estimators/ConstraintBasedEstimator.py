@@ -175,7 +175,9 @@ class ConstraintBasedEstimator(StructureEstimator):
             """Returns result of hypothesis test for the null hypothesis that
             X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
             """
-            chi2, p_value, sufficient_data = self.test_conditional_independence(X, Y, Zs)
+            chi2, p_value, sufficient_data = self.test_conditional_independence(
+                X, Y, Zs
+            )
             return p_value >= significance_level
 
         return self.build_skeleton(nodes, is_independent)
@@ -225,7 +227,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> # Both networks belong to the same PDAG/are I-equivalent
         """
 
-        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(nodes, independencies)
+        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
+            nodes, independencies
+        )
         pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
         dag = ConstraintBasedEstimator.pdag_to_dag(pdag)
 
@@ -304,14 +308,24 @@ class ConstraintBasedEstimator(StructureEstimator):
             #                    undirected neighbors + parents of X are a clique
             found = False
             for X in pdag.nodes():
-                directed_outgoing_edges = set(pdag.successors(X)) - set(pdag.predecessors(X))
-                undirected_neighbors = set(pdag.successors(X)) & set(pdag.predecessors(X))
-                neighbors_are_clique = all((pdag.has_edge(Y, Z)
-                                            for Z in pdag.predecessors(X)
-                                            for Y in undirected_neighbors if not Y == Z))
+                directed_outgoing_edges = set(pdag.successors(X)) - set(
+                    pdag.predecessors(X)
+                )
+                undirected_neighbors = set(pdag.successors(X)) & set(
+                    pdag.predecessors(X)
+                )
+                neighbors_are_clique = all(
+                    (
+                        pdag.has_edge(Y, Z)
+                        for Z in pdag.predecessors(X)
+                        for Y in undirected_neighbors
+                        if not Y == Z
+                    )
+                )
 
-                if not directed_outgoing_edges and \
-                        (not undirected_neighbors or neighbors_are_clique):
+                if not directed_outgoing_edges and (
+                    not undirected_neighbors or neighbors_are_clique
+                ):
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.predecessors(X):
@@ -321,9 +335,11 @@ class ConstraintBasedEstimator(StructureEstimator):
                     break
 
             if not found:
-                warn("PDAG has no faithful extension (= no oriented DAG with the " +
-                     "same v-structures as PDAG). Remaining undirected PDAG edges " +
-                     "oriented arbitrarily.")
+                warn(
+                    "PDAG has no faithful extension (= no oriented DAG with the "
+                    + "same v-structures as PDAG). Remaining undirected PDAG edges "
+                    + "oriented arbitrarily."
+                )
                 for X, Y in pdag.edges():
                     if not dag.has_edge(Y, X):
                         try:
@@ -341,12 +357,14 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
 
         if not isinstance(model, DAG):
-            raise TypeError("model: Expected DAG instance, " +
-                            "got type {model_type}".format(model_type=type(model)))
+            raise TypeError(
+                "model: Expected DAG instance, "
+                + "got type {model_type}".format(model_type=type(model))
+            )
 
         skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
-                                    model.nodes(),
-                                    model.get_independencies())
+            model.nodes(), model.get_independencies()
+        )
         pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
 
         return pdag
@@ -412,8 +430,9 @@ class ConstraintBasedEstimator(StructureEstimator):
 
             # 2) for each X->Z-Y, orient edges to Z->Y
             for X, Y in node_pairs:
-                for Z in ((set(pdag.successors(X)) - set(pdag.predecessors(X))) &
-                          (set(pdag.successors(Y)) & set(pdag.predecessors(Y)))):
+                for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
+                    set(pdag.successors(Y)) & set(pdag.predecessors(Y))
+                ):
                     pdag.remove(Y, Z)
 
             # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
@@ -429,11 +448,17 @@ class ConstraintBasedEstimator(StructureEstimator):
 
             # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
             for X, Y in node_pairs:
-                for Z in (set(pdag.successors(X)) & set(pdag.predecessors(X)) &
-                          set(pdag.successors(Y)) & set(pdag.predecessors(Y))):
-                    for W in ((set(pdag.successors(X)) - set(pdag.predecessors(X))) &
-                              (set(pdag.successors(Y)) - set(pdag.predecessors(Y))) &
-                              (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))):
+                for Z in (
+                    set(pdag.successors(X))
+                    & set(pdag.predecessors(X))
+                    & set(pdag.successors(Y))
+                    & set(pdag.predecessors(Y))
+                ):
+                    for W in (
+                        (set(pdag.successors(X)) - set(pdag.predecessors(X)))
+                        & (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
+                        & (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))
+                    ):
                         pdag.remove(W, Z)
 
             progress = num_edges > pdag.number_of_edges()
@@ -508,25 +533,35 @@ class ConstraintBasedEstimator(StructureEstimator):
         nodes = list(nodes)
 
         if isinstance(independencies, Independencies):
+
             def is_independent(X, Y, Zs):
                 return IndependenceAssertion(X, Y, Zs) in independencies
+
         elif callable(independencies):
             is_independent = independencies
         else:
-            raise ValueError("'independencies' must be either Independencies-instance " +
-                             "or a ternary function that decides independencies.")
+            raise ValueError(
+                "'independencies' must be either Independencies-instance "
+                + "or a ternary function that decides independencies."
+            )
 
         graph = UndirectedGraph(combinations(nodes, 2))
         lim_neighbors = 0
         separating_sets = dict()
-        while not all([len(list(graph.neighbors(node))) < lim_neighbors for node in nodes]):
+        while not all(
+            [len(list(graph.neighbors(node))) < lim_neighbors for node in nodes]
+        ):
             for node in nodes:
                 for neighbor in list(graph.neighbors(node)):
                     # search if there is a set of neighbors (of size lim_neighbors)
                     # that makes X and Y independent:
-                    for separating_set in combinations(set(graph.neighbors(node)) - set([neighbor]), lim_neighbors):
+                    for separating_set in combinations(
+                        set(graph.neighbors(node)) - set([neighbor]), lim_neighbors
+                    ):
                         if is_independent(node, neighbor, separating_set):
-                            separating_sets[frozenset((node, neighbor))] = separating_set
+                            separating_sets[
+                                frozenset((node, neighbor))
+                            ] = separating_set
                             graph.remove_edge(node, neighbor)
                             break
             lim_neighbors += 1

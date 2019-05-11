@@ -97,8 +97,16 @@ class TabularCPD(DiscreteFactor):
     normalize()
     reduce([values_list])
     """
-    def __init__(self, variable, variable_card, values,
-                 evidence=None, evidence_card=None, state_names={}):
+
+    def __init__(
+        self,
+        variable,
+        variable_card,
+        values,
+        evidence=None,
+        evidence_card=None,
+        state_names={},
+    ):
 
         self.variable = variable
         self.variable_card = None
@@ -120,28 +128,36 @@ class TabularCPD(DiscreteFactor):
                 raise TypeError("Evidence must be list, tuple or array of strings.")
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):
-                raise ValueError("Length of evidence_card doesn't match length of evidence")
+                raise ValueError(
+                    "Length of evidence_card doesn't match length of evidence"
+                )
 
         values = np.array(values)
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
-        super(TabularCPD, self).__init__(variables, cardinality, values.flatten('C'),
-                                         state_names=state_names)
+        super(TabularCPD, self).__init__(
+            variables, cardinality, values.flatten("C"), state_names=state_names
+        )
 
     def __repr__(self):
-        var_str = '<TabularCPD representing P({var}:{card}'.format(
-            var=self.variable, card=self.variable_card)
+        var_str = "<TabularCPD representing P({var}:{card}".format(
+            var=self.variable, card=self.variable_card
+        )
 
         evidence = self.variables[1:]
         evidence_card = self.cardinality[1:]
         if evidence:
-            evidence_str = ' | ' + ', '.join(['{var}:{card}'.format(var=var, card=card)
-                                              for var, card in zip(evidence, evidence_card)])
+            evidence_str = " | " + ", ".join(
+                [
+                    "{var}:{card}".format(var=var, card=card)
+                    for var, card in zip(evidence, evidence_card)
+                ]
+            )
         else:
-            evidence_str = ''
+            evidence_str = ""
 
-        return var_str + evidence_str + ') at {address}>'.format(address=hex(id(self)))
+        return var_str + evidence_str + ") at {address}>".format(address=hex(id(self)))
 
     def get_values(self):
         """
@@ -160,7 +176,9 @@ class TabularCPD(DiscreteFactor):
                [ 0.8,  0.8]])
         """
         if self.variable in self.variables:
-            return self.values.reshape(self.cardinality[0], np.prod(self.cardinality[1:]))
+            return self.values.reshape(
+                self.cardinality[0], np.prod(self.cardinality[1:])
+            )
         else:
             return self.values.reshape(1, np.prod(self.cardinality))
 
@@ -180,26 +198,41 @@ class TabularCPD(DiscreteFactor):
             col_indexes = np.array(list(product(*[range(i) for i in evidence_card])))
             if self.state_names and print_state_names:
                 for i in range(len(evidence_card)):
-                    column_header = [str(evidence[i])] + ['{var}({state})'.format(
-                        var=evidence[i],
-                        state=self.state_names[evidence[i]][d])
-                        for d in col_indexes.T[i]]
+                    column_header = [str(evidence[i])] + [
+                        "{var}({state})".format(
+                            var=evidence[i], state=self.state_names[evidence[i]][d]
+                        )
+                        for d in col_indexes.T[i]
+                    ]
                     headers_list.append(column_header)
             else:
                 for i in range(len(evidence_card)):
-                    column_header = [str(evidence[i])] + ['{s}_{d}'.format(
-                        s=evidence[i], d=d) for d in col_indexes.T[i]]
+                    column_header = [str(evidence[i])] + [
+                        "{s}_{d}".format(s=evidence[i], d=d) for d in col_indexes.T[i]
+                    ]
                     headers_list.append(column_header)
 
         # Build row headers
         if self.state_names and print_state_names:
-            variable_array = [['{var}({state})'.format
-                               (var=self.variable, state=self.state_names[self.variable][i])
-                               for i in range(self.variable_card)]]
+            variable_array = [
+                [
+                    "{var}({state})".format(
+                        var=self.variable, state=self.state_names[self.variable][i]
+                    )
+                    for i in range(self.variable_card)
+                ]
+            ]
         else:
-            variable_array = [['{s}_{d}'.format(s=self.variable, d=i) for i in range(self.variable_card)]]
+            variable_array = [
+                [
+                    "{s}_{d}".format(s=self.variable, d=i)
+                    for i in range(self.variable_card)
+                ]
+            ]
         # Stack with data
-        labeled_rows = np.hstack((np.array(variable_array).T, self.get_values())).tolist()
+        labeled_rows = np.hstack(
+            (np.array(variable_array).T, self.get_values())
+        ).tolist()
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
         return cdf_str
@@ -230,8 +263,14 @@ class TabularCPD(DiscreteFactor):
         """
         evidence = self.variables[1:] if len(self.variables) > 1 else None
         evidence_card = self.cardinality[1:] if len(self.variables) > 1 else None
-        return TabularCPD(self.variable, self.variable_card, self.get_values(),
-                          evidence, evidence_card, state_names=self.state_names)
+        return TabularCPD(
+            self.variable,
+            self.variable_card,
+            self.get_values(),
+            evidence,
+            evidence_card,
+            state_names=self.state_names,
+        )
 
     def normalize(self, inplace=True):
         """
@@ -285,7 +324,9 @@ class TabularCPD(DiscreteFactor):
                 [ 0.35,  0.6 ]])
         """
         if self.variable in variables:
-            raise ValueError("Marginalization not allowed on the variable on which CPD is defined")
+            raise ValueError(
+                "Marginalization not allowed on the variable on which CPD is defined"
+            )
 
         tabular_cpd = self if inplace else self.copy()
 
@@ -320,7 +361,9 @@ class TabularCPD(DiscreteFactor):
                [ 0.3,  0.4]])
         """
         if self.variable in (value[0] for value in values):
-            raise ValueError("Reduce not allowed on the variable on which CPD is defined")
+            raise ValueError(
+                "Reduce not allowed on the variable on which CPD is defined"
+            )
 
         tabular_cpd = self if inplace else self.copy()
 
@@ -345,10 +388,12 @@ class TabularCPD(DiscreteFactor):
         >>> factor
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
-        return DiscreteFactor(variables=self.variables,
-                              cardinality=self.cardinality,
-                              values=self.values,
-                              state_names=self.state_names)
+        return DiscreteFactor(
+            variables=self.variables,
+            cardinality=self.cardinality,
+            values=self.values,
+            state_names=self.state_names,
+        )
 
     def reorder_parents(self, new_order, inplace=True):
         """
@@ -439,8 +484,11 @@ class TabularCPD(DiscreteFactor):
         >>> cpd.variable_card
         3
         """
-        if (len(self.variables) <= 1 or (set(new_order) - set(self.variables)) or
-                (set(self.variables[1:]) - set(new_order))):
+        if (
+            len(self.variables) <= 1
+            or (set(new_order) - set(self.variables))
+            or (set(self.variables[1:]) - set(new_order))
+        ):
             raise ValueError("New order either has missing or extra arguments")
         else:
             if new_order != self.variables[1:]:
@@ -453,11 +501,18 @@ class TabularCPD(DiscreteFactor):
 
                 if inplace:
                     variables = [self.variables[0]] + new_order
-                    cardinality = [self.variable_card] + [card_map[var] for var in new_order]
-                    super(TabularCPD, self).__init__(variables, cardinality, new_values.flatten('C'))
+                    cardinality = [self.variable_card] + [
+                        card_map[var] for var in new_order
+                    ]
+                    super(TabularCPD, self).__init__(
+                        variables, cardinality, new_values.flatten("C")
+                    )
                     return self.get_values()
                 else:
-                    return new_values.reshape(self.cardinality[0], np.prod([card_map[var] for var in new_order]))
+                    return new_values.reshape(
+                        self.cardinality[0],
+                        np.prod([card_map[var] for var in new_order]),
+                    )
             else:
                 warn("Same ordering provided as current")
                 return self.get_values()

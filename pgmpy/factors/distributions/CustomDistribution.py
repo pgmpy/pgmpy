@@ -32,7 +32,9 @@ class CustomDistribution(BaseDistribution):
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
                 "variables: Expected type: iterable, got: {type}".format(
-                    type=type(variables)))
+                    type=type(variables)
+                )
+            )
 
         if len(set(variables)) != len(variables):
             raise ValueError("Multiple variables can't have the same name")
@@ -220,8 +222,10 @@ class CustomDistribution(BaseDistribution):
         24.0
         """
         if not isinstance(values, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type: iterable, "
-                            "got: {var_type}".format(var_type=type(values)))
+            raise TypeError(
+                "variables: Expected type: iterable, "
+                "got: {var_type}".format(var_type=type(values))
+            )
 
         for var, value in values:
             if var not in self.variables:
@@ -232,7 +236,9 @@ class CustomDistribution(BaseDistribution):
         var_to_remove = [var for var, value in values]
         var_to_keep = [var for var in self.variables if var not in var_to_remove]
 
-        reduced_var_index = [(self.variables.index(var), value) for var, value in values]
+        reduced_var_index = [
+            (self.variables.index(var), value) for var, value in values
+        ]
         pdf = self.pdf
 
         def reduced_pdf(*args, **kwargs):
@@ -246,8 +252,9 @@ class CustomDistribution(BaseDistribution):
                 for variable, val in values:
                     reduced_kwargs[variable] = val
             if reduced_args and reduced_kwargs:
-                reduced_args = [arg for arg in reduced_args if arg not in
-                                reduced_kwargs.values()]
+                reduced_args = [
+                    arg for arg in reduced_args if arg not in reduced_kwargs.values()
+                ]
 
             return pdf(*reduced_args, **reduced_kwargs)
 
@@ -298,8 +305,10 @@ class CustomDistribution(BaseDistribution):
             raise ValueError("Shouldn't be calling marginalize over no variable.")
 
         if not isinstance(variables, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type iterable, "
-                            "got: {var_type}".format(var_type=type(variables)))
+            raise TypeError(
+                "variables: Expected type iterable, "
+                "got: {var_type}".format(var_type=type(variables))
+            )
 
         for var in variables:
             if var not in self.variables:
@@ -317,11 +326,18 @@ class CustomDistribution(BaseDistribution):
 
         def reordered_pdf(*args):
             # ordered_args restores the original order as it was in self.variables
-            ordered_args = [args[reordered_var_index.index(index_id)] for index_id in range(len(all_var))]
+            ordered_args = [
+                args[reordered_var_index.index(index_id)]
+                for index_id in range(len(all_var))
+            ]
             return pdf(*ordered_args)
 
         def marginalized_pdf(*args):
-            return integrate.nquad(reordered_pdf, [[-np.inf, np.inf] for i in range(len(variables))], args=args)[0]
+            return integrate.nquad(
+                reordered_pdf,
+                [[-np.inf, np.inf] for i in range(len(variables))],
+                args=args,
+            )[0]
 
         phi._pdf = marginalized_pdf
         phi.variables = var_to_keep
@@ -371,7 +387,10 @@ class CustomDistribution(BaseDistribution):
             return phi
 
     def is_valid_cpd(self):
-        return np.isclose(integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables])[0], 1)
+        return np.isclose(
+            integrate.nquad(self.pdf, [[-np.inf, np.inf] for var in self.variables])[0],
+            1,
+        )
 
     def _operate(self, other, operation, inplace=True):
         """
@@ -399,24 +418,30 @@ class CustomDistribution(BaseDistribution):
 
         """
         if not isinstance(other, CustomDistribution):
-            raise TypeError("CustomDistribution objects can only be multiplied "
-                            "or divided with another CustomDistribution  "
-                            "object. Got {other_type}, expected: "
-                            "CustomDistribution.".format(other_type=type(other)))
+            raise TypeError(
+                "CustomDistribution objects can only be multiplied "
+                "or divided with another CustomDistribution  "
+                "object. Got {other_type}, expected: "
+                "CustomDistribution.".format(other_type=type(other))
+            )
 
         phi = self if inplace else self.copy()
         pdf = self.pdf
         self_var = [var for var in self.variables]
 
-        modified_pdf_var = self_var + [var for var in other.variables if var not in self_var]
+        modified_pdf_var = self_var + [
+            var for var in other.variables if var not in self_var
+        ]
 
         def modified_pdf(*args):
-            self_pdf_args = list(args[:len(self_var)])
-            other_pdf_args = [args[modified_pdf_var.index(var)] for var in other.variables]
+            self_pdf_args = list(args[: len(self_var)])
+            other_pdf_args = [
+                args[modified_pdf_var.index(var)] for var in other.variables
+            ]
 
-            if operation == 'product':
+            if operation == "product":
                 return pdf(*self_pdf_args) * other._pdf(*other_pdf_args)
-            if operation == 'divide':
+            if operation == "divide":
                 return pdf(*self_pdf_args) / other._pdf(*other_pdf_args)
 
         phi.variables = modified_pdf_var
@@ -460,7 +485,7 @@ class CustomDistribution(BaseDistribution):
         >>> sn3.assignment(0, 0)
         0.063493635934240983
         """
-        return self._operate(other, 'product', inplace)
+        return self._operate(other, "product", inplace)
 
     def divide(self, other, inplace=True):
         """
@@ -500,7 +525,7 @@ class CustomDistribution(BaseDistribution):
         if set(other.variables) - set(self.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
-        return self._operate(other, 'divide', inplace)
+        return self._operate(other, "divide", inplace)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)

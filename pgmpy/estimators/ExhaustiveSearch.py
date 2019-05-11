@@ -85,7 +85,11 @@ class ExhaustiveSearch(StructureEstimator):
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
             warn("Generating all DAGs of n nodes likely not feasible for n>6!")
-            warn("Attempting to search through {0} graphs".format(2**(len(nodes)*(len(nodes)-1))))
+            warn(
+                "Attempting to search through {0} graphs".format(
+                    2 ** (len(nodes) * (len(nodes) - 1))
+                )
+            )
 
         edges = list(combinations(nodes, 2))  # n*(n-1) possible directed edges
         edges.extend([(y, x) for x, y in edges])
@@ -146,8 +150,10 @@ class ExhaustiveSearch(StructureEstimator):
         -16237.575725538434     [('C', 'B')]
         """
 
-        scored_dags = sorted([(self.scoring_method.score(dag), dag) for dag in self.all_dags()],
-                             key=lambda x: x[0])
+        scored_dags = sorted(
+            [(self.scoring_method.score(dag), dag) for dag in self.all_dags()],
+            key=lambda x: x[0],
+        )
         return scored_dags
 
     def estimate(self):

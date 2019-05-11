@@ -71,8 +71,10 @@ class JunctionTree(ClusterGraph):
         ...                   (('a', 'b', 'c'), ('a', 'c'))])
         """
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, u, v):
-            raise ValueError('Addition of edge between {u} and {v} forms a cycle breaking the '
-                             'properties of Junction Tree'.format(u=str(u), v=str(v)))
+            raise ValueError(
+                "Addition of edge between {u} and {v} forms a cycle breaking the "
+                "properties of Junction Tree".format(u=str(u), v=str(v))
+            )
 
         super(JunctionTree, self).add_edge(u, v, **kwargs)
 
@@ -92,7 +94,7 @@ class JunctionTree(ClusterGraph):
             True if all the checks are passed
         """
         if not nx.is_connected(self):
-            raise ValueError('The Junction Tree defined is not fully connected.')
+            raise ValueError("The Junction Tree defined is not fully connected.")
 
         return super(JunctionTree, self).check_model()
 

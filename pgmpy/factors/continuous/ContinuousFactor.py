@@ -14,6 +14,7 @@ class ContinuousFactor(BaseFactor):
     Base class for factors representing various multivariate
     representations.
     """
+
     def __init__(self, variables, pdf, *args, **kwargs):
         """
         Parameters
@@ -39,8 +40,10 @@ class ContinuousFactor(BaseFactor):
         226800.0
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type list or array-like, "
-                            "got type {var_type}".format(var_type=type(variables)))
+            raise TypeError(
+                "variables: Expected type list or array-like, "
+                "got type {var_type}".format(var_type=type(variables))
+            )
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same.")
@@ -48,27 +51,31 @@ class ContinuousFactor(BaseFactor):
         variables = list(variables)
 
         if isinstance(pdf, str):
-            if pdf == 'gaussian':
+            if pdf == "gaussian":
                 self.distribution = GaussianDistribution(
                     variables=variables,
-                    mean=kwargs['mean'],
-                    covariance=kwargs['covariance'])
+                    mean=kwargs["mean"],
+                    covariance=kwargs["covariance"],
+                )
             else:
-                raise NotImplementedError("{dist} distribution not supported.",
-                                          "Please use CustomDistribution".
-                                          format(dist=pdf))
+                raise NotImplementedError(
+                    "{dist} distribution not supported.",
+                    "Please use CustomDistribution".format(dist=pdf),
+                )
 
         elif isinstance(pdf, CustomDistribution):
             self.distribution = pdf
 
         elif callable(pdf):
             self.distribution = CustomDistribution(
-                variables=variables,
-                distribution=pdf)
+                variables=variables, distribution=pdf
+            )
 
         else:
-            raise ValueError("pdf: Expected type: str or function, ",
-                             "Got: {instance}".format(instance=type(variables)))
+            raise ValueError(
+                "pdf: Expected type: str or function, ",
+                "Got: {instance}".format(instance=type(variables)),
+            )
 
     @property
     def pdf(self):
@@ -327,14 +334,18 @@ class ContinuousFactor(BaseFactor):
 
         """
         if not isinstance(other, ContinuousFactor):
-            raise TypeError("ContinuousFactor objects can only be multiplied ",
-                            "or divided with another ContinuousFactor object. ",
-                            "Got {other_type}, expected: ContinuousFactor.".format(
-                                other_type=type(other)))
+            raise TypeError(
+                "ContinuousFactor objects can only be multiplied ",
+                "or divided with another ContinuousFactor object. ",
+                "Got {other_type}, expected: ContinuousFactor.".format(
+                    other_type=type(other)
+                ),
+            )
 
         phi = self if inplace else self.copy()
         phi.distribution = phi.distribution._operate(
-            other=other.distribution, operation=operation, inplace=False)
+            other=other.distribution, operation=operation, inplace=False
+        )
 
         if not inplace:
             return phi
@@ -371,7 +382,7 @@ class ContinuousFactor(BaseFactor):
         >>> sn3.assignment(0, 0)
         0.063493635934240983
         """
-        return self._operate(other, 'product', inplace)
+        return self._operate(other, "product", inplace)
 
     def divide(self, other, inplace=True):
         """
@@ -408,7 +419,7 @@ class ContinuousFactor(BaseFactor):
         if set(other.scope()) - set(self.scope()):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
-        return self._operate(other, 'divide', inplace)
+        return self._operate(other, "divide", inplace)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)

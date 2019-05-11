@@ -15,6 +15,7 @@ class FactorSet(object):
     For example the factor set corresponding to factor :math:`\phi_1\cdot\phi_2` would be the union of the factors
     :math:`\phi_1` and :math:`\phi_2` i.e. factor set :math:`\vec\phi = \phi_1 \cup \phi_2`.
     """
+
     def __init__(self, *factors_list):
         """
         Initialize the factor set class.
@@ -212,7 +213,9 @@ class FactorSet(object):
         factor_set = self if inplace else self.copy()
         factor_set1 = factorset.copy()
 
-        factor_set.add_factors(*[phi.identity_factor() / phi for phi in factor_set1.factors])
+        factor_set.add_factors(
+            *[phi.identity_factor() / phi for phi in factor_set1.factors]
+        )
 
         if not inplace:
             return factor_set
@@ -246,20 +249,25 @@ class FactorSet(object):
              <DiscreteFactor representing phi(x3:2, x4:2) at 0x7f8e32b4cf90>])
         """
         if isinstance(variables, six.string_types):
-            raise TypeError('Expected list or array-like type got type str')
+            raise TypeError("Expected list or array-like type got type str")
 
         factor_set = self if inplace else self.copy()
 
-        factors_to_be_marginalized = set(filter(lambda x: set(x.scope()).intersection(variables),
-                                                factor_set.factors))
+        factors_to_be_marginalized = set(
+            filter(lambda x: set(x.scope()).intersection(variables), factor_set.factors)
+        )
 
         for factor in factors_to_be_marginalized:
-            variables_to_be_marginalized = list(set(factor.scope()).intersection(variables))
+            variables_to_be_marginalized = list(
+                set(factor.scope()).intersection(variables)
+            )
             if inplace:
                 factor.marginalize(variables_to_be_marginalized, inplace=True)
             else:
                 factor_set.remove_factors(factor)
-                factor_set.add_factors(factor.marginalize(variables_to_be_marginalized, inplace=False))
+                factor_set.add_factors(
+                    factor.marginalize(variables_to_be_marginalized, inplace=False)
+                )
 
         if not inplace:
             return factor_set

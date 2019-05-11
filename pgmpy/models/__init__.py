@@ -10,16 +10,18 @@ from .NoisyOrModel import NoisyOrModel
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .SEM import SEMGraph, SEMLISREL, SEM
 
-__all__ = ['BayesianModel',
-           'NoisyOrModel',
-           'MarkovModel',
-           'FactorGraph',
-           'JunctionTree',
-           'ClusterGraph',
-           'DynamicBayesianNetwork',
-           'MarkovChain',
-           'NaiveBayes',
-           'LinearGaussianBayesianNetwork',
-           'SEMGraph',
-           'SEMLISREL',
-           'SEM']
+__all__ = [
+    "BayesianModel",
+    "NoisyOrModel",
+    "MarkovModel",
+    "FactorGraph",
+    "JunctionTree",
+    "ClusterGraph",
+    "DynamicBayesianNetwork",
+    "MarkovChain",
+    "NaiveBayes",
+    "LinearGaussianBayesianNetwork",
+    "SEMGraph",
+    "SEMLISREL",
+    "SEM",
+]

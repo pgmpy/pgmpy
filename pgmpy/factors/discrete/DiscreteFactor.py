@@ -11,7 +11,8 @@ from pgmpy.extern import tabulate
 from pgmpy.extern import six
 from pgmpy.extern.six.moves import map, range, reduce, zip
 
-State = namedtuple('State', ['var', 'state'])
+State = namedtuple("State", ["var", "state"])
+
 
 class DiscreteFactor(BaseFactor, StateNameMixin):
     """
@@ -96,11 +97,16 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         values = np.array(values, dtype=float)
 
         if len(cardinality) != len(variables):
-            raise ValueError("Number of elements in cardinality must be equal to number of variables")
+            raise ValueError(
+                "Number of elements in cardinality must be equal to number of variables"
+            )
 
         if values.size != np.product(cardinality):
-            raise ValueError("Values array must be of size: {size}".format(
-                size=np.product(cardinality)))
+            raise ValueError(
+                "Values array must be of size: {size}".format(
+                    size=np.product(cardinality)
+                )
+            )
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
@@ -110,7 +116,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         self.values = values.reshape(self.cardinality)
 
         # Set the state names
-        super(DiscreteFactor, self).store_state_names(variables, cardinality, state_names)
+        super(DiscreteFactor, self).store_state_names(
+            variables, cardinality, state_names
+        )
 
     def scope(self):
         """
@@ -194,8 +202,13 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         assignments = assignments[:, ::-1]
 
-        return [[(key, self.get_state_names(key, val)) for key, val in zip(self.variables, values)] for
-                                                                            values in assignments]
+        return [
+            [
+                (key, self.get_state_names(key, val))
+                for key, val in zip(self.variables, values)
+            ]
+            for values in assignments
+        ]
 
     def identity_factor(self):
         """
@@ -225,10 +238,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 [ 1.,  1.],
                 [ 1.,  1.]]])
         """
-        return DiscreteFactor(variables=self.variables,
-                              cardinality=self.cardinality,
-                              values=np.ones(self.values.size),
-                              state_names=self.state_names)
+        return DiscreteFactor(
+            variables=self.variables,
+            cardinality=self.cardinality,
+            values=np.ones(self.values.size),
+            state_names=self.state_names,
+        )
 
     def marginalize(self, variables, inplace=True):
         """
@@ -417,10 +432,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             raise TypeError("values: Expected type list or array-like, got type str")
 
         if not all([isinstance(state_tuple, tuple) for state_tuple in values]):
-            raise TypeError("values: Expected type list of tuples, get type {type}", type(values[0]))
+            raise TypeError(
+                "values: Expected type list of tuples, get type {type}", type(values[0])
+            )
 
         phi = self if inplace else self.copy()
-        values = [(var, self.get_state_no(var, state_name)) for var, state_name in values]
+        values = [
+            (var, self.get_state_no(var, state_name)) for var, state_name in values
+        ]
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)
@@ -429,7 +448,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             slice_[var_index] = state
             var_index_to_del.append(var_index)
 
-        var_index_to_keep = sorted(set(range(len(phi.variables))) - set(var_index_to_del))
+        var_index_to_keep = sorted(
+            set(range(len(phi.variables))) - set(var_index_to_del)
+        )
         # set difference is not gaurenteed to maintain ordering
         phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
@@ -502,7 +523,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 phi.variables.extend(extra_vars)
 
                 new_var_card = phi1.get_cardinality(extra_vars)
-                phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
+                phi.cardinality = np.append(
+                    phi.cardinality, [new_var_card[var] for var in extra_vars]
+                )
 
             # modifying phi1 to add new variables
             extra_vars = set(phi.variables) - set(phi1.variables)
@@ -517,8 +540,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             # rearranging the axes of phi1 to match phi
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
-                phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                    phi1.variables[axis]
+                phi1.variables[axis], phi1.variables[exchange_index] = (
+                    phi1.variables[exchange_index],
+                    phi1.variables[axis],
+                )
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values + phi1.values
@@ -590,7 +615,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 phi.variables.extend(extra_vars)
 
                 new_var_card = phi1.get_cardinality(extra_vars)
-                phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
+                phi.cardinality = np.append(
+                    phi.cardinality, [new_var_card[var] for var in extra_vars]
+                )
 
             # modifying phi1 to add new variables
             extra_vars = set(phi.variables) - set(phi1.variables)
@@ -605,8 +632,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             # rearranging the axes of phi1 to match phi
             for axis in range(phi.values.ndim):
                 exchange_index = phi1.variables.index(phi.variables[axis])
-                phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], \
-                    phi1.variables[axis]
+                phi1.variables[axis], phi1.variables[exchange_index] = (
+                    phi1.variables[exchange_index],
+                    phi1.variables[axis],
+                )
                 phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
             phi.values = phi.values * phi1.values
@@ -670,7 +699,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # Rearranging the axes of phi1 to match phi
         for axis in range(phi.values.ndim):
             exchange_index = phi1.variables.index(phi.variables[axis])
-            phi1.variables[axis], phi1.variables[exchange_index] = phi1.variables[exchange_index], phi1.variables[axis]
+            phi1.variables[axis], phi1.variables[exchange_index] = (
+                phi1.variables[exchange_index],
+                phi1.variables[axis],
+            )
             phi1.values = phi1.values.swapaxes(axis, exchange_index)
 
         phi.values = phi.values / phi1.values
@@ -711,15 +743,21 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
-        return DiscreteFactor(self.scope(), self.cardinality, self.values, state_names=self.state_names)
+        return DiscreteFactor(
+            self.scope(), self.cardinality, self.values, state_names=self.state_names
+        )
 
     def is_valid_cpd(self):
-        return np.allclose(self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten('C'),
-                           np.ones(np.product(self.cardinality[:0:-1])),
-                           atol=0.01)
+        return np.allclose(
+            self.to_factor()
+            .marginalize(self.scope()[:1], inplace=False)
+            .values.flatten("C"),
+            np.ones(np.product(self.cardinality[:0:-1])),
+            atol=0.01,
+        )
 
     def __str__(self):
-        return self._str(phi_or_p='phi', tablefmt='grid')
+        return self._str(phi_or_p="phi", tablefmt="grid")
 
     def _str(self, phi_or_p="phi", tablefmt="grid", print_state_names=True):
         """
@@ -734,32 +772,47 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 If True, the user defined state names are displayed.
         """
         string_header = list(map(lambda x: six.text_type(x), self.scope()))
-        string_header.append('{phi_or_p}({variables})'.format(phi_or_p=phi_or_p,
-                                                              variables=','.join(string_header)))
+        string_header.append(
+            "{phi_or_p}({variables})".format(
+                phi_or_p=phi_or_p, variables=",".join(string_header)
+            )
+        )
 
         value_index = 0
         factor_table = []
         for prob in product(*[range(card) for card in self.cardinality]):
             if self.state_names and print_state_names:
-                prob_list = ["{var}({state})".format(
-                    var=list(self.variables)[i], state=self.state_names[list(
-                        self.variables)[i]][prob[i]])
-                             for i in range(len(self.variables))]
+                prob_list = [
+                    "{var}({state})".format(
+                        var=list(self.variables)[i],
+                        state=self.state_names[list(self.variables)[i]][prob[i]],
+                    )
+                    for i in range(len(self.variables))
+                ]
             else:
-                prob_list = ["{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
-                             for i in range(len(self.variables))]
+                prob_list = [
+                    "{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
+                    for i in range(len(self.variables))
+                ]
 
             prob_list.append(self.values.ravel()[value_index])
             factor_table.append(prob_list)
             value_index += 1
 
-        return tabulate(factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f")
+        return tabulate(
+            factor_table, headers=string_header, tablefmt=tablefmt, floatfmt=".4f"
+        )
 
     def __repr__(self):
-        var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
-                              for var, card in zip(self.variables, self.cardinality)])
+        var_card = ", ".join(
+            [
+                "{var}:{card}".format(var=var, card=card)
+                for var, card in zip(self.variables, self.cardinality)
+            ]
+        )
         return "<DiscreteFactor representing phi({var_card}) at {address}>".format(
-            address=hex(id(self)), var_card=var_card)
+            address=hex(id(self)), var_card=var_card
+        )
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
@@ -789,10 +842,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             phi = other.copy()
             for axis in range(self.values.ndim):
                 exchange_index = phi.variables.index(self.variables[axis])
-                phi.variables[axis], phi.variables[exchange_index] = (phi.variables[exchange_index],
-                                                                      phi.variables[axis])
-                phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
-                                                                          phi.cardinality[axis])
+                phi.variables[axis], phi.variables[exchange_index] = (
+                    phi.variables[exchange_index],
+                    phi.variables[axis],
+                )
+                phi.cardinality[axis], phi.cardinality[exchange_index] = (
+                    phi.cardinality[exchange_index],
+                    phi.cardinality[axis],
+                )
                 phi.values = phi.values.swapaxes(axis, exchange_index)
 
             if phi.values.shape != self.values.shape:
@@ -813,9 +870,13 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi = self.copy()
         for axis in range(phi.values.ndim):
             exchange_index = variable_hashes.index(sorted_var_hashes[axis])
-            variable_hashes[axis], variable_hashes[exchange_index] = (variable_hashes[exchange_index],
-                                                                      variable_hashes[axis])
-            phi.cardinality[axis], phi.cardinality[exchange_index] = (phi.cardinality[exchange_index],
-                                                                      phi.cardinality[axis])
+            variable_hashes[axis], variable_hashes[exchange_index] = (
+                variable_hashes[exchange_index],
+                variable_hashes[axis],
+            )
+            phi.cardinality[axis], phi.cardinality[exchange_index] = (
+                phi.cardinality[exchange_index],
+                phi.cardinality[axis],
+            )
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))

@@ -34,7 +34,9 @@ class LinearGaussianCPD(BaseFactor):
     Reference: https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
     """
 
-    def __init__(self, variable, evidence_mean, evidence_variance, evidence=[], beta=None):
+    def __init__(
+        self, variable, evidence_mean, evidence_variance, evidence=[], beta=None
+    ):
         """
         Parameters
         ----------
@@ -82,12 +84,13 @@ class LinearGaussianCPD(BaseFactor):
 
             if len(evidence) != len(beta) - 1:
                 raise ValueError(
-                    "The number of variables in evidence must be one less than the length of the beta vector.")
+                    "The number of variables in evidence must be one less than the length of the beta vector."
+                )
 
         variables = [variable] + evidence
-        super(LinearGaussianCPD, self).__init__(variables, pdf='gaussian',
-                                                mean=self.mean,
-                                                covariance=self.variance)
+        super(LinearGaussianCPD, self).__init__(
+            variables, pdf="gaussian", mean=self.mean, covariance=self.variance
+        )
 
     def sum_of_product(self, xi, xj):
         prod_xixj = xi * xj
@@ -114,27 +117,28 @@ class LinearGaussianCPD(BaseFactor):
 
         sym_coefs = []
         for i in range(0, x_len):
-            sym_coefs.append('b' + str(i + 1) + '_coef')
+            sym_coefs.append("b" + str(i + 1) + "_coef")
 
         sum_x = x_df.sum()
-        x = [sum_x['(Y|X)']]
+        x = [sum_x["(Y|X)"]]
         coef_matrix = pd.DataFrame(columns=sym_coefs)
 
         # First we compute just the coefficients of beta_1 to beta_N.
         # Later we compute beta_0 and append it.
         for i in range(0, x_len):
-            x.append(self.sum_of_product(x_df['(Y|X)'], x_df[self.evidence[i]]))
+            x.append(self.sum_of_product(x_df["(Y|X)"], x_df[self.evidence[i]]))
             for j in range(0, x_len):
                 coef_matrix.loc[i, sym_coefs[j]] = self.sum_of_product(
-                    x_df[self.evidence[i]], x_df[self.evidence[j]])
+                    x_df[self.evidence[i]], x_df[self.evidence[j]]
+                )
 
-        coef_matrix.insert(0, 'b0_coef', sum_x[self.evidence].values)
+        coef_matrix.insert(0, "b0_coef", sum_x[self.evidence].values)
         row_1 = np.append([len(x_df)], sum_x[self.evidence].values)
         coef_matrix.loc[-1] = row_1
         coef_matrix.index = coef_matrix.index + 1  # shifting index
         coef_matrix.sort_index(inplace=True)
 
-        beta_coef_matrix = np.matrix(coef_matrix.values, dtype='float')
+        beta_coef_matrix = np.matrix(coef_matrix.values, dtype="float")
         coef_inv = np.linalg.inv(beta_coef_matrix)
         beta_est = np.array(np.matmul(coef_inv, np.transpose(x)))
         self.beta = beta_est[0]
@@ -143,29 +147,28 @@ class LinearGaussianCPD(BaseFactor):
         x_len_df = len(x_df)
         for i in range(0, x_len):
             for j in range(0, x_len):
-                sigma_est += self.beta[i + 1] * self.beta[j + 1] * (self.sum_of_product(
-                    x_df[self.evidence[i]], x_df[self.evidence[j]]) / x_len_df - np.mean(x_df[self.evidence[i]]) * np.mean(x_df[self.evidence[j]]))
+                sigma_est += (
+                    self.beta[i + 1]
+                    * self.beta[j + 1]
+                    * (
+                        self.sum_of_product(
+                            x_df[self.evidence[i]], x_df[self.evidence[j]]
+                        )
+                        / x_len_df
+                        - np.mean(x_df[self.evidence[i]])
+                        * np.mean(x_df[self.evidence[j]])
+                    )
+                )
 
         sigma_est = np.sqrt(
-            self.sum_of_product(
-                x_df['(Y|X)'],
-                x_df['(Y|X)']) /
-            x_len_df -
-            np.mean(
-                x_df['(Y|X)']) *
-            np.mean(
-                x_df['(Y|X)']) -
-            sigma_est)
+            self.sum_of_product(x_df["(Y|X)"], x_df["(Y|X)"]) / x_len_df
+            - np.mean(x_df["(Y|X)"]) * np.mean(x_df["(Y|X)"])
+            - sigma_est
+        )
         self.sigma_yx = sigma_est
         return self.beta, self.sigma_yx
 
-    def fit(
-            self,
-            data,
-            states,
-            estimator=None,
-            complete_samples_only=True,
-            **kwargs):
+    def fit(self, data, states, estimator=None, complete_samples_only=True, **kwargs):
         """
         Determine βs from data
 
@@ -179,25 +182,28 @@ class LinearGaussianCPD(BaseFactor):
             Are they downsampled or complete? Defaults to True
 
         """
-        if estimator == 'MLE':
+        if estimator == "MLE":
             mean, variance = self.maximum_likelihood_estimator(data, states)
-        elif estimator == 'MAP':
+        elif estimator == "MAP":
             raise NotImplementedError(
-                "fit method has not been implemented using Maximum A-Priori (MAP)")
+                "fit method has not been implemented using Maximum A-Priori (MAP)"
+            )
 
         return mean, variance
 
     @property
     def pdf(self):
-
         def _pdf(*args):
             # The first element of args is the value of the variable on which CPD is defined
             # and the rest of the elements give the mean values of the parent
             # variables.
-            mean = sum([arg * coeff for (arg, coeff)
-                        in zip(args[1:], self.beta_vector)]) + self.beta_0
+            mean = (
+                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)])
+                + self.beta_0
+            )
             return multivariate_normal.pdf(
-                args[0], np.array(mean), np.array([[self.variance]]))
+                args[0], np.array(mean), np.array([[self.variance]])
+            )
 
         return _pdf
 
@@ -219,8 +225,9 @@ class LinearGaussianCPD(BaseFactor):
         >>> copy_cpd.evidence
         ['X1', 'X2', 'X3']
         """
-        copy_cpd = LinearGaussianCPD(self.variable, self.beta, self.variance,
-                                     list(self.evidence))
+        copy_cpd = LinearGaussianCPD(
+            self.variable, self.beta, self.variance, list(self.evidence)
+        )
 
         return copy_cpd
 
@@ -229,16 +236,21 @@ class LinearGaussianCPD(BaseFactor):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
                 node=str(self.variable),
-                parents=', '.join([str(var) for var in self.evidence]),
-                mu=" + ".join(["{coeff}*{parent}".format(
-                    coeff=coeff, parent=parent) for coeff, parent in
-                    zip(self.beta_vector, self.evidence)]),
+                parents=", ".join([str(var) for var in self.evidence]),
+                mu=" + ".join(
+                    [
+                        "{coeff}*{parent}".format(coeff=coeff, parent=parent)
+                        for coeff, parent in zip(self.beta_vector, self.evidence)
+                    ]
+                ),
                 b_0=str(self.beta_0),
-                sigma=str(self.variance))
+                sigma=str(self.variance),
+            )
         else:
             # P(X) = N(1, 4)
             rep_str = "P({X}) = N({beta_0}; {variance})".format(
                 X=str(self.variable),
                 beta_0=str(self.beta_0),
-                variance=str(self.variance))
+                variance=str(self.variance),
+            )
         return rep_str

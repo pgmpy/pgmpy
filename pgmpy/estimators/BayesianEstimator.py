@@ -14,11 +14,15 @@ class BayesianEstimator(ParameterEstimator):
         See `MaximumLikelihoodEstimator` for constructor parameters.
         """
         if not isinstance(model, BayesianModel):
-            raise NotImplementedError("Bayesian Parameter Estimation is only implemented for BayesianModel")
+            raise NotImplementedError(
+                "Bayesian Parameter Estimation is only implemented for BayesianModel"
+            )
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, prior_type='BDeu', equivalent_sample_size=5, pseudo_counts=None):
+    def get_parameters(
+        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None
+    ):
         """
         Method to estimate the model parameters (CPDs).
 
@@ -64,19 +68,26 @@ class BayesianEstimator(ParameterEstimator):
         parameters = []
 
         for node in self.model.nodes():
-            _equivalent_sample_size = equivalent_sample_size[node] if isinstance(equivalent_sample_size, dict) else \
-                                      equivalent_sample_size
+            _equivalent_sample_size = (
+                equivalent_sample_size[node]
+                if isinstance(equivalent_sample_size, dict)
+                else equivalent_sample_size
+            )
             _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
 
-            cpd = self.estimate_cpd(node,
-                                    prior_type=prior_type,
-                                    equivalent_sample_size=_equivalent_sample_size,
-                                    pseudo_counts=_pseudo_counts)
+            cpd = self.estimate_cpd(
+                node,
+                prior_type=prior_type,
+                equivalent_sample_size=_equivalent_sample_size,
+                pseudo_counts=_pseudo_counts,
+            )
             parameters.append(cpd)
 
         return parameters
 
-    def estimate_cpd(self, node, prior_type='BDeu', pseudo_counts=[], equivalent_sample_size=5):
+    def estimate_cpd(
+        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5
+    ):
         """
         Method to estimate the CPD for a given variable.
 
@@ -130,25 +141,34 @@ class BayesianEstimator(ParameterEstimator):
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
         cpd_shape = (node_cardinality, np.prod(parents_cardinalities, dtype=int))
 
-        if prior_type == 'K2':
+        if prior_type == "K2":
             pseudo_counts = np.ones(cpd_shape, dtype=int)
-        elif prior_type == 'BDeu':
-            alpha = float(equivalent_sample_size) / (node_cardinality * np.prod(parents_cardinalities))
+        elif prior_type == "BDeu":
+            alpha = float(equivalent_sample_size) / (
+                node_cardinality * np.prod(parents_cardinalities)
+            )
             pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
-        elif prior_type == 'dirichlet':
+        elif prior_type == "dirichlet":
             pseudo_counts = np.array(pseudo_counts)
             if pseudo_counts.shape != cpd_shape:
-                raise ValueError("The shape of pseudo_counts must be: {shape}".format(
-                   shape=str(cpd_shape)))
+                raise ValueError(
+                    "The shape of pseudo_counts must be: {shape}".format(
+                        shape=str(cpd_shape)
+                    )
+                )
         else:
             raise ValueError("'prior_type' not specified")
 
         state_counts = self.state_counts(node)
         bayesian_counts = state_counts + pseudo_counts
 
-        cpd = TabularCPD(node, node_cardinality, np.array(bayesian_counts),
-                         evidence=parents,
-                         evidence_card=parents_cardinalities,
-                         state_names=self.state_names)
+        cpd = TabularCPD(
+            node,
+            node_cardinality,
+            np.array(bayesian_counts),
+            evidence=parents,
+            evidence_card=parents_cardinalities,
+            state_names=self.state_names,
+        )
         cpd.normalize()
         return cpd

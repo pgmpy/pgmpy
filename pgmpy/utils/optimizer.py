@@ -2,6 +2,7 @@ import warnings
 from math import isclose
 
 import torch
+
 optim = torch.optim
 
 
@@ -19,10 +20,13 @@ def pinverse(t):
     torch.tensor: Inverse of the matrix `t`.
     """
     u, s, v = t.svd()
-    t_inv = v @ torch.diag(torch.where(s!=0, 1/s, s)) @ u.t()
+    t_inv = v @ torch.diag(torch.where(s != 0, 1 / s, s)) @ u.t()
     return t_inv
 
-def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_delta=1e-4):
+
+def optimize(
+    loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_delta=1e-4
+):
     """
     Generic function to optimize loss functions.
 
@@ -69,36 +73,45 @@ def optimize(loss_fn, params={}, loss_args={}, opt='adam', max_iter=10000, exit_
     --------
     """
     # TODO: Add option to modify the optimizers.
-    init_loss = float('inf')
+    init_loss = float("inf")
 
     if isinstance(opt, str):
-        opt_dict = {'adadelta': optim.Adadelta,
-                    'adagrad': optim.Adagrad,
-                    'adam': optim.Adam,
-                    'sparseadam': optim.SparseAdam,
-                    'adamax': optim.Adamax,
-                    'asgd': optim.ASGD,
-                    'lbfgs': optim.LBFGS,
-                    'rmsprop': optim.RMSprop,
-                    'rprop': optim.Rprop,
-                    'sgd': optim.SGD}
+        opt_dict = {
+            "adadelta": optim.Adadelta,
+            "adagrad": optim.Adagrad,
+            "adam": optim.Adam,
+            "sparseadam": optim.SparseAdam,
+            "adamax": optim.Adamax,
+            "asgd": optim.ASGD,
+            "lbfgs": optim.LBFGS,
+            "rmsprop": optim.RMSprop,
+            "rprop": optim.Rprop,
+            "sgd": optim.SGD,
+        }
         opt = opt_dict[opt.lower()](params.values())
 
-
     for t in range(max_iter):
+
         def closure():
             opt.zero_grad()
             loss = loss_fn(params, loss_args)
             loss.backward()
             return loss
+
         opt.step(closure=closure)
 
         if isclose(init_loss, closure().item(), abs_tol=exit_delta):
-            warnings.warn("Converged after {iterations} iterations.".format(iterations=t))
+            warnings.warn(
+                "Converged after {iterations} iterations.".format(iterations=t)
+            )
             return params
         else:
             init_loss = closure().item()
 
-    warnings.warn("""Couldn't converge after {iterations} iterations. Try increasing max_iter or change
-                     optimizer parameters""".format(iterations=max_iter))
+    warnings.warn(
+        """Couldn't converge after {iterations} iterations. Try increasing max_iter or change
+                     optimizer parameters""".format(
+            iterations=max_iter
+        )
+    )
     return params

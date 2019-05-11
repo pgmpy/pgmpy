@@ -87,5 +87,9 @@ class Inference(object):
             self.start_bayesian_model.add_cpds(*model.get_cpds(time_slice=0))
             cpd_inter = [model.get_cpds(node) for node in model.get_interface_nodes(1)]
             self.interface_nodes = model.get_interface_nodes(0)
-            self.one_and_half_model = BayesianModel(model.get_inter_edges() + model.get_intra_edges(1))
-            self.one_and_half_model.add_cpds(*(model.get_cpds(time_slice=1) + cpd_inter))
+            self.one_and_half_model = BayesianModel(
+                model.get_inter_edges() + model.get_intra_edges(1)
+            )
+            self.one_and_half_model.add_cpds(
+                *(model.get_cpds(time_slice=1) + cpd_inter)
+            )

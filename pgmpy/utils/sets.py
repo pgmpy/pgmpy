@@ -24,8 +24,10 @@ def _variable_or_iterable_to_set(x):
 
     if not isinstance(x, Iterable) or not all(isinstance(xx, str) for xx in x):
         raise ValueError(
-            "{} is expected to be either a string, set of strings, or an iterable of strings"
-            .format(x))
+            "{} is expected to be either a string, set of strings, or an iterable of strings".format(
+                x
+            )
+        )
 
     return frozenset(x)
 

@@ -49,15 +49,16 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         """
         for cpd in cpds:
             if not isinstance(cpd, LinearGaussianCPD):
-                raise ValueError('Only LinearGaussianCPD can be added.')
+                raise ValueError("Only LinearGaussianCPD can be added.")
 
-            if set(cpd.variables) - set(cpd.variables).intersection(
-                    set(self.nodes())):
-                raise ValueError('CPD defined on variable not in the model', cpd)
+            if set(cpd.variables) - set(cpd.variables).intersection(set(self.nodes())):
+                raise ValueError("CPD defined on variable not in the model", cpd)
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
+                    logging.warning(
+                        "Replacing existing CPD for {var}".format(var=cpd.variable)
+                    )
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -170,21 +171,41 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         for node_idx in range(len(variables)):
             cpd = self.get_cpds(variables[node_idx])
-            mean[node_idx] = sum([coeff * mean[variables.index(parent)] for
-                                  coeff, parent in zip(cpd.beta_vector, cpd.evidence)]) + cpd.beta_0
-            covariance[node_idx, node_idx] = sum(
-                [coeff * coeff * covariance[variables.index(parent), variables.index(parent)]
-                 for coeff, parent in zip(cpd.beta_vector, cpd.evidence)]) + cpd.variance
+            mean[node_idx] = (
+                sum(
+                    [
+                        coeff * mean[variables.index(parent)]
+                        for coeff, parent in zip(cpd.beta_vector, cpd.evidence)
+                    ]
+                )
+                + cpd.beta_0
+            )
+            covariance[node_idx, node_idx] = (
+                sum(
+                    [
+                        coeff
+                        * coeff
+                        * covariance[variables.index(parent), variables.index(parent)]
+                        for coeff, parent in zip(cpd.beta_vector, cpd.evidence)
+                    ]
+                )
+                + cpd.variance
+            )
 
         for node_i_idx in range(len(variables)):
             for node_j_idx in range(len(variables)):
                 if covariance[node_j_idx, node_i_idx] != 0:
-                    covariance[node_i_idx, node_j_idx] = covariance[node_j_idx, node_i_idx]
+                    covariance[node_i_idx, node_j_idx] = covariance[
+                        node_j_idx, node_i_idx
+                    ]
                 else:
                     cpd_j = self.get_cpds(variables[node_j_idx])
                     covariance[node_i_idx, node_j_idx] = sum(
-                        [coeff * covariance[node_i_idx, variables.index(parent)]
-                         for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)])
+                        [
+                            coeff * covariance[node_i_idx, variables.index(parent)]
+                            for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)
+                        ]
+                    )
 
         return GaussianDistribution(variables, mean, covariance)
 
@@ -206,8 +227,10 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
             if isinstance(cpd, LinearGaussianCPD):
                 if set(cpd.evidence) != set(self.get_parents(node)):
-                    raise ValueError("CPD associated with %s doesn't have "
-                                     "proper parents associated with it." % node)
+                    raise ValueError(
+                        "CPD associated with %s doesn't have "
+                        "proper parents associated with it." % node
+                    )
         return True
 
     def get_cardinality(self, node):
@@ -216,27 +239,37 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
+    def fit(
+        self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs
+    ):
         """
         For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
         """
-        
-        raise NotImplementedError("fit method has not been implemented for LinearGaussianBayesianNetwork.")
+
+        raise NotImplementedError(
+            "fit method has not been implemented for LinearGaussianBayesianNetwork."
+        )
 
     def predict(self, data):
         """
         For now, predict method has not been implemented for LinearGaussianBayesianNetwork.
         """
-        raise NotImplementedError("predict method has not been implemented for LinearGaussianBayesianNetwork.")
+        raise NotImplementedError(
+            "predict method has not been implemented for LinearGaussianBayesianNetwork."
+        )
 
     def to_markov_model(self):
         """
         For now, to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.
         """
-        raise NotImplementedError("to_markov_model method has not been implemented for LinearGaussianBayesianNetwork.")
+        raise NotImplementedError(
+            "to_markov_model method has not been implemented for LinearGaussianBayesianNetwork."
+        )
 
     def is_imap(self, JPD):
         """
         For now, is_imap method has not been implemented for LinearGaussianBayesianNetwork.
         """
-        raise NotImplementedError("is_imap method has not been implemented for LinearGaussianBayesianNetwork.")
+        raise NotImplementedError(
+            "is_imap method has not been implemented for LinearGaussianBayesianNetwork."
+        )

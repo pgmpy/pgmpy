@@ -100,10 +100,10 @@ class UndirectedGraph(nx.Graph):
         # Check for networkx 2.0 syntax
         if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
             node, attrs = node
-            if attrs.get('weight', None) is not None:
-                attrs['weight'] = weight
+            if attrs.get("weight", None) is not None:
+                attrs["weight"] = weight
         else:
-            attrs = {'weight': weight}
+            attrs = {"weight": weight}
         super(UndirectedGraph, self).add_node(node, weight=weight)
 
     def add_nodes_from(self, nodes, weights=None):
@@ -143,8 +143,9 @@ class UndirectedGraph(nx.Graph):
 
         if weights:
             if len(nodes) != len(weights):
-                raise ValueError("The number of elements in nodes and weights"
-                                 "should be equal.")
+                raise ValueError(
+                    "The number of elements in nodes and weights" "should be equal."
+                )
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], weight=weights[index])
         else:
@@ -241,11 +242,11 @@ class UndirectedGraph(nx.Graph):
 
         if weights:
             if len(ebunch) != len(weights):
-                raise ValueError("The number of elements in ebunch and weights"
-                                 "should be equal")
+                raise ValueError(
+                    "The number of elements in ebunch and weights" "should be equal"
+                )
             for index in range(len(ebunch)):
-                self.add_edge(ebunch[index][0], ebunch[index][1],
-                              weight=weights[index])
+                self.add_edge(ebunch[index][0], ebunch[index][1], weight=weights[index])
         else:
             for edge in ebunch:
                 self.add_edge(edge[0], edge[1])

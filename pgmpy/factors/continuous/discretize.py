@@ -91,8 +91,10 @@ class BaseDiscretizer(with_metaclass(ABCMeta)):
 
         """
         step = (self.high - self.low) / self.cardinality
-        labels = ['x={i}'.format(i=str(i)) for i in np.round(
-            np.arange(self.low, self.high, step), 3)]
+        labels = [
+            "x={i}".format(i=str(i))
+            for i in np.round(np.arange(self.low, self.high, step), 3)
+        ]
         return labels
 
 
@@ -130,11 +132,18 @@ class RoundingDiscretizer(BaseDiscretizer):
         step = (self.high - self.low) / self.cardinality
 
         # for x=[low]
-        discrete_values = [self.factor.cdf(self.low + step/2) - self.factor.cdf(self.low)]
+        discrete_values = [
+            self.factor.cdf(self.low + step / 2) - self.factor.cdf(self.low)
+        ]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 1)
-        discrete_values.extend([self.factor.cdf(i + step/2) - self.factor.cdf(i - step/2) for i in points])
+        discrete_values.extend(
+            [
+                self.factor.cdf(i + step / 2) - self.factor.cdf(i - step / 2)
+                for i in points
+            ]
+        )
 
         return discrete_values
 
@@ -184,20 +193,30 @@ class UnbiasedDiscretizer(BaseDiscretizer):
      3.7867260839208328e-05]
 
     """
+
     def get_discrete_values(self):
         lev = self._lim_moment
         step = (self.high - self.low) / (self.cardinality - 1)
 
         # for x=[low]
-        discrete_values = [(lev(self.low) - lev(self.low + step)) / step +
-                           1 - self.factor.cdf(self.low)]
+        discrete_values = [
+            (lev(self.low) - lev(self.low + step)) / step
+            + 1
+            - self.factor.cdf(self.low)
+        ]
 
         # for x=[low+step, low+2*step, ........., high-step]
         points = np.linspace(self.low + step, self.high - step, self.cardinality - 2)
-        discrete_values.extend([(2 * lev(i) - lev(i - step) - lev(i + step)) / step for i in points])
+        discrete_values.extend(
+            [(2 * lev(i) - lev(i - step) - lev(i + step)) / step for i in points]
+        )
 
         # for x=[high]
-        discrete_values.append((lev(self.high) - lev(self.high - step)) / step - 1 + self.factor.cdf(self.high))
+        discrete_values.append(
+            (lev(self.high) - lev(self.high - step)) / step
+            - 1
+            + self.factor.cdf(self.high)
+        )
 
         return discrete_values
 
@@ -225,12 +244,17 @@ class UnbiasedDiscretizer(BaseDiscretizer):
         order: int
             The order of the moment, default is first order.
         """
+
         def fun(x):
             return np.power(x, order) * self.factor.pdf(x)
-        return (integrate.quad(fun, -np.inf, u)[0] +
-                np.power(u, order)*(1 - self.factor.cdf(u)))
+
+        return integrate.quad(fun, -np.inf, u)[0] + np.power(u, order) * (
+            1 - self.factor.cdf(u)
+        )
 
     def get_labels(self):
-        labels = list('x={i}'.format(i=str(i)) for i in np.round
-                      (np.linspace(self.low, self.high, self.cardinality), 3))
+        labels = list(
+            "x={i}".format(i=str(i))
+            for i in np.round(np.linspace(self.low, self.high, self.cardinality), 3)
+        )
         return labels

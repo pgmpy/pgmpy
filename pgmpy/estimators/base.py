@@ -41,13 +41,19 @@ class BaseEstimator(object):
         variables = list(data.columns.values)
 
         if not isinstance(state_names, dict):
-            self.state_names = {var: self._collect_state_names(var) for var in variables}
+            self.state_names = {
+                var: self._collect_state_names(var) for var in variables
+            }
         else:
             self.state_names = dict()
             for var in variables:
                 if var in state_names:
                     if not set(self._collect_state_names(var)) <= set(state_names[var]):
-                        raise ValueError("Data contains unexpected states for variable '{0}'.".format(str(var)))
+                        raise ValueError(
+                            "Data contains unexpected states for variable '{0}'.".format(
+                                str(var)
+                            )
+                        )
                     self.state_names[var] = sorted(state_names[var])
                 else:
                     self.state_names[var] = self._collect_state_names(var)
@@ -115,19 +121,31 @@ class BaseEstimator(object):
         if complete_samples_only is None:
             complete_samples_only = self.complete_samples_only
         # ignores either any row containing NaN, or only those where the variable or its parents is NaN
-        data = self.data.dropna() if complete_samples_only else self.data.dropna(subset=[variable] + parents)
+        data = (
+            self.data.dropna()
+            if complete_samples_only
+            else self.data.dropna(subset=[variable] + parents)
+        )
 
         if not parents:
             # count how often each state of 'variable' occured
             state_count_data = data.ix[:, variable].value_counts()
-            state_counts = state_count_data.reindex(self.state_names[variable]).fillna(0).to_frame()
+            state_counts = (
+                state_count_data.reindex(self.state_names[variable])
+                .fillna(0)
+                .to_frame()
+            )
 
         else:
             parents_states = [self.state_names[parent] for parent in parents]
             # count how often each state of 'variable' occured, conditional on parents' states
-            state_count_data = data.groupby([variable] + parents).size().unstack(parents)
+            state_count_data = (
+                data.groupby([variable] + parents).size().unstack(parents)
+            )
             if not isinstance(state_count_data.columns, pd.MultiIndex):
-                state_count_data.columns = pd.MultiIndex.from_arrays([state_count_data.columns])
+                state_count_data.columns = pd.MultiIndex.from_arrays(
+                    [state_count_data.columns]
+                )
 
             # reindex rows & columns to sort them and to add missing ones
             # missing row    = some state of 'variable' did not occur in data
@@ -135,7 +153,9 @@ class BaseEstimator(object):
             #                  did not occur in data
             row_index = self.state_names[variable]
             column_index = pd.MultiIndex.from_product(parents_states, names=parents)
-            state_counts = state_count_data.reindex(index=row_index, columns=column_index).fillna(0)
+            state_counts = state_count_data.reindex(
+                index=row_index, columns=column_index
+            ).fillna(0)
 
         return state_counts
 
@@ -201,59 +221,81 @@ class BaseEstimator(object):
         (9192.5172226063387, 0.0, True)
         """
 
-        if isinstance(Zs, (frozenset, list, set, tuple,)):
+        if isinstance(Zs, (frozenset, list, set, tuple)):
             Zs = list(Zs)
         else:
             Zs = [Zs]
 
-        num_params = ((len(self.state_names[X])-1) *
-                      (len(self.state_names[Y])-1) *
-                      np.prod([len(self.state_names[Z]) for Z in Zs]))
+        num_params = (
+            (len(self.state_names[X]) - 1)
+            * (len(self.state_names[Y]) - 1)
+            * np.prod([len(self.state_names[Z]) for Z in Zs])
+        )
         sufficient_data = len(self.data) >= num_params * 5
         if not sufficient_data:
-            warn("Insufficient data for testing {0} _|_ {1} | {2}. ".format(X, Y, Zs) +
-                 "At least {0} samples recommended, {1} present.".format(5 * num_params, len(self.data)))
+            warn(
+                "Insufficient data for testing {0} _|_ {1} | {2}. ".format(X, Y, Zs)
+                + "At least {0} samples recommended, {1} present.".format(
+                    5 * num_params, len(self.data)
+                )
+            )
 
         # compute actual frequency/state_count table:
         # = P(X,Y,Zs)
-        XYZ_state_counts = pd.crosstab(index=self.data[X],
-                                       columns=[self.data[Y]] + [self.data[Z] for Z in Zs])
+        XYZ_state_counts = pd.crosstab(
+            index=self.data[X], columns=[self.data[Y]] + [self.data[Z] for Z in Zs]
+        )
         # reindex to add missing rows & columns (if some values don't appear in data)
         row_index = self.state_names[X]
         column_index = pd.MultiIndex.from_product(
-                            [self.state_names[Y]] + [self.state_names[Z] for Z in Zs], names=[Y]+Zs)
+            [self.state_names[Y]] + [self.state_names[Z] for Z in Zs], names=[Y] + Zs
+        )
         if not isinstance(XYZ_state_counts.columns, pd.MultiIndex):
-            XYZ_state_counts.columns = pd.MultiIndex.from_arrays([XYZ_state_counts.columns])
-        XYZ_state_counts = XYZ_state_counts.reindex(index=row_index,    columns=column_index).fillna(0)
+            XYZ_state_counts.columns = pd.MultiIndex.from_arrays(
+                [XYZ_state_counts.columns]
+            )
+        XYZ_state_counts = XYZ_state_counts.reindex(
+            index=row_index, columns=column_index
+        ).fillna(0)
 
         # compute the expected frequency/state_count table if X _|_ Y | Zs:
         # = P(X|Zs)*P(Y|Zs)*P(Zs) = P(X,Zs)*P(Y,Zs)/P(Zs)
         if Zs:
-            XZ_state_counts = XYZ_state_counts.sum(axis=1, level=Zs)  # marginalize out Y
-            YZ_state_counts = XYZ_state_counts.sum().unstack(Zs)      # marginalize out X
+            XZ_state_counts = XYZ_state_counts.sum(
+                axis=1, level=Zs
+            )  # marginalize out Y
+            YZ_state_counts = XYZ_state_counts.sum().unstack(Zs)  # marginalize out X
         else:
             XZ_state_counts = XYZ_state_counts.sum(axis=1)
             YZ_state_counts = XYZ_state_counts.sum()
         Z_state_counts = YZ_state_counts.sum()  # marginalize out both
 
-        XYZ_expected = pd.DataFrame(index=XYZ_state_counts.index, columns=XYZ_state_counts.columns)
+        XYZ_expected = pd.DataFrame(
+            index=XYZ_state_counts.index, columns=XYZ_state_counts.columns
+        )
         for X_val in XYZ_expected.index:
             if Zs:
                 for Y_val in XYZ_expected.columns.levels[0]:
-                    XYZ_expected.loc[X_val, Y_val] = (XZ_state_counts.loc[X_val] *
-                                                      YZ_state_counts.loc[Y_val] /
-                                                      Z_state_counts).values
+                    XYZ_expected.loc[X_val, Y_val] = (
+                        XZ_state_counts.loc[X_val]
+                        * YZ_state_counts.loc[Y_val]
+                        / Z_state_counts
+                    ).values
             else:
                 for Y_val in XYZ_expected.columns:
-                    XYZ_expected.loc[X_val, Y_val] = (XZ_state_counts.loc[X_val] *
-                                                      YZ_state_counts.loc[Y_val] /
-                                                      float(Z_state_counts))
+                    XYZ_expected.loc[X_val, Y_val] = (
+                        XZ_state_counts.loc[X_val]
+                        * YZ_state_counts.loc[Y_val]
+                        / float(Z_state_counts)
+                    )
 
         observed = XYZ_state_counts.values.flatten()
         expected = XYZ_expected.fillna(0).values.flatten()
         # remove elements where the expected value is 0;
         # this also corrects the degrees of freedom for chisquare
-        observed, expected = zip(*((o, e) for o, e in zip(observed, expected) if not e == 0))
+        observed, expected = zip(
+            *((o, e) for o, e in zip(observed, expected) if not e == 0)
+        )
 
         chi2, significance_level = chisquare(observed, expected)
 
@@ -288,7 +330,9 @@ class ParameterEstimator(BaseEstimator):
         """
 
         if not set(model.nodes()) <= set(data.columns.values):
-            raise ValueError("variable names of the model must be identical to column names in data")
+            raise ValueError(
+                "variable names of the model must be identical to column names in data"
+            )
         self.model = model
 
         super(ParameterEstimator, self).__init__(data, **kwargs)
@@ -338,7 +382,9 @@ class ParameterEstimator(BaseEstimator):
         """
 
         parents = sorted(self.model.get_parents(variable))
-        return super(ParameterEstimator, self).state_counts(variable, parents=parents, **kwargs)
+        return super(ParameterEstimator, self).state_counts(
+            variable, parents=parents, **kwargs
+        )
 
     def get_parameters(self):
         pass

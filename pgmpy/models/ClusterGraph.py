@@ -54,6 +54,7 @@ class ClusterGraph(UndirectedGraph):
     >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
     ...                   (('a', 'b', 'c'), ('a', 'c'))])
     """
+
     def __init__(self, ebunch=None):
         super(ClusterGraph, self).__init__()
         if ebunch:
@@ -77,7 +78,9 @@ class ClusterGraph(UndirectedGraph):
         >>> G.add_node(('a', 'b', 'c'))
         """
         if not isinstance(node, (list, set, tuple)):
-            raise TypeError('Node can only be a list, set or tuple of nodes forming a clique')
+            raise TypeError(
+                "Node can only be a list, set or tuple of nodes forming a clique"
+            )
 
         node = tuple(node)
         super(ClusterGraph, self).add_node(node, **kwargs)
@@ -120,7 +123,7 @@ class ClusterGraph(UndirectedGraph):
         set_u = set(u)
         set_v = set(v)
         if set_u.isdisjoint(set_v):
-            raise ValueError('No sepset found between these two edges.')
+            raise ValueError("No sepset found between these two edges.")
 
         super(ClusterGraph, self).add_edge(u, v)
 
@@ -153,8 +156,9 @@ class ClusterGraph(UndirectedGraph):
             factor_scope = set(factor.scope())
             nodes = [set(node) for node in self.nodes()]
             if factor_scope not in nodes:
-                raise ValueError('Factors defined on clusters of variable not'
-                                 'present in model')
+                raise ValueError(
+                    "Factors defined on clusters of variable not" "present in model"
+                )
 
             self.factors.append(factor)
 
@@ -186,7 +190,7 @@ class ClusterGraph(UndirectedGraph):
             nodes = [set(n) for n in self.nodes()]
 
             if set(node) not in nodes:
-                raise ValueError('Node not present in Cluster Graph')
+                raise ValueError("Node not present in Cluster Graph")
 
             factors = filter(lambda x: set(x.scope()) == set(node), self.factors)
             return next(factors)
@@ -281,7 +285,9 @@ class ClusterGraph(UndirectedGraph):
         """
         if self.check_model():
             factor = self.factors[0]
-            factor = factor_product(factor, *[self.factors[i] for i in range(1, len(self.factors))])
+            factor = factor_product(
+                factor, *[self.factors[i] for i in range(1, len(self.factors))]
+            )
             return np.sum(factor.values)
 
     def check_model(self):
@@ -305,17 +311,22 @@ class ClusterGraph(UndirectedGraph):
         for clique in self.nodes():
             factors = filter(lambda x: set(x.scope()) == set(clique), self.factors)
             if not any(factors):
-                raise ValueError('Factors for all the cliques or clusters not defined.')
+                raise ValueError("Factors for all the cliques or clusters not defined.")
 
         cardinalities = self.get_cardinality()
-        if len(set((x for clique in self.nodes() for x in clique))) != len(cardinalities):
-            raise ValueError('Factors for all the variables not defined.')
+        if len(set((x for clique in self.nodes() for x in clique))) != len(
+            cardinalities
+        ):
+            raise ValueError("Factors for all the variables not defined.")
 
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                if (cardinalities[variable] != cardinality):
+                if cardinalities[variable] != cardinality:
                     raise ValueError(
-                        'Cardinality of variable {var} not matching among factors'.format(var=variable))
+                        "Cardinality of variable {var} not matching among factors".format(
+                            var=variable
+                        )
+                    )
 
         return True
 
