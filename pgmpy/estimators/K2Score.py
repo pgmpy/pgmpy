@@ -39,18 +39,22 @@ class K2Score(StructureScore):
         super(K2Score, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        "Computes a score that measures how much a \
-        given variable is \"influenced\" by a given list of potential parents."
+        'Computes a score that measures how much a \
+        given variable is "influenced" by a given list of potential parents.'
 
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
         state_counts = self.state_counts(variable, parents)
 
         score = 0
-        for parents_state in state_counts:  # iterate over df columns (only 1 if no parents)
+        for (
+            parents_state
+        ) in state_counts:  # iterate over df columns (only 1 if no parents)
             conditional_sample_size = sum(state_counts[parents_state])
 
-            score += lgamma(var_cardinality) - lgamma(conditional_sample_size + var_cardinality)
+            score += lgamma(var_cardinality) - lgamma(
+                conditional_sample_size + var_cardinality
+            )
 
             for state in var_states:
                 if state_counts[parents_state][state] > 0:

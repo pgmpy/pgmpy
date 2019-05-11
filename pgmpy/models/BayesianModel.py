@@ -10,7 +10,11 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG
-from pgmpy.factors.discrete import TabularCPD, JointProbabilityDistribution, DiscreteFactor
+from pgmpy.factors.discrete import (
+    TabularCPD,
+    JointProbabilityDistribution,
+    DiscreteFactor,
+)
 from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.independencies import Independencies
 from pgmpy.extern import six
@@ -112,10 +116,12 @@ class BayesianModel(DAG):
         >>> G.add_edge('grade', 'intel')
         """
         if u == v:
-            raise ValueError('Self loops are not allowed.')
+            raise ValueError("Self loops are not allowed.")
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, v, u):
             raise ValueError(
-                'Loops are not allowed. Adding the edge from (%s->%s) forms a loop.' % (u, v))
+                "Loops are not allowed. Adding the edge from (%s->%s) forms a loop."
+                % (u, v)
+            )
         else:
             super(BayesianModel, self).add_edge(u, v, **kwargs)
 
@@ -240,15 +246,16 @@ class BayesianModel(DAG):
         """
         for cpd in cpds:
             if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
-                raise ValueError('Only TabularCPD or ContinuousFactor can be added.')
+                raise ValueError("Only TabularCPD or ContinuousFactor can be added.")
 
-            if set(cpd.scope()) - set(cpd.scope()).intersection(
-                    set(self.nodes())):
-                raise ValueError('CPD defined on variable not in the model', cpd)
+            if set(cpd.scope()) - set(cpd.scope()).intersection(set(self.nodes())):
+                raise ValueError("CPD defined on variable not in the model", cpd)
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning("Replacing existing CPD for {var}".format(var=cpd.variable))
+                    logging.warning(
+                        "Replacing existing CPD for {var}".format(var=cpd.variable)
+                    )
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -282,7 +289,7 @@ class BayesianModel(DAG):
         """
         if node is not None:
             if node not in self.nodes():
-                raise ValueError('Node not present in the Directed Graph')
+                raise ValueError("Node not present in the Directed Graph")
             for cpd in self.cpds:
                 if cpd.variable == node:
                     return cpd
@@ -378,16 +385,20 @@ class BayesianModel(DAG):
             cpd = self.get_cpds(node=node)
 
             if cpd is None:
-                raise ValueError('No CPD associated with {}'.format(node))
+                raise ValueError("No CPD associated with {}".format(node))
             elif isinstance(cpd, (TabularCPD, ContinuousFactor)):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
-                    raise ValueError("CPD associated with {node} doesn't have "
-                                     "proper parents associated with it.".format(node=node))
+                    raise ValueError(
+                        "CPD associated with {node} doesn't have "
+                        "proper parents associated with it.".format(node=node)
+                    )
                 if not cpd.is_valid_cpd():
-                    raise ValueError("Sum or integral of conditional probabilites for node {node}"
-                                     " is not equal to 1.".format(node=node))
+                    raise ValueError(
+                        "Sum or integral of conditional probabilites for node {node}"
+                        " is not equal to 1.".format(node=node)
+                    )
         return True
 
     def to_markov_model(self):
@@ -453,7 +464,9 @@ class BayesianModel(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs):
+    def fit(
+        self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs
+    ):
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -495,7 +508,11 @@ class BayesianModel(DAG):
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
         """
 
-        from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, BaseEstimator
+        from pgmpy.estimators import (
+            MaximumLikelihoodEstimator,
+            BayesianEstimator,
+            BaseEstimator,
+        )
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator
@@ -503,8 +520,12 @@ class BayesianModel(DAG):
             if not issubclass(estimator, BaseEstimator):
                 raise TypeError("Estimator object should be a valid pgmpy estimator.")
 
-        _estimator = estimator(self, data, state_names=state_names,
-                               complete_samples_only=complete_samples_only)
+        _estimator = estimator(
+            self,
+            data,
+            state_names=state_names,
+            complete_samples_only=complete_samples_only,
+        )
         cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
@@ -561,7 +582,9 @@ class BayesianModel(DAG):
         # Send state_names dict from one of the estimated CPDs to the inference class.
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
-            states_dict = model_inference.map_query(variables=missing_variables, evidence=data_point.to_dict())
+            states_dict = model_inference.map_query(
+                variables=missing_variables, evidence=data_point.to_dict()
+            )
             for k, v in states_dict.items():
                 pred_values[k].append(v)
         return pd.DataFrame(pred_values, index=data.index)
@@ -625,14 +648,18 @@ class BayesianModel(DAG):
 
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
-            full_distribution = model_inference.query(variables=missing_variables, evidence=data_point.to_dict())
+            full_distribution = model_inference.query(
+                variables=missing_variables, evidence=data_point.to_dict()
+            )
             states_dict = {}
             for var in missing_variables:
-                states_dict[var] = full_distribution.marginalize(missing_variables - {var}, inplace=False)
+                states_dict[var] = full_distribution.marginalize(
+                    missing_variables - {var}, inplace=False
+                )
             for k, v in states_dict.items():
                 for l in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][l]
-                    pred_values[k + '_' + str(state)].append(v.values[l])
+                    pred_values[k + "_" + str(state)].append(v.values[l])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_factorized_product(self, latex=False):

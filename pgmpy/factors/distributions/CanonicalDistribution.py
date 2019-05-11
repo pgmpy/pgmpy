@@ -28,6 +28,7 @@ class CanonicalDistribution(BaseDistribution):
     Daphne Koller and Nir Friedman, Section 14.2, Chapter 14.
 
     """
+
     def __init__(self, variables, K, h, g):
         """
         Parameters
@@ -70,8 +71,10 @@ class CanonicalDistribution(BaseDistribution):
         no_of_var = len(variables)
 
         if len(h) != no_of_var:
-            raise ValueError("Length of h parameter vector must be equal to "
-                             "the number of variables.")
+            raise ValueError(
+                "Length of h parameter vector must be equal to "
+                "the number of variables."
+            )
 
         self.variables = variables
         self.h = np.asarray(np.reshape(h, (no_of_var, 1)), dtype=float)
@@ -79,17 +82,22 @@ class CanonicalDistribution(BaseDistribution):
         self.K = np.asarray(K, dtype=float)
 
         if self.K.shape != (no_of_var, no_of_var):
-            raise ValueError("The K matrix should be a square matrix with "
-                             "order equal to the number of variables. Got: "
-                             "{got_shape}, Expected: {exp_shape}".format(
-                                 got_shape=self.K.shape,
-                                 exp_shape=(no_of_var, no_of_var)))
+            raise ValueError(
+                "The K matrix should be a square matrix with "
+                "order equal to the number of variables. Got: "
+                "{got_shape}, Expected: {exp_shape}".format(
+                    got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)
+                )
+            )
 
     @property
     def pdf(self):
         def fun(*args):
             x = np.array(args)
-            return np.exp(self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x)))
+            return np.exp(
+                self.g + np.dot(x, self.h)[0] - 0.5 * np.dot(x.T, np.dot(self.K, x))
+            )
+
         return fun
 
     def assignment(self, *x):
@@ -157,8 +165,9 @@ class CanonicalDistribution(BaseDistribution):
         -3
 
         """
-        copy_factor = CanonicalDistribution(self.variables, self.K.copy(),
-                                            self.h.copy(), self.g)
+        copy_factor = CanonicalDistribution(
+            self.variables, self.K.copy(), self.h.copy(), self.g
+        )
 
         return copy_factor
 
@@ -259,8 +268,10 @@ class CanonicalDistribution(BaseDistribution):
         -2.375
         """
         if not isinstance(values, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type list or array-like, "
-                            "got type {var_type}".format(var_type=type(values)))
+            raise TypeError(
+                "variables: Expected type list or array-like, "
+                "got type {var_type}".format(var_type=type(values))
+            )
 
         if not all([var in self.variables for var, value in values]):
             raise ValueError("Variable not in scope.")
@@ -270,8 +281,11 @@ class CanonicalDistribution(BaseDistribution):
         var_to_reduce = [var for var, value in values]
 
         # index_to_keep -> j vector
-        index_to_keep = [self.variables.index(var) for var in self.variables
-                         if var not in var_to_reduce]
+        index_to_keep = [
+            self.variables.index(var)
+            for var in self.variables
+            if var not in var_to_reduce
+        ]
         # index_to_reduce -> i vector
         index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
 
@@ -287,7 +301,9 @@ class CanonicalDistribution(BaseDistribution):
         phi.variables = [self.variables[index] for index in index_to_keep]
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
-        phi.g = self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
+        phi.g = (
+            self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
+        )
 
         if not inplace:
             return phi
@@ -358,8 +374,10 @@ class CanonicalDistribution(BaseDistribution):
         0.22579135
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
-            raise TypeError("variables: Expected type list or array-like, "
-                            "got type {var_type}".format(var_type=type(variables)))
+            raise TypeError(
+                "variables: Expected type list or array-like, "
+                "got type {var_type}".format(var_type=type(variables))
+            )
 
         if not all([var in self.variables for var in variables]):
             raise ValueError("Variable not in scope.")
@@ -367,8 +385,9 @@ class CanonicalDistribution(BaseDistribution):
         phi = self if inplace else self.copy()
 
         # index_to_keep -> i vector
-        index_to_keep = [self.variables.index(var) for var in self.variables
-                         if var not in variables]
+        index_to_keep = [
+            self.variables.index(var) for var in self.variables if var not in variables
+        ]
         # index_to_marginalize -> j vector
         index_to_marginalize = [self.variables.index(var) for var in variables]
 
@@ -384,8 +403,15 @@ class CanonicalDistribution(BaseDistribution):
 
         phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
         phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
-        phi.g = self.g + 0.5 * (len(variables) * np.log(2 * np.pi) -
-                                np.log(abs(np.linalg.det(K_j_j))) + np.dot(np.dot(h_j.T, K_j_j), h_j))[0][0]
+        phi.g = (
+            self.g
+            + 0.5
+            * (
+                len(variables) * np.log(2 * np.pi)
+                - np.log(abs(np.linalg.det(K_j_j)))
+                + np.dot(np.dot(h_j.T, K_j_j), h_j)
+            )[0][0]
+        )
 
         if not inplace:
             return phi
@@ -460,11 +486,14 @@ class CanonicalDistribution(BaseDistribution):
             raise TypeError(
                 "CanonicalDistribution object can only be multiplied or divided "
                 "with an another CanonicalDistribution object. Got {other_type}, "
-                "expected CanonicalDistribution.".format(other_type=type(other)))
+                "expected CanonicalDistribution.".format(other_type=type(other))
+            )
 
         phi = self if inplace else self.copy()
 
-        all_vars = self.variables + [var for var in other.variables if var not in self.variables]
+        all_vars = self.variables + [
+            var for var in other.variables if var not in self.variables
+        ]
         no_of_var = len(all_vars)
 
         self_var_index = [all_vars.index(var) for var in self.variables]
@@ -482,14 +511,22 @@ class CanonicalDistribution(BaseDistribution):
 
         phi.variables = all_vars
 
-        if operation == 'product':
-            phi.K = _extend_K_scope(self.K, self_var_index) + _extend_K_scope(other.K, other_var_index)
-            phi.h = _extend_h_scope(self.h, self_var_index) + _extend_h_scope(other.h, other_var_index)
+        if operation == "product":
+            phi.K = _extend_K_scope(self.K, self_var_index) + _extend_K_scope(
+                other.K, other_var_index
+            )
+            phi.h = _extend_h_scope(self.h, self_var_index) + _extend_h_scope(
+                other.h, other_var_index
+            )
             phi.g = self.g + other.g
 
         else:
-            phi.K = _extend_K_scope(self.K, self_var_index) - _extend_K_scope(other.K, other_var_index)
-            phi.h = _extend_h_scope(self.h, self_var_index) - _extend_h_scope(other.h, other_var_index)
+            phi.K = _extend_K_scope(self.K, self_var_index) - _extend_K_scope(
+                other.K, other_var_index
+            )
+            phi.h = _extend_h_scope(self.h, self_var_index) - _extend_h_scope(
+                other.h, other_var_index
+            )
             phi.g = self.g - other.g
 
         if not inplace:
@@ -533,7 +570,7 @@ class CanonicalDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        return self._operate(other, operation='product', inplace=inplace)
+        return self._operate(other, operation="product", inplace=inplace)
 
     def divide(self, other, inplace=True):
         """
@@ -573,7 +610,7 @@ class CanonicalDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        return self._operate(other, operation='divide', inplace=inplace)
+        return self._operate(other, operation="divide", inplace=inplace)
 
     def __mul__(self, other):
         return self.product(other, inplace=False)

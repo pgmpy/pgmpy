@@ -33,6 +33,7 @@ except ImportError:
 DEFAULT_VERSION = "2.2"
 DEFAULT_URL = "https://pypi.python.org/packages/source/s/setuptools/"
 
+
 def _python_cmd(*args):
     """
     Return True if the command succeeded.
@@ -40,10 +41,11 @@ def _python_cmd(*args):
     args = (sys.executable,) + args
     return subprocess.call(args) == 0
 
+
 def _install(tarball, install_args=()):
     # extracting the tarball
     tmpdir = tempfile.mkdtemp()
-    log.warn('Extracting in %s', tmpdir)
+    log.warn("Extracting in %s", tmpdir)
     old_wd = os.getcwd()
     try:
         os.chdir(tmpdir)
@@ -54,13 +56,13 @@ def _install(tarball, install_args=()):
         # going in the directory
         subdir = os.path.join(tmpdir, os.listdir(tmpdir)[0])
         os.chdir(subdir)
-        log.warn('Now working in %s', subdir)
+        log.warn("Now working in %s", subdir)
 
         # installing
-        log.warn('Installing Setuptools')
-        if not _python_cmd('setup.py', 'install', *install_args):
-            log.warn('Something went wrong during the installation.')
-            log.warn('See the error message above.')
+        log.warn("Installing Setuptools")
+        if not _python_cmd("setup.py", "install", *install_args):
+            log.warn("Something went wrong during the installation.")
+            log.warn("See the error message above.")
             # exitcode will be 2
             return 2
     finally:
@@ -71,7 +73,7 @@ def _install(tarball, install_args=()):
 def _build_egg(egg, tarball, to_dir):
     # extracting the tarball
     tmpdir = tempfile.mkdtemp()
-    log.warn('Extracting in %s', tmpdir)
+    log.warn("Extracting in %s", tmpdir)
     old_wd = os.getcwd()
     try:
         os.chdir(tmpdir)
@@ -82,11 +84,11 @@ def _build_egg(egg, tarball, to_dir):
         # going in the directory
         subdir = os.path.join(tmpdir, os.listdir(tmpdir)[0])
         os.chdir(subdir)
-        log.warn('Now working in %s', subdir)
+        log.warn("Now working in %s", subdir)
 
         # building an egg
-        log.warn('Building a Setuptools egg in %s', to_dir)
-        _python_cmd('setup.py', '-q', 'bdist_egg', '--dist-dir', to_dir)
+        log.warn("Building a Setuptools egg in %s", to_dir)
+        _python_cmd("setup.py", "-q", "bdist_egg", "--dist-dir", to_dir)
 
     finally:
         os.chdir(old_wd)
@@ -94,31 +96,38 @@ def _build_egg(egg, tarball, to_dir):
     # returning the result
     log.warn(egg)
     if not os.path.exists(egg):
-        raise IOError('Could not build the egg.')
+        raise IOError("Could not build the egg.")
 
 
 def _do_download(version, download_base, to_dir, download_delay):
-    egg = os.path.join(to_dir, 'setuptools-%s-py%d.%d.egg'
-                       % (version, sys.version_info[0], sys.version_info[1]))
+    egg = os.path.join(
+        to_dir,
+        "setuptools-%s-py%d.%d.egg"
+        % (version, sys.version_info[0], sys.version_info[1]),
+    )
     if not os.path.exists(egg):
-        tarball = download_setuptools(version, download_base,
-                                      to_dir, download_delay)
+        tarball = download_setuptools(version, download_base, to_dir, download_delay)
         _build_egg(egg, tarball, to_dir)
     sys.path.insert(0, egg)
 
     # Remove previously-imported pkg_resources if present (see
     # https://bitbucket.org/pypa/setuptools/pull-request/7/ for details).
-    if 'pkg_resources' in sys.modules:
-        del sys.modules['pkg_resources']
+    if "pkg_resources" in sys.modules:
+        del sys.modules["pkg_resources"]
 
     import setuptools
+
     setuptools.bootstrap_install_from = egg
 
 
-def use_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
-                   to_dir=os.curdir, download_delay=15):
+def use_setuptools(
+    version=DEFAULT_VERSION,
+    download_base=DEFAULT_URL,
+    to_dir=os.curdir,
+    download_delay=15,
+):
     to_dir = os.path.abspath(to_dir)
-    rep_modules = 'pkg_resources', 'setuptools'
+    rep_modules = "pkg_resources", "setuptools"
     imported = set(sys.modules).intersection(rep_modules)
     try:
         import pkg_resources
@@ -131,20 +140,23 @@ def use_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
         return _do_download(version, download_base, to_dir, download_delay)
     except pkg_resources.VersionConflict as VC_err:
         if imported:
-            msg = textwrap.dedent("""
+            msg = textwrap.dedent(
+                """
                 The required version of setuptools (>={version}) is not available,
                 and can't be installed while this script is running. Please
                 install a more recent version first, using
                 'easy_install -U setuptools'.
 
                 (Currently using {VC_err.args[0]!r})
-                """).format(VC_err=VC_err, version=version)
+                """
+            ).format(VC_err=VC_err, version=version)
             sys.stderr.write(msg)
             sys.exit(2)
 
         # otherwise, reload ok
-        del pkg_resources, sys.modules['pkg_resources']
+        del pkg_resources, sys.modules["pkg_resources"]
         return _do_download(version, download_base, to_dir, download_delay)
+
 
 def _clean_check(cmd, target):
     """
@@ -158,6 +170,7 @@ def _clean_check(cmd, target):
             os.unlink(target)
         raise
 
+
 def download_file_powershell(url, target):
     """
     Download the file at url to target using Powershell (which will validate
@@ -165,17 +178,18 @@ def download_file_powershell(url, target):
     """
     target = os.path.abspath(target)
     cmd = [
-        'powershell',
-        '-Command',
+        "powershell",
+        "-Command",
         "(new-object System.Net.WebClient).DownloadFile(%(url)r, %(target)r)" % vars(),
     ]
     _clean_check(cmd, target)
 
+
 def has_powershell():
-    if platform.system() != 'Windows':
+    if platform.system() != "Windows":
         return False
-    cmd = ['powershell', '-Command', 'echo test']
-    devnull = open(os.path.devnull, 'wb')
+    cmd = ["powershell", "-Command", "echo test"]
+    devnull = open(os.path.devnull, "wb")
     try:
         try:
             subprocess.check_call(cmd, stdout=devnull, stderr=devnull)
@@ -184,16 +198,19 @@ def has_powershell():
     finally:
         devnull.close()
     return True
+
 
 download_file_powershell.viable = has_powershell
 
+
 def download_file_curl(url, target):
-    cmd = ['curl', url, '--silent', '--output', target]
+    cmd = ["curl", url, "--silent", "--output", target]
     _clean_check(cmd, target)
 
+
 def has_curl():
-    cmd = ['curl', '--version']
-    devnull = open(os.path.devnull, 'wb')
+    cmd = ["curl", "--version"]
+    devnull = open(os.path.devnull, "wb")
     try:
         try:
             subprocess.check_call(cmd, stdout=devnull, stderr=devnull)
@@ -202,16 +219,19 @@ def has_curl():
     finally:
         devnull.close()
     return True
+
 
 download_file_curl.viable = has_curl
 
+
 def download_file_wget(url, target):
-    cmd = ['wget', url, '--quiet', '--output-document', target]
+    cmd = ["wget", url, "--quiet", "--output-document", target]
     _clean_check(cmd, target)
 
+
 def has_wget():
-    cmd = ['wget', '--version']
-    devnull = open(os.path.devnull, 'wb')
+    cmd = ["wget", "--version"]
+    devnull = open(os.path.devnull, "wb")
     try:
         try:
             subprocess.check_call(cmd, stdout=devnull, stderr=devnull)
@@ -221,7 +241,9 @@ def has_wget():
         devnull.close()
     return True
 
+
 download_file_wget.viable = has_wget
+
 
 def download_file_insecure(url, target):
     """
@@ -246,7 +268,9 @@ def download_file_insecure(url, target):
         if dst:
             dst.close()
 
+
 download_file_insecure.viable = lambda: True
+
 
 def get_best_downloader():
     downloaders = [
@@ -260,9 +284,14 @@ def get_best_downloader():
         if dl.viable():
             return dl
 
-def download_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
-                        to_dir=os.curdir, delay=15,
-                        downloader_factory=get_best_downloader):
+
+def download_setuptools(
+    version=DEFAULT_VERSION,
+    download_base=DEFAULT_URL,
+    to_dir=os.curdir,
+    delay=15,
+    downloader_factory=get_best_downloader,
+):
     """Download setuptools from a specified location and return its filename
 
     `version` should be a valid setuptools version number that is available
@@ -296,6 +325,7 @@ def _extractall(self, path=".", members=None):
     import copy
     import operator
     from tarfile import ExtractError
+
     directories = []
 
     if members is None:
@@ -310,7 +340,7 @@ def _extractall(self, path=".", members=None):
         self.extract(tarinfo, path)
 
     # Reverse sort directories.
-    directories.sort(key=operator.attrgetter('name'), reverse=True)
+    directories.sort(key=operator.attrgetter("name"), reverse=True)
 
     # Set correct owner, mtime and filemode on directories.
     for tarinfo in directories:
@@ -330,7 +360,8 @@ def _build_install_args(options):
     """
     Build the arguments to 'python setup.py install' on the setuptools package
     """
-    return ['--user'] if options.user_install else []
+    return ["--user"] if options.user_install else []
+
 
 def _parse_args():
     """
@@ -338,27 +369,41 @@ def _parse_args():
     """
     parser = optparse.OptionParser()
     parser.add_option(
-        '--user', dest='user_install', action='store_true', default=False,
-        help='install in user site package (requires Python 2.6 or later)')
+        "--user",
+        dest="user_install",
+        action="store_true",
+        default=False,
+        help="install in user site package (requires Python 2.6 or later)",
+    )
     parser.add_option(
-        '--download-base', dest='download_base', metavar="URL",
+        "--download-base",
+        dest="download_base",
+        metavar="URL",
         default=DEFAULT_URL,
-        help='alternative URL from where to download the setuptools package')
+        help="alternative URL from where to download the setuptools package",
+    )
     parser.add_option(
-        '--insecure', dest='downloader_factory', action='store_const',
-        const=lambda: download_file_insecure, default=get_best_downloader,
-        help='Use internal, non-validating downloader'
+        "--insecure",
+        dest="downloader_factory",
+        action="store_const",
+        const=lambda: download_file_insecure,
+        default=get_best_downloader,
+        help="Use internal, non-validating downloader",
     )
     options, args = parser.parse_args()
     # positional arguments are ignored
     return options
 
+
 def main(version=DEFAULT_VERSION):
     """Install or upgrade setuptools and EasyInstall"""
     options = _parse_args()
-    tarball = download_setuptools(download_base=options.download_base,
-        downloader_factory=options.downloader_factory)
+    tarball = download_setuptools(
+        download_base=options.download_base,
+        downloader_factory=options.downloader_factory,
+    )
     return _install(tarball, _build_install_args(options))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

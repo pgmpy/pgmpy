@@ -52,8 +52,15 @@ class BaseGradLogPDF(object):
 
     def __init__(self, variable_assignments, model):
 
-        self.variable_assignments = _check_1d_array_object(variable_assignments, 'variable_assignments')
-        _check_length_equal(variable_assignments, model.variables, 'variable_assignments', 'model.variables')
+        self.variable_assignments = _check_1d_array_object(
+            variable_assignments, "variable_assignments"
+        )
+        _check_length_equal(
+            variable_assignments,
+            model.variables,
+            "variable_assignments",
+            "model.variables",
+        )
 
         self.model = model
 
@@ -132,7 +139,7 @@ class GradLogPDFGaussian(BaseGradLogPDF):
         Method that finds gradient and its log at position
         """
         sub_vec = self.variable_assignments - self.model.mean.flatten()
-        grad = - np.dot(self.model.precision_matrix, sub_vec)
+        grad = -np.dot(self.model.precision_matrix, sub_vec)
         log_pdf = 0.5 * np.dot(sub_vec, grad)
 
         return grad, log_pdf
@@ -199,25 +206,33 @@ class BaseSimulateHamiltonianDynamics(object):
     array([-0.9375, -1.875])
     """
 
-    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
+    def __init__(
+        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
+    ):
 
-        position = _check_1d_array_object(position, 'position')
+        position = _check_1d_array_object(position, "position")
 
-        momentum = _check_1d_array_object(momentum, 'momentum')
+        momentum = _check_1d_array_object(momentum, "momentum")
 
         if not issubclass(grad_log_pdf, BaseGradLogPDF):
-            raise TypeError("grad_log_pdf must be an instance" +
-                            " of pgmpy.inference.continuous.base.BaseGradLogPDF")
+            raise TypeError(
+                "grad_log_pdf must be an instance"
+                + " of pgmpy.inference.continuous.base.BaseGradLogPDF"
+            )
 
-        _check_length_equal(position, momentum, 'position', 'momentum')
-        _check_length_equal(position, model.variables, 'position', 'model.variables')
+        _check_length_equal(position, momentum, "position", "momentum")
+        _check_length_equal(position, model.variables, "position", "model.variables")
 
         if grad_log_position is None:
             grad_log_position, _ = grad_log_pdf(position, model).get_gradient_log_pdf()
 
         else:
-            grad_log_positon = _check_1d_array_object(grad_log_position, 'grad_log_position')
-            _check_length_equal(grad_log_position, position, 'grad_log_position', 'position')
+            grad_log_positon = _check_1d_array_object(
+                grad_log_position, "grad_log_position"
+            )
+            _check_length_equal(
+                grad_log_position, position, "grad_log_position", "position"
+            )
 
         self.position = position
         self.momentum = momentum
@@ -312,12 +327,17 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     array([ 41., -58.])
     """
 
-    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
+    def __init__(
+        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
+    ):
 
-        BaseSimulateHamiltonianDynamics.__init__(self, model, position, momentum,
-                                                 stepsize, grad_log_pdf, grad_log_position)
+        BaseSimulateHamiltonianDynamics.__init__(
+            self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
+        )
 
-        self.new_position, self.new_momentum, self.new_grad_logp = self._get_proposed_values()
+        self.new_position, self.new_momentum, self.new_grad_logp = (
+            self._get_proposed_values()
+        )
 
     def _get_proposed_values(self):
         """
@@ -384,12 +404,17 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     array([-2.125, -1.1875])
     """
 
-    def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
+    def __init__(
+        self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
+    ):
 
-        BaseSimulateHamiltonianDynamics.__init__(self, model, position, momentum,
-                                                 stepsize, grad_log_pdf, grad_log_position)
+        BaseSimulateHamiltonianDynamics.__init__(
+            self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
+        )
 
-        self.new_position, self.new_momentum, self.new_grad_logp = self._get_proposed_values()
+        self.new_position, self.new_momentum, self.new_grad_logp = (
+            self._get_proposed_values()
+        )
 
     def _get_proposed_values(self):
         """

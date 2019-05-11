@@ -137,76 +137,80 @@ TEST_FILE = """<?xml version="1.0"?>
 
 
 class TestXMLBIFReaderMethods(unittest.TestCase):
-
     def setUp(self):
         self.reader = XMLBIFReader(string=TEST_FILE)
 
     def test_get_variables(self):
-        var_expected = ['kid', 'light_on', 'bowel_problem', 'dog_out',
-                        'hear_bark', 'family_out']
+        var_expected = [
+            "kid",
+            "light_on",
+            "bowel_problem",
+            "dog_out",
+            "hear_bark",
+            "family_out",
+        ]
         self.assertListEqual(self.reader.variables, var_expected)
 
     def test_get_states(self):
-        states_expected = {'bowel_problem': ['true', 'false'],
-                           'dog_out': ['true', 'false'],
-                           'family_out': ['true', 'false'],
-                           'hear_bark': ['true', 'false'],
-                           'kid': ['true', 'false'],
-                           'light_on': ['true', 'false']}
+        states_expected = {
+            "bowel_problem": ["true", "false"],
+            "dog_out": ["true", "false"],
+            "family_out": ["true", "false"],
+            "hear_bark": ["true", "false"],
+            "kid": ["true", "false"],
+            "light_on": ["true", "false"],
+        }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable],
-                                 states[variable])
+            self.assertListEqual(states_expected[variable], states[variable])
 
     def test_get_parents(self):
-        parents_expected = {'bowel_problem': [],
-                            'dog_out': ['bowel_problem', 'family_out'],
-                            'family_out': [],
-                            'hear_bark': ['dog_out'],
-                            'kid': [],
-                            'light_on': ['family_out']}
+        parents_expected = {
+            "bowel_problem": [],
+            "dog_out": ["bowel_problem", "family_out"],
+            "family_out": [],
+            "hear_bark": ["dog_out"],
+            "kid": [],
+            "light_on": ["family_out"],
+        }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable],
-                                 parents[variable])
+            self.assertListEqual(parents_expected[variable], parents[variable])
 
     def test_get_edges(self):
-        edges_expected = [['family_out', 'dog_out'],
-                          ['bowel_problem', 'dog_out'],
-                          ['family_out', 'light_on'],
-                          ['dog_out', 'hear_bark']]
-        self.assertListEqual(sorted(self.reader.edge_list),
-                             sorted(edges_expected))
+        edges_expected = [
+            ["family_out", "dog_out"],
+            ["bowel_problem", "dog_out"],
+            ["family_out", "light_on"],
+            ["dog_out", "hear_bark"],
+        ]
+        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
 
     def test_get_values(self):
-        cpd_expected = {'bowel_problem': np.array([[0.01],
-                                                   [0.99]]),
-                        'dog_out': np.array([[0.99, 0.97, 0.9, 0.3],
-                                             [0.01, 0.03, 0.1, 0.7]]),
-                        'family_out': np.array([[0.15],
-                                                [0.85]]),
-                        'hear_bark': np.array([[0.7, 0.01],
-                                               [0.3, 0.99]]),
-                        'kid': np.array([[0.3],
-                                        [0.7]]),
-                        'light_on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}
+        cpd_expected = {
+            "bowel_problem": np.array([[0.01], [0.99]]),
+            "dog_out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
+            "family_out": np.array([[0.15], [0.85]]),
+            "hear_bark": np.array([[0.7, 0.01], [0.3, 0.99]]),
+            "kid": np.array([[0.3], [0.7]]),
+            "light_on": np.array([[0.6, 0.05], [0.4, 0.95]]),
+        }
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
-            np_test.assert_array_equal(cpd_expected[variable],
-                                       cpd[variable])
+            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_get_property(self):
-        property_expected = {'bowel_problem': ['position = (190, 69)'],
-                             'dog_out': ['position = (155, 165)'],
-                             'family_out': ['position = (112, 69)'],
-                             'hear_bark': ['position = (154, 241)'],
-                             'kid': ['position = (100, 165)'],
-                             'light_on': ['position = (73, 165)']}
+        property_expected = {
+            "bowel_problem": ["position = (190, 69)"],
+            "dog_out": ["position = (155, 165)"],
+            "family_out": ["position = (112, 69)"],
+            "hear_bark": ["position = (154, 241)"],
+            "kid": ["position = (100, 165)"],
+            "light_on": ["position = (73, 165)"],
+        }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable],
-                                 prop[variable])
+            self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
         self.reader.get_model().check_model()
@@ -216,78 +220,82 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
 
 
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
-
     def setUp(self):
-        with open("dog_problem.xml", 'w') as fout:
+        with open("dog_problem.xml", "w") as fout:
             fout.write(TEST_FILE)
         self.reader = XMLBIFReader("dog_problem.xml")
 
     def test_get_variables(self):
-        var_expected = ['kid', 'light_on', 'bowel_problem', 'dog_out',
-                        'hear_bark', 'family_out']
+        var_expected = [
+            "kid",
+            "light_on",
+            "bowel_problem",
+            "dog_out",
+            "hear_bark",
+            "family_out",
+        ]
         self.assertListEqual(self.reader.variables, var_expected)
 
     def test_get_states(self):
-        states_expected = {'bowel_problem': ['true', 'false'],
-                           'dog_out': ['true', 'false'],
-                           'family_out': ['true', 'false'],
-                           'hear_bark': ['true', 'false'],
-                           'kid': ['true', 'false'],
-                           'light_on': ['true', 'false']}
+        states_expected = {
+            "bowel_problem": ["true", "false"],
+            "dog_out": ["true", "false"],
+            "family_out": ["true", "false"],
+            "hear_bark": ["true", "false"],
+            "kid": ["true", "false"],
+            "light_on": ["true", "false"],
+        }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable],
-                                 states[variable])
+            self.assertListEqual(states_expected[variable], states[variable])
 
     def test_get_parents(self):
-        parents_expected = {'bowel_problem': [],
-                            'dog_out': ['bowel_problem', 'family_out'],
-                            'family_out': [],
-                            'hear_bark': ['dog_out'],
-                            'kid': [],
-                            'light_on': ['family_out']}
+        parents_expected = {
+            "bowel_problem": [],
+            "dog_out": ["bowel_problem", "family_out"],
+            "family_out": [],
+            "hear_bark": ["dog_out"],
+            "kid": [],
+            "light_on": ["family_out"],
+        }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable],
-                                 parents[variable])
+            self.assertListEqual(parents_expected[variable], parents[variable])
 
     def test_get_edges(self):
-        edges_expected = [['family_out', 'dog_out'],
-                          ['bowel_problem', 'dog_out'],
-                          ['family_out', 'light_on'],
-                          ['dog_out', 'hear_bark']]
-        self.assertListEqual(sorted(self.reader.edge_list),
-                             sorted(edges_expected))
+        edges_expected = [
+            ["family_out", "dog_out"],
+            ["bowel_problem", "dog_out"],
+            ["family_out", "light_on"],
+            ["dog_out", "hear_bark"],
+        ]
+        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
 
     def test_get_values(self):
-        cpd_expected = {'bowel_problem': np.array([[0.01],
-                                                   [0.99]]),
-                        'dog_out': np.array([[0.99, 0.97, 0.9, 0.3],
-                                             [0.01, 0.03, 0.1, 0.7]]),
-                        'family_out': np.array([[0.15],
-                                                [0.85]]),
-                        'hear_bark': np.array([[0.7, 0.01],
-                                               [0.3, 0.99]]),
-                        'kid': np.array([[0.3],
-                                        [0.7]]),
-                        'light_on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}
+        cpd_expected = {
+            "bowel_problem": np.array([[0.01], [0.99]]),
+            "dog_out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
+            "family_out": np.array([[0.15], [0.85]]),
+            "hear_bark": np.array([[0.7, 0.01], [0.3, 0.99]]),
+            "kid": np.array([[0.3], [0.7]]),
+            "light_on": np.array([[0.6, 0.05], [0.4, 0.95]]),
+        }
         cpd = self.reader.variable_CPD
         for variable in cpd_expected:
-            np_test.assert_array_equal(cpd_expected[variable],
-                                       cpd[variable])
+            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_get_property(self):
-        property_expected = {'bowel_problem': ['position = (190, 69)'],
-                             'dog_out': ['position = (155, 165)'],
-                             'family_out': ['position = (112, 69)'],
-                             'hear_bark': ['position = (154, 241)'],
-                             'kid': ['position = (100, 165)'],
-                             'light_on': ['position = (73, 165)']}
+        property_expected = {
+            "bowel_problem": ["position = (190, 69)"],
+            "dog_out": ["position = (155, 165)"],
+            "family_out": ["position = (112, 69)"],
+            "hear_bark": ["position = (154, 241)"],
+            "kid": ["position = (100, 165)"],
+            "light_on": ["position = (73, 165)"],
+        }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable],
-                                 prop[variable])
+            self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
         self.reader.get_model().check_model()
@@ -298,36 +306,48 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
 
 
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
-
     def setUp(self):
         reader = XMLBIFReader(string=TEST_FILE)
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = BayesianModel([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
-        self.cpd_d = TabularCPD(variable='D', variable_card=2, values=[[0.6, 0.4]])
-        self.cpd_i = TabularCPD(variable='I', variable_card=2, values=[[0.7, 0.3]])
+        self.model_stateless = BayesianModel(
+            [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
+        )
+        self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6, 0.4]])
+        self.cpd_i = TabularCPD(variable="I", variable_card=2, values=[[0.7, 0.3]])
 
-        self.cpd_g = TabularCPD(variable='G', variable_card=3,
-                                values=[[0.3, 0.05, 0.9,  0.5],
-                                        [0.4, 0.25, 0.08, 0.3],
-                                        [0.3, 0.7,  0.02, 0.2]],
-                                evidence=['I', 'D'],
-                                evidence_card=[2, 2])
+        self.cpd_g = TabularCPD(
+            variable="G",
+            variable_card=3,
+            values=[
+                [0.3, 0.05, 0.9, 0.5],
+                [0.4, 0.25, 0.08, 0.3],
+                [0.3, 0.7, 0.02, 0.2],
+            ],
+            evidence=["I", "D"],
+            evidence_card=[2, 2],
+        )
 
-        self.cpd_l = TabularCPD(variable='L', variable_card=2,
-                                values=[[0.1, 0.4, 0.99],
-                                        [0.9, 0.6, 0.01]],
-                                evidence=['G'],
-                                evidence_card=[3])
+        self.cpd_l = TabularCPD(
+            variable="L",
+            variable_card=2,
+            values=[[0.1, 0.4, 0.99], [0.9, 0.6, 0.01]],
+            evidence=["G"],
+            evidence_card=[3],
+        )
 
-        self.cpd_s = TabularCPD(variable='S', variable_card=2,
-                                values=[[0.95, 0.2],
-                                        [0.05, 0.8]],
-                                evidence=['I'],
-                                evidence_card=[2])
+        self.cpd_s = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.95, 0.2], [0.05, 0.8]],
+            evidence=["I"],
+            evidence_card=[2],
+        )
 
-        self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
+        self.model_stateless.add_cpds(
+            self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s
+        )
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
 
     def test_write_xmlbif_statefull(self):
@@ -341,22 +361,28 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
-        with open("grade_problem_output.xbif", 'r') as f:
+        with open("grade_problem_output.xbif", "r") as f:
             reader = XMLBIFReader(f)
         model = reader.get_model()
         self.assert_models_equivelent(self.model_stateless, model)
-        self.assertDictEqual({'G': ['state0', 'state1', 'state2'],
-                              'I': ['state0', 'state1'],
-                              'D': ['state0', 'state1'],
-                              'S': ['state0', 'state1'],
-                              'L': ['state0', 'state1']},
-                             model.get_cpds('D').state_names)
+        self.assertDictEqual(
+            {
+                "G": ["state0", "state1", "state2"],
+                "I": ["state0", "state1"],
+                "D": ["state0", "state1"],
+                "S": ["state0", "state1"],
+                "L": ["state0", "state1"],
+            },
+            model.get_cpds("D").state_names,
+        )
         os.remove("grade_problem_output.xbif")
 
     def assert_models_equivelent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
-            self.assertListEqual(list(expected.get_parents(node)), list(got.get_parents(node)))
+            self.assertListEqual(
+                list(expected.get_parents(node)), list(got.get_parents(node))
+            )
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
             np_test.assert_array_equal(cpds_expected.values, cpds_got.values)

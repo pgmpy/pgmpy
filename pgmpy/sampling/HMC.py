@@ -8,7 +8,12 @@ from math import sqrt
 import numpy as np
 
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
-from pgmpy.sampling import LeapFrog, BaseSimulateHamiltonianDynamics, BaseGradLogPDF, _return_samples
+from pgmpy.sampling import (
+    LeapFrog,
+    BaseSimulateHamiltonianDynamics,
+    BaseGradLogPDF,
+    _return_samples,
+)
 
 
 class HamiltonianMC(object):
@@ -72,12 +77,16 @@ class HamiltonianMC(object):
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
 
         if not issubclass(grad_log_pdf, BaseGradLogPDF):
-            raise TypeError("grad_log_pdf must be an instance of " +
-                            "pgmpy.inference.base_continuous.BaseGradLogPDF")
+            raise TypeError(
+                "grad_log_pdf must be an instance of "
+                + "pgmpy.inference.base_continuous.BaseGradLogPDF"
+            )
 
         if not issubclass(simulate_dynamics, BaseSimulateHamiltonianDynamics):
-            raise TypeError("split_time must be an instance of " +
-                            "pgmpy.inference.base_continuous.BaseSimulateHamiltonianDynamics")
+            raise TypeError(
+                "split_time must be an instance of "
+                + "pgmpy.inference.base_continuous.BaseSimulateHamiltonianDynamics"
+            )
 
         self.model = model
         self.grad_log_pdf = grad_log_pdf
@@ -96,7 +105,9 @@ class HamiltonianMC(object):
 
         # acceptance_prob = P(position_bar, momentum_bar)/ P(position, momentum)
         potential_change = logp_bar - logp  # Negative change
-        kinetic_change = 0.5 * np.float(np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum))
+        kinetic_change = 0.5 * np.float(
+            np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum)
+        )
 
         # acceptance probability
         return np.exp(potential_change - kinetic_change)
@@ -106,9 +117,9 @@ class HamiltonianMC(object):
         Temporary method to fix issue in numpy 0.12 #852
         """
         if a == 1:
-            return (acceptance_prob ** a) > (1/(2**a))
+            return (acceptance_prob ** a) > (1 / (2 ** a))
         else:
-            return (1/(acceptance_prob ** a)) > (2**(-a))
+            return (1 / (acceptance_prob ** a)) > (2 ** (-a))
 
     def _find_reasonable_stepsize(self, position, stepsize_app=1):
         """
@@ -125,11 +136,13 @@ class HamiltonianMC(object):
         momentum = np.reshape(np.random.normal(0, 1, len(position)), position.shape)
 
         # Take a single step in time
-        position_bar, momentum_bar, _ =\
-            self.simulate_dynamics(self.model, position, momentum,
-                                   stepsize_app, self.grad_log_pdf).get_proposed_values()
+        position_bar, momentum_bar, _ = self.simulate_dynamics(
+            self.model, position, momentum, stepsize_app, self.grad_log_pdf
+        ).get_proposed_values()
 
-        acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
+        acceptance_prob = self._acceptance_prob(
+            position, position_bar, momentum, momentum_bar
+        )
 
         # a = 2I[acceptance_prob] -1
         a = 2 * (acceptance_prob > 0.5) - 1
@@ -139,11 +152,13 @@ class HamiltonianMC(object):
         while condition:
             stepsize_app = (2 ** a) * stepsize_app
 
-            position_bar, momentum_bar, _ =\
-                self.simulate_dynamics(self.model, position, momentum,
-                                       stepsize_app, self.grad_log_pdf).get_proposed_values()
+            position_bar, momentum_bar, _ = self.simulate_dynamics(
+                self.model, position, momentum, stepsize_app, self.grad_log_pdf
+            ).get_proposed_values()
 
-            acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
+            acceptance_prob = self._acceptance_prob(
+                position, position_bar, momentum, momentum_bar
+            )
 
             condition = self._get_condition(acceptance_prob, a)
 
@@ -166,11 +181,18 @@ class HamiltonianMC(object):
         grad_bar, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
         for _ in range(lsteps):
-            position_bar, momentum_bar, grad_bar =\
-                self.simulate_dynamics(self.model, position_bar, momentum_bar,
-                                       stepsize, self.grad_log_pdf, grad_bar).get_proposed_values()
+            position_bar, momentum_bar, grad_bar = self.simulate_dynamics(
+                self.model,
+                position_bar,
+                momentum_bar,
+                stepsize,
+                self.grad_log_pdf,
+                grad_bar,
+            ).get_proposed_values()
 
-        acceptance_prob = self._acceptance_prob(position, position_bar, momentum, momentum_bar)
+        acceptance_prob = self._acceptance_prob(
+            position, position_bar, momentum, momentum_bar
+        )
 
         # Metropolis acceptance probability
         alpha = min(1, acceptance_prob)
@@ -182,7 +204,14 @@ class HamiltonianMC(object):
 
         return position, alpha
 
-    def sample(self, initial_pos, num_samples, trajectory_length, stepsize=None, return_type='dataframe'):
+    def sample(
+        self,
+        initial_pos,
+        num_samples,
+        trajectory_length,
+        stepsize=None,
+        return_type="dataframe",
+    ):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -243,13 +272,15 @@ class HamiltonianMC(object):
         """
 
         self.accepted_proposals = 1.0
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        types = [(var_name, 'float') for var_name in self.model.variables]
+        types = [(var_name, "float") for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
 
         # Assigning after converting into tuple because value was being changed after assignment
@@ -261,14 +292,18 @@ class HamiltonianMC(object):
         for i in range(1, num_samples):
 
             # Genrating sample
-            position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
+            position_m, _ = self._sample(
+                position_m, trajectory_length, stepsize, lsteps
+            )
             samples[i] = tuple(position_m)
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
         return _return_samples(return_type, samples)
 
-    def generate_sample(self, initial_pos, num_samples, trajectory_length, stepsize=None):
+    def generate_sample(
+        self, initial_pos, num_samples, trajectory_length, stepsize=None
+    ):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
@@ -323,8 +358,10 @@ class HamiltonianMC(object):
         """
 
         self.accepted_proposals = 0
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
@@ -334,7 +371,9 @@ class HamiltonianMC(object):
 
         for i in range(0, num_samples):
 
-            position_m, _ = self._sample(position_m, trajectory_length, stepsize, lsteps)
+            position_m, _ = self._sample(
+                position_m, trajectory_length, stepsize, lsteps
+            )
 
             yield position_m
 
@@ -394,23 +433,29 @@ class HamiltonianMCDA(HamiltonianMC):
     Algorithm 5 : Hamiltonian Monte Carlo with dual averaging
     """
 
-    def __init__(self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65):
+    def __init__(
+        self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65
+    ):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
-            raise ValueError(
-                "delta should be a floating value in between 0 and 1")
+            raise ValueError("delta should be a floating value in between 0 and 1")
 
         self.delta = delta
 
-        super(HamiltonianMCDA, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
-                                              simulate_dynamics=simulate_dynamics)
+        super(HamiltonianMCDA, self).__init__(
+            model=model, grad_log_pdf=grad_log_pdf, simulate_dynamics=simulate_dynamics
+        )
 
-    def _adapt_params(self, stepsize, stepsize_bar, h_bar, mu, index_i, alpha, n_alpha=1):
+    def _adapt_params(
+        self, stepsize, stepsize_bar, h_bar, mu, index_i, alpha, n_alpha=1
+    ):
         """
         Run tha adaptation for stepsize for better proposals of position
         """
         gamma = 0.05  # free parameter that controls the amount of shrinkage towards mu
-        t0 = 10.0  # free parameter that stabilizes the initial iterations of the algorithm
+        t0 = (
+            10.0
+        )  # free parameter that stabilizes the initial iterations of the algorithm
         kappa = 0.75
         # See equation (6) section 3.2.1 for details
 
@@ -419,11 +464,21 @@ class HamiltonianMCDA(HamiltonianMC):
 
         stepsize = np.exp(mu - sqrt(index_i) / gamma * h_bar)
         i_kappa = index_i ** (-kappa)
-        stepsize_bar = np.exp(i_kappa * np.log(stepsize) + (1 - i_kappa) * np.log(stepsize_bar))
+        stepsize_bar = np.exp(
+            i_kappa * np.log(stepsize) + (1 - i_kappa) * np.log(stepsize_bar)
+        )
 
         return stepsize, stepsize_bar, h_bar
 
-    def sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None, return_type='dataframe'):
+    def sample(
+        self,
+        initial_pos,
+        num_adapt,
+        num_samples,
+        trajectory_length,
+        stepsize=None,
+        return_type="dataframe",
+    ):
         """
         Method to return samples using Hamiltonian Monte Carlo
 
@@ -476,14 +531,18 @@ class HamiltonianMCDA(HamiltonianMC):
 
         self.accepted_proposals = 1.0
 
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
-            return HamiltonianMC.sample(self, initial_pos, num_samples, trajectory_length, stepsize)
+            return HamiltonianMC.sample(
+                self, initial_pos, num_samples, trajectory_length, stepsize
+            )
 
         # stepsize is epsilon
         # freely chosen point, after each iteration xt(/position) is shrunk towards it
@@ -494,7 +553,7 @@ class HamiltonianMCDA(HamiltonianMC):
         h_bar = 0.0
         # See equation (6) section 3.2.1 for details
 
-        types = [(var_name, 'float') for var_name in self.model.variables]
+        types = [(var_name, "float") for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
         samples[0] = tuple(initial_pos)
         position_m = initial_pos
@@ -507,7 +566,9 @@ class HamiltonianMCDA(HamiltonianMC):
 
             # Adaptation of stepsize till num_adapt iterations
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(
+                    stepsize, stepsize_bar, h_bar, mu, i, alpha
+                )
             else:
                 stepsize = stepsize_bar
 
@@ -515,7 +576,9 @@ class HamiltonianMCDA(HamiltonianMC):
 
         return _return_samples(return_type, samples)
 
-    def generate_sample(self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None):
+    def generate_sample(
+        self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None
+    ):
         """
         Method returns a generator type object whose each iteration yields a sample
         using Hamiltonian Monte Carlo
@@ -562,14 +625,18 @@ class HamiltonianMCDA(HamiltonianMC):
                [ 0.69517394,  2.95449533]])
         """
         self.accepted_proposals = 0
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
-            for sample in HamiltonianMC.generate_sample(self, initial_pos, num_samples, trajectory_length, stepsize):
+            for sample in HamiltonianMC.generate_sample(
+                self, initial_pos, num_samples, trajectory_length, stepsize
+            ):
                 yield sample
             return
         mu = np.log(10.0 * stepsize)
@@ -585,7 +652,9 @@ class HamiltonianMCDA(HamiltonianMC):
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
 
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu, i, alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(
+                    stepsize, stepsize_bar, h_bar, mu, i, alpha
+                )
             else:
                 stepsize = stepsize_bar
 

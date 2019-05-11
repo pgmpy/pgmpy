@@ -18,6 +18,7 @@ class NoisyOrModel(nx.DiGraph):
 
     Reference: http://xenon.stanford.edu/~srinivas/research/6-UAI93-Srinivas-Generalization-of-Noisy-Or.pdf
     """
+
     def __init__(self, variables, cardinality, inhibitor_probability):
         # TODO: Accept values of each state so that it could be
         # put into F to compute the final state values of the output
@@ -78,11 +79,19 @@ class NoisyOrModel(nx.DiGraph):
 
         if len(variables) != len(cardinality):
             raise ValueError("Size of variables and cardinality should be same")
-        elif any(cardinal != len(prob_array) for prob_array, cardinal in zip(inhibitor_probability, cardinality)) or \
-                len(cardinality) != len(inhibitor_probability):
-            raise ValueError("Size of variables and inhibitor_probability should be same")
-        elif not all(0 <= item <= 1 for item in chain.from_iterable(inhibitor_probability)):
-            raise ValueError("Probability values should be between 0 and 1(both inclusive).")
+        elif any(
+            cardinal != len(prob_array)
+            for prob_array, cardinal in zip(inhibitor_probability, cardinality)
+        ) or len(cardinality) != len(inhibitor_probability):
+            raise ValueError(
+                "Size of variables and inhibitor_probability should be same"
+            )
+        elif not all(
+            0 <= item <= 1 for item in chain.from_iterable(inhibitor_probability)
+        ):
+            raise ValueError(
+                "Probability values should be between 0 and 1(both inclusive)."
+            )
         else:
             self.variables = np.concatenate((self.variables, variables))
             self.cardinality = np.concatenate((self.cardinality, cardinality))
@@ -105,12 +114,21 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0. 4]])
         >>> model.del_variables(['x1'])
         """
-        variables = [variables] if isinstance(variables, six.string_types) else set(variables)
-        indices = [index for index, variable in enumerate(self.variables) if variable in variables]
+        variables = (
+            [variables] if isinstance(variables, six.string_types) else set(variables)
+        )
+        indices = [
+            index
+            for index, variable in enumerate(self.variables)
+            if variable in variables
+        ]
         self.variables = np.delete(self.variables, indices, 0)
         self.cardinality = np.delete(self.cardinality, indices, 0)
-        self.inhibitor_probability = [prob_array for index, prob_array in enumerate(self.inhibitor_probability)
-                                      if index not in indices]
+        self.inhibitor_probability = [
+            prob_array
+            for index, prob_array in enumerate(self.inhibitor_probability)
+            if index not in indices
+        ]
 
     #
     # def out_prob(self, func):

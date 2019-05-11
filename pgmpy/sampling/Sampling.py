@@ -12,7 +12,7 @@ from pgmpy.extern.six.moves import map, range
 from pgmpy.sampling import _return_samples
 
 
-State = namedtuple('State', ['var', 'state'])
+State = namedtuple("State", ["var", "state"])
 
 
 class BayesianModelSampling(Inference):
@@ -29,14 +29,17 @@ class BayesianModelSampling(Inference):
     --------------
     forward_sample(size)
     """
+
     def __init__(self, model):
         if not isinstance(model, BayesianModel):
-            raise TypeError("Model expected type: BayesianModel, got type: ", type(model))
+            raise TypeError(
+                "Model expected type: BayesianModel, got type: ", type(model)
+            )
 
         self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
-    def forward_sample(self, size=1, return_type='dataframe'):
+    def forward_sample(self, size=1, return_type="dataframe"):
         """
         Generates sample(s) from joint distribution of the bayesian network.
 
@@ -72,7 +75,7 @@ class BayesianModelSampling(Inference):
         rec.array([(0, 0, 1), (1, 0, 2)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
-        types = [(var_name, 'int') for var_name in self.topological_order]
+        types = [(var_name, "int") for var_name in self.topological_order]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
 
         for node in self.topological_order:
@@ -94,9 +97,13 @@ class BayesianModelSampling(Inference):
         variable_evid = variable_cpd.variables[:0:-1]
         cached_values = {}
 
-        for state_combination in itertools.product(*[range(self.cardinality[var]) for var in variable_evid]):
+        for state_combination in itertools.product(
+            *[range(self.cardinality[var]) for var in variable_evid]
+        ):
             states = list(zip(variable_evid, state_combination))
-            cached_values[state_combination] = variable_cpd.reduce(states, inplace=False).values
+            cached_values[state_combination] = variable_cpd.reduce(
+                states, inplace=False
+            ).values
 
         return cached_values
 
@@ -142,13 +149,13 @@ class BayesianModelSampling(Inference):
         """
         if evidence is None:
             return self.forward_sample(size)
-        types = [(var_name, 'int') for var_name in self.topological_order]
+        types = [(var_name, "int") for var_name in self.topological_order]
         sampled = np.zeros(0, dtype=types).view(np.recarray)
         prob = 1
         i = 0
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
-            _sampled = self.forward_sample(_size, 'recarray')
+            _sampled = self.forward_sample(_size, "recarray")
 
             for evid in evidence:
                 _sampled = _sampled[_sampled[evid[0]] == evid[1]]
@@ -160,7 +167,9 @@ class BayesianModelSampling(Inference):
 
         return _return_samples(return_type, sampled)
 
-    def likelihood_weighted_sample(self, evidence=None, size=1, return_type="dataframe"):
+    def likelihood_weighted_sample(
+        self, evidence=None, size=1, return_type="dataframe"
+    ):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
         network, that comply with the given evidence.
@@ -201,10 +210,10 @@ class BayesianModelSampling(Inference):
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
-        types = [(var_name, 'int') for var_name in self.topological_order]
-        types.append(('_weight', 'float'))
+        types = [(var_name, "int") for var_name in self.topological_order]
+        types.append(("_weight", "float"))
         sampled = np.zeros(size, dtype=types).view(np.recarray)
-        sampled['_weight'] = np.ones(size)
+        sampled["_weight"] = np.ones(size)
         evidence_dict = {var: st for var, st in evidence}
 
         for node in self.topological_order:
@@ -215,18 +224,20 @@ class BayesianModelSampling(Inference):
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
                 cached_values = self.pre_compute_reduce(node)
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence_values.T))
+                weights = list(
+                    map(lambda t: cached_values[tuple(t)], evidence_values.T)
+                )
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
-                        sampled['_weight'][i] *= weights[i][evidence_dict[node]]
+                        sampled["_weight"][i] *= weights[i][evidence_dict[node]]
                 else:
                     sampled[node] = sample_discrete(states, weights)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
-                        sampled['_weight'][i] *= cpd.values[evidence_dict[node]]
+                        sampled["_weight"][i] *= cpd.values[evidence_dict[node]]
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
@@ -268,6 +279,7 @@ class GibbsSampling(MarkovChain):
     1      0    0
     2      1    1
     """
+
     def __init__(self, model=None):
         super(GibbsSampling, self).__init__()
         if isinstance(model, BayesianModel):
@@ -287,7 +299,9 @@ class GibbsSampling(MarkovChain):
             The model from which probabilities will be computed.
         """
         self.variables = np.array(model.nodes())
-        self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
+        self.cardinalities = {
+            var: model.get_cpds(var).variable_card for var in self.variables
+        }
 
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
@@ -320,9 +334,13 @@ class GibbsSampling(MarkovChain):
                 factors_dict[var].append(factor)
 
         # Take factor product
-        factors_dict = {var: factor_product(*factors) if len(factors) > 1 else factors[0]
-                        for var, factors in factors_dict.items()}
-        self.cardinalities = {var: factors_dict[var].get_cardinality([var])[var] for var in self.variables}
+        factors_dict = {
+            var: factor_product(*factors) if len(factors) > 1 else factors[0]
+            for var, factors in factors_dict.items()
+        }
+        self.cardinalities = {
+            var: factors_dict[var].get_cardinality([var])[var] for var in self.variables
+        }
 
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
@@ -331,7 +349,11 @@ class GibbsSampling(MarkovChain):
             factor = factors_dict[var]
             scope = set(factor.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
-                states = [State(first_var, s) for first_var, s in zip(other_vars, tup) if first_var in scope]
+                states = [
+                    State(first_var, s)
+                    for first_var, s in zip(other_vars, tup)
+                    if first_var in scope
+                ]
                 reduced_factor = factor.reduce(states, inplace=False)
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
@@ -377,14 +399,16 @@ class GibbsSampling(MarkovChain):
         elif start_state is not None:
             self.set_start_state(start_state)
 
-        types = [(var_name, 'int') for var_name in self.variables]
+        types = [(var_name, "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled[0] = tuple([st for var, st in self.state])
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
-                next_st = sample_discrete(list(range(self.cardinalities[var])),
-                                          self.transition_models[var][other_st])[0]
+                next_st = sample_discrete(
+                    list(range(self.cardinalities[var])),
+                    self.transition_models[var][other_st],
+                )[0]
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = tuple([st for var, st in self.state])
 
@@ -422,7 +446,9 @@ class GibbsSampling(MarkovChain):
         for i in range(size):
             for j, (var, st) in enumerate(self.state):
                 other_st = tuple(st for v, st in self.state if var != v)
-                next_st = sample_discrete(list(range(self.cardinalities[var])),
-                                          self.transition_models[var][other_st])[0]
+                next_st = sample_discrete(
+                    list(range(self.cardinalities[var])),
+                    self.transition_models[var][other_st],
+                )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]

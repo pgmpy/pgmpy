@@ -45,18 +45,23 @@ class CausalInference(object):
     Many thanks to @ijmbarr for their implementation of Causal Graphical models available. It served as an invaluable
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
+
     def __init__(self, model, latent_vars=None, set_nodes=None):
         if not isinstance(model, BayesianModel):
-            raise NotImplementedError("Causal Inference is only implemented for BayesianModels at this time.")
+            raise NotImplementedError(
+                "Causal Inference is only implemented for BayesianModels at this time."
+            )
         self.dag = model
         self.graph = self.dag.to_undirected()
         self.latent_variables = _variable_or_iterable_to_set(latent_vars)
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        self.observed_variables = frozenset(self.dag.nodes()).difference(self.latent_variables)
+        self.observed_variables = frozenset(self.dag.nodes()).difference(
+            self.latent_variables
+        )
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
-        return ("{classname}({vars})".format(self.__class__.__name__, variables))
+        return "{classname}({vars})".format(self.__class__.__name__, variables)
 
     def _is_d_separated(self, X, Y, Z=None):
         return not self.dag.is_active_trail(X, Y, observed=Z)
@@ -148,9 +153,7 @@ class CausalInference(object):
             return frozenset()
 
         possible_adjustment_variables = (
-            set(self.observed_variables)
-            - {X} - {Y}
-            - set(nx.descendants(self.dag, X))
+            set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
         )
 
         valid_adjustment_sets = []
@@ -195,9 +198,7 @@ class CausalInference(object):
 
         # 1. Z intercepts all directed paths from X to Y
         unblocked_directed_paths = [
-            path
-            for path in directed_paths
-            if not any(zz in path for zz in Z)
+            path for path in directed_paths if not any(zz in path for zz in Z)
         ]
 
         if unblocked_directed_paths:
@@ -205,9 +206,7 @@ class CausalInference(object):
 
         # 2. there is no backdoor path from X to Z
         unblocked_backdoor_paths_X_Z = [
-            zz
-            for zz in Z
-            if not self.is_valid_backdoor_adjustment_set(X, zz)
+            zz for zz in Z if not self.is_valid_backdoor_adjustment_set(X, zz)
         ]
 
         if unblocked_backdoor_paths_X_Z:
@@ -242,16 +241,15 @@ class CausalInference(object):
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
-        possible_adjustment_variables = (
-            set(self.observed_variables)
-            - {X} - {Y}
-        )
+        possible_adjustment_variables = set(self.observed_variables) - {X} - {Y}
 
-        valid_adjustment_sets = frozenset([
-            frozenset(s)
-            for s in _powerset(possible_adjustment_variables)
-            if self.is_valid_frontdoor_adjustment_set(X, Y, s)
-        ])
+        valid_adjustment_sets = frozenset(
+            [
+                frozenset(s)
+                for s in _powerset(possible_adjustment_variables)
+                if self.is_valid_frontdoor_adjustment_set(X, Y, s)
+            ]
+        )
 
         return valid_adjustment_sets
 
@@ -271,7 +269,7 @@ class CausalInference(object):
                 parents = [
                     "do({})".format(n) if n in self.set_nodes else str(n)
                     for n in parents
-                    ]
+                ]
                 p = "P({}|{})".format(node, ",".join(parents))
             products.append(p)
         return "".join(products)
@@ -294,7 +292,15 @@ class CausalInference(object):
             return frozenset([])
         return adjustment_list[np.argmin(adjustment_list)]
 
-    def estimate_ate(self, X, Y, data, estimand_strategy="smallest", estimator_type="linear", **kwargs):
+    def estimate_ate(
+        self,
+        X,
+        Y,
+        data,
+        estimand_strategy="smallest",
+        estimator_type="linear",
+        **kwargs
+    ):
         """
         Estimate the average treatment effect (ATE) of X on Y.
 
@@ -343,18 +349,22 @@ class CausalInference(object):
         >>> inference = CausalInference(model=game1)
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         """
-        valid_estimators = ['linear']
+        valid_estimators = ["linear"]
         try:
             assert estimator_type in valid_estimators
         except AssertionError:
-            print("{} if not a valid estimator_type.  Please select from {}".format(estimator_type, valid_estimators))
+            print(
+                "{} if not a valid estimator_type.  Please select from {}".format(
+                    estimator_type, valid_estimators
+                )
+            )
 
         if isinstance(estimand_strategy, frozenset):
             adjustment_set = frozenset({estimand_strategy})
             assert self.is_valid_backdoor_adjustment_set(X, Y, Z=adjustment_set)
-        elif estimand_strategy in ['smallest', 'all']:
+        elif estimand_strategy in ["smallest", "all"]:
             adjustment_sets = self.get_all_backdoor_adjustment_sets(X, Y)
-            if estimand_strategy == 'smallest':
+            if estimand_strategy == "smallest":
                 adjustment_sets = frozenset({self.simple_decision(adjustment_sets)})
 
         if estimator_type == "linear":

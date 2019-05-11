@@ -42,4 +42,5 @@ class BaseDistribution(object):
     def divide(self, other, inplace=True):
         pass
     """
+
     pass

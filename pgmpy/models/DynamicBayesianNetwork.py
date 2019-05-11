@@ -129,8 +129,14 @@ class DynamicBayesianNetwork(DAG):
         >>> sorted(dbn._nodes())
         ['B', 'A', 'C']
         """
-        return list(set([node for node, timeslice in
-                         super(DynamicBayesianNetwork, self).nodes()]))
+        return list(
+            set(
+                [
+                    node
+                    for node, timeslice in super(DynamicBayesianNetwork, self).nodes()
+                ]
+            )
+        )
 
     def add_edge(self, start, end, **kwargs):
         """
@@ -163,9 +169,9 @@ class DynamicBayesianNetwork(DAG):
         """
         try:
             if len(start) != 2 or len(end) != 2:
-                raise ValueError('Nodes must be of type (node, time_slice).')
+                raise ValueError("Nodes must be of type (node, time_slice).")
             elif not isinstance(start[1], int) or not isinstance(end[1], int):
-                raise ValueError('Nodes must be of type (node, time_slice).')
+                raise ValueError("Nodes must be of type (node, time_slice).")
             elif start[1] == end[1]:
                 start = (start[0], 0)
                 end = (end[0], 0)
@@ -173,24 +179,35 @@ class DynamicBayesianNetwork(DAG):
                 start = (start[0], 0)
                 end = (end[0], 1)
             elif start[1] > end[1]:
-                raise NotImplementedError('Edges in backward direction are not allowed.')
+                raise NotImplementedError(
+                    "Edges in backward direction are not allowed."
+                )
             elif start[1] != end[1]:
-                raise ValueError("Edges over multiple time slices is not currently supported")
+                raise ValueError(
+                    "Edges over multiple time slices is not currently supported"
+                )
         except TypeError:
-            raise ValueError('Nodes must be of type (node, time_slice).')
+            raise ValueError("Nodes must be of type (node, time_slice).")
 
         if start == end:
-            raise ValueError('Self Loops are not allowed')
-        elif start in super(DynamicBayesianNetwork, self).nodes() and end \
-                in super(DynamicBayesianNetwork, self).nodes() and \
-                nx.has_path(self, end, start):
-            raise ValueError('Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.'.format(
-                start=str(start), end=str(end)))
+            raise ValueError("Self Loops are not allowed")
+        elif (
+            start in super(DynamicBayesianNetwork, self).nodes()
+            and end in super(DynamicBayesianNetwork, self).nodes()
+            and nx.has_path(self, end, start)
+        ):
+            raise ValueError(
+                "Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.".format(
+                    start=str(start), end=str(end)
+                )
+            )
 
         super(DynamicBayesianNetwork, self).add_edge(start, end, **kwargs)
 
         if start[1] == end[1]:
-            super(DynamicBayesianNetwork, self).add_edge((start[0], 1 - start[1]), (end[0], 1 - end[1]))
+            super(DynamicBayesianNetwork, self).add_edge(
+                (start[0], 1 - start[1]), (end[0], 1 - end[1])
+            )
         else:
             super(DynamicBayesianNetwork, self).add_node((end[0], 1 - end[1]))
 
@@ -246,9 +263,15 @@ class DynamicBayesianNetwork(DAG):
         [(('D', 0), ('G', 0)), (('G', 0), ('L', 0)), (('I', 0), ('G', 0))
         """
         if not isinstance(time_slice, int) or time_slice < 0:
-            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+            raise ValueError(
+                "The timeslice should be a positive value greater than or equal to zero"
+            )
 
-        return [tuple((x[0], time_slice) for x in edge) for edge in self.edges() if edge[0][1] == edge[1][1] == 0]
+        return [
+            tuple((x[0], time_slice) for x in edge)
+            for edge in self.edges()
+            if edge[0][1] == edge[1][1] == 0
+        ]
 
     def get_inter_edges(self):
         """
@@ -290,7 +313,9 @@ class DynamicBayesianNetwork(DAG):
         [('D', 0)]
         """
         if not isinstance(time_slice, int) or time_slice < 0:
-            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+            raise ValueError(
+                "The timeslice should be a positive value greater than or equal to zero"
+            )
 
         return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
@@ -312,7 +337,9 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.get_slice_nodes()
         """
         if not isinstance(time_slice, int) or time_slice < 0:
-            raise ValueError("The timeslice should be a positive value greater than or equal to zero")
+            raise ValueError(
+                "The timeslice should be a positive value greater than or equal to zero"
+            )
 
         return [(node, time_slice) for node in self._nodes()]
 
@@ -363,11 +390,12 @@ class DynamicBayesianNetwork(DAG):
         """
         for cpd in cpds:
             if not isinstance(cpd, TabularCPD):
-                raise ValueError('cpd should be an instance of TabularCPD')
+                raise ValueError("cpd should be an instance of TabularCPD")
 
-            if set(cpd.variables) - set(cpd.variables).intersection(set(
-                    super(DynamicBayesianNetwork, self).nodes())):
-                raise ValueError('CPD defined on variable not in the model', cpd)
+            if set(cpd.variables) - set(cpd.variables).intersection(
+                set(super(DynamicBayesianNetwork, self).nodes())
+            ):
+                raise ValueError("CPD defined on variable not in the model", cpd)
 
         self.cpds.extend(cpds)
 
@@ -401,13 +429,17 @@ class DynamicBayesianNetwork(DAG):
         # TODO: fix bugs in this
         if node:
             if node not in super(DynamicBayesianNetwork, self).nodes():
-                raise ValueError('Node not present in the model.')
+                raise ValueError("Node not present in the model.")
             else:
                 for cpd in self.cpds:
                     if cpd.variable == node:
                         return cpd
         else:
-            return [cpd for cpd in self.cpds if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))]
+            return [
+                cpd
+                for cpd in self.cpds
+                if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))
+            ]
 
     def remove_cpds(self, *cpds):
         """
@@ -461,13 +493,21 @@ class DynamicBayesianNetwork(DAG):
                 evidence_card = cpd.cardinality[:0:-1]
                 parents = self.get_parents(node)
                 if set(evidence) != set(parents if parents else []):
-                    raise ValueError("CPD associated with {node} doesn't have "
-                                     "proper parents associated with it.".format(node=node))
-                if not np.allclose(cpd.to_factor().marginalize([node], inplace=False).values.flatten('C'),
-                                   np.ones(np.product(evidence_card)),
-                                   atol=0.01):
-                    raise ValueError('Sum of probabilities of states for node {node}'
-                                     ' is not equal to 1'.format(node=node))
+                    raise ValueError(
+                        "CPD associated with {node} doesn't have "
+                        "proper parents associated with it.".format(node=node)
+                    )
+                if not np.allclose(
+                    cpd.to_factor()
+                    .marginalize([node], inplace=False)
+                    .values.flatten("C"),
+                    np.ones(np.product(evidence_card)),
+                    atol=0.01,
+                ):
+                    raise ValueError(
+                        "Sum of probabilities of states for node {node}"
+                        " is not equal to 1".format(node=node)
+                    )
         return True
 
     def initialize_initial_state(self):
@@ -510,15 +550,31 @@ class DynamicBayesianNetwork(DAG):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
                         evidence_card = cpd.cardinality[:0:-1]
-                        new_cpd = TabularCPD(temp_var, cpd.variable_card,
-                                             cpd.values.reshape(cpd.variable_card, np.prod(evidence_card)),
-                                             parents, evidence_card)
+                        new_cpd = TabularCPD(
+                            temp_var,
+                            cpd.variable_card,
+                            cpd.values.reshape(
+                                cpd.variable_card, np.prod(evidence_card)
+                            ),
+                            parents,
+                            evidence_card,
+                        )
                     else:
                         if cpd.get_evidence():
-                            initial_cpd = cpd.marginalize(cpd.get_evidence(), inplace=False)
-                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(initial_cpd.values, (-1, 2)))
+                            initial_cpd = cpd.marginalize(
+                                cpd.get_evidence(), inplace=False
+                            )
+                            new_cpd = TabularCPD(
+                                temp_var,
+                                cpd.variable_card,
+                                np.reshape(initial_cpd.values, (-1, 2)),
+                            )
                         else:
-                            new_cpd = TabularCPD(temp_var, cpd.variable_card, np.reshape(cpd.values, (-1, 2)))
+                            new_cpd = TabularCPD(
+                                temp_var,
+                                cpd.variable_card,
+                                np.reshape(cpd.values, (-1, 2)),
+                            )
                     self.add_cpds(new_cpd)
             self.check_model()
 
@@ -546,8 +602,7 @@ class DynamicBayesianNetwork(DAG):
         moral_graph = self.to_undirected()
 
         for node in super(DynamicBayesianNetwork, self).nodes():
-            moral_graph.add_edges_from(combinations(
-                self.get_parents(node), 2))
+            moral_graph.add_edges_from(combinations(self.get_parents(node), 2))
 
         return moral_graph
 

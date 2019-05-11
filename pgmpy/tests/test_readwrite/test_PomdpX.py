@@ -13,10 +13,12 @@ except ImportError:
     try:
         # Python 2.5
         import xml.etree.cElementTree as etree
+
         six.print_("running with cElementTree on Python 2.5+")
     except ImportError:
         try:
             import xml.etree.ElementTree as etree
+
             print("running with ElementTree on Python 2.5+")
         except ImportError:
             warnings.warn("Failed to import ElementTree from any known place")
@@ -206,127 +208,142 @@ class TestPomdpXReaderString(unittest.TestCase):
         self.reader_file = PomdpXReader(path=six.StringIO(string))
 
     def test_get_variables(self):
-        var_expected = {'StateVar': [
-                        {'vnamePrev': 'rover_0',
-                         'vnameCurr': 'rover_1',
-                         'ValueEnum': ['s0', 's1', 's2'],
-                         'fullyObs': True},
-                        {'vnamePrev': 'rock_0',
-                         'vnameCurr': 'rock_1',
-                         'fullyObs': False,
-                         'ValueEnum': ['good', 'bad']}],
-                        'ObsVar': [{'vname': 'obs_sensor',
-                                    'ValueEnum': ['ogood', 'obad']}],
-                        'RewardVar': [{'vname': 'reward_rover'}],
-                        'ActionVar': [{'vname': 'action_rover',
-                                       'ValueEnum': ['amw', 'ame',
-                                                     'ac', 'as']}]
-                        }
+        var_expected = {
+            "StateVar": [
+                {
+                    "vnamePrev": "rover_0",
+                    "vnameCurr": "rover_1",
+                    "ValueEnum": ["s0", "s1", "s2"],
+                    "fullyObs": True,
+                },
+                {
+                    "vnamePrev": "rock_0",
+                    "vnameCurr": "rock_1",
+                    "fullyObs": False,
+                    "ValueEnum": ["good", "bad"],
+                },
+            ],
+            "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
+            "RewardVar": [{"vname": "reward_rover"}],
+            "ActionVar": [
+                {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
+            ],
+        }
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_variables(), var_expected)
         self.assertEqual(self.reader_file.get_variables(), var_expected)
 
     def test_get_initial_belief_system(self):
-        belief_expected = [{'Var': 'rover_0',
-                            'Parent': ['null'],
-                            'Type': 'TBL',
-                            'Parameter': [{'Instance': ['-'],
-                                           'ProbTable': ['0.0', '1.0', '0.0']}]
-                            },
-                           {'Var': 'rock_0',
-                            'Parent': ['null'],
-                            'Type': 'TBL',
-                            'Parameter': [{'Instance': ['-'],
-                                           'ProbTable': ['uniform']}]
-                            }]
+        belief_expected = [
+            {
+                "Var": "rover_0",
+                "Parent": ["null"],
+                "Type": "TBL",
+                "Parameter": [{"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}],
+            },
+            {
+                "Var": "rock_0",
+                "Parent": ["null"],
+                "Type": "TBL",
+                "Parameter": [{"Instance": ["-"], "ProbTable": ["uniform"]}],
+            },
+        ]
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_initial_beliefs(), belief_expected)
         self.assertEqual(self.reader_file.get_initial_beliefs(), belief_expected)
 
     def test_get_state_transition_function(self):
-        state_transition_function_expected = \
-            [{'Var': 'rover_1',
-              'Parent': ['action_rover', 'rover_0'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['amw', 's0', 's2'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['amw', 's1', 's0'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['ame', 's0', 's1'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['ame', 's1', 's2'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['ac', 's0', 's0'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['ac', 's1', 's1'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['as', 's0', 's0'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['as', 's1', 's2'],
-                             'ProbTable': ['1.0']},
-                            {'Instance': ['*', 's2', 's2'],
-                             'ProbTable': ['1.0']}]},
-             {'Var': 'rock_1',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['amw', '*', '-', '-'],
-                             'ProbTable': ['1.0', '0.0', '0.0', '1.0']},
-                            {'Instance': ['ame', '*', '-', '-'],
-                             'ProbTable': ['identity']},
-                            {'Instance': ['ac', '*', '-', '-'],
-                             'ProbTable': ['identity']},
-                            {'Instance': ['as', '*', '-', '-'],
-                             'ProbTable': ['identity']},
-                            {'Instance': ['as', 's0', '*', '-'],
-                             'ProbTable': ['0.0', '1.0']},
-                            ]}]
+        state_transition_function_expected = [
+            {
+                "Var": "rover_1",
+                "Parent": ["action_rover", "rover_0"],
+                "Type": "TBL",
+                "Parameter": [
+                    {"Instance": ["amw", "s0", "s2"], "ProbTable": ["1.0"]},
+                    {"Instance": ["amw", "s1", "s0"], "ProbTable": ["1.0"]},
+                    {"Instance": ["ame", "s0", "s1"], "ProbTable": ["1.0"]},
+                    {"Instance": ["ame", "s1", "s2"], "ProbTable": ["1.0"]},
+                    {"Instance": ["ac", "s0", "s0"], "ProbTable": ["1.0"]},
+                    {"Instance": ["ac", "s1", "s1"], "ProbTable": ["1.0"]},
+                    {"Instance": ["as", "s0", "s0"], "ProbTable": ["1.0"]},
+                    {"Instance": ["as", "s1", "s2"], "ProbTable": ["1.0"]},
+                    {"Instance": ["*", "s2", "s2"], "ProbTable": ["1.0"]},
+                ],
+            },
+            {
+                "Var": "rock_1",
+                "Parent": ["action_rover", "rover_0", "rock_0"],
+                "Type": "TBL",
+                "Parameter": [
+                    {
+                        "Instance": ["amw", "*", "-", "-"],
+                        "ProbTable": ["1.0", "0.0", "0.0", "1.0"],
+                    },
+                    {"Instance": ["ame", "*", "-", "-"], "ProbTable": ["identity"]},
+                    {"Instance": ["ac", "*", "-", "-"], "ProbTable": ["identity"]},
+                    {"Instance": ["as", "*", "-", "-"], "ProbTable": ["identity"]},
+                    {"Instance": ["as", "s0", "*", "-"], "ProbTable": ["0.0", "1.0"]},
+                ],
+            },
+        ]
         self.maxDiff = None
-        self.assertEqual(self.reader_string.get_state_transition_function(),
-                         state_transition_function_expected)
-        self.assertEqual(self.reader_file.get_state_transition_function(),
-                         state_transition_function_expected)
+        self.assertEqual(
+            self.reader_string.get_state_transition_function(),
+            state_transition_function_expected,
+        )
+        self.assertEqual(
+            self.reader_file.get_state_transition_function(),
+            state_transition_function_expected,
+        )
 
     def test_obs_function(self):
-        obs_function_expected = \
-            [{'Var': 'obs_sensor',
-              'Parent': ['action_rover', 'rover_1', 'rock_1'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['amw', '*', '*', '-'],
-                             'ProbTable': ['1.0', '0.0']},
-                            {'Instance': ['ame', '*', '*', '-'],
-                             'ProbTable': ['1.0', '0.0']},
-                            {'Instance': ['as', '*', '*', '-'],
-                             'ProbTable': ['1.0', '0.0']},
-                            {'Instance': ['ac', 's0', '-', '-'],
-                             'ProbTable': ['1.0', '0.0', '0.0', '1.0']},
-                            {'Instance': ['ac', 's1', '-', '-'],
-                             'ProbTable': ['0.8', '0.2', '0.2', '0.8']},
-                            {'Instance': ['ac', 's2', '*', '-'],
-                             'ProbTable': ['1.0', '0.0']}]}]
+        obs_function_expected = [
+            {
+                "Var": "obs_sensor",
+                "Parent": ["action_rover", "rover_1", "rock_1"],
+                "Type": "TBL",
+                "Parameter": [
+                    {"Instance": ["amw", "*", "*", "-"], "ProbTable": ["1.0", "0.0"]},
+                    {"Instance": ["ame", "*", "*", "-"], "ProbTable": ["1.0", "0.0"]},
+                    {"Instance": ["as", "*", "*", "-"], "ProbTable": ["1.0", "0.0"]},
+                    {
+                        "Instance": ["ac", "s0", "-", "-"],
+                        "ProbTable": ["1.0", "0.0", "0.0", "1.0"],
+                    },
+                    {
+                        "Instance": ["ac", "s1", "-", "-"],
+                        "ProbTable": ["0.8", "0.2", "0.2", "0.8"],
+                    },
+                    {"Instance": ["ac", "s2", "*", "-"], "ProbTable": ["1.0", "0.0"]},
+                ],
+            }
+        ]
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_obs_function(), obs_function_expected)
         self.assertEqual(self.reader_file.get_obs_function(), obs_function_expected)
 
     def test_reward_function(self):
-        reward_function_expected = \
-            [{'Var': 'reward_rover',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['ame', 's1', '*'],
-                             'ValueTable': ['10']},
-                            {'Instance': ['amw', 's0', '*'],
-                             'ValueTable': ['-100']},
-                            {'Instance': ['as', 's1', '*'],
-                             'ValueTable': ['-100']},
-                            {'Instance': ['as', 's0', 'good'],
-                             'ValueTable': ['10']},
-                            {'Instance': ['as', 's0', 'bad'],
-                             'ValueTable': ['-10']}]}]
+        reward_function_expected = [
+            {
+                "Var": "reward_rover",
+                "Parent": ["action_rover", "rover_0", "rock_0"],
+                "Type": "TBL",
+                "Parameter": [
+                    {"Instance": ["ame", "s1", "*"], "ValueTable": ["10"]},
+                    {"Instance": ["amw", "s0", "*"], "ValueTable": ["-100"]},
+                    {"Instance": ["as", "s1", "*"], "ValueTable": ["-100"]},
+                    {"Instance": ["as", "s0", "good"], "ValueTable": ["10"]},
+                    {"Instance": ["as", "s0", "bad"], "ValueTable": ["-10"]},
+                ],
+            }
+        ]
         self.maxDiff = None
-        self.assertEqual(self.reader_string.get_reward_function(),
-                         reward_function_expected)
-        self.assertEqual(self.reader_file.get_reward_function(),
-                         reward_function_expected)
+        self.assertEqual(
+            self.reader_string.get_reward_function(), reward_function_expected
+        )
+        self.assertEqual(
+            self.reader_file.get_reward_function(), reward_function_expected
+        )
 
     def test_get_parameter_dd(self):
         string = """
@@ -366,19 +383,25 @@ class TestPomdpXReaderString(unittest.TestCase):
  """
         self.reader_string = PomdpXReader(string=string)
         self.reader_file = PomdpXReader(path=six.StringIO(string))
-        expected_dd_parameter = [{
-            'Var': 'rover_0',
-            'Parent': ['null'],
-            'Type': 'DD',
-            'Parameter': {'rover_0': {'s0': '0.0',
-                                      's1': {'rock_0': {'good': '0.5',
-                                                        'bad': '0.5'}},
-                                      's2': '0.0'}}}]
+        expected_dd_parameter = [
+            {
+                "Var": "rover_0",
+                "Parent": ["null"],
+                "Type": "DD",
+                "Parameter": {
+                    "rover_0": {
+                        "s0": "0.0",
+                        "s1": {"rock_0": {"good": "0.5", "bad": "0.5"}},
+                        "s2": "0.0",
+                    }
+                },
+            }
+        ]
         self.maxDiff = None
-        self.assertEqual(expected_dd_parameter,
-                         self.reader_string.get_initial_beliefs())
-        self.assertEqual(expected_dd_parameter,
-                         self.reader_file.get_initial_beliefs())
+        self.assertEqual(
+            expected_dd_parameter, self.reader_string.get_initial_beliefs()
+        )
+        self.assertEqual(expected_dd_parameter, self.reader_file.get_initial_beliefs())
 
     def test_initial_belief_dd(self):
         string = """
@@ -415,19 +438,23 @@ class TestPomdpXReaderString(unittest.TestCase):
     """
         self.reader_string = PomdpXReader(string=string)
         self.reader_file = PomdpXReader(path=six.StringIO(string))
-        expected_belief_dd = [{
-            'Var': 'rover_0',
-            'Parent': ['null'],
-            'Type': 'DD',
-            'Parameter': {'rover_0': {'s0': '0.0',
-                                      's1': {'type': 'uniform',
-                                             'var': 'rock_0'},
-                                      's2': '0.0'}}}]
+        expected_belief_dd = [
+            {
+                "Var": "rover_0",
+                "Parent": ["null"],
+                "Type": "DD",
+                "Parameter": {
+                    "rover_0": {
+                        "s0": "0.0",
+                        "s1": {"type": "uniform", "var": "rock_0"},
+                        "s2": "0.0",
+                    }
+                },
+            }
+        ]
         self.maxDiff = None
-        self.assertEqual(self.reader_string.get_initial_beliefs(),
-                         expected_belief_dd)
-        self.assertEqual(self.reader_file.get_initial_beliefs(),
-                         expected_belief_dd)
+        self.assertEqual(self.reader_string.get_initial_beliefs(), expected_belief_dd)
+        self.assertEqual(self.reader_file.get_initial_beliefs(), expected_belief_dd)
 
     def test_reward_function(self):
         string = """
@@ -504,26 +531,34 @@ class TestPomdpXReaderString(unittest.TestCase):
         """
         self.reader_string = PomdpXReader(string=string)
         self.reader_file = PomdpXReader(path=six.StringIO(string))
-        expected_reward_function_dd =\
-            [{'Var': 'reward_rover',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'rover_0': {'s0': '-100.0',
-                                                                 's1': '0.0',
-                                                                 's2': '0.0'}},
-                                             'ame': {'rover_0': {'s0': '0.0',
-                                                                 's1': '10.0',
-                                                                 's2': '0.0'}},
-                                             'ac': '0.0',
-                                             'as': {'rover_0': {'s0': {'rock_0': {'good': '10',
-                                                                                  'bad': '-10'}},
-                                                                's1': '-100',
-                                                                's2': '-100'}}}}}]
+        expected_reward_function_dd = [
+            {
+                "Var": "reward_rover",
+                "Parent": ["action_rover", "rover_0", "rock_0"],
+                "Type": "DD",
+                "Parameter": {
+                    "action_rover": {
+                        "amw": {"rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}},
+                        "ame": {"rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}},
+                        "ac": "0.0",
+                        "as": {
+                            "rover_0": {
+                                "s0": {"rock_0": {"good": "10", "bad": "-10"}},
+                                "s1": "-100",
+                                "s2": "-100",
+                            }
+                        },
+                    }
+                },
+            }
+        ]
         self.maxDiff = None
-        self.assertEqual(self.reader_string.get_reward_function(),
-                         expected_reward_function_dd)
-        self.assertEqual(self.reader_file.get_reward_function(),
-                         expected_reward_function_dd)
+        self.assertEqual(
+            self.reader_string.get_reward_function(), expected_reward_function_dd
+        )
+        self.assertEqual(
+            self.reader_file.get_reward_function(), expected_reward_function_dd
+        )
 
     def test_state_transition_function(self):
         string = """
@@ -625,61 +660,107 @@ class TestPomdpXReaderString(unittest.TestCase):
         """
         self.reader_string = PomdpXReader(string=string)
         self.reader_file = PomdpXReader(path=six.StringIO(string))
-        expected_state_transition_function = \
-            [{'Var': 'rover_1',
-              'Parent': ['action_rover', 'rover_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 's1': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's0'},
-                                                                 's2': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'}}},
-                                             'ame': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's1'},
-                                                                 's1': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 's2': {'type': 'deterministic',
-                                                                        'var': 'rover_1',
-                                                                        'val': 's2'},
-                                                                 }},
-                                             'ac': {'type': 'persistent',
-                                                    'var': 'rover_1'},
-                                             'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's0'},
-                                                                's1': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's2'},
-                                                                's2': {'type': 'deterministic',
-                                                                       'var': 'rover_1',
-                                                                       'val': 's2'}}}}}},
-             {'Var': 'rock_1',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'type': 'persistent',
-                                                     'var': 'rock_1'},
-                                             'ame': {'type': 'persistent',
-                                                     'var': 'rock_1'},
-                                             'ac': {'type': 'persistent',
-                                                    'var': 'rock_1'},
-                                             'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                                                       'var': 'rock_1',
-                                                                       'val': 'bad'},
-                                                                's1': {'type': 'persistent',
-                                                                       'var': 'rock_1'},
-                                                                's2': {'type': 'persistent',
-                                                                       'var': 'rock_1'}}}}}}]
+        expected_state_transition_function = [
+            {
+                "Var": "rover_1",
+                "Parent": ["action_rover", "rover_0"],
+                "Type": "DD",
+                "Parameter": {
+                    "action_rover": {
+                        "amw": {
+                            "rover_0": {
+                                "s0": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                                "s1": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s0",
+                                },
+                                "s2": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                            }
+                        },
+                        "ame": {
+                            "rover_0": {
+                                "s0": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s1",
+                                },
+                                "s1": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                                "s2": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                            }
+                        },
+                        "ac": {"type": "persistent", "var": "rover_1"},
+                        "as": {
+                            "rover_0": {
+                                "s0": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s0",
+                                },
+                                "s1": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                                "s2": {
+                                    "type": "deterministic",
+                                    "var": "rover_1",
+                                    "val": "s2",
+                                },
+                            }
+                        },
+                    }
+                },
+            },
+            {
+                "Var": "rock_1",
+                "Parent": ["action_rover", "rover_0", "rock_0"],
+                "Type": "DD",
+                "Parameter": {
+                    "action_rover": {
+                        "amw": {"type": "persistent", "var": "rock_1"},
+                        "ame": {"type": "persistent", "var": "rock_1"},
+                        "ac": {"type": "persistent", "var": "rock_1"},
+                        "as": {
+                            "rover_0": {
+                                "s0": {
+                                    "type": "deterministic",
+                                    "var": "rock_1",
+                                    "val": "bad",
+                                },
+                                "s1": {"type": "persistent", "var": "rock_1"},
+                                "s2": {"type": "persistent", "var": "rock_1"},
+                            }
+                        },
+                    }
+                },
+            },
+        ]
         self.maxDiff = None
-        self.assertEqual(self.reader_string.get_state_transition_function(),
-                         expected_state_transition_function)
-        self.assertEqual(self.reader_file.get_state_transition_function(),
-                         expected_state_transition_function)
+        self.assertEqual(
+            self.reader_string.get_state_transition_function(),
+            expected_state_transition_function,
+        )
+        self.assertEqual(
+            self.reader_file.get_state_transition_function(),
+            expected_state_transition_function,
+        )
 
     def test_obs_function_dd(self):
         string = """
@@ -760,34 +841,59 @@ class TestPomdpXReaderString(unittest.TestCase):
         """
         self.reader_string = PomdpXReader(string=string)
         self.reader_file = PomdpXReader(path=six.StringIO(string))
-        expected_obs_function = \
-            [{'Var': 'obs_sensor',
-              'Parent': ['action_rover', 'rover_1', 'rock_1'],
-              'Type': 'DD',
-              'Parameter': {'action_rover': {'amw': {'type': 'deterministic',
-                                                     'var': 'obs_sensor',
-                                                     'val': 'ogood'},
-                                             'ame': {'type': 'deterministic',
-                                                     'var': 'obs_sensor',
-                                                     'val': 'ogood'},
-                                             'ac': {'rover_1': {'s0': {'rock_1': {'good': {'type': 'deterministic',
-                                                                                           'var': 'obs_sensor',
-                                                                                           'val': 'ogood'},
-                                                                                  'bad': {'type': 'deterministic',
-                                                                                          'var': 'obs_sensor',
-                                                                                          'val': 'obad'}}},
-                                                                's1': {'type': 'template',
-                                                                       'idref': 'obs_rock'},
-                                                                's2': {'type': 'template',
-                                                                       'idref': 'obs_rock'}}},
-                                             'as': {'type': 'deterministic',
-                                                    'var': 'obs_sensor',
-                                                    'val': 'ogood'}},
-                            'SubDAGTemplate': {'rock_1': {'good': {'obs_sensor': {'ogood': '0.8',
-                                                                                  'obad': '0.2'}},
-                                                          'bad': {'obs_sensor': {'ogood': '0.2',
-                                                                                 'obad': '0.8'}}}},
-                            'id': 'obs_rock'}}]
+        expected_obs_function = [
+            {
+                "Var": "obs_sensor",
+                "Parent": ["action_rover", "rover_1", "rock_1"],
+                "Type": "DD",
+                "Parameter": {
+                    "action_rover": {
+                        "amw": {
+                            "type": "deterministic",
+                            "var": "obs_sensor",
+                            "val": "ogood",
+                        },
+                        "ame": {
+                            "type": "deterministic",
+                            "var": "obs_sensor",
+                            "val": "ogood",
+                        },
+                        "ac": {
+                            "rover_1": {
+                                "s0": {
+                                    "rock_1": {
+                                        "good": {
+                                            "type": "deterministic",
+                                            "var": "obs_sensor",
+                                            "val": "ogood",
+                                        },
+                                        "bad": {
+                                            "type": "deterministic",
+                                            "var": "obs_sensor",
+                                            "val": "obad",
+                                        },
+                                    }
+                                },
+                                "s1": {"type": "template", "idref": "obs_rock"},
+                                "s2": {"type": "template", "idref": "obs_rock"},
+                            }
+                        },
+                        "as": {
+                            "type": "deterministic",
+                            "var": "obs_sensor",
+                            "val": "ogood",
+                        },
+                    },
+                    "SubDAGTemplate": {
+                        "rock_1": {
+                            "good": {"obs_sensor": {"ogood": "0.8", "obad": "0.2"}},
+                            "bad": {"obs_sensor": {"ogood": "0.2", "obad": "0.8"}},
+                        }
+                    },
+                    "id": "obs_rock",
+                },
+            }
+        ]
         self.maxDiff = None
         self.assertEqual(self.reader_string.get_obs_function(), expected_obs_function)
         self.assertEqual(self.reader_file.get_obs_function(), expected_obs_function)
@@ -799,101 +905,136 @@ class TestPomdpXReaderString(unittest.TestCase):
 
 class TestPomdpXWriter(unittest.TestCase):
     def setUp(self):
-        self.model_data = {'discription': '',
-                           'discount': '0.95',
-                           'variables': {
-                               'StateVar': [{'vnamePrev': 'rover_0',
-                                             'vnameCurr': 'rover_1',
-                                             'ValueEnum': ['s0', 's1', 's2'],
-                                             'fullyObs': True},
-                                            {'vnamePrev': 'rock_0',
-                                             'vnameCurr': 'rock_1',
-                                             'fullyObs': False,
-                                             'ValueEnum': ['good', 'bad']}],
-                               'ObsVar': [{'vname': 'obs_sensor',
-                                           'ValueEnum': ['ogood', 'obad']}],
-                               'RewardVar': [{'vname': 'reward_rover'}],
-                               'ActionVar': [{'vname': 'action_rover',
-                                              'ValueEnum': ['amw', 'ame',
-                                                            'ac', 'as']}]},
-                           'initial_state_belief': [{'Var': 'rover_0',
-                                                     'Parent': ['null'],
-                                                     'Type': 'TBL',
-                                                     'Parameter': [{'Instance': ['-'],
-                                                                    'ProbTable': ['0.0', '1.0', '0.0']}]},
-                                                    {'Var': 'rock_0',
-                                                     'Parent': ['null'],
-                                                     'Type': 'TBL',
-                                                     'Parameter': [{'Instance': ['-'],
-                                                                    'ProbTable': ['uniform']}]}],
-                           'state_transition_function': [{'Var': 'rover_1',
-                                                          'Parent': ['action_rover', 'rover_0'],
-                                                          'Type': 'TBL',
-                                                          'Parameter': [{'Instance': ['amw', 's0', 's2'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['amw', 's1', 's0'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['ame', 's0', 's1'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['ame', 's1', 's2'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['ac', 's0', 's0'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['ac', 's1', 's1'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['as', 's0', 's0'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['as', 's1', 's2'],
-                                                                         'ProbTable': ['1.0']},
-                                                                        {'Instance': ['*', 's2', 's2'],
-                                                                         'ProbTable': ['1.0']}]},
-                                                         {'Var': 'rock_1',
-                                                          'Parent': ['action_rover', 'rover_0', 'rock_0'],
-                                                          'Type': 'TBL',
-                                                          'Parameter': [{'Instance': ['amw', '*', '-', '-'],
-                                                                         'ProbTable': ['1.0', '0.0', '0.0', '1.0']},
-                                                                        {'Instance': ['ame', '*', '-', '-'],
-                                                                         'ProbTable': ['identity']},
-                                                                        {'Instance': ['ac', '*', '-', '-'],
-                                                                         'ProbTable': ['identity']},
-                                                                        {'Instance': ['as', '*', '-', '-'],
-                                                                         'ProbTable': ['identity']},
-                                                                        {'Instance': ['as', 's0', '*', '-'],
-                                                                         'ProbTable': ['0.0', '1.0']},
-                                                                        ]}],
-                           'obs_function': [{'Var': 'obs_sensor',
-                                             'Parent': ['action_rover', 'rover_1', 'rock_1'],
-                                             'Type': 'TBL',
-                                             'Parameter': [{'Instance': ['amw', '*', '*', '-'],
-                                                            'ProbTable': ['1.0', '0.0']},
-                                                           {'Instance': ['ame', '*', '*', '-'],
-                                                            'ProbTable': ['1.0', '0.0']},
-                                                           {'Instance': ['as', '*', '*', '-'],
-                                                            'ProbTable': ['1.0', '0.0']},
-                                                           {'Instance': ['ac', 's0', '-', '-'],
-                                                            'ProbTable': ['1.0', '0.0', '0.0', '1.0']},
-                                                           {'Instance': ['ac', 's1', '-', '-'],
-                                                            'ProbTable': ['0.8', '0.2', '0.2', '0.8']},
-                                                           {'Instance': ['ac', 's2', '*', '-'],
-                                                            'ProbTable': ['1.0', '0.0']}]}],
-                           'reward_function': [{'Var': 'reward_rover',
-                                                'Parent': ['action_rover', 'rover_0', 'rock_0'],
-                                                'Type': 'TBL',
-                                                'Parameter': [{'Instance': ['ame', 's1', '*'],
-                                                               'ValueTable': ['10']},
-                                                              {'Instance': ['amw', 's0', '*'],
-                                                               'ValueTable': ['-100']},
-                                                              {'Instance': ['as', 's1', '*'],
-                                                               'ValueTable': ['-100']},
-                                                              {'Instance': ['as', 's0', 'good'],
-                                                               'ValueTable': ['10']},
-                                                              {'Instance': ['as', 's0', 'bad'],
-                                                               'ValueTable': ['-10']}]}]}
+        self.model_data = {
+            "discription": "",
+            "discount": "0.95",
+            "variables": {
+                "StateVar": [
+                    {
+                        "vnamePrev": "rover_0",
+                        "vnameCurr": "rover_1",
+                        "ValueEnum": ["s0", "s1", "s2"],
+                        "fullyObs": True,
+                    },
+                    {
+                        "vnamePrev": "rock_0",
+                        "vnameCurr": "rock_1",
+                        "fullyObs": False,
+                        "ValueEnum": ["good", "bad"],
+                    },
+                ],
+                "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
+                "RewardVar": [{"vname": "reward_rover"}],
+                "ActionVar": [
+                    {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
+                ],
+            },
+            "initial_state_belief": [
+                {
+                    "Var": "rover_0",
+                    "Parent": ["null"],
+                    "Type": "TBL",
+                    "Parameter": [
+                        {"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}
+                    ],
+                },
+                {
+                    "Var": "rock_0",
+                    "Parent": ["null"],
+                    "Type": "TBL",
+                    "Parameter": [{"Instance": ["-"], "ProbTable": ["uniform"]}],
+                },
+            ],
+            "state_transition_function": [
+                {
+                    "Var": "rover_1",
+                    "Parent": ["action_rover", "rover_0"],
+                    "Type": "TBL",
+                    "Parameter": [
+                        {"Instance": ["amw", "s0", "s2"], "ProbTable": ["1.0"]},
+                        {"Instance": ["amw", "s1", "s0"], "ProbTable": ["1.0"]},
+                        {"Instance": ["ame", "s0", "s1"], "ProbTable": ["1.0"]},
+                        {"Instance": ["ame", "s1", "s2"], "ProbTable": ["1.0"]},
+                        {"Instance": ["ac", "s0", "s0"], "ProbTable": ["1.0"]},
+                        {"Instance": ["ac", "s1", "s1"], "ProbTable": ["1.0"]},
+                        {"Instance": ["as", "s0", "s0"], "ProbTable": ["1.0"]},
+                        {"Instance": ["as", "s1", "s2"], "ProbTable": ["1.0"]},
+                        {"Instance": ["*", "s2", "s2"], "ProbTable": ["1.0"]},
+                    ],
+                },
+                {
+                    "Var": "rock_1",
+                    "Parent": ["action_rover", "rover_0", "rock_0"],
+                    "Type": "TBL",
+                    "Parameter": [
+                        {
+                            "Instance": ["amw", "*", "-", "-"],
+                            "ProbTable": ["1.0", "0.0", "0.0", "1.0"],
+                        },
+                        {"Instance": ["ame", "*", "-", "-"], "ProbTable": ["identity"]},
+                        {"Instance": ["ac", "*", "-", "-"], "ProbTable": ["identity"]},
+                        {"Instance": ["as", "*", "-", "-"], "ProbTable": ["identity"]},
+                        {
+                            "Instance": ["as", "s0", "*", "-"],
+                            "ProbTable": ["0.0", "1.0"],
+                        },
+                    ],
+                },
+            ],
+            "obs_function": [
+                {
+                    "Var": "obs_sensor",
+                    "Parent": ["action_rover", "rover_1", "rock_1"],
+                    "Type": "TBL",
+                    "Parameter": [
+                        {
+                            "Instance": ["amw", "*", "*", "-"],
+                            "ProbTable": ["1.0", "0.0"],
+                        },
+                        {
+                            "Instance": ["ame", "*", "*", "-"],
+                            "ProbTable": ["1.0", "0.0"],
+                        },
+                        {
+                            "Instance": ["as", "*", "*", "-"],
+                            "ProbTable": ["1.0", "0.0"],
+                        },
+                        {
+                            "Instance": ["ac", "s0", "-", "-"],
+                            "ProbTable": ["1.0", "0.0", "0.0", "1.0"],
+                        },
+                        {
+                            "Instance": ["ac", "s1", "-", "-"],
+                            "ProbTable": ["0.8", "0.2", "0.2", "0.8"],
+                        },
+                        {
+                            "Instance": ["ac", "s2", "*", "-"],
+                            "ProbTable": ["1.0", "0.0"],
+                        },
+                    ],
+                }
+            ],
+            "reward_function": [
+                {
+                    "Var": "reward_rover",
+                    "Parent": ["action_rover", "rover_0", "rock_0"],
+                    "Type": "TBL",
+                    "Parameter": [
+                        {"Instance": ["ame", "s1", "*"], "ValueTable": ["10"]},
+                        {"Instance": ["amw", "s0", "*"], "ValueTable": ["-100"]},
+                        {"Instance": ["as", "s1", "*"], "ValueTable": ["-100"]},
+                        {"Instance": ["as", "s0", "good"], "ValueTable": ["10"]},
+                        {"Instance": ["as", "s0", "bad"], "ValueTable": ["-10"]},
+                    ],
+                }
+            ],
+        }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
     def test_variables(self):
-        expected_variables = etree.XML("""
+        expected_variables = etree.XML(
+            """
 <Variable>
   <StateVar fullyObs="true" vnameCurr="rover_1" vnamePrev="rover_0">
     <NumValues>3</NumValues>
@@ -908,13 +1049,16 @@ class TestPomdpXWriter(unittest.TestCase):
     <ValueEnum>amw ame ac as</ValueEnum>
   </ActionVar>
   <RewardVar vname="reward_rover" />
-</Variable>""")
+</Variable>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.get_variables(),
-                         etree.tostring(expected_variables))
+        self.assertEqual(
+            self.writer.get_variables(), etree.tostring(expected_variables)
+        )
 
     def test_add_initial_belief(self):
-        expected_belief_xml = etree.XML("""
+        expected_belief_xml = etree.XML(
+            """
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -936,13 +1080,17 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</InitialStateBelief>""")
+</InitialStateBelief>"""
+        )
         self.maxDiff = None
-        self.assertEqual(str(self.writer.add_initial_belief()),
-                         str(etree.tostring(expected_belief_xml)))
+        self.assertEqual(
+            str(self.writer.add_initial_belief()),
+            str(etree.tostring(expected_belief_xml)),
+        )
 
     def test_add_transition_function(self):
-        expected_transition_xml = etree.XML("""
+        expected_transition_xml = etree.XML(
+            """
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -1012,13 +1160,17 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>""")
+</StateTransitionFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_state_transition_function(),
-                         etree.tostring(expected_transition_xml))
+        self.assertEqual(
+            self.writer.add_state_transition_function(),
+            etree.tostring(expected_transition_xml),
+        )
 
     def test_add_obs_function(self):
-        expected_obs_xml = etree.XML("""
+        expected_obs_xml = etree.XML(
+            """
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -1050,13 +1202,16 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</ObsFunction>""")
+</ObsFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_obs_function(),
-                         etree.tostring(expected_obs_xml))
+        self.assertEqual(
+            self.writer.add_obs_function(), etree.tostring(expected_obs_xml)
+        )
 
     def test_add_reward_function(self):
-        expected_reward_xml = etree.XML("""
+        expected_reward_xml = etree.XML(
+            """
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -1084,22 +1239,33 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </Func>
-</RewardFunction>""")
+</RewardFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_reward_function(),
-                         etree.tostring(expected_reward_xml))
+        self.assertEqual(
+            self.writer.add_reward_function(), etree.tostring(expected_reward_xml)
+        )
 
     def test_initial_state_belief_dd(self):
-        self.model_data = {'initial_state_belief': [{
-            'Var': 'rover_0',
-            'Parent': ['null'],
-            'Type': 'DD',
-            'Parameter': {'rover_0': {'s0': '0.0',
-                                      's1': {'type': 'uniform',
-                                             'var': 'rock_0'},
-                                      's2': '0.0'}}}]}
+        self.model_data = {
+            "initial_state_belief": [
+                {
+                    "Var": "rover_0",
+                    "Parent": ["null"],
+                    "Type": "DD",
+                    "Parameter": {
+                        "rover_0": {
+                            "s0": "0.0",
+                            "s1": {"type": "uniform", "var": "rock_0"},
+                            "s2": "0.0",
+                        }
+                    },
+                }
+            ]
+        }
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML("""
+        expected_xml = etree.XML(
+            """
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -1120,69 +1286,110 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</InitialStateBelief>""")
+</InitialStateBelief>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_initial_belief(),
-                         etree.tostring(expected_xml))
+        self.assertEqual(self.writer.add_initial_belief(), etree.tostring(expected_xml))
 
     def test_state_transition_function_dd(self):
         self.model_data = {
-            'state_transition_function': [{
-                'Var': 'rover_1',
-                'Parent': ['action_rover', 'rover_0'],
-                'Type': 'DD',
-                'Parameter': {'action_rover': {
-                    'amw': {'rover_0': {'s0': {
-                        'type': 'deterministic',
-                        'var': 'rover_1',
-                        'val': 's2'},
-                        's1': {'type': 'deterministic',
-                               'var': 'rover_1',
-                               'val': 's0'},
-                        's2': {'type': 'deterministic',
-                               'var': 'rover_1',
-                               'val': 's2'}}},
-                    'ame': {'rover_0': {'s0': {'type': 'deterministic',
-                                               'var': 'rover_1',
-                                               'val': 's1'},
-                                        's1': {'type': 'deterministic',
-                                               'var': 'rover_1',
-                                               'val': 's2'},
-                                        's2': {'type': 'deterministic',
-                                               'var': 'rover_1',
-                                               'val': 's2'},
-                                        }},
-                    'ac': {'type': 'persistent',
-                           'var': 'rover_1'},
-                    'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                              'var': 'rover_1',
-                                              'val': 's0'},
-                                       's1': {'type': 'deterministic',
-                                              'var': 'rover_1',
-                                              'val': 's2'},
-                                       's2': {'type': 'deterministic',
-                                              'var': 'rover_1',
-                                              'val': 's2'}}}}}},
-                {'Var': 'rock_1',
-                 'Parent': ['action_rover', 'rover_0', 'rock_0'],
-                 'Type': 'DD',
-                 'Parameter': {'action_rover': {
-                     'amw': {'type': 'persistent',
-                             'var': 'rock_1'},
-                     'ame': {'type': 'persistent',
-                             'var': 'rock_1'},
-                     'ac': {'type': 'persistent',
-                            'var': 'rock_1'},
-                     'as': {'rover_0': {'s0': {'type': 'deterministic',
-                                               'var': 'rock_1',
-                                               'val': 'bad'},
-                                        's1': {'type': 'persistent',
-                                               'var': 'rock_1'},
-                                        's2': {'type': 'persistent',
-                                               'var': 'rock_1'}}}}}}]}
+            "state_transition_function": [
+                {
+                    "Var": "rover_1",
+                    "Parent": ["action_rover", "rover_0"],
+                    "Type": "DD",
+                    "Parameter": {
+                        "action_rover": {
+                            "amw": {
+                                "rover_0": {
+                                    "s0": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                    "s1": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s0",
+                                    },
+                                    "s2": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                }
+                            },
+                            "ame": {
+                                "rover_0": {
+                                    "s0": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s1",
+                                    },
+                                    "s1": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                    "s2": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                }
+                            },
+                            "ac": {"type": "persistent", "var": "rover_1"},
+                            "as": {
+                                "rover_0": {
+                                    "s0": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s0",
+                                    },
+                                    "s1": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                    "s2": {
+                                        "type": "deterministic",
+                                        "var": "rover_1",
+                                        "val": "s2",
+                                    },
+                                }
+                            },
+                        }
+                    },
+                },
+                {
+                    "Var": "rock_1",
+                    "Parent": ["action_rover", "rover_0", "rock_0"],
+                    "Type": "DD",
+                    "Parameter": {
+                        "action_rover": {
+                            "amw": {"type": "persistent", "var": "rock_1"},
+                            "ame": {"type": "persistent", "var": "rock_1"},
+                            "ac": {"type": "persistent", "var": "rock_1"},
+                            "as": {
+                                "rover_0": {
+                                    "s0": {
+                                        "type": "deterministic",
+                                        "var": "rock_1",
+                                        "val": "bad",
+                                    },
+                                    "s1": {"type": "persistent", "var": "rock_1"},
+                                    "s2": {"type": "persistent", "var": "rock_1"},
+                                }
+                            },
+                        }
+                    },
+                },
+            ]
+        }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML("""
+        expected_xml = etree.XML(
+            """
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -1268,48 +1475,74 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>""")
+</StateTransitionFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(str(self.writer.add_state_transition_function()),
-                         str(etree.tostring(expected_xml)))
+        self.assertEqual(
+            str(self.writer.add_state_transition_function()),
+            str(etree.tostring(expected_xml)),
+        )
 
     def test_obs_function_dd(self):
         self.model_data = {
-            'obs_function': [{
-                'Var': 'obs_sensor',
-                'Parent': ['action_rover', 'rover_1', 'rock_1'],
-                'Type': 'DD',
-                'Parameter': {'action_rover': {
-                    'amw': {'type': 'deterministic',
-                            'var': 'obs_sensor',
-                            'val': 'ogood'},
-                    'ame': {'type': 'deterministic',
-                            'var': 'obs_sensor',
-                            'val': 'ogood'},
-                    'ac': {'rover_1': {'s0': {'rock_1': {'good': {
-                        'type': 'deterministic',
-                        'var': 'obs_sensor',
-                        'val': 'ogood'},
-                        'bad': {'type': 'deterministic',
-                                'var': 'obs_sensor',
-                                'val': 'obad'}}},
-                        's1': {'type': 'template',
-                               'idref': 'obs_rock'},
-                        's2': {'type': 'template',
-                               'idref': 'obs_rock'}}},
-                    'as': {'type': 'deterministic',
-                           'var': 'obs_sensor',
-                           'val': 'ogood'}},
-                    'SubDAGTemplate': {'rock_1': {'good': {'obs_sensor': {
-                        'ogood': '0.8',
-                        'obad': '0.2'}},
-                        'bad': {'obs_sensor': {
-                            'ogood': '0.2',
-                            'obad': '0.8'}}}},
-                    'id': 'obs_rock'}}]}
+            "obs_function": [
+                {
+                    "Var": "obs_sensor",
+                    "Parent": ["action_rover", "rover_1", "rock_1"],
+                    "Type": "DD",
+                    "Parameter": {
+                        "action_rover": {
+                            "amw": {
+                                "type": "deterministic",
+                                "var": "obs_sensor",
+                                "val": "ogood",
+                            },
+                            "ame": {
+                                "type": "deterministic",
+                                "var": "obs_sensor",
+                                "val": "ogood",
+                            },
+                            "ac": {
+                                "rover_1": {
+                                    "s0": {
+                                        "rock_1": {
+                                            "good": {
+                                                "type": "deterministic",
+                                                "var": "obs_sensor",
+                                                "val": "ogood",
+                                            },
+                                            "bad": {
+                                                "type": "deterministic",
+                                                "var": "obs_sensor",
+                                                "val": "obad",
+                                            },
+                                        }
+                                    },
+                                    "s1": {"type": "template", "idref": "obs_rock"},
+                                    "s2": {"type": "template", "idref": "obs_rock"},
+                                }
+                            },
+                            "as": {
+                                "type": "deterministic",
+                                "var": "obs_sensor",
+                                "val": "ogood",
+                            },
+                        },
+                        "SubDAGTemplate": {
+                            "rock_1": {
+                                "good": {"obs_sensor": {"ogood": "0.8", "obad": "0.2"}},
+                                "bad": {"obs_sensor": {"ogood": "0.2", "obad": "0.8"}},
+                            }
+                        },
+                        "id": "obs_rock",
+                    },
+                }
+            ]
+        }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML("""
+        expected_xml = etree.XML(
+            """
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -1374,33 +1607,45 @@ class TestPomdpXWriter(unittest.TestCase):
       </SubDAGTemplate>
     </Parameter>
   </CondProb>
-</ObsFunction>""")
+</ObsFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(str(self.writer.add_obs_function()),
-                         str(etree.tostring(expected_xml)))
+        self.assertEqual(
+            str(self.writer.add_obs_function()), str(etree.tostring(expected_xml))
+        )
 
     def test_reward_function_dd(self):
         self.model_data = {
-            'reward_function': [{
-                'Var': 'reward_rover',
-                'Parent': ['action_rover', 'rover_0', 'rock_0'],
-                'Type': 'DD',
-                'Parameter': {
-                    'action_rover': {
-                        'amw': {'rover_0': {'s0': '-100.0',
-                                            's1': '0.0',
-                                            's2': '0.0'}},
-                        'ame': {'rover_0': {'s0': '0.0',
-                                            's1': '10.0',
-                                            's2': '0.0'}},
-                        'ac': '0.0',
-                        'as': {'rover_0': {'s0': {'rock_0': {'good': '10',
-                                                             'bad': '-10'}},
-                                           's1': '-100',
-                                           's2': '-100'}}}}}]}
+            "reward_function": [
+                {
+                    "Var": "reward_rover",
+                    "Parent": ["action_rover", "rover_0", "rock_0"],
+                    "Type": "DD",
+                    "Parameter": {
+                        "action_rover": {
+                            "amw": {
+                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
+                            },
+                            "ame": {
+                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
+                            },
+                            "ac": "0.0",
+                            "as": {
+                                "rover_0": {
+                                    "s0": {"rock_0": {"good": "10", "bad": "-10"}},
+                                    "s1": "-100",
+                                    "s2": "-100",
+                                }
+                            },
+                        }
+                    },
+                }
+            ]
+        }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML("""
+        expected_xml = etree.XML(
+            """
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -1461,7 +1706,9 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </Func>
-</RewardFunction>""")
+</RewardFunction>"""
+        )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_reward_function(),
-                         etree.tostring(expected_xml))
+        self.assertEqual(
+            self.writer.add_reward_function(), etree.tostring(expected_xml)
+        )

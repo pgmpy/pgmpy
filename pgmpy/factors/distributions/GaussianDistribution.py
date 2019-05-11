@@ -16,6 +16,7 @@ class GaussianDistribution(BaseDistribution):
 
     This is the base class for its representation.
     """
+
     def __init__(self, variables, mean, cov):
         """
         Parameters
@@ -59,15 +60,18 @@ class GaussianDistribution(BaseDistribution):
         self._precision_matrix = None
 
         if len(mean) != no_of_var:
-            raise ValueError("Length of mean_vector must be equal to the",
-                             "number of variables.")
+            raise ValueError(
+                "Length of mean_vector must be equal to the", "number of variables."
+            )
 
         if self.covariance.shape != (no_of_var, no_of_var):
-            raise ValueError("The Covariance matrix should be a square matrix",
-                             " with order equal to the number of variables. ",
-                             "Got: {got_shape}, Expected: {exp_shape}".format
-                             (got_shape=self.covariance.shape,
-                              exp_shape=(no_of_var, no_of_var)))
+            raise ValueError(
+                "The Covariance matrix should be a square matrix",
+                " with order equal to the number of variables. ",
+                "Got: {got_shape}, Expected: {exp_shape}".format(
+                    got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)
+                ),
+            )
 
     @property
     def pdf(self):
@@ -92,7 +96,8 @@ class GaussianDistribution(BaseDistribution):
         0.0014805631279234139
         """
         return lambda *args: multivariate_normal.pdf(
-            args, self.mean.reshape(1, len(self.variables))[0], self.covariance)
+            args, self.mean.reshape(1, len(self.variables))[0], self.covariance
+        )
 
     def assignment(self, *x):
         """
@@ -198,14 +203,16 @@ class GaussianDistribution(BaseDistribution):
                [2., 5.]])
         """
         if not isinstance(variables, list):
-            raise TypeError("variables: Expected type list or array-like,"
-                            "got type {var_type}".format(
-                                var_type=type(variables)))
+            raise TypeError(
+                "variables: Expected type list or array-like,"
+                "got type {var_type}".format(var_type=type(variables))
+            )
 
         phi = self if inplace else self.copy()
 
-        index_to_keep = [self.variables.index(var) for var in self.variables
-                         if var not in variables]
+        index_to_keep = [
+            self.variables.index(var) for var in self.variables if var not in variables
+        ]
 
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.mean = phi.mean[index_to_keep]
@@ -275,27 +282,35 @@ class GaussianDistribution(BaseDistribution):
 
         """
         if not isinstance(values, list):
-            raise TypeError("values: Expected type list or array-like, ",
-                            "got type {var_type}".format(
-                                var_type=type(values)))
+            raise TypeError(
+                "values: Expected type list or array-like, ",
+                "got type {var_type}".format(var_type=type(values)),
+            )
 
         phi = self if inplace else self.copy()
 
         var_to_reduce = [var for var, value in values]
 
         # index_to_keep -> j vector
-        index_to_keep = [self.variables.index(var) for var in self.variables
-                         if var not in var_to_reduce]
+        index_to_keep = [
+            self.variables.index(var)
+            for var in self.variables
+            if var not in var_to_reduce
+        ]
         # index_to_reduce -> i vector
         index_to_reduce = [self.variables.index(var) for var in var_to_reduce]
 
         mu_j = self.mean[index_to_keep]
         mu_i = self.mean[index_to_reduce]
-        x_i = np.array([value for var, value in values]).reshape(len(index_to_reduce), 1)
+        x_i = np.array([value for var, value in values]).reshape(
+            len(index_to_reduce), 1
+        )
 
         sig_i_j = self.covariance[np.ix_(index_to_reduce, index_to_keep)]
         sig_j_i = self.covariance[np.ix_(index_to_keep, index_to_reduce)]
-        sig_i_i_inv = np.linalg.inv(self.covariance[np.ix_(index_to_reduce, index_to_reduce)])
+        sig_i_i_inv = np.linalg.inv(
+            self.covariance[np.ix_(index_to_reduce, index_to_reduce)]
+        )
         sig_j_j = self.covariance[np.ix_(index_to_keep, index_to_keep)]
 
         phi.variables = [self.variables[index] for index in index_to_keep]
@@ -353,9 +368,9 @@ class GaussianDistribution(BaseDistribution):
                 [-0.125     ,  0.58333333,  0.33333333],
                 [ 0.        ,  0.33333333,  0.33333333]])
         """
-        copy_distribution = GaussianDistribution(variables=self.variables,
-                                                 mean=self.mean.copy(),
-                                                 cov=self.covariance.copy())
+        copy_distribution = GaussianDistribution(
+            variables=self.variables, mean=self.mean.copy(), cov=self.covariance.copy()
+        )
         if self._precision_matrix is not None:
             copy_distribution._precision_matrix = self._precision_matrix.copy()
 
@@ -413,8 +428,9 @@ class GaussianDistribution(BaseDistribution):
         h = np.dot(K, mu)
 
         g = -(0.5) * np.dot(mu.T, h)[0, 0] - np.log(
-            np.power(2 * np.pi, len(self.variables)/2) *
-            np.power(abs(np.linalg.det(sigma)), 0.5))
+            np.power(2 * np.pi, len(self.variables) / 2)
+            * np.power(abs(np.linalg.det(sigma)), 0.5)
+        )
 
         return CanonicalDistribution(self.variables, K, h, g)
 
@@ -457,8 +473,11 @@ class GaussianDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        phi = self.to_canonical_factor()._operate(
-            other.to_canonical_factor(), operation, inplace=False).to_joint_gaussian()
+        phi = (
+            self.to_canonical_factor()
+            ._operate(other.to_canonical_factor(), operation, inplace=False)
+            .to_joint_gaussian()
+        )
 
         if not inplace:
             return phi
@@ -503,7 +522,7 @@ class GaussianDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        return self._operate(other, operation='product', inplace=inplace)
+        return self._operate(other, operation="product", inplace=inplace)
 
     def divide(self, other, inplace=True):
         """
@@ -543,11 +562,12 @@ class GaussianDistribution(BaseDistribution):
                [ 1.6],
                [ 3.5]])
         """
-        return self._operate(other, operation='divide', inplace=inplace)
+        return self._operate(other, operation="divide", inplace=inplace)
 
     def __repr__(self):
         return "GaussianDistribution representing N({var}) at {address}".format(
-            var=self.variables, address=hex(id(self)))
+            var=self.variables, address=hex(id(self))
+        )
 
     def __mul__(self, other):
         return self.product(other, inplace=False)
@@ -561,7 +581,10 @@ class GaussianDistribution(BaseDistribution):
     __div__ = __truediv__
 
     def __eq__(self, other):
-        if not (isinstance(self, GaussianDistribution) and isinstance(self, GaussianDistribution)):
+        if not (
+            isinstance(self, GaussianDistribution)
+            and isinstance(self, GaussianDistribution)
+        ):
             return False
 
         elif set(self.scope()) != set(other.scope()):

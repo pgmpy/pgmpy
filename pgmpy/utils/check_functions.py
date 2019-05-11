@@ -23,4 +23,8 @@ def _check_length_equal(param_1, param_2, name_param_1, name_param_2):
     Raises an error when the length of given two arguments is not equal
     """
     if len(param_1) != len(param_2):
-        raise ValueError("Length of {} must be same as Length of {}".format(name_param_1, name_param_2))
+        raise ValueError(
+            "Length of {} must be same as Length of {}".format(
+                name_param_1, name_param_2
+            )
+        )

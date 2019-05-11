@@ -56,6 +56,7 @@ class MarkovChain(object):
     3      1     0
     4      0     2
     """
+
     def __init__(self, variables=None, card=None, start_state=None):
         """
         Parameters:
@@ -73,10 +74,12 @@ class MarkovChain(object):
             variables = []
         if card is None:
             card = []
-        if not hasattr(variables, '__iter__') or isinstance(variables, six.string_types):
-            raise ValueError('variables must be a non-string iterable.')
-        if not hasattr(card, '__iter__') or isinstance(card, six.string_types):
-            raise ValueError('card must be a non-string iterable.')
+        if not hasattr(variables, "__iter__") or isinstance(
+            variables, six.string_types
+        ):
+            raise ValueError("variables must be a non-string iterable.")
+        if not hasattr(card, "__iter__") or isinstance(card, six.string_types):
+            raise ValueError("card must be a non-string iterable.")
         self.variables = variables
         self.cardinalities = {v: c for v, c in zip(variables, card)}
         self.transition_models = {var: {} for var in variables}
@@ -101,8 +104,10 @@ class MarkovChain(object):
         >>> model.set_start_state([State('a', 0), State('b', 1)])
         """
         if start_state is not None:
-            if not hasattr(start_state, '__iter__') or isinstance(start_state, six.string_types):
-                raise ValueError('start_state must be a non-string iterable.')
+            if not hasattr(start_state, "__iter__") or isinstance(
+                start_state, six.string_types
+            ):
+                raise ValueError("start_state must be a non-string iterable.")
             # Must be an array-like iterable. Reorder according to self.variables.
             state_dict = {var: st for var, st in start_state}
             start_state = [State(var, state_dict[var]) for var in self.variables]
@@ -113,16 +118,21 @@ class MarkovChain(object):
         """
         Checks if a list representing the state of the variables is valid.
         """
-        if not hasattr(state, '__iter__') or isinstance(state, six.string_types):
-            raise ValueError('Start state must be a non-string iterable object.')
+        if not hasattr(state, "__iter__") or isinstance(state, six.string_types):
+            raise ValueError("Start state must be a non-string iterable object.")
         state_vars = {s.var for s in state}
         if not state_vars == set(self.variables):
-            raise ValueError('Start state must represent a complete assignment to all variables.'
-                             'Expected variables in state: {svar}, Got: {mvar}.'.format(svar=state_vars,
-                                                                                        mvar=set(self.variables)))
+            raise ValueError(
+                "Start state must represent a complete assignment to all variables."
+                "Expected variables in state: {svar}, Got: {mvar}.".format(
+                    svar=state_vars, mvar=set(self.variables)
+                )
+            )
         for var, val in state:
             if val >= self.cardinalities[var]:
-                raise ValueError('Assignment {val} to {var} invalid.'.format(val=val, var=var))
+                raise ValueError(
+                    "Assignment {val} to {var} invalid.".format(val=val, var=var)
+                )
         return True
 
     def add_variable(self, variable, card=0):
@@ -145,7 +155,7 @@ class MarkovChain(object):
         if variable not in self.variables:
             self.variables.append(variable)
         else:
-            warn('Variable {var} already exists.'.format(var=variable))
+            warn("Variable {var} already exists.".format(var=variable))
         self.cardinalities[variable] = card
         self.transition_models[variable] = {}
 
@@ -200,36 +210,56 @@ class MarkovChain(object):
         # check if the transition model is valid
         if not isinstance(transition_model, dict):
             if not isinstance(transition_model, np.ndarray):
-                raise ValueError('Transition model must be a dict or numpy array')
+                raise ValueError("Transition model must be a dict or numpy array")
             elif len(transition_model.shape) != 2:
-                raise ValueError('Transition model must be 2d array.given {t}'.format(t=transition_model.shape))
+                raise ValueError(
+                    "Transition model must be 2d array.given {t}".format(
+                        t=transition_model.shape
+                    )
+                )
             elif transition_model.shape[0] != transition_model.shape[1]:
-                raise ValueError('Dimension mismatch {d1}!={d2}'.format(d1=transition_model.shape[0],
-                                 d2=transition_model.shape[1]))
+                raise ValueError(
+                    "Dimension mismatch {d1}!={d2}".format(
+                        d1=transition_model.shape[0], d2=transition_model.shape[1]
+                    )
+                )
             else:
                 # convert the matrix to dict
                 size = transition_model.shape[0]
-                transition_model = dict((i, dict((j, float(transition_model[i][j]))
-                                         for j in range(0, size))) for i in range(0, size))
+                transition_model = dict(
+                    (
+                        i,
+                        dict(
+                            (j, float(transition_model[i][j])) for j in range(0, size)
+                        ),
+                    )
+                    for i in range(0, size)
+                )
 
         exp_states = set(range(self.cardinalities[variable]))
         tm_states = set(transition_model.keys())
         if not exp_states == tm_states:
-            raise ValueError('Transitions must be defined for all states of variable {v}. '
-                             'Expected states: {es}, Got: {ts}.'.format(v=variable, es=exp_states, ts=tm_states))
+            raise ValueError(
+                "Transitions must be defined for all states of variable {v}. "
+                "Expected states: {es}, Got: {ts}.".format(
+                    v=variable, es=exp_states, ts=tm_states
+                )
+            )
 
         for _, transition in transition_model.items():
             if not isinstance(transition, dict):
-                raise ValueError('Each transition must be a dict.')
+                raise ValueError("Each transition must be a dict.")
             prob_sum = 0
 
             for _, prob in transition.items():
                 if prob < 0 or prob > 1:
-                    raise ValueError('Transitions must represent valid probability weights.')
+                    raise ValueError(
+                        "Transitions must represent valid probability weights."
+                    )
                 prob_sum += prob
 
             if not np.allclose(prob_sum, 1):
-                raise ValueError('Transition probabilities must sum to 1.')
+                raise ValueError("Transition probabilities must sum to 1.")
 
         self.transition_models[variable] = transition_model
 
@@ -283,7 +313,9 @@ class MarkovChain(object):
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size)
+                samples[var][st] = sample_discrete(
+                    var_states[var][st], var_values[var][st], size=size
+                )
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
@@ -363,8 +395,10 @@ class MarkovChain(object):
 
         for i in range(size):
             for j, (var, st) in enumerate(self.state):
-                next_st = sample_discrete(list(self.transition_models[var][st].keys()),
-                                          list(self.transition_models[var][st].values()))[0]
+                next_st = sample_discrete(
+                    list(self.transition_models[var][st].keys()),
+                    list(self.transition_models[var][st].values()),
+                )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
 
@@ -403,17 +437,26 @@ class MarkovChain(object):
         return_val = True
         for k in keys:
             # convert dict to numpy matrix
-            transition_mat = np.array([np.array(list(self.transition_models[k][i].values()))
-                                       for i in self.transition_models[k].keys()], dtype=np.float)
+            transition_mat = np.array(
+                [
+                    np.array(list(self.transition_models[k][i].values()))
+                    for i in self.transition_models[k].keys()
+                ],
+                dtype=np.float,
+            )
             S, U = eig(transition_mat.T)
-            stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
+            stationary = np.array(U[:, np.where(np.abs(S - 1.0) < 1e-8)[0][0]].flat)
             stationary = (stationary / np.sum(stationary)).real
 
             probabilites = []
             window_size = 10000 if sample is None else len(sample)
             for i in range(0, transition_mat.shape[0]):
-                probabilites.extend(self.prob_from_sample([State(k, i)], window_size=window_size))
-            if any(np.abs(i) > tolerance for i in np.subtract(probabilites, stationary)):
+                probabilites.extend(
+                    self.prob_from_sample([State(k, i)], window_size=window_size)
+                )
+            if any(
+                np.abs(i) > tolerance for i in np.subtract(probabilites, stationary)
+            ):
                 return_val = return_val and False
             else:
                 return_val = return_val and True
@@ -435,7 +478,10 @@ class MarkovChain(object):
         >>> model.random_state()
         [State('diff', 2), State('intel', 1)]
         """
-        return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]
+        return [
+            State(var, np.random.randint(self.cardinalities[var]))
+            for var in self.variables
+        ]
 
     def copy(self):
         """
@@ -461,8 +507,11 @@ class MarkovChain(object):
         >>> {'diff': {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}},
              'intel': {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}}
         """
-        markovchain_copy = MarkovChain(variables=list(self.cardinalities.keys()),
-                                       card=list(self.cardinalities.values()), start_state=self.state)
+        markovchain_copy = MarkovChain(
+            variables=list(self.cardinalities.keys()),
+            card=list(self.cardinalities.values()),
+            start_state=self.state,
+        )
         if self.transition_models:
             markovchain_copy.transition_models = self.transition_models.copy()
 

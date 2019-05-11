@@ -11,10 +11,10 @@ from pgmpy.extern.six.moves import map, range
 
 
 class TestBIFReader(unittest.TestCase):
-
     def setUp(self):
 
-        self.reader = BIFReader(string="""
+        self.reader = BIFReader(
+            string="""
                 // Bayesian Network in the Interchange Format
                 // Produced by BayesianNetworks package in JavaBayes
                 // Output created Sun Nov 02 17:49:49 GMT+00:00 1997
@@ -58,64 +58,70 @@ class TestBIFReader(unittest.TestCase):
                 probability (  "family-out" ) { //1 variable(s) and 2 values
                         table 0.15 0.85 ;
                 }
-                """)
+                """
+        )
 
-        self.water_model = BIFReader('pgmpy/tests/test_readwrite/testdata/water.bif')
+        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif")
 
     def test_network_name(self):
 
-        name_expected = 'Dog-Problem'
+        name_expected = "Dog-Problem"
         self.assertEqual(self.reader.network_name, name_expected)
 
     def test_get_variables(self):
 
-        var_expected = ['light-on', 'bowel-problem', 'dog-out',
-                        'hear-bark', 'family-out']
+        var_expected = [
+            "light-on",
+            "bowel-problem",
+            "dog-out",
+            "hear-bark",
+            "family-out",
+        ]
         self.assertListEqual(self.reader.get_variables(), var_expected)
 
     def test_states(self):
 
-        states_expected = {'bowel-problem': ['true', 'false'],
-                           'dog-out': ['true', 'false'],
-                           'family-out': ['true', 'false'],
-                           'hear-bark': ['true', 'false'],
-                           'light-on': ['true', 'false']}
+        states_expected = {
+            "bowel-problem": ["true", "false"],
+            "dog-out": ["true", "false"],
+            "family-out": ["true", "false"],
+            "hear-bark": ["true", "false"],
+            "light-on": ["true", "false"],
+        }
         states = self.reader.get_states()
         for variable in states_expected:
             self.assertListEqual(states_expected[variable], states[variable])
 
     def test_get_property(self):
 
-        property_expected = {'bowel-problem': ['position = (335, 99)'],
-                             'dog-out': ['position = (300, 195)'],
-                             'family-out': ['position = (257, 99)'],
-                             'hear-bark': ['position = (296, 268)'],
-                             'light-on': ['position = (218, 195)']}
+        property_expected = {
+            "bowel-problem": ["position = (335, 99)"],
+            "dog-out": ["position = (300, 195)"],
+            "family-out": ["position = (257, 99)"],
+            "hear-bark": ["position = (296, 268)"],
+            "light-on": ["position = (218, 195)"],
+        }
         prop = self.reader.get_property()
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable],
-                                 prop[variable])
+            self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_get_values(self):
 
-        cpd_expected = {'bowel-problem': np.array([[0.01],
-                                                   [0.99]]),
-                        'dog-out': np.array([[0.99, 0.97, 0.9, 0.3],
-                                             [0.01, 0.03, 0.1, 0.7]]),
-                        'family-out': np.array([[0.15],
-                                                [0.85]]),
-                        'hear-bark': np.array([[0.7, 0.01],
-                                               [0.3, 0.99]]),
-                        'light-on': np.array([[0.6, 0.05],
-                                              [0.4, 0.95]])}
+        cpd_expected = {
+            "bowel-problem": np.array([[0.01], [0.99]]),
+            "dog-out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
+            "family-out": np.array([[0.15], [0.85]]),
+            "hear-bark": np.array([[0.7, 0.01], [0.3, 0.99]]),
+            "light-on": np.array([[0.6, 0.05], [0.4, 0.95]]),
+        }
         cpd = self.reader.variable_cpds
         for variable in cpd_expected:
-            np_test.assert_array_equal(cpd_expected[variable],
-                                       cpd[variable])
+            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_get_values_reordered(self):
 
-        cancer_values1 = BIFReader(string="""
+        cancer_values1 = BIFReader(
+            string="""
                 network unknown {
                 }
                 variable Pollution {
@@ -132,9 +138,11 @@ class TestBIFReader(unittest.TestCase):
                   (low, False) 0.001, 0.999;
                   (high, True) 0.05, 0.95;
                   (high, False) 0.02, 0.98;
-                }""").get_values()
+                }"""
+        ).get_values()
 
-        cancer_values2 = BIFReader(string="""
+        cancer_values2 = BIFReader(
+            string="""
                 network unknown {
                 }
                 variable Pollution {
@@ -151,71 +159,77 @@ class TestBIFReader(unittest.TestCase):
                   (high, True) 0.05, 0.95;
                   (low, False) 0.001, 0.999;
                   (high, False) 0.02, 0.98;
-                }""").get_values()
+                }"""
+        ).get_values()
 
         for var in cancer_values1:
             np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
 
     def test_get_parents(self):
 
-        parents_expected = {'bowel-problem': [],
-                            'dog-out': ['bowel-problem', 'family-out'],
-                            'family-out': [],
-                            'hear-bark': ['dog-out'],
-                            'light-on': ['family-out']}
+        parents_expected = {
+            "bowel-problem": [],
+            "dog-out": ["bowel-problem", "family-out"],
+            "family-out": [],
+            "hear-bark": ["dog-out"],
+            "light-on": ["family-out"],
+        }
         parents = self.reader.get_parents()
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable],
-                                 parents[variable])
+            self.assertListEqual(parents_expected[variable], parents[variable])
 
     def test_get_edges(self):
 
-        edges_expected = [['family-out', 'dog-out'],
-                          ['bowel-problem', 'dog-out'],
-                          ['family-out', 'light-on'],
-                          ['dog-out', 'hear-bark']]
-        self.assertListEqual(sorted(self.reader.variable_edges),
-                             sorted(edges_expected))
+        edges_expected = [
+            ["family-out", "dog-out"],
+            ["bowel-problem", "dog-out"],
+            ["family-out", "light-on"],
+            ["dog-out", "hear-bark"],
+        ]
+        self.assertListEqual(sorted(self.reader.variable_edges), sorted(edges_expected))
 
     def test_get_model(self):
-        edges_expected = [('family-out', 'dog-out'),
-                          ('bowel-problem', 'dog-out'),
-                          ('family-out', 'light-on'),
-                          ('dog-out', 'hear-bark')]
-        nodes_expected = ['bowel-problem', 'hear-bark', 'light-on',
-                          'dog-out', 'family-out']
-        edge_expected = {'bowel-problem': {'dog-out': {'weight': None}},
-                         'dog-out': {'hear-bark': {'weight': None}},
-                         'family-out': {'dog-out': {'weight': None},
-                                        'light-on': {'weight': None}},
-                         'hear-bark': {},
-                         'light-on': {}}
-        node_expected = {'bowel-problem': {'weight': None,
-                                           'position': '(335, 99)'},
-                         'dog-out': {'weight': None,
-                                     'position': '(300, 195)'},
-                         'family-out': {'weight': None,
-                                        'position': '(257, 99)'},
-                         'hear-bark': {'weight': None,
-                                       'position': '(296, 268)'},
-                         'light-on': {'weight': None,
-                                      'position': '(218, 195)'}}
-        cpds_expected = [np.array([[0.01],
-                                   [0.99]]),
-                         np.array([[0.99, 0.97, 0.9, 0.3],
-                                   [0.01, 0.03, 0.1, 0.7]]),
-                         np.array([[0.15],
-                                   [0.85]]),
-                         np.array([[0.7, 0.01],
-                                   [0.3, 0.99]]),
-                         np.array([[0.6, 0.05],
-                                   [0.4, 0.95]])]
+        edges_expected = [
+            ("family-out", "dog-out"),
+            ("bowel-problem", "dog-out"),
+            ("family-out", "light-on"),
+            ("dog-out", "hear-bark"),
+        ]
+        nodes_expected = [
+            "bowel-problem",
+            "hear-bark",
+            "light-on",
+            "dog-out",
+            "family-out",
+        ]
+        edge_expected = {
+            "bowel-problem": {"dog-out": {"weight": None}},
+            "dog-out": {"hear-bark": {"weight": None}},
+            "family-out": {"dog-out": {"weight": None}, "light-on": {"weight": None}},
+            "hear-bark": {},
+            "light-on": {},
+        }
+        node_expected = {
+            "bowel-problem": {"weight": None, "position": "(335, 99)"},
+            "dog-out": {"weight": None, "position": "(300, 195)"},
+            "family-out": {"weight": None, "position": "(257, 99)"},
+            "hear-bark": {"weight": None, "position": "(296, 268)"},
+            "light-on": {"weight": None, "position": "(218, 195)"},
+        }
+        cpds_expected = [
+            np.array([[0.01], [0.99]]),
+            np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
+            np.array([[0.15], [0.85]]),
+            np.array([[0.7, 0.01], [0.3, 0.99]]),
+            np.array([[0.6, 0.05], [0.4, 0.95]]),
+        ]
         model = self.reader.get_model()
         for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(model.get_cpds()[cpd_index].get_values(),
-                                       cpds_expected[cpd_index])
+            np_test.assert_array_equal(
+                model.get_cpds()[cpd_index].get_values(), cpds_expected[cpd_index]
+            )
         self.assertDictEqual(dict(model.node), node_expected)
-        if nx.__version__.startswith('1'):
+        if nx.__version__.startswith("1"):
             self.assertDictEqual(model.edge, edge_expected)
         else:
             self.assertDictEqual(dict(model.adj), edge_expected)
@@ -234,49 +248,58 @@ class TestBIFReader(unittest.TestCase):
 
 
 class TestBIFWriter(unittest.TestCase):
-
     def setUp(self):
-        variables = ['kid', 'bowel-problem', 'dog-out',
-                     'family-out', 'hear-bark', 'light-on']
+        variables = [
+            "kid",
+            "bowel-problem",
+            "dog-out",
+            "family-out",
+            "hear-bark",
+            "light-on",
+        ]
 
-        edges = [['family-out', 'dog-out'],
-                 ['bowel-problem', 'dog-out'],
-                 ['family-out', 'light-on'],
-                 ['dog-out', 'hear-bark']]
+        edges = [
+            ["family-out", "dog-out"],
+            ["bowel-problem", "dog-out"],
+            ["family-out", "light-on"],
+            ["dog-out", "hear-bark"],
+        ]
 
-        cpds = {'kid': np.array([[0.3],
-                                 [0.7]]),
-                'bowel-problem': np.array([[0.01],
-                                           [0.99]]),
-                'dog-out': np.array([[0.99, 0.01, 0.97, 0.03],
-                                     [0.9, 0.1, 0.3, 0.7]]),
-                'family-out': np.array([[0.15],
-                                        [0.85]]),
-                'hear-bark': np.array([[0.7, 0.3],
-                                       [0.01, 0.99]]),
-                'light-on': np.array([[0.6, 0.4],
-                                      [0.05, 0.95]])}
+        cpds = {
+            "kid": np.array([[0.3], [0.7]]),
+            "bowel-problem": np.array([[0.01], [0.99]]),
+            "dog-out": np.array([[0.99, 0.01, 0.97, 0.03], [0.9, 0.1, 0.3, 0.7]]),
+            "family-out": np.array([[0.15], [0.85]]),
+            "hear-bark": np.array([[0.7, 0.3], [0.01, 0.99]]),
+            "light-on": np.array([[0.6, 0.4], [0.05, 0.95]]),
+        }
 
-        states = {'kid': ['true', 'false'],
-                  'bowel-problem': ['true', 'false'],
-                  'dog-out': ['true', 'false'],
-                  'family-out': ['true', 'false'],
-                  'hear-bark': ['true', 'false'],
-                  'light-on': ['true', 'false']}
+        states = {
+            "kid": ["true", "false"],
+            "bowel-problem": ["true", "false"],
+            "dog-out": ["true", "false"],
+            "family-out": ["true", "false"],
+            "hear-bark": ["true", "false"],
+            "light-on": ["true", "false"],
+        }
 
-        parents = {'kid': [],
-                   'bowel-problem': [],
-                   'dog-out': ['family-out', 'bowel-problem'],
-                   'family-out': [],
-                   'hear-bark': ['dog-out'],
-                   'light-on': ['family-out']}
+        parents = {
+            "kid": [],
+            "bowel-problem": [],
+            "dog-out": ["family-out", "bowel-problem"],
+            "family-out": [],
+            "hear-bark": ["dog-out"],
+            "light-on": ["family-out"],
+        }
 
-        properties = {'kid': ['position = (100, 165)'],
-                      'bowel-problem': ['position = (335, 99)'],
-                      'dog-out': ['position = (300, 195)'],
-                      'family-out': ['position = (257, 99)'],
-                      'hear-bark': ['position = (296, 268)'],
-                      'light-on': ['position = (218, 195)']}
+        properties = {
+            "kid": ["position = (100, 165)"],
+            "bowel-problem": ["position = (335, 99)"],
+            "dog-out": ["position = (300, 195)"],
+            "family-out": ["position = (257, 99)"],
+            "hear-bark": ["position = (296, 268)"],
+            "light-on": ["position = (218, 195)"],
+        }
 
         self.model = BayesianModel()
         self.model.add_nodes_from(variables)
@@ -285,16 +308,21 @@ class TestBIFWriter(unittest.TestCase):
         tabular_cpds = []
         for var in sorted(cpds.keys()):
             values = cpds[var]
-            cpd = TabularCPD(var, len(states[var]), values,
-                             evidence=parents[var],
-                             evidence_card=[len(states[evidence_var])
-                                            for evidence_var in parents[var]])
+            cpd = TabularCPD(
+                var,
+                len(states[var]),
+                values,
+                evidence=parents[var],
+                evidence_card=[
+                    len(states[evidence_var]) for evidence_var in parents[var]
+                ],
+            )
             tabular_cpds.append(cpd)
         self.model.add_cpds(*tabular_cpds)
 
         for node, properties in properties.items():
             for prop in properties:
-                prop_name, prop_value = map(lambda t: t.strip(), prop.split('='))
+                prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
                 self.model.node[node][prop_name] = prop_value
 
         self.writer = BIFWriter(model=self.model)

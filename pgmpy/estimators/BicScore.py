@@ -41,8 +41,8 @@ class BicScore(StructureScore):
         super(BicScore, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
-        "Computes a score that measures how much a \
-        given variable is \"influenced\" by a given list of potential parents."
+        'Computes a score that measures how much a \
+        given variable is "influenced" by a given list of potential parents.'
 
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
@@ -51,13 +51,17 @@ class BicScore(StructureScore):
         num_parents_states = float(len(state_counts.columns))
 
         score = 0
-        for parents_state in state_counts:  # iterate over df columns (only 1 if no parents)
+        for (
+            parents_state
+        ) in state_counts:  # iterate over df columns (only 1 if no parents)
             conditional_sample_size = sum(state_counts[parents_state])
 
             for state in var_states:
                 if state_counts[parents_state][state] > 0:
-                    score += state_counts[parents_state][state] * (log(state_counts[parents_state][state]) -
-                                                                   log(conditional_sample_size))
+                    score += state_counts[parents_state][state] * (
+                        log(state_counts[parents_state][state])
+                        - log(conditional_sample_size)
+                    )
 
         score -= 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
 

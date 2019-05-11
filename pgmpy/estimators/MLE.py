@@ -44,7 +44,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         """
 
         if not isinstance(model, BayesianModel):
-            raise NotImplementedError("Maximum Likelihood Estimate is only implemented for BayesianModel")
+            raise NotImplementedError(
+                "Maximum Likelihood Estimate is only implemented for BayesianModel"
+            )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
@@ -134,12 +136,20 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         # Get the state names for the CPD
         state_names = {node: list(state_counts.index)}
         if parents:
-            state_names.update({state_counts.columns.names[i]: list(state_counts.columns.levels[i])
-                                for i in range(len(parents))})
+            state_names.update(
+                {
+                    state_counts.columns.names[i]: list(state_counts.columns.levels[i])
+                    for i in range(len(parents))
+                }
+            )
 
-        cpd = TabularCPD(node, node_cardinality, np.array(state_counts),
-                         evidence=parents,
-                         evidence_card=parents_cardinalities,
-                         state_names=state_names)
+        cpd = TabularCPD(
+            node,
+            node_cardinality,
+            np.array(state_counts),
+            evidence=parents,
+            evidence_card=parents_cardinalities,
+            state_names=state_names,
+        )
         cpd.normalize()
         return cpd

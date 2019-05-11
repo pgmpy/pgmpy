@@ -137,12 +137,20 @@ class TestXBNReader(unittest.TestCase):
         self.assertRaises(ValueError, XMLBeliefNetwork.XBNReader)
 
     def test_get_analysis_notebook(self):
-        self.assertEqual(self.reader_string.get_analysisnotebook_values()['NAME'],
-                         "Notebook.Cancer Example From Neapolitan")
-        self.assertEqual(self.reader_string.get_analysisnotebook_values()['ROOT'], "Cancer")
-        self.assertEqual(self.reader_file.get_analysisnotebook_values()['NAME'],
-                         "Notebook.Cancer Example From Neapolitan")
-        self.assertEqual(self.reader_file.get_analysisnotebook_values()['ROOT'], "Cancer")
+        self.assertEqual(
+            self.reader_string.get_analysisnotebook_values()["NAME"],
+            "Notebook.Cancer Example From Neapolitan",
+        )
+        self.assertEqual(
+            self.reader_string.get_analysisnotebook_values()["ROOT"], "Cancer"
+        )
+        self.assertEqual(
+            self.reader_file.get_analysisnotebook_values()["NAME"],
+            "Notebook.Cancer Example From Neapolitan",
+        )
+        self.assertEqual(
+            self.reader_file.get_analysisnotebook_values()["ROOT"], "Cancer"
+        )
 
     def test_get_bnmodel_name(self):
         self.assertEqual(self.reader_string.get_bnmodel_name(), "Cancer")
@@ -150,187 +158,254 @@ class TestXBNReader(unittest.TestCase):
 
     def test_get_static_properties(self):
         properties = self.reader_string.get_static_properties()
-        self.assertEqual(properties['FORMAT'], "MSR DTAS XML")
-        self.assertEqual(properties['VERSION'], "0.2")
-        self.assertEqual(properties['CREATOR'], "Microsoft Research DTAS")
+        self.assertEqual(properties["FORMAT"], "MSR DTAS XML")
+        self.assertEqual(properties["VERSION"], "0.2")
+        self.assertEqual(properties["CREATOR"], "Microsoft Research DTAS")
         properties = self.reader_file.get_static_properties()
-        self.assertEqual(properties['FORMAT'], "MSR DTAS XML")
-        self.assertEqual(properties['VERSION'], "0.2")
-        self.assertEqual(properties['CREATOR'], "Microsoft Research DTAS")
+        self.assertEqual(properties["FORMAT"], "MSR DTAS XML")
+        self.assertEqual(properties["VERSION"], "0.2")
+        self.assertEqual(properties["CREATOR"], "Microsoft Research DTAS")
 
     def test_get_variables(self):
-        self.assertListEqual(sorted(list(self.reader_string.get_variables())), ['a', 'b', 'c', 'd', 'e', 'f'])
-        self.assertListEqual(sorted(list(self.reader_file.get_variables())), ['a', 'b', 'c', 'd', 'e', 'f'])
-        self.assertEqual(self.reader_string.get_variables()['a']['TYPE'], 'discrete')
-        self.assertEqual(self.reader_string.get_variables()['a']['XPOS'], '13495')
-        self.assertEqual(self.reader_string.get_variables()['a']['YPOS'], '10465')
-        self.assertEqual(self.reader_string.get_variables()['a']['DESCRIPTION'], '(a) Metastatic Cancer')
-        self.assertListEqual(self.reader_string.get_variables()['a']['STATES'], ['Present', 'Absent'])
-        self.assertEqual(self.reader_file.get_variables()['a']['TYPE'], 'discrete')
-        self.assertEqual(self.reader_file.get_variables()['a']['XPOS'], '13495')
-        self.assertEqual(self.reader_file.get_variables()['a']['YPOS'], '10465')
-        self.assertEqual(self.reader_file.get_variables()['a']['DESCRIPTION'], '(a) Metastatic Cancer')
-        self.assertListEqual(self.reader_file.get_variables()['a']['STATES'], ['Present', 'Absent'])
+        self.assertListEqual(
+            sorted(list(self.reader_string.get_variables())),
+            ["a", "b", "c", "d", "e", "f"],
+        )
+        self.assertListEqual(
+            sorted(list(self.reader_file.get_variables())),
+            ["a", "b", "c", "d", "e", "f"],
+        )
+        self.assertEqual(self.reader_string.get_variables()["a"]["TYPE"], "discrete")
+        self.assertEqual(self.reader_string.get_variables()["a"]["XPOS"], "13495")
+        self.assertEqual(self.reader_string.get_variables()["a"]["YPOS"], "10465")
+        self.assertEqual(
+            self.reader_string.get_variables()["a"]["DESCRIPTION"],
+            "(a) Metastatic Cancer",
+        )
+        self.assertListEqual(
+            self.reader_string.get_variables()["a"]["STATES"], ["Present", "Absent"]
+        )
+        self.assertEqual(self.reader_file.get_variables()["a"]["TYPE"], "discrete")
+        self.assertEqual(self.reader_file.get_variables()["a"]["XPOS"], "13495")
+        self.assertEqual(self.reader_file.get_variables()["a"]["YPOS"], "10465")
+        self.assertEqual(
+            self.reader_file.get_variables()["a"]["DESCRIPTION"],
+            "(a) Metastatic Cancer",
+        )
+        self.assertListEqual(
+            self.reader_file.get_variables()["a"]["STATES"], ["Present", "Absent"]
+        )
 
     def test_get_edges(self):
-        self.assertListEqual(self.reader_string.get_edges(),
-                             [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
-        self.assertListEqual(self.reader_file.get_edges(), [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')])
+        self.assertListEqual(
+            self.reader_string.get_edges(),
+            [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")],
+        )
+        self.assertListEqual(
+            self.reader_file.get_edges(),
+            [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")],
+        )
 
     def test_get_distribution(self):
         distribution = self.reader_string.get_distributions()
-        self.assertEqual(distribution['a']['TYPE'], 'discrete')
-        self.assertListEqual(distribution['b']['CONDSET'], ['a'])
-        np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
-        np_test.assert_array_equal(distribution['f']['DPIS'], np.array([[0.3, 0.7]]))
-        np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
-        np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
-        np_test.assert_array_equal(distribution['d']['DPIS'],
-                                   np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
-        np_test.assert_array_equal(distribution['b']['DPIS'], np.array([[0.8, 0.2], [0.2, 0.8]]))
-        np_test.assert_array_equal(distribution['d']['CARDINALITY'], np.array([2, 2]))
-        np_test.assert_array_equal(distribution['c']['DPIS'], np.array([[0.2, 0.8], [0.05, 0.95]]))
-        np_test.assert_array_equal(distribution['c']['CARDINALITY'], np.array([2]))
+        self.assertEqual(distribution["a"]["TYPE"], "discrete")
+        self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
+        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3, 0.7]]))
+        np_test.assert_array_equal(
+            distribution["e"]["DPIS"], np.array([[0.8, 0.2], [0.6, 0.4]])
+        )
+        np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
+        np_test.assert_array_equal(
+            distribution["d"]["DPIS"],
+            np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+        )
+        np_test.assert_array_equal(
+            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
+        )
+        np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
+        np_test.assert_array_equal(
+            distribution["c"]["DPIS"], np.array([[0.2, 0.8], [0.05, 0.95]])
+        )
+        np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
-        self.assertEqual(distribution['a']['TYPE'], 'discrete')
-        self.assertListEqual(distribution['b']['CONDSET'], ['a'])
-        np_test.assert_array_equal(distribution['a']['DPIS'], np.array([[0.2, 0.8]]))
-        np_test.assert_array_equal(distribution['f']['DPIS'], np.array([[0.3, 0.7]]))
-        np_test.assert_array_equal(distribution['e']['DPIS'], np.array([[0.8, 0.2], [0.6, 0.4]]))
-        np_test.assert_array_equal(distribution['e']['CARDINALITY'], np.array([2]))
-        np_test.assert_array_equal(distribution['d']['DPIS'],
-                                   np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]))
-        np_test.assert_array_equal(distribution['d']['CARDINALITY'], np.array([2, 2]))
-        np_test.assert_array_equal(distribution['b']['DPIS'], np.array([[0.8, 0.2], [0.2, 0.8]]))
-        np_test.assert_array_equal(distribution['c']['DPIS'], np.array([[0.2, 0.8], [0.05, 0.95]]))
-        np_test.assert_array_equal(distribution['c']['CARDINALITY'], np.array([2]))
+        self.assertEqual(distribution["a"]["TYPE"], "discrete")
+        self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
+        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3, 0.7]]))
+        np_test.assert_array_equal(
+            distribution["e"]["DPIS"], np.array([[0.8, 0.2], [0.6, 0.4]])
+        )
+        np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
+        np_test.assert_array_equal(
+            distribution["d"]["DPIS"],
+            np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+        )
+        np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
+        np_test.assert_array_equal(
+            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
+        )
+        np_test.assert_array_equal(
+            distribution["c"]["DPIS"], np.array([[0.2, 0.8], [0.05, 0.95]])
+        )
+        np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
     def test_get_model(self):
         model = self.reader_string.get_model()
-        node_expected = {'c': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(c) Brain Tumor',
-                               'YPOS': '11935',
-                               'XPOS': '15250',
-                               'TYPE': 'discrete'},
-                         'a': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(a) Metastatic Cancer',
-                               'YPOS': '10465',
-                               'XPOS': '13495',
-                               'TYPE': 'discrete'},
-                         'b': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(b) Serum Calcium Increase',
-                               'YPOS': '11965',
-                               'XPOS': '11290',
-                               'TYPE': 'discrete'},
-                         'e': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(e) Papilledema',
-                               'YPOS': '13240',
-                               'XPOS': '17305',
-                               'TYPE': 'discrete'},
-                         'f': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(f) Asthma',
-                               'YPOS': '10489',
-                               'XPOS': '13440',
-                               'TYPE': 'discrete'},
-                         'd': {'STATES': ['Present', 'Absent'],
-                               'DESCRIPTION': '(d) Coma',
-                               'YPOS': '12985',
-                               'XPOS': '13960',
-                               'TYPE': 'discrete'}}
-        cpds_expected = {'b': np.array([[0.8, 0.2],
-                                        [0.2, 0.8]]),
-                         'e': np.array([[0.8, 0.2],
-                                        [0.6, 0.4]]),
-                         'f': np.array([[0.3],
-                                        [0.7]]),
-                         'c': np.array([[0.2, 0.8],
-                                        [0.05, 0.95]]),
-                         'a': np.array([[0.2],
-                                        [0.8]]),
-                         'd': np.array([[0.8, 0.2, 0.9, 0.1],
-                                        [0.7, 0.3, 0.05, 0.95]])}
+        node_expected = {
+            "c": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(c) Brain Tumor",
+                "YPOS": "11935",
+                "XPOS": "15250",
+                "TYPE": "discrete",
+            },
+            "a": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(a) Metastatic Cancer",
+                "YPOS": "10465",
+                "XPOS": "13495",
+                "TYPE": "discrete",
+            },
+            "b": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(b) Serum Calcium Increase",
+                "YPOS": "11965",
+                "XPOS": "11290",
+                "TYPE": "discrete",
+            },
+            "e": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(e) Papilledema",
+                "YPOS": "13240",
+                "XPOS": "17305",
+                "TYPE": "discrete",
+            },
+            "f": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(f) Asthma",
+                "YPOS": "10489",
+                "XPOS": "13440",
+                "TYPE": "discrete",
+            },
+            "d": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(d) Coma",
+                "YPOS": "12985",
+                "XPOS": "13960",
+                "TYPE": "discrete",
+            },
+        }
+        cpds_expected = {
+            "b": np.array([[0.8, 0.2], [0.2, 0.8]]),
+            "e": np.array([[0.8, 0.2], [0.6, 0.4]]),
+            "f": np.array([[0.3], [0.7]]),
+            "c": np.array([[0.2, 0.8], [0.05, 0.95]]),
+            "a": np.array([[0.2], [0.8]]),
+            "d": np.array([[0.8, 0.2, 0.9, 0.1], [0.7, 0.3, 0.05, 0.95]]),
+        }
         for cpd in model.get_cpds():
             np_test.assert_array_equal(cpd.get_values(), cpds_expected[cpd.variable])
-        self.assertListEqual(sorted(model.edges()), sorted([('b', 'd'), ('a', 'b'), ('a', 'c'),
-                                                            ('c', 'd'), ('c', 'e')]))
+        self.assertListEqual(
+            sorted(model.edges()),
+            sorted([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]),
+        )
         self.assertDictEqual(dict(model.node), node_expected)
 
 
 class TestXBNWriter(unittest.TestCase):
     def setUp(self):
-        nodes = {'c': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(c) Brain Tumor',
-                       'YPOS': '11935',
-                       'XPOS': '15250',
-                       'TYPE': 'discrete'},
-                 'a': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(a) Metastatic Cancer',
-                       'YPOS': '10465',
-                       'XPOS': '13495',
-                       'TYPE': 'discrete'},
-                 'b': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(b) Serum Calcium Increase',
-                       'YPOS': '11965',
-                       'XPOS': '11290',
-                       'TYPE': 'discrete'},
-                 'e': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(e) Papilledema',
-                       'YPOS': '13240',
-                       'XPOS': '17305',
-                       'TYPE': 'discrete'},
-                 'f': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(f) Asthma',
-                       'YPOS': '10489',
-                       'XPOS': '13440',
-                       'TYPE': 'discrete'},
-                 'd': {'STATES': ['Present', 'Absent'],
-                       'DESCRIPTION': '(d) Coma',
-                       'YPOS': '12985',
-                       'XPOS': '13960',
-                       'TYPE': 'discrete'}}
+        nodes = {
+            "c": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(c) Brain Tumor",
+                "YPOS": "11935",
+                "XPOS": "15250",
+                "TYPE": "discrete",
+            },
+            "a": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(a) Metastatic Cancer",
+                "YPOS": "10465",
+                "XPOS": "13495",
+                "TYPE": "discrete",
+            },
+            "b": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(b) Serum Calcium Increase",
+                "YPOS": "11965",
+                "XPOS": "11290",
+                "TYPE": "discrete",
+            },
+            "e": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(e) Papilledema",
+                "YPOS": "13240",
+                "XPOS": "17305",
+                "TYPE": "discrete",
+            },
+            "f": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(f) Asthma",
+                "YPOS": "10489",
+                "XPOS": "13440",
+                "TYPE": "discrete",
+            },
+            "d": {
+                "STATES": ["Present", "Absent"],
+                "DESCRIPTION": "(d) Coma",
+                "YPOS": "12985",
+                "XPOS": "13960",
+                "TYPE": "discrete",
+            },
+        }
         model = BayesianModel()
-        model.add_nodes_from(['a', 'b', 'c', 'd', 'e', 'f'])
-        model.add_edges_from([('b', 'd'), ('a', 'b'), ('a', 'c'), ('c', 'd'), ('c', 'e')])
-        cpd_distribution = {'a': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.2, 0.8]])},
-                            'e': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.8, 0.2],
-                                                    [0.6, 0.4]]),
-                                  'CONDSET': ['c'],
-                                  'CARDINALITY': [2]},
-                            'f': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.3, 0.7]])},
-                            'b': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.8, 0.2],
-                                                    [0.2, 0.8]]),
-                                  'CONDSET': ['a'],
-                                  'CARDINALITY': [2]},
-                            'c': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.2, 0.8],
-                                                    [0.05, 0.95]]),
-                                  'CONDSET': ['a'],
-                                  'CARDINALITY': [2]},
-                            'd': {'TYPE': 'discrete',
-                                  'DPIS': np.array([[0.8, 0.2],
-                                                    [0.9, 0.1],
-                                                    [0.7, 0.3],
-                                                    [0.05, 0.95]]),
-                                  'CONDSET': ['b', 'c'],
-                                  'CARDINALITY': [2, 2]}}
+        model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
+        model.add_edges_from(
+            [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
+        )
+        cpd_distribution = {
+            "a": {"TYPE": "discrete", "DPIS": np.array([[0.2, 0.8]])},
+            "e": {
+                "TYPE": "discrete",
+                "DPIS": np.array([[0.8, 0.2], [0.6, 0.4]]),
+                "CONDSET": ["c"],
+                "CARDINALITY": [2],
+            },
+            "f": {"TYPE": "discrete", "DPIS": np.array([[0.3, 0.7]])},
+            "b": {
+                "TYPE": "discrete",
+                "DPIS": np.array([[0.8, 0.2], [0.2, 0.8]]),
+                "CONDSET": ["a"],
+                "CARDINALITY": [2],
+            },
+            "c": {
+                "TYPE": "discrete",
+                "DPIS": np.array([[0.2, 0.8], [0.05, 0.95]]),
+                "CONDSET": ["a"],
+                "CARDINALITY": [2],
+            },
+            "d": {
+                "TYPE": "discrete",
+                "DPIS": np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+                "CONDSET": ["b", "c"],
+                "CARDINALITY": [2, 2],
+            },
+        }
 
         tabular_cpds = []
         for var, values in cpd_distribution.items():
-            evidence = values['CONDSET'] if 'CONDSET' in values else []
-            cpd = values['DPIS']
-            evidence_card = values['CARDINALITY'] if 'CARDINALITY' in values else []
-            states = nodes[var]['STATES']
-            cpd = TabularCPD(var, len(states), cpd,
-                             evidence=evidence,
-                             evidence_card=evidence_card)
+            evidence = values["CONDSET"] if "CONDSET" in values else []
+            cpd = values["DPIS"]
+            evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
+            states = nodes[var]["STATES"]
+            cpd = TabularCPD(
+                var, len(states), cpd, evidence=evidence, evidence_card=evidence_card
+            )
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
 
-        if nx.__version__.startswith('1'):
+        if nx.__version__.startswith("1"):
             for var, properties in nodes.items():
                 model.node[var] = properties
         else:
@@ -341,7 +416,8 @@ class TestXBNWriter(unittest.TestCase):
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
     def test_file(self):
-        self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
+        self.expected_xml = etree.XML(
+            """<ANALYSISNOTEBOOK>
   <BNMODEL>
     <VARIABLES>
       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
@@ -440,5 +516,8 @@ class TestXBNWriter(unittest.TestCase):
       </DIST>
     </DISTRIBUTIONS>
   </BNMODEL>
-</ANALYSISNOTEBOOK>""")
-        self.assertEqual(str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml)))
+</ANALYSISNOTEBOOK>"""
+        )
+        self.assertEqual(
+            str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
+        )

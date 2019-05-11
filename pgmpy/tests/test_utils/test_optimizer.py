@@ -14,20 +14,25 @@ class TestOptimize(unittest.TestCase):
         self.B = torch.ones(5, 5, device=device, dtype=dtype, requires_grad=False)
 
     def loss_fn(self, params, loss_params):
-        A = params['A']
-        B = loss_params['B']
+        A = params["A"]
+        B = loss_params["B"]
 
         return (A - B).pow(2).sum()
 
     def test_optimize(self):
         # TODO: Add tests for other optimizers
-        for opt in ['adadelta', 'adam', 'adamax',
-                    'asgd', 'lbfgs', 'rmsprop', 'rprop']:
+        for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
             A = torch.randn(5, 5, device=device, dtype=dtype, requires_grad=True)
             B = torch.ones(5, 5, device=device, dtype=dtype, requires_grad=False)
-            params = optimize(self.loss_fn, params={'A': A}, loss_args={'B': B}, opt=opt, max_iter=int(1e6))
+            params = optimize(
+                self.loss_fn,
+                params={"A": A},
+                loss_args={"B": B},
+                opt=opt,
+                max_iter=int(1e6),
+            )
 
-            npt.assert_almost_equal(B, params['A'].detach().numpy().round(), decimal=1)
+            npt.assert_almost_equal(B, params["A"].detach().numpy().round(), decimal=1)
 
 
 class Testpinverse(unittest.TestCase):

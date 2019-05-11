@@ -60,16 +60,18 @@ class NoUTurnSampler(HamiltonianMCDA):
 
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
 
-        super(NoUTurnSampler, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
-                                             simulate_dynamics=simulate_dynamics)
+        super(NoUTurnSampler, self).__init__(
+            model=model, grad_log_pdf=grad_log_pdf, simulate_dynamics=simulate_dynamics
+        )
 
     def _initalize_tree(self, position, momentum, slice_var, stepsize):
         """
         Initalizes root node of the tree, i.e depth = 0
         """
 
-        position_bar, momentum_bar, _ = self.simulate_dynamics(self.model, position, momentum, stepsize,
-                                                               self.grad_log_pdf).get_proposed_values()
+        position_bar, momentum_bar, _ = self.simulate_dynamics(
+            self.model, position, momentum, stepsize, self.grad_log_pdf
+        ).get_proposed_values()
 
         _, logp_bar = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()
 
@@ -80,14 +82,26 @@ class NoUTurnSampler(HamiltonianMCDA):
 
         return position_bar, momentum_bar, candidate_set_size, accept_set_bool
 
-    def _update_acceptance_criteria(self, position_forward, position_backward, momentum_forward, momentum_backward,
-                                    accept_set_bool, candidate_set_size, candidate_set_size2):
+    def _update_acceptance_criteria(
+        self,
+        position_forward,
+        position_backward,
+        momentum_forward,
+        momentum_backward,
+        accept_set_bool,
+        candidate_set_size,
+        candidate_set_size2,
+    ):
 
         # criteria1 = I[(θ+ − θ−)·r− ≥ 0]
-        criteria1 = np.dot((position_forward - position_backward), momentum_backward) >= 0
+        criteria1 = (
+            np.dot((position_forward - position_backward), momentum_backward) >= 0
+        )
 
         # criteira2 = I[(θ+ − θ− )·r+ ≥ 0]
-        criteria2 = np.dot((position_forward - position_backward), momentum_forward) >= 0
+        criteria2 = (
+            np.dot((position_forward - position_backward), momentum_forward) >= 0
+        )
 
         accept_set_bool = accept_set_bool and criteria1 and criteria2
         candidate_set_size += candidate_set_size2
@@ -104,39 +118,95 @@ class NoUTurnSampler(HamiltonianMCDA):
         # candidate_set_size -> n, accept_set_bool -> s
         if depth == 0:
             # Take single leapfrog step in the given direction (direction * stepsize)
-            position_bar, momentum_bar, candidate_set_size, accept_set_bool =\
-                self._initalize_tree(position, momentum, slice_var, direction * stepsize)
+            position_bar, momentum_bar, candidate_set_size, accept_set_bool = self._initalize_tree(
+                position, momentum, slice_var, direction * stepsize
+            )
 
-            return (position_bar, momentum_bar, position_bar, momentum_bar, position_bar,
-                    candidate_set_size, accept_set_bool)
+            return (
+                position_bar,
+                momentum_bar,
+                position_bar,
+                momentum_bar,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+            )
 
         else:
             # Build left and right subtrees
-            (position_backward, momentum_backward, position_forward, momentum_forward, position_bar,
-             candidate_set_size, accept_set_bool) = self._build_tree(position, momentum,
-                                                                     slice_var, direction, depth - 1, stepsize)
+            (
+                position_backward,
+                momentum_backward,
+                position_forward,
+                momentum_forward,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+            ) = self._build_tree(
+                position, momentum, slice_var, direction, depth - 1, stepsize
+            )
             if accept_set_bool == 1:
                 if direction == -1:
                     # Build tree in backward direction
-                    (position_backward, momentum_backward, _, _, position_bar2, candidate_set_size2,
-                     accept_set_bool2) = self._build_tree(position_backward, momentum_backward,
-                                                          slice_var, direction, depth - 1, stepsize)
+                    (
+                        position_backward,
+                        momentum_backward,
+                        _,
+                        _,
+                        position_bar2,
+                        candidate_set_size2,
+                        accept_set_bool2,
+                    ) = self._build_tree(
+                        position_backward,
+                        momentum_backward,
+                        slice_var,
+                        direction,
+                        depth - 1,
+                        stepsize,
+                    )
                 else:
                     # Build tree in forward direction
-                    (_, _, position_forward, momentum_forward, position_bar2, candidate_set_size2,
-                     accept_set_bool2) = self._build_tree(position_forward, momentum_forward,
-                                                          slice_var, direction, depth - 1, stepsize)
+                    (
+                        _,
+                        _,
+                        position_forward,
+                        momentum_forward,
+                        position_bar2,
+                        candidate_set_size2,
+                        accept_set_bool2,
+                    ) = self._build_tree(
+                        position_forward,
+                        momentum_forward,
+                        slice_var,
+                        direction,
+                        depth - 1,
+                        stepsize,
+                    )
 
-                if np.random.rand() < candidate_set_size2 / (candidate_set_size2 + candidate_set_size):
+                if np.random.rand() < candidate_set_size2 / (
+                    candidate_set_size2 + candidate_set_size
+                ):
                     position_bar = position_bar2
 
-                accept_set_bool, candidate_set_size =\
-                    self._update_acceptance_criteria(position_forward, position_backward, momentum_forward,
-                                                     momentum_backward, accept_set_bool2, candidate_set_size,
-                                                     candidate_set_size2)
+                accept_set_bool, candidate_set_size = self._update_acceptance_criteria(
+                    position_forward,
+                    position_backward,
+                    momentum_forward,
+                    momentum_backward,
+                    accept_set_bool2,
+                    candidate_set_size,
+                    candidate_set_size2,
+                )
 
-            return (position_backward, momentum_backward, position_forward, momentum_forward,
-                    position_bar, candidate_set_size, accept_set_bool)
+            return (
+                position_backward,
+                momentum_backward,
+                position_forward,
+                momentum_forward,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+            )
 
     def _sample(self, position, stepsize):
         """
@@ -154,33 +224,66 @@ class NoUTurnSampler(HamiltonianMCDA):
         _, log_pdf = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
 
         # Resample slice variable `u`
-        slice_var = np.random.uniform(0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum)))
+        slice_var = np.random.uniform(
+            0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum))
+        )
 
         while accept_set_bool == 1:
             direction = np.random.choice([-1, 1], p=[0.5, 0.5])
             if direction == -1:
                 # Build a tree in backward direction
-                (position_backward, momentum_backward, _, _, position_bar,
-                 candidate_set_size2, accept_set_bool2) = self._build_tree(position_backward, momentum_backward,
-                                                                           slice_var, direction, depth, stepsize)
+                (
+                    position_backward,
+                    momentum_backward,
+                    _,
+                    _,
+                    position_bar,
+                    candidate_set_size2,
+                    accept_set_bool2,
+                ) = self._build_tree(
+                    position_backward,
+                    momentum_backward,
+                    slice_var,
+                    direction,
+                    depth,
+                    stepsize,
+                )
             else:
                 # Build tree in forward direction
-                (_, _, position_forward, momentum_forward, position_bar,
-                 candidate_set_size2, accept_set_bool2) = self._build_tree(position_forward, momentum_forward,
-                                                                           slice_var, direction, depth, stepsize)
+                (
+                    _,
+                    _,
+                    position_forward,
+                    momentum_forward,
+                    position_bar,
+                    candidate_set_size2,
+                    accept_set_bool2,
+                ) = self._build_tree(
+                    position_forward,
+                    momentum_forward,
+                    slice_var,
+                    direction,
+                    depth,
+                    stepsize,
+                )
             if accept_set_bool2 == 1:
                 if np.random.rand() < candidate_set_size2 / candidate_set_size:
                     position = position_bar.copy()
 
-            accept_set_bool, candidate_set_size = self._update_acceptance_criteria(position_forward, position_backward,
-                                                                                   momentum_forward, momentum_backward,
-                                                                                   accept_set_bool2, candidate_set_size,
-                                                                                   candidate_set_size2)
+            accept_set_bool, candidate_set_size = self._update_acceptance_criteria(
+                position_forward,
+                position_backward,
+                momentum_forward,
+                momentum_backward,
+                accept_set_bool2,
+                candidate_set_size,
+                candidate_set_size2,
+            )
             depth += 1
 
         return position
 
-    def sample(self, initial_pos, num_samples, stepsize=None, return_type='dataframe'):
+    def sample(self, initial_pos, num_samples, stepsize=None, return_type="dataframe"):
         """
         Method to return samples using No U Turn Sampler
 
@@ -230,13 +333,15 @@ class NoUTurnSampler(HamiltonianMCDA):
         8  1.484520 -1.349247  0.768599
         9  0.934942 -1.894589  0.471772
         """
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        types = [(var_name, 'float') for var_name in self.model.variables]
+        types = [(var_name, "float") for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
 
         samples[0] = tuple(initial_pos)
@@ -293,8 +398,10 @@ class NoUTurnSampler(HamiltonianMCDA):
                [ 11.31892143,  -8.5873259 ],
                [ 11.29008667,  -0.43809674]])
         """
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
@@ -369,58 +476,146 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog, delta=0.65):
 
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
-            raise ValueError(
-                "delta should be a floating value in between 0 and 1")
+            raise ValueError("delta should be a floating value in between 0 and 1")
 
         self.delta = delta
 
-        super(NoUTurnSamplerDA, self).__init__(model=model, grad_log_pdf=grad_log_pdf,
-                                               simulate_dynamics=simulate_dynamics)
+        super(NoUTurnSamplerDA, self).__init__(
+            model=model, grad_log_pdf=grad_log_pdf, simulate_dynamics=simulate_dynamics
+        )
 
-    def _build_tree(self, position, momentum, slice_var, direction, depth, stepsize, position0, momentum0):
+    def _build_tree(
+        self,
+        position,
+        momentum,
+        slice_var,
+        direction,
+        depth,
+        stepsize,
+        position0,
+        momentum0,
+    ):
         """
         Recursively builds a tree for proposing new position and momentum
         """
         if depth == 0:
 
-            position_bar, momentum_bar, candidate_set_size, accept_set_bool =\
-                self._initalize_tree(position, momentum, slice_var, direction * stepsize)
+            position_bar, momentum_bar, candidate_set_size, accept_set_bool = self._initalize_tree(
+                position, momentum, slice_var, direction * stepsize
+            )
 
-            alpha = min(1, self._acceptance_prob(position, position_bar, momentum, momentum_bar))
+            alpha = min(
+                1, self._acceptance_prob(position, position_bar, momentum, momentum_bar)
+            )
 
-            return (position_bar, momentum_bar, position_bar, momentum_bar, position_bar,
-                    candidate_set_size, accept_set_bool, alpha, 1)
+            return (
+                position_bar,
+                momentum_bar,
+                position_bar,
+                momentum_bar,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+                alpha,
+                1,
+            )
 
         else:
-            (position_backward, momentum_backward, position_forward, momentum_forward, position_bar,
-             candidate_set_size, accept_set_bool, alpha, n_alpha) =\
-                self._build_tree(position, momentum, slice_var,
-                                 direction, depth - 1, stepsize, position0, momentum0)
+            (
+                position_backward,
+                momentum_backward,
+                position_forward,
+                momentum_forward,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+                alpha,
+                n_alpha,
+            ) = self._build_tree(
+                position,
+                momentum,
+                slice_var,
+                direction,
+                depth - 1,
+                stepsize,
+                position0,
+                momentum0,
+            )
 
             if accept_set_bool == 1:
                 if direction == -1:
                     # Build tree in backward direction
-                    (position_backward, momentum_backward, _, _, position_bar2, candidate_set_size2, accept_set_bool2,
-                     alpha2, n_alpha2) = self._build_tree(position_backward, momentum_backward, slice_var, direction,
-                                                          depth - 1, stepsize, position0, momentum0)
+                    (
+                        position_backward,
+                        momentum_backward,
+                        _,
+                        _,
+                        position_bar2,
+                        candidate_set_size2,
+                        accept_set_bool2,
+                        alpha2,
+                        n_alpha2,
+                    ) = self._build_tree(
+                        position_backward,
+                        momentum_backward,
+                        slice_var,
+                        direction,
+                        depth - 1,
+                        stepsize,
+                        position0,
+                        momentum0,
+                    )
                 else:
                     # Build tree in forward direction
-                    (_, _, position_forward, momentum_forward, position_bar2, candidate_set_size2, accept_set_bool2,
-                     alpha2, n_alpha2) = self._build_tree(position_forward, momentum_forward, slice_var, direction,
-                                                          depth - 1, stepsize, position0, momentum0)
+                    (
+                        _,
+                        _,
+                        position_forward,
+                        momentum_forward,
+                        position_bar2,
+                        candidate_set_size2,
+                        accept_set_bool2,
+                        alpha2,
+                        n_alpha2,
+                    ) = self._build_tree(
+                        position_forward,
+                        momentum_forward,
+                        slice_var,
+                        direction,
+                        depth - 1,
+                        stepsize,
+                        position0,
+                        momentum0,
+                    )
 
-                if np.random.rand() < candidate_set_size2 / (candidate_set_size2 + candidate_set_size):
+                if np.random.rand() < candidate_set_size2 / (
+                    candidate_set_size2 + candidate_set_size
+                ):
                     position_bar = position_bar2
 
                 alpha += alpha2
                 n_alpha += n_alpha2
-                accept_set_bool, candidate_set_size =\
-                    self._update_acceptance_criteria(position_forward, position_backward, momentum_forward,
-                                                     momentum_backward, accept_set_bool2, candidate_set_size,
-                                                     candidate_set_size2)
+                accept_set_bool, candidate_set_size = self._update_acceptance_criteria(
+                    position_forward,
+                    position_backward,
+                    momentum_forward,
+                    momentum_backward,
+                    accept_set_bool2,
+                    candidate_set_size,
+                    candidate_set_size2,
+                )
 
-            return (position_backward, momentum_backward, position_forward, momentum_forward, position_bar,
-                    candidate_set_size, accept_set_bool, alpha, n_alpha)
+            return (
+                position_backward,
+                momentum_backward,
+                position_forward,
+                momentum_forward,
+                position_bar,
+                candidate_set_size,
+                accept_set_bool,
+                alpha,
+                n_alpha,
+            )
 
     def _sample(self, position, stepsize):
         """
@@ -439,35 +634,83 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         _, log_pdf = self.grad_log_pdf(position, self.model).get_gradient_log_pdf()
 
         # Resample slice variable `u`
-        slice_var = np.random.uniform(0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum)))
+        slice_var = np.random.uniform(
+            0, np.exp(log_pdf - 0.5 * np.dot(momentum, momentum))
+        )
 
         while accept_set_bool == 1:
             direction = np.random.choice([-1, 1], p=[0.5, 0.5])
             if direction == -1:
                 # Build a tree in backward direction
-                (position_backward, momentum_backward, _, _, position_bar, candidate_set_size2, accept_set_bool2,
-                 alpha, n_alpha) = self._build_tree(position_backward, momentum_backward, slice_var, direction,
-                                                    depth, stepsize, position_m_1, momentum)
+                (
+                    position_backward,
+                    momentum_backward,
+                    _,
+                    _,
+                    position_bar,
+                    candidate_set_size2,
+                    accept_set_bool2,
+                    alpha,
+                    n_alpha,
+                ) = self._build_tree(
+                    position_backward,
+                    momentum_backward,
+                    slice_var,
+                    direction,
+                    depth,
+                    stepsize,
+                    position_m_1,
+                    momentum,
+                )
             else:
                 # Build tree in forward direction
-                (_, _, position_forward, momentum_forward, position_bar, candidate_set_size2, accept_set_bool2,
-                 alpha, n_alpha) = self._build_tree(position_forward, momentum_forward, slice_var, direction,
-                                                    depth, stepsize, position_m_1, momentum)
+                (
+                    _,
+                    _,
+                    position_forward,
+                    momentum_forward,
+                    position_bar,
+                    candidate_set_size2,
+                    accept_set_bool2,
+                    alpha,
+                    n_alpha,
+                ) = self._build_tree(
+                    position_forward,
+                    momentum_forward,
+                    slice_var,
+                    direction,
+                    depth,
+                    stepsize,
+                    position_m_1,
+                    momentum,
+                )
 
             if accept_set_bool2 == 1:
                 if np.random.rand() < candidate_set_size2 / candidate_set_size:
                     position = position_bar
 
-            accept_set_bool, candidate_set_size = self._update_acceptance_criteria(position_forward, position_backward,
-                                                                                   momentum_forward, momentum_backward,
-                                                                                   accept_set_bool2, candidate_set_size,
-                                                                                   candidate_set_size2)
+            accept_set_bool, candidate_set_size = self._update_acceptance_criteria(
+                position_forward,
+                position_backward,
+                momentum_forward,
+                momentum_backward,
+                accept_set_bool2,
+                candidate_set_size,
+                candidate_set_size2,
+            )
 
             depth += 1
 
         return position, alpha, n_alpha
 
-    def sample(self, initial_pos, num_adapt, num_samples, stepsize=None, return_type='dataframe'):
+    def sample(
+        self,
+        initial_pos,
+        num_adapt,
+        num_samples,
+        stepsize=None,
+        return_type="dataframe",
+    ):
         """
         Returns samples using No U Turn Sampler with dual averaging
 
@@ -520,21 +763,24 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         8  13.253336 -20.169492
         9  11.295901  -7.665058
         """
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:
-            return NoUTurnSampler(self.model, self.grad_log_pdf,
-                                  self.simulate_dynamics).sample(initial_pos, num_samples, stepsize)
+            return NoUTurnSampler(
+                self.model, self.grad_log_pdf, self.simulate_dynamics
+            ).sample(initial_pos, num_samples, stepsize)
 
         mu = np.log(10.0 * stepsize)
         stepsize_bar = 1.0
         h_bar = 0.0
 
-        types = [(var_name, 'float') for var_name in self.model.variables]
+        types = [(var_name, "float") for var_name in self.model.variables]
         samples = np.zeros(num_samples, dtype=types).view(np.recarray)
         samples[0] = tuple(initial_pos)
         position_m = initial_pos
@@ -545,8 +791,9 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             samples[i] = tuple(position_m)
 
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu,
-                                                                   i, alpha, n_alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(
+                    stepsize, stepsize_bar, h_bar, mu, i, alpha, n_alpha
+                )
             else:
                 stepsize = stepsize_bar
 
@@ -602,15 +849,18 @@ class NoUTurnSamplerDA(NoUTurnSampler):
                [-56.63440044, -16.03309364],
                [-63.880094  , -19.19981944]])
         """
-        initial_pos = _check_1d_array_object(initial_pos, 'initial_pos')
-        _check_length_equal(initial_pos, self.model.variables, 'initial_pos', 'model.variables')
+        initial_pos = _check_1d_array_object(initial_pos, "initial_pos")
+        _check_length_equal(
+            initial_pos, self.model.variables, "initial_pos", "model.variables"
+        )
 
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
         if num_adapt <= 1:  # return sample generated using Simple HMC algorithm
-            for sample in NoUTurnSampler(self.model, self.grad_log_pdf,
-                                         self.simulate_dynamics).generate_sample(initial_pos, num_samples, stepsize):
+            for sample in NoUTurnSampler(
+                self.model, self.grad_log_pdf, self.simulate_dynamics
+            ).generate_sample(initial_pos, num_samples, stepsize):
                 yield sample
             return
         mu = np.log(10.0 * stepsize)
@@ -626,8 +876,9 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             position_m, alpha, n_alpha = self._sample(position_m, stepsize)
 
             if i <= num_adapt:
-                stepsize, stepsize_bar, h_bar = self._adapt_params(stepsize, stepsize_bar, h_bar, mu,
-                                                                   i, alpha, n_alpha)
+                stepsize, stepsize_bar, h_bar = self._adapt_params(
+                    stepsize, stepsize_bar, h_bar, mu, i, alpha, n_alpha
+                )
             else:
                 stepsize = stepsize_bar
 

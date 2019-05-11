@@ -82,21 +82,28 @@ class JointProbabilityDistribution(DiscreteFactor):
         x1_1  x2_1  x3_1         0.1250
        """
         if np.isclose(np.sum(values), 1):
-            super(JointProbabilityDistribution, self).__init__(variables, cardinality, values)
+            super(JointProbabilityDistribution, self).__init__(
+                variables, cardinality, values
+            )
         else:
             raise ValueError("The probability values doesn't sum to 1.")
 
     def __repr__(self):
-        var_card = ", ".join(['{var}:{card}'.format(var=var, card=card)
-                              for var, card in zip(self.variables, self.cardinality)])
-        return "<Joint Distribution representing P({var_card}) at {address}>".format(address=hex(id(self)),
-                                                                                     var_card=var_card)
+        var_card = ", ".join(
+            [
+                "{var}:{card}".format(var=var, card=card)
+                for var, card in zip(self.variables, self.cardinality)
+            ]
+        )
+        return "<Joint Distribution representing P({var_card}) at {address}>".format(
+            address=hex(id(self)), var_card=var_card
+        )
 
     def __str__(self):
         if six.PY2:
-            return self._str(phi_or_p='P', tablefmt='pqsl')
+            return self._str(phi_or_p="P", tablefmt="pqsl")
         else:
-            return self._str(phi_or_p='P')
+            return self._str(phi_or_p="P")
 
     def marginal_distribution(self, variables, inplace=True):
         """
@@ -127,12 +134,21 @@ class JointProbabilityDistribution(DiscreteFactor):
         x1_1  x2_1      0.1996
         x1_1  x2_2      0.1340
         """
-        return self.marginalize(list(set(list(self.variables)) -
-                                     set(variables if isinstance(
-                                         variables, (list, set, dict, tuple)) else [variables])),
-                                inplace=inplace)
+        return self.marginalize(
+            list(
+                set(list(self.variables))
+                - set(
+                    variables
+                    if isinstance(variables, (list, set, dict, tuple))
+                    else [variables]
+                )
+            ),
+            inplace=inplace,
+        )
 
-    def check_independence(self, event1, event2, event3=None, condition_random_variable=False):
+    def check_independence(
+        self, event1, event2, event3=None, condition_random_variable=False
+    ):
         """
         Check if the Joint Probability Distribution satisfies the given independence condition.
 
@@ -169,27 +185,33 @@ class JointProbabilityDistribution(DiscreteFactor):
         """
         JPD = self.copy()
         if isinstance(event1, six.string_types):
-            raise TypeError('Event 1 should be a list or array-like structure')
+            raise TypeError("Event 1 should be a list or array-like structure")
 
         if isinstance(event2, six.string_types):
-            raise TypeError('Event 2 should be a list or array-like structure')
+            raise TypeError("Event 2 should be a list or array-like structure")
 
         if event3:
             if isinstance(event3, six.string_types):
-                raise TypeError('Event 3 cannot of type string')
+                raise TypeError("Event 3 cannot of type string")
 
             elif condition_random_variable:
                 if not all(isinstance(var, six.string_types) for var in event3):
-                    raise TypeError('Event3 should be a 1d list of strings')
+                    raise TypeError("Event3 should be a 1d list of strings")
                 event3 = list(event3)
                 # Using the definition of conditional independence
                 # If P(X,Y|Z) = P(X|Z)*P(Y|Z)
                 # This can be expanded to P(X,Y,Z)*P(Z) == P(X,Z)*P(Y,Z)
                 phi_z = JPD.marginal_distribution(event3, inplace=False).to_factor()
                 for variable_pair in itertools.product(event1, event2):
-                    phi_xyz = JPD.marginal_distribution(event3 + list(variable_pair), inplace=False).to_factor()
-                    phi_xz = JPD.marginal_distribution(event3 + [variable_pair[0]], inplace=False).to_factor()
-                    phi_yz = JPD.marginal_distribution(event3 + [variable_pair[1]], inplace=False).to_factor()
+                    phi_xyz = JPD.marginal_distribution(
+                        event3 + list(variable_pair), inplace=False
+                    ).to_factor()
+                    phi_xz = JPD.marginal_distribution(
+                        event3 + [variable_pair[0]], inplace=False
+                    ).to_factor()
+                    phi_yz = JPD.marginal_distribution(
+                        event3 + [variable_pair[1]], inplace=False
+                    ).to_factor()
                     if phi_xyz * phi_z != phi_xz * phi_yz:
                         return False
                 return True
@@ -197,9 +219,13 @@ class JointProbabilityDistribution(DiscreteFactor):
                 JPD.conditional_distribution(event3)
 
         for variable_pair in itertools.product(event1, event2):
-            if (JPD.marginal_distribution(variable_pair, inplace=False) !=
-                    JPD.marginal_distribution(variable_pair[0], inplace=False) *
-                    JPD.marginal_distribution(variable_pair[1], inplace=False)):
+            if JPD.marginal_distribution(
+                variable_pair, inplace=False
+            ) != JPD.marginal_distribution(
+                variable_pair[0], inplace=False
+            ) * JPD.marginal_distribution(
+                variable_pair[1], inplace=False
+            ):
                 return False
         return True
 
@@ -229,9 +255,13 @@ class JointProbabilityDistribution(DiscreteFactor):
             JPD.conditional_distribution(condition)
         independencies = Independencies()
         for variable_pair in itertools.combinations(list(JPD.variables), 2):
-            if (JPD.marginal_distribution(variable_pair, inplace=False) ==
-                    JPD.marginal_distribution(variable_pair[0], inplace=False) *
-                    JPD.marginal_distribution(variable_pair[1], inplace=False)):
+            if JPD.marginal_distribution(
+                variable_pair, inplace=False
+            ) == JPD.marginal_distribution(
+                variable_pair[0], inplace=False
+            ) * JPD.marginal_distribution(
+                variable_pair[1], inplace=False
+            ):
                 independencies.add_assertions(variable_pair)
         return independencies
 
@@ -319,9 +349,12 @@ class JointProbabilityDistribution(DiscreteFactor):
         for variable_index in range(len(order)):
             u = order[:variable_index]
             for subset in get_subsets(u):
-                if (len(subset) < len(u) and
-                        self.check_independence([order[variable_index]], set(u) - set(subset), subset, True)):
-                    G.add_edges_from([(variable, order[variable_index]) for variable in subset])
+                if len(subset) < len(u) and self.check_independence(
+                    [order[variable_index]], set(u) - set(subset), subset, True
+                ):
+                    G.add_edges_from(
+                        [(variable, order[variable_index]) for variable in subset]
+                    )
         return G
 
     def is_imap(self, model):
@@ -359,6 +392,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         True
         """
         from pgmpy.models import BayesianModel
+
         if not isinstance(model, BayesianModel):
             raise TypeError("model must be an instance of BayesianModel")
         factors = [cpd.to_factor() for cpd in model.get_cpds()]

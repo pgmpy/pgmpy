@@ -3,7 +3,6 @@ from pgmpy.estimators import StructureScore
 
 
 class ScoreCache(StructureScore):
-
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):
         """
         A wrapper class for StructureScore instances, which implement a decomposable score,
@@ -29,10 +28,14 @@ class ScoreCache(StructureScore):
         Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
         Section 18.3
         """
-        assert isinstance(base_scorer, StructureScore), "Base scorer has to be of type StructureScore."
+        assert isinstance(
+            base_scorer, StructureScore
+        ), "Base scorer has to be of type StructureScore."
 
         self.base_scorer = base_scorer
-        self.cache = LRUCache(original_function=self._wrapped_original, max_size=int(max_size))
+        self.cache = LRUCache(
+            original_function=self._wrapped_original, max_size=int(max_size)
+        )
         super(ScoreCache, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
@@ -49,7 +52,6 @@ _PREV, _NEXT, _KEY, _VALUE = 0, 1, 2, 3
 
 
 class LRUCache:
-
     def __init__(self, original_function, max_size=10000):
         """
         Least-Recently-Used cache.

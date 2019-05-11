@@ -90,7 +90,7 @@ class FactorGraph(UndirectedGraph):
         if u != v:
             super(FactorGraph, self).add_edge(u, v, **kwargs)
         else:
-            raise ValueError('Self loops are not allowed')
+            raise ValueError("Self loops are not allowed")
 
     def add_factors(self, *factors):
         """
@@ -117,9 +117,9 @@ class FactorGraph(UndirectedGraph):
         """
         for factor in factors:
             if set(factor.variables) - set(factor.variables).intersection(
-                    set(self.nodes())):
-                raise ValueError("Factors defined on variable not in the model",
-                                 factor)
+                set(self.nodes())
+            ):
+                raise ValueError("Factors defined on variable not in the model", factor)
 
             self.factors.append(factor)
 
@@ -204,25 +204,32 @@ class FactorGraph(UndirectedGraph):
         variable_nodes = set([x for factor in self.factors for x in factor.scope()])
         factor_nodes = set(self.nodes()) - variable_nodes
 
-        if not all(isinstance(factor_node, DiscreteFactor) for factor_node in factor_nodes):
-            raise ValueError('Factors not associated for all the random variables')
+        if not all(
+            isinstance(factor_node, DiscreteFactor) for factor_node in factor_nodes
+        ):
+            raise ValueError("Factors not associated for all the random variables")
 
-        if (not (bipartite.is_bipartite(self)) or
-            not (bipartite.is_bipartite_node_set(self, variable_nodes) or
-                 bipartite.is_bipartite_node_set(self, variable_nodes))):
-            raise ValueError('Edges can only be between variables and factors')
+        if not (bipartite.is_bipartite(self)) or not (
+            bipartite.is_bipartite_node_set(self, variable_nodes)
+            or bipartite.is_bipartite_node_set(self, variable_nodes)
+        ):
+            raise ValueError("Edges can only be between variables and factors")
 
         if len(factor_nodes) != len(self.factors):
-            raise ValueError('Factors not associated with all the factor nodes.')
+            raise ValueError("Factors not associated with all the factor nodes.")
 
         cardinalities = self.get_cardinality()
         if len(variable_nodes) != len(cardinalities):
-            raise ValueError('Factors for all the variables not defined')
+            raise ValueError("Factors for all the variables not defined")
 
         for factor in self.factors:
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                if (cardinalities[variable] != cardinality):
-                    raise ValueError('Cardinality of variable {var} not matching among factors'.format(var=variable))
+                if cardinalities[variable] != cardinality:
+                    raise ValueError(
+                        "Cardinality of variable {var} not matching among factors".format(
+                            var=variable
+                        )
+                    )
 
         return True
 
@@ -308,7 +315,7 @@ class FactorGraph(UndirectedGraph):
         variable_nodes = self.get_variable_nodes()
 
         if len(set(self.nodes()) - set(variable_nodes)) != len(self.factors):
-            raise ValueError('Factors not associated with all the factor nodes.')
+            raise ValueError("Factors not associated with all the factor nodes.")
 
         mm.add_nodes_from(variable_nodes)
         for factor in self.factors:
@@ -371,10 +378,14 @@ class FactorGraph(UndirectedGraph):
         else:
             factor_nodes = self.get_factor_nodes()
             if node not in factor_nodes:
-                raise ValueError('Factors are not associated with the '
-                                 'corresponding node.')
-            factors = list(filter(lambda x: set(x.scope()) == set(self.neighbors(node)),
-                                  self.factors))
+                raise ValueError(
+                    "Factors are not associated with the " "corresponding node."
+                )
+            factors = list(
+                filter(
+                    lambda x: set(x.scope()) == set(self.neighbors(node)), self.factors
+                )
+            )
             return factors[0]
 
     def get_partition_function(self):
@@ -404,10 +415,11 @@ class FactorGraph(UndirectedGraph):
         >>> G.get_partition_function()
         """
         factor = self.factors[0]
-        factor = factor_product(factor, *[self.factors[i] for i in
-                                          range(1, len(self.factors))])
+        factor = factor_product(
+            factor, *[self.factors[i] for i in range(1, len(self.factors))]
+        )
         if set(factor.scope()) != set(self.get_variable_nodes()):
-            raise ValueError('DiscreteFactor for all the random variables not defined.')
+            raise ValueError("DiscreteFactor for all the random variables not defined.")
 
         return np.sum(factor.values)
 

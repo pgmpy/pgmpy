@@ -13,6 +13,7 @@ class UAIReader(object):
     """
     Class for reading UAI file format from files or strings.
     """
+
     def __init__(self, path=None, string=None):
         """
         Initialize an instance of UAI reader class
@@ -51,29 +52,43 @@ class UAIReader(object):
         """
         Returns the grammar of the UAI file.
         """
-        network_name = Word(alphas).setResultsName('network_name')
-        no_variables = Word(nums).setResultsName('no_variables')
+        network_name = Word(alphas).setResultsName("network_name")
+        no_variables = Word(nums).setResultsName("no_variables")
         grammar = network_name + no_variables
-        self.no_variables = int(grammar.parseString(self.network)['no_variables'])
-        domain_variables = (Word(nums)*self.no_variables).setResultsName('domain_variables')
+        self.no_variables = int(grammar.parseString(self.network)["no_variables"])
+        domain_variables = (Word(nums) * self.no_variables).setResultsName(
+            "domain_variables"
+        )
         grammar += domain_variables
-        no_functions = Word(nums).setResultsName('no_functions')
+        no_functions = Word(nums).setResultsName("no_functions")
         grammar += no_functions
-        self.no_functions = int(grammar.parseString(self.network)['no_functions'])
+        self.no_functions = int(grammar.parseString(self.network)["no_functions"])
         integer = Word(nums).setParseAction(lambda t: int(t[0]))
         for function in range(0, self.no_functions):
-            scope_grammar = Word(nums).setResultsName('fun_scope_' + str(function))
+            scope_grammar = Word(nums).setResultsName("fun_scope_" + str(function))
             grammar += scope_grammar
-            function_scope = grammar.parseString(self.network)['fun_scope_' + str(function)]
-            function_grammar = ((integer)*int(function_scope)).setResultsName('fun_' + str(function))
+            function_scope = grammar.parseString(self.network)[
+                "fun_scope_" + str(function)
+            ]
+            function_grammar = ((integer) * int(function_scope)).setResultsName(
+                "fun_" + str(function)
+            )
             grammar += function_grammar
 
-        floatnumber = Combine(Word(nums) + Optional(Literal(".") + Optional(Word(nums))))
+        floatnumber = Combine(
+            Word(nums) + Optional(Literal(".") + Optional(Word(nums)))
+        )
         for function in range(0, self.no_functions):
-            no_values_grammar = Word(nums).setResultsName('fun_no_values_' + str(function))
+            no_values_grammar = Word(nums).setResultsName(
+                "fun_no_values_" + str(function)
+            )
             grammar += no_values_grammar
-            no_values = grammar.parseString(self.network)['fun_no_values_' + str(function)]
-            values_grammar = ((floatnumber)*int(no_values)).setResultsName('fun_values_' + str(function))
+            no_values = grammar.parseString(self.network)[
+                "fun_no_values_" + str(function)
+            ]
+            values_grammar = ((floatnumber) * int(no_values)).setResultsName(
+                "fun_values_" + str(function)
+            )
             grammar += values_grammar
         return grammar
 
@@ -93,7 +108,7 @@ class UAIReader(object):
         'MARKOV'
         """
         network_type = self.grammar.parseString(self.network)
-        return network_type['network_name']
+        return network_type["network_name"]
 
     def get_variables(self):
         """
@@ -134,7 +149,7 @@ class UAIReader(object):
         {'var_0': '2', 'var_1': '2', 'var_2': '3'}
         """
         domain = {}
-        var_domain = self.grammar.parseString(self.network)['domain_variables']
+        var_domain = self.grammar.parseString(self.network)["domain_variables"]
         for var in range(0, len(var_domain)):
             domain["var_" + str(var)] = var_domain[var]
         return domain
@@ -155,10 +170,12 @@ class UAIReader(object):
         """
         edges = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
+            function_variables = self.grammar.parseString(self.network)[
+                "fun_" + str(function)
+            ]
             if isinstance(function_variables, int):
                 function_variables = [function_variables]
-            if self.network_type == 'BAYES':
+            if self.network_type == "BAYES":
                 child_var = "var_" + str(function_variables[-1])
                 function_variables = function_variables[:-1]
                 for var in function_variables:
@@ -189,16 +206,22 @@ class UAIReader(object):
         """
         tables = []
         for function in range(0, self.no_functions):
-            function_variables = self.grammar.parseString(self.network)['fun_' + str(function)]
+            function_variables = self.grammar.parseString(self.network)[
+                "fun_" + str(function)
+            ]
             if isinstance(function_variables, int):
                 function_variables = [function_variables]
-            if self.network_type == 'BAYES':
+            if self.network_type == "BAYES":
                 child_var = "var_" + str(function_variables[-1])
-                values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
+                values = self.grammar.parseString(self.network)[
+                    "fun_values_" + str(function)
+                ]
                 tables.append((child_var, list(values)))
             elif self.network_type == "MARKOV":
                 function_variables = ["var_" + str(var) for var in function_variables]
-                values = self.grammar.parseString(self.network)['fun_values_' + str(function)]
+                values = self.grammar.parseString(self.network)[
+                    "fun_values_" + str(function)
+                ]
                 tables.append((function_variables, list(values)))
         return tables
 
@@ -217,7 +240,7 @@ class UAIReader(object):
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_model()
         """
-        if self.network_type == 'BAYES':
+        if self.network_type == "BAYES":
             model = BayesianModel()
             model.add_nodes_from(self.variables)
             model.add_edges_from(self.edges)
@@ -234,7 +257,7 @@ class UAIReader(object):
             model.add_cpds(*tabular_cpds)
             return model
 
-        elif self.network_type == 'MARKOV':
+        elif self.network_type == "MARKOV":
             model = MarkovModel(self.edges)
 
             factors = []
@@ -242,7 +265,9 @@ class UAIReader(object):
                 variables = table[0]
                 cardinality = [int(self.domain[var]) for var in variables]
                 value = list(map(float, table[1]))
-                factor = DiscreteFactor(variables=variables, cardinality=cardinality, values=value)
+                factor = DiscreteFactor(
+                    variables=variables, cardinality=cardinality, values=value
+                )
                 factors.append(factor)
 
             model.add_factors(*factors)
@@ -253,6 +278,7 @@ class UAIWriter(object):
     """
     Class for writing models in UAI.
     """
+
     def __init__(self, model):
         """
         Initialize an instance of UAI writer class
@@ -349,8 +375,12 @@ class UAIWriter(object):
             for cpd in cpds:
                 child_var = cpd.variable
                 evidence = cpd.variables[:0:-1]
-                function = [str(variables.index((var, self.domain[var]))) for var in evidence]
-                function.append(str(variables.index((child_var, self.domain[child_var]))))
+                function = [
+                    str(variables.index((var, self.domain[var]))) for var in evidence
+                ]
+                function.append(
+                    str(variables.index((child_var, self.domain[child_var])))
+                )
                 functions.append(function)
             return functions
         elif isinstance(self.model, MarkovModel):
@@ -359,7 +389,9 @@ class UAIWriter(object):
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
             for factor in factors:
                 scope = factor.scope()
-                function = [str(variables.index((var, self.domain[var]))) for var in scope]
+                function = [
+                    str(variables.index((var, self.domain[var]))) for var in scope
+                ]
                 functions.append(function)
             return functions
         else:
@@ -406,5 +438,5 @@ class UAIWriter(object):
         >>> writer.write_xmlbif(test_file)
         """
         writer = self.__str__()
-        with open(filename, 'w') as fout:
+        with open(filename, "w") as fout:
             fout.write(writer)

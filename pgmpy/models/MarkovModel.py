@@ -109,7 +109,7 @@ class MarkovModel(UndirectedGraph):
         if u != v:
             super(MarkovModel, self).add_edge(u, v, **kwargs)
         else:
-            raise ValueError('Self loops are not allowed')
+            raise ValueError("Self loops are not allowed")
 
     def add_factors(self, *factors):
         """
@@ -138,9 +138,9 @@ class MarkovModel(UndirectedGraph):
         """
         for factor in factors:
             if set(factor.variables) - set(factor.variables).intersection(
-                    set(self.nodes())):
-                raise ValueError("Factors defined on variable not in the model",
-                                 factor)
+                set(self.nodes())
+            ):
+                raise ValueError("Factors defined on variable not in the model", factor)
 
             self.factors.append(factor)
 
@@ -172,7 +172,7 @@ class MarkovModel(UndirectedGraph):
         """
         if node:
             if node not in self.nodes():
-                raise ValueError('Node not present in the Undirected Graph')
+                raise ValueError("Node not present in the Undirected Graph")
             node_factors = []
             for factor in self.factors:
                 if node in factor.scope():
@@ -232,8 +232,8 @@ class MarkovModel(UndirectedGraph):
         else:
             cardinalities = defaultdict(int)
             for factor in self.factors:
-                    for variable, cardinality in zip(factor.scope(), factor.cardinality):
-                        cardinalities[variable] = cardinality
+                for variable, cardinality in zip(factor.scope(), factor.cardinality):
+                    cardinalities[variable] = cardinality
             return cardinalities
 
     def check_model(self):
@@ -254,9 +254,12 @@ class MarkovModel(UndirectedGraph):
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
                     raise ValueError(
-                        'Cardinality of variable {var} not matching among factors'.format(var=variable))
+                        "Cardinality of variable {var} not matching among factors".format(
+                            var=variable
+                        )
+                    )
                 if len(self.nodes()) != len(cardinalities):
-                    raise ValueError('Factors for all the variables not defined')
+                    raise ValueError("Factors for all the variables not defined")
             for var1, var2 in itertools.combinations(factor.variables, 2):
                 if var2 not in self.neighbors(var1):
                     raise ValueError("DiscreteFactor inconsistent with the model.")
@@ -283,21 +286,22 @@ class MarkovModel(UndirectedGraph):
         >>> factor_graph = student.to_factor_graph()
         """
         from pgmpy.models import FactorGraph
+
         factor_graph = FactorGraph()
 
         if not self.factors:
-            raise ValueError('Factors not associated with the random variables.')
+            raise ValueError("Factors not associated with the random variables.")
 
         factor_graph.add_nodes_from(self.nodes())
         for factor in self.factors:
             scope = factor.scope()
-            factor_node = 'phi_' + '_'.join(scope)
+            factor_node = "phi_" + "_".join(scope)
             factor_graph.add_edges_from(itertools.product(scope, [factor_node]))
             factor_graph.add_factors(factor)
 
         return factor_graph
 
-    def triangulate(self, heuristic='H6', order=None, inplace=False):
+    def triangulate(self, heuristic="H6", order=None, inplace=False):
         """
         Triangulate the graph.
 
@@ -377,8 +381,9 @@ class MarkovModel(UndirectedGraph):
             Size of a clique is defined as product of cardinalities of all the
             nodes present in the clique.
             """
-            return list(map(lambda x: np.prod([cardinalities[node] for node in x]),
-                            clique))
+            return list(
+                map(lambda x: np.prod([cardinalities[node] for node in x]), clique)
+            )
 
         def _get_cliques_dict(node):
             """
@@ -393,11 +398,13 @@ class MarkovModel(UndirectedGraph):
             graph_working_copy = nx.Graph(graph_copy.edges())
             neighbors = list(graph_working_copy.neighbors(node))
             graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
-            clique_dict = nx.cliques_containing_node(graph_working_copy,
-                                                     nodes=([node] + neighbors))
+            clique_dict = nx.cliques_containing_node(
+                graph_working_copy, nodes=([node] + neighbors)
+            )
             graph_working_copy.remove_node(node)
-            clique_dict_removed = nx.cliques_containing_node(graph_working_copy,
-                                                             nodes=neighbors)
+            clique_dict_removed = nx.cliques_containing_node(
+                graph_working_copy, nodes=neighbors
+            )
             return clique_dict, clique_dict_removed
 
         if not order:
@@ -418,31 +425,30 @@ class MarkovModel(UndirectedGraph):
                     clique_dict, clique_dict_removed = _get_cliques_dict(node)
                     S[node] = _find_size_of_clique(
                         _find_common_cliques(list(clique_dict_removed.values())),
-                        cardinalities
+                        cardinalities,
                     )[0]
                     common_clique_size = _find_size_of_clique(
-                        _find_common_cliques(list(clique_dict.values())),
-                        cardinalities
+                        _find_common_cliques(list(clique_dict.values())), cardinalities
                     )
                     M[node] = np.max(common_clique_size)
                     C[node] = np.sum(common_clique_size)
 
-                if heuristic == 'H1':
+                if heuristic == "H1":
                     node_to_delete = min(S, key=S.get)
 
-                elif heuristic == 'H2':
+                elif heuristic == "H2":
                     S_by_E = {key: S[key] / cardinalities[key] for key in S}
                     node_to_delete = min(S_by_E, key=S_by_E.get)
 
-                elif heuristic == 'H3':
+                elif heuristic == "H3":
                     S_minus_M = {key: S[key] - M[key] for key in S}
                     node_to_delete = min(S_minus_M, key=S_minus_M.get)
 
-                elif heuristic == 'H4':
+                elif heuristic == "H4":
                     S_minus_C = {key: S[key] - C[key] for key in S}
                     node_to_delete = min(S_minus_C, key=S_minus_C.get)
 
-                elif heuristic == 'H5':
+                elif heuristic == "H5":
                     S_by_M = {key: S[key] / M[key] for key in S}
                     node_to_delete = min(S_by_M, key=S_by_M.get)
 
@@ -515,18 +521,19 @@ class MarkovModel(UndirectedGraph):
         elif len(cliques) >= 2:
             complete_graph = UndirectedGraph()
             edges = list(itertools.combinations(cliques, 2))
-            weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))),
-                           edges))
+            weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))), edges))
             for edge, weight in zip(edges, weights):
                 complete_graph.add_edge(*edge, weight=-weight)
 
             # Create clique trees by minimum (or maximum) spanning tree method
-            clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
+            clique_trees = JunctionTree(
+                nx.minimum_spanning_tree(complete_graph).edges()
+            )
 
         # Check whether the factors are defined for all the random variables or not
         all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
         if set(all_vars) != set(self.nodes()):
-            ValueError('DiscreteFactor for all the random variables not specified')
+            ValueError("DiscreteFactor for all the random variables not specified")
 
         # Dictionary stating whether the factor is used to create clique
         # potential or not
@@ -545,7 +552,9 @@ class MarkovModel(UndirectedGraph):
 
             # To compute clique potential, initially set it as unity factor
             var_card = [self.get_cardinality()[x] for x in node]
-            clique_potential = DiscreteFactor(node, var_card, np.ones(np.product(var_card)))
+            clique_potential = DiscreteFactor(
+                node, var_card, np.ones(np.product(var_card))
+            )
             # multiply it with the factors associated with the variables present
             # in the clique (or node)
             # Checking if there's clique_factors, to handle the case when clique_factors
@@ -555,8 +564,10 @@ class MarkovModel(UndirectedGraph):
             clique_trees.add_factors(clique_potential)
 
         if not all(is_used.values()):
-            raise ValueError('All the factors were not used to create Junction Tree.'
-                             'Extra factors are defined.')
+            raise ValueError(
+                "All the factors were not used to create Junction Tree."
+                "Extra factors are defined."
+            )
 
         return clique_trees
 
@@ -609,7 +620,9 @@ class MarkovModel(UndirectedGraph):
             markov_blanket = set(self.markov_blanket(node))
             rest = all_vars - set([node]) - markov_blanket
             try:
-                local_independencies.add_assertions([node, list(rest), list(markov_blanket)])
+                local_independencies.add_assertions(
+                    [node, list(rest), list(markov_blanket)]
+                )
             except ValueError:
                 pass
 
@@ -671,7 +684,8 @@ class MarkovModel(UndirectedGraph):
         for node_index in range(len(var_order)):
             node = var_order[node_index]
             node_parents = (set(var_clique_dict[node]) - set([node])).intersection(
-                set(var_order[:node_index]))
+                set(var_order[:node_index])
+            )
             bm.add_edges_from([(parent, node) for parent in node_parents])
             # TODO : Convert factor into CPDs
         return bm
@@ -703,10 +717,11 @@ class MarkovModel(UndirectedGraph):
         self.check_model()
 
         factor = self.factors[0]
-        factor = factor_product(factor, *[self.factors[i] for i in
-                                          range(1, len(self.factors))])
+        factor = factor_product(
+            factor, *[self.factors[i] for i in range(1, len(self.factors))]
+        )
         if set(factor.scope()) != set(self.nodes()):
-            raise ValueError('DiscreteFactor for all the random variables not defined.')
+            raise ValueError("DiscreteFactor for all the random variables not defined.")
 
         return np.sum(factor.values)
 

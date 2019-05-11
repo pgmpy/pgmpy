@@ -4,6 +4,7 @@ class StateNameMixin:
     The state names are stored in instances of `StateNameMixin`. The conversion between
     state number and names are also handled by methods in this class.
     """
+
     def store_state_names(self, variables, cardinality, state_names):
         """
         Initialize an instance of StateNameMixin.
@@ -23,21 +24,31 @@ class StateNameMixin:
         if state_names:
             for key, value in state_names.items():
                 if not isinstance(value, list):
-                    raise ValueError("The state names must be for the form: {variable: list_of_states}")
+                    raise ValueError(
+                        "The state names must be for the form: {variable: list_of_states}"
+                    )
             self.state_names = state_names
             # Create maps for easy access to specific state names of state numbers.
             if state_names:
                 self.name_to_no = {}
                 self.no_to_name = {}
                 for key, values in self.state_names.items():
-                    self.name_to_no[key] = {name: no for no, name in enumerate(self.state_names[key])}
-                    self.no_to_name[key] = {no: name for no, name in enumerate(self.state_names[key])}
+                    self.name_to_no[key] = {
+                        name: no for no, name in enumerate(self.state_names[key])
+                    }
+                    self.no_to_name[key] = {
+                        no: name for no, name in enumerate(self.state_names[key])
+                    }
         else:
-            self.state_names = {var: list(range(int(cardinality[index]))) for index, var in enumerate(variables)}
-            self.name_to_no = {var: {i: i for i in range(int(cardinality[index]))} for
-                               index, var in enumerate(variables)}
+            self.state_names = {
+                var: list(range(int(cardinality[index])))
+                for index, var in enumerate(variables)
+            }
+            self.name_to_no = {
+                var: {i: i for i in range(int(cardinality[index]))}
+                for index, var in enumerate(variables)
+            }
             self.no_to_name = self.name_to_no
-
 
     def get_state_names(self, var, state_no):
         """
