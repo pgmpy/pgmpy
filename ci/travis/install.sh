@@ -25,9 +25,12 @@ if [[ "$DISTRIB" == "conda" ]]; then
 	conda update conda
 	conda info -a
 
-	conda create -n testenv python=$PYTHON_VERSION --file requirements.txt
+	conda create -n testenv python=$PYTHON_VERSION
         source activate testenv
-	conda install nose mock
+	conda config --env --append channels conda-forge
+	conda config --env --get channels
+
+	conda install --file requirements-dev.txt
 	# Possible workaround for pytorch installation issue
 	conda uninstall pytorch
 	pip uninstall torch -qqq
@@ -41,3 +44,4 @@ fi
 
 # Build pgmpy
 python setup.py develop
+black --check .

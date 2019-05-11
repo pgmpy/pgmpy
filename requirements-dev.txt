@@ -6,5 +6,6 @@ pyparsing
 mock
 nose
 wrapt
+pytorch
 statsmodels
 black
