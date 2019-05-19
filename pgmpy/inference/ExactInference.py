@@ -179,7 +179,7 @@ class VariableElimination(Inference):
             joint=joint,
         )
 
-    def max_marginal(self, variables=None, evidence=None, elimination_order=None):
+    def max_marginal(self, variables=None, evidence=None, elimination_order='MinFill'):
         """
         Computes the max-marginal over the variables given the evidence.
 
@@ -218,7 +218,7 @@ class VariableElimination(Inference):
 
         return np.max(final_distribution.values)
 
-    def map_query(self, variables=None, evidence=None, elimination_order=None):
+    def map_query(self, variables=None, evidence=None, elimination_order='MinFill'):
         """
         Computes the MAP Query over the variables given the evidence.
 

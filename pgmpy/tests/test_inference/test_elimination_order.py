@@ -7,7 +7,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.inference.EliminationOrder import (
     BaseEliminationOrder,
     WeightedMinFill,
-    MinNeighbours,
+    MinNeighbors,
     MinWeight,
     MinFill,
 )
@@ -72,10 +72,10 @@ class TestWeightedMinFill(BaseEliminationTest):
         self.assertEqual(elimination_order, ["sat", "diff", "grade"])
 
 
-class TestMinNeighbours(BaseEliminationTest):
+class TestMinNeighbors(BaseEliminationTest):
     def setUp(self):
-        super(TestMinNeighbours, self).setUp()
-        self.elimination_order = MinNeighbours(self.model)
+        super(TestMinNeighbors, self).setUp()
+        self.elimination_order = MinNeighbors(self.model)
 
     def test_cost(self):
         self.assertEqual(self.elimination_order.cost("grade"), 3)
