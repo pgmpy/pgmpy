@@ -10,12 +10,23 @@ from pgmpy.extern.six.moves import filter, range
 from pgmpy.extern.six import string_types
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
+from pgmpy.inference.EliminationOrder import (
+    WeightedMinFill,
+    MinNeighbors,
+    MinFill,
+    MinWeight,
+)
 from pgmpy.models import JunctionTree, BayesianModel
 
 
 class VariableElimination(Inference):
     def _variable_elimination(
-        self, variables, operation, evidence=None, elimination_order=None, joint=True
+        self,
+        variables,
+        operation,
+        evidence=None,
+        elimination_order="MinFill",
+        joint=True,
     ):
         """
         Implementation of a generalized variable elimination.
@@ -65,14 +76,22 @@ class VariableElimination(Inference):
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
 
-        # TODO: Modify it to find the optimal elimination order
-        if not elimination_order:
-            elimination_order = list(
+        # Get elimination order
+        if isinstance(elimination_order, str):
+            to_eliminate = (
                 set(self.variables)
                 - set(variables)
                 - set(evidence.keys() if evidence else [])
             )
-
+            heuristic_dict = {
+                "WeightedMinFill": WeightedMinFill,
+                "MinNeighbors": MinNeighbors,
+                "MinWeight": MinWeight,
+                "MinFill": MinFill,
+            }
+            elimination_order = heuristic_dict[elimination_order](
+                self.model
+            ).get_elimination_order(nodes=to_eliminate)
         elif any(
             var in elimination_order
             for var in set(variables).union(set(evidence.keys() if evidence else []))
@@ -120,7 +139,7 @@ class VariableElimination(Inference):
                 ).normalize(inplace=False)
             return query_var_factor
 
-    def query(self, variables, evidence=None, elimination_order=None, joint=True):
+    def query(self, variables, evidence=None, elimination_order="MinFill", joint=True):
         """
         Parameters
         ----------
