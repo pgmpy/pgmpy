@@ -1618,7 +1618,7 @@ class TestSEMGraph(unittest.TestCase):
             ],
             latents=["u"],
         )
-        self.assertEqual(model2.get_conditional_ivs("x", "y"), [("z", {"y", "w"})])
+        self.assertEqual(model2.get_conditional_ivs("x", "y"), [("z", {"w"})])
 
         model3 = SEMGraph(
             ebunch=[("x", "y"), ("u", "x"), ("u", "y"), ("z", "x")], latents=["u"]
