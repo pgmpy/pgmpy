@@ -1605,7 +1605,7 @@ class TestSEMGraph(unittest.TestCase):
             err_corr=[("W", "Y")],
             err_var={},
         )
-        self.assertEqual(model1.get_conditional_ivs("X", "Y"), [("I", {"W", "Y"})])
+        self.assertEqual(model1.get_conditional_ivs("X", "Y"), [("I", {"W"})])
 
         model2 = SEMGraph(
             ebunch=[
@@ -1618,7 +1618,7 @@ class TestSEMGraph(unittest.TestCase):
             ],
             latents=["u"],
         )
-        self.assertEqual(model2.get_conditional_ivs("x", "y"), [("z", {"y", "w"})])
+        self.assertEqual(model2.get_conditional_ivs("x", "y"), [("z", {"w"})])
 
         model3 = SEMGraph(
             ebunch=[("x", "y"), ("u", "x"), ("u", "y"), ("z", "x")], latents=["u"]
