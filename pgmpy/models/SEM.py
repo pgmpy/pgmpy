@@ -482,7 +482,7 @@ class SEMGraph(DAG):
         ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
 
         M = self.moralize(graph=ancestral_G)
-        visited = set()
+        visited = set([Y])
         to_visit = list(M.neighbors(Y))
 
         # Another optimization over the original algo. Rather than going through all the paths does
