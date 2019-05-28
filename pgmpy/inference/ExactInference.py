@@ -77,7 +77,7 @@ class VariableElimination(Inference):
                 del working_factors[evidence_var]
 
         # Get elimination order
-        if isinstance(elimination_order, str):
+        if isinstance(elimination_order, str) and isinstance(self.model, BayesianModel):
             to_eliminate = (
                 set(self.variables)
                 - set(variables)
