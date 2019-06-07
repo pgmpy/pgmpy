@@ -98,5 +98,5 @@ notifications:
     url: https://webhooks.gitter.im/e/c084306bedf9aa508af2
     method: GET
     on_build_success: false
-    on_build_failure: true
+    on_build_failure: false
     on_build_status_changed: true
