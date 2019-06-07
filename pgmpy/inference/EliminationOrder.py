@@ -82,7 +82,7 @@ class BaseEliminationOrder:
         >>> WeightedMinFill(model).get_elimination_order(['c', 'd', 'g', 'l', 's'])
         ['c', 's', 'l', 'd', 'g']
         """
-        if not nodes:
+        if nodes is None:
             nodes = self.bayesian_model.nodes()
         nodes = set(nodes)
 

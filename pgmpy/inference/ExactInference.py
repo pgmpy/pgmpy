@@ -314,6 +314,7 @@ class VariableElimination(Inference):
             "marginalize",
             evidence=evidence,
             elimination_order=elimination_order,
+            joint=True,
         )
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
