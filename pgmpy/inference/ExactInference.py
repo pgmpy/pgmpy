@@ -64,12 +64,22 @@ class VariableElimination(Inference):
         -------
         list: A list of variables names in the order they need to be eliminated.
         """
-        to_eliminate = set(self.variables) - set(variables) - set(
-                                         evidence.keys() if evidence else [])
+        to_eliminate = (
+            set(self.variables)
+            - set(variables)
+            - set(evidence.keys() if evidence else [])
+        )
 
         # Step 1: If elimination_order is a list, verify it's correct and return.
-        if hasattr(elimination_order, '__iter__') and (not isinstance(elimination_order, str)):
-            if any(var in elimination_order for var in set(variables).union(set(evidence.keys() if evidence else []))):
+        if hasattr(elimination_order, "__iter__") and (
+            not isinstance(elimination_order, str)
+        ):
+            if any(
+                var in elimination_order
+                for var in set(variables).union(
+                    set(evidence.keys() if evidence else [])
+                )
+            ):
                 raise ValueError(
                     "Elimination order contains variables which are in"
                     " variables or evidence args"
@@ -82,7 +92,9 @@ class VariableElimination(Inference):
             return to_eliminate
 
         # Step 3: If elimination order is a str, compute the order using the specified heuristic.
-        elif isinstance(elimination_order, str) and isinstance(self.model, BayesianModel):
+        elif isinstance(elimination_order, str) and isinstance(
+            self.model, BayesianModel
+        ):
             heuristic_dict = {
                 "weightedminfill": WeightedMinFill,
                 "minneighbors": MinNeighbors,
@@ -93,7 +105,6 @@ class VariableElimination(Inference):
                 self.model
             ).get_elimination_order(nodes=to_eliminate)
             return elimination_order
-
 
     def _variable_elimination(
         self,
@@ -143,7 +154,9 @@ class VariableElimination(Inference):
         eliminated_variables = set()
         # Get working factors and elimination order
         working_factors = self._get_working_factors(evidence)
-        elimination_order = self._get_elimination_order(variables, evidence, elimination_order)
+        elimination_order = self._get_elimination_order(
+            variables, evidence, elimination_order
+        )
 
         # Step 3: Run variable elimination
         pbar = tqdm(elimination_order)
