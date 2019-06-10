@@ -3,7 +3,6 @@ numpy
 scipy
 pandas
 pyparsing
-wrapt
 pytorch
 statsmodels
 tqdm

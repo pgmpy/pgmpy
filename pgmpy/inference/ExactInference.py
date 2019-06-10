@@ -10,45 +10,30 @@ from pgmpy.extern.six.moves import filter, range
 from pgmpy.extern.six import string_types
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
+from pgmpy.inference.EliminationOrder import (
+    WeightedMinFill,
+    MinNeighbors,
+    MinFill,
+    MinWeight,
+)
 from pgmpy.models import JunctionTree, BayesianModel
 
 
 class VariableElimination(Inference):
-    def _variable_elimination(
-        self, variables, operation, evidence=None, elimination_order=None, joint=True
-    ):
+    def _get_working_factors(self, evidence):
         """
-        Implementation of a generalized variable elimination.
+        Uses the evidence given to the query methods to modify the factors before running
+        the variable elimination algorithm.
 
         Parameters
         ----------
-        variables: list, array-like
-            variables that are not to be eliminated.
-        operation: str ('marginalize' | 'maximize')
-            The operation to do for eliminating the variable.
         evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-            None if no evidence
-        elimination_order: list, array-like
-            list of variables representing the order in which they
-            are to be eliminated. If None order is computed automatically.
+            Dict of the form {variable: state}
+
+        Returns
+        -------
+        dict: Modified working factors.
         """
-        if isinstance(variables, string_types):
-            raise TypeError("variables must be a list of strings")
-        if isinstance(evidence, string_types):
-            raise TypeError("evidence must be a list of strings")
-
-        # Dealing with the case when variables is not provided.
-        if not variables:
-            all_factors = []
-            for factor_li in self.factors.values():
-                all_factors.extend(factor_li)
-            if joint:
-                return factor_product(*set(all_factors))
-            else:
-                return set(all_factors)
-
-        eliminated_variables = set()
         working_factors = {
             node: {factor for factor in self.factors[node]} for node in self.factors
         }
@@ -64,24 +49,116 @@ class VariableElimination(Inference):
                         working_factors[var].remove(factor)
                         working_factors[var].add(factor_reduced)
                 del working_factors[evidence_var]
+        return working_factors
 
-        # TODO: Modify it to find the optimal elimination order
-        if not elimination_order:
-            elimination_order = list(
-                set(self.variables)
-                - set(variables)
-                - set(evidence.keys() if evidence else [])
-            )
+    def _get_elimination_order(self, variables, evidence, elimination_order):
+        """
+        Deals with all elimination order parameters given to _variable_elimination method
+        and returns a list of variables that are to be eliminated
 
-        elif any(
-            var in elimination_order
-            for var in set(variables).union(set(evidence.keys() if evidence else []))
+        Parameters
+        ----------
+        elimination_order: str or list
+
+        Returns
+        -------
+        list: A list of variables names in the order they need to be eliminated.
+        """
+        to_eliminate = (
+            set(self.variables)
+            - set(variables)
+            - set(evidence.keys() if evidence else [])
+        )
+
+        # Step 1: If elimination_order is a list, verify it's correct and return.
+        if hasattr(elimination_order, "__iter__") and (
+            not isinstance(elimination_order, str)
         ):
-            raise ValueError(
-                "Elimination order contains variables which are in"
-                " variables or evidence args"
-            )
+            if any(
+                var in elimination_order
+                for var in set(variables).union(
+                    set(evidence.keys() if evidence else [])
+                )
+            ):
+                raise ValueError(
+                    "Elimination order contains variables which are in"
+                    " variables or evidence args"
+                )
+            else:
+                return elimination_order
 
+        # Step 2: If elimination order is None or a Markov model, return a random order.
+        elif (elimination_order is None) or (not isinstance(self.model, BayesianModel)):
+            return to_eliminate
+
+        # Step 3: If elimination order is a str, compute the order using the specified heuristic.
+        elif isinstance(elimination_order, str) and isinstance(
+            self.model, BayesianModel
+        ):
+            heuristic_dict = {
+                "weightedminfill": WeightedMinFill,
+                "minneighbors": MinNeighbors,
+                "minweight": MinWeight,
+                "minfill": MinFill,
+            }
+            elimination_order = heuristic_dict[elimination_order.lower()](
+                self.model
+            ).get_elimination_order(nodes=to_eliminate)
+            return elimination_order
+
+    def _variable_elimination(
+        self,
+        variables,
+        operation,
+        evidence=None,
+        elimination_order="MinFill",
+        joint=True,
+    ):
+        """
+        Implementation of a generalized variable elimination.
+
+        Parameters
+        ----------
+        variables: list, array-like
+            variables that are not to be eliminated.
+
+        operation: str ('marginalize' | 'maximize')
+            The operation to do for eliminating the variable.
+
+        evidence: dict
+            a dict key, value pair as {var: state_of_var_observed}
+            None if no evidence
+
+        elimination_order: str or list (array-like)
+            If str: Heuristic to use to find the elimination order.
+            If array-like: The elimination order to use.
+            If None: A random elimination order is used.
+        """
+        # Step 1: Deal with the input arguments.
+        if isinstance(variables, string_types):
+            raise TypeError("variables must be a list of strings")
+        if isinstance(evidence, string_types):
+            raise TypeError("evidence must be a list of strings")
+
+        # Dealing with the case when variables is not provided.
+        if not variables:
+            all_factors = []
+            for factor_li in self.factors.values():
+                all_factors.extend(factor_li)
+            if joint:
+                return factor_product(*set(all_factors))
+            else:
+                return set(all_factors)
+
+        # Step 2: Prepare data structures to run the algorithm.
+        eliminated_variables = set()
+        # Get working factors and elimination order
+        working_factors = self._get_working_factors(evidence)
+        elimination_order = self._get_elimination_order(
+            variables, evidence, elimination_order
+        )
+
+        # Step 3: Run variable elimination
         pbar = tqdm(elimination_order)
         for var in pbar:
             pbar.set_description("Eliminating: {var}".format(var=var))
@@ -99,6 +176,7 @@ class VariableElimination(Inference):
                 working_factors[variable].add(phi)
             eliminated_variables.add(var)
 
+        # Step 4: Prepare variables to be returned.
         final_distribution = set()
         for node in working_factors:
             factors = working_factors[node]
@@ -120,7 +198,7 @@ class VariableElimination(Inference):
                 ).normalize(inplace=False)
             return query_var_factor
 
-    def query(self, variables, evidence=None, elimination_order=None, joint=True):
+    def query(self, variables, evidence=None, elimination_order="MinFill", joint=True):
         """
         Parameters
         ----------
@@ -160,7 +238,7 @@ class VariableElimination(Inference):
             joint=joint,
         )
 
-    def max_marginal(self, variables=None, evidence=None, elimination_order=None):
+    def max_marginal(self, variables=None, evidence=None, elimination_order="MinFill"):
         """
         Computes the max-marginal over the variables given the evidence.
 
@@ -199,7 +277,7 @@ class VariableElimination(Inference):
 
         return np.max(final_distribution.values)
 
-    def map_query(self, variables=None, evidence=None, elimination_order=None):
+    def map_query(self, variables=None, evidence=None, elimination_order="MinFill"):
         """
         Computes the MAP Query over the variables given the evidence.
 
@@ -236,6 +314,7 @@ class VariableElimination(Inference):
             "marginalize",
             evidence=evidence,
             elimination_order=elimination_order,
+            joint=True,
         )
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
