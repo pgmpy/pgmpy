@@ -300,7 +300,7 @@ class ContinuousFactor(BaseFactor):
 
         """
         phi = self if inplace else self.copy()
-        phi.distriution = phi.distribution.normalize(inplace=False)
+        phi.distribution.normalize(inplace=True)
 
         if not inplace:
             return phi

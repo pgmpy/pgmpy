@@ -259,7 +259,7 @@ class TestContinuousFactorMethods(unittest.TestCase):
         self.assertEqual(phi4.scope(), phi2.scope())
         for inp in np.random.rand(1, 2):
             np_test.assert_almost_equal(
-                phi4.pdf(inp[0], inp[1]), 2 * self.pdf2(inp[0], inp[1])
+                phi4.pdf(inp[0], inp[1]), self.pdf2(inp[0], inp[1])
             )
 
         phi2.normalize()
