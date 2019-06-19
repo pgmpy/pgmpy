@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import numpy as np
@@ -342,9 +343,64 @@ class TestSEM(unittest.TestCase):
             self.assertDictEqual(self.demo.err_graph.nodes[node], {"weight": np.NaN})
 
     def test_from_lavaan(self):
-        self.assertRaises(
-            NotImplementedError, SEM.from_lavaan, "Doesn't matter what I write here"
+        model_str = """# %load model.lav
+                       # measurement model
+                         ind60 =~ x1 + x2 + x3
+                         dem60 =~ y1 + y2 + y3 + y4
+                         dem65 =~ y5 + y6 + y7 + y8
+                       # regressions
+                         dem60 ~ ind60
+                         dem65 ~ ind60 + dem60
+                       # residual correlations
+                         y1 ~~ y5
+                         y2 ~~ y4 + y6
+                         y3 ~~ y7
+                         y4 ~~ y8
+                         y6 ~~ y8
+                       """
+        model_from_str = SEM.from_lavaan(string=model_str)
+
+        with open("test_model.lav", "w") as f:
+            f.write(model_str)
+        model_from_file = SEM.from_lavaan(filename="test_model.lav")
+        os.remove("test_model.lav")
+
+        expected_edges = set(
+            [
+                ("ind60", "x1"),
+                ("ind60", "x2"),
+                ("ind60", "x3"),
+                ("ind60", "dem60"),
+                ("ind60", "dem65"),
+                ("dem60", "dem65"),
+                ("dem60", "y1"),
+                ("dem60", "y2"),
+                ("dem60", "y3"),
+                ("dem60", "y4"),
+                ("dem65", "y5"),
+                ("dem65", "y6"),
+                ("dem65", "y7"),
+                ("dem65", "y8"),
+            ]
         )
+        expected_err_edges = set(
+            [
+                ("y1", "y5"),
+                ("y2", "y6"),
+                ("y2", "y4"),
+                ("y3", "y7"),
+                ("y4", "y8"),
+                ("y6", "y8"),
+            ]
+        )
+
+        expected_latents = set(["dem60", "dem65", "ind60"])
+        self.assertEqual(set(model_from_str.graph.edges()), expected_edges)
+        self.assertEqual(set(model_from_file.graph.edges()), expected_edges)
+        self.assertEqual(set(model_from_str.err_graph.edges()), expected_err_edges)
+        self.assertEqual(set(model_from_file.err_graph.edges()), expected_err_edges)
+        self.assertEqual(set(model_from_str.latents), expected_latents)
+        self.assertEqual(set(model_from_file.latents), expected_latents)
 
     def test_from_lisrel(self):
         pass  # TODO: Add this test when done writing the tests for SEMAlg
