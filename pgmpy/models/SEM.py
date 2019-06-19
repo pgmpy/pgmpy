@@ -4,6 +4,7 @@ import warnings
 import itertools
 
 from networkx.algorithms.dag import descendants
+from pyparsing import OneOrMore, Word, Optional, Suppress, alphanums, nums
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import HAS_PANDAS
@@ -1042,7 +1043,75 @@ class SEM(SEMGraph):
         """
         if syntax.lower() == "lavaan":
             # Create a SEMGraph model using the lavaan str.
-            raise NotImplementedError("Lavaan syntax is not supported yet.")
+
+            # Step 1: Define the grammar for each type of string.
+            var = Word(alphanums)
+            reg_gram = (
+                OneOrMore(
+                    var.setResultsName("predictors", listAllMatches=True)
+                    + Optional(Suppress("+"))
+                )
+                + "~"
+                + OneOrMore(
+                    var.setResultsName("covariates", listAllMatches=True)
+                    + Optional(Suppress("+"))
+                )
+            )
+            intercept_gram = var("inter_var") + "~" + Word("1")
+            covar_gram = (
+                var("covar_var1")
+                + "~~"
+                + OneOrMore(
+                    var.setResultsName("covar_var2", listAllMatches=True)
+                    + Optional(Suppress("+"))
+                )
+            )
+            latent_gram = (
+                var("latent")
+                + "=~"
+                + OneOrMore(
+                    var.setResultsName("obs", listAllMatches=True)
+                    + Optional(Suppress("+"))
+                )
+            )
+
+            # Step 2: Preprocess string to lines
+            lines = kwargs["lavaan_str"]
+
+            # Step 3: Initialize arguments and fill them by parsing each line.
+            ebunch = []
+            latents = []
+            err_corr = []
+            err_var = []
+            for line in lines:
+                line = line.strip()
+                if (line != "") and (not line.startswith("#")):
+                    if intercept_gram.matches(line):
+                        continue
+                    elif reg_gram.matches(line):
+                        results = reg_gram.parseString(line, parseAll=True)
+                        for pred in results["predictors"]:
+                            ebunch.extend(
+                                [
+                                    (covariate, pred)
+                                    for covariate in results["covariates"]
+                                ]
+                            )
+                    elif covar_gram.matches(line):
+                        results = covar_gram.parseString(line, parseAll=True)
+                        for var in results["covar_var2"]:
+                            err_corr.append((results["covar_var1"], var))
+
+                    elif latent_gram.matches(line):
+                        results = latent_gram.parseString(line, parseAll=True)
+                        latents.append(results["latent"])
+                        ebunch.extend(
+                            [(results["latent"], obs) for obs in results["obs"]]
+                        )
+
+            # Step 4: Call the parent __init__ with the arguments
+            super(SEM, self).__init__(ebunch=ebunch, latents=latents, err_corr=err_corr)
+
         elif syntax.lower() == "graph":
             super(SEM, self).__init__(
                 ebunch=kwargs["ebunch"],
@@ -1050,6 +1119,7 @@ class SEM(SEMGraph):
                 err_corr=kwargs["err_corr"],
                 err_var=kwargs["err_var"],
             )
+
         elif syntax.lower() == "lisrel":
 
             model = SEMAlg(
@@ -1074,21 +1144,30 @@ class SEM(SEMGraph):
             )
 
     @classmethod
-    def from_lavaan(cls, lavaan_str):
+    def from_lavaan(cls, string=None, filename=None):
         """
         Initializes a `SEM` instance using lavaan syntax.
 
         Parameters
         ----------
-        str_model: str (default: None)
+        string: str (default: None)
             A `lavaan` style multiline set of regression equation representing the model.
             Refer http://lavaan.ugent.be/tutorial/syntax1.html for details.
 
-            If None requires `var_names` and `params` to be specified.
+        filename: str (default: None)
+            The filename of the file containing the model in lavaan syntax.
 
         Examples
         --------
         """
+        if filename:
+            with open(filename, "r") as f:
+                lavaan_str = f.readlines()
+        elif string:
+            lavaan_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
         return cls(syntax="lavaan", lavaan_str=lavaan_str)
 
     @classmethod

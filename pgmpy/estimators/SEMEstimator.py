@@ -252,7 +252,7 @@ class SEMEstimator(object):
 
         # Initialize the values of parameters as tensors.
         if isinstance(init_values, dict):
-            B_init, zeta_init = init_values['B'], init_values['zeta']
+            B_init, zeta_init = init_values["B"], init_values["zeta"]
         else:
             B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
         B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
