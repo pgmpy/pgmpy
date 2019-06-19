@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pgmpy.models import SEMGraph, SEMLISREL, SEM
+from pgmpy.models import SEMGraph, SEMAlg, SEM
 from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
@@ -18,11 +18,11 @@ class SEMEstimator(object):
     def __init__(self, model):
         if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
-        elif isinstance(model, SEMLISREL):
+        elif isinstance(model, SEMAlg):
             self.model = model
         else:
             raise ValueError(
-                """model should be an instance of either SEMGraph or SEMLISREL class.
+                """model should be an instance of either SEMGraph or SEMAlg class.
                                 Got type: {t}""".format(
                     t=type(model)
                 )

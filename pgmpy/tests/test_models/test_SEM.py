@@ -4,7 +4,7 @@ import numpy as np
 import networkx as nx
 import numpy.testing as npt
 
-from pgmpy.models import SEM, SEMGraph, SEMLISREL
+from pgmpy.models import SEM, SEMGraph, SEMAlg
 
 
 class TestSEM(unittest.TestCase):
@@ -347,7 +347,7 @@ class TestSEM(unittest.TestCase):
         )
 
     def test_from_lisrel(self):
-        pass  # TODO: Add this test when done writing the tests for SEMLISREL
+        pass  # TODO: Add this test when done writing the tests for SEMAlg
 
     def test_from_ram(self):
         pass  # TODO: Add this.
@@ -1629,7 +1629,7 @@ class TestSEMGraph(unittest.TestCase):
         self.assertEqual(model4.get_conditional_ivs("x", "y"), [("z", {"u"})])
 
 
-class TestSEMLISREL(unittest.TestCase):
+class TestSEMAlg(unittest.TestCase):
     def setUp(self):
         self.demo = SEMGraph(
             ebunch=[
