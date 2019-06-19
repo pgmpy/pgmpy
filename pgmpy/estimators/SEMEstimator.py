@@ -216,6 +216,10 @@ class SEMEstimator(object):
             GLS: Generalized Least Squares
             2sls: 2-SLS estimator
 
+        init_values: str or dict
+            Options for str: random | std | iv
+            dict: dictionary with keys `B` and `zeta`.
+
         **kwargs: dict
             Extra parameters required in case of some estimators.
             GLS:
@@ -247,7 +251,10 @@ class SEMEstimator(object):
             )
 
         # Initialize the values of parameters as tensors.
-        B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
+        if isinstance(init_values, dict):
+            B_init, zeta_init = init_values['B'], init_values['zeta']
+        else:
+            B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
         B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
         zeta = torch.tensor(zeta_init, device=device, dtype=dtype, requires_grad=True)
 
