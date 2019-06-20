@@ -9,3 +9,4 @@ pytorch
 statsmodels
 black
 tqdm
+joblib

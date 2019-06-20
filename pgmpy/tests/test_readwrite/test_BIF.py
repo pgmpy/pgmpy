@@ -58,10 +58,13 @@ class TestBIFReader(unittest.TestCase):
                 probability (  "family-out" ) { //1 variable(s) and 2 values
                         table 0.15 0.85 ;
                 }
-                """
+                """,
+            include_properties=True,
         )
 
-        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif")
+        self.water_model = BIFReader(
+            "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
+        )
 
     def test_network_name(self):
 
