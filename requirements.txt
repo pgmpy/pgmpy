@@ -6,3 +6,4 @@ pyparsing
 pytorch
 statsmodels
 tqdm
+joblib

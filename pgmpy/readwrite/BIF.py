@@ -4,6 +4,7 @@ from string import Template
 from itertools import product
 
 import numpy as np
+from joblib import Parallel, delayed
 from pyparsing import (
     Word,
     alphanums,
@@ -29,18 +30,26 @@ class BIFReader(object):
     Base class for reading network file in bif format
     """
 
-    def __init__(self, path=None, string=None):
+    def __init__(self, path=None, string=None, include_properties=False, n_jobs=-1):
         """
-        Initialisation of BifReader object
+        Initializes a BIFReader object.
 
         Parameters
-        ----------------
+        ----------
         path : file or str
-                File of bif data
+            File of bif data
+
         string : str
-                String of bif data
+            String of bif data
+
+        include_properties: boolean
+            If True, gets the properties tag from the file and stores in graph properties.
+
+        n_jobs: int (default: -1)
+            Number of jobs to run in parallel. `-1` means use all processors.
+
         Examples
-        -----------------
+        --------
         # dog-problem.bif file is present at
         # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
         >>> from pgmpy.readwrite import BIFReader
@@ -57,6 +66,9 @@ class BIFReader(object):
 
         else:
             raise ValueError("Must specify either path or string")
+
+        self.n_jobs = n_jobs
+        self.include_properties = include_properties
 
         if '"' in self.network:
             # Replacing quotes by spaces to remove case sensitivity like:
@@ -76,7 +88,8 @@ class BIFReader(object):
         self.network_name = self.get_network_name()
         self.variable_names = self.get_variables()
         self.variable_states = self.get_states()
-        self.variable_properties = self.get_property()
+        if self.include_properties:
+            self.variable_properties = self.get_property()
         self.variable_parents = self.get_parents()
         self.variable_cpds = self.get_values()
         self.variable_edges = self.get_edges()
@@ -253,6 +266,32 @@ class BIFReader(object):
             variable_parents[names[0]] = names[1:]
         return variable_parents
 
+    def _get_values_from_block(self, block):
+        names = self.probability_expr.searchString(block)
+        var_name, parents = names[0][0], names[0][1:]
+        cpds = self.cpd_expr.searchString(block)
+        if "table" in block:
+            arr = np.array([float(j) for i in cpds for j in i])
+            arr = arr.reshape(
+                (
+                    len(self.variable_states[var_name]),
+                    arr.size // len(self.variable_states[var_name]),
+                )
+            )
+        else:
+            arr_length = np.prod([len(self.variable_states[var]) for var in parents])
+            arr = np.zeros((len(self.variable_states[var_name]), arr_length))
+            values_dict = {}
+            for prob_line in cpds:
+                states = prob_line[: len(parents)]
+                vals = [float(i) for i in prob_line[len(parents) :]]
+                values_dict[tuple(states)] = vals
+            for index, combination in enumerate(
+                product(*[self.variable_states[var] for var in parents])
+            ):
+                arr[:, index] = values_dict[combination]
+        return var_name, arr
+
     def get_values(self):
         """
         Returns the CPD of the variables present in the network
@@ -273,33 +312,12 @@ class BIFReader(object):
         'light-on': np.array([[0.6, 0.05],
                             [0.4, 0.95]])}
         """
+        cpd_values = Parallel(n_jobs=self.n_jobs)(
+            delayed(self._get_values_from_block)(block)
+            for block in self.probability_block()
+        )
         variable_cpds = {}
-        for block in self.probability_block():
-            names = self.probability_expr.searchString(block)
-            var_name, parents = names[0][0], names[0][1:]
-            cpds = self.cpd_expr.searchString(block)
-            if "table" in block:
-                arr = np.array([float(j) for i in cpds for j in i])
-                arr = arr.reshape(
-                    (
-                        len(self.variable_states[var_name]),
-                        arr.size // len(self.variable_states[var_name]),
-                    )
-                )
-            else:
-                arr_length = np.prod(
-                    [len(self.variable_states[var]) for var in parents]
-                )
-                arr = np.zeros((len(self.variable_states[var_name]), arr_length))
-                values_dict = {}
-                for prob_line in cpds:
-                    states = prob_line[: len(parents)]
-                    vals = [float(i) for i in prob_line[len(parents) :]]
-                    values_dict[tuple(states)] = vals
-                for index, combination in enumerate(
-                    product(*[self.variable_states[var] for var in parents])
-                ):
-                    arr[:, index] = values_dict[combination]
+        for var_name, arr in cpd_values:
             variable_cpds[var_name] = arr
 
         return variable_cpds
@@ -364,10 +382,14 @@ class BIFReader(object):
                 tabular_cpds.append(cpd)
 
             model.add_cpds(*tabular_cpds)
-            for node, properties in self.variable_properties.items():
-                for prop in properties:
-                    prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
-                    model.node[node][prop_name] = prop_value
+
+            if self.include_properties:
+                for node, properties in self.variable_properties.items():
+                    for prop in properties:
+                        prop_name, prop_value = map(
+                            lambda t: t.strip(), prop.split("=")
+                        )
+                        model.node[node][prop_name] = prop_value
 
             return model
 
