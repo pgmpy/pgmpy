@@ -99,7 +99,9 @@ class HillClimbSearch(StructureEstimator):
                         )
                         yield (operation, score_delta)
 
-    def estimate(self, start=None, tabu_length=0, max_indegree=None):
+    def estimate(
+        self, start=None, tabu_length=0, max_indegree=None, epsilon=1e-4, max_iter=1e6
+    ):
         """
         Performs local hill climb search to estimates the `DAG` structure
         that has optimal score, according to the scoring method supplied in the constructor.
@@ -110,13 +112,23 @@ class HillClimbSearch(StructureEstimator):
         ----------
         start: DAG instance
             The starting point for the local search. By default a completely disconnected network is used.
+
         tabu_length: int
             If provided, the last `tabu_length` graph modifications cannot be reversed
             during the search procedure. This serves to enforce a wider exploration
             of the search space. Default value: 100.
+
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
+
+        epsilon: float (default: 1e-4)
+            Defines the exit condition. If the improvement in score is less than `epsilon`,
+            the learned model is returned.
+
+        max_iter: int (default: 1e6)
+            The maximum number of iterations allowed. Returns the learned model when the
+            number of iterations is greater than `max_iter`.
 
         Returns
         -------
@@ -142,7 +154,6 @@ class HillClimbSearch(StructureEstimator):
         >>> est.estimate(max_indegree=1).edges()
         [('J', 'A'), ('B', 'J')]
         """
-        epsilon = 1e-8
         nodes = self.state_names.keys()
         if start is None:
             start = DAG()
@@ -155,7 +166,10 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        while True:
+        iter_no = 0
+        while iter_no <= max_iter:
+            iter_no += 1
+
             best_score_delta = 0
             best_operation = None
 
