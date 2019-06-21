@@ -8,7 +8,7 @@ from pgmpy.estimators.BicScore import BicScore
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
-from pgmpy.estimators.SEMEstimator import SEMEstimator
+from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 
 __all__ = [
     "BaseEstimator",
@@ -23,4 +23,5 @@ __all__ = [
     "BdeuScore",
     "BicScore",
     "SEMEstimator",
+    "IVEstimator",
 ]
