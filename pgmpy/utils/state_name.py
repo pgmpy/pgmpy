@@ -64,7 +64,7 @@ class StateNameMixin:
         Given `var` and `state_name` return the state number.
         """
         if self.state_names:
-            return self.name_to_no[var][state_name]
+            return self.name_to_no[var][self.state_names[var][state_name]]
         else:
             return state_name
 
