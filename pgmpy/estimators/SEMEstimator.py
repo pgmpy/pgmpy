@@ -7,7 +7,7 @@ import torch
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
 from pgmpy.data import Data
-from pgmpy.global_vars import device, dtype
+from pgmpy.config import device, dtype
 from pgmpy.utils import optimize, pinverse
 
 

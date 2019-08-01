@@ -5,7 +5,7 @@ import numpy as np
 import numpy.testing as npt
 
 from pgmpy.utils import optimize, pinverse
-from pgmpy.global_vars import device, dtype
+from pgmpy.config import device, dtype
 
 
 class TestOptimize(unittest.TestCase):
