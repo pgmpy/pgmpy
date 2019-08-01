@@ -28,6 +28,11 @@ def pearsonr(X, Y, Z, data):
     -------
     Pearson's correlation coefficient: float
     p-value: float
+
+    References
+    ----------
+    [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
+    [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
