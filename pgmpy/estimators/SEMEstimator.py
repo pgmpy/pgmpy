@@ -7,7 +7,6 @@ import torch
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
 from pgmpy.data import Data
-from pgmpy.config import device, dtype
 from pgmpy.utils import optimize, pinverse
 
 
@@ -17,6 +16,11 @@ class SEMEstimator(object):
     """
 
     def __init__(self, model):
+        from pgmpy.config import device, dtype
+
+        if type(dtype) == type:
+            raise NotImplementedError("SEM Estimators work only with pytorch backend")
+
         if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
         elif isinstance(model, SEMAlg):

@@ -3,6 +3,10 @@ import unittest
 import pandas as pd
 import numpy as np
 
+from pgmpy.config import set_dtype, set_backend
+
+set_backend("pytorch")
+set_dtype("float32")
 from pgmpy.models import SEMGraph, SEM
 from pgmpy.estimators import SEMEstimator, IVEstimator
 
