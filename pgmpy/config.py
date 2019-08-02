@@ -50,7 +50,7 @@ def set_backend(backend_="numpy"):
         raise ValueError("Unknown backend. Please select between numpy or pytorch")
 
 
-def set_dtype(dtype_="float"):
+def set_dtype(dtype_="float32"):
     """
     Globally set dtype for all arrays.
 
