@@ -7,7 +7,7 @@ from networkx.algorithms.dag import descendants
 from pyparsing import OneOrMore, Word, Optional, Suppress, alphanums, nums
 
 from pgmpy.base import DAG
-from pgmpy.global_vars import HAS_PANDAS
+from pgmpy.config import HAS_PANDAS
 
 
 if HAS_PANDAS:

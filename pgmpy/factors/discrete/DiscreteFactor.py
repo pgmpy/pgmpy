@@ -5,6 +5,7 @@ from collections import namedtuple
 
 import numpy as np
 
+from pgmpy.base.backend import *
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin
 from pgmpy.extern import tabulate
@@ -94,7 +95,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if isinstance(variables, six.string_types):
             raise TypeError("Variables: Expected type list or array like, got string")
 
-        values = np.array(values, dtype=float)
+        values = barray(values, dtype=float)
 
         if len(cardinality) != len(variables):
             raise ValueError(
@@ -289,7 +290,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
-        phi.values = np.sum(phi.values, axis=tuple(var_indexes))
+        phi.values = bsum(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi
@@ -344,7 +345,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
 
-        phi.values = np.max(phi.values, axis=tuple(var_indexes))
+        phi.values = bmax(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi
@@ -393,7 +394,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self if inplace else self.copy()
 
-        phi.values = phi.values / phi.values.sum()
+        phi.values = bdiv(phi.values, phi.values.sum())
 
         if not inplace:
             return phi
