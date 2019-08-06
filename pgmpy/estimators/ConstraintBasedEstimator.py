@@ -7,6 +7,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.estimators import test_conditional_independence
 
 
 class ConstraintBasedEstimator(StructureEstimator):
@@ -171,16 +172,16 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         nodes = self.state_names.keys()
 
-        def is_independent(X, Y, Zs):
-            """Returns result of hypothesis test for the null hypothesis that
-            X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
-            """
-            chi2, p_value, sufficient_data = self.test_conditional_independence(
-                X, Y, Zs
-            )
-            return p_value >= significance_level
+#         def is_independent(X, Y, Zs):
+#             """Returns result of hypothesis test for the null hypothesis that
+#             X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
+#             """
+#             chi2, p_value, sufficient_data = self.test_conditional_independence(
+#                 X, Y, Zs
+#             )
+#             return p_value >= significance_level
 
-        return self.build_skeleton(nodes, is_independent)
+        return self.build_skeleton(nodes, test_conditional_independence)
 
     @staticmethod
     def estimate_from_independencies(nodes, independencies):
