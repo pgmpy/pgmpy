@@ -432,27 +432,15 @@ class DAG(nx.DiGraph):
         (grade _|_ SAT | diff, intel)
         """
 
-        def dfs(node):
-            """
-            Returns the descendents of node.
-
-            This is a very simple dfs
-            which does not remember which nodes it has visited.
-            """
-            descendents = []
-            visit = [node]
-            while visit:
-                n = visit.pop()
-                neighbors = list(self.neighbors(n))
-                visit.extend(neighbors)
-                descendents.extend(neighbors)
-            return descendents
-
         independencies = Independencies()
         for variable in (
             variables if isinstance(variables, (list, tuple)) else [variables]
         ):
-            non_descendents = set(self.nodes()) - {variable} - set(dfs(variable))
+            non_descendents = (
+                set(self.nodes())
+                - {variable}
+                - set(nx.dfs_preorder_nodes(self, variable))
+            )
             parents = set(self.get_parents(variable))
             if non_descendents - parents:
                 independencies.add_assertions(
