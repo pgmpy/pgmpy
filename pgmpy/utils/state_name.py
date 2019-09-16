@@ -23,10 +23,15 @@ class StateNameMixin:
         """
         if state_names:
             for key, value in state_names.items():
-                if not isinstance(value, list):
+                if not isinstance(value, (list, tuple)):
                     raise ValueError(
                         "The state names must be for the form: {variable: list_of_states}"
                     )
+                elif not len(set(value)) == len(value):
+                    raise ValueError(
+                        "Repeated statenames for variable: {var}".format(var=key)
+                    )
+
             self.state_names = state_names
             # Create maps for easy access to specific state names of state numbers.
             if state_names:
