@@ -51,7 +51,7 @@ class VariableElimination(Inference):
                 del working_factors[evidence_var]
         return working_factors
 
-    def _get_elimination_order(self, variables, evidence, elimination_order):
+    def _get_elimination_order(self, variables, evidence, elimination_order, show_progress=True):
         """
         Deals with all elimination order parameters given to _variable_elimination method
         and returns a list of variables that are to be eliminated
@@ -103,7 +103,7 @@ class VariableElimination(Inference):
             }
             elimination_order = heuristic_dict[elimination_order.lower()](
                 self.model
-            ).get_elimination_order(nodes=to_eliminate)
+            ).get_elimination_order(nodes=to_eliminate, show_progress=show_progress)
             return elimination_order
 
     def _variable_elimination(
@@ -113,6 +113,7 @@ class VariableElimination(Inference):
         evidence=None,
         elimination_order="MinFill",
         joint=True,
+        show_progress=True,
     ):
         """
         Implementation of a generalized variable elimination.
@@ -155,13 +156,18 @@ class VariableElimination(Inference):
         # Get working factors and elimination order
         working_factors = self._get_working_factors(evidence)
         elimination_order = self._get_elimination_order(
-            variables, evidence, elimination_order
+            variables, evidence, elimination_order, show_progress=show_progress
         )
 
         # Step 3: Run variable elimination
-        pbar = tqdm(elimination_order)
+        if show_progress:
+            pbar = tqdm(elimination_order)
+        else:
+            pbar = elimination_order
+
         for var in pbar:
-            pbar.set_description("Eliminating: {var}".format(var=var))
+            if show_progress:
+                pbar.set_description("Eliminating: {var}".format(var=var))
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [
@@ -198,7 +204,14 @@ class VariableElimination(Inference):
                 ).normalize(inplace=False)
             return query_var_factor
 
-    def query(self, variables, evidence=None, elimination_order="MinFill", joint=True):
+    def query(
+        self,
+        variables,
+        evidence=None,
+        elimination_order="MinFill",
+        joint=True,
+        show_progress=True,
+    ):
         """
         Parameters
         ----------
@@ -231,14 +244,21 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         return self._variable_elimination(
-            variables,
-            "marginalize",
+            variables=variables,
+            operation="marginalize",
             evidence=evidence,
             elimination_order=elimination_order,
             joint=joint,
+            show_progress=show_progress,
         )
 
-    def max_marginal(self, variables=None, evidence=None, elimination_order="MinFill"):
+    def max_marginal(
+        self,
+        variables=None,
+        evidence=None,
+        elimination_order="MinFill",
+        show_progress=True,
+    ):
         """
         Computes the max-marginal over the variables given the evidence.
 
@@ -269,15 +289,22 @@ class VariableElimination(Inference):
         if not variables:
             variables = []
         final_distribution = self._variable_elimination(
-            variables,
-            "maximize",
+            variables=variables,
+            operation="maximize",
             evidence=evidence,
             elimination_order=elimination_order,
+            show_progress=show_progress,
         )
 
         return np.max(final_distribution.values)
 
-    def map_query(self, variables=None, evidence=None, elimination_order="MinFill"):
+    def map_query(
+        self,
+        variables=None,
+        evidence=None,
+        elimination_order="MinFill",
+        show_progress=True,
+    ):
         """
         Computes the MAP Query over the variables given the evidence.
 
@@ -310,11 +337,12 @@ class VariableElimination(Inference):
         """
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
-            variables,
-            "marginalize",
+            variables=variables,
+            operation="marginalize",
             evidence=evidence,
             elimination_order=elimination_order,
             joint=True,
+            show_progress=show_progress,
         )
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]

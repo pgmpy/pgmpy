@@ -40,7 +40,7 @@ class BaseEliminationOrder:
         """
         return 0
 
-    def get_elimination_order(self, nodes=None):
+    def get_elimination_order(self, nodes=None, show_progress=True):
         """
         Returns the optimal elimination order based on the cost function.
         The node having the least cost is removed first.
@@ -87,17 +87,19 @@ class BaseEliminationOrder:
         nodes = set(nodes)
 
         ordering = []
-
-        with tqdm(total=len(nodes)) as pbar:
+        if show_progress:
+            pbar = tqdm(total=len(nodes))
             pbar.set_description("Finding Elimination Order: ")
-            while nodes:
-                scores = {node: self.cost(node) for node in nodes}
-                min_score_node = min(scores, key=scores.get)
-                ordering.append(min_score_node)
-                nodes.remove(min_score_node)
-                self.bayesian_model.remove_node(min_score_node)
-                self.moralized_model.remove_node(min_score_node)
 
+        while nodes:
+            scores = {node: self.cost(node) for node in nodes}
+            min_score_node = min(scores, key=scores.get)
+            ordering.append(min_score_node)
+            nodes.remove(min_score_node)
+            self.bayesian_model.remove_node(min_score_node)
+            self.moralized_model.remove_node(min_score_node)
+
+            if show_progress:
                 pbar.update(1)
         return ordering
 

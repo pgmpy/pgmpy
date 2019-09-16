@@ -583,7 +583,9 @@ class BayesianModel(DAG):
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
             states_dict = model_inference.map_query(
-                variables=missing_variables, evidence=data_point.to_dict()
+                variables=missing_variables,
+                evidence=data_point.to_dict(),
+                show_progress=False,
             )
             for k, v in states_dict.items():
                 pred_values[k].append(v)
@@ -649,7 +651,9 @@ class BayesianModel(DAG):
         model_inference = VariableElimination(self)
         for index, data_point in data.iterrows():
             full_distribution = model_inference.query(
-                variables=missing_variables, evidence=data_point.to_dict()
+                variables=missing_variables,
+                evidence=data_point.to_dict(),
+                show_progress=False,
             )
             states_dict = {}
             for var in missing_variables:
