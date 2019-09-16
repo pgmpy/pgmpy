@@ -18,16 +18,55 @@ from pgmpy.models import MarkovModel
 
 class TestFactorInit(unittest.TestCase):
     def test_class_init(self):
-        phi = DiscreteFactor(["x1", "x2", "x3"], [2, 2, 2], np.ones(8))
+        phi = DiscreteFactor(
+            variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
+        )
         self.assertEqual(phi.variables, ["x1", "x2", "x3"])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
         np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
 
-    def test_class_init1(self):
-        phi = DiscreteFactor([1, 2, 3], [2, 3, 2], np.arange(12))
+    def test_class_init_int_var(self):
+        phi = DiscreteFactor(
+            variables=[1, 2, 3], cardinality=[2, 3, 2], values=np.arange(12)
+        )
         self.assertEqual(phi.variables, [1, 2, 3])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
         np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
+
+    def test_class_init_statenames(self):
+        phi = DiscreteFactor(
+            variables=["x1", "x2", "x3"],
+            cardinality=[2, 2, 2],
+            values=np.ones(8),
+            state_names={
+                "x1": ["sn0", "sn1"],
+                "x2": ["sn0", "sn1"],
+                "x3": ["sn0", "sn1"],
+            },
+        )
+        self.assertEqual(phi.variables, ["x1", "x2", "x3"])
+        np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
+        np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
+
+    def test_class_init_repeated_statename(self):
+        self.assertRaises(
+            ValueError,
+            DiscreteFactor,
+            ["x1", "x2", "x3"],
+            [2, 2, 2],
+            np.ones(8),
+            {"x1": ["sn0", "sn0"], "x2": ["sn0", "sn1"], "x3": ["sn0", "sn1"]},
+        )
+
+    def test_class_init_nonlist_statename(self):
+        self.assertRaises(
+            ValueError,
+            DiscreteFactor,
+            ["x1", "x2", "x3"],
+            [2, 2, 2],
+            np.ones(8),
+            {"x1": {"sn0", "sn0"}, "x2": ["sn0", "sn1"], "x3": ["sn0", "sn1"]},
+        )
 
     def test_class_init_sizeerror(self):
         self.assertRaises(
@@ -47,12 +86,52 @@ class TestFactorInit(unittest.TestCase):
 class TestFactorMethods(unittest.TestCase):
     def setUp(self):
         self.phi = DiscreteFactor(
-            ["x1", "x2", "x3"], [2, 2, 2], np.random.uniform(5, 10, size=8)
+            variables=["x1", "x2", "x3"],
+            cardinality=[2, 2, 2],
+            values=np.random.uniform(5, 10, size=8),
         )
-        self.phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        self.phi_sn = DiscreteFactor(
+            variables=["x1", "x2", "x3"],
+            cardinality=[2, 2, 2],
+            values=np.random.uniform(5, 10, size=8),
+            state_names={
+                "x1": ("sn0", "sn1"),
+                "x2": ("sn0", "sn1"),
+                "x3": ("sn0", "sn1"),
+            },
+        )
+
+        self.phi1 = DiscreteFactor(
+            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+        )
+        self.phi1_sn = DiscreteFactor(
+            variables=["x1", "x2", "x3"],
+            cardinality=[2, 3, 2],
+            values=range(12),
+            state_names={
+                "x1": ("sn0", "sn1"),
+                "x2": ("sn0", "sn1", "sn2"),
+                "x3": ("sn0", "sn1"),
+            },
+        )
+
         self.phi2 = DiscreteFactor(
-            [("x1", 0), ("x2", 0), ("x3", 0)], [2, 3, 2], range(12)
+            variables=[("x1", 0), ("x2", 0), ("x3", 0)],
+            cardinality=[2, 3, 2],
+            values=range(12),
         )
+
+        self.phi2_sn = DiscreteFactor(
+            variables=[("x1", 0), ("x2", 0), ("x3", 0)],
+            cardinality=[2, 3, 2],
+            values=range(12),
+            state_names={
+                "x1": ("sn0", "sn1"),
+                "x2": ("sn0", "sn1", "sn2"),
+                "x3": ("sn0", "sn1"),
+            },
+        )
+
         # This larger factor (phi3) caused a bug in reduce
         card3 = [3, 3, 3, 2, 2, 2, 2, 2, 2]
         self.phi3 = DiscreteFactor(
@@ -97,7 +176,10 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_scope(self):
         self.assertListEqual(self.phi.scope(), ["x1", "x2", "x3"])
+        self.assertListEqual(self.phi_sn.scope(), ["x1", "x2", "x3"])
+
         self.assertListEqual(self.phi1.scope(), ["x1", "x2", "x3"])
+        self.assertListEqual(self.phi1_sn.scope(), ["x1", "x2", "x3"])
 
         self.assertListEqual(self.phi4.scope(), [self.tup1, self.tup2, self.tup3])
 
@@ -106,11 +188,24 @@ class TestFactorMethods(unittest.TestCase):
             self.phi.assignment([0]), [[("x1", 0), ("x2", 0), ("x3", 0)]]
         )
         self.assertListEqual(
+            self.phi_sn.assignment([0]), [[("x1", "sn0"), ("x2", "sn0"), ("x3", "sn0")]]
+        )
+
+        self.assertListEqual(
             self.phi.assignment([4, 5, 6]),
             [
                 [("x1", 1), ("x2", 0), ("x3", 0)],
                 [("x1", 1), ("x2", 0), ("x3", 1)],
                 [("x1", 1), ("x2", 1), ("x3", 0)],
+            ],
+        )
+
+        self.assertListEqual(
+            self.phi_sn.assignment([4, 5, 6]),
+            [
+                [("x1", "sn1"), ("x2", "sn0"), ("x3", "sn0")],
+                [("x1", "sn1"), ("x2", "sn0"), ("x3", "sn1")],
+                [("x1", "sn1"), ("x2", "sn1"), ("x3", "sn0")],
             ],
         )
 
@@ -122,6 +217,16 @@ class TestFactorMethods(unittest.TestCase):
                 [("x1", 1), ("x2", 0), ("x3", 0)],
             ],
         )
+
+        self.assertListEqual(
+            self.phi1_sn.assignment(np.array([4, 5, 6])),
+            [
+                [("x1", "sn0"), ("x2", "sn2"), ("x3", "sn0")],
+                [("x1", "sn0"), ("x2", "sn2"), ("x3", "sn1")],
+                [("x1", "sn1"), ("x2", "sn0"), ("x3", "sn0")],
+            ],
+        )
+
         self.assertListEqual(
             self.phi4.assignment(np.array([11, 12, 23])),
             [
@@ -133,20 +238,36 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_assignment_indexerror(self):
         self.assertRaises(IndexError, self.phi.assignment, [10])
+        self.assertRaises(IndexError, self.phi_sn.assignment, [10])
         self.assertRaises(IndexError, self.phi.assignment, [1, 3, 10, 5])
+        self.assertRaises(IndexError, self.phi_sn.assignment, [1, 3, 10, 5])
         self.assertRaises(IndexError, self.phi.assignment, np.array([1, 3, 10, 5]))
+        self.assertRaises(IndexError, self.phi_sn.assignment, np.array([1, 3, 10, 5]))
 
         self.assertRaises(IndexError, self.phi4.assignment, [2, 24])
         self.assertRaises(IndexError, self.phi4.assignment, np.array([24, 2, 4, 30]))
 
     def test_get_cardinality(self):
         self.assertEqual(self.phi.get_cardinality(["x1"]), {"x1": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x1"]), {"x1": 2})
+
         self.assertEqual(self.phi.get_cardinality(["x2"]), {"x2": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x2"]), {"x2": 2})
+
         self.assertEqual(self.phi.get_cardinality(["x3"]), {"x3": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x3"]), {"x3": 2})
+
         self.assertEqual(self.phi.get_cardinality(["x1", "x2"]), {"x1": 2, "x2": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x1", "x2"]), {"x1": 2, "x2": 2})
+
         self.assertEqual(self.phi.get_cardinality(["x1", "x3"]), {"x1": 2, "x3": 2})
+        self.assertEqual(self.phi_sn.get_cardinality(["x1", "x3"]), {"x1": 2, "x3": 2})
+
         self.assertEqual(
             self.phi.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2}
+        )
+        self.assertEqual(
+            self.phi_sn.get_cardinality(["x1", "x2", "x3"]), {"x1": 2, "x2": 2, "x3": 2}
         )
 
         self.assertEqual(
@@ -162,16 +283,27 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_get_cardinality_typeerror(self):
         self.assertRaises(TypeError, self.phi.get_cardinality, "x1")
+        self.assertRaises(TypeError, self.phi_sn.get_cardinality, "x1")
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])
         np_test.assert_array_equal(
             self.phi1.values, np.array([[6, 8], [10, 12], [14, 16]])
         )
+        self.phi1_sn.marginalize(["x1"])
+        np_test.assert_array_equal(
+            self.phi1_sn.values, np.array([[6, 8], [10, 12], [14, 16]])
+        )
+
         self.phi1.marginalize(["x2"])
         np_test.assert_array_equal(self.phi1.values, np.array([30, 36]))
+        self.phi1_sn.marginalize(["x2"])
+        np_test.assert_array_equal(self.phi1_sn.values, np.array([30, 36]))
+
         self.phi1.marginalize(["x3"])
         np_test.assert_array_equal(self.phi1.values, np.array(66))
+        self.phi1_sn.marginalize(["x3"])
+        np_test.assert_array_equal(self.phi1_sn.values, np.array(66))
 
         self.phi5.marginalize([self.tup1])
         np_test.assert_array_equal(
@@ -227,6 +359,26 @@ class TestFactorMethods(unittest.TestCase):
                 ]
             ),
         )
+
+        self.phi1_sn.normalize()
+        np_test.assert_almost_equal(
+            self.phi1_sn.values,
+            np.array(
+                [
+                    [
+                        [0, 0.01515152],
+                        [0.03030303, 0.04545455],
+                        [0.06060606, 0.07575758],
+                    ],
+                    [
+                        [0.09090909, 0.10606061],
+                        [0.12121212, 0.13636364],
+                        [0.15151515, 0.16666667],
+                    ],
+                ]
+            ),
+        )
+
         self.phi5.normalize()
         np_test.assert_almost_equal(
             self.phi5.values,
@@ -247,6 +399,8 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce(self):
         self.phi1.reduce([("x1", 0), ("x2", 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+        self.phi1_sn.reduce([("x1", "sn0"), ("x2", "sn0")])
+        np_test.assert_array_equal(self.phi1_sn.values, np.array([0, 1]))
 
         self.phi5.reduce([(self.tup1, 0), (self.tup3, 1)])
         np_test.assert_array_equal(self.phi5.values, np.array([1, 5, 9]))
@@ -254,6 +408,8 @@ class TestFactorMethods(unittest.TestCase):
     def test_reduce1(self):
         self.phi1.reduce([("x2", 0), ("x1", 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+        self.phi1_sn.reduce([("x2", "sn0"), ("x1", "sn0")])
+        np_test.assert_array_equal(self.phi1_sn.values, np.array([0, 1]))
 
         self.phi5.reduce([(self.tup3, 1), (self.tup1, 0)])
         np_test.assert_array_equal(self.phi5.values, np.array([1, 5, 9]))
@@ -276,6 +432,11 @@ class TestFactorMethods(unittest.TestCase):
         np_test.assert_array_equal(self.phi1.values, np.array([1]))
         np_test.assert_array_equal(self.phi1.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
+
+        self.phi1_sn.reduce([("x1", "sn0"), ("x2", "sn0"), ("x3", "sn1")])
+        np_test.assert_array_equal(self.phi1_sn.values, np.array([1]))
+        np_test.assert_array_equal(self.phi1_sn.cardinality, np.array([]))
+        np_test.assert_array_equal(self.phi1_sn.variables, OrderedDict())
 
         self.phi5.reduce([(("x1", "x2"), 1), (("x2", "x3"), 0), (("x3", (1, "x4")), 3)])
         np_test.assert_array_equal(self.phi5.values, np.array([15]))
