@@ -51,7 +51,9 @@ class VariableElimination(Inference):
                 del working_factors[evidence_var]
         return working_factors
 
-    def _get_elimination_order(self, variables, evidence, elimination_order, show_progress=True):
+    def _get_elimination_order(
+        self, variables, evidence, elimination_order, show_progress=True
+    ):
         """
         Deals with all elimination order parameters given to _variable_elimination method
         and returns a list of variables that are to be eliminated
