@@ -39,3 +39,11 @@ class TestPearsonr(unittest.TestCase):
 
         coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_vstruct)
         self.assertTrue(coef > 0.9)
+
+
+class TestChiSquare(unittest.Testcase):
+    def setUp(self):
+        pass
+
+    def test_chi_square(self):
+        pass

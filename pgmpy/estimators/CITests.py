@@ -211,7 +211,6 @@ def pearsonr(X, Y, Z, data):
 
         return stats.pearsonr(residual_X, residual_Y)
 
-
 def test_conditional_independence(X, Y, Z, data, method='chi_square', tol=0.01, **kwargs):
     if method == 'chi_square':
         param, p_value = chi_square(X, Y, Z, data, **kwargs)
