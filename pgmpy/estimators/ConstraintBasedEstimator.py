@@ -172,14 +172,14 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         nodes = self.state_names.keys()
 
-#         def is_independent(X, Y, Zs):
-#             """Returns result of hypothesis test for the null hypothesis that
-#             X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
-#             """
-#             chi2, p_value, sufficient_data = self.test_conditional_independence(
-#                 X, Y, Zs
-#             )
-#             return p_value >= significance_level
+        #         def is_independent(X, Y, Zs):
+        #             """Returns result of hypothesis test for the null hypothesis that
+        #             X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
+        #             """
+        #             chi2, p_value, sufficient_data = self.test_conditional_independence(
+        #                 X, Y, Zs
+        #             )
+        #             return p_value >= significance_level
 
         return self.build_skeleton(nodes, test_conditional_independence)
 

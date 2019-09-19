@@ -74,7 +74,7 @@ def chi_square(X, Y, Z, data, **kwargs):
     else:
         Z = [Z]
 
-    state_names = kwargs['state_names']
+    state_names = kwargs["state_names"]
     num_params = (
         (len(state_names[X]) - 1)
         * (len(state_names[Y]) - 1)
@@ -101,9 +101,7 @@ def chi_square(X, Y, Z, data, **kwargs):
         [state_names[Y]] + [state_names[z] for z in Z], names=[Y] + Z
     )
     if not isinstance(XYZ_state_counts.columns, pd.MultiIndex):
-        XYZ_state_counts.columns = pd.MultiIndex.from_arrays(
-            [XYZ_state_counts.columns]
-        )
+        XYZ_state_counts.columns = pd.MultiIndex.from_arrays([XYZ_state_counts.columns])
     XYZ_state_counts = XYZ_state_counts.reindex(
         index=row_index, columns=column_index
     ).fillna(0)
@@ -111,9 +109,7 @@ def chi_square(X, Y, Z, data, **kwargs):
     # compute the expected frequency/state_count table if X _|_ Y | Zs:
     # = P(X|Zs)*P(Y|Zs)*P(Zs) = P(X,Zs)*P(Y,Zs)/P(Zs)
     if Z:
-        XZ_state_counts = XYZ_state_counts.sum(
-            axis=1, level=Z
-        )  # marginalize out Y
+        XZ_state_counts = XYZ_state_counts.sum(axis=1, level=Z)  # marginalize out Y
         YZ_state_counts = XYZ_state_counts.sum().unstack(Z)  # marginalize out X
     else:
         XZ_state_counts = XYZ_state_counts.sum(axis=1)
@@ -211,15 +207,18 @@ def pearsonr(X, Y, Z, data):
 
         return stats.pearsonr(residual_X, residual_Y)
 
-def test_conditional_independence(X, Y, Z, data, method='chi_square', tol=0.01, **kwargs):
-    if method == 'chi_square':
+
+def test_conditional_independence(
+    X, Y, Z, data, method="chi_square", tol=0.01, **kwargs
+):
+    if method == "chi_square":
         param, p_value = chi_square(X, Y, Z, data, **kwargs)
         if p_value >= tol:
             return True
         else:
             return False
 
-    elif method == 'pearsonr':
+    elif method == "pearsonr":
         param, p_value = pearsonr(X=X, Y=Y, Z=Z, data=data, **kwargs)
         if abs(param) <= tol:
             return True
