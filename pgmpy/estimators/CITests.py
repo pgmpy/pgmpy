@@ -207,7 +207,7 @@ def pearsonr(X, Y, Z, data):
         Y_coef = np.linalg.lstsq(data.loc[:, Z], data.loc[:, Y], rcond=None)[0]
 
         residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
-        residual_Y = data.loc[:, X] - data.loc[:, Z].dot(Y_coef)
+        residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
 
         return stats.pearsonr(residual_X, residual_Y)
 
