@@ -1,15 +1,15 @@
-from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEstimator
-from pgmpy.estimators.BayesianEstimator import BayesianEstimator
-from pgmpy.estimators.BdeuScore import BdeuScore
-from pgmpy.estimators.BicScore import BicScore
-from pgmpy.estimators.CITests import test_conditional_independence
-from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
-from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
-from pgmpy.estimators.HillClimbSearch import HillClimbSearch
-from pgmpy.estimators.K2Score import K2Score
-from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
-from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
-from pgmpy.estimators.StructureScore import StructureScore
+from .base import BaseEstimator, ParameterEstimator, StructureEstimator
+from .StructureScore import StructureScore
+from .BayesianEstimator import BayesianEstimator
+from .BdeuScore import BdeuScore
+from .BicScore import BicScore
+from .CITests import test_conditional_independence
+from .ConstraintBasedEstimator import ConstraintBasedEstimator
+from .ExhaustiveSearch import ExhaustiveSearch
+from .HillClimbSearch import HillClimbSearch
+from .K2Score import K2Score
+from .MLE import MaximumLikelihoodEstimator
+from .SEMEstimator import SEMEstimator, IVEstimator
 
 __all__ = [
     "BaseEstimator",

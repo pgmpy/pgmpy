@@ -42,7 +42,7 @@ class BdeuScore(StructureScore):
         http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
         """
         self.equivalent_sample_size = equivalent_sample_size
-        super(BdeuScore, self).__init__(data, **kwargs)
+        super(BdeuScore, self).__init__(data, kwargs)
 
     def local_score(self, variable, parents):
         'Computes a score that measures how much a \
