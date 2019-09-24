@@ -435,11 +435,12 @@ class DynamicBayesianNetwork(DAG):
                     if cpd.variable == node:
                         return cpd
         else:
-            return [
-                cpd
-                for cpd in self.cpds
-                if set(list(cpd.variables)).issubset(self.get_slice_nodes(time_slice))
-            ]
+            return_cpds = []
+            for var in self.get_slice_nodes(time_slice=time_slice):
+                cpd = self.get_cpds(node=var)
+                if cpd:
+                    return_cpds.append(cpd)
+            return return_cpds
 
     def remove_cpds(self, *cpds):
         """
