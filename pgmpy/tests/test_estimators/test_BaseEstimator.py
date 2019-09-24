@@ -58,32 +58,21 @@ class TestBaseEstimator(unittest.TestCase):
         data["E"] = data["A"] + data["B"] + data["C"]
         est = BaseEstimator(data)
 
-        self.assertGreater(
-            est.test_conditional_independence("A", "C")[1], 0.01
-        )  # independent
-        self.assertGreater(
-            est.test_conditional_independence("A", "B", "D")[1], 0.01
-        )  # independent
-        self.assertLess(
-            est.test_conditional_independence("A", "B", ["D", "E"])[1], 0.01
+        self.assertTrue(est.test_conditional_independence("A", "C"))  # independent
+        self.assertTrue(est.test_conditional_independence("A", "B", "D"))  # independent
+        self.assertFalse(
+            est.test_conditional_independence("A", "B", ["D", "E"])
         )  # dependent
 
     def test_test_conditional_independence_titanic(self):
         est = BaseEstimator(self.titanic_data)
 
-        np.testing.assert_almost_equal(
-            est.test_conditional_independence("Embarked", "Sex"),
-            (13.355630515001746, 0.020264556044311655, True),
+        self.assertTrue(est.test_conditional_independence("Embarked", "Sex"))
+        self.assertFalse(
+            est.test_conditional_independence("Pclass", "Survived", ["Embarked"])
         )
-        np.testing.assert_almost_equal(
-            est.test_conditional_independence("Pclass", "Survived", ["Embarked"]),
-            (96.403283942888635, 4.1082315854166553e-13, True),
-        )
-        np.testing.assert_almost_equal(
-            est.test_conditional_independence(
-                "Embarked", "Survived", ["Sex", "Pclass"]
-            ),
-            (21.537481934494085, 0.96380273702382602, True),
+        self.assertTrue(
+            est.test_conditional_independence("Embarked", "Survived", ["Sex", "Pclass"])
         )
         # insufficient data test commented out, because generates warning
         # self.assertEqual(est.test_conditional_independence('Sex', 'Survived', ["Age", "Embarked"]),
