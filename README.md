@@ -105,6 +105,19 @@ Examples:
 We have a few example jupyter notebooks here: https://github.com/pgmpy/pgmpy/tree/dev/examples
 For more detailed jupyter notebooks and basic tutorials on Graphical Models check: https://github.com/pgmpy/pgmpy_notebook/
 
+Citing:
+=======
+Please use the following bibtex for citing `pgmpy` in your research:
+```
+@inproceedings{ankan2015pgmpy,
+  title={pgmpy: Probabilistic graphical models using python},
+  author={Ankan, Ankur and Panda, Abinash},
+  booktitle={Proceedings of the 14th Python in Science Conference (SCIPY 2015)},
+  year={2015},
+  organization={Citeseer}
+}
+```
+
 License
 =======
 pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
