@@ -54,7 +54,6 @@ install:
   - cmd: rmdir C:\cygwin /s /q
 
   # install our build environment
-  - cmd: conda activate base
   - cmd: conda config --set show_channel_urls true --set always_yes true --set changeps1 false
   - cmd: conda config --set ssl_verify false
 
