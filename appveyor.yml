@@ -64,6 +64,7 @@ install:
   - cmd: conda config --add channels defaults
 
   # this is now the downloaded conda...
+  - cmd: conda init bash
   - cmd: conda activate base
   - cmd: conda info -a
 
