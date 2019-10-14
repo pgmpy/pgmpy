@@ -174,9 +174,7 @@ class BayesianModelSampling(Inference):
 
         return _return_samples(return_type, sampled)
 
-    def likelihood_weighted_sample(
-        self, evidence=None, size=1, return_type="dataframe"
-    ):
+    def likelihood_weighted_sample(self, evidence=[], size=1, return_type="dataframe"):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
         network, that comply with the given evidence.
