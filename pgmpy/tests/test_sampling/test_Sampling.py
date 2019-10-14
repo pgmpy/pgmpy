@@ -48,6 +48,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.L).issubset({0, 1}))
 
     def test_rejection_sample_basic(self):
+        sample = self.sampling_inference.rejection_sample()
         sample = self.sampling_inference.rejection_sample(
             [State("A", 1), State("J", 1), State("R", 1)], 25
         )
@@ -73,6 +74,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertEqual(sample, forward_sample.return_value)
 
     def test_likelihood_weighted_sample(self):
+        sample = self.sampling_inference.likelihood_weighted_sample()
         sample = self.sampling_inference.likelihood_weighted_sample(
             [State("A", 0), State("J", 1), State("R", 0)], 25
         )
