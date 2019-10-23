@@ -681,6 +681,20 @@ class DAG(nx.DiGraph):
             ancestors_list.add(node)
         return ancestors_list
 
+    def to_pdag(self):
+        """
+        Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
+
+        Returns
+        -------
+        PDAG: An instance of pgmpy.base.PDAG.
+
+        Examples
+        --------
+
+        """
+        pass
+
     def do(self, node):
         """
         Applies the do operator to the graph and returns a new DAG with the transformed graph.
@@ -720,3 +734,83 @@ class DAG(nx.DiGraph):
         for parent in parents:
             dag_do_x.remove_edge(parent, node)
         return dag_do_x
+
+
+class PDAG(nx.DiGraph):
+    """
+    Class for representing PDAGs (also known as CPDAG). PDAGs are the equivance classes of
+    DAGs and contain both directed and undirected edges.
+
+    **Note: In this class, undirected edges are represented using two edges in both direction i.e.
+    an undirected edge between X - Y is represented using X -> Y and X <- Y.
+    """
+
+    def __init__(self, directed_ebunch=[], undirected_ebunch=[]):
+        """
+        Initializes a PDAG class.
+
+        Parameters
+        ----------
+        directed_ebunch: list, array-like of 2-tuples
+            List of directed edges in the PDAG.
+
+        undirected_ebunch: list, array-like of 2-tuples
+            List of undirected edges in the PDAG.
+
+        Returns
+        -------
+        An instance of the PDAG object.
+
+        Examples
+        --------
+        """
+        super(PDAG, self).__init__(
+            directed_ebunch
+            + undirected_ebunch
+            + [(Y, X) for (X, Y) in undirected_ebunch]
+        )
+        self.directed_edges = set(directed_ebunch)
+        self.undirected_edges = set(undirected_ebunch)
+        cycles = []
+        try:
+            cycles = list(nx.find_cycle(self))
+        except nx.NetworkXNoCycle:
+            pass
+        else:
+            out_str = "Cycles are not allowed in a DAG."
+            out_str += "Edges indicating the path taken for a loop: "
+            out_str += "".join(["({0},{1}) ".format(u, v) for (u, v) in cycles])
+            raise ValueError(out_str)
+
+    def to_dag(self, required_edges=[]):
+        """
+        Returns one possible DAG which is represented using the PDAG.
+
+        Parameters
+        ----------
+        required_edges: list, array-like of 2-tuples
+            The list of edges that should be included in the DAG.
+
+        Returns
+        -------
+        Returns an instance of DAG.
+
+        Examples
+        --------
+        """
+        for edge in required_edges:
+            if (edge in self.directed_edges) or (
+                (edge[1], edge[0]) in self.directed_edges
+            ):
+                raise ValueError(
+                    "The required edge: {edge} is not possible as PDAG already has a directed edge between the variables".format(
+                        edge=edge
+                    )
+                )
+
+        dag = DAG()
+        # Add all the nodes and the directed edges
+        dag.add_nodes_from(self.nodes())
+        dag.add_edges_from(self.directed_edges)
+
+        # TODO
