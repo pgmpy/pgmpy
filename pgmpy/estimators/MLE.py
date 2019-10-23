@@ -127,7 +127,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         # if a column contains only `0`s (no states observed for some configuration
         # of parents' states) fill that column uniformly instead
-        state_counts.ix[:, (state_counts == 0).all()] = 1
+        state_counts.loc[:, (state_counts == 0).all()] = 1
 
         parents = sorted(self.model.get_parents(node))
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
