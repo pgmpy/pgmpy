@@ -714,7 +714,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
             np_test.assert_array_equal(
                 model.get_cpds()[cpd_index].get_values(), cpds_expected[cpd_index]
             )
-        self.assertDictEqual(dict(model.node), node_expected)
+        self.assertDictEqual(dict(model.nodes), node_expected)
         if nx.__version__.startswith("1"):
             self.assertDictEqual(model.edge, edge_expected)
         else:
@@ -1396,7 +1396,7 @@ class TestProbModelXMLmethods(unittest.TestCase):
 
         if nx.__version__.startswith("1"):
             for node in nodes:
-                self.model.node[node] = nodes[node]
+                self.model.nodes[node] = nodes[node]
             for edge in edges:
                 self.model.edge[edge] = edges[edge]
         else:

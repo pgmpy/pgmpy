@@ -310,7 +310,7 @@ class TestXBNReader(unittest.TestCase):
             sorted(model.edges()),
             sorted([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]),
         )
-        self.assertDictEqual(dict(model.node), node_expected)
+        self.assertDictEqual(dict(model.nodes), node_expected)
 
 
 class TestXBNWriter(unittest.TestCase):
@@ -407,7 +407,7 @@ class TestXBNWriter(unittest.TestCase):
 
         if nx.__version__.startswith("1"):
             for var, properties in nodes.items():
-                model.node[var] = properties
+                model.nodes[var] = properties
         else:
             for var, properties in nodes.items():
                 model._node[var] = properties

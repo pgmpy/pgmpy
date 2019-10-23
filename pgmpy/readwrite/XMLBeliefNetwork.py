@@ -229,7 +229,7 @@ class XBNReader(object):
 
         if nx.__version__.startswith("1"):
             for var, properties in self.variables.items():
-                model.node[var] = properties
+                model.nodes[var] = properties
         else:
             for var, properties in self.variables.items():
                 model._node[var] = properties
@@ -275,7 +275,7 @@ class XBNWriter(object):
         if self.model.name:
             etree.SubElement(self.bnmodel, "NAME").text = self.model.name
 
-        self.variables = self.set_variables(self.model.node)
+        self.variables = self.set_variables(self.model.nodes)
         self.structure = self.set_edges(sorted(self.model.edges()))
         self.distribution = self.set_distributions()
 
@@ -439,7 +439,7 @@ class XBNWriter(object):
             cpd_values = cpd.values.ravel()
             var = cpd.variable
             dist = etree.SubElement(
-                distributions, "DIST", attrib={"TYPE": self.model.node[var]["TYPE"]}
+                distributions, "DIST", attrib={"TYPE": self.model.nodes[var]["TYPE"]}
             )
             etree.SubElement(dist, "PRIVATE", attrib={"NAME": var})
             dpis = etree.SubElement(dist, "DPIS")
