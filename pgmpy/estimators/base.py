@@ -61,7 +61,7 @@ class BaseEstimator(object):
 
     def _collect_state_names(self, variable):
         "Return a list of states that the variable takes in the data"
-        states = sorted(list(self.data.ix[:, variable].dropna().unique()))
+        states = sorted(list(self.data.loc[:, variable].dropna().unique()))
         return states
 
     @convert_args_tuple
@@ -130,7 +130,7 @@ class BaseEstimator(object):
 
         if not parents:
             # count how often each state of 'variable' occured
-            state_count_data = data.ix[:, variable].value_counts()
+            state_count_data = data.loc[:, variable].value_counts()
             state_counts = (
                 state_count_data.reindex(self.state_names[variable])
                 .fillna(0)

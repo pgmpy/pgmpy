@@ -637,8 +637,8 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             self.assertEqual(cpd.variable, node)
             np_test.assert_array_equal(cpd.cardinality, np.array([2]))
             value = (
-                values.ix[:, node].value_counts()
-                / values.ix[:, node].value_counts().sum()
+                values.loc[:, node].value_counts()
+                / values.loc[:, node].value_counts().sum()
             )
             value = value.reindex(sorted(value.index)).values
             np_test.assert_array_equal(cpd.values, value)
