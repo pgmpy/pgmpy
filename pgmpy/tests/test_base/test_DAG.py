@@ -37,16 +37,16 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_add_node_weight(self):
         self.graph.add_node("weighted_a", 0.3)
-        self.assertEqual(self.graph.node["weighted_a"]["weight"], 0.3)
+        self.assertEqual(self.graph.nodes["weighted_a"]["weight"], 0.3)
 
     def test_add_nodes_from_weight(self):
         self.graph.add_nodes_from(["weighted_b", "weighted_c"], [0.5, 0.6])
-        self.assertEqual(self.graph.node["weighted_b"]["weight"], 0.5)
-        self.assertEqual(self.graph.node["weighted_c"]["weight"], 0.6)
+        self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
+        self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
 
         self.graph.add_nodes_from(["e", "f"])
-        self.assertEqual(self.graph.node["e"]["weight"], None)
-        self.assertEqual(self.graph.node["f"]["weight"], None)
+        self.assertEqual(self.graph.nodes["e"]["weight"], None)
+        self.assertEqual(self.graph.nodes["f"]["weight"], None)
 
     def test_add_edge_string(self):
         self.graph.add_edge("d", "e")

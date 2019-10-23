@@ -228,7 +228,7 @@ class XMLBIFReader(object):
             for prop in properties:
                 if prop is not None:
                     prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
-                    model.node[node][prop_name] = prop_value
+                    model.nodes[node][prop_name] = prop_value
 
         return model
 
@@ -401,7 +401,7 @@ class XMLBIFWriter(object):
         variables = self.model.nodes()
         property_tag = {}
         for var in sorted(variables):
-            properties = self.model.node[var]
+            properties = self.model.nodes[var]
             property_tag[var] = etree.SubElement(self.variables[var], "PROPERTY")
             for prop, val in properties.items():
                 property_tag[var].text = str(prop) + " = " + str(val)

@@ -231,7 +231,7 @@ class TestBIFReader(unittest.TestCase):
             np_test.assert_array_equal(
                 model.get_cpds()[cpd_index].get_values(), cpds_expected[cpd_index]
             )
-        self.assertDictEqual(dict(model.node), node_expected)
+        self.assertDictEqual(dict(model.nodes), node_expected)
         if nx.__version__.startswith("1"):
             self.assertDictEqual(model.edge, edge_expected)
         else:
@@ -326,7 +326,7 @@ class TestBIFWriter(unittest.TestCase):
         for node, properties in properties.items():
             for prop in properties:
                 prop_name, prop_value = map(lambda t: t.strip(), prop.split("="))
-                self.model.node[node][prop_name] = prop_value
+                self.model.nodes[node][prop_name] = prop_value
 
         self.writer = BIFWriter(model=self.model)
 

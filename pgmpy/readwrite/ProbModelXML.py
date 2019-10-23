@@ -258,7 +258,7 @@ def get_probmodel_data(model):
 
     variables = model.nodes()
     for var in variables:
-        model_data["probnet"]["Variables"][var] = model.node[var]
+        model_data["probnet"]["Variables"][var] = model.nodes[var]
 
     model_data["probnet"]["edges"] = {}
     edges = model.edges()
@@ -1168,7 +1168,7 @@ class ProbModelXMLReader(object):
             variables = model.nodes()
             for var in variables:
                 for prop_name, prop_value in self.probnet["Variables"][var].items():
-                    model.node[var][prop_name] = prop_value
+                    model.nodes[var][prop_name] = prop_value
             edges = model.edges()
 
             if nx.__version__.startswith("1"):

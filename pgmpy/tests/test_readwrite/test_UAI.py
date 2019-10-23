@@ -103,7 +103,7 @@ class TestUAIReader(unittest.TestCase):
             "var_2": {},
             "var_4": {},
         }
-        self.assertDictEqual(dict(model.node), node_expected)
+        self.assertDictEqual(dict(model.nodes), node_expected)
 
 
 class TestUAIWriter(unittest.TestCase):

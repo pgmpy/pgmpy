@@ -389,7 +389,7 @@ class BIFReader(object):
                         prop_name, prop_value = map(
                             lambda t: t.strip(), prop.split("=")
                         )
-                        model.node[node][prop_name] = prop_value
+                        model.nodes[node][prop_name] = prop_value
 
             return model
 
@@ -570,7 +570,7 @@ $properties}\n"""
         variables = self.model.nodes()
         property_tag = {}
         for variable in sorted(variables):
-            properties = self.model.node[variable]
+            properties = self.model.nodes[variable]
             properties = collections.OrderedDict(sorted(properties.items()))
             property_tag[variable] = []
             for prop, val in properties.items():
