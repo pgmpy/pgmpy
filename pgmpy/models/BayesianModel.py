@@ -9,6 +9,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import (
@@ -530,7 +531,7 @@ class BayesianModel(DAG):
         cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
-    def predict(self, data):
+    def predict(self, data, n_jobs=-1):
         """
         Predicts states of all the missing variables.
 
@@ -579,20 +580,22 @@ class BayesianModel(DAG):
 
         data_unique = data.drop_duplicates()
         missing_variables = set(self.nodes()) - set(data_unique.columns)
-        pred_values = defaultdict(list)
+        #         pred_values = defaultdict(list)
+        pred_values = []
 
         # Send state_names dict from one of the estimated CPDs to the inference class.
         model_inference = VariableElimination(self)
-        for index, data_point in tqdm(
-            data_unique.iterrows(), total=data_unique.shape[0]
-        ):
-            states_dict = model_inference.map_query(
+        pred_values = Parallel(n_jobs=n_jobs)(
+            delayed(model_inference.map_query)(
                 variables=missing_variables,
                 evidence=data_point.to_dict(),
                 show_progress=False,
             )
-            for k, v in states_dict.items():
-                pred_values[k].append(v)
+            for index, data_point in tqdm(
+                data_unique.iterrows(), total=data_unique.shape[0]
+            )
+        )
+
         df_results = pd.DataFrame(pred_values, index=data_unique.index)
         data_with_results = pd.concat([data_unique, df_results], axis=1)
         return data.merge(data_with_results, how="left").loc[:, missing_variables]
