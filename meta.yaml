@@ -1,5 +1,5 @@
 {% set name = "pgmpy" %}
-{% set version = "0.1.7" %}
+{% set version = "0.1.9" %}
 
 package:
   name: "{{ name|lower }}"
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: 668a34220342f211d4112c48b64ad696a3592b4758f9e3aac3553f968ed231b7 
+  #sha256: 668a34220342f211d4112c48b64ad696a3592b4758f9e3aac3553f968ed231b7 
 
 build:
   number: 0
@@ -17,6 +17,7 @@ requirements:
   host:
     - pip
     - python
+    - pytorch
   run:
     - python
     - networkx
