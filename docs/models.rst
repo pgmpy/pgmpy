@@ -50,10 +50,17 @@ Naive Bayes
    :members:
    :undoc-members:
 
-DynamicBayesianNetwork
-----------------------
+Dynamic Bayesian Network
+------------------------
 .. automodule:: pgmpy.models.DynamicBayesianNetwork
    :members:
    :undoc-members:
    :inherited-members:
    :show-inheritance:
+
+Structural Equation Models
+--------------------------
+.. automodule:: pgmpy.models.SEM
+   :members:
+   :undoc-members:
+
