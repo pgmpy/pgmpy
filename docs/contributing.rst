@@ -36,35 +36,23 @@ branches.
 
 Summary of our git branching model:
 - Fork the desired repository on GitHub to your account;
-- Clone your forked repository locally
-  (`git clone git@github.com:your-username:repository-name.git`);
-- Create a new branch off of `develop` with a descriptive name (for example:
-  `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can
-  do it by switching to `develop` branch (`git checkout develop`) and then
-  creating a new branch (`git checkout -b name-of-the-new-branch`);
-- Do many small commits on that branch locally (`git add files-changed`,
-  `git commit -m "Add some change"`);
-- Push to your fork on GitHub (with the name as your local branch:
-  `git push origin branch-name`);
-- Create a pull request using the GitHub Web interface (asking us to pull the
-  changes from your new branch and add the changes to our `develop` branch);
+- Clone your forked repository locally: `git clone git@github.com:your-username:repository-name.git`;
+- Create a new branch off of `develop` with a descriptive name (for example: `feature/portuguese-sentiment-analysis`, `hotfix/bug-on-downloader`). You can do it by switching to `develop` branch (`git checkout develop`) and then creating a new branch (`git checkout -b name-of-the-new-branch`);
+- Do many small commits on that branch locally (`git add files-changed`, `git commit -m "Add some change"`);
+- Push to your fork on GitHub (with the name as your local branch: `git push origin branch-name`);
+- Create a pull request using the GitHub Web interface (asking us to pull the changes from your new branch and add the changes to our `develop` branch);
 - Wait for comments.
 
 
 Tips
 ----
 
-- Write [helpful commit
-  messages](http://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message).
+- Write [helpful commit messages](http://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message).
 - Anything in the `dev` branch should be deployable (no failing tests).
 - Never use `git add .`: it can add unwanted files;
 - Avoid using `git commit -a` unless you know what you're doing;
-- Check every change with `git diff` before adding then to the index (stage
-  area) and with `git diff --cached` before commiting;
-- If you have push access to the main repository, please do not commit directly
-  to `dev`: your access should be used only to accept pull requests; if you
-  want to make a new feature, you should use the same process as other
-  developers so that your code can be reviewed.
+- Check every change with `git diff` before adding then to the index (stage area) and with `git diff --cached` before commiting;
+- If you have push access to the main repository, please do not commit directly to `dev`: your access should be used only to accept pull requests; if you want to make a new feature, you should use the same process as other developers so that your code can be reviewed.
 
 
 Code Guidelines
@@ -73,22 +61,13 @@ Code Guidelines
 - We use [PEP8](http://www.python.org/dev/peps/pep-0008/);
 - We permit 120 characters in a line, rather 79 as suggested in PEP8
 - Write tests for your new features (please see "Tests" topic below);
-- Always remember that [commented code is dead
-  code](http://www.codinghorror.com/blog/2008/07/coding-without-comments.html);
-- Name identifiers (variables, classes, functions, module names) with readable
-  names (`x` is always wrong);
-- When manipulating strings, use [Python's new-style
-  formatting](http://docs.python.org/library/string.html#format-string-syntax)
-  (`'{} = {}'.format(a, b)` instead of `'%s = %s' % (a, b)`);
-- When working with files use `with open(<filename>, <option>) as f` instead of
-  ` f = open(<filename>, <option>)`;
-- All `#TODO` comments should be turned into issues (use our
-  [GitHub issue system](https://github.com/pgmpy/pgmpy/issues));
-- Run all tests before pushing (just execute `nosetests`) so you will know if your
-  changes broke something;
-- Try to write both Python 2 and Python3-friendly code so won't be a pain for
-  us to support both versions.We use [six](https://pypi.python.org/pypi/six) to help
-  us in integration across various python versions.
+- Always remember that [commented code is dead code](http://www.codinghorror.com/blog/2008/07/coding-without-comments.html);
+- Name identifiers (variables, classes, functions, module names) with readable names (`x` is always wrong);
+- When manipulating strings, use [Python's new-style formatting](http://docs.python.org/library/string.html#format-string-syntax) (`'{} = {}'.format(a, b)` instead of `'%s = %s' % (a, b)`);
+- When working with files use `with open(<filename>, <option>) as f` instead of ` f = open(<filename>, <option>)`;
+- All `#TODO` comments should be turned into issues (use our [GitHub issue system](https://github.com/pgmpy/pgmpy/issues));
+- Run all tests before pushing (just execute `nosetests`) so you will know if your changes broke something;
+- Try to write both Python 2 and Python3-friendly code so won't be a pain for us to support both versions.We use [six](https://pypi.python.org/pypi/six) to help us in integration across various python versions.
 
 
 Tests

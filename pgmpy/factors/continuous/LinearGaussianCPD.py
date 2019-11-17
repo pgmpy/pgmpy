@@ -16,22 +16,27 @@ class LinearGaussianCPD(BaseFactor):
     not depend on X.
 
     For example,
-    $ p(Y|X) = N(-2x + 0.9 ; 1) $
-    Here, $ x $ is the mean of the variable $ X $.
 
-    Let $ Y $ be a continuous variable with continuous parents
-    $ X1, X2, ..., Xk $. We say that $ Y $ has a linear Gaussian CPD
-    if there are parameters $ \beta_0, \beta_1, ..., \beta_k $
-    and $ \sigma_2 $ such that,
+    .. math::
 
-    $ p(Y |x1, x2, ..., xk) = \mathcal{N}(\beta_0 + x1*\beta_1 + ......... + xk*\beta_k ; \sigma_2) $
+      p(Y|X) = N(-2x + 0.9 ; 1)
+
+    Here, :math:`x` is the mean of the variable :math:`X`.
+
+    Let :math:`Y` be a continuous variable with continuous parents
+    :math:`X1, X2, \cdots, Xk`. We say that :math:`Y` has a linear Gaussian CPD
+    if there are parameters :math:`\beta_0, \beta_1, ..., \beta_k`
+    and :math:`\sigma_2` such that,
+
+    .. math:: p(Y |x1, x2, ..., xk) = \mathcal{N}(\beta_0 + x1*\beta_1 + ......... + xk*\beta_k ; \sigma_2)
 
     In vector notation,
 
-    $ p(Y |x) = \mathcal{N}(\beta_0 + \boldmath{β}.T * \boldmath{x} ; \sigma_2) $
+    .. math:: p(Y |x) = \mathcal{N}(\beta_0 + \boldmath{β}.T * \boldmath{x} ; \sigma_2)
 
-
-    Reference: https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
+    References
+    ----------
+    .. [1] https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
     """
 
     def __init__(

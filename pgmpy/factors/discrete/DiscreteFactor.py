@@ -17,15 +17,6 @@ State = namedtuple("State", ["var", "state"])
 class DiscreteFactor(BaseFactor, StateNameMixin):
     """
     Base class for DiscreteFactor.
-
-    Public Methods
-    --------------
-    assignment(index)
-    get_cardinality(variable)
-    marginalize([variable_list])
-    normalize()
-    product(*DiscreteFactor)
-    reduce([variable_values_list])
     """
 
     def __init__(self, variables, cardinality, values, state_names={}):
@@ -34,7 +25,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Defined above, we have the following mapping from variable
         assignments to the index of the row vector in the value field:
-
         +-----+-----+-----+-------------------+
         |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
         +-----+-----+-----+-------------------+
@@ -372,7 +362,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         array([[[ 0,  1],
                 [ 2,  3],
                 [ 4,  5]],
-
                [[ 6,  7],
                 [ 8,  9],
                 [10, 11]]])
@@ -385,11 +374,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         array([[[ 0.        ,  0.01515152],
                 [ 0.03030303,  0.04545455],
                 [ 0.06060606,  0.07575758]],
-
                [[ 0.09090909,  0.10606061],
                 [ 0.12121212,  0.13636364],
                 [ 0.15151515,  0.16666667]]])
-
         """
         phi = self if inplace else self.copy()
 
@@ -477,8 +464,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         DiscreteFactor or None: if inplace=True (default) returns None
                         if inplace=False returns a new `DiscreteFactor` instance.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))
@@ -569,8 +556,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         DiscreteFactor or None: if inplace=True (default) returns None
                         if inplace=False returns a new `DiscreteFactor` instance.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi2 = DiscreteFactor(['x3', 'x4', 'x1'], [2, 2, 2], range(8))

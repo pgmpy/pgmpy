@@ -69,8 +69,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         model: DAG()-instance
             An estimate for the DAG for the data set (not yet parametrized).
 
-        Reference
-        ---------
+        References
+        ----------
         Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
         http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
 
@@ -111,7 +111,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         """Estimates a graph skeleton (UndirectedGraph) for the data set.
         Uses the build_skeleton method (PC algorithm); independencies are
         determined using a chisquare statistic with the acceptance threshold
-        of `significance_level`. Returns a tuple `(skeleton, separating_sets).
+        of `significance_level`. Returns a tuple `(skeleton, separating_sets)`.
 
         Parameters
         ----------
@@ -133,18 +133,17 @@ class ConstraintBasedEstimator(StructureEstimator):
             separating set of variables that makes then conditionally independent.
             (needed for edge orientation procedures)
 
-        Reference
-        ---------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+        References
+        ----------
+        .. [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
             http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        [2] Chi-square test https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
+        .. [2] Chi-square test https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
 
         Examples
         --------
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import ConstraintBasedEstimator
-        >>>
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
         >>> data['F'] = data['A'] + data['B'] + data ['C']
         >>> est = ConstraintBasedEstimator(data)
@@ -156,7 +155,6 @@ class ConstraintBasedEstimator(StructureEstimator):
         {('D', 'A'): (), ('C', 'A'): (), ('C', 'E'): (), ('E', 'F'): (), ('B', 'D'): (),
          ('B', 'E'): (), ('D', 'F'): (), ('D', 'E'): (), ('A', 'E'): (), ('B', 'A'): (),
          ('B', 'C'): (), ('C', 'D'): ()}
-        >>>
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 3)), columns=list('XYZ'))
         >>> data['X'] += data['Z']
         >>> data['Y'] += data['Z']
@@ -390,8 +388,8 @@ class ConstraintBasedEstimator(StructureEstimator):
             Any completion by (removing one of the both-way edges for each such
             pair) results in a I-equivalent Bayesian network DAG.
 
-        Reference
-        ---------
+        References
+        ----------
         Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
         http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
 
@@ -498,8 +496,8 @@ class ConstraintBasedEstimator(StructureEstimator):
             separating set ("witnessing set") of variables that makes then
             conditionally independent. (needed for edge orientation procedures)
 
-        Reference
-        ---------
+        References
+        ----------
         [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
             http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009

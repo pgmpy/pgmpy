@@ -71,13 +71,6 @@ class MarkovModel(UndirectedGraph):
     True
     >>> len(G)  # number of nodes in graph
     3
-
-    Public Methods
-    --------------
-    add_node('node1')
-    add_nodes_from(['node1', 'node2', ...])
-    add_edge('node1', 'node2')
-    add_edges_from([('node1', 'node2'),('node3', 'node4')])
     """
 
     def __init__(self, ebunch=None):
@@ -149,8 +142,8 @@ class MarkovModel(UndirectedGraph):
         Returns all the factors containing the node. If node is not specified
         returns all the factors that have been added till now to the graph.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         node: any hashable python object (optional)
             The node whose factor we want. If node is not specified
 
@@ -336,8 +329,8 @@ class MarkovModel(UndirectedGraph):
             if inplace is true then adds the edges to the object from
             which it is called else returns a new object.
 
-        Reference
-        ---------
+        References
+        ----------
         http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.56.3607
 
         Examples
@@ -734,7 +727,7 @@ class MarkovModel(UndirectedGraph):
         MarkovModel: Copy of this Markov model.
 
         Examples
-        -------
+        --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.models import MarkovModel
         >>> G = MarkovModel()

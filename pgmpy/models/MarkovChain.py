@@ -17,37 +17,36 @@ class MarkovChain(object):
     Class to represent a Markov Chain with multiple kernels for factored state space,
     along with methods to simulate a run.
 
-    Public Methods:
-    ---------------
-    set_start_state(state)
-    add_variable(variable, cardinality)
-    add_variables_from(vars_list, cards_list)
-    add_transition_model(variable, transition_dict)
-    sample(start_state, size)
+    Examples
+    --------
 
-    Examples:
-    ---------
     Create an empty Markov Chain:
+
     >>> from pgmpy.models import MarkovChain as MC
     >>> model = MC()
 
     And then add variables to it
+
     >>> model.add_variables_from(['intel', 'diff'], [2, 3])
 
     Or directly create a Markov Chain from a list of variables and their cardinalities
+
     >>> model = MC(['intel', 'diff'], [2, 3])
 
     Add transition models
+
     >>> intel_tm = {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}
     >>> model.add_transition_model('intel', intel_tm)
     >>> diff_tm = {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6 }, 2: {0: 0.7, 1: 0.15, 2: 0.15}}
     >>> model.add_transition_model('diff', diff_tm)
 
     Set a start state
+
     >>> from pgmpy.factors.discrete import State
     >>> model.set_start_state([State('intel', 0), State('diff', 2)])
 
     Sample from it
+
     >>> model.sample(size=5)
        intel  diff
     0      0     2
@@ -59,8 +58,8 @@ class MarkovChain(object):
 
     def __init__(self, variables=None, card=None, start_state=None):
         """
-        Parameters:
-        -----------
+        Parameters
+        ----------
         variables: array-like iterable object
             A list of variables of the model.
 
@@ -91,13 +90,13 @@ class MarkovChain(object):
         Set the start state of the Markov Chain. If the start_state is given as a array-like iterable, its contents
         are reordered in the internal representation.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_state: dict or array-like iterable object
             Dict (or list) of tuples representing the starting states of the variables.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> from pgmpy.factors.discrete import State
         >>> model = MC(['a', 'b'], [2, 2])
@@ -139,15 +138,15 @@ class MarkovChain(object):
         """
         Add a variable to the model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         variable: any hashable python object
 
         card: int
             Representing the cardinality of the variable to be added.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC()
         >>> model.add_variable('x', 4)
@@ -163,16 +162,16 @@ class MarkovChain(object):
         """
         Add several variables to the model at once.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         variables: array-like iterable object
             List of variables to be added.
 
         cards: array-like iterable object
             List of cardinalities of the variables to be added.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC()
         >>> model.add_variables_from(['x', 'y'], [3, 4])
@@ -184,8 +183,8 @@ class MarkovChain(object):
         """
         Adds a transition model for a particular variable.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         variable: any hashable python object
             must be an existing variable of the model.
         transition_model: dict or 2d array
@@ -194,8 +193,8 @@ class MarkovChain(object):
             array[i,j] indicates the transition probalities from State i to State j
 
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC()
         >>> model.add_variable('grade', 3)
@@ -267,19 +266,19 @@ class MarkovChain(object):
         """
         Sample from the Markov Chain.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_state: dict or array-like iterable
             Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
             Number of samples to be generated.
 
-        Return Type:
-        ------------
+        Returns
+        -------
         pandas.DataFrame
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> from pgmpy.factors.discrete import State
         >>> model = MC(['intel', 'diff'], [2, 3])
@@ -333,8 +332,8 @@ class MarkovChain(object):
         If 'sample' is not passed as an argument, generate the statistic by sampling from the
         Markov Chain, starting with a random initial state.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models.MarkovChain import MarkovChain as MC
         >>> from pgmpy.factors.discrete import State
         >>> model = MC(['intel', 'diff'], [3, 2])
@@ -366,12 +365,12 @@ class MarkovChain(object):
         """
         Generator version of self.sample
 
-        Return Type:
-        ------------
+        Returns
+        -------
         List of State namedtuples, representing the assignment to all variables of the model.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models.MarkovChain import MarkovChain
         >>> from pgmpy.factors.discrete import State
         >>> model = MarkovChain()
@@ -407,21 +406,21 @@ class MarkovChain(object):
         Checks if the given markov chain is stationary and checks the steady state
         probablity values for the state are consistent.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         tolerance: float
             represents the diff between actual steady state value and the computed value
         sample: [State(i,j)]
             represents the list of state which the markov chain has sampled
 
-        Return Type:
-        ------------
-        Boolean
-        True, if the markov chain converges to steady state distribution within the tolerance
-        False, if the markov chain does not converge to steady state distribution within tolerance
+        Returns
+        -------
+        Boolean:
+            True, if the markov chain converges to steady state distribution within the tolerance
+            False, if the markov chain does not converge to steady state distribution within tolerance
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models.MarkovChain import MarkovChain
         >>> from pgmpy.factors.discrete import State
         >>> model = MarkovChain()
@@ -467,12 +466,12 @@ class MarkovChain(object):
         """
         Generates a random state of the Markov Chain.
 
-        Return Type:
-        ------------
+        Returns
+        -------
         List of namedtuples, representing a random assignment to all variables of the model.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC(['intel', 'diff'], [2, 3])
         >>> model.random_state()
@@ -487,12 +486,12 @@ class MarkovChain(object):
         """
         Returns a copy of Markov Chain Model.
 
-        Return Type:
-        ------------
+        Returns
+        -------
         MarkovChain : Copy of MarkovChain.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.models import MarkovChain
         >>> from pgmpy.factors.discrete import State
         >>> model = MarkovChain()

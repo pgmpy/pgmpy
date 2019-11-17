@@ -18,6 +18,23 @@ class TabularCPD(DiscreteFactor):
     """
     Defines the conditional probability distribution table (cpd table)
 
+    Parameters
+    ----------
+    variable: int, string (any hashable python object)
+        The variable whose CPD is defined.
+
+    variable_card: integer
+        cardinality of variable
+
+    values: 2d array, 2d list or 2d tuple
+        values of the cpd table
+
+    evidence: array-like
+        evidences(if any) w.r.t. which cpd is defined
+
+    evidence_card: integer, array-like
+        cardinality of evidences (if any)
+
     Examples
     --------
     For a distribution of P(grade|diff, intel)
@@ -58,10 +75,8 @@ class TabularCPD(DiscreteFactor):
     >>> cpd.values
     array([[[ 0.1,  0.1,  0.1],
             [ 0.1,  0.1,  0.1]],
-
            [[ 0.1,  0.1,  0.1],
             [ 0.1,  0.1,  0.1]],
-
            [[ 0.8,  0.8,  0.8],
             [ 0.8,  0.8,  0.8]]])
     >>> cpd.variables
@@ -72,30 +87,6 @@ class TabularCPD(DiscreteFactor):
     'grade'
     >>> cpd.variable_card
     3
-
-    Parameters
-    ----------
-    variable: int, string (any hashable python object)
-        The variable whose CPD is defined.
-
-    variable_card: integer
-        cardinality of variable
-
-    values: 2d array, 2d list or 2d tuple
-        values of the cpd table
-
-    evidence: array-like
-        evidences(if any) w.r.t. which cpd is defined
-
-    evidence_card: integer, array-like
-        cardinality of evidences (if any)
-
-    Public Methods
-    --------------
-    get_values()
-    marginalize([variables_list])
-    normalize()
-    reduce([values_list])
     """
 
     def __init__(
@@ -410,11 +401,13 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
+
         Consider a CPD P(grade| diff, intel)
+
         >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
-                                        [0.1,0.1,0.1,0.1,0.1,0.1],
-                                        [0.8,0.8,0.8,0.8,0.8,0.8]],
-                                    evidence=['diff', 'intel'], evidence_card=[2,3])
+        ...                             [0.1,0.1,0.1,0.1,0.1,0.1],
+        ...                             [0.8,0.8,0.8,0.8,0.8,0.8]],
+        ...                  evidence=['diff', 'intel'], evidence_card=[2,3])
         >>> print(cpd)
         +---------+---------+---------+---------+---------+---------+---------+
         | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
@@ -427,13 +420,12 @@ class TabularCPD(DiscreteFactor):
         +---------+---------+---------+---------+---------+---------+---------+
         | grade_2 | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     | 0.8     |
         +---------+---------+---------+---------+---------+---------+---------+
+
         >>> cpd.values
         array([[[ 0.1,  0.1,  0.1],
                 [ 0.1,  0.1,  0.1]],
-
                [[ 0.1,  0.1,  0.1],
                 [ 0.1,  0.1,  0.1]],
-
                [[ 0.8,  0.8,  0.8],
                 [ 0.8,  0.8,  0.8]]])
         >>> cpd.variables
@@ -444,7 +436,6 @@ class TabularCPD(DiscreteFactor):
         'grade'
         >>> cpd.variable_card
         3
-
         >>> cpd.reorder_parents(['intel', 'diff'])
         array([[ 0.1,  0.1,  0.2,  0.2,  0.1,  0.1],
                [ 0.1,  0.1,  0.1,  0.1,  0.1,  0.1],
@@ -466,11 +457,9 @@ class TabularCPD(DiscreteFactor):
         array([[[ 0.1,  0.1],
                 [ 0.2,  0.2],
                 [ 0.1,  0.1]],
-
                [[ 0.1,  0.1],
                 [ 0.1,  0.1],
                 [ 0.1,  0.1]],
-
                [[ 0.8,  0.8],
                 [ 0.7,  0.7],
                 [ 0.8,  0.8]]])

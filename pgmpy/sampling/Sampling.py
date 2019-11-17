@@ -24,11 +24,6 @@ class BayesianModelSampling(Inference):
     ----------
     model: instance of BayesianModel
         model on which inference queries will be computed
-
-
-    Public Methods
-    --------------
-    forward_sample(size)
     """
 
     def __init__(self, model):
@@ -253,19 +248,13 @@ class GibbsSampling(MarkovChain):
     """
     Class for performing Gibbs sampling.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model: BayesianModel or MarkovModel
         Model from which variables are inherited and transition probabilites computed.
 
-    Public Methods:
-    ---------------
-    set_start_state(state)
-    sample(start_state, size)
-    generate_sample(start_state, size)
-
-    Examples:
-    ---------
+    Examples
+    --------
     Initialization from a BayesianModel object:
     >>> from pgmpy.factors.discrete import TabularCPD
     >>> from pgmpy.models import BayesianModel
@@ -298,8 +287,8 @@ class GibbsSampling(MarkovChain):
         'Probabilistic Graphical Model Principles and Techniques', Koller and
         Friedman, Section 12.3.3 pp 512-513.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: BayesianModel
             The model from which probabilities will be computed.
         """
@@ -327,8 +316,8 @@ class GibbsSampling(MarkovChain):
         'Probabilistic Graphical Model Principles and Techniques', Koller and
         Friedman, Section 12.3.3 pp 512-513.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: MarkovModel
             The model from which probabilities will be computed.
         """
@@ -367,8 +356,8 @@ class GibbsSampling(MarkovChain):
         """
         Sample from the Markov Chain.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         start_state: dict or array-like iterable
             Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
@@ -382,8 +371,8 @@ class GibbsSampling(MarkovChain):
         sampled: A pandas.DataFrame or a numpy.recarray object depending upon return_type argument
             the generated samples
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.factors import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import MarkovModel
@@ -423,12 +412,12 @@ class GibbsSampling(MarkovChain):
         """
         Generator version of self.sample
 
-        Return Type:
-        ------------
+        Returns
+        -------
         List of State namedtuples, representing the assignment to all variables of the model.
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import MarkovModel

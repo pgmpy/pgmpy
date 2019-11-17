@@ -39,12 +39,6 @@ Continuous Factor
 .. automodule:: pgmpy.factors.continuous.ContinuousFactor
    :members:
 
-Joint Gaussian Distribution
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. automodule:: pgmpy.factors.continuous.GaussianDistribution
-   :members:
-
 Linear Gaussian CPD
 ^^^^^^^^^^^^^^^^^^^
 
