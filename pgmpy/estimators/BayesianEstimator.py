@@ -32,7 +32,7 @@ class BayesianEstimator(ParameterEstimator):
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
                 'pseudo_counts' = dirichlet hyperparameters; a dict containing, for each variable, a 2-D
-                 array of the shape (node_card, product of parents_card) with a "virtual" count for each 
+                 array of the shape (node_card, product of parents_card) with a "virtual" count for each
                  variable state in the CPD, that is added to the state counts.
                  (lexicographic ordering of states assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
@@ -100,7 +100,7 @@ class BayesianEstimator(ParameterEstimator):
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
                 'pseudo_counts' = dirichlet hyperparameters; 2-D array of shape
-                 (node_card, product of parents_card) with a "virtual" count for 
+                 (node_card, product of parents_card) with a "virtual" count for
                  each variable state in the CPD.
                  The virtual counts are added to the actual state counts found in the data.
                  (if a list is provided, a lexicographic ordering of states is assumed)
@@ -134,8 +134,8 @@ class BayesianEstimator(ParameterEstimator):
         ├──────┼──────┼──────┼──────┼────────────────────┤
         │ C(1) │ 0.75 │ 0.75 │ 0.5  │ 0.6666666666666666 │
         ╘══════╧══════╧══════╧══════╧════════════════════╛
-        """
 
+        """
         node_cardinality = len(self.state_names[node])
         parents = sorted(self.model.get_parents(node))
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]

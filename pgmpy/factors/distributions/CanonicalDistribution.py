@@ -22,8 +22,8 @@ class CanonicalDistribution(BaseDistribution):
 
     C (X; K,h,g) = exp( ((-1/2) * X.T * K * X) + (h.T * X) + g)
 
-    Reference
-    ---------
+    References
+    ----------
     Probabilistic Graphical Models, Principles and Techniques,
     Daphne Koller and Nir Friedman, Section 14.2, Chapter 14.
 

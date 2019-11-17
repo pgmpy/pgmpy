@@ -22,8 +22,8 @@ class HamiltonianMC(object):
     Class for performing sampling using simple
     Hamiltonian Monte Carlo
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model: An instance pgmpy.models
         Model from which sampling has to be done
 
@@ -35,13 +35,8 @@ class HamiltonianMC(object):
         A class to propose future values of momentum and position in time by simulating
         Hamiltonian Dynamics
 
-    Public Methods:
-    ---------------
-    sample()
-    generate_sample()
-
-    Example:
-    --------
+    Example
+    -------
     >>> from pgmpy.sampling import HamiltonianMC as HMC, LeapFrog, GradLogPDFGaussian
     >>> from pgmpy.factors.continuous import GaussianDistribution as JGD
     >>> import numpy as np
@@ -387,8 +382,8 @@ class HamiltonianMCDA(HamiltonianMC):
     using Hamiltonian Monte Carlo with dual averaging for
     adaptaion of parameter stepsize.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model: An instance pgmpy.models
         Model from which sampling has to be done
 
@@ -402,13 +397,8 @@ class HamiltonianMCDA(HamiltonianMC):
     delta: float (in between 0 and 1), defaults to 0.65
         The target HMC acceptance probability
 
-    Public Methods:
-    ---------------
-    sample()
-    generate_sample()
-
-    Example:
-    --------
+    Example
+    -------
     >>> from pgmpy.sampling import HamiltonianMCDA as HMCda, LeapFrog, GradLogPDFGaussian as GLPG
     >>> from pgmpy.factors.continuous import GaussianDistribution as JGD
     >>> import numpy as np

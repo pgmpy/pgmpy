@@ -52,7 +52,7 @@ class StructureScore(BaseEstimator):
             A number indicating the degree of fit between data and model
 
         Examples
-        -------
+        --------
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import K2Score

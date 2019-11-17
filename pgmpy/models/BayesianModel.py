@@ -223,8 +223,8 @@ class BayesianModel(DAG):
         cpds  :  list, set, tuple (array-like)
             List of CPDs which will be associated with the model
 
-        EXAMPLE
-        -------
+        Examples
+        --------
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
         >>> student = BayesianModel([('diff', 'grades'), ('intel', 'grades')])
@@ -268,8 +268,8 @@ class BayesianModel(DAG):
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         node: any hashable python object (optional)
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
@@ -483,8 +483,8 @@ class BayesianModel(DAG):
             One of:
             - MaximumLikelihoodEstimator (default)
             - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-                or 'equivalent_sample_size' as additional keyword arguments.
-                See `BayesianEstimator.get_parameters()` for usage.
+            or 'equivalent_sample_size' as additional keyword arguments.
+            See `BayesianEstimator.get_parameters()` for usage.
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states
@@ -684,14 +684,15 @@ class BayesianModel(DAG):
         Checks whether the bayesian model is Imap of given JointProbabilityDistribution
 
         Parameters
-        -----------
+        ----------
         JPD : An instance of JointProbabilityDistribution Class, for which you want to
             check the Imap
 
         Returns
-        --------
+        -------
         boolean : True if bayesian model is Imap for given Joint Probability Distribution
                 False otherwise
+
         Examples
         --------
         >>> from pgmpy.models import BayesianModel

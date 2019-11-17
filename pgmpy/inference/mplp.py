@@ -21,6 +21,7 @@ class Mplp(Inference):
     Parameters
     ----------
     model: MarkovModel for which inference is to be performed.
+
     Examples
     --------
     >>> import numpy as np
@@ -108,14 +109,13 @@ class Mplp(Inference):
         Parameters
         ----------
         set_of_variables: tuple
-                          This is the set of variables that form the cluster.
+            This is the set of variables that form the cluster.
 
         intersection_set_variables: set containing frozensets.
-                                    collection of intersection of all pairs of cluster variables.
-                        For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
+            collection of intersection of all pairs of cluster variables. For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
 
         cluster_potential: DiscreteFactor
-                           Each cluster has a initial probability distribution provided beforehand.
+            Each cluster has a initial probability distribution provided beforehand.
         """
 
         def __init__(self, intersection_set_variables, cluster_potential):
@@ -169,8 +169,8 @@ class Mplp(Inference):
             cluster 'c' to all of its intersection_sets 's'.
             Here 's' are the elements of intersection_sets_for_cluster_c.
 
-        Reference
-        ---------
+        References
+        ----------
         Fixing Max-Product: Convergent Message-Passing Algorithms for MAP LP Relaxations
         by Amir Globerson and Tommi Jaakkola.
         Section 6, Page: 5; Beyond pairwise potentials: Generalized MPLP
@@ -477,7 +477,7 @@ class Mplp(Inference):
         Returns the integrality gap of the current state of the Mplp algorithm. The lesser it is, the closer we are
                 towards the exact solution.
 
-        Example:
+        Examples
         --------
         >>> from pgmpy.models import MarkovModel
         >>> from pgmpy.factors.discrete import DiscreteFactor
@@ -541,10 +541,10 @@ class Mplp(Inference):
 
         prolong: bool
                  If set False: The moment we exhaust of all the triplets the tightening stops.
-                 If set True: The tightening will be performed max_iterations number of times irrespective of the
-                              triplets.
+                 If set True: The tightening will be performed max_iterations number of times irrespective of the triplets.
 
-        Reference:
+        References
+        ----------
         Section 3.3: The Dual Algorithm; Tightening LP Relaxation for MAP using Message Passing (2008)
         By Sontag Et al.
 
@@ -577,7 +577,6 @@ class Mplp(Inference):
         >>> result
         {'B': 0.93894, 'C': 1.121, 'A': 1.8323, 'F': 1.5093, 'D': 1.7765, 'E': 2.12239}
         """
-
         self.dual_threshold = dual_threshold
         self.integrality_gap_threshold = integrality_gap_threshold
         # Run MPLP initially for a maximum of init_iter times.

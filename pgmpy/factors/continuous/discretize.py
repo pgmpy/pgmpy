@@ -171,8 +171,8 @@ class UnbiasedDiscretizer(BaseDiscretizer):
     about the point x, cdf is the cumulative density function
     and step = (high-low)/cardinality.
 
-    Reference
-    ---------
+    References
+    ----------
     Klugman, S. A., Panjer, H. H. and Willmot, G. E.,
     Loss Models, From Data to Decisions, Fourth Edition,
     Wiley, section 9.6.5.2 (Method of local monment matching) and

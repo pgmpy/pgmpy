@@ -365,8 +365,8 @@ class ContinuousFactor(BaseFactor):
                         if inplace=True (default) returns None
                         if inplace=False returns a new `ContinuousFactor` instance.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.factors.continuous import ContinuousFactor
         >>> from scipy.stats import multivariate_normal
         >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])
@@ -399,8 +399,8 @@ class ContinuousFactor(BaseFactor):
                         if inplace=True (default) returns None
                         if inplace=False returns a new `ContinuousFactor` instance.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.factors.continuous import ContinuousFactor
         >>> from scipy.stats import multivariate_normal
         >>> sn_pdf1 = lambda x: multivariate_normal.pdf([x], [0], [[1]])

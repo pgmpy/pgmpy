@@ -244,8 +244,8 @@ class DynamicBayesianNetwork(DAG):
         """
         Returns the intra slice edges present in the 2-TBN.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         time_slice: int (whole number)
                 The time slice for which to get intra edges. The timeslice
                 should be a positive value or zero.

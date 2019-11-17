@@ -339,7 +339,7 @@ class ClusterGraph(UndirectedGraph):
         ClusterGraph: copy of ClusterGraph
 
         Examples
-        -------
+        --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = ClusterGraph()
         >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])

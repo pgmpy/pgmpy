@@ -12,16 +12,6 @@ from pgmpy.extern import six
 class JointProbabilityDistribution(DiscreteFactor):
     """
     Base class for Joint Probability Distribution
-
-    Public Methods
-    --------------
-    conditional_distribution(values)
-    create_bayesian_model()
-    get_independencies()
-    pmap()
-    marginal_distribution(variables)
-    minimal_imap()
-    is_imap(model)
     """
 
     def __init__(self, variables, cardinality, values):
@@ -235,8 +225,8 @@ class JointProbabilityDistribution(DiscreteFactor):
         Returns marginally independent variables if condition=None.
         Returns conditionally independent variables if condition!=None
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         condition: array_like
                 Random Variable on which to condition the Joint Probability Distribution.
 
@@ -362,14 +352,15 @@ class JointProbabilityDistribution(DiscreteFactor):
         Checks whether the given BayesianModel is Imap of JointProbabilityDistribution
 
         Parameters
-        -----------
+        ----------
         model : An instance of BayesianModel Class, for which you want to
             check the Imap
 
         Returns
-        --------
+        -------
         boolean : True if given bayesian model is Imap for Joint Probability Distribution
                 False otherwise
+
         Examples
         --------
         >>> from pgmpy.models import BayesianModel
@@ -386,7 +377,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         ...                        evidence_card=[2, 3])
         >>> bm.add_cpds(diff_cpd, intel_cpd, grade_cpd)
         >>> val = [0.01, 0.01, 0.08, 0.006, 0.006, 0.048, 0.004, 0.004, 0.032,
-                   0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
+        ...        0.04, 0.04, 0.32, 0.024, 0.024, 0.192, 0.016, 0.016, 0.128]
         >>> JPD = JointProbabilityDistribution(['diff', 'intel', 'grade'], [2, 3, 3], val)
         >>> JPD.is_imap(bm)
         True

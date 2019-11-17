@@ -14,8 +14,8 @@ class NoUTurnSampler(HamiltonianMCDA):
     Class for performing sampling in Continuous model
     using No U Turn Sampler (a variant of Hamiltonian Monte Carlo)
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model: An instance pgmpy.models
         Model from which sampling has to be done
 
@@ -26,13 +26,13 @@ class NoUTurnSampler(HamiltonianMCDA):
         Class to propose future states of position and momentum in time by simulating
         HamiltonianDynamics
 
-    Public Methods:
-    ---------------
+    Public Methods
+    --------------
     sample()
     generate_sample()
 
-    Example:
-    --------
+    Example
+    -------
     >>> from pgmpy.sampling import NoUTurnSampler as NUTS, LeapFrog, GradLogPDFGaussian
     >>> from pgmpy.factors.continuous import GaussianDistribution as JGD
     >>> import numpy as np
@@ -422,8 +422,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     using No U Turn sampler with dual averaging for
     adaptation of parameter stepsize.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model: An instance pgmpy.models
         Model from which sampling has to be done
 
@@ -437,13 +437,8 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     delta: float (in between 0 and 1), defaults to 0.65
         The target HMC acceptance probability
 
-    Public Methods:
-    ---------------
-    sample()
-    generate_sample()
-
-    Example:
-    --------
+    Example
+    -------
     >>> from pgmpy.sampling import NoUTurnSamplerDA as NUTSda, GradLogPDFGaussian
     >>> from pgmpy.factors.continuous import GaussianDistribution as JGD
     >>> import numpy as np
