@@ -777,9 +777,9 @@ class PDAG(nx.DiGraph):
         except nx.NetworkXNoCycle:
             pass
         else:
-            out_str = "Cycles are not allowed in a DAG."
-            out_str += "Edges indicating the path taken for a loop: "
-            out_str += "".join(["({0},{1}) ".format(u, v) for (u, v) in cycles])
+            out_str = "Cycles are not allowed in a DAG. "
+            out_str += "The following path forms a loop: "
+            out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
             raise ValueError(out_str)
 
     def to_dag(self, required_edges=[]):
