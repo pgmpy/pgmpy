@@ -27,6 +27,8 @@ requirements:
     - pyparsing
     - pytorch
     - statsmodels
+    - tqdm
+    - joblib
 
 test:
   imports:
