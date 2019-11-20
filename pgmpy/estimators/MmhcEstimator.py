@@ -4,6 +4,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import StructureEstimator, HillClimbSearch, BdeuScore
 from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.estimators.CITests import chi_square
 
 
 class MmhcEstimator(StructureEstimator):
@@ -73,7 +74,9 @@ class MmhcEstimator(StructureEstimator):
 
         skel = self.mmpc(significance_level)
 
-        hc = HillClimbSearch(self.data, scoring_method=BdeuScore(self.data, equivalent_sample_size=10))
+        hc = HillClimbSearch(
+            self.data, scoring_method=BdeuScore(self.data, equivalent_sample_size=10)
+        )
         model = hc.estimate(white_list=skel.to_directed().edges(), tabu_length=10)
 
         return model
@@ -140,18 +143,11 @@ class MmhcEstimator(StructureEstimator):
 
         nodes = self.state_names.keys()
 
-        def is_independent(X, Y, Zs):
-            """Returns result of hypothesis test for the null hypothesis that
-            X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
-            """
-            chi2, p_value, sufficient_data = self.test_conditional_independence(X, Y, Zs)
-            return p_value >= significance_level and sufficient_data
-
         def assoc(X, Y, Zs):
             """Measure for (conditional) association between variables. Use negative
             p-value of independence test.
             """
-            return 1 - self.test_conditional_independence(X, Y, Zs)[1]
+            return 1 - chi_square(X, Y, Zs, self.data)[1]
 
         def min_assoc(X, Y, Zs):
             "Minimal association of X, Y given any subset of Zs."
@@ -177,7 +173,9 @@ class MmhcEstimator(StructureEstimator):
 
             # Forward Phase
             while True:
-                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(node, neighbors[node])
+                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(
+                    node, neighbors[node]
+                )
                 if new_neighbor_min_assoc > 0:
                     neighbors[node].append(new_neighbor)
                 else:
@@ -187,7 +185,7 @@ class MmhcEstimator(StructureEstimator):
             for neigh in neighbors[node]:
                 other_neighbors = [n for n in neighbors[node] if n != neigh]
                 for sep_set in powerset(other_neighbors):
-                    if is_independent(node, neigh, sep_set):
+                    if self.test_conditional_independence(node, neigh, sep_set):
                         neighbors[node].remove(neigh)
                         break
 

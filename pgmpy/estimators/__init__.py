@@ -9,6 +9,7 @@ from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
+from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 
 __all__ = [
     "BaseEstimator",
@@ -18,10 +19,12 @@ __all__ = [
     "StructureEstimator",
     "ExhaustiveSearch",
     "HillClimbSearch",
-    "ConstraintBasedEstimator" "StructureScore",
+    "ConstraintBasedEstimator",
+    "StructureScore",
     "K2Score",
     "BdeuScore",
     "BicScore",
     "SEMEstimator",
     "IVEstimator",
+    "MmhcEstimator",
 ]
