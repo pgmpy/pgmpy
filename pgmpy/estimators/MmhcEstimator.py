@@ -38,7 +38,7 @@ class MmhcEstimator(StructureEstimator):
         """
         super(MmhcEstimator, self).__init__(data, **kwargs)
 
-    def estimate(self, significance_level=0.01):
+    def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
         Estimates a BayesianModel for the data set, using MMHC. First estimates a
         graph skeleton using MMPC and then orients the edges using score-based local
@@ -48,6 +48,15 @@ class MmhcEstimator(StructureEstimator):
         ----------
         significance_level: float, default: 0.01
             The significance level to use for conditional independence tests in the data set. See `mmpc`-method.
+
+        scoring_method: instance of a Scoring method (default: BdeuScore)
+            The method to use for scoring during Hill Climb Search. Can be an instance of any of the
+            scoring methods implemented in pgmpy.
+
+        tabu_length: int
+            If provided, the last `tabu_length` graph modifications cannot be reversed
+            during the search procedure. This serves to enforce a wider exploration
+            of the search space. Default value: 100.
 
         Returns
         -------
@@ -71,13 +80,15 @@ class MmhcEstimator(StructureEstimator):
         >>> print(model.edges())
         [('Z', 'sum'), ('X', 'sum'), ('W', 'sum'), ('Y', 'sum')]
         """
+        if scoring_method is None:
+            scoring_method = BdeuScore(self.data, equivalent_sample_size=10)
 
         skel = self.mmpc(significance_level)
 
         hc = HillClimbSearch(
-            self.data, scoring_method=BdeuScore(self.data, equivalent_sample_size=10)
-        )
-        model = hc.estimate(white_list=skel.to_directed().edges(), tabu_length=10)
+            self.data, scoring_method=scoring_method)
+
+        model = hc.estimate(white_list=skel.to_directed().edges(), tabu_length=tabu_length)
 
         return model
 
