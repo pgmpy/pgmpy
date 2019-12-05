@@ -19,8 +19,8 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 Dependencies
 =============
 pgmpy has following non optional dependencies:
-- Python 3.4 or higher
-- NetworkX 2.x
+- Python 3.6 or higher
+- NetworkX
 - Scipy 
 - Numpy
 - Pandas
