@@ -4,80 +4,52 @@ from pgmpy.models import BayesianModel
 
 class NaiveBayes(BayesianModel):
     """
-    Class to represent Naive Bayes.
-    Subclass of Bayesian Model.
-    Model holds directed edges from one parent node to multiple
-    children nodes only.
-
-    Parameters
-    ----------
-    data : input graph
-        Data to initialize graph.  If data=None (default) an empty
-        graph is created.  The data can be an edge list, or any
-        NetworkX graph object.
-
-    Examples
-    --------
-    Create an empty Naive Bayes Model with no nodes and no edges.
-
-    >>> from pgmpy.models import NaiveBayes
-    >>> G = NaiveBayes()
-
-    G can be grown in several ways.
-
-    **Nodes:**
-
-    Add one node at a time:
-
-    >>> G.add_node('a')
-
-    Add the nodes from any container (a list, set or tuple or the nodes
-    from another graph).
-
-    >>> G.add_nodes_from(['a', 'b', 'c'])
-
-    **Edges:**
-
-    G can also be grown by adding edges.
-
-    Add one edge,
-
-    >>> G.add_edge('a', 'b')
-
-    a list of edges,
-
-    >>> G.add_edges_from([('a', 'b'), ('a', 'c')])
-
-    If some edges connect nodes not yet in the model, the nodes
-    are added automatically.  There are no errors when adding
-    nodes or edges that already exist.
-
-    **Shortcuts:**
-
-    Many common graph features allow python syntax for speed reporting.
-
-    >>> 'a' in G     # check if node in graph
-    True
-    >>> len(G)  # number of nodes in graph
-    3
+    Class to represent Naive Bayes. Naive Bayes is a special case of Bayesian Model
+    where the only edges in the model are from the feature variables to the dependent variable.
     """
 
-    def __init__(self, ebunch=None):
-        self.parent_node = None
-        self.children_nodes = set()
-        super(NaiveBayes, self).__init__(ebunch)
-
-    def add_edge(self, u, v, *kwargs):
+    def __init__(self, feature_vars=None, dependent_var=None):
         """
-        Add an edge between u and v.
-
-        The nodes u and v will be automatically added if they are
-        not already in the graph
+        Method to initialize the `NaiveBayes` class.
 
         Parameters
         ----------
-        u,v : nodes
-              Nodes can be any hashable python object.
+        feature_vars: list (array-like)
+            A list of variable predictor variables (i.e. the features) in the model.
+
+        dependent_var: hashable object
+            The dependent variable (i.e. the variable to be predicted) in the model.
+
+        Returns
+        -------
+        pgmpy.models.BayesianModel instance: An instance of a Bayesian Model with the
+            initialized model structure.
+        """
+        self.dependent = dependent_var
+        self.features = set(feature_vars) if feature_vars is not None else set()
+        if (feature_vars is not None) and (dependent_var is not None):
+            ebunch = [(self.dependent, feature) for feature in self.features]
+        else:
+            ebunch = []
+
+        super(NaiveBayes, self).__init__(ebunch=ebunch)
+
+    def add_edge(self, u, v, *kwargs):
+        """
+        Add an edge between `u` and `v`.
+
+        The nodes `u` and `v` will be automatically added if they are
+        not already in the graph. `u` will be the dependent variable (i.e. variable to be predicted)
+        and `v` will be one of the features (i.e. predictors) in the model.
+
+        Parameters
+        ----------
+        u, v : nodes
+               Nodes can be any hashable python object.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -89,12 +61,42 @@ class NaiveBayes(BayesianModel):
         >>> G.edges()
         [('a', 'c'), ('a', 'b')]
         """
-
-        if self.parent_node and u != self.parent_node:
-            raise ValueError("Model can have only one parent node.")
-        self.parent_node = u
-        self.children_nodes.add(v)
+        if self.dependent and u != self.dependent:
+            raise ValueError(
+                f"Model can only have edges outgoing from: {self.dependent}"
+            )
+        self.dependent = u
+        self.features.add(v)
         super(NaiveBayes, self).add_edge(u, v, *kwargs)
+
+    def add_edges_from(self, ebunch):
+        """
+        Adds edges to the model.
+
+        Each tuple of the form (u, v) in ebunch adds a new edge in the model.
+        Since there can only be one dependent variable in a Naive Bayes model, `u` should 
+        be the same for each tuple in `ebunch`.
+
+        Parameters
+        ----------
+        ebunch: list (array-like)
+            A list of tuples of the form (u, v) representing an edge from u to v.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> from pgmpy.models import NaiveBayes
+        >>> G = NaiveBayes()
+        >>> G.add_nodes_from(['a', 'b', 'c'])
+        >>> G.add_edges_from([('a', 'b'), ('a', 'c')])
+        >>> G.edges()
+        [('a', 'c'), ('a', 'b')]
+        """
+        for (u, v) in ebunch:
+            self.add_edge(u, v)
 
     def _get_ancestors_of(self, obs_nodes_list):
         """
@@ -107,7 +109,7 @@ class NaiveBayes(BayesianModel):
         """
         if not obs_nodes_list:
             return set()
-        return set(obs_nodes_list) | set(self.parent_node)
+        return set(obs_nodes_list) | set(self.dependent)
 
     def active_trail_nodes(self, start, observed=None):
         """
@@ -134,7 +136,7 @@ class NaiveBayes(BayesianModel):
         {'b'}
         """
 
-        if observed and self.parent_node in observed:
+        if observed and self.dependent in observed:
             return set(start)
         else:
             return set(self.nodes()) - set(observed if observed else [])
@@ -161,13 +163,9 @@ class NaiveBayes(BayesianModel):
         """
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
-            if variable != self.parent_node:
+            if variable != self.dependent:
                 independencies.add_assertions(
-                    [
-                        variable,
-                        list(set(self.children_nodes) - set(variable)),
-                        self.parent_node,
-                    ]
+                    [variable, list(set(self.features) - set(variable)), self.dependent]
                 )
         return independencies
 
@@ -208,15 +206,13 @@ class NaiveBayes(BayesianModel):
         [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
         """
         if not parent_node:
-            if not self.parent_node:
+            if not self.dependent:
                 raise ValueError("parent node must be specified for the model")
             else:
-                parent_node = self.parent_node
+                parent_node = self.dependent
         if parent_node not in data.columns:
             raise ValueError(
-                "parent node: {node} is not present in the given data".format(
-                    node=parent_node
-                )
+                f"Dependent variable: {parent_node} is not present in the data"
             )
         for child_node in data.columns:
             if child_node != parent_node:

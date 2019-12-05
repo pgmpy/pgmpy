@@ -17,26 +17,18 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertIsInstance(self.G, nx.DiGraph)
 
     def test_class_init_with_data_string(self):
-        self.g = NaiveBayes([("a", "b"), ("a", "c")])
+        self.g = NaiveBayes(feature_vars=["b", "c"], dependent_var="a")
         six.assertCountEqual(self, list(self.g.nodes()), ["a", "b", "c"])
         six.assertCountEqual(self, list(self.g.edges()), [("a", "b"), ("a", "c")])
-        self.assertEqual(self.g.parent_node, "a")
-        self.assertSetEqual(self.g.children_nodes, {"b", "c"})
-
-        self.assertRaises(ValueError, NaiveBayes, [("a", "b"), ("b", "c")])
-        self.assertRaises(ValueError, NaiveBayes, [("a", "b"), ("c", "b")])
-        self.assertRaises(ValueError, NaiveBayes, [("a", "b"), ("d", "e")])
+        self.assertEqual(self.g.dependent, "a")
+        self.assertSetEqual(self.g.features, {"b", "c"})
 
     def test_class_init_with_data_nonstring(self):
-        self.g = NaiveBayes([(1, 2), (1, 3)])
+        self.g = NaiveBayes(feature_vars=[2, 3], dependent_var=1)
         six.assertCountEqual(self, list(self.g.nodes()), [1, 2, 3])
         six.assertCountEqual(self, list(self.g.edges()), [(1, 2), (1, 3)])
-        self.assertEqual(self.g.parent_node, 1)
-        self.assertSetEqual(self.g.children_nodes, {2, 3})
-
-        self.assertRaises(ValueError, NaiveBayes, [(1, 2), (2, 3)])
-        self.assertRaises(ValueError, NaiveBayes, [(1, 2), (3, 2)])
-        self.assertRaises(ValueError, NaiveBayes, [(1, 2), (3, 4)])
+        self.assertEqual(self.g.dependent, 1)
+        self.assertSetEqual(self.g.features, {2, 3})
 
     def test_add_node_string(self):
         self.G.add_node("a")
@@ -58,8 +50,8 @@ class TestBaseModelCreation(unittest.TestCase):
         self.G.add_edge("a", "b")
         six.assertCountEqual(self, list(self.G.nodes()), ["a", "b"])
         self.assertListEqual(list(self.G.edges()), [("a", "b")])
-        self.assertEqual(self.G.parent_node, "a")
-        self.assertSetEqual(self.G.children_nodes, {"b"})
+        self.assertEqual(self.G.dependent, "a")
+        self.assertSetEqual(self.G.features, {"b"})
 
         self.G.add_nodes_from(["c", "d"])
         self.G.add_edge("a", "c")
@@ -68,8 +60,8 @@ class TestBaseModelCreation(unittest.TestCase):
         six.assertCountEqual(
             self, list(self.G.edges()), [("a", "b"), ("a", "c"), ("a", "d")]
         )
-        self.assertEqual(self.G.parent_node, "a")
-        self.assertSetEqual(self.G.children_nodes, {"b", "c", "d"})
+        self.assertEqual(self.G.dependent, "a")
+        self.assertSetEqual(self.G.features, {"b", "c", "d"})
 
         self.assertRaises(ValueError, self.G.add_edge, "b", "c")
         self.assertRaises(ValueError, self.G.add_edge, "d", "f")
@@ -81,16 +73,16 @@ class TestBaseModelCreation(unittest.TestCase):
         self.G.add_edge(1, 2)
         six.assertCountEqual(self, list(self.G.nodes()), [1, 2])
         self.assertListEqual(list(self.G.edges()), [(1, 2)])
-        self.assertEqual(self.G.parent_node, 1)
-        self.assertSetEqual(self.G.children_nodes, {2})
+        self.assertEqual(self.G.dependent, 1)
+        self.assertSetEqual(self.G.features, {2})
 
         self.G.add_nodes_from([3, 4])
         self.G.add_edge(1, 3)
         self.G.add_edge(1, 4)
         six.assertCountEqual(self, list(self.G.nodes()), [1, 2, 3, 4])
         six.assertCountEqual(self, list(self.G.edges()), [(1, 2), (1, 3), (1, 4)])
-        self.assertEqual(self.G.parent_node, 1)
-        self.assertSetEqual(self.G.children_nodes, {2, 3, 4})
+        self.assertEqual(self.G.dependent, 1)
+        self.assertSetEqual(self.G.features, {2, 3, 4})
 
         self.assertRaises(ValueError, self.G.add_edge, 2, 3)
         self.assertRaises(ValueError, self.G.add_edge, 3, 6)
@@ -106,7 +98,7 @@ class TestBaseModelCreation(unittest.TestCase):
         self.assertRaises(ValueError, self.G.add_edges_from, [("a", "a")])
 
     def test_update_node_parents_bm_constructor(self):
-        self.g = NaiveBayes([("a", "b"), ("a", "c")])
+        self.g = NaiveBayes(feature_vars=["b", "c"], dependent_var="a")
         self.assertListEqual(list(self.g.predecessors("a")), [])
         self.assertListEqual(list(self.g.predecessors("b")), ["a"])
         self.assertListEqual(list(self.g.predecessors("c")), ["a"])
@@ -124,8 +116,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
 class TestNaiveBayesMethods(unittest.TestCase):
     def setUp(self):
-        self.G1 = NaiveBayes([("a", "b"), ("a", "c"), ("a", "d"), ("a", "e")])
-        self.G2 = NaiveBayes([("d", "g"), ("d", "l"), ("d", "s")])
+        self.G1 = NaiveBayes(feature_vars=["b", "c", "d", "e"], dependent_var="a")
+        self.G2 = NaiveBayes(feature_vars=["g", "l", "s"], dependent_var="d")
 
     def test_local_independencies(self):
         self.assertEqual(self.G1.local_independencies("a"), Independencies())
@@ -186,7 +178,7 @@ class TestNaiveBayesMethods(unittest.TestCase):
 class TestNaiveBayesFit(unittest.TestCase):
     def setUp(self):
         self.model1 = NaiveBayes()
-        self.model2 = NaiveBayes([("A", "B")])
+        self.model2 = NaiveBayes(feature_vars=["B"], dependent_var="A")
 
     def test_fit_model_creation(self):
         values = pd.DataFrame(
@@ -199,16 +191,16 @@ class TestNaiveBayesFit(unittest.TestCase):
         six.assertCountEqual(
             self, self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
         )
-        self.assertEqual(self.model1.parent_node, "A")
-        self.assertSetEqual(self.model1.children_nodes, {"B", "C", "D", "E"})
+        self.assertEqual(self.model1.dependent, "A")
+        self.assertSetEqual(self.model1.features, {"B", "C", "D", "E"})
 
         self.model2.fit(values)
         six.assertCountEqual(self, self.model1.nodes(), ["A", "B", "C", "D", "E"])
         six.assertCountEqual(
             self, self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
         )
-        self.assertEqual(self.model2.parent_node, "A")
-        self.assertSetEqual(self.model2.children_nodes, {"B", "C", "D", "E"})
+        self.assertEqual(self.model2.dependent, "A")
+        self.assertSetEqual(self.model2.features, {"B", "C", "D", "E"})
 
     def test_fit_model_creation_exception(self):
         values = pd.DataFrame(
