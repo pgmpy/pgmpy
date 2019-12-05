@@ -7,7 +7,6 @@ import networkx as nx
 from pgmpy.readwrite import BIFReader, BIFWriter
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.extern.six.moves import map, range
 
 
 class TestBIFReader(unittest.TestCase):

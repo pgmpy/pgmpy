@@ -5,6 +5,7 @@ import os
 import unittest
 import warnings
 import json
+import io
 
 import numpy as np
 import numpy.testing as np_test
@@ -13,8 +14,6 @@ import networkx as nx
 from pgmpy.readwrite import ProbModelXMLReader, ProbModelXMLWriter, get_probmodel_data
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.extern.six.moves import range
-from pgmpy.extern import six
 
 try:
     from lxml import etree
@@ -212,7 +211,7 @@ class TestProbModelXMLReaderString(unittest.TestCase):
 """
         self.maxDiff = None
         self.reader_string = ProbModelXMLReader(string=string)
-        self.reader_file = ProbModelXMLReader(path=six.StringIO(string))
+        self.reader_file = ProbModelXMLReader(path=io.StringIO(string))
 
     def test_comment(self):
         comment_expected = (

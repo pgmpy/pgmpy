@@ -4,6 +4,7 @@ import itertools
 from collections import defaultdict
 import logging
 from operator import mul
+from functools import reduce
 
 import networkx as nx
 import numpy as np
@@ -19,8 +20,6 @@ from pgmpy.factors.discrete import (
 )
 from pgmpy.factors.continuous import ContinuousFactor
 from pgmpy.independencies import Independencies
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import range, reduce
 from pgmpy.models.MarkovModel import MarkovModel
 
 
@@ -322,7 +321,7 @@ class BayesianModel(DAG):
         >>> student.remove_cpds(cpd)
         """
         for cpd in cpds:
-            if isinstance(cpd, six.string_types):
+            if isinstance(cpd, str):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 

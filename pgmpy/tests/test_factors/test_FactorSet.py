@@ -1,6 +1,5 @@
 import unittest
 
-from pgmpy.extern.six.moves import filter, range
 from pgmpy.factors import FactorSet
 from pgmpy.factors.discrete import DiscreteFactor
 

@@ -23,7 +23,6 @@ import numpy as np
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD, State
-from pgmpy.extern.six.moves import map
 
 
 class XMLBIFReader(object):

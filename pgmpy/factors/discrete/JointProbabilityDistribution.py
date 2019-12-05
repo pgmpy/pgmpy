@@ -1,12 +1,11 @@
 import itertools
 from operator import mul
+from functools import reduce
 
 import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
-from pgmpy.extern.six.moves import range, zip
-from pgmpy.extern import six
 
 
 class JointProbabilityDistribution(DiscreteFactor):
@@ -90,10 +89,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         )
 
     def __str__(self):
-        if six.PY2:
-            return self._str(phi_or_p="P", tablefmt="pqsl")
-        else:
-            return self._str(phi_or_p="P")
+        return self._str(phi_or_p="P")
 
     def marginal_distribution(self, variables, inplace=True):
         """
@@ -174,18 +170,18 @@ class JointProbabilityDistribution(DiscreteFactor):
         False
         """
         JPD = self.copy()
-        if isinstance(event1, six.string_types):
+        if isinstance(event1, str):
             raise TypeError("Event 1 should be a list or array-like structure")
 
-        if isinstance(event2, six.string_types):
+        if isinstance(event2, str):
             raise TypeError("Event 2 should be a list or array-like structure")
 
         if event3:
-            if isinstance(event3, six.string_types):
+            if isinstance(event3, str):
                 raise TypeError("Event 3 cannot of type string")
 
             elif condition_random_variable:
-                if not all(isinstance(var, six.string_types) for var in event3):
+                if not all(isinstance(var, str) for var in event3):
                     raise TypeError("Event3 should be a 1d list of strings")
                 event3 = list(event3)
                 # Using the definition of conditional independence
@@ -387,7 +383,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         if not isinstance(model, BayesianModel):
             raise TypeError("model must be an instance of BayesianModel")
         factors = [cpd.to_factor() for cpd in model.get_cpds()]
-        factor_prod = six.moves.reduce(mul, factors)
+        factor_prod = reduce(mul, factors)
         JPD_fact = DiscreteFactor(self.variables, self.cardinality, self.values)
         if JPD_fact == factor_prod:
             return True

@@ -125,8 +125,6 @@ import numpy as np
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import map
 
 # warnings.warn("Not Complete. Please use only for "
 #               "reading and writing Bayesian Models.")
@@ -437,7 +435,7 @@ class ProbModelXMLWriter(object):
         Adds an edge to the ProbModelXML.
         """
         edge_data = self.data["probnet"]["edges"][edge]
-        if isinstance(edge, six.string_types):
+        if isinstance(edge, str):
             edge = eval(edge)
         link = etree.SubElement(
             self.links,

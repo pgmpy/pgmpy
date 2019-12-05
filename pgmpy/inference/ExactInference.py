@@ -5,9 +5,7 @@ import itertools
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
-from pgmpy.extern.six.moves import filter, range
 
-from pgmpy.extern.six import string_types
 from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
 from pgmpy.inference.EliminationOrder import (
@@ -138,9 +136,9 @@ class VariableElimination(Inference):
             If None: A random elimination order is used.
         """
         # Step 1: Deal with the input arguments.
-        if isinstance(variables, string_types):
+        if isinstance(variables, str):
             raise TypeError("variables must be a list of strings")
-        if isinstance(evidence, string_types):
+        if isinstance(evidence, str):
             raise TypeError("evidence must be a list of strings")
 
         # Dealing with the case when variables is not provided.

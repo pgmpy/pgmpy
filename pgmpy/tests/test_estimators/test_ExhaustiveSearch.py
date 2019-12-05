@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 
 from pgmpy.estimators import ExhaustiveSearch, BdeuScore, BicScore
-from pgmpy.extern import six
 
 
 class TestBaseEstimator(unittest.TestCase):
@@ -33,9 +32,7 @@ class TestBaseEstimator(unittest.TestCase):
         # self.assertEqual(len(list(self.est_rand.all_dags(nodes=range(5)))), 29281)  # takes ~30s
 
         abc_dags = set(
-            six.moves.map(
-                tuple, [sorted(dag.edges()) for dag in self.est_rand.all_dags()]
-            )
+            map(tuple, [sorted(dag.edges()) for dag in self.est_rand.all_dags()])
         )
         abc_dags_ref = set(
             [
@@ -147,7 +144,7 @@ class TestBaseEstimator(unittest.TestCase):
             [edges for score, edges in scores_ref],
         )
         # use assertAlmostEqual pointwise to avoid rounding issues
-        six.moves.map(
+        map(
             lambda x, y: self.assertAlmostEqual(x, y),
             [score for score, model in scores],
             [score for score, edges in scores_ref],

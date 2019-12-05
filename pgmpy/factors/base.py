@@ -1,6 +1,5 @@
 from abc import abstractmethod
-
-from pgmpy.extern.six.moves import reduce
+from functools import reduce
 
 
 class BaseFactor(object):

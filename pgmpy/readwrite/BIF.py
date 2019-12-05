@@ -21,7 +21,6 @@ from pyparsing import (
 
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.extern.six.moves import map, range
 
 
 class BIFReader(object):

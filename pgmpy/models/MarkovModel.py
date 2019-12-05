@@ -9,7 +9,6 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
 from pgmpy.independencies import Independencies
-from pgmpy.extern.six.moves import map, range, zip
 
 
 class MarkovModel(UndirectedGraph):

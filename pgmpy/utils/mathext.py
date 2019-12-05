@@ -2,7 +2,6 @@ from collections import namedtuple
 
 import numpy as np
 from itertools import combinations, chain
-from pgmpy.extern.six.moves import map
 
 
 State = namedtuple("State", ["var", "state"])

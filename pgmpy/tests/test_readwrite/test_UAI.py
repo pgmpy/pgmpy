@@ -5,7 +5,6 @@ import unittest
 from pgmpy.readwrite import UAIReader, UAIWriter
 from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
-from pgmpy.extern.six.moves import map
 
 
 class TestUAIReader(unittest.TestCase):

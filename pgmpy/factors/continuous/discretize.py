@@ -1,13 +1,12 @@
 from __future__ import division
 
-from six import with_metaclass
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from scipy import integrate
 
 
-class BaseDiscretizer(with_metaclass(ABCMeta)):
+class BaseDiscretizer(ABCMeta):
     """
     Base class for the discretizer classes in pgmpy. The discretizer
     classes are used to discretize a continuous random variable

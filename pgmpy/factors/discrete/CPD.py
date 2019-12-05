@@ -10,8 +10,6 @@ import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import tabulate
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import range, zip
 
 
 class TabularCPD(DiscreteFactor):
@@ -115,7 +113,7 @@ class TabularCPD(DiscreteFactor):
             cardinality.extend(evidence_card)
 
         if evidence is not None:
-            if isinstance(evidence, six.string_types):
+            if isinstance(evidence, str):
                 raise TypeError("Evidence must be list, tuple or array of strings.")
             variables.extend(evidence)
             if not len(evidence_card) == len(evidence):

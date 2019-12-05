@@ -4,9 +4,6 @@ from itertools import chain
 import numpy as np
 import networkx as nx
 
-from pgmpy.extern.six.moves import zip
-from pgmpy.extern import six
-
 
 class NoisyOrModel(nx.DiGraph):
     """
@@ -114,9 +111,7 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0. 4]])
         >>> model.del_variables(['x1'])
         """
-        variables = (
-            [variables] if isinstance(variables, six.string_types) else set(variables)
-        )
+        variables = [variables] if isinstance(variables, str) else set(variables)
         indices = [
             index
             for index, variable in enumerate(self.variables)
