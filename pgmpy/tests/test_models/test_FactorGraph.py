@@ -6,8 +6,6 @@ from pgmpy.models import FactorGraph
 from pgmpy.models import MarkovModel
 from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import range
 
 
 class TestFactorGraphCreation(unittest.TestCase):
@@ -59,26 +57,26 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.add_edges_from([("a", "phi1"), ("b", "phi1")])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1)
-        six.assertCountEqual(self, self.graph.factors, [phi1])
+        self.assertCountEqual(self.graph.factors, [phi1])
 
     def test_add_multiple_factors(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
+        self.assertCountEqual(self.graph.factors, [phi1, phi2])
 
     def test_get_factors(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
 
-        six.assertCountEqual(self, self.graph.get_factors(), [])
+        self.assertCountEqual(self.graph.get_factors(), [])
 
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_factors(node=phi1), phi1)
         self.assertEqual(self.graph.get_factors(node=phi2), phi2)
-        six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
+        self.assertCountEqual(self.graph.get_factors(), [phi1, phi2])
 
         self.graph.remove_factors(phi1)
         self.assertRaises(ValueError, self.graph.get_factors, node=phi1)
@@ -91,7 +89,7 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        six.assertCountEqual(self, self.graph.factors, [phi2])
+        self.assertCountEqual(self.graph.factors, [phi2])
 
     def test_get_partition_function(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
@@ -161,14 +159,14 @@ class TestFactorGraphMethods(unittest.TestCase):
 
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.get_factor_nodes(), [phi1, phi2])
+        self.assertCountEqual(self.graph.get_factor_nodes(), [phi1, phi2])
 
     def test_get_variable_nodes(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.get_variable_nodes(), ["a", "b", "c"])
+        self.assertCountEqual(self.graph.get_variable_nodes(), ["a", "b", "c"])
 
     def test_get_variable_nodes_raises_error(self):
         self.graph.add_edges_from(

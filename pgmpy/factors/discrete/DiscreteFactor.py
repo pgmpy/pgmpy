@@ -8,8 +8,6 @@ import numpy as np
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin
 from pgmpy.extern import tabulate
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import map, range, reduce, zip
 
 State = namedtuple("State", ["var", "state"])
 
@@ -81,7 +79,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         | x1_1 | x2_1 | x3_1 |          1.0000 |
         +------+------+------+-----------------+
         """
-        if isinstance(variables, six.string_types):
+        if isinstance(variables, str):
             raise TypeError("Variables: Expected type list or array like, got string")
 
         values = np.array(values, dtype=float)
@@ -149,7 +147,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.get_cardinality(['x1', 'x2'])
         {'x1': 2, 'x2': 3}
         """
-        if isinstance(variables, six.string_types):
+        if isinstance(variables, str):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         if not all([var in self.variables for var in variables]):
@@ -264,7 +262,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         ['x2']
         """
 
-        if isinstance(variables, six.string_types):
+        if isinstance(variables, str):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         phi = self if inplace else self.copy()
@@ -319,7 +317,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                [ 0.05,  0.07],
                [ 0.15,  0.21]])
         """
-        if isinstance(variables, six.string_types):
+        if isinstance(variables, str):
             raise TypeError("variables: Expected type list or array-like, got type str")
 
         phi = self if inplace else self.copy()
@@ -415,7 +413,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.values
         array([0., 1.])
         """
-        if isinstance(values, six.string_types):
+        if isinstance(values, str):
             raise TypeError("values: Expected type list or array-like, got type str")
 
         if not all([isinstance(state_tuple, tuple) for state_tuple in values]):
@@ -758,7 +756,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         print_state_names: boolean
                 If True, the user defined state names are displayed.
         """
-        string_header = list(map(lambda x: six.text_type(x), self.scope()))
+        string_header = list(map(str, self.scope()))
         string_header.append(
             "{phi_or_p}({variables})".format(
                 phi_or_p=phi_or_p, variables=",".join(string_header)

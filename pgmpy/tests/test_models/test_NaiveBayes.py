@@ -6,7 +6,6 @@ import numpy as np
 
 from pgmpy.models import NaiveBayes
 from pgmpy.independencies import Independencies
-from pgmpy.extern import six
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -18,15 +17,15 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_class_init_with_data_string(self):
         self.g = NaiveBayes(feature_vars=["b", "c"], dependent_var="a")
-        six.assertCountEqual(self, list(self.g.nodes()), ["a", "b", "c"])
-        six.assertCountEqual(self, list(self.g.edges()), [("a", "b"), ("a", "c")])
+        self.assertCountEqual(list(self.g.nodes()), ["a", "b", "c"])
+        self.assertCountEqual(list(self.g.edges()), [("a", "b"), ("a", "c")])
         self.assertEqual(self.g.dependent, "a")
         self.assertSetEqual(self.g.features, {"b", "c"})
 
     def test_class_init_with_data_nonstring(self):
         self.g = NaiveBayes(feature_vars=[2, 3], dependent_var=1)
-        six.assertCountEqual(self, list(self.g.nodes()), [1, 2, 3])
-        six.assertCountEqual(self, list(self.g.edges()), [(1, 2), (1, 3)])
+        self.assertCountEqual(list(self.g.nodes()), [1, 2, 3])
+        self.assertCountEqual(list(self.g.edges()), [(1, 2), (1, 3)])
         self.assertEqual(self.g.dependent, 1)
         self.assertSetEqual(self.g.features, {2, 3})
 
@@ -40,15 +39,15 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_add_nodes_from_string(self):
         self.G.add_nodes_from(["a", "b", "c", "d"])
-        six.assertCountEqual(self, list(self.G.nodes()), ["a", "b", "c", "d"])
+        self.assertCountEqual(list(self.G.nodes()), ["a", "b", "c", "d"])
 
     def test_add_nodes_from_non_string(self):
         self.G.add_nodes_from([1, 2, 3, 4])
-        six.assertCountEqual(self, list(self.G.nodes()), [1, 2, 3, 4])
+        self.assertCountEqual(list(self.G.nodes()), [1, 2, 3, 4])
 
     def test_add_edge_string(self):
         self.G.add_edge("a", "b")
-        six.assertCountEqual(self, list(self.G.nodes()), ["a", "b"])
+        self.assertCountEqual(list(self.G.nodes()), ["a", "b"])
         self.assertListEqual(list(self.G.edges()), [("a", "b")])
         self.assertEqual(self.G.dependent, "a")
         self.assertSetEqual(self.G.features, {"b"})
@@ -56,9 +55,9 @@ class TestBaseModelCreation(unittest.TestCase):
         self.G.add_nodes_from(["c", "d"])
         self.G.add_edge("a", "c")
         self.G.add_edge("a", "d")
-        six.assertCountEqual(self, list(self.G.nodes()), ["a", "b", "c", "d"])
-        six.assertCountEqual(
-            self, list(self.G.edges()), [("a", "b"), ("a", "c"), ("a", "d")]
+        self.assertCountEqual(list(self.G.nodes()), ["a", "b", "c", "d"])
+        self.assertCountEqual(
+            list(self.G.edges()), [("a", "b"), ("a", "c"), ("a", "d")]
         )
         self.assertEqual(self.G.dependent, "a")
         self.assertSetEqual(self.G.features, {"b", "c", "d"})
@@ -71,7 +70,7 @@ class TestBaseModelCreation(unittest.TestCase):
 
     def test_add_edge_nonstring(self):
         self.G.add_edge(1, 2)
-        six.assertCountEqual(self, list(self.G.nodes()), [1, 2])
+        self.assertCountEqual(list(self.G.nodes()), [1, 2])
         self.assertListEqual(list(self.G.edges()), [(1, 2)])
         self.assertEqual(self.G.dependent, 1)
         self.assertSetEqual(self.G.features, {2})
@@ -79,8 +78,8 @@ class TestBaseModelCreation(unittest.TestCase):
         self.G.add_nodes_from([3, 4])
         self.G.add_edge(1, 3)
         self.G.add_edge(1, 4)
-        six.assertCountEqual(self, list(self.G.nodes()), [1, 2, 3, 4])
-        six.assertCountEqual(self, list(self.G.edges()), [(1, 2), (1, 3), (1, 4)])
+        self.assertCountEqual(list(self.G.nodes()), [1, 2, 3, 4])
+        self.assertCountEqual(list(self.G.edges()), [(1, 2), (1, 3), (1, 4)])
         self.assertEqual(self.G.dependent, 1)
         self.assertSetEqual(self.G.features, {2, 3, 4})
 
@@ -187,17 +186,17 @@ class TestNaiveBayesFit(unittest.TestCase):
         )
 
         self.model1.fit(values, "A")
-        six.assertCountEqual(self, self.model1.nodes(), ["A", "B", "C", "D", "E"])
-        six.assertCountEqual(
-            self, self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
+        self.assertCountEqual(self.model1.nodes(), ["A", "B", "C", "D", "E"])
+        self.assertCountEqual(
+            self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
         )
         self.assertEqual(self.model1.dependent, "A")
         self.assertSetEqual(self.model1.features, {"B", "C", "D", "E"})
 
         self.model2.fit(values)
-        six.assertCountEqual(self, self.model1.nodes(), ["A", "B", "C", "D", "E"])
-        six.assertCountEqual(
-            self, self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
+        self.assertCountEqual(self.model1.nodes(), ["A", "B", "C", "D", "E"])
+        self.assertCountEqual(
+            self.model1.edges(), [("A", "B"), ("A", "C"), ("A", "D"), ("A", "E")]
         )
         self.assertEqual(self.model2.dependent, "A")
         self.assertSetEqual(self.model2.features, {"B", "C", "D", "E"})

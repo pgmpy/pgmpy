@@ -6,8 +6,6 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
 from pgmpy.independencies import Independencies
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import range
 from pgmpy.models import BayesianModel, MarkovModel, FactorGraph
 from pgmpy.tests import help_functions as hf
 
@@ -313,23 +311,23 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi = DiscreteFactor(["a", "b"], [2, 2], range(4))
         self.graph.add_factors(phi)
-        six.assertCountEqual(self, self.graph.factors, [phi])
+        self.assertCountEqual(self.graph.factors, [phi])
 
     def test_add_multiple_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.factors, [phi1, phi2])
+        self.assertCountEqual(self.graph.factors, [phi1, phi2])
 
     def test_get_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
-        six.assertCountEqual(self, self.graph.get_factors(), [])
+        self.assertCountEqual(self.graph.get_factors(), [])
         self.graph.add_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.get_factors(), [phi1, phi2])
-        six.assertCountEqual(self, self.graph.get_factors("a"), [phi1])
+        self.assertCountEqual(self.graph.get_factors(), [phi1, phi2])
+        self.assertCountEqual(self.graph.get_factors("a"), [phi1])
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(["a", "b", "c"])
@@ -337,7 +335,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        six.assertCountEqual(self, self.graph.factors, [phi2])
+        self.assertCountEqual(self.graph.factors, [phi2])
 
     def test_remove_multiple_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
@@ -345,7 +343,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1, phi2)
-        six.assertCountEqual(self, self.graph.factors, [])
+        self.assertCountEqual(self.graph.factors, [])
 
     def test_partition_function(self):
         self.graph.add_nodes_from(["a", "b", "c"])

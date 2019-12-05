@@ -3,9 +3,9 @@
 
 import unittest
 import warnings
+import io
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
-from pgmpy.extern import six
 
 try:
     from lxml import etree
@@ -14,7 +14,7 @@ except ImportError:
         # Python 2.5
         import xml.etree.cElementTree as etree
 
-        six.print_("running with cElementTree on Python 2.5+")
+        print("running with cElementTree on Python 2.5+")
     except ImportError:
         try:
             import xml.etree.ElementTree as etree
@@ -205,7 +205,7 @@ class TestPomdpXReaderString(unittest.TestCase):
  </pomdpx>
  """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
 
     def test_get_variables(self):
         var_expected = {
@@ -382,7 +382,7 @@ class TestPomdpXReaderString(unittest.TestCase):
   </pomdpx>
  """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
         expected_dd_parameter = [
             {
                 "Var": "rover_0",
@@ -437,7 +437,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
     """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
         expected_belief_dd = [
             {
                 "Var": "rover_0",
@@ -530,7 +530,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
         expected_reward_function_dd = [
             {
                 "Var": "reward_rover",
@@ -659,7 +659,7 @@ class TestPomdpXReaderString(unittest.TestCase):
 </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
         expected_state_transition_function = [
             {
                 "Var": "rover_1",
@@ -840,7 +840,7 @@ class TestPomdpXReaderString(unittest.TestCase):
     </pomdpx>
         """
         self.reader_string = PomdpXReader(string=string)
-        self.reader_file = PomdpXReader(path=six.StringIO(string))
+        self.reader_file = PomdpXReader(path=io.StringIO(string))
         expected_obs_function = [
             {
                 "Var": "obs_sensor",

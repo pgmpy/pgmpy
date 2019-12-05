@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 import numpy as np
 import numpy.testing as np_test
-from pgmpy.extern.six.moves import range
 
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD

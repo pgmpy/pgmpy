@@ -8,7 +8,6 @@ from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.models import JunctionTree
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.extern.six.moves import range
 
 
 class TestVariableElimination(unittest.TestCase):

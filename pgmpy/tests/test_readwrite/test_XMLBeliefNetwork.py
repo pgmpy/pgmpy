@@ -1,5 +1,6 @@
 import unittest
 import warnings
+import io
 
 import numpy as np
 import numpy.testing as np_test
@@ -8,7 +9,6 @@ import networkx as nx
 from pgmpy.readwrite import XMLBeliefNetwork
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.extern import six
 
 try:
     from lxml import etree
@@ -131,7 +131,7 @@ class TestXBNReader(unittest.TestCase):
                     </ANALYSISNOTEBOOK>"""
 
         self.reader_string = XMLBeliefNetwork.XBNReader(string=string)
-        self.reader_file = XMLBeliefNetwork.XBNReader(path=six.StringIO(string))
+        self.reader_file = XMLBeliefNetwork.XBNReader(path=io.StringIO(string))
 
     def test_init_exception(self):
         self.assertRaises(ValueError, XMLBeliefNetwork.XBNReader)

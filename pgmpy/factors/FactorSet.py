@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from pgmpy.extern.six.moves import filter, reduce
+from functools import reduce
+
 from pgmpy.factors.base import BaseFactor
-from pgmpy.extern import six
 
 
 class FactorSet(object):
@@ -248,7 +248,7 @@ class FactorSet(object):
         set([<DiscreteFactor representing phi(x2:3, x3:2) at 0x7f8e32b4cc10>,
              <DiscreteFactor representing phi(x3:2, x4:2) at 0x7f8e32b4cf90>])
         """
-        if isinstance(variables, six.string_types):
+        if isinstance(variables, str):
             raise TypeError("Expected list or array-like type got type str")
 
         factor_set = self if inplace else self.copy()

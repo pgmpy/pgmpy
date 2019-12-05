@@ -4,8 +4,6 @@ from collections import defaultdict
 
 import warnings
 
-from pgmpy.extern import six
-from pgmpy.extern.six.moves import range
 
 try:
     from lxml import etree
@@ -514,7 +512,7 @@ class PomdpXWriter(object):
             for edge in sorted(edge_dict.keys(), key=tuple):
                 edge_tag = etree.SubElement(node_tag, "Edge", attrib={"val": edge})
                 value = edge_dict.get(edge)
-                if isinstance(value, six.string_types):
+                if isinstance(value, str):
                     terminal_tag = etree.SubElement(edge_tag, "Terminal")
                     terminal_tag.text = value
                 elif "type" in value:

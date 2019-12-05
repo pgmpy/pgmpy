@@ -9,7 +9,6 @@ from pgmpy.factors import factor_product
 from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
-from pgmpy.extern.six.moves import map, range
 from pgmpy.sampling import _return_samples
 
 
