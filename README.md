@@ -19,32 +19,38 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 Dependencies
 =============
 pgmpy has following non optional dependencies:
-- Python 3.6 or higher
-- NetworkX
-- Scipy 
-- Numpy
-- Pandas
+- python 3.6 or higher
+- networkX
+- scipy 
+- numpy
+- pytorch
+
+Some of the functionality would also require:
+- tqdm
+- pandas
+- pyparsing
+- statsmodels
+- joblib
 
 Installation
 =============
-The preferred way to install pgmpy is through the `dev` brach:
+pgmpy is available both on pypi and anaconda. For installing through anaconda use:
+```bash
+$ conda install -c ankurankan pgmpy
+```
+
+For installing through pip:
+```bash
+$ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
+$ pip install pgmpy
+```
+
+To install pgmpy from the source code:
 ```
 $ git clone https://github.com/pgmpy/pgmpy 
 $ cd pgmpy/
 $ pip install -r requirements.txt
 $ python setup.py install
-```
-
-pgmpy can also be installed using conda or pip. 
-Using conda:
-```
-$ conda install -c ankurankan pgmpy
-```
-
-Using pip:
-```
-$ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
-$ pip install pgmpy
 ```
 
 If you face any problems during installation let us know, via issues, mail or at our gitter channel.
@@ -54,11 +60,7 @@ Development
 
 Code
 ----
-
-You can check the latest sources from our github repository 
-use the command:
-
-    git clone https://github.com/pgmpy/pgmpy.git
+Our latest codebase is available on the `dev` branch of the repository.
 
 Contributing
 ------------
@@ -90,15 +92,14 @@ $ nosetests --with-coverage --cover-package=pgmpy
 Documentation and usage
 =======================
 
-Everything is at:
-http://pgmpy.org/
+The documentation is hosted at: http://pgmpy.org/
 
-You can also build the documentation in your local system. We use sphinx to help us building documentation from our code.
+We use sphinx to build the documentation. To build the documentation on your local system use:
 ```
 $ cd /path/to/pgmpy/docs
 $ make html
 ```
-Then the docs will be in _build/html
+The generated docs will be in _build/html
 
 Examples:
 =========
