@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.stats import chisquare
 
 from pgmpy.utils.decorators import convert_args_tuple
-from pgmpy.estimators.CITests import chi_square, pearsonr
+from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
 class BaseEstimator(object):
@@ -160,6 +160,11 @@ class BaseEstimator(object):
     def test_conditional_independence(
         self, X, Y, Zs=[], method="chi_square", tol=0.01, **kwargs
     ):
+        """
+        Method to perform a stastical test if `X_|_Y|Zs`. All the tests are implemented
+        in CITests.py. This method provides a uniform wrapper over all the different
+        tests.
+        """
         if method == "chi_square":
             param, p_value = chi_square(
                 X=X, Y=Y, Z=Zs, data=self.data, state_names=self.state_names
@@ -175,6 +180,9 @@ class BaseEstimator(object):
                 return True
             else:
                 return False
+
+        elif method == "independence_match":
+            return independence_match(X, Y, Zs, independencies=kwargs['independencies'])
 
 
 class ParameterEstimator(BaseEstimator):

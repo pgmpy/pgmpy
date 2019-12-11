@@ -13,8 +13,8 @@ class ConstraintBasedEstimator(StructureEstimator):
     def __init__(self, data, max_ci_vars=None, **kwargs):
         """
         Class for constraint-based estimation of DAGs from a given
-        data set. Identifies (conditional) dependencies in data set using
-        chi_square dependency test and uses the PC algorithm to estimate a DAG
+        data set. Identifies (conditional) dependencies in data set using conditional
+        independence test and uses the PC algorithm to estimate a DAG
         pattern that satisfies the identified dependencies. The DAG pattern can
         then be completed to a faithful DAG, if possible.
 
@@ -354,7 +354,8 @@ class ConstraintBasedEstimator(StructureEstimator):
 
     @staticmethod
     def model_to_pdag(model):
-        """Construct the DAG pattern (representing the I-equivalence class) for
+        """
+        Construct the DAG pattern (representing the I-equivalence class) for
         a given DAG. This is the "inverse" to pdag_to_dag.
         """
 
@@ -464,8 +465,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         return pdag
 
-    @staticmethod
-    def build_skeleton(nodes, independencies, max_ci_vars=None):
+    def build_skeleton(self, nodes, independencies, **kwargs):
         """Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
         provided as an instance of the `Independencies`-class or by passing a
@@ -538,12 +538,11 @@ class ConstraintBasedEstimator(StructureEstimator):
             max_ci_vars = len(nodes) - 1
 
         if isinstance(independencies, Independencies):
-
-            def is_independent(X, Y, Zs):
-                return IndependenceAssertion(X, Y, Zs) in independencies
+            independence_test = "independence_match"
+            kwargs["independencies"] = independencies
 
         elif callable(independencies):
-            is_independent = independencies
+            independence_test = independencies
         else:
             raise ValueError(
                 "'independencies' must be either Independencies-instance "
@@ -563,7 +562,13 @@ class ConstraintBasedEstimator(StructureEstimator):
                     for separating_set in combinations(
                         set(graph.neighbors(node)) - set([neighbor]), lim_neighbors
                     ):
-                        if is_independent(node, neighbor, separating_set):
+                        if self.test_conditional_independence(
+                            X=node,
+                            Y=neighbor,
+                            Zs=separating_set,
+                            method=independence_test,
+                            kwargs=kwargs,
+                        ):
                             separating_sets[
                                 frozenset((node, neighbor))
                             ] = separating_set

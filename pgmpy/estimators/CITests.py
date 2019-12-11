@@ -2,9 +2,35 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
-
 from scipy import stats
 
+from pgmpy.independencies import IndependenceAssertion
+
+
+def independence_match(X, Y, Z, independencies):
+    """
+    Checks if `X _|_ Y | Z` is in `independencies`. This method is implemneted to
+    have an uniform API when the independencies are provided instead of data.
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X _|_ Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X _|_ Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X _|_ Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the indepenedence condition.
+
+    Returns
+    -------
+    p-value: float (Fixed to 0 since it is always confident)
+    """
+    return IndependenceAssertion(X, Y, Z) in independencies
 
 def chi_square(X, Y, Z, data, **kwargs):
     """
@@ -21,9 +47,11 @@ def chi_square(X, Y, Z, data, **kwargs):
     ----------
     X: int, string, hashable object
         A variable name contained in the data set
+
     Y: int, string, hashable object
         A variable name contained in the data set, different from X
-    Zs: list of variable names
+
+    Z: list (array-like)
         A list of variable names contained in the data set, different from X and Y.
         This is the separating set that (potentially) makes X and Y independent.
         Default: []
@@ -32,10 +60,12 @@ def chi_square(X, Y, Z, data, **kwargs):
     -------
     chi2: float
         The chi2 test statistic.
+
     p_value: float
         The p_value, i.e. the probability of observing the computed chi2
         statistic (or an even higher value), given the null hypothesis
         that X _|_ Y | Zs.
+
     sufficient_data: bool
         A flag that indicates if the sample size is considered sufficient.
         As in [4], require at least 5 samples per parameter (on average).

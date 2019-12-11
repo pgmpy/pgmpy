@@ -798,16 +798,8 @@ class PDAG(nx.DiGraph):
         Examples
         --------
         """
-        for edge in required_edges:
-            if (edge in self.directed_edges) or (
-                (edge[1], edge[0]) in self.directed_edges
-            ):
-                raise ValueError(
-                    "The required edge: {edge} is not possible as PDAG already has a directed edge between the variables".format(
-                        edge=edge
-                    )
-                )
-
+        # Add required edges if it doesn't form a new v-structure or an opposite edge
+        # is already present in the network.
         dag = DAG()
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
