@@ -3,10 +3,10 @@ import unittest
 import pandas as pd
 
 from pgmpy.models import BayesianModel
-from pgmpy.estimators import BdeuScore
+from pgmpy.estimators import BDeuScore
 
 
-class TestBdeuScore(unittest.TestCase):
+class TestBDeuScore(unittest.TestCase):
     def setUp(self):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
@@ -21,11 +21,11 @@ class TestBdeuScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
-        self.assertAlmostEqual(BdeuScore(self.d1).score(self.m1), -9.907103407446435)
-        self.assertEqual(BdeuScore(self.d1).score(BayesianModel()), 0)
+        self.assertAlmostEqual(BDeuScore(self.d1).score(self.m1), -9.907103407446435)
+        self.assertEqual(BDeuScore(self.d1).score(BayesianModel()), 0)
 
     def test_score_titanic(self):
-        scorer = BdeuScore(self.titanic_data2, equivalent_sample_size=25)
+        scorer = BDeuScore(self.titanic_data2, equivalent_sample_size=25)
         titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1892.7383393910427)
         titanic2 = BayesianModel([("Pclass", "Sex")])

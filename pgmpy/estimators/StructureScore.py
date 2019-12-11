@@ -7,7 +7,7 @@ class StructureScore(BaseEstimator):
     def __init__(self, data, **kwargs):
         """
         Abstract base class for structure scoring classes in pgmpy. Use any of the derived classes
-        K2Score, BdeuScore, or BicScore. Scoring classes are
+        K2Score, BDeuScore, or BicScore. Scoring classes are
         used to measure how well a model is able to describe the given data set.
 
         Parameters
