@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from pgmpy.estimators import ExhaustiveSearch, BdeuScore, BicScore
+from pgmpy.estimators import ExhaustiveSearch, BDeuScore, BicScore
 
 
 class TestBaseEstimator(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestBaseEstimator(unittest.TestCase):
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = ExhaustiveSearch(self.rand_data)
         self.est_rand_bdeu = ExhaustiveSearch(
-            self.rand_data, scoring_method=BdeuScore(self.rand_data)
+            self.rand_data, scoring_method=BDeuScore(self.rand_data)
         )
         self.est_rand_bic = ExhaustiveSearch(
             self.rand_data, scoring_method=BicScore(self.rand_data)

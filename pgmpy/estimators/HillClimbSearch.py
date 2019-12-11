@@ -21,7 +21,7 @@ class HillClimbSearch(StructureEstimator):
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
-            An instance of `K2Score`, `BdeuScore`, or `BicScore`.
+            An instance of `K2Score`, `BDeuScore`, or `BicScore`.
             This score is optimized during structure estimation by the `estimate`-method.
 
         state_names: dict (optional)
