@@ -4,7 +4,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.models import BayesianModel
 from pgmpy.estimators import StructureEstimator, HillClimbSearch, BDeuScore
 from pgmpy.independencies import Independencies, IndependenceAssertion
-from pgmpy.estimators.CITests import chi_square
+from pgmpy.estimators.CITests import ChiSquare
 
 
 class MmhcEstimator(StructureEstimator):

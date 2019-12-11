@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.estimators.CITests import pearsonr
+from pgmpy.estimators.CITests import ChiSquare, Pearsonr 
 
 
 class TestPearsonr(unittest.TestCase):
@@ -28,14 +28,48 @@ class TestPearsonr(unittest.TestCase):
         self.df_vstruct = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
     def test_pearsonr(self):
-        coef, p_value = pearsonr(X="X", Y="Y", Z=[], data=self.df_ind)
+        pr1 = Pearsonr(data=self.df_ind)
+        coef, p_value = pr1.compute_statistic(X="X", Y="Y", Z=[])
         self.assertTrue(coef < 0.1)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_cind)
+        pr2 = Pearsonr(data=self.df_cind)
+        coef, p_value = pr2.compute_statistic(X="X", Y="Y", Z=["Z"])
         self.assertTrue(coef < 0.1)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1", "Z2"], data=self.df_cind_mul)
+        pr3 = Pearsonr(data=self.df_cind_mul)
+        coef, p_value = pr3.compute_statistic(X="X", Y="Y", Z=["Z1", "Z2"])
         self.assertTrue(coef < 0.1)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z"], data=self.df_vstruct)
+        pr4 = Pearsonr(data=self.df_vstruct)
+        coef, p_value = pr4.compute_statistic(X="X", Y="Y", Z=["Z"])
         self.assertTrue(abs(coef) > 0.9)
+
+    def test_chi_square(self):
+        data = pd.DataFrame(
+            np.random.randint(0, 2, size=(1000, 4)), columns=list("ABCD")
+        )
+        data["E"] = data["A"] + data["B"] + data["C"]
+        t = ChiSquare(data=data, tol=0.01)
+
+        self.assertTrue(t.test_independence("A", "C"))  # independent
+        self.assertTrue(t.test_independence("A", "B", "D"))  # independent
+        self.assertFalse(
+            t.test_independence("A", "B", ["D", "E"])
+        )  # dependent
+
+    def test_test_conditional_independence_titanic(self):
+        titanic_data = pd.read_csv(
+            "pgmpy/tests/test_estimators/testdata/titanic_train.csv"
+        )
+        t = ChiSquare(data=titanic_data)
+
+        self.assertTrue(t.test_independence("Embarked", "Sex"))
+        self.assertFalse(
+            t.test_independence("Pclass", "Survived", ["Embarked"])
+        )
+        self.assertTrue(
+            t.test_independence("Embarked", "Survived", ["Sex", "Pclass"])
+        )
+        # insufficient data test commented out, because generates warning
+        # self.assertEqual(est.test_conditional_independence('Sex', 'Survived', ["Age", "Embarked"]),
+        #                 (235.51133052530713, 0.99999999683394869, False))

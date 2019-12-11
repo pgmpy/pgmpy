@@ -7,7 +7,6 @@ import pandas as pd
 from scipy.stats import chisquare
 
 from pgmpy.utils.decorators import convert_args_tuple
-from pgmpy.estimators.CITests import chi_square, pearsonr
 
 
 class BaseEstimator(object):
@@ -160,25 +159,6 @@ class BaseEstimator(object):
 
         return state_counts
 
-    def test_conditional_independence(
-        self, X, Y, Zs=[], method="chi_square", tol=0.01, **kwargs
-    ):
-        if method == "chi_square":
-            param, p_value = chi_square(
-                X=X, Y=Y, Z=Zs, data=self.data, state_names=self.state_names
-            )
-            if p_value >= tol:
-                return True
-            else:
-                return False
-
-        elif method == "pearsonr":
-            param, p_value = pearsonr(X=X, Y=Y, Z=Zs, data=self.data, **kwargs)
-            if abs(param) <= tol:
-                return True
-            else:
-                return False
-
 
 class ParameterEstimator(BaseEstimator):
     def __init__(self, model, data, **kwargs):
@@ -213,7 +193,7 @@ class ParameterEstimator(BaseEstimator):
             )
         self.model = model
 
-        super(ParameterEstimator, self).__init__(data, **kwargs)
+        super(ParameterEstimator, self).__init__(data, kwargs)
 
     def state_counts(self, variable, **kwargs):
         """
@@ -292,7 +272,7 @@ class StructureEstimator(BaseEstimator):
             This sets the behavior of the `state_count`-method.
         """
 
-        super(StructureEstimator, self).__init__(data, **kwargs)
+        super(StructureEstimator, self).__init__(data, kwargs)
 
     def estimate(self):
         pass

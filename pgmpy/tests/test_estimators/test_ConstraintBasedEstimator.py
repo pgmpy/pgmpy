@@ -104,16 +104,17 @@ class TestConstraintBasedEstimator(unittest.TestCase):
     def test_estimate_from_independencies(self):
         ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
         ind = ind.closure()
-        model = ConstraintBasedEstimator.estimate_from_independencies("ABCD", ind)
+        est = ConstraintBasedEstimator(data=None, independencies=ind)
+        model = est.estimate_from_independencies("ABCD")
 
         self.assertSetEqual(
             set(model.edges()), set([("B", "D"), ("A", "D"), ("C", "D")])
         )
 
         model1 = BayesianModel([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
-        model2 = ConstraintBasedEstimator.estimate_from_independencies(
-            model1.nodes(), model1.get_independencies()
-        )
+        est = ConstraintBasedEstimator(data=None, independencies=model1.get_independencies())
+        model2 = est.estimate_from_independencies(
+            model1.nodes())
 
         self.assertTrue(
             set(model2.edges()) == set(model1.edges())

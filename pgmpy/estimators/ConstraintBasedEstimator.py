@@ -2,15 +2,17 @@
 
 from warnings import warn
 from itertools import combinations
+import networkx as nx
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.estimators.CITests import ChiSquare, Pearsonr, IndependenceMatching
 
 
 class ConstraintBasedEstimator(StructureEstimator):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data=None, ci_test="chi_square", **kwargs):
         """
         Class for constraint-based estimation of DAGs from a given
         data set. Identifies (conditional) dependencies in data set using
@@ -43,7 +45,14 @@ class ConstraintBasedEstimator(StructureEstimator):
         [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
         http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         """
-        super(ConstraintBasedEstimator, self).__init__(data, **kwargs)
+        if ci_test == "chi_square":
+            self.ci_test = ChiSquare(data=data, kwargs=kwargs)
+        elif ci_test == "pearsonr":
+            self.ci_test = Pearsonr(data=data, kwargs=kwargs)
+        elif ci_test == "independence_match":
+            self.ci_test = IndependenceMatching(**kwargs)
+
+        super(ConstraintBasedEstimator, self).__init__(data=data, kwargs=kwargs)
 
     def estimate(self, significance_level=0.01):
         """
@@ -168,17 +177,9 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
 
         nodes = self.state_names.keys()
+        return self.build_skeleton(nodes)
 
-        def is_independent(X, Y, Zs):
-            """Returns result of hypothesis test for the null hypothesis that
-            X _|_ Y | Zs, using a chi2 statistic and threshold `significance_level`.
-            """
-            return self.test_conditional_independence(X, Y, Zs, method="chi_square")
-
-        return self.build_skeleton(nodes, is_independent)
-
-    @staticmethod
-    def estimate_from_independencies(nodes, independencies):
+    def estimate_from_independencies(self, nodes):
         """Estimates a DAG from an Independencies()-object or a
         decision function for conditional independencies. This requires that
         the set of independencies admits a faithful representation (e.g. is a
@@ -222,8 +223,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> # Both networks belong to the same PDAG/are I-equivalent
         """
 
-        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
-            nodes, independencies
+        skel, separating_sets = self.build_skeleton(
+            nodes
         )
         pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
         dag = ConstraintBasedEstimator.pdag_to_dag(pdag)
@@ -345,8 +346,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         return dag
 
-    @staticmethod
-    def model_to_pdag(model):
+    def model_to_pdag(self, model):
         """Construct the DAG pattern (representing the I-equivalence class) for
         a given DAG. This is the "inverse" to pdag_to_dag.
         """
@@ -357,8 +357,8 @@ class ConstraintBasedEstimator(StructureEstimator):
                 + "got type {model_type}".format(model_type=type(model))
             )
 
-        skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
-            model.nodes(), model.get_independencies()
+        skel, separating_sets = self.build_skeleton(
+            model.nodes()
         )
         pdag = ConstraintBasedEstimator.skeleton_to_pdag(skel, separating_sets)
 
@@ -460,8 +460,7 @@ class ConstraintBasedEstimator(StructureEstimator):
 
         return pdag
 
-    @staticmethod
-    def build_skeleton(nodes, independencies):
+    def build_skeleton(self, nodes):
         """Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
         provided as an instance of the `Independencies`-class or by passing a
@@ -524,22 +523,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         >>> print(skel.edges())
         [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')]
         """
-
         nodes = list(nodes)
-
-        if isinstance(independencies, Independencies):
-
-            def is_independent(X, Y, Zs):
-                return IndependenceAssertion(X, Y, Zs) in independencies
-
-        elif callable(independencies):
-            is_independent = independencies
-        else:
-            raise ValueError(
-                "'independencies' must be either Independencies-instance "
-                + "or a ternary function that decides independencies."
-            )
-
         graph = UndirectedGraph(combinations(nodes, 2))
         lim_neighbors = 0
         separating_sets = dict()
@@ -553,7 +537,9 @@ class ConstraintBasedEstimator(StructureEstimator):
                     for separating_set in combinations(
                         set(graph.neighbors(node)) - set([neighbor]), lim_neighbors
                     ):
-                        if is_independent(node, neighbor, separating_set):
+                        if self.ci_test.test_independence(
+                            node, neighbor, separating_set
+                        ):
                             separating_sets[
                                 frozenset((node, neighbor))
                             ] = separating_set
