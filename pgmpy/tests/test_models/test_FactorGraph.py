@@ -82,14 +82,19 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.assertRaises(ValueError, self.graph.get_factors, node=phi1)
 
     def test_remove_factors(self):
-        self.graph.add_edges_from(
-            [("a", "phi1"), ("b", "phi1"), ("b", "phi2"), ("c", "phi2")]
-        )
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], np.random.rand(4))
+        self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        self.assertCountEqual(self.graph.factors, [phi2])
+        self.assertEqual(set(self.graph.factors), set([phi2]))
+        self.assertTrue(
+            (("c", phi2) in self.graph.edges()) or ((phi2, "c") in self.graph.edges())
+        )
+        self.assertTrue(
+            (("b", phi2) in self.graph.edges()) or ((phi2, "b") in self.graph.edges())
+        )
+        self.assertEqual(set(self.graph.nodes()), set(["a", "b", "c", phi2]))
 
     def test_get_partition_function(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
@@ -207,11 +212,8 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         self.assertTrue(self.graph.check_model())
 
-        self.graph.remove_factors(phi1)
-        self.graph.remove_node(phi1)
         phi1 = DiscreteFactor(["a", "b"], [4, 2], np.random.rand(8))
-        self.graph.add_factors(phi1)
-        self.graph.add_edges_from([("a", phi1)])
+        self.graph.add_factors(phi1, replace=True)
         self.assertTrue(self.graph.check_model())
 
     def test_check_model1(self):
@@ -264,11 +266,8 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
         self.assertRaises(ValueError, self.graph.check_model)
 
-        self.graph.remove_factors(phi2)
-        self.graph.remove_node(phi2)
         phi3 = DiscreteFactor(["c", "a"], [4, 4], np.random.rand(16))
-        self.graph.add_factors(phi3)
-        self.graph.add_edges_from([("a", phi3), ("c", phi3)])
+        self.graph.add_factors(phi3, replace=True)
         self.assertRaises(ValueError, self.graph.check_model)
 
     def test_copy(self):

@@ -91,7 +91,7 @@ class FactorGraph(UndirectedGraph):
         else:
             raise ValueError("Self loops are not allowed")
 
-    def add_factors(self, *factors):
+    def add_factors(self, *factors, replace=False):
         """
         Associate a factor to the graph.
         See factors class for the order of potential values.
@@ -118,9 +118,21 @@ class FactorGraph(UndirectedGraph):
             if set(factor.variables) - set(factor.variables).intersection(
                 set(self.nodes())
             ):
-                raise ValueError("Factors defined on variable not in the model", factor)
+                raise ValueError(
+                    "Factors defined on variable not in the model", factor.__repr__()
+                )
 
-            self.factors.append(factor)
+            if replace:
+                for fa in self.factors:
+                    if set(factor.variables) == set(fa.variables):
+                        neighbors = self.neighbors(fa)
+                        self.remove_factors(fa)
+                        self.add_node(factor)
+                        self.add_edges_from([(factor, neigh) for neigh in neighbors])
+                self.factors.append(factor)
+
+            else:
+                self.factors.append(factor)
 
     def remove_factors(self, *factors):
         """
@@ -138,6 +150,9 @@ class FactorGraph(UndirectedGraph):
         """
         for factor in factors:
             self.factors.remove(factor)
+            # If factor is also in the graph, remove the node and corresponding edges.
+            if factor in self.nodes:
+                self.remove_node(factor)
 
     def get_cardinality(self, node=None):
         """
