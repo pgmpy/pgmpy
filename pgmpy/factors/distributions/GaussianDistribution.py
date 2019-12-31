@@ -143,7 +143,7 @@ class GaussianDistribution(BaseDistribution):
         ...          mean=[1, -3, 4],
         ...          cov=[[4, 2, -2],
         ...               [2, 5, -5],
-        ...               [-2, -5, 8]]))
+        ...               [-2, -5, 8]])
         >>> dis.precision_matrix
         array([[ 0.3125    , -0.125     ,  0.        ],
                [-0.125     ,  0.58333333,  0.33333333],
@@ -180,7 +180,7 @@ class GaussianDistribution(BaseDistribution):
         ...          mean=[1, -3, 4],
         ...          cov=[[4, 2, -2],
         ...               [2, 5, -5],
-        ...               [-2, -5, 8]]))
+        ...               [-2, -5, 8]])
         >>> dis.variables
         ['x1', 'x2', 'x3']
         >>> dis.mean

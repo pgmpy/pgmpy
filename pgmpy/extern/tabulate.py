@@ -258,10 +258,10 @@ _invisible_codes_bytes = re.compile(b"\x1b\[\d*m")  # ANSI color codes
 
 
 def simple_separated_format(separator):
-    """Construct a simple TableFormat with columns separated by a separator.
+    r"""Construct a simple TableFormat with columns separated by a separator.
 
-    >>> tsv = simple_separated_format("\\t") ; \
-        tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == 'foo \\t 1\\nspam\\t23'
+    >>> tsv = simple_separated_format("\t")
+    >>> tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == 'foo \t 1\nspam\t23'
     True
 
     """
@@ -499,14 +499,14 @@ def _column_type(strings, has_invisible=True):
 
 
 def _format(val, valtype, floatfmt, missingval=""):
-    """Format a value accoding to its type.
+    r"""Format a value accoding to its type.
 
     Unicode is supported:
 
-    >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430'] ; \
-        tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]] ; \
-        good_result = '\\u0431\\u0443\\u043a\\u0432\\u0430      \\u0446\\u0438\\u0444\\u0440\\u0430\\n-------  -------\\n\\u0430\\u0437             2\\n\\u0431\\u0443\\u043a\\u0438           4' ; \
-        tabulate(tbl, headers=hrow) == good_result
+    >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430']
+    >>> tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]]
+    >>> good_result = '\u0431\u0443\u043a\u0432\u0430      \u0446\u0438\u0444\u0440\u0430\n-------  -------\n\u0430\u0437             2\n\u0431\u0443\u043a\u0438           4'
+    >>> tabulate(tbl, headers=hrow) == good_result
     True
 
     """

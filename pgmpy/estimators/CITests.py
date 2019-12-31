@@ -62,11 +62,11 @@ def chi_square(X, Y, Z, data, **kwargs):
     >>> data['E'] = data['A'] + data['B'] + data['C']
     >>> c = ConstraintBasedEstimator(data)
     >>> print(c.test_conditional_independence('A', 'C'))  # independent
-    (0.95035644482050263, 0.8132617142699442, True)
+    True
     >>> print(c.test_conditional_independence('A', 'B', 'D'))  # independent
-    (5.5227461320130899, 0.59644169242588885, True)
+    True
     >>> print(c.test_conditional_independence('A', 'B', ['D', 'E']))  # dependent
-    (9192.5172226063387, 0.0, True)
+    False
     """
 
     if isinstance(Z, (frozenset, list, set, tuple)):
@@ -155,7 +155,7 @@ def chi_square(X, Y, Z, data, **kwargs):
 
 
 def pearsonr(X, Y, Z, data):
-    """
+    r"""
     Computes Pearson correlation coefficient and p-value for testing non-correlation. Should be used
     only on continuous data. In case when :math:`Z != \null` uses linear regression and computes pearson
     coefficient on residuals.

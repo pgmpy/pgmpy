@@ -67,7 +67,7 @@ class NoisyOrModel(nx.DiGraph):
         >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
         ...                                                      [0.2, 0.4, 0.7],
-        ...                                                      [0.1, 0. 4]])
+        ...                                                      [0.1, 0., 4]])
         >>> model.add_variables(['x4'], [3], [0.1, 0.4, 0.2])
         """
         if len(variables) == 1:
@@ -108,7 +108,7 @@ class NoisyOrModel(nx.DiGraph):
         >>> from pgmpy.models import NoisyOrModel
         >>> model = NoisyOrModel(['x1', 'x2', 'x3'], [2, 3, 2], [[0.6, 0.4],
         ...                                                      [0.2, 0.4, 0.7],
-        ...                                                      [0.1, 0. 4]])
+        ...                                                      [0.1, 0., 4]])
         >>> model.del_variables(['x1'])
         """
         variables = [variables] if isinstance(variables, str) else set(variables)
