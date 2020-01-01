@@ -3,7 +3,11 @@ import itertools
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
 from pgmpy.data import Data

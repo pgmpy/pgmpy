@@ -1,9 +1,12 @@
 import warnings
 from math import isclose
 
-import torch
 
-optim = torch.optim
+try:
+    import torch
+    optim = torch.optim
+except ImportError:
+    optim = None
 
 
 def pinverse(t):

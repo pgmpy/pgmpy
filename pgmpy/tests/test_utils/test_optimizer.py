@@ -1,11 +1,14 @@
 import unittest
-
-import torch
 import numpy as np
 import numpy.testing as npt
 
 from pgmpy.utils import optimize, pinverse
 from pgmpy.global_vars import device, dtype
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 class TestOptimize(unittest.TestCase):
@@ -19,6 +22,7 @@ class TestOptimize(unittest.TestCase):
 
         return (A - B).pow(2).sum()
 
+    @unittest.skipIf(torch is None, 'torch is not installed')
     def test_optimize(self):
         # TODO: Add tests for other optimizers
         for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
@@ -36,12 +40,14 @@ class TestOptimize(unittest.TestCase):
 
 
 class Testpinverse(unittest.TestCase):
+    @unittest.skipIf(torch is None, 'torch is not installed')
     def test_pinverse(self):
         mat = np.random.randn(5, 5)
         np_inv = np.linalg.pinv(mat)
         inv = pinverse(torch.tensor(mat))
         npt.assert_array_almost_equal(np_inv, inv.numpy())
 
+    @unittest.skipIf(torch is None, 'torch is not installed')
     def test_pinverse_zeros(self):
         mat = np.zeros((5, 5))
         np_inv = np.linalg.pinv(mat)
