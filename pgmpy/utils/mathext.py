@@ -88,9 +88,7 @@ def sample_discrete(values, weights, size=1, rng=None):
     if weights.ndim == 1:
         return rng.choice(values, size=size, p=weights)
     else:
-        return np.fromiter(
-            map(lambda t: rng.choice(values, p=t), weights), dtype="int"
-        )
+        return np.fromiter(map(lambda t: rng.choice(values, p=t), weights), dtype="int")
 
 
 def powerset(l):

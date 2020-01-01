@@ -335,9 +335,11 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )
 
-        self.new_position, self.new_momentum, self.new_grad_logp = (
-            self._get_proposed_values()
-        )
+        (
+            self.new_position,
+            self.new_momentum,
+            self.new_grad_logp,
+        ) = self._get_proposed_values()
 
     def _get_proposed_values(self):
         """
@@ -412,9 +414,11 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )
 
-        self.new_position, self.new_momentum, self.new_grad_logp = (
-            self._get_proposed_values()
-        )
+        (
+            self.new_position,
+            self.new_momentum,
+            self.new_grad_logp,
+        ) = self._get_proposed_values()
 
     def _get_proposed_values(self):
         """

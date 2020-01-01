@@ -2,10 +2,11 @@ import warnings
 from math import isclose
 
 
-try:
+try:  # pragma: no cover
     import torch
+
     optim = torch.optim
-except ImportError:
+except ImportError:  # pragma: no cover
     optim = None
 
 

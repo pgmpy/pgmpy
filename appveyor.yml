@@ -86,7 +86,7 @@ install:
 test_script:
   # tests
   - cmd: activate pgmpy
-  - cmd: nosetests -v --exclude=test_sampling
+  - cmd: nosetests -v --exclude=test_sampling --exclude='test_MmhcEstimator\.py'
 
 notifications:
   - provider: Webhook

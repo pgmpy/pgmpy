@@ -1,12 +1,10 @@
-import itertools
-
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-try:
+try:  # pragma: no cover
     import torch
-except ImportError:
+except ImportError:  # pragma: no cover
     torch = None
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
@@ -66,7 +64,7 @@ class SEMEstimator(object):
         return self.wedge_y @ B_inv @ zeta_masked @ B_inv.t() @ self.wedge_y.t()
 
     def ml_loss(self, params, loss_args):
-        """
+        r"""
         Method to compute the Maximum Likelihood loss function. The optimizer calls this
         method after each iteration with updated params to compute the new loss.
 
@@ -98,7 +96,7 @@ class SEMEstimator(object):
         )
 
     def uls_loss(self, params, loss_args):
-        """
+        r"""
         Method to compute the Unweighted Least Squares fitting function. The optimizer calls
         this method after each iteration with updated params to compute the new loss.
 
@@ -124,7 +122,7 @@ class SEMEstimator(object):
         return (S - sigma).pow(2).trace()
 
     def gls_loss(self, params, loss_args):
-        """
+        r"""
         Method to compute the Weighted Least Squares fitting function. The optimizer calls
         this method after each iteration with updated params to compute the new loss.
 

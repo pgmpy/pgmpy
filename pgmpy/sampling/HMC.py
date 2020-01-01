@@ -444,9 +444,7 @@ class HamiltonianMCDA(HamiltonianMC):
         Run tha adaptation for stepsize for better proposals of position
         """
         gamma = 0.05  # free parameter that controls the amount of shrinkage towards mu
-        t0 = (
-            10.0
-        )  # free parameter that stabilizes the initial iterations of the algorithm
+        t0 = 10.0  # free parameter that stabilizes the initial iterations
         kappa = 0.75
         # See equation (6) section 3.2.1 for details
 

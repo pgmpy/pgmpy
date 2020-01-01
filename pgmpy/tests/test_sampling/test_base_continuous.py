@@ -132,9 +132,11 @@ class TestLeapFrog(unittest.TestCase):
         np.testing.assert_almost_equal(
             new_grad, np.array([-1.0123835, 1.00139798, -0.46422764])
         )
-        new_pos, new_momentum, new_grad = (
-            self.test_without_grad_log.get_proposed_values()
-        )
+        (
+            new_pos,
+            new_momentum,
+            new_grad,
+        ) = self.test_without_grad_log.get_proposed_values()
         np.testing.assert_almost_equal(
             new_pos, np.array([-0.5001626, -0.32195122, -0.45333333])
         )
@@ -183,9 +185,11 @@ class TestModifiedEuler(unittest.TestCase):
         np.testing.assert_almost_equal(new_pos, np.array([-1.0, 0.5]))
         np.testing.assert_almost_equal(new_momentum, np.array([-2.0, 1.0]))
         np.testing.assert_almost_equal(new_grad, np.array([-0.93406593, 0.08241758]))
-        new_pos, new_momentum, new_grad = (
-            self.test_without_grad_log.get_proposed_values()
-        )
+        (
+            new_pos,
+            new_momentum,
+            new_grad,
+        ) = self.test_without_grad_log.get_proposed_values()
         np.testing.assert_almost_equal(new_pos, np.array([-0.6, 0.3]))
         np.testing.assert_almost_equal(new_momentum, np.array([-2.0, 1.0]))
         np.testing.assert_almost_equal(new_grad, np.array([-0.56043956, 0.04945055]))
