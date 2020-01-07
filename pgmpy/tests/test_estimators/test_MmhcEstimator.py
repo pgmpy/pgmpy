@@ -16,7 +16,7 @@ class TestMmhcEstimator(unittest.TestCase):
         self.data1["sum"] = self.data1.sum(axis=1)
         self.est1 = MmhcEstimator(self.data1)
 
-    @unittest.skip('currently disabled due to non-determenism')
+    @unittest.skip("currently disabled due to non-determenism")
     def test_estimate(self):
         self.assertTrue(
             set(self.est1.estimate().edges()).issubset(
