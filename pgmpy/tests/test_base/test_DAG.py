@@ -151,6 +151,18 @@ class TestDAGMoralization(unittest.TestCase):
             [["diff", "grade"], ["diff", "intel"], ["grade", "intel"]],
         )
 
+    def test_moralize_disconnected(self):
+        graph_copy = self.graph.copy()
+        graph_copy.add_node("disconnected")
+        moral_graph = graph_copy.moralize()
+        self.assertListEqual(
+            hf.recursive_sorted(moral_graph.edges()),
+            [["diff", "grade"], ["diff", "intel"], ["grade", "intel"]],
+        )
+        self.assertEqual(
+            sorted(moral_graph.nodes()), ["diff", "disconnected", "grade", "intel"]
+        )
+
     def test_get_children(self):
         self.assertListEqual(sorted(self.graph.get_children("diff")), ["grade"])
 
