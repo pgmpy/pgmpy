@@ -41,7 +41,7 @@ $ conda install -c ankurankan pgmpy
 
 For installing through pip:
 ```bash
-$ pip install -r requirements.txt  # or requirements-dev.txt if you want to run unittests
+$ pip install -r requirements.txt  # only if you want to run unittests
 $ pip install pgmpy
 ```
 
@@ -80,13 +80,13 @@ Testing
 -------
 
 After installation, you can launch the test form pgmpy
-source directory (you will need to have the ``nose`` package installed):
+source directory (you will need to have the ``pytest`` package installed):
 ```bash
-$ nosetests -v
+$ pytest -v
 ```
 to see the coverage of existing code use following command
 ```
-$ nosetests --with-coverage --cover-package=pgmpy
+$ pytest --cov-report html --cov=pgmpy
 ```
 
 Documentation and usage
