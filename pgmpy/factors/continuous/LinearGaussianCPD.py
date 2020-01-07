@@ -82,16 +82,6 @@ class LinearGaussianCPD(BaseFactor):
         self.evidence = evidence
         self.sigma_yx = None
 
-        if beta is not None:
-            self.beta = beta
-            self.beta_0 = beta[0]
-            self.beta_vector = np.asarray(beta[1:])
-
-            if len(evidence) != len(beta) - 1:
-                raise ValueError(
-                    "The number of variables in evidence must be one less than the length of the beta vector."
-                )
-
         variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(
             variables, pdf="gaussian", mean=self.mean, covariance=self.variance
@@ -203,8 +193,8 @@ class LinearGaussianCPD(BaseFactor):
             # and the rest of the elements give the mean values of the parent
             # variables.
             mean = (
-                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.beta_vector)])
-                + self.beta_0
+                sum([arg * coeff for (arg, coeff) in zip(args[1:], self.mean)])
+                + self.mean[0]
             )
             return multivariate_normal.pdf(
                 args[0], np.array(mean), np.array([[self.variance]])
@@ -237,7 +227,7 @@ class LinearGaussianCPD(BaseFactor):
         return copy_cpd
 
     def __str__(self):
-        if self.evidence and list(self.beta_vector):
+        if self.evidence and list(self.mean):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
                 node=str(self.variable),
@@ -245,17 +235,17 @@ class LinearGaussianCPD(BaseFactor):
                 mu=" + ".join(
                     [
                         "{coeff}*{parent}".format(coeff=coeff, parent=parent)
-                        for coeff, parent in zip(self.beta_vector, self.evidence)
+                        for coeff, parent in zip(self.mean, self.evidence)
                     ]
                 ),
-                b_0=str(self.beta_0),
+                b_0=str(self.mean[0]),
                 sigma=str(self.variance),
             )
         else:
             # P(X) = N(1, 4)
             rep_str = "P({X}) = N({beta_0}; {variance})".format(
                 X=str(self.variable),
-                beta_0=str(self.beta_0),
+                beta_0=str(self.mean[0]),
                 variance=str(self.variance),
             )
         return rep_str
