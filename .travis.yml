@@ -54,7 +54,7 @@ after_success:
         travis encrypt CI_GITHUB_SECRET=$CI_GITHUB_SECRET
 
         # HOW TO ENCRYPT YOUR SECRET GPG KEY
-        IDENTIFIER="travis-ci-Erotemic"
+        IDENTIFIER="<YOUR-GPG-IDENTIFIER> 
         KEYID=$(gpg --list-keys --keyid-format LONG "$IDENTIFIER" | head -n 2 | tail -n 1 | awk '{print $1}' | tail -c 9)
         echo "KEYID = $KEYID"
 
