@@ -243,6 +243,14 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables)
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
         return self._variable_elimination(
             variables=variables,
             operation="marginalize",
@@ -288,6 +296,15 @@ class VariableElimination(Inference):
         """
         if not variables:
             variables = []
+
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables if variables is not None else [])
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
         final_distribution = self._variable_elimination(
             variables=variables,
             operation="maximize",
@@ -335,6 +352,14 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables if variables is not None else [])
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
             variables=variables,
@@ -841,6 +866,14 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.query(variables=['J', 'Q'],
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables)
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
         return self._query(
             variables=variables, operation="marginalize", evidence=evidence, joint=joint
         )
@@ -887,6 +920,14 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.map_query(variables=['J', 'Q'],
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables if variables is not None else [])
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         if not variables:
             variables = set(self.variables)

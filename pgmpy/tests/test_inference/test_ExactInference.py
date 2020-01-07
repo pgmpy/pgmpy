@@ -130,6 +130,11 @@ class TestVariableElimination(unittest.TestCase):
             ),
         )
 
+    def test_query_common_var(self):
+        self.assertRaises(
+            ValueError, self.bayesian_inference.query, variables=["J"], evidence=["J"]
+        )
+
     def test_max_marginal(self):
         np_test.assert_almost_equal(
             self.bayesian_inference.max_marginal(), 0.1659, decimal=4
@@ -150,6 +155,14 @@ class TestVariableElimination(unittest.TestCase):
             self.bayesian_inference.max_marginal(["G", "R", "A"]), 0.3061, decimal=4
         )
 
+    def test_max_marginal_common_var(self):
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.max_marginal,
+            variables=["J"],
+            evidence=["J"],
+        )
+
     def test_map_query(self):
         map_query = self.bayesian_inference.map_query()
         self.assertDictEqual(
@@ -161,6 +174,14 @@ class TestVariableElimination(unittest.TestCase):
             ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}
         )
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
+
+    def test_map_query_common_var(self):
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.map_query,
+            variables=["J"],
+            evidence=["J"],
+        )
 
     def test_induced_graph(self):
         induced_graph = self.bayesian_inference.induced_graph(
@@ -594,6 +615,12 @@ class TestBeliefPropagation(unittest.TestCase):
             ),
         )
 
+    def test_query_common_var(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        self.assertRaises(
+            ValueError, belief_propagation.query, variables=["J"], evidence=["J"]
+        )
+
     def test_map_query(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         map_query = belief_propagation.map_query()
@@ -607,6 +634,12 @@ class TestBeliefPropagation(unittest.TestCase):
             ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}
         )
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
+
+    def test_map_query_common_var(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        self.assertRaises(
+            ValueError, belief_propagation.map_query, variables=["J"], evidence=["J"]
+        )
 
     def tearDown(self):
         del self.junction_tree
