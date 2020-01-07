@@ -22,18 +22,25 @@ python:
   #
 before_install:
   - pip install pip -U
+  # run a linter before doing anything else
+  - pip install black -U
+  - black --diff .
+  - black --check .
+  # install the rest of the external requirements
   - pip install -r requirements.txt -U
 
 install:
+  # Install the library (note we could do this in non-develop mode instead)
   - travis_retry pip install -e .
     
 script: 
-  - black --diff .
-  - black --check .
+  # Execute the tests
   - travis_wait ./run_tests.py 
 
 after_success: 
+    # Upload coverage results
     - codecov 
+    # Prep GPG and encryption utilities
     - gpg --version
     - gpg2 --version
     - export GPG_EXECUTABLE=gpg2
