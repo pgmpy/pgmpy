@@ -165,7 +165,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                [-2., -5.,  8.]])
 
         """
-        variables = nx.topological_sort(self)
+        variables = list(nx.topological_sort(self))
         mean = np.zeros(len(variables))
         covariance = np.zeros((len(variables), len(variables)))
 
@@ -175,10 +175,10 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                 sum(
                     [
                         coeff * mean[variables.index(parent)]
-                        for coeff, parent in zip(cpd.beta_vector, cpd.evidence)
+                        for coeff, parent in zip(cpd.mean, cpd.evidence)
                     ]
                 )
-                + cpd.beta_0
+                + cpd.mean[0]
             )
             covariance[node_idx, node_idx] = (
                 sum(
@@ -186,7 +186,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                         coeff
                         * coeff
                         * covariance[variables.index(parent), variables.index(parent)]
-                        for coeff, parent in zip(cpd.beta_vector, cpd.evidence)
+                        for coeff, parent in zip(cpd.mean, cpd.evidence)
                     ]
                 )
                 + cpd.variance
@@ -203,7 +203,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
                     covariance[node_i_idx, node_j_idx] = sum(
                         [
                             coeff * covariance[node_i_idx, variables.index(parent)]
-                            for coeff, parent in zip(cpd_j.beta_vector, cpd_j.evidence)
+                            for coeff, parent in zip(cpd_j.mean, cpd_j.evidence)
                         ]
                     )
 
