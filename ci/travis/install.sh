@@ -44,4 +44,5 @@ fi
 
 # Build pgmpy
 python setup.py develop
+black --diff .
 black --check .

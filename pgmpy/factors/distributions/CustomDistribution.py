@@ -372,7 +372,7 @@ class CustomDistribution(BaseDistribution):
         ...                                     distribution=normal_pdf_x2)
         >>> normal_dist_x2.assignment(1, 1)
         0.117099663049
-        >>> normal_dist = normal_dist_x2.normalize(inplace=False))
+        >>> normal_dist = normal_dist_x2.normalize(inplace=False)
         >>> normal_dist.assignment(1, 1)
         0.0585498315243
         """

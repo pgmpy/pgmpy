@@ -89,7 +89,7 @@ class SEMGraph(DAG):
         ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
         ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
         ...                    latents=['intelligence', 'academic'],
-        ...                    err_corr=[]
+        ...                    err_corr=[],
         ...                    err_var={'intelligence': 1})
 
         References
@@ -1215,7 +1215,7 @@ class SEM(SEMGraph):
         ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
         ...                                  ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
         ...                          latents=['intelligence', 'academic'],
-        ...                          err_corr=[]
+        ...                          err_corr=[],
         ...                          err_var={})
 
         References
@@ -1379,7 +1379,7 @@ class SEM(SEMGraph):
         Examples
         --------
         >>> from pgmpy.models import SEM
-        >>> SEM.from_RAM(TODO: Finish this)
+        >>> SEM.from_RAM  # TODO: Finish this
         """
         if observed:
             wedge_y = np.zeros((len(variables), len(observed)))

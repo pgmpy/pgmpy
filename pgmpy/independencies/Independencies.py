@@ -349,7 +349,7 @@ class Independencies(object):
 
 
 class IndependenceAssertion(object):
-    """
+    r"""
     Represents Conditional Independence or Independence assertion.
 
     Each assertion has 3 attributes: event1, event2, event3.
@@ -391,16 +391,16 @@ class IndependenceAssertion(object):
     """
 
     def __init__(self, event1=[], event2=[], event3=[]):
-        """
+        r"""
         Initialize an IndependenceAssertion object with event1, event2 and event3 attributes.
 
-                  event2
-                  ^
-      event1     /   event3
-         ^      /     ^
-         |     /      |
-        (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
-          ---
+                    event2
+                    ^
+        event1     /   event3
+           ^      /     ^
+           |     /      |
+          (U || X, Y | Z) read as Random variable U is independent of X and Y given Z.
+            ---
         """
         if event1 and not event2:
             raise ValueError("event2 needs to be specified")
@@ -468,7 +468,7 @@ class IndependenceAssertion(object):
         return self.event1, self.event2, self.event3
 
     def latex_string(self):
-        return "%s \perp %s \mid %s" % (
+        return r"%s \perp %s \mid %s" % (
             ", ".join(self.event1),
             ", ".join(self.event2),
             ", ".join(self.event3),

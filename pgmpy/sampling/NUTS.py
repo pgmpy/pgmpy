@@ -119,7 +119,12 @@ class NoUTurnSampler(HamiltonianMCDA):
         # candidate_set_size -> n, accept_set_bool -> s
         if depth == 0:
             # Take single leapfrog step in the given direction (direction * stepsize)
-            position_bar, momentum_bar, candidate_set_size, accept_set_bool = self._initalize_tree(
+            (
+                position_bar,
+                momentum_bar,
+                candidate_set_size,
+                accept_set_bool,
+            ) = self._initalize_tree(
                 position, momentum, slice_var, direction * stepsize
             )
 
@@ -496,7 +501,12 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         """
         if depth == 0:
 
-            position_bar, momentum_bar, candidate_set_size, accept_set_bool = self._initalize_tree(
+            (
+                position_bar,
+                momentum_bar,
+                candidate_set_size,
+                accept_set_bool,
+            ) = self._initalize_tree(
                 position, momentum, slice_var, direction * stepsize
             )
 

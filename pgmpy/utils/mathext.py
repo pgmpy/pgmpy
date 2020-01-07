@@ -56,7 +56,7 @@ def cartesian(arrays, out=None):
     return out
 
 
-def sample_discrete(values, weights, size=1):
+def sample_discrete(values, weights, size=1, rng=None):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -66,6 +66,7 @@ def sample_discrete(values, weights, size=1):
             can take.
     weights: numpy.array or list of numpy.array: Array(s) representing the PMF of the random variable.
     size: int: Size of the sample to be generated.
+    rng : numpy.random.RandomState | None : random number generator
 
     Returns
     -------
@@ -77,17 +78,17 @@ def sample_discrete(values, weights, size=1):
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(['v_0', 'v_1', 'v_2'])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> sample_discrete(values, probabilities, 10)
-    array(['v_1', 'v_1', 'v_0', 'v_1', 'v_2', 'v_0', 'v_1', 'v_1', 'v_1',
-      'v_2'], dtype='<U3')
+    >>> rng = np.random.RandomState(0)
+    >>> sample_discrete(values, probabilities, 10, rng=rng).tolist()
+    ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
+    if rng is None:
+        rng = np.random
     weights = np.array(weights)
     if weights.ndim == 1:
-        return np.random.choice(values, size=size, p=weights)
+        return rng.choice(values, size=size, p=weights)
     else:
-        return np.fromiter(
-            map(lambda t: np.random.choice(values, p=t), weights), dtype="int"
-        )
+        return np.fromiter(map(lambda t: rng.choice(values, p=t), weights), dtype="int")
 
 
 def powerset(l):
@@ -98,6 +99,6 @@ def powerset(l):
     -------
     >>> from pgmpy.utils.mathext import powerset
     >>> list(powerset([1,2,3]))
-    [(), (1,), (2,), (3,), (1,2), (1,3), (2,3), (1,2,3)]
+    [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
     return chain.from_iterable(combinations(l, r) for r in range(len(l) + 1))

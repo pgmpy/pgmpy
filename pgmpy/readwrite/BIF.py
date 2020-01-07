@@ -80,9 +80,11 @@ class BIFReader(object):
                 self.network
             )  # removing comments from the file
 
-        self.name_expr, self.state_expr, self.property_expr = (
-            self.get_variable_grammar()
-        )
+        (
+            self.name_expr,
+            self.state_expr,
+            self.property_expr,
+        ) = self.get_variable_grammar()
         self.probability_expr, self.cpd_expr = self.get_probability_grammar()
         self.network_name = self.get_network_name()
         self.variable_names = self.get_variables()
@@ -461,9 +463,12 @@ $properties}\n"""
         """
         Returns the BIF format as string
         """
-        network_template, variable_template, property_template, probability_template = (
-            self.BIF_templates()
-        )
+        (
+            network_template,
+            variable_template,
+            property_template,
+            probability_template,
+        ) = self.BIF_templates()
         network = ""
         network += network_template.substitute(name=self.network_name)
         variables = self.model.nodes()

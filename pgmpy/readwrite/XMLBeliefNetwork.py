@@ -374,7 +374,7 @@ class XBNWriter(object):
         >>> writer = XBNWriter()
         >>> writer.set_variables({'a': {'TYPE': 'discrete', 'XPOS': '13495',
         ...                             'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-        ...                             'STATES': ['Present', 'Absent']}
+        ...                             'STATES': ['Present', 'Absent']},
         ...                       'b': {'TYPE': 'discrete', 'XPOS': '11290',
         ...                             'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
         ...                             'STATES': ['Present', 'Absent']}})

@@ -1,9 +1,13 @@
 import warnings
 from math import isclose
 
-import torch
 
-optim = torch.optim
+try:  # pragma: no cover
+    import torch
+
+    optim = torch.optim
+except ImportError:  # pragma: no cover
+    optim = None
 
 
 def pinverse(t):

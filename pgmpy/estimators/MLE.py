@@ -67,7 +67,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'))
+        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
         >>> estimator.get_parameters()
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,

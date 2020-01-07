@@ -10,7 +10,7 @@ from pgmpy.factors.base import BaseFactor
 
 
 class LinearGaussianCPD(BaseFactor):
-    """
+    r"""
     For, X -> Y the Linear Gaussian model assumes that the mean
     of Y is a linear function of mean of X and the variance of Y does
     not depend on X.
@@ -92,7 +92,7 @@ class LinearGaussianCPD(BaseFactor):
         return np.sum(prod_xixj)
 
     def maximum_likelihood_estimator(self, data, states):
-        """ 
+        """
         Fit using MLE method.
 
         Parameters

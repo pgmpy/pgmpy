@@ -111,7 +111,7 @@ class BayesianModel(DAG):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel/home/abinash/software_packages/numpy-1.7.1
+        >>> from pgmpy.models import BayesianModel
         >>> G = BayesianModel()
         >>> G.add_nodes_from(['grade', 'intel'])
         >>> G.add_edge('grade', 'intel')

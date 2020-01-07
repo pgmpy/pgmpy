@@ -40,7 +40,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.cpds:
-                print(cpd)
+        ...     print(cpd)
 
         P(x1) = N(1; 4)
         P(x2| x1) = N(0.5*x1_mu); -5)
@@ -112,7 +112,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.get_cpds():
-                print(cpd)
+        ...     print(cpd)
 
         P(x1) = N(1; 4)
         P(x2| x1) = N(0.5*x1_mu); -5)
@@ -120,7 +120,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
 
         >>> model.remove_cpds(cpd2, cpd3)
         >>> for cpd in model.get_cpds():
-                print(cpd)
+        ...     print(cpd)
 
         P(x1) = N(1; 4)
 

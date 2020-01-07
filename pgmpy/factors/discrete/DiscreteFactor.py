@@ -651,7 +651,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
-        >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5)])
+        >>> phi2 = DiscreteFactor(['x3', 'x1'], [2, 2], range(1, 5))
         >>> phi1.divide(phi2)
         >>> phi1.variables
         ['x1', 'x2', 'x3']
