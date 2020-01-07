@@ -2,10 +2,6 @@ environment:
   matrix:
     - PYTHON: "C:\\Python37"
     - PYTHON: "C:\\Python36"
-    - PYTHON: "C:\\Python35"
-    - PYTHON: "C:\\Python27"
-    - PYTHON: "C:\\Python27-x64"
-    - PYTHON: "C:\\Python35-x64"
 
 install:
   - "%PYTHON%\\python.exe -m pip install pip -U"
