@@ -302,7 +302,9 @@ class DAG(nx.DiGraph):
         >>> moral_graph.edges()
         [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
         """
-        moral_graph = UndirectedGraph(self.to_undirected().edges())
+        moral_graph = UndirectedGraph()
+        moral_graph.add_nodes_from(self.nodes())
+        moral_graph.add_edges_from(self.to_undirected().edges())
 
         for node in self.nodes():
             moral_graph.add_edges_from(
