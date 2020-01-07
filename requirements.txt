@@ -1,9 +1,2 @@
-networkx
-numpy
-scipy
-pandas
-pyparsing
-pytorch
-statsmodels
-tqdm
-joblib
+-r requirements/runtime.txt
+-r requirements/tests.txt
