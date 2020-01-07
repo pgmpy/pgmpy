@@ -30,6 +30,8 @@ install:
   - travis_retry pip install -e .
     
 script: 
+  - black --diff .
+  - black --check .
   - travis_wait ./run_tests.py 
 
 after_success: 
