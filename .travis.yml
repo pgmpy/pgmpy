@@ -56,6 +56,8 @@ after_success:
         echo $CI_GITHUB_SECRET
 
         # encrypt relevant travis variables
+        #  sudo apt install ruby ruby-dev -y
+        #  sudo gem install travis
         travis encrypt TWINE_USERNAME=$TWINE_USERNAME 
         travis encrypt TWINE_PASSWORD=$TWINE_PASSWORD  
         travis encrypt CI_GITHUB_SECRET=$CI_GITHUB_SECRET
