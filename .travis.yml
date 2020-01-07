@@ -16,11 +16,9 @@ cache:
         - $HOME/download
 
 python:
-  - "2.7"
-  - "3.5"
   - "3.6"
   - "3.7"
-  - "3.8"
+  #- "3.8"  no torch for 3.8 yet
   #
 before_install:
   - pip install pip -U
