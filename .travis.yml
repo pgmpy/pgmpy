@@ -1,8 +1,8 @@
 env:
     global:
-        - secure: "YOUR-SECRET1"
-        - secure: "YOUR-SECRET2"
-        - secure: "YOUR-SECRET3"
+        - secure: "gESRFSRjxdrv8EebgIhIutOHKowghOlNn9UKnNEulyAv3fTT26++dQW3kIP/TlKmIA8ClSLMfegV69XCYqjbSX6fZtE31g1VxGY6ZKt3wreKpHzLru4qN0/WoOtesga9i0pocFjBSl4bxFECJSqExCsMB+Yl9Gm7H6TO3597OP4=" 
+        - secure: "lsV2jOGu759lCZso9/SetSnCR/IzKZxhLzfgTxbMFnAhwat0dGGND2/OmzZsCqD9NeP4h2kO06MkFPmqcHLXALVucNA1rzK8sBrqCd3ef8sc2eM6bDODwHtnfy3/Xf+W1nzv6gONoVjON1SnnPSwtGkeVQGUw6k//5sVTGxPNO0=" 
+        - secure: "HVM08/B0+F3o81Xq3ay/RojRwOpSDvBLdEUMZFuX+510e87gIFtFH+fiZgsWFSkpZzQFT9/QrQaBioDIZD7fHiTOxypVHJPxqiEq5I8ktBrGNREXYHdQeFxMg+SproOQAaA0tjG6lB54OFiPekvIB3ZtfKeYe4OXeDz48Bg5DyI=" 
 
 language: python
 sudo: false
