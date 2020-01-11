@@ -258,7 +258,7 @@ class TabularCPD(DiscreteFactor):
             self.get_values(),
             evidence,
             evidence_card,
-            state_names=self.state_names,
+            state_names=self.state_names.copy(),
         )
 
     def normalize(self, inplace=True):
