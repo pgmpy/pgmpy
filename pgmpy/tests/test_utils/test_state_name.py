@@ -55,8 +55,8 @@ class TestStateNameInit(unittest.TestCase):
         )
 
         student = BayesianModel([("diff", "grade"), ("intel", "grade")])
-        diff_cpd = TabularCPD("diff", 2, [[0.2, 0.8]])
-        intel_cpd = TabularCPD("intel", 2, [[0.3, 0.7]])
+        diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        intel_cpd = TabularCPD("intel", 2, [[0.3], [0.7]])
         grade_cpd = TabularCPD(
             "grade",
             3,
@@ -122,8 +122,8 @@ class StateNameDecorator(unittest.TestCase):
         student = BayesianModel([("diff", "grade"), ("intel", "grade")])
         student_state_names = BayesianModel([("diff", "grade"), ("intel", "grade")])
 
-        diff_cpd = TabularCPD("diff", 2, [[0.2, 0.8]])
-        intel_cpd = TabularCPD("intel", 2, [[0.3, 0.7]])
+        diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
+        intel_cpd = TabularCPD("intel", 2, [[0.3], [0.7]])
         grade_cpd = TabularCPD(
             "grade",
             3,
@@ -135,13 +135,13 @@ class StateNameDecorator(unittest.TestCase):
         diff_cpd_state_names = TabularCPD(
             variable="diff",
             variable_card=2,
-            values=[[0.2, 0.8]],
+            values=[[0.2], [0.8]],
             state_names={"diff": ["high", "low"]},
         )
         intel_cpd_state_names = TabularCPD(
             variable="intel",
             variable_card=2,
-            values=[[0.3, 0.7]],
+            values=[[0.3], [0.7]],
             state_names={"intel": ["poor", "good", "very good"]},
         )
         grade_cpd_state_names = TabularCPD(

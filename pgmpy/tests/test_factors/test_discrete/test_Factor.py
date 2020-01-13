@@ -828,7 +828,7 @@ class TestHash:
 
 class TestTabularCPDInit(unittest.TestCase):
     def test_cpd_init(self):
-        cpd = TabularCPD("grade", 3, [[0.1, 0.1, 0.1]])
+        cpd = TabularCPD("grade", 3, [[0.1], [0.1], [0.1]])
         self.assertEqual(cpd.variable, "grade")
         self.assertEqual(cpd.variable_card, 3)
         self.assertEqual(list(cpd.variables), ["grade"])

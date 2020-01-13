@@ -17,7 +17,7 @@ class TestDBNInference(unittest.TestCase):
         dbn_1.add_edges_from(
             [(("Z", 0), ("X", 0)), (("Z", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
         )
-        cpd_start_z_1 = TabularCPD(("Z", 0), 2, [[0.8, 0.2]])
+        cpd_start_z_1 = TabularCPD(("Z", 0), 2, [[0.8], [0.2]])
         cpd_x_1 = TabularCPD(("X", 0), 2, [[0.9, 0.6], [0.1, 0.4]], [("Z", 0)], [2])
         cpd_y_1 = TabularCPD(("Y", 0), 2, [[0.7, 0.2], [0.3, 0.8]], [("Z", 0)], [2])
         cpd_trans_z_1 = TabularCPD(
@@ -30,7 +30,7 @@ class TestDBNInference(unittest.TestCase):
         dbn_2.add_edges_from(
             [(("Z", 0), ("X", 0)), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
         )
-        cpd_start_z_2 = TabularCPD(("Z", 0), 2, [[0.5, 0.5]])
+        cpd_start_z_2 = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
         cpd_x_2 = TabularCPD(("X", 0), 2, [[0.6, 0.9], [0.4, 0.1]], [("Z", 0)], [2])
         cpd_y_2 = TabularCPD(("Y", 0), 2, [[0.2, 0.3], [0.8, 0.7]], [("X", 0)], [2])
         cpd_z_2 = TabularCPD(("Z", 1), 2, [[0.4, 0.7], [0.6, 0.3]], [("Z", 0)], [2])

@@ -314,8 +314,8 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.model_stateless = BayesianModel(
             [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
         )
-        self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6, 0.4]])
-        self.cpd_i = TabularCPD(variable="I", variable_card=2, values=[[0.7, 0.3]])
+        self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])
+        self.cpd_i = TabularCPD(variable="I", variable_card=2, values=[[0.7], [0.3]])
 
         self.cpd_g = TabularCPD(
             variable="G",

@@ -448,8 +448,8 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.G.add_cpds(cpd_g, cpd_s, cpd_l)
         self.assertRaises(ValueError, self.G.check_model)
 
-        cpd_d = TabularCPD("d", 2, values=[[0.8, 0.2]])
-        cpd_i = TabularCPD("i", 2, values=[[0.7, 0.3]])
+        cpd_d = TabularCPD("d", 2, values=[[0.8], [0.2]])
+        cpd_i = TabularCPD("i", 2, values=[[0.7], [0.3]])
         self.G.add_cpds(cpd_d, cpd_i)
 
         self.assertTrue(self.G.check_model())
