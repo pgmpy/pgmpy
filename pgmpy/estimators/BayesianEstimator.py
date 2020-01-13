@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from itertools import chain
+
 import numpy as np
 
 from pgmpy.estimators import ParameterEstimator
@@ -66,7 +68,6 @@ class BayesianEstimator(ParameterEstimator):
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
         parameters = []
-
         for node in self.model.nodes():
             _equivalent_sample_size = (
                 equivalent_sample_size[node]
@@ -168,7 +169,7 @@ class BayesianEstimator(ParameterEstimator):
             np.array(bayesian_counts),
             evidence=parents,
             evidence_card=parents_cardinalities,
-            state_names=self.state_names,
+            state_names={var: self.state_names[var] for var in chain([node], parents)},
         )
         cpd.normalize()
         return cpd

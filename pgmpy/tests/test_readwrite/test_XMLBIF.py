@@ -367,11 +367,11 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual(
             {
-                "G": ["state0", "state1", "state2"],
-                "I": ["state0", "state1"],
-                "D": ["state0", "state1"],
-                "S": ["state0", "state1"],
-                "L": ["state0", "state1"],
+                "G": ["0", "1", "2"],
+                "I": ["0", "1"],
+                "D": ["0", "1"],
+                "S": ["0", "1"],
+                "L": ["0", "1"],
             },
             model.get_cpds("D").state_names,
         )
@@ -381,8 +381,8 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
             self.assertListEqual(
-                list(expected.get_parents(node)), list(got.get_parents(node))
+                sorted(expected.get_parents(node)), sorted(got.get_parents(node))
             )
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
-            np_test.assert_array_equal(cpds_expected.values, cpds_got.values)
+            self.assertEqual(cpds_expected, cpds_got)
