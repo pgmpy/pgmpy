@@ -125,6 +125,15 @@ class TabularCPD(DiscreteFactor):
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
+        if evidence is None:
+            expected_cpd_shape = (variable_card, 1)
+        else:
+            expected_cpd_shape = (variable_card, np.product(evidence_card))
+        if values.shape != expected_cpd_shape:
+            raise ValueError(
+                f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}"
+            )
+
         super(TabularCPD, self).__init__(
             variables, cardinality, values.flatten("C"), state_names=state_names
         )
@@ -169,7 +178,7 @@ class TabularCPD(DiscreteFactor):
                 self.cardinality[0], np.prod(self.cardinality[1:])
             )
         else:
-            return self.values.reshape(1, np.prod(self.cardinality))
+            return self.values.reshape(np.prod(self.cardinality), 1)
 
     def __str__(self):
         return self._make_table_str(tablefmt="grid")

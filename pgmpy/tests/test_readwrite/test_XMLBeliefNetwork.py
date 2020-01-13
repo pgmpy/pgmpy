@@ -210,43 +210,43 @@ class TestXBNReader(unittest.TestCase):
         distribution = self.reader_string.get_distributions()
         self.assertEqual(distribution["a"]["TYPE"], "discrete")
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
-        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2, 0.8]]))
-        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3, 0.7]]))
+        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
+        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
         np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.2], [0.6, 0.4]])
+            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
         )
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
-            np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+            np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(
             distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
         np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.8], [0.05, 0.95]])
+            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
         )
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
         self.assertEqual(distribution["a"]["TYPE"], "discrete")
         self.assertListEqual(distribution["b"]["CONDSET"], ["a"])
-        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2, 0.8]]))
-        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3, 0.7]]))
+        np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
+        np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
         np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.2], [0.6, 0.4]])
+            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
         )
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
-            np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+            np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
         np_test.assert_array_equal(
             distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
         )
         np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.8], [0.05, 0.95]])
+            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
         )
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
@@ -298,11 +298,11 @@ class TestXBNReader(unittest.TestCase):
         }
         cpds_expected = {
             "b": np.array([[0.8, 0.2], [0.2, 0.8]]),
-            "e": np.array([[0.8, 0.2], [0.6, 0.4]]),
+            "e": np.array([[0.8, 0.6], [0.2, 0.4]]),
             "f": np.array([[0.3], [0.7]]),
-            "c": np.array([[0.2, 0.8], [0.05, 0.95]]),
+            "c": np.array([[0.2, 0.05], [0.8, 0.95]]),
             "a": np.array([[0.2], [0.8]]),
-            "d": np.array([[0.8, 0.2, 0.9, 0.1], [0.7, 0.3, 0.05, 0.95]]),
+            "d": np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         }
         for cpd in model.get_cpds():
             np_test.assert_array_equal(cpd.get_values(), cpds_expected[cpd.variable])
@@ -365,14 +365,14 @@ class TestXBNWriter(unittest.TestCase):
             [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
         )
         cpd_distribution = {
-            "a": {"TYPE": "discrete", "DPIS": np.array([[0.2, 0.8]])},
+            "a": {"TYPE": "discrete", "DPIS": np.array([[0.2], [0.8]])},
             "e": {
                 "TYPE": "discrete",
-                "DPIS": np.array([[0.8, 0.2], [0.6, 0.4]]),
+                "DPIS": np.array([[0.8, 0.6], [0.2, 0.4]]),
                 "CONDSET": ["c"],
                 "CARDINALITY": [2],
             },
-            "f": {"TYPE": "discrete", "DPIS": np.array([[0.3, 0.7]])},
+            "f": {"TYPE": "discrete", "DPIS": np.array([[0.3], [0.7]])},
             "b": {
                 "TYPE": "discrete",
                 "DPIS": np.array([[0.8, 0.2], [0.2, 0.8]]),
@@ -381,13 +381,13 @@ class TestXBNWriter(unittest.TestCase):
             },
             "c": {
                 "TYPE": "discrete",
-                "DPIS": np.array([[0.2, 0.8], [0.05, 0.95]]),
+                "DPIS": np.array([[0.2, 0.05], [0.8, 0.95]]),
                 "CONDSET": ["a"],
                 "CARDINALITY": [2],
             },
             "d": {
                 "TYPE": "discrete",
-                "DPIS": np.array([[0.8, 0.2], [0.9, 0.1], [0.7, 0.3], [0.05, 0.95]]),
+                "DPIS": np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
                 "CONDSET": ["b", "c"],
                 "CARDINALITY": [2, 2],
             },
@@ -462,14 +462,14 @@ class TestXBNWriter(unittest.TestCase):
       <DIST TYPE="discrete">
         <PRIVATE NAME="a"/>
         <DPIS>
-          <DPI> 0.2 0.8</DPI>
+          <DPI> 0.2 0.8 </DPI>
         </DPIS>
       </DIST>
       <DIST TYPE="discrete">
         <PRIVATE NAME="b"/>
         <DPIS>
-          <DPI INDEXES=" "> 0.8 0.2 </DPI>
-          <DPI INDEXES=" "> 0.2 0.8 </DPI>
+          <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
         </DPIS>
         <CONDSET>
           <CONDELEM NAME="a"/>
@@ -478,8 +478,8 @@ class TestXBNWriter(unittest.TestCase):
       <DIST TYPE="discrete">
         <PRIVATE NAME="c"/>
         <DPIS>
-          <DPI INDEXES=" "> 0.2 0.8 </DPI>
-          <DPI INDEXES=" "> 0.05 0.95 </DPI>
+          <DPI INDEXES=" 0 "> 0.2 0.8 </DPI>
+          <DPI INDEXES=" 1 "> 0.05 0.95 </DPI>
         </DPIS>
         <CONDSET>
           <CONDELEM NAME="a"/>
@@ -488,10 +488,10 @@ class TestXBNWriter(unittest.TestCase):
       <DIST TYPE="discrete">
         <PRIVATE NAME="d"/>
         <DPIS>
-          <DPI INDEXES=" "> 0.8 0.2 </DPI>
-          <DPI INDEXES=" "> 0.9 0.1 </DPI>
-          <DPI INDEXES=" "> 0.7 0.3 </DPI>
-          <DPI INDEXES=" "> 0.05 0.95 </DPI>
+          <DPI INDEXES=" 0 0 "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" 0 1 "> 0.9 0.1 </DPI>
+          <DPI INDEXES=" 1 0 "> 0.7 0.3 </DPI>
+          <DPI INDEXES=" 1 1 "> 0.05 0.95 </DPI>
         </DPIS>
         <CONDSET>
           <CONDELEM NAME="b"/>
@@ -501,8 +501,8 @@ class TestXBNWriter(unittest.TestCase):
       <DIST TYPE="discrete">
         <PRIVATE NAME="e"/>
         <DPIS>
-          <DPI INDEXES=" "> 0.8 0.2 </DPI>
-          <DPI INDEXES=" "> 0.6 0.4 </DPI>
+          <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+          <DPI INDEXES=" 1 "> 0.6 0.4 </DPI>
         </DPIS>
         <CONDSET>
           <CONDELEM NAME="c"/>
@@ -511,13 +511,15 @@ class TestXBNWriter(unittest.TestCase):
       <DIST TYPE="discrete">
         <PRIVATE NAME="f"/>
         <DPIS>
-          <DPI> 0.3 0.7</DPI>
+          <DPI> 0.3 0.7 </DPI>
         </DPIS>
       </DIST>
     </DISTRIBUTIONS>
   </BNMODEL>
 </ANALYSISNOTEBOOK>"""
         )
+        output = str(self.writer.__str__())
+        expected = str(etree.tostring(self.expected_xml))
         self.assertEqual(
             str(self.writer.__str__()[:-1]), str(etree.tostring(self.expected_xml))
         )

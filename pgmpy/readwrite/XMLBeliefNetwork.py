@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import networkx as nx
 
@@ -200,7 +202,7 @@ class XBNReader(object):
                 )
             distribution[variable_name]["DPIS"] = np.array(
                 [list(map(float, dpi.text.split())) for dpi in dist.find("DPIS")]
-            )
+            ).transpose()
 
         return distribution
 
@@ -225,13 +227,8 @@ class XBNReader(object):
             tabular_cpds.append(cpd)
 
         model.add_cpds(*tabular_cpds)
-
-        if nx.__version__.startswith("1"):
-            for var, properties in self.variables.items():
-                model.nodes[var] = properties
-        else:
-            for var, properties in self.variables.items():
-                model._node[var] = properties
+        for var, properties in self.variables.items():
+            model._node[var] = properties
 
         return model
 
@@ -435,28 +432,28 @@ class XBNWriter(object):
         cpds = self.model.get_cpds()
         cpds.sort(key=lambda x: x.variable)
         for cpd in cpds:
-            cpd_values = cpd.values.ravel()
+            cpd_values = cpd.get_values().transpose()
             var = cpd.variable
             dist = etree.SubElement(
                 distributions, "DIST", attrib={"TYPE": self.model.nodes[var]["TYPE"]}
             )
             etree.SubElement(dist, "PRIVATE", attrib={"NAME": var})
             dpis = etree.SubElement(dist, "DPIS")
-            evidence = cpd.variables[:0:-1]
+            evidence = cpd.variables[1:]
+            evidence_card = cpd.cardinality[1:]
             if evidence:
                 condset = etree.SubElement(dist, "CONDSET")
-                for condelem in sorted(evidence):
+                for condelem in evidence:
                     etree.SubElement(condset, "CONDELEM", attrib={"NAME": condelem})
-                # TODO: Get Index value.
-                for val in range(0, len(cpd_values), 2):
-                    etree.SubElement(dpis, "DPI", attrib={"INDEXES": " "}).text = (
-                        " "
-                        + str(cpd_values[val])
-                        + " "
-                        + str(cpd_values[val + 1])
-                        + " "
-                    )
+                indexes_iter = itertools.product(
+                    *[range(card) for card in evidence_card]
+                )
+                for val in range(cpd_values.shape[0]):
+                    index_value = " " + " ".join(map(str, next(indexes_iter))) + " "
+                    etree.SubElement(
+                        dpis, "DPI", attrib={"INDEXES": index_value}
+                    ).text = (" " + " ".join(map(str, cpd_values[val])) + " ")
             else:
-                etree.SubElement(dpis, "DPI").text = " " + " ".join(
-                    map(str, cpd_values)
+                etree.SubElement(dpis, "DPI").text = (
+                    " " + " ".join(map(str, cpd_values[0])) + " "
                 )

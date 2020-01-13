@@ -94,8 +94,8 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             evidence=[("D", 0)],
             evidence_card=[2],
         )
-        self.diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6, 0.4]])
-        self.intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7, 0.3]])
+        self.diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6], [0.4]])
+        self.intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7], [0.3]])
         self.i_i_cpd = TabularCPD(
             ("I", 1),
             2,
@@ -342,9 +342,9 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
             evidence_card=[2],
         )
 
-        diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6, 0.4]])
+        diff_cpd = TabularCPD(("D", 0), 2, values=[[0.6], [0.4]])
 
-        intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7, 0.3]])
+        intel_cpd = TabularCPD(("I", 0), 2, values=[[0.7], [0.3]])
 
         i_i_cpd = TabularCPD(
             ("I", 1),
@@ -461,12 +461,12 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(d_i_cpd)
 
-        diff_cpd = TabularCPD(("D", 0), 2, values=[[0.7, 0.4]])
+        diff_cpd = TabularCPD(("D", 0), 2, values=[[0.7], [0.4]])
         self.G.add_cpds(diff_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(diff_cpd)
 
-        intel_cpd = TabularCPD(("I", 0), 2, values=[[1.7, 0.3]])
+        intel_cpd = TabularCPD(("I", 0), 2, values=[[1.7], [0.3]])
         self.G.add_cpds(intel_cpd)
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(intel_cpd)
