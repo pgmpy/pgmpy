@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import numpy as np
@@ -11,7 +12,6 @@ from pgmpy.factors.discrete import TabularCPD
 
 class TestBIFReader(unittest.TestCase):
     def setUp(self):
-
         self.reader = BIFReader(
             string="""
                 // Bayesian Network in the Interchange Format
@@ -219,22 +219,60 @@ class TestBIFReader(unittest.TestCase):
             "light-on": {"weight": None, "position": "(218, 195)"},
         }
         cpds_expected = [
-            np.array([[0.01], [0.99]]),
-            np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
-            np.array([[0.15], [0.85]]),
-            np.array([[0.7, 0.01], [0.3, 0.99]]),
-            np.array([[0.6, 0.05], [0.4, 0.95]]),
+            TabularCPD(
+                variable="bowel-problem",
+                variable_card=2,
+                values=np.array([[0.01], [0.99]]),
+                state_names={"bowel-problem": ["true", "false"]},
+            ),
+            TabularCPD(
+                variable="dog-out",
+                variable_card=2,
+                values=np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
+                evidence=["bowel-problem", "family-out"],
+                evidence_card=[2, 2],
+                state_names={
+                    "dog-out": ["true", "false"],
+                    "bowel-problem": ["true", "false"],
+                    "family-out": ["true", "false"],
+                },
+            ),
+            TabularCPD(
+                variable="family-out",
+                variable_card=2,
+                values=np.array([[0.15], [0.85]]),
+                state_names={"family-out": ["true", "false"]},
+            ),
+            TabularCPD(
+                variable="hear-bark",
+                variable_card=2,
+                values=np.array([[0.7, 0.01], [0.3, 0.99]]),
+                evidence=["dog-out"],
+                evidence_card=[2],
+                state_names={
+                    "hear-bark": ["true", "false"],
+                    "dog-out": ["true", "false"],
+                },
+            ),
+            TabularCPD(
+                variable="light-on",
+                variable_card=2,
+                values=np.array([[0.6, 0.05], [0.4, 0.95]]),
+                evidence=["family-out"],
+                evidence_card=[2],
+                state_names={
+                    "light-on": ["true", "false"],
+                    "family-out": ["true", "false"],
+                },
+            ),
         ]
         model = self.reader.get_model()
-        for cpd_index in range(0, len(cpds_expected)):
-            np_test.assert_array_equal(
-                model.get_cpds()[cpd_index].get_values(), cpds_expected[cpd_index]
-            )
+        model_cpds = model.get_cpds()
+        for cpd_index in range(5):
+            self.assertEqual(model_cpds[cpd_index], cpds_expected[cpd_index])
+
         self.assertDictEqual(dict(model.nodes), node_expected)
-        if nx.__version__.startswith("1"):
-            self.assertDictEqual(model.edge, edge_expected)
-        else:
-            self.assertDictEqual(dict(model.adj), edge_expected)
+        self.assertDictEqual(dict(model.adj), edge_expected)
 
         self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
@@ -288,7 +326,7 @@ class TestBIFWriter(unittest.TestCase):
         parents = {
             "kid": [],
             "bowel-problem": [],
-            "dog-out": ["family-out", "bowel-problem"],
+            "dog-out": ["bowel-problem", "family-out"],
             "family-out": [],
             "hear-bark": ["dog-out"],
             "light-on": ["family-out"],
@@ -333,32 +371,32 @@ class TestBIFWriter(unittest.TestCase):
         self.expected_string = """network unknown {
 }
 variable bowel-problem {
-    type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (335, 99) ;
     property weight = None ;
 }
 variable dog-out {
-    type discrete [ 2 ] { dog-out_0, dog-out_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (300, 195) ;
     property weight = None ;
 }
 variable family-out {
-    type discrete [ 2 ] { family-out_0, family-out_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (257, 99) ;
     property weight = None ;
 }
 variable hear-bark {
-    type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (296, 268) ;
     property weight = None ;
 }
 variable kid {
-    type discrete [ 2 ] { kid_0, kid_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (100, 165) ;
     property weight = None ;
 }
 variable light-on {
-    type discrete [ 2 ] { light-on_0, light-on_1 };
+    type discrete [ 2 ] { 0, 1 };
     property position = (218, 195) ;
     property weight = None ;
 }
@@ -383,3 +421,13 @@ probability ( light-on | family-out ) {
 """
         self.maxDiff = None
         self.assertEqual(self.writer.__str__(), self.expected_string)
+
+    def test_write_read_equal(self):
+        self.writer.write_bif("test_bif.bif")
+        reader = BIFReader("test_bif.bif")
+        read_model = reader.get_model()
+        self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
+        self.assertEqual(sorted(self.model.edges()), sorted(read_model.edges()))
+        for var in self.model.nodes():
+            self.assertEqual(self.model.get_cpds(var), read_model.get_cpds(var))
+        os.remove("test_bif.bif")

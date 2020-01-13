@@ -1,5 +1,7 @@
 # coding:utf-8
 
+from itertools import chain
+
 import numpy as np
 
 from pgmpy.estimators import ParameterEstimator
@@ -149,7 +151,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             np.array(state_counts),
             evidence=parents,
             evidence_card=parents_cardinalities,
-            state_names=state_names,
+            state_names={var: self.state_names[var] for var in chain([node], parents)},
         )
         cpd.normalize()
         return cpd

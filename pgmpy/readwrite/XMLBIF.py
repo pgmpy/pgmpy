@@ -376,7 +376,7 @@ class XMLBIFWriter(object):
             .transformString(s)
         )
         if not s_fixed[0].isalpha():
-            s_fixed = "state" + s_fixed
+            s_fixed = s_fixed
         return s_fixed
 
     def get_properties(self):
@@ -430,8 +430,8 @@ class XMLBIFWriter(object):
         for cpd in cpds:
             definition_tag[cpd.variable] = etree.SubElement(self.network, "DEFINITION")
             etree.SubElement(definition_tag[cpd.variable], "FOR").text = cpd.variable
-            for child in sorted(cpd.variables[:0:-1]):
-                etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = child
+            for parent in cpd.variables[1:]:
+                etree.SubElement(definition_tag[cpd.variable], "GIVEN").text = parent
 
         return definition_tag
 

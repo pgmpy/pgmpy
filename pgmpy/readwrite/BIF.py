@@ -317,6 +317,7 @@ class BIFReader(object):
             delayed(self._get_values_from_block)(block)
             for block in self.probability_block()
         )
+
         variable_cpds = {}
         for var_name, arr in cpd_values:
             variable_cpds[var_name] = arr
@@ -548,7 +549,7 @@ $properties}\n"""
             variable = cpd.variable
             variable_states[variable] = []
             for state in range(cpd.get_cardinality([variable])[variable]):
-                variable_states[variable].append(str(variable) + "_" + str(state))
+                variable_states[variable].append(str(state))
         return variable_states
 
     def get_properties(self):
@@ -602,12 +603,9 @@ $properties}\n"""
          'light-on': ['family-out']}
         """
         cpds = self.model.get_cpds()
-        cpds.sort(key=lambda x: x.variable)
         variable_parents = {}
         for cpd in cpds:
-            variable_parents[cpd.variable] = []
-            for parent in sorted(cpd.variables[:0:-1]):
-                variable_parents[cpd.variable].append(parent)
+            variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
     def get_cpds(self):
