@@ -711,7 +711,8 @@ class BeliefPropagation(Inference):
         """
         self._calibrate_junction_tree(operation="maximize")
 
-    def _query(self, variables, operation, evidence=None, joint=True):
+    def _query(self, variables, operation, evidence=None, joint=True,
+               show_progress=True):
         """
         This is a generalized query method that can be used for both query and map query.
 
@@ -815,14 +816,16 @@ class BeliefPropagation(Inference):
         variable_elimination = VariableElimination(subtree)
         if operation == "marginalize":
             return variable_elimination.query(
-                variables=variables, evidence=evidence, joint=joint
+                variables=variables, evidence=evidence, joint=joint,
+                show_progress=show_progress,
             )
         elif operation == "maximize":
             return variable_elimination.map_query(
-                variables=variables, evidence=evidence
+                variables=variables, evidence=evidence,
+                show_progress=show_progress,
             )
 
-    def query(self, variables, evidence=None, joint=True):
+    def query(self, variables, evidence=None, joint=True, show_progress=True):
         """
         Query method using belief propagation.
 
@@ -875,10 +878,12 @@ class BeliefPropagation(Inference):
             )
 
         return self._query(
-            variables=variables, operation="marginalize", evidence=evidence, joint=joint
+            variables=variables, operation="marginalize", evidence=evidence,
+            joint=joint, show_progress=show_progress
+
         )
 
-    def map_query(self, variables=None, evidence=None):
+    def map_query(self, variables=None, evidence=None, show_progress=True):
         """
         MAP Query method using belief propagation.
 
@@ -933,7 +938,8 @@ class BeliefPropagation(Inference):
             variables = set(self.variables)
 
         final_distribution = self._query(
-            variables=variables, operation="marginalize", evidence=evidence
+            variables=variables, operation="marginalize", evidence=evidence,
+            show_progress=show_progress
         )
 
         # To handle the case when no argument is passed then
