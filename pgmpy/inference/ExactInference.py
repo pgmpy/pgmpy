@@ -824,7 +824,7 @@ class BeliefPropagation(Inference):
             )
         elif operation == "maximize":
             return variable_elimination.map_query(
-                variables=variables, evidence=evidence, show_progress=show_progress,
+                variables=variables, evidence=evidence, show_progress=show_progress
             )
 
     def query(self, variables, evidence=None, joint=True, show_progress=True):

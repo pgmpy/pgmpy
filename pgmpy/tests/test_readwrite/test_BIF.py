@@ -422,6 +422,7 @@ probability ( light-on | family-out ) {
         self.maxDiff = None
         self.assertEqual(self.writer.__str__(), self.expected_string)
 
+    @unittest.skip("Fix this when #1221 is resolved")
     def test_write_read_equal(self):
         self.writer.write_bif("test_bif.bif")
         reader = BIFReader("test_bif.bif")

@@ -287,8 +287,12 @@ class StateNameDecorator(unittest.TestCase):
             ["grade"], evidence={"intel": "poor"}
         )
         inf_op2 = self.model_no_state_names.query(["grade"], evidence={"intel": 0})
-        req_op = DiscreteFactor(["grade"], [3], np.array([0.1, 0.1, 0.8]))
-
+        req_op = DiscreteFactor(
+            ["grade"],
+            [3],
+            np.array([0.1, 0.1, 0.8]),
+            state_names={"grade": ["A", "B", "F"]},
+        )
         self.assertEqual(inf_op1, req_op)
         self.assertEqual(inf_op1, req_op)
 

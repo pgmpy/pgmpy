@@ -50,6 +50,7 @@ class TestMLE(unittest.TestCase):
             [[0, 1, 1.0 / 3], [1, 0, 2.0 / 3]],
             evidence=["A"],
             evidence_card=[3],
+            state_names={"A": [2, 3, 8], "B": ["O", "X"]},
         )
         mle2 = MaximumLikelihoodEstimator(m, d)
         self.assertEqual(mle2.estimate_cpd("B"), cpd_b)
@@ -69,6 +70,11 @@ class TestMLE(unittest.TestCase):
             [[1, 0, 1, 0], [0, 0.5, 0, 0], [0, 0.5, 0, 0], [0, 0, 0, 1]],
             evidence=["Fruit", "Light?"],
             evidence_card=[2, 2],
+            state_names={
+                "Color": ["black", "green", "red", "yellow"],
+                "Light?": [False, True],
+                "Fruit": ["Apple", "Banana"],
+            },
         )
         mle2 = MaximumLikelihoodEstimator(m, d)
         self.assertEqual(mle2.estimate_cpd("Color"), color_cpd)
@@ -86,8 +92,10 @@ class TestMLE(unittest.TestCase):
             state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 42, 1], 1: [2]},
         )
         cpds = [
-            TabularCPD("A", 3, [[2.0 / 3], [1.0 / 3], [0]]),
-            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
+            TabularCPD(
+                "A", 3, [[2.0 / 3], [1.0 / 3], [0]], state_names={"A": [0, 1, 23]}
+            ),
+            TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]], state_names={"B": [0, 1]}),
             TabularCPD(
                 "C",
                 3,
@@ -98,6 +106,7 @@ class TestMLE(unittest.TestCase):
                 ],
                 evidence=["A", "B"],
                 evidence_card=[3, 2],
+                state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 1, 42]},
             ),
         ]
         self.assertSetEqual(set(mle.get_parameters()), set(cpds))

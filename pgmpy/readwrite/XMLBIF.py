@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from itertools import chain
 
 from io import BytesIO
 import pyparsing as pp
@@ -61,6 +62,7 @@ class XMLBIFReader(object):
         self.variable_states = self.get_states()
         self.variable_CPD = self.get_values()
         self.variable_property = self.get_property()
+        self.state_names = self.get_states()
 
     def get_variables(self):
         """
@@ -217,7 +219,10 @@ class XMLBIFReader(object):
                 values,
                 evidence=self.variable_parents[var],
                 evidence_card=evidence_card,
-                state_names=self.get_states(),
+                state_names={
+                    var: self.state_names[var]
+                    for var in chain([var], self.variable_parents[var])
+                },
             )
             tabular_cpds.append(cpd)
 
@@ -369,6 +374,7 @@ class XMLBIFWriter(object):
         XMLBIF states must start with a letter an only contain letters,
         numbers and underscores.
         """
+        # TODO: Throw a warning that the state names are going to be modified instead of silently modifying it.
         s = str(state_name)
         s_fixed = (
             pp.CharsNotIn(pp.alphanums + "_")
