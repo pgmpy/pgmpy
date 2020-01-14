@@ -33,7 +33,8 @@ class StateNameMixin:
                         "Repeated statenames for variable: {var}".format(var=key)
                     )
 
-            self.state_names = state_names
+            # Make a copy, so that the original object does't get modified after operations.
+            self.state_names = state_names.copy()
             # Create maps for easy access to specific state names of state numbers.
             if state_names:
                 self.name_to_no = {}
@@ -54,7 +55,7 @@ class StateNameMixin:
                 var: {i: i for i in range(int(cardinality[index]))}
                 for index, var in enumerate(variables)
             }
-            self.no_to_name = self.name_to_no
+            self.no_to_name = self.name_to_no.copy()
 
     def get_state_names(self, var, state_no):
         """

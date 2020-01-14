@@ -29,28 +29,36 @@ class TestBayesianEstimator(unittest.TestCase):
         cpd_A = self.est1.estimate_cpd(
             "A", prior_type="dirichlet", pseudo_counts=[[0], [1]]
         )
-        self.assertEqual(cpd_A, TabularCPD("A", 2, [[0.5], [0.5]]))
+        cpd_A_exp = TabularCPD(
+            variable="A",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"A": [0, 1]},
+        )
+        self.assertEqual(cpd_A, cpd_A_exp)
 
         cpd_B = self.est1.estimate_cpd(
             "B", prior_type="dirichlet", pseudo_counts=[[9], [3]]
         )
-        self.assertEqual(cpd_B, TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]))
+        cpd_B_exp = TabularCPD(
+            "B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]}
+        )
+        self.assertEqual(cpd_B, cpd_B_exp)
 
         cpd_C = self.est1.estimate_cpd(
             "C",
             prior_type="dirichlet",
             pseudo_counts=[[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]],
         )
-        self.assertEqual(
-            cpd_C,
-            TabularCPD(
-                "C",
-                2,
-                [[0.2, 0.2, 0.7, 0.4], [0.8, 0.8, 0.3, 0.6]],
-                evidence=["A", "B"],
-                evidence_card=[2, 2],
-            ),
+        cpd_C_exp = TabularCPD(
+            "C",
+            2,
+            [[0.2, 0.2, 0.7, 0.4], [0.8, 0.8, 0.3, 0.6]],
+            evidence=["A", "B"],
+            evidence_card=[2, 2],
+            state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
+        self.assertEqual(cpd_C, cpd_C_exp)
 
     def test_estimate_cpd_improper_prior(self):
         cpd_C = self.est1.estimate_cpd(
@@ -86,6 +94,7 @@ class TestBayesianEstimator(unittest.TestCase):
             ],
             evidence=["A", "B"],
             evidence_card=[3, 2],
+            state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
         )
         self.assertEqual(cpd_C1, cpd_C1_correct)
 
@@ -99,6 +108,7 @@ class TestBayesianEstimator(unittest.TestCase):
             ],
             evidence=["A", "B"],
             evidence_card=[3, 2],
+            state_names={"A": [0, 1, 2], "B": ["X", "Y"], "C": [0, 1]},
         )
         self.assertEqual(cpd_C2, cpd_C2_correct)
 

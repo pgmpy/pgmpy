@@ -276,6 +276,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         index_to_keep = sorted(set(range(len(self.variables))) - set(var_indexes))
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
+        phi.del_state_names(variables)
 
         phi.values = np.sum(phi.values, axis=tuple(var_indexes))
 
@@ -331,6 +332,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         index_to_keep = sorted(set(range(len(self.variables))) - set(var_indexes))
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
+        phi.del_state_names(variables)
 
         phi.values = np.max(phi.values, axis=tuple(var_indexes))
 
@@ -439,6 +441,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # set difference is not gaurenteed to maintain ordering
         phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
+        phi.del_state_names([var for var, _ in values])
+
         phi.values = phi.values[tuple(slice_)]
 
         if not inplace:
@@ -729,7 +733,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # not creating a new copy of self.values and self.cardinality
         # because __init__ methods does that.
         return DiscreteFactor(
-            self.scope(), self.cardinality, self.values, state_names=self.state_names
+            self.scope(),
+            self.cardinality,
+            self.values,
+            state_names=self.state_names.copy(),
         )
 
     def is_valid_cpd(self):
@@ -843,6 +850,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False
+            elif not (self.state_names == phi.state_names):
+                return False
             else:
                 return True
 
@@ -852,6 +861,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     def __hash__(self):
         variable_hashes = [hash(variable) for variable in self.variables]
         sorted_var_hashes = sorted(variable_hashes)
+        state_names_hash = hash(frozenset(self.state_names))
         phi = self.copy()
         for axis in range(phi.values.ndim):
             exchange_index = variable_hashes.index(sorted_var_hashes[axis])
@@ -864,4 +874,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 phi.cardinality[axis],
             )
             phi.values = phi.values.swapaxes(axis, exchange_index)
-        return hash(str(sorted_var_hashes) + str(phi.values) + str(phi.cardinality))
+        return hash(
+            str(sorted_var_hashes)
+            + str(phi.values)
+            + str(phi.cardinality)
+            + str(state_names_hash)
+        )
