@@ -1150,6 +1150,10 @@ class TestTabularCPDMethods(unittest.TestCase):
     def test_copy_state_names(self):
         copy_cpd = self.cpd.copy()
         self.assertEqual(self.cpd.state_names, copy_cpd.state_names)
+        copy_cpd.state_names.clear()
+        self.assertNotEqual(self.cpd.state_names, copy_cpd.state_names)
+        self.assertFalse(copy_cpd.state_names)
+        self.assertTrue(self.cpd.state_names)
 
     def test_reduce_1(self):
         self.cpd.reduce([("diff", "low")])
