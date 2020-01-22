@@ -1,6 +1,11 @@
 Algorithms for Inference
 ========================
 
+Causal Inference
+----------------
+.. autoclass:: pgmpy.inference.CausalInference.CausalInference
+   :members:
+
 Variable Elimination
 --------------------
 
@@ -24,6 +29,7 @@ Dynamic Bayesian Network Inference
 
 .. automodule:: pgmpy.inference.dbn_inference
    :members:
+
 
 Elimination Ordering
 ====================
