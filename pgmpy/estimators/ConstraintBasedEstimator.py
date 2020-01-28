@@ -10,7 +10,7 @@ from pgmpy.independencies import Independencies, IndependenceAssertion
 
 
 class ConstraintBasedEstimator(StructureEstimator):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data, max_ci_vars=None, **kwargs):
         """
         Class for constraint-based estimation of DAGs from a given
         data set. Identifies (conditional) dependencies in data set using
@@ -24,6 +24,10 @@ class ConstraintBasedEstimator(StructureEstimator):
             datafame object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+        max_ci_vars: int (default: `len(nodes) - 1`)
+            The maximum number of variables to use as conditional variables in 
+            independence tests.
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -43,6 +47,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
         http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         """
+        self.max_ci_vars = max_ci_vars
         super(ConstraintBasedEstimator, self).__init__(data, **kwargs)
 
     def estimate(self, significance_level=0.01):
@@ -102,12 +107,14 @@ class ConstraintBasedEstimator(StructureEstimator):
         [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
         """
 
-        skel, separating_sets = self.estimate_skeleton(significance_level)
+        skel, separating_sets = self.estimate_skeleton(
+            significance_level, self.max_ci_vars
+        )
         pdag = self.skeleton_to_pdag(skel, separating_sets)
         model = self.pdag_to_dag(pdag)
         return model
 
-    def estimate_skeleton(self, significance_level=0.01):
+    def estimate_skeleton(self, significance_level=0.01, max_ci_vars=None):
         """Estimates a graph skeleton (UndirectedGraph) for the data set.
         Uses the build_skeleton method (PC algorithm); independencies are
         determined using a chisquare statistic with the acceptance threshold
@@ -175,7 +182,7 @@ class ConstraintBasedEstimator(StructureEstimator):
             """
             return self.test_conditional_independence(X, Y, Zs, method="chi_square")
 
-        return self.build_skeleton(nodes, is_independent)
+        return self.build_skeleton(nodes, is_independent, max_ci_vars)
 
     @staticmethod
     def estimate_from_independencies(nodes, independencies):
@@ -461,7 +468,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         return pdag
 
     @staticmethod
-    def build_skeleton(nodes, independencies):
+    def build_skeleton(nodes, independencies, max_ci_vars=None):
         """Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
         provided as an instance of the `Independencies`-class or by passing a
@@ -485,6 +492,10 @@ class ConstraintBasedEstimator(StructureEstimator):
             Can either be provided as an Independencies()-instance or by passing a
             function `f(X, Y, Zs)` that returns `True` when X _|_ Y | Zs,
             otherwise `False`. (X, Y being individual nodes and Zs a list of nodes).
+
+        max_ci_vars: int (default: `len(nodes) - 1`)
+            The maximum number of variables to use as conditional variables in 
+            independence tests.
 
         Returns
         -------
@@ -526,6 +537,8 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
 
         nodes = list(nodes)
+        if max_ci_vars is None:
+            max_ci_vars = len(nodes) - 1
 
         if isinstance(independencies, Independencies):
 
@@ -545,7 +558,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         separating_sets = dict()
         while not all(
             [len(list(graph.neighbors(node))) < lim_neighbors for node in nodes]
-        ):
+        ) and (lim_neighbors <= max_ci_vars):
             for node in nodes:
                 for neighbor in list(graph.neighbors(node)):
                     # search if there is a set of neighbors (of size lim_neighbors)
