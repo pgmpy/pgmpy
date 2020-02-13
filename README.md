@@ -1,5 +1,6 @@
 pgmpy
 =====
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/066aee1f8cac4bcebd2fba6aa773ecb8)](https://app.codacy.com/gh/pgmpy/pgmpy?utm_source=github.com&utm_medium=referral&utm_content=pgmpy/pgmpy&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/pgmpy/pgmpy.svg?style=flat)](https://travis-ci.org/pgmpy/pgmpy)
 [![Appveyor](https://ci.appveyor.com/api/projects/status/github/pgmpy/pgmpy?branch=dev)](https://www.appveyor.com/)
 [![codecov](https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg)](https://codecov.io/gh/pgmpy/pgmpy)
