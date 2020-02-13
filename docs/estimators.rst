@@ -1,6 +1,18 @@
 Estimators for Parameter and Structure Learning
 ===============================================
 
+Base Estimator Classes
+----------------------
+
+.. autoclass:: pgmpy.estimators.base.BaseEstimator
+   :members:
+
+.. autoclass:: pgmpy.estimators.base.ParameterEstimator
+   :members:
+
+.. autoclass:: pgmpy.estimators.base.StructureEstimator
+   :members:
+
 Bayesian Estimator
 ------------------
 
@@ -10,14 +22,13 @@ Bayesian Estimator
 Bdeu Score
 ----------
 
-.. autoclass:: pgmpy.estimators.BdeuScore.BdeuScore
+.. autoclass:: pgmpy.estimators.BDeuScore.BDeuScore
    :members:
 
 Bic Score
 ---------
 
-.. autoclass:: pgmpy.estimators.BicScore.BicScore
-   :members:
+.. autoclass:: pgmpy.estimators.BicScore.BicScore :members:
 
 Contraint Based Estimator
 -------------------------
@@ -55,3 +66,17 @@ Structure Score
 .. autoclass:: pgmpy.estimators.StructureScore.StructureScore
    :members:
 
+Structural Equation Model Estimators
+------------------------------------
+
+.. autoclass:: pgmpy.estimators.SEMEstimator.IVEstimator
+   :members:
+
+.. autoclass:: pgmpy.estimators.SEMEstimator.SEMEstimator
+   :members:
+
+Mmhc Estimator
+--------------
+
+.. autoclass:: pgmpy.estimators.MmhcEstimator.MmhcEstimator
+   :members:
