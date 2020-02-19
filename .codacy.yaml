@@ -2,3 +2,4 @@ exclude_paths:
         - '**.md'
         - 'pgmpy/tests/**'
         - 'docs/**'
+        - 'pgmpy/extern/**'
