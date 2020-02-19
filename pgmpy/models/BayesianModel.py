@@ -19,78 +19,79 @@ from pgmpy.factors.discrete import (
     DiscreteFactor,
 )
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.independencies import Independencies
 from pgmpy.models.MarkovModel import MarkovModel
 
 
 class BayesianModel(DAG):
     """
-    Base class for bayesian model.
-
-    A models stores nodes and edges with conditional probability
-    distribution (cpd) and other attributes.
-
-    models hold directed edges.  Self loops are not allowed neither
-    multiple (parallel) edges.
-
-    Nodes can be any hashable python object.
-
-    Edges are represented as links between nodes.
-
-    Parameters
-    ----------
-    data : input graph
-        Data to initialize graph.  If data=None (default) an empty
-        graph is created.  The data can be an edge list, or any
-        NetworkX graph object.
-
-    Examples
-    --------
-    Create an empty bayesian model with no nodes and no edges.
-
-    >>> from pgmpy.models import BayesianModel
-    >>> G = BayesianModel()
-
-    G can be grown in several ways.
-
-    **Nodes:**
-
-    Add one node at a time:
-
-    >>> G.add_node('a')
-
-    Add the nodes from any container (a list, set or tuple or the nodes
-    from another graph).
-
-    >>> G.add_nodes_from(['a', 'b'])
-
-    **Edges:**
-
-    G can also be grown by adding edges.
-
-    Add one edge,
-
-    >>> G.add_edge('a', 'b')
-
-    a list of edges,
-
-    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
-
-    If some edges connect nodes not yet in the model, the nodes
-    are added automatically.  There are no errors when adding
-    nodes or edges that already exist.
-
-    **Shortcuts:**
-
-    Many common graph features allow python syntax for speed reporting.
-
-    >>> 'a' in G     # check if node in graph
-    True
-    >>> len(G)  # number of nodes in graph
-    3
+    Base class for Bayesian Models.
     """
 
     def __init__(self, ebunch=None):
+        """
+        Initializes a Bayesian Model.
+        A models stores nodes and edges with conditional probability
+        distribution (cpd) and other attributes.
+
+        models hold directed edges.  Self loops are not allowed neither
+        multiple (parallel) edges.
+
+        Nodes can be any hashable python object.
+
+        Edges are represented as links between nodes.
+
+        Parameters
+        ----------
+        data : input graph
+            Data to initialize graph.  If data=None (default) an empty
+            graph is created.  The data can be an edge list, or any
+            NetworkX graph object.
+
+        Examples
+        --------
+        Create an empty bayesian model with no nodes and no edges.
+
+        >>> from pgmpy.models import BayesianModel
+        >>> G = BayesianModel()
+
+        G can be grown in several ways.
+
+        **Nodes:**
+
+        Add one node at a time:
+
+        >>> G.add_node('a')
+
+        Add the nodes from any container (a list, set or tuple or the nodes
+        from another graph).
+
+        >>> G.add_nodes_from(['a', 'b'])
+
+        **Edges:**
+
+        G can also be grown by adding edges.
+
+        Add one edge,
+
+        >>> G.add_edge('a', 'b')
+
+        a list of edges,
+
+        >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+
+        If some edges connect nodes not yet in the model, the nodes
+        are added automatically.  There are no errors when adding
+        nodes or edges that already exist.
+
+        **Shortcuts:**
+
+        Many common graph features allow python syntax for speed reporting.
+
+        >>> 'a' in G     # check if node in graph
+        True
+        >>> len(G)  # number of nodes in graph
+        3
+        """
         super(BayesianModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
@@ -291,11 +292,10 @@ class BayesianModel(DAG):
         if node is not None:
             if node not in self.nodes():
                 raise ValueError("Node not present in the Directed Graph")
-            for cpd in self.cpds:
-                if cpd.variable == node:
-                    return cpd
             else:
-                return None
+                for cpd in self.cpds:
+                    if cpd.variable == node:
+                        return cpd
         else:
             return self.cpds
 
@@ -508,10 +508,8 @@ class BayesianModel(DAG):
         <TabularCPD representing P(B:2) at 0x7fb98a7d5588>,
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
         """
-
         from pgmpy.estimators import (
             MaximumLikelihoodEstimator,
-            BayesianEstimator,
             BaseEstimator,
         )
 
@@ -657,7 +655,7 @@ class BayesianModel(DAG):
         pred_values = defaultdict(list)
 
         model_inference = VariableElimination(self)
-        for index, data_point in data.iterrows():
+        for _, data_point in data.iterrows():
             full_distribution = model_inference.query(
                 variables=missing_variables,
                 evidence=data_point.to_dict(),
@@ -781,7 +779,7 @@ class BayesianModel(DAG):
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
-                               ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
+        ...                    ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
         >>> bayes_model.get_markov_blanket('y')
         ['s', 'w', 'x', 'u', 'z', 'v']
         """
