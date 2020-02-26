@@ -879,13 +879,17 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        return self._query(
+        result = self._query(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
             joint=joint,
             show_progress=show_progress,
         )
+        if joint:
+            return result.normalize(inplace=False)
+        else:
+            return result
 
     def map_query(self, variables=None, evidence=None, show_progress=True):
         """
