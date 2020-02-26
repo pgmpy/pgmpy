@@ -2,6 +2,7 @@ from __future__ import division
 
 from itertools import product
 from collections import namedtuple
+from warnings import warn
 
 import numpy as np
 
@@ -415,6 +416,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.values
         array([0., 1.])
         """
+        # Check if values is an array
         if isinstance(values, str):
             raise TypeError("values: Expected type list or array-like, got type str")
 
@@ -423,10 +425,23 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 "values: Expected type list of tuples, get type {type}", type(values[0])
             )
 
+        # Check if all variables in values are in the factor
+        for var, _ in values:
+            if var not in self.variables:
+                raise ValueError(f"The variable: {var} is not in the factor")
+
         phi = self if inplace else self.copy()
-        values = [
-            (var, self.get_state_no(var, state_name)) for var, state_name in values
-        ]
+
+        # Convert the state names to state number. If state name not found treat them as
+        # state numbers.
+        try:
+            values = [
+                (var, self.get_state_no(var, state_name)) for var, state_name in values
+            ]
+        except KeyError:
+            warn(
+                "Found unknown state name. Trying to switch to using all state names as state numbers"
+            )
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)

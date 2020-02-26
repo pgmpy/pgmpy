@@ -508,10 +508,7 @@ class BayesianModel(DAG):
         <TabularCPD representing P(B:2) at 0x7fb98a7d5588>,
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
         """
-        from pgmpy.estimators import (
-            MaximumLikelihoodEstimator,
-            BaseEstimator,
-        )
+        from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator
