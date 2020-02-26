@@ -597,7 +597,7 @@ class TestBeliefPropagation(unittest.TestCase):
         self.assertEqual(
             query_result,
             DiscreteFactor(
-                variables=["J"], cardinality=[2], values=np.array([0.072, 0.048])
+                variables=["J"], cardinality=[2], values=np.array([0.6, 0.4])
             ),
         )
 
@@ -611,7 +611,7 @@ class TestBeliefPropagation(unittest.TestCase):
             DiscreteFactor(
                 variables=["J", "Q"],
                 cardinality=[2, 2],
-                values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
+                values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             ),
         )
 
