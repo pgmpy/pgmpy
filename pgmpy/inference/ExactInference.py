@@ -252,7 +252,7 @@ class VariableElimination(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
-
+        self.create_structures(self.model)
         return self._variable_elimination(
             variables=variables,
             operation="marginalize",
@@ -307,6 +307,7 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        self.create_structures(self.model)
         final_distribution = self._variable_elimination(
             variables=variables,
             operation="maximize",
@@ -362,6 +363,7 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        self.create_structures(self.model)
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
             variables=variables,
@@ -411,6 +413,8 @@ class VariableElimination(Inference):
         <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
         # If the elimination order does not contain the same variables as the model
+        self.create_structures(self.model)
+
         if set(elimination_order) != set(self.variables):
             raise ValueError(
                 "Set of variables in elimination order"
@@ -881,6 +885,7 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        self.create_structures(self.model)
         result = self._query(
             variables=variables,
             operation="marginalize",
@@ -942,6 +947,8 @@ class BeliefPropagation(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+
+        self.create_structures(self.model)
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         if not variables:

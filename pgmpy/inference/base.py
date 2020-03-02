@@ -58,6 +58,10 @@ class Inference(object):
         self.model = model
         model.check_model()
 
+    def create_structures(self, model):
+        """
+        Creates structures that are used by the inference algorithms.
+        """
         if isinstance(model, JunctionTree):
             self.variables = set(chain(*model.nodes()))
         else:
@@ -93,3 +97,4 @@ class Inference(object):
             self.one_and_half_model.add_cpds(
                 *(model.get_cpds(time_slice=1) + cpd_inter)
             )
+

@@ -53,7 +53,7 @@ class Mplp(Inference):
             raise TypeError("Only MarkovModel is supported")
 
         super(Mplp, self).__init__(model)
-        self.model = model
+        self.create_structures(self.model)
 
         # S = \{c \cap c^{'} : c, c^{'} \in C, c \cap c^{'} \neq \emptyset\}
         self.intersection_set_variables = set()

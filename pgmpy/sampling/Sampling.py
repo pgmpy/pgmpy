@@ -33,6 +33,7 @@ class BayesianModelSampling(Inference):
 
         self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
+        self.create_structures(self.model)
 
     def forward_sample(self, size=1, return_type="dataframe"):
         """
