@@ -32,6 +32,7 @@ def independence_match(X, Y, Z, independencies):
     """
     return IndependenceAssertion(X, Y, Z) in independencies
 
+
 def chi_square(X, Y, Z, data, **kwargs):
     """
     Chi-square conditional independence test.
