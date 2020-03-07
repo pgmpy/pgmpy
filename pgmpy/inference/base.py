@@ -98,3 +98,18 @@ class Inference(object):
                 *(model.get_cpds(time_slice=1) + cpd_inter)
             )
 
+    def optimize_model_for_query(self, variables, evidence):
+        """
+        Optimizes Bayesian model structure for the given query.
+        """
+        if variables is None:
+            self.create_structures(self.model)
+            return evidence
+        evidence = {} if evidence is None else list(evidence.keys())
+        reachable_nodes = self.model.active_trail_nodes(variables, observed=evidence)
+        removed_nodes = set(self.model.nodes()) - set(chain(*reachable_nodes.values()))
+        self.reduced_model = self.model.copy()
+        evidence = {key: evidence[key] for key in evidence if key in reachable_nodes}
+        self.reduced_model.remove_nodes_from(removed_nodes)
+        self.create_structures(self.reduced_model)
+        return evidence
