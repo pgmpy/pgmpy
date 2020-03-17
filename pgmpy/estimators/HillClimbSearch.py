@@ -101,8 +101,8 @@ class HillClimbSearch(StructureEstimator):
                 if (
                     operation not in tabu_list
                     and ("flip", (Y, X)) not in tabu_list
-                    and (black_list is None or (X, Y) not in black_list)
-                    and (white_list is None or (X, Y) in white_list)
+                    and (black_list is None or (Y, X) not in black_list)
+                    and (white_list is None or (Y, X) in white_list)
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
