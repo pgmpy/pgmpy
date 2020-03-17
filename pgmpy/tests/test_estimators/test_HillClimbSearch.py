@@ -53,7 +53,7 @@ class TestHillClimbEstimator(unittest.TestCase):
                 self.model2, black_list=[("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]
             )
         )
-        model2_legal_ops_bl_ref = [("+", ("B", "C")), ("-", ("A", "B"))]
+        model2_legal_ops_bl_ref = [("+", ("B", "C")), ("-", ("A", "B")), ("flip", ("A", "B"))]
         self.assertSetEqual(
             set([op for op, score in model2_legal_ops_bl]), set(model2_legal_ops_bl_ref)
         )
