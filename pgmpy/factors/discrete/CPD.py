@@ -443,7 +443,7 @@ class TabularCPD(DiscreteFactor):
         'grade'
         >>> cpd.variable_card
         3
-        
+
         >>> cpd.reorder_parents(['intel', 'diff'])
         array([[0.1, 0.4, 0.1, 0.2, 0. , 0.1],
                [0.3, 0.4, 0.2, 0.3, 0.1, 0.2],
