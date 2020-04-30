@@ -111,7 +111,6 @@ class HillClimbSearch(StructureEstimator):
                                 - local_score(Y, old_Y_parents)
                             )
                             return (("flip", (X, Y)), score_delta)
-        
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
         potential_new_edges = (
@@ -128,7 +127,6 @@ class HillClimbSearch(StructureEstimator):
                 )
             if i!=None
             )
-
         gen2 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
                 delayed(_operation_execution)(
@@ -138,7 +136,6 @@ class HillClimbSearch(StructureEstimator):
                 )
             if i!=None
             )
-
         gen3 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
                 delayed(_operation_execution)(
