@@ -114,13 +114,44 @@ class HillClimbSearch(StructureEstimator):
 
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
-        potential_new_edges = (set(permutations(nodes, 2))- set(model.edges())- set([(Y, X) for (X, Y) in model.edges()]))
+        potential_new_edges = (
+            set(permutations(nodes, 2))
+            - set(model.edges())
+            - set([(Y, X) for (X, Y) in model.edges()])
+            )
 
-        gen1 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('+',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in potential_new_edges) if i!=None)
+        gen1 = (
+            i for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(self._operation_execution)(
+                    '+',X,Y,model,tabu_list,white_list,black_list,
+                    max_indegree,local_score
+                    )
+                for (X, Y) in potential_new_edges
+                )
+            if i!=None
+            )
 
-        gen2 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('-',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in model.edges()) if i!=None)
+        gen2 = (
+            i for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(self._operation_execution)(
+                    '-',X,Y,model,tabu_list,white_list,black_list,
+                    max_indegree,local_score
+                    )
+                for (X, Y) in model.edges()
+                )
+            if i!=None
+            )
 
-        gen3 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('flip',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in model.edges()) if i!=None)
+        gen3 = (
+            i for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(self._operation_execution)(
+                    'flip',X,Y,model,tabu_list,white_list,black_list,
+                    max_indegree,local_score
+                    )
+                for (X, Y) in model.edges()
+                )
+            if i!=None
+            )
         
         return chain(gen1,gen2,gen3)
 
