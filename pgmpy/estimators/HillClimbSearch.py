@@ -50,8 +50,7 @@ class HillClimbSearch(StructureEstimator):
             self.scoring_method = K2Score(data, **kwargs)
         self.n_jobs=n_jobs
 
-        super(HillClimbSearch, self).__init__(data, **kwargs)
-     
+        super(HillClimbSearch, self).__init__(data, **kwargs)     
     def _legal_operations(
         self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
     ):
@@ -146,7 +145,6 @@ class HillClimbSearch(StructureEstimator):
             if i!=None
             )
         return chain(gen1,gen2,gen3)
-
     def estimate(
         self,
         start=None,
