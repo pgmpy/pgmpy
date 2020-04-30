@@ -119,12 +119,10 @@ class HillClimbSearch(StructureEstimator):
             - set(model.edges())
             - set([(Y, X) for (X, Y) in model.edges()])
             )
-
         gen1 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
                 delayed(_operation_execution)(
-                    '+',X,Y,model,tabu_list,white_list,black_list,
-                    max_indegree,local_score
+                    '+',X,Y
                     )
                 for (X, Y) in potential_new_edges
                 )
@@ -134,8 +132,7 @@ class HillClimbSearch(StructureEstimator):
         gen2 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
                 delayed(_operation_execution)(
-                    '-',X,Y,model,tabu_list,white_list,black_list,
-                    max_indegree,local_score
+                    '-',X,Y
                     )
                 for (X, Y) in model.edges()
                 )
@@ -145,8 +142,7 @@ class HillClimbSearch(StructureEstimator):
         gen3 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
                 delayed(_operation_execution)(
-                    'flip',X,Y,model,tabu_list,white_list,black_list,
-                    max_indegree,local_score
+                    'flip',X,Y
                     )
                 for (X, Y) in model.edges()
                 )
