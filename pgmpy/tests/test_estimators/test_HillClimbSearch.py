@@ -6,7 +6,6 @@ import numpy as np
 from pgmpy.estimators import HillClimbSearch, K2Score
 from pgmpy.models import BayesianModel
 
-
 class TestHillClimbEstimator(unittest.TestCase):
     def setUp(self):
         self.rand_data = pd.DataFrame(
@@ -14,7 +13,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = HillClimbSearch(
-            self.rand_data, scoring_method=K2Score(self.rand_data)
+            self.rand_data, scoring_method=K2Score(self.rand_data),n_jobs=-1
         )
         self.model1 = BayesianModel()
         self.model1.add_nodes_from(["A", "B", "C"])
@@ -23,7 +22,7 @@ class TestHillClimbEstimator(unittest.TestCase):
 
         # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/titanic_train.csv"
+            "C:/Users/suyash/pgmpy/pgmpy/tests/test_estimators/testdata/titanic_train.csv"
         )
         self.titanic_data1 = self.titanic_data[
             ["Survived", "Sex", "Pclass", "Age", "Embarked"]
@@ -58,6 +57,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             ("-", ("A", "B")),
             ("flip", ("A", "B")),
         ]
+        
         self.assertSetEqual(
             set([op for op, score in model2_legal_ops_bl]), set(model2_legal_ops_bl_ref)
         )
@@ -130,6 +130,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
+        
     def tearDown(self):
         del self.rand_data
         del self.est_rand

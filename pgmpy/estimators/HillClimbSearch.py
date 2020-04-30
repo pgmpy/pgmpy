@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-from itertools import permutations
+from itertools import permutations,chain
 
 import networkx as nx
 
 from pgmpy.estimators import StructureEstimator, K2Score
 from pgmpy.base import DAG
+from joblib.parallel import Parallel,delayed
 
-
+# Passed all test cases
 class HillClimbSearch(StructureEstimator):
-    def __init__(self, data, scoring_method=None, **kwargs):
+    def __init__(self, data, scoring_method=None, n_jobs=-1, **kwargs):
         """
         Class for heuristic hill climb searches for DAGs, to learn
         network structure from data. `estimate` attempts to find a model with optimal score.
@@ -34,6 +35,9 @@ class HillClimbSearch(StructureEstimator):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
+            
+        n_jobs : int, default=-1
+            The number of jobs to run in parallel. `-1` means using all processors
 
         References
         ----------
@@ -44,35 +48,16 @@ class HillClimbSearch(StructureEstimator):
             self.scoring_method = scoring_method
         else:
             self.scoring_method = K2Score(data, **kwargs)
+        self.n_jobs=n_jobs
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
-    def _legal_operations(
-        self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
-    ):
-        """Generates a list of legal (= not in tabu_list) graph modifications
-        for a given model, together with their score changes. Possible graph modifications:
-        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
-        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
-        If a number `max_indegree` is provided, only modifications that keep the number
-        of parents for each node below `max_indegree` are considered. A list of
-        edges can optionally be passed as `black_list` or `white_list` to exclude those
-        edges or to limit the search.
-        """
-
-        local_score = self.scoring_method.local_score
-        nodes = self.state_names.keys()
-        potential_new_edges = (
-            set(permutations(nodes, 2))
-            - set(model.edges())
-            - set([(Y, X) for (X, Y) in model.edges()])
-        )
-
-        for (X, Y) in potential_new_edges:  # (1) add single edge
+    
+    def _operation_execution(self,operation,X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score):
+        if operation=='+':
             if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
-                operation = ("+", (X, Y))
                 if (
-                    operation not in tabu_list
+                    ("+", (X, Y)) not in tabu_list
                     and (black_list is None or (X, Y) not in black_list)
                     and (white_list is None or (X, Y) in white_list)
                 ):
@@ -82,24 +67,20 @@ class HillClimbSearch(StructureEstimator):
                         score_delta = local_score(Y, new_parents) - local_score(
                             Y, old_parents
                         )
-                        yield (operation, score_delta)
-
-        for (X, Y) in model.edges():  # (2) remove single edge
-            operation = ("-", (X, Y))
-            if operation not in tabu_list:
+                        return (("+", (X, Y)), score_delta)
+        elif operation=='-':
+            if ("-", (X, Y)) not in tabu_list:
                 old_parents = model.get_parents(Y)
                 new_parents = old_parents[:]
                 new_parents.remove(X)
                 score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
-                yield (operation, score_delta)
-
-        for (X, Y) in model.edges():  # (3) flip single edge
+                return (("-", (X, Y)), score_delta)
+        elif operation=='flip':
             new_edges = list(model.edges()) + [(Y, X)]
             new_edges.remove((X, Y))
             if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
-                operation = ("flip", (X, Y))
                 if (
-                    operation not in tabu_list
+                    ("flip", (X, Y)) not in tabu_list
                     and ("flip", (Y, X)) not in tabu_list
                     and (black_list is None or (Y, X) not in black_list)
                     and (white_list is None or (Y, X) in white_list)
@@ -116,7 +97,32 @@ class HillClimbSearch(StructureEstimator):
                             - local_score(X, old_X_parents)
                             - local_score(Y, old_Y_parents)
                         )
-                        yield (operation, score_delta)
+                        return (("flip", (X, Y)), score_delta)
+        
+    def _legal_operations(
+        self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
+    ):
+        """Generates a list of legal (= not in tabu_list) graph modifications
+        for a given model, together with their score changes. Possible graph modifications:
+        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
+        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
+        If a number `max_indegree` is provided, only modifications that keep the number
+        of parents for each node below `max_indegree` are considered. A list of
+        edges can optionally be passed as `black_list` or `white_list` to exclude those
+        edges or to limit the search.
+        """
+
+        local_score = self.scoring_method.local_score
+        nodes = self.state_names.keys()
+        potential_new_edges = (set(permutations(nodes, 2))- set(model.edges())- set([(Y, X) for (X, Y) in model.edges()]))
+
+        gen1 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('+',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in potential_new_edges) if i!=None)
+
+        gen2 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('-',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in model.edges()) if i!=None)
+
+        gen3 = (i for i in Parallel(n_jobs=self.n_jobs)(delayed(self._operation_execution)('flip',X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score) for (X, Y) in model.edges()) if i!=None)
+        
+        return chain(gen1,gen2,gen3)
 
     def estimate(
         self,
