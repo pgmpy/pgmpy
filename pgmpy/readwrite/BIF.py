@@ -548,7 +548,7 @@ $properties}\n"""
         for cpd in cpds:
             variable = cpd.variable
             variable_states[variable] = []
-            for state in range(cpd.get_cardinality([variable])[variable]):
+            for state in cpd.state_names[variable]:
                 variable_states[variable].append(str(state))
         return variable_states
 
