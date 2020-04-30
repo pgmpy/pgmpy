@@ -53,7 +53,9 @@ class HillClimbSearch(StructureEstimator):
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
     
-    def _operation_execution(self,operation,X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score):
+    def _operation_execution(
+            self,operation,X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score
+    ):
         if operation=='+':
             if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
                 if (
@@ -152,7 +154,6 @@ class HillClimbSearch(StructureEstimator):
                 )
             if i!=None
             )
-        
         return chain(gen1,gen2,gen3)
 
     def estimate(
