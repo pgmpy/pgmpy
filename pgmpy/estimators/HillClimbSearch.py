@@ -51,56 +51,7 @@ class HillClimbSearch(StructureEstimator):
         self.n_jobs=n_jobs
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
-
-    
-    def _operation_execution(
-            self,operation,X,Y,model,tabu_list,white_list,black_list,max_indegree,local_score
-    ):
-        if operation=='+':
-            if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
-                if (
-                    ("+", (X, Y)) not in tabu_list
-                    and (black_list is None or (X, Y) not in black_list)
-                    and (white_list is None or (X, Y) in white_list)
-                ):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
-                    if max_indegree is None or len(new_parents) <= max_indegree:
-                        score_delta = local_score(Y, new_parents) - local_score(
-                            Y, old_parents
-                        )
-                        return (("+", (X, Y)), score_delta)
-        elif operation=='-':
-            if ("-", (X, Y)) not in tabu_list:
-                old_parents = model.get_parents(Y)
-                new_parents = old_parents[:]
-                new_parents.remove(X)
-                score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
-                return (("-", (X, Y)), score_delta)
-        elif operation=='flip':
-            new_edges = list(model.edges()) + [(Y, X)]
-            new_edges.remove((X, Y))
-            if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
-                if (
-                    ("flip", (X, Y)) not in tabu_list
-                    and ("flip", (Y, X)) not in tabu_list
-                    and (black_list is None or (Y, X) not in black_list)
-                    and (white_list is None or (Y, X) in white_list)
-                ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = old_Y_parents[:]
-                    new_Y_parents.remove(X)
-                    if max_indegree is None or len(new_X_parents) <= max_indegree:
-                        score_delta = (
-                            local_score(X, new_X_parents)
-                            + local_score(Y, new_Y_parents)
-                            - local_score(X, old_X_parents)
-                            - local_score(Y, old_Y_parents)
-                        )
-                        return (("flip", (X, Y)), score_delta)
-        
+     
     def _legal_operations(
         self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
     ):
@@ -113,7 +64,54 @@ class HillClimbSearch(StructureEstimator):
         edges can optionally be passed as `black_list` or `white_list` to exclude those
         edges or to limit the search.
         """
-
+        def _operation_execution(
+            operation,X,Y
+            ):
+            if operation=='+':
+                if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
+                    if (
+                        ("+", (X, Y)) not in tabu_list
+                        and (black_list is None or (X, Y) not in black_list)
+                        and (white_list is None or (X, Y) in white_list)
+                    ):
+                        old_parents = model.get_parents(Y)
+                        new_parents = old_parents + [X]
+                        if max_indegree is None or len(new_parents) <= max_indegree:
+                            score_delta = local_score(Y, new_parents) - local_score(
+                                Y, old_parents
+                            )
+                            return (("+", (X, Y)), score_delta)
+            elif operation=='-':
+                if ("-", (X, Y)) not in tabu_list:
+                    old_parents = model.get_parents(Y)
+                    new_parents = old_parents[:]
+                    new_parents.remove(X)
+                    score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
+                    return (("-", (X, Y)), score_delta)
+            elif operation=='flip':
+                new_edges = list(model.edges()) + [(Y, X)]
+                new_edges.remove((X, Y))
+                if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
+                    if (
+                        ("flip", (X, Y)) not in tabu_list
+                        and ("flip", (Y, X)) not in tabu_list
+                        and (black_list is None or (Y, X) not in black_list)
+                        and (white_list is None or (Y, X) in white_list)
+                    ):
+                        old_X_parents = model.get_parents(X)
+                        old_Y_parents = model.get_parents(Y)
+                        new_X_parents = old_X_parents + [Y]
+                        new_Y_parents = old_Y_parents[:]
+                        new_Y_parents.remove(X)
+                        if max_indegree is None or len(new_X_parents) <= max_indegree:
+                            score_delta = (
+                                local_score(X, new_X_parents)
+                                + local_score(Y, new_Y_parents)
+                                - local_score(X, old_X_parents)
+                                - local_score(Y, old_Y_parents)
+                            )
+                            return (("flip", (X, Y)), score_delta)
+        
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
         potential_new_edges = (
@@ -124,7 +122,7 @@ class HillClimbSearch(StructureEstimator):
 
         gen1 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(self._operation_execution)(
+                delayed(_operation_execution)(
                     '+',X,Y,model,tabu_list,white_list,black_list,
                     max_indegree,local_score
                     )
@@ -135,7 +133,7 @@ class HillClimbSearch(StructureEstimator):
 
         gen2 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(self._operation_execution)(
+                delayed(_operation_execution)(
                     '-',X,Y,model,tabu_list,white_list,black_list,
                     max_indegree,local_score
                     )
@@ -146,7 +144,7 @@ class HillClimbSearch(StructureEstimator):
 
         gen3 = (
             i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(self._operation_execution)(
+                delayed(_operation_execution)(
                     'flip',X,Y,model,tabu_list,white_list,black_list,
                     max_indegree,local_score
                     )
