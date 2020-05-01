@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-from itertools import permutations,chain
+from itertools import permutations, chain
 
 import networkx as nx
 
 from pgmpy.estimators import StructureEstimator, K2Score
 from pgmpy.base import DAG
-from joblib.parallel import Parallel,delayed
+from joblib.parallel import Parallel, delayed
 
 # Passed all test cases
 class HillClimbSearch(StructureEstimator):
@@ -48,9 +48,10 @@ class HillClimbSearch(StructureEstimator):
             self.scoring_method = scoring_method
         else:
             self.scoring_method = K2Score(data, **kwargs)
-        self.n_jobs=n_jobs
+        self.n_jobs = n_jobs
 
-        super(HillClimbSearch, self).__init__(data, **kwargs)     
+        super(HillClimbSearch, self).__init__(data, **kwargs)
+
     def _legal_operations(
         self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
     ):
@@ -63,11 +64,12 @@ class HillClimbSearch(StructureEstimator):
         edges can optionally be passed as `black_list` or `white_list` to exclude those
         edges or to limit the search.
         """
-        def _operation_execution(
-            operation,X,Y
-            ):
-            if operation=='+':
-                if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
+
+        def _operation_execution(operation, X, Y):
+            if operation == "+":
+                if nx.is_directed_acyclic_graph(
+                    nx.DiGraph(list(model.edges()) + [(X, Y)])
+                ):
                     if (
                         ("+", (X, Y)) not in tabu_list
                         and (black_list is None or (X, Y) not in black_list)
@@ -80,14 +82,16 @@ class HillClimbSearch(StructureEstimator):
                                 Y, old_parents
                             )
                             return (("+", (X, Y)), score_delta)
-            elif operation=='-':
+            elif operation == "-":
                 if ("-", (X, Y)) not in tabu_list:
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents[:]
                     new_parents.remove(X)
-                    score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
+                    score_delta = local_score(Y, new_parents) - local_score(
+                        Y, old_parents
+                    )
                     return (("-", (X, Y)), score_delta)
-            elif operation=='flip':
+            elif operation == "flip":
                 new_edges = list(model.edges()) + [(Y, X)]
                 new_edges.remove((X, Y))
                 if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
@@ -110,41 +114,38 @@ class HillClimbSearch(StructureEstimator):
                                 - local_score(Y, old_Y_parents)
                             )
                             return (("flip", (X, Y)), score_delta)
+
         local_score = self.scoring_method.local_score
         nodes = self.state_names.keys()
         potential_new_edges = (
             set(permutations(nodes, 2))
             - set(model.edges())
             - set([(Y, X) for (X, Y) in model.edges()])
-            )
+        )
         gen1 = (
-            i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(_operation_execution)(
-                    '+',X,Y
-                    )
+            i
+            for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(_operation_execution)("+", X, Y)
                 for (X, Y) in potential_new_edges
-                )
-            if i!=None
             )
+            if i != None
+        )
         gen2 = (
-            i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(_operation_execution)(
-                    '-',X,Y
-                    )
-                for (X, Y) in model.edges()
-                )
-            if i!=None
+            i
+            for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(_operation_execution)("-", X, Y) for (X, Y) in model.edges()
             )
+            if i != None
+        )
         gen3 = (
-            i for i in Parallel(n_jobs=self.n_jobs)(
-                delayed(_operation_execution)(
-                    'flip',X,Y
-                    )
-                for (X, Y) in model.edges()
-                )
-            if i!=None
+            i
+            for i in Parallel(n_jobs=self.n_jobs)(
+                delayed(_operation_execution)("flip", X, Y) for (X, Y) in model.edges()
             )
-        return chain(gen1,gen2,gen3)
+            if i != None
+        )
+        return chain(gen1, gen2, gen3)
+
     def estimate(
         self,
         start=None,
