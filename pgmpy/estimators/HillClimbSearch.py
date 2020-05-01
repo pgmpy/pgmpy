@@ -37,7 +37,7 @@ class HillClimbSearch(StructureEstimator):
             This sets the behavior of the `state_count`-method.
             
         n_jobs : int, default=-1
-            The number of jobs to run in parallel. `-1` means using all processors
+            The number of jobs to run in parallel. `-1` means using all processors.
 
         References
         ----------
