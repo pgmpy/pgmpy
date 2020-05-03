@@ -23,7 +23,7 @@ class BayesianEstimator(ParameterEstimator):
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(
-        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None
+        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None, k2_pseudo_count=1
     ):
         """
         Method to estimate the model parameters (CPDs).
@@ -43,8 +43,9 @@ class BayesianEstimator(ParameterEstimator):
                 `equivalent_sample_size/(node_cardinality*np.prod(parents_cardinalities))` for each node.
                 'equivalent_sample_size' can either be a numerical value or a dict that specifies
                 the size for each variable separately.
-            - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to 1,
-                regardless of the cardinality of the variable.
+            - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to a fixed
+                value regardless of the cardinality of the variable.  By default, the fixed value is 1
+                unless specified in 'k2_pseudo_count'.
 
         Returns
         -------
@@ -81,13 +82,14 @@ class BayesianEstimator(ParameterEstimator):
                 prior_type=prior_type,
                 equivalent_sample_size=_equivalent_sample_size,
                 pseudo_counts=_pseudo_counts,
+                k2_pseudo_count=k2_pseudo_count
             )
             parameters.append(cpd)
 
         return parameters
 
     def estimate_cpd(
-        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5
+        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5, k2_pseudo_count=1
     ):
         """
         Method to estimate the CPD for a given variable.
@@ -143,7 +145,7 @@ class BayesianEstimator(ParameterEstimator):
         cpd_shape = (node_cardinality, np.prod(parents_cardinalities, dtype=int))
 
         if prior_type == "K2":
-            pseudo_counts = np.ones(cpd_shape, dtype=int)
+            pseudo_counts = np.ones(cpd_shape, dtype=int) * k2_pseudo_count
         elif prior_type == "BDeu":
             alpha = float(equivalent_sample_size) / (
                 node_cardinality * np.prod(parents_cardinalities)
