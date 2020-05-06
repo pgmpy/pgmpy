@@ -100,6 +100,103 @@ class TestBayesianModelSampling(unittest.TestCase):
         del self.markov_model
 
 
+class TestBayesianModelSamplingStateNames(unittest.TestCase):
+    def setUp(self):
+        self.bayesian_model = BayesianModel(
+            [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
+        )
+        cpd_a = TabularCPD("A", 2, [[0.2], [0.8]], state_names={"A": [1, 2]})
+        cpd_r = TabularCPD("R", 2, [[0.4], [0.6]], state_names={"R": [2, 3]})
+        cpd_j = TabularCPD(
+            variable="J",
+            variable_card=2,
+            values=[[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
+            evidence=["R", "A"],
+            evidence_card=[2, 2],
+            state_names={"J": [3, 4], "A": [1, 2], "R": [2, 3]},
+        )
+        cpd_q = TabularCPD(
+            variable="Q",
+            variable_card=2,
+            values=[[0.9, 0.2], [0.1, 0.8]],
+            evidence=["J"],
+            evidence_card=[2],
+            state_names={"J": [3, 4], "Q": [4, 5]},
+        )
+        cpd_l = TabularCPD(
+            variable="L",
+            variable_card=2,
+            values=[[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+            evidence=["G", "J"],
+            evidence_card=[2, 2],
+            state_names={"L": [2, 3], "G": [3, 4], "J": [3, 4]},
+        )
+        cpd_g = TabularCPD("G", 2, [[0.6], [0.4]], state_names={"G": [3, 4]})
+        self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
+        self.sampling_inference = BayesianModelSampling(self.bayesian_model)
+
+    def test_forward_sample(self):
+        sample = self.sampling_inference.forward_sample(25)
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertIn("A", sample.columns)
+        self.assertIn("J", sample.columns)
+        self.assertIn("R", sample.columns)
+        self.assertIn("Q", sample.columns)
+        self.assertIn("G", sample.columns)
+        self.assertIn("L", sample.columns)
+        self.assertTrue(set(sample.A).issubset({1, 2}))
+        self.assertTrue(set(sample.J).issubset({3, 4}))
+        self.assertTrue(set(sample.R).issubset({2, 3}))
+        self.assertTrue(set(sample.Q).issubset({4, 5}))
+        self.assertTrue(set(sample.G).issubset({3, 4}))
+        self.assertTrue(set(sample.L).issubset({2, 3}))
+
+    def test_rejection_sample_basic(self):
+        sample = self.sampling_inference.rejection_sample()
+        sample = self.sampling_inference.rejection_sample(
+            [State("A", 1), State("J", 4), State("R", 2)], 25
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertIn("A", sample.columns)
+        self.assertIn("J", sample.columns)
+        self.assertIn("R", sample.columns)
+        self.assertIn("Q", sample.columns)
+        self.assertIn("G", sample.columns)
+        self.assertIn("L", sample.columns)
+        self.assertTrue(set(sample.A).issubset({1}))
+        self.assertTrue(set(sample.J).issubset({4}))
+        self.assertTrue(set(sample.R).issubset({2}))
+        self.assertTrue(set(sample.Q).issubset({4, 5}))
+        self.assertTrue(set(sample.G).issubset({3, 4}))
+        self.assertTrue(set(sample.L).issubset({2, 3}))
+
+    def test_likelihood_weighted_sample(self):
+        sample = self.sampling_inference.likelihood_weighted_sample(
+            [State("A", 1), State("J", 4), State("R", 2)], 25
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 7)
+        self.assertIn("A", sample.columns)
+        self.assertIn("J", sample.columns)
+        self.assertIn("R", sample.columns)
+        self.assertIn("Q", sample.columns)
+        self.assertIn("G", sample.columns)
+        self.assertIn("L", sample.columns)
+        self.assertIn("_weight", sample.columns)
+        self.assertTrue(set(sample.A).issubset({1, 2}))
+        self.assertTrue(set(sample.J).issubset({3, 4}))
+        self.assertTrue(set(sample.R).issubset({2, 3}))
+        self.assertTrue(set(sample.Q).issubset({4, 5}))
+        self.assertTrue(set(sample.G).issubset({3, 4}))
+        self.assertTrue(set(sample.L).issubset({2, 3}))
+
+    def tearDown(self):
+        del self.sampling_inference
+        del self.bayesian_model
+
+
 class TestGibbsSampling(unittest.TestCase):
     def setUp(self):
         # A test Bayesian model

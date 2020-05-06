@@ -77,7 +77,7 @@ class BayesianModelSampling(Inference):
         for node in pbar:
             pbar.set_description("Generating for node: {node}".format(node=node))
             cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
+            states = cpd.state_names[node]
             evidence = cpd.variables[:0:-1]
             if evidence:
                 cached_values = self.pre_compute_reduce(variable=node)
@@ -94,8 +94,11 @@ class BayesianModelSampling(Inference):
         variable_evid = variable_cpd.variables[:0:-1]
         cached_values = {}
 
+        state_names = {
+            var: self.model.get_cpds(var).state_names[var] for var in variable_evid
+        }
         for state_combination in itertools.product(
-            *[range(self.cardinality[var]) for var in variable_evid]
+            *[state_names[var] for var in variable_evid]
         ):
             states = list(zip(variable_evid, state_combination))
             cached_values[state_combination] = variable_cpd.reduce(
@@ -213,11 +216,13 @@ class BayesianModelSampling(Inference):
         types.append(("_weight", "float"))
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled["_weight"] = np.ones(size)
-        evidence_dict = {var: st for var, st in evidence}
+        evidence_dict = {
+            var: self.model.get_cpds(var).get_state_no(var, st) for var, st in evidence
+        }
 
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
+            states = cpd.state_names[node]
             evidence = cpd.get_evidence()
 
             if evidence:
@@ -227,14 +232,14 @@ class BayesianModelSampling(Inference):
                     map(lambda t: cached_values[tuple(t)], evidence_values.T)
                 )
                 if node in evidence_dict:
-                    sampled[node] = evidence_dict[node]
+                    sampled[node] = cpd.get_state_names(node, evidence_dict[node])
                     for i in range(size):
                         sampled["_weight"][i] *= weights[i][evidence_dict[node]]
                 else:
                     sampled[node] = sample_discrete(states, weights)
             else:
                 if node in evidence_dict:
-                    sampled[node] = evidence_dict[node]
+                    sampled[node] = cpd.get_state_names(node, evidence_dict[node])
                     for i in range(size):
                         sampled["_weight"][i] *= cpd.values[evidence_dict[node]]
                 else:
