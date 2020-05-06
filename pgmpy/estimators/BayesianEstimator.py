@@ -33,8 +33,8 @@ class BayesianEstimator(ParameterEstimator):
         prior_type: 'dirichlet', 'BDeu', or 'K2'
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
-                'pseudo_counts' = dirichlet hyperparameters; a dict containing, for each variable, a 2-D
-                 array of the shape (node_card, product of parents_card) with a "virtual" count for each
+                'pseudo_counts' = dirichlet hyperparameters; a single number or a dict containing, for each variable,
+                 a 2-D array of the shape (node_card, product of parents_card) with a "virtual" count for each
                  variable state in the CPD, that is added to the state counts.
                  (lexicographic ordering of states assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
@@ -74,7 +74,10 @@ class BayesianEstimator(ParameterEstimator):
                 if isinstance(equivalent_sample_size, dict)
                 else equivalent_sample_size
             )
-            _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
+            if isinstance(pseudo_counts, list):
+                _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
+            else:
+                _pseudo_counts = pseudo_counts
 
             cpd = self.estimate_cpd(
                 node,
@@ -100,7 +103,7 @@ class BayesianEstimator(ParameterEstimator):
         prior_type: 'dirichlet', 'BDeu', 'K2',
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
-                'pseudo_counts' = dirichlet hyperparameters; 2-D array of shape
+                'pseudo_counts' = dirichlet hyperparameters; a single number or 2-D array of shape
                  (node_card, product of parents_card) with a "virtual" count for
                  each variable state in the CPD.
                  The virtual counts are added to the actual state counts found in the data.
@@ -150,13 +153,16 @@ class BayesianEstimator(ParameterEstimator):
             )
             pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
         elif prior_type == "dirichlet":
-            pseudo_counts = np.array(pseudo_counts)
-            if pseudo_counts.shape != cpd_shape:
-                raise ValueError(
-                    "The shape of pseudo_counts for the node: {node} must be of shape: {shape}".format(
-                        node=node, shape=str(cpd_shape)
+            if isinstance(pseudo_counts, list):
+                pseudo_counts = np.array(pseudo_counts)
+                if pseudo_counts.shape != cpd_shape:
+                    raise ValueError(
+                        "The shape of pseudo_counts for the node: {node} must be of shape: {shape}".format(
+                            node=node, shape=str(cpd_shape)
+                        )
                     )
-                )
+            else:
+                pseudo_counts = np.ones(cpd_shape, dtype=int) * pseudo_counts
         else:
             raise ValueError("'prior_type' not specified")
 
