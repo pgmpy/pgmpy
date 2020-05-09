@@ -7,6 +7,7 @@ from .MarkovChain import MarkovChain
 from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
 from .NoisyOrModel import NoisyOrModel
+from .TreeAugmentedNaiveBayes import TreeAugmentedNaiveBayes
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .SEM import SEMGraph, SEMAlg, SEM
 
@@ -21,6 +22,7 @@ __all__ = [
     "MarkovChain",
     "NaiveBayes",
     "LinearGaussianBayesianNetwork",
+    "TreeAugmentedNaiveBayes",
     "SEMGraph",
     "SEMAlg",
     "SEM",
