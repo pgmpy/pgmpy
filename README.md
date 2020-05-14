@@ -102,13 +102,13 @@ $ make html
 ```
 The generated docs will be in _build/html
 
-Examples:
-=========
+Examples
+========
 We have a few example jupyter notebooks here: https://github.com/pgmpy/pgmpy/tree/dev/examples
 For more detailed jupyter notebooks and basic tutorials on Graphical Models check: https://github.com/pgmpy/pgmpy_notebook/
 
-Citing:
-=======
+Citing
+======
 Please use the following bibtex for citing `pgmpy` in your research:
 ```
 @inproceedings{ankan2015pgmpy,
