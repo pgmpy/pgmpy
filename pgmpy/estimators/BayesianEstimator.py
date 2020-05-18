@@ -3,6 +3,7 @@
 from itertools import chain
 
 import numpy as np
+import numbers
 
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
@@ -74,10 +75,10 @@ class BayesianEstimator(ParameterEstimator):
                 if isinstance(equivalent_sample_size, dict)
                 else equivalent_sample_size
             )
-            if isinstance(pseudo_counts, list):
-                _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
-            else:
+            if isinstance(pseudo_counts, numbers.Real):
                 _pseudo_counts = pseudo_counts
+            else:
+                _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
 
             cpd = self.estimate_cpd(
                 node,
@@ -153,7 +154,10 @@ class BayesianEstimator(ParameterEstimator):
             )
             pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
         elif prior_type == "dirichlet":
-            if isinstance(pseudo_counts, list):
+            if isinstance(pseudo_counts, numbers.Real):
+                pseudo_counts = np.ones(cpd_shape, dtype=int) * pseudo_counts
+
+            else:
                 pseudo_counts = np.array(pseudo_counts)
                 if pseudo_counts.shape != cpd_shape:
                     raise ValueError(
@@ -161,8 +165,6 @@ class BayesianEstimator(ParameterEstimator):
                             node=node, shape=str(cpd_shape)
                         )
                     )
-            else:
-                pseudo_counts = np.ones(cpd_shape, dtype=int) * pseudo_counts
         else:
             raise ValueError("'prior_type' not specified")
 
