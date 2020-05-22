@@ -150,6 +150,30 @@ class TestBayesianEstimator(unittest.TestCase):
             cpds,
         )
 
+    def test_get_parameters3(self):
+        pseudo_counts = 0.1
+        cpds = set(
+            [
+                self.est3.estimate_cpd(
+                    "A", prior_type="dirichlet", pseudo_counts=pseudo_counts
+                ),
+                self.est3.estimate_cpd(
+                    "B", prior_type="dirichlet", pseudo_counts=pseudo_counts
+                ),
+                self.est3.estimate_cpd(
+                    "C", prior_type="dirichlet", pseudo_counts=pseudo_counts
+                ),
+            ]
+        )
+        self.assertSetEqual(
+            set(
+                self.est3.get_parameters(
+                    prior_type="dirichlet", pseudo_counts=pseudo_counts
+                )
+            ),
+            cpds,
+        )
+
     def tearDown(self):
         del self.m1
         del self.d1
