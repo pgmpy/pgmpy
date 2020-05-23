@@ -1,6 +1,7 @@
 networkx
 numpy
 scipy
+sklearn
 pandas
 pyparsing
 torch
