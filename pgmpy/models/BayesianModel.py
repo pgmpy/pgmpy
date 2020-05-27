@@ -421,6 +421,7 @@ class BayesianModel(DAG):
         """
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
+        mm.add_nodes_from(moral_graph.nodes())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
         return mm
