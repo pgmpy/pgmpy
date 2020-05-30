@@ -40,12 +40,12 @@ class VariableElimination(Inference):
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor in working_factors[evidence_var]:
-                    factor_reduced = factor[0].reduce(
+                for factor, origin in working_factors[evidence_var]:
+                    factor_reduced = factor.reduce(
                         [(evidence_var, evidence[evidence_var])], inplace=False
                     )
                     for var in factor_reduced.scope():
-                        working_factors[var].remove(factor)
+                        working_factors[var].remove((factor, origin))
                         working_factors[var].add((factor_reduced, evidence_var))
                 del working_factors[evidence_var]
         return working_factors
@@ -172,9 +172,9 @@ class VariableElimination(Inference):
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [
-                factor[0]
-                for factor in working_factors[var]
-                if not set(factor[0].variables).intersection(eliminated_variables)
+                factor
+                for factor, _ in working_factors[var]
+                if not set(factor.variables).intersection(eliminated_variables)
             ]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)([var], inplace=False)
@@ -186,11 +186,10 @@ class VariableElimination(Inference):
         # Step 4: Prepare variables to be returned.
         final_distribution = set()
         for node in working_factors:
-            for factor in working_factors[node]:
-                f = factor[0]
-                if not set(f.variables).intersection(eliminated_variables):
-                    final_distribution.add(factor)
-        final_distribution = [f[0] for f in final_distribution]
+            for factor, origin in working_factors[node]:
+                if not set(factor.variables).intersection(eliminated_variables):
+                    final_distribution.add((factor, origin))
+        final_distribution = [factor for factor, _ in final_distribution]
 
         if joint:
             if isinstance(self.model, BayesianModel):
