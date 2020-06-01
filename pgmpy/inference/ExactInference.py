@@ -34,7 +34,8 @@ class VariableElimination(Inference):
         """
 
         working_factors = {
-            node: {(factor, None) for factor in self.factors[node]} for node in self.factors
+            node: {(factor, None) for factor in self.factors[node]}
+            for node in self.factors
         }
 
         # Dealing with evidence. Reducing factors over it before VE is run.
