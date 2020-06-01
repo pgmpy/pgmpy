@@ -213,6 +213,23 @@ class TestVariableElimination(unittest.TestCase):
         del self.bayesian_model
 
 
+class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
+    def setUp(self):
+        self.markov_model = MarkovModel([('A', 'B'), ('A', 'C')])
+        f1 = DiscreteFactor(variables=['A', 'B'], cardinality=[2, 2], values=np.eye(2) * 2)
+        f2 = DiscreteFactor(variables=['A', 'C'], cardinality=[2, 2], values=np.eye(2) * 2)
+        self.markov_model.add_factors(f1, f2)
+        self.markov_inference = VariableElimination(self.markov_model)
+
+    def test_duplicated_factors(self):
+        query_result = self.markov_inference.query(['A'])
+        self.assertEqual(
+            query_result,
+            DiscreteFactor(
+                variables=["A"], cardinality=[2], values=np.array([4, 4])
+            ),
+        )
+
 class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
