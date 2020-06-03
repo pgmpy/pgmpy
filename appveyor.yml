@@ -3,6 +3,7 @@ environment:
     # pytorch only seems to work on 64bit Python versions on Windows
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python36-x64"
+    - PYTHON: "C:\\Python38-x64"
 
 install:
   - "%PYTHON%\\python.exe -m pip install pip -U"
