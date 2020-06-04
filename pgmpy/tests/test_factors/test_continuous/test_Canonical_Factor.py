@@ -46,32 +46,32 @@ class TestCanonicalFactor(unittest.TestCase):
             ValueError,
             CanonicalDistribution,
             ["x1", "x2", "x3"],
-            np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-            np.array([1, 2]),
+            np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float),
+            np.array([1, 2], dtype=float),
             7,
         )
         self.assertRaises(
             ValueError,
             CanonicalDistribution,
             ["x1", "x2", "x3"],
-            np.array([[1.1, -1, 0], [-1, 4], [0, -2, 4]]),
-            np.array([1, 2, 3]),
+            np.array([[1.1, -1, 0], [-1, 4], [0, -2, 4]], dtype=object),
+            np.array([1, 2, 3], dtype=float),
             7,
         )
         self.assertRaises(
             ValueError,
             CanonicalDistribution,
             ["x1", "x2", "x3"],
-            np.array([[1.1, -1, 0], [0, -2, 4]]),
-            np.array([1, 2, 3]),
+            np.array([[1.1, -1, 0], [0, -2, 4]], dtype=float),
+            np.array([1, 2, 3], dtype=float),
             7,
         )
         self.assertRaises(
             ValueError,
             CanonicalDistribution,
             ["x1", "x3"],
-            np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]]),
-            np.array([1, 2, 3]),
+            np.array([[1.1, -1, 0], [-1, 4, -2], [0, -2, 4]], dtype=float),
+            np.array([1, 2, 3], dtype=float),
             7,
         )
 
