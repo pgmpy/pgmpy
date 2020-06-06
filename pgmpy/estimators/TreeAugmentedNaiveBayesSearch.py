@@ -10,6 +10,7 @@ from pgmpy.base import DAG
 class TreeAugmentedNaiveBayesSearch(StructureEstimator):
     def __init__(self, data, class_node, root_node=None, **kwargs):
         """
+
         Search class for learning tree-augmented naive bayes (TAN) graph structure with a given set of variables.
 
         Parameters
@@ -48,6 +49,7 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
 
     def estimate(self):
         """
+
         Estimate the `DAG` structure that fits best to the given data set without parametrization.
 
         Returns
