@@ -12,9 +12,6 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         """
         Search class for learning tree-augmented naive bayes (TAN) graph structure with a given set of variables.
 
-        TAN is an extension of Naive Bayes classifer and allows a tree structure over the independent variables
-        to account for interaction.
-
         Parameters
         ----------
         data: pandas DataFrame object
