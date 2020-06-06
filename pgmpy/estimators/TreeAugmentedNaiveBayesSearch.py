@@ -10,8 +10,8 @@ from pgmpy.base import DAG
 class TreeAugmentedNaiveBayesSearch(StructureEstimator):
     def __init__(self, data, class_node, root_node=None, **kwargs):
         """
-
         Search class for learning tree-augmented naive bayes (TAN) graph structure with a given set of variables.
+
         TAN is an extension of Naive Bayes classifer and allows a tree structure over the independent variables
         to account for interaction.
 
@@ -42,7 +42,6 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         ----------
         Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers. Machine Learning 29: 131–163
         """
-
         self.class_node = class_node
         self.root_node = root_node
 
@@ -50,9 +49,7 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
 
     def estimate(self):
         """
-
-        Estimates the `DAG` structure that fits best to the given data set using the chow-liu algorithm.
-        Only estimates network structure, no parametrization.
+        Estimate the `DAG` structure that fits best to the given data set without parametrization.
 
         Returns
         -------
@@ -73,7 +70,6 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy', alpha=0.3)
         >>> plt.show()
         """
-
         if self.class_node not in self.data.columns:
             raise ValueError("class node must exist in data")
 
