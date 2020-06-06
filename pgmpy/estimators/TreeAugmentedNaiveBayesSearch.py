@@ -41,6 +41,7 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         ----------
         Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers. Machine Learning 29: 131–163
         """
+
         self.class_node = class_node
         self.root_node = root_node
 
