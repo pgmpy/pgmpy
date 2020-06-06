@@ -22,13 +22,13 @@ Bayesian Estimator
 BDeu Score
 ----------
 
-.. autoclass:: pgmpy.estimators.BDeuScore.BDeuScore
+.. autoclass:: pgmpy.estimators.StructureScore.BDeuScore
    :members:
 
 Bic Score
 ---------
 
-.. autoclass:: pgmpy.estimators.BicScore.BicScore :members:
+.. autoclass:: pgmpy.estimators.StructureScore.BicScore :members:
 
 Contraint Based Estimator
 -------------------------
@@ -51,7 +51,7 @@ Hill Climb Search
 K2 Score
 --------
 
-.. autoclass:: pgmpy.estimators.K2Score.K2Score
+.. autoclass:: pgmpy.estimators.StructureScore.K2Score
    :members:
 
 Maximum Likelihood Estimator
