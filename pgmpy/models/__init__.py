@@ -6,7 +6,6 @@ from .JunctionTree import JunctionTree
 from .MarkovChain import MarkovChain
 from .MarkovModel import MarkovModel
 from .NaiveBayes import NaiveBayes
-from .TreeAugmentedNaiveBayes import TreeAugmentedNaiveBayes
 from .NoisyOrModel import NoisyOrModel
 from .LinearGaussianBayesianNetwork import LinearGaussianBayesianNetwork
 from .SEM import SEMGraph, SEMAlg, SEM
@@ -21,7 +20,6 @@ __all__ = [
     "DynamicBayesianNetwork",
     "MarkovChain",
     "NaiveBayes",
-    "TreeAugmentedNaiveBayes",
     "LinearGaussianBayesianNetwork",
     "SEMGraph",
     "SEMAlg",
