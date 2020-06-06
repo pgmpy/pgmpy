@@ -19,7 +19,7 @@ Bayesian Estimator
 .. autoclass:: pgmpy.estimators.BayesianEstimator.BayesianEstimator
    :members:
 
-Bdeu Score
+BDeu Score
 ----------
 
 .. autoclass:: pgmpy.estimators.BDeuScore.BDeuScore
