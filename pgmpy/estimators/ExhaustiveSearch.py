@@ -5,14 +5,14 @@ from itertools import combinations
 
 import networkx as nx
 
-from pgmpy.estimators import StructureEstimator
+from pgmpy.estimators import StructureEstimator, ScoreCache
 from pgmpy.estimators import K2Score
 from pgmpy.utils.mathext import powerset
 from pgmpy.base import DAG
 
 
 class ExhaustiveSearch(StructureEstimator):
-    def __init__(self, data, scoring_method=None, **kwargs):
+    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         """
         Search class for exhaustive searches over all DAGs with a given set of variables.
         Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
@@ -33,6 +33,11 @@ class ExhaustiveSearch(StructureEstimator):
             that the variable can take. If unspecified, the observed values in the data set
             are taken to be the only possible states.
 
+        use_caching: boolean
+            If True, uses caching of score for faster computation.
+            Note: Caching only works for scoring methods which are decomposible. Can
+            give wrong results in case of custom scoring methods.
+
         complete_samples_only: bool (optional, default `True`)
             Specifies how to deal with missing data, if present. If set to `True` all rows
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
@@ -40,9 +45,12 @@ class ExhaustiveSearch(StructureEstimator):
             This sets the behavior of the `state_count`-method.
         """
         if scoring_method is not None:
-            self.scoring_method = scoring_method
+            if use_cache:
+                self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
+            else:
+                self.scoring_method = scoring_method
         else:
-            self.scoring_method = K2Score(data, **kwargs)
+            self.scoring_method = ScoreCache.ScoreCache(K2Score(data, **kwargs), data)
 
         super(ExhaustiveSearch, self).__init__(data, **kwargs)
 

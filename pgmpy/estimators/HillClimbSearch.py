@@ -3,12 +3,12 @@ from itertools import permutations
 
 import networkx as nx
 
-from pgmpy.estimators import StructureEstimator, K2Score
+from pgmpy.estimators import StructureEstimator, K2Score, ScoreCache
 from pgmpy.base import DAG
 
 
 class HillClimbSearch(StructureEstimator):
-    def __init__(self, data, scoring_method=None, **kwargs):
+    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         """
         Class for heuristic hill climb searches for DAGs, to learn
         network structure from data. `estimate` attempts to find a model with optimal score.
@@ -35,15 +35,23 @@ class HillClimbSearch(StructureEstimator):
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
 
+        use_caching: boolean
+            If True, uses caching of score for faster computation.
+            Note: Caching only works for scoring methods which are decomposible. Can
+            give wrong results in case of custom scoring methods.
+
         References
         ----------
         Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
         Section 18.4.3 (page 811ff)
         """
         if scoring_method is not None:
-            self.scoring_method = scoring_method
+            if use_cache:
+                self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)
+            else:
+                self.scoring_method = scoring_method
         else:
-            self.scoring_method = K2Score(data, **kwargs)
+            self.scoring_method = ScoreCache.ScoreCache(K2Score(data, **kwargs), data)
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
