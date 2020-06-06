@@ -19,8 +19,7 @@ class BaseEstimator(object):
         Parameters
         ----------
 
-        data: pandas DataFrame object
-            datafame object where each column represents one variable.
+        data: pandas DataFrame object datafame object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -51,11 +50,9 @@ class BaseEstimator(object):
                 if var in state_names:
                     if not set(self._collect_state_names(var)) <= set(state_names[var]):
                         raise ValueError(
-                            "Data contains unexpected states for variable '{0}'.".format(
-                                str(var)
-                            )
+                            f"Data contains unexpected states for variable: {var}."
                         )
-                    self.state_names[var] = sorted(state_names[var])
+                    self.state_names[var] = state_names[var]
                 else:
                     self.state_names[var] = self._collect_state_names(var)
 
