@@ -41,7 +41,9 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         References
         ----------
         Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers. Machine Learning 29: 131–163
+
         """
+
         self.class_node = class_node
         self.root_node = root_node
 
@@ -69,7 +71,9 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         >>> model = est.estimate()
         >>> nx.draw_circular(model, with_labels=True, arrowsize=20, arrowstyle='fancy', alpha=0.3)
         >>> plt.show()
+
         """
+
         if self.class_node not in self.data.columns:
             raise ValueError("class node must exist in data")
 
