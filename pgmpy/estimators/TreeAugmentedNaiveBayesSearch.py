@@ -82,11 +82,11 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         for i in range(total_cols):
             from_node = df_features.columns[i]
             G.add_node(from_node)
-            for j in range(i+1, total_cols):
+            for j in range(i + 1, total_cols):
                 to_node = df_features.columns[j]
                 G.add_node(to_node)
                 # edge weight is the MI between a pair of independent variables
-                mi = mutual_info_score(df_features.iloc[:,i], df_features.iloc[:,j])
+                mi = mutual_info_score(df_features.iloc[:, i], df_features.iloc[:, j])
                 G.add_edge(from_node, to_node, weight=mi)
         T = nx.maximum_spanning_tree(G)
 
@@ -101,4 +101,3 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
             D.add_edge(self.class_node, node)
 
         return DAG(D)
-
