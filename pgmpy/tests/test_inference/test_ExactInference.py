@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import itertools
 import numpy.testing as np_test
 
 from pgmpy.inference import VariableElimination
@@ -660,6 +661,52 @@ class TestBeliefPropagation(unittest.TestCase):
         self.assertRaises(
             ValueError, belief_propagation.map_query, variables=["J"], evidence=["J"]
         )
+
+    def test_issue_1048(self):
+        model = BayesianModel()
+
+        # Nodes
+        parents = ["parent"]
+        children = ["child_{}".format(i) for i in range(10)]
+
+        # Add nodes and edges
+        model.add_nodes_from(parents + children)
+        model.add_edges_from(itertools.product(parents, children))
+
+        # Add cpds
+        model.add_cpds(TabularCPD(parents[0], 2, [[0.5], [0.5]]))
+        for c in children:
+            model.add_cpds(
+                TabularCPD(
+                    c, 2, [[0.9, 0.1], [0.1, 0.9]], evidence=parents, evidence_card=[2]
+                )
+            )
+
+        # Infer
+        inf = BeliefPropagation(model)
+        inf.calibrate()
+        evidence = {}
+
+        expected_evidences = [
+            {},
+            {"child_0": 1},
+            {"child_0": 1, "child_1": 1},
+            {"child_0": 1, "child_1": 1, "child_2": 1},
+        ]
+        expected_values = [
+            np.array([0.5, 0.5]),
+            np.array([0.1, 0.9]),
+            np.array([0.0122, 0.9878]),
+            np.array([0.0014, 0.9987]),
+        ]
+        for i, c in enumerate(children[:4]):
+            self.assertEqual(evidence, expected_evidences[i])
+            np_test.assert_almost_equal(
+                inf.query(["parent"], evidence).normalize(inplace=False).values,
+                expected_values[i],
+                decimal=2,
+            )
+            evidence.update({c: 1})
 
     def tearDown(self):
         del self.junction_tree
