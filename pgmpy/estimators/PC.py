@@ -54,7 +54,7 @@ class PC(StructureEstimator):
 
         super(PC, self).__init__(data=data, kwargs=kwargs)
 
-    def estimate(self, significance_level=0.01):
+    def estimate(self, max_conditional_variables=5, variant='parallel', significance_level=0.01, n_jobs=-1):
         """
         Estimates a DAG for the data set, using the PC constraint-based
         structure learning algorithm. Independencies are identified from the
@@ -72,6 +72,12 @@ class PC(StructureEstimator):
             falsely rejecting the null hypothesis that variables are independent,
             given that they are. The lower `significance_level`, the less likely
             we are to accept dependencies, resulting in a sparser graph.
+
+        variant: str (one of "orig", "stable", "parallel")
+            The variant of PC algorithm to run.
+                "orig": The original PC algorithm. Might not give the same results in different runs but does less independence tests compared to stable.
+                "stable": Gives the same result in every run but does needs to do more statistical independence tests.
+                "parallel": Parallel version of PC Stable. Can run on multiple cores with the same result on each run.
 
         Returns
         -------
@@ -110,11 +116,18 @@ class PC(StructureEstimator):
         >>> print(model.edges())
         [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
         """
-        skel, separating_sets = self.build_skeleton()
+        if variant not in ["orig", "stable", "parallel"]:
+            raise ValueError(f"variant must be one of: orig, stable, or parallel. Got: {variant}")
+        if variant == "orig":
+            skel, separating_sets = self.build_skeleton_orig()
+        elif variant == "stable":
+            skel, separating_sets = self.build_skeleton_stable()
+        elif variant == "parallel":
+            skel, separating_sets = self.build_skeleton_parallel(n_jobs=n_jobs)
         pdag = self.skeleton_to_pdag(skel, separating_sets)
         return pdag.to_dag()
 
-    def build_skeleton(self):
+    def build_skeleton(self, variant, max_conditional_variables):
         """Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
         provided as an instance of the `Independencies`-class or by passing a
@@ -177,27 +190,117 @@ class PC(StructureEstimator):
         >>> print(skel.edges())
         [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')]
         """
-        graph = UndirectedGraph(combinations(self.nodes, 2))
+# In [38]: def build_skel_stable(nodes=['A', 'B', 'C', 'D']):
+#     ...:     graph = nx.complete_graph(n=nodes, create_using=nx.Graph)
+#     ...:     lim_neigh = 0
+#     ...:     separating_sets = dict()
+#     ...:     while not all(map(lambda t: len(list(graph.neighbors(t))) < lim_neigh, graph.nodes())):
+#     ...:         neighbors = {node: set(graph[node]) for node in graph.nodes()}
+#     ...:         for (u, v) in graph.edges():
+#     ...:             for sep_set in combinations(neighbors[u] - {v}, lim_neigh):
+#     ...:                 print(f"Testing {u}, {v}, {sep_set}")
+#     ...:                 # import pdb; pdb.set_trace()
+#     ...:                 if test_ind(X=u, Y=v, Z=list(sep_set)):
+#     ...:                     separating_sets[(u, v)] = sep_set
+#     ...:                     print(f"Removing {u}, {v}")
+#     ...:                     graph.remove_edge(u, v)
+#     ...:                     break
+#     ...:         lim_neigh += 1
+#     ...:     return graph
+#
+# In [36]: def build_skel_orig(nodes=['A', 'B', 'C', 'D']):
+#     ...:     graph = nx.complete_graph(n=nodes, create_using=nx.Graph)
+#     ...:     lim_neigh = 0
+#     ...:     separating_sets = dict()
+#     ...:     while not all(map(lambda t: len(list(graph.neighbors(t))) < lim_neigh, graph.nodes())):
+#     ...:         for (u, v) in graph.edges():
+#     ...:             for sep_set in combinations(set(graph.neighbors(u)) - {v}, lim_neigh):
+#     ...:                 print(f"Testing {u}, {v}, {sep_set}")
+#     ...:                 # import pdb; pdb.set_trace()
+#     ...:                 if test_ind(X=u, Y=v, Z=list(sep_set)):
+#     ...:                     separating_sets[(u, v)] = sep_set
+#     ...:                     print(f"Removing {u}, {v}")
+#     ...:                     graph.remove_edge(u, v)
+#     ...:                     break
+#     ...:         lim_neigh += 1
+#     ...:     return graph
+#
+# In [52]: def build_skel_p(nodes=['A', 'B', 'C', 'D']): 
+#     ...:     graph = nx.complete_graph(n=nodes, create_using=nx.Graph) 
+#     ...:     lim_neigh = 0 
+#     ...:     separating_sets = dict() 
+#     ...:     executor = Parallel(n_jobs=-1, prefer='threads') 
+#     ...:     while not all(map(lambda t: len(list(graph.neighbors(t))) < lim_neigh, graph.nodes())): 
+#     ...:         neighbors = {node: set(graph[node]) for node in graph.nodes()} 
+#     ...:         for (u, v) in graph.edges(): 
+#     ...:             sep_set_combinations = list(combinations(neighbors[u] - {v}, lim_neigh)) 
+#     ...:             tests = executor(delayed(test_ind)(X=u, Y=v, Z=list(sep_set)) for sep_set in sep_set_combinations) 
+#     ...:             if any(tests): 
+#     ...:                 print(f"Removing edge {u}, {v}") 
+#     ...:                 graph.remove_edge(u, v) 
+#     ...:                 separating_sets[(u, v)] = sep_set_combinations[tests.index(True)] 
+#     ...:         lim_neigh += 1 
+#     ...:     return graph 
+# 
+#     
+
+        # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        while not all(
-            [len(list(graph.neighbors(node))) < lim_neighbors for node in self.nodes]
-        ):
-            for node in self.nodes:
-                for neighbor in list(graph.neighbors(node)):
-                    # search if there is a set of neighbors (of size lim_neighbors)
-                    # that makes X and Y independent:
-                    for separating_set in combinations(
-                        set(graph.neighbors(node)) - set([neighbor]), lim_neighbors
-                    ):
-                        if self.ci_test.test_independence(
-                            node, neighbor, separating_set
+
+        # Step 1: Initialize a fully connected undirected graph
+        graph = nx.complete_graph(n=self.nodes, create_using=nx.Graph)
+
+        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
+        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
+        while (not all([len(list(graph.neighbors(node))) < lim_neighbors for node in self.nodes])) or (lim_neighbors > max_conditional_variables):
+            # Step 2: Iterate over the edges and find a conditioning set of size `lim_neighbors`
+            # which makes u and v independent.
+            for (u, v) in graph.edges():
+                for separating_set in combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors):
+                    # Step 3: If a conditioning set exists remove the edge, store the separating set
+                    #         and move on to finding conditioning set for next edge.
+                    if self.ci_test.test_independence(
+                            u, v, separating_set
                         ):
-                            separating_sets[
-                                frozenset((node, neighbor))
-                            ] = separating_set
-                            graph.remove_edge(node, neighbor)
-                            break
+                        separating_sets[(u, v)] = separating_set
+                        graph.remove_edge(u, v)
+                        break
+
+            # Step 4: After iterating over all the edges, expand the search space by increasing the size 
+            #         of conditioning set by 1.
+            lim_neighbors += 1
+
+        return graph, separating_sets
+
+    def build_skeleton_stable(self, n_jobs):
+        # Initialize initial values and structures.
+        lim_neighbors = 0
+        separating_sets = dict()
+
+        # Step 1: Initialize a fully connected undirected graph
+        graph = nx.complete_graph(n=self.nodes, create_using=nx.Graph)
+
+        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
+        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
+        while (not all([len(list(graph.neighbors(node))) < lim_neighbors for node in self.nodes])) or (lim_neighbors > max_conditional_variables):
+            # Step 2: Iterate over the edges and find a conditioning set of size `lim_neighbors`
+            # which makes u and v independent.
+            for (u, v) in graph.edges():
+                # Step 3: Precompute neighbors as this is the stable algorithm.
+                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                for separating_set in combinations(neighbors[u] - set([v]), lim_neighbors):
+                    # Step 4: If a conditioning set exists remove the edge, store the separating set
+                    #         and move on to finding conditioning set for next edge.
+                    if self.ci_test.test_independence(
+                            u, v, separating_set
+                        ):
+                        separating_sets[(u, v)] = separating_set
+                        graph.remove_edge(u, v)
+                        break
+
+            # Step 5: After iterating over all the edges, expand the search space by increasing the size 
+            #         of conditioning set by 1.
             lim_neighbors += 1
 
         return graph, separating_sets
