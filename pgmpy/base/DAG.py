@@ -771,16 +771,27 @@ class PDAG(nx.DiGraph):
         )
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
-        cycles = []
-        try:
-            cycles = list(nx.find_cycle(self))
-        except nx.NetworkXNoCycle:
-            pass
-        else:
-            out_str = "Cycles are not allowed in a DAG. "
-            out_str += "The following path forms a loop: "
-            out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
-            raise ValueError(out_str)
+        # cycles = []
+        # try:
+        #     cycles = list(nx.find_cycle(self))
+        # except nx.NetworkXNoCycle:
+        #     pass
+        # else:
+        #     out_str = "Cycles are not allowed in a DAG. "
+        #     out_str += "The following path forms a loop: "
+        #     out_str += "".join(["({u},{v}) ".format(u=u, v=v) for (u, v) in cycles])
+        #     raise ValueError(out_str)
+
+    def copy(self):
+        """
+        Returns a copy of the object instance.
+
+        Returns
+        -------
+        PDAG instance: Returns a copy of self.
+        """
+        return PDAG(directed_ebunch=list(self.directed_edges.copy()),
+                    undirected_ebunch=list(self.undirected_edges.copy()))
 
     def to_dag(self, required_edges=[]):
         """
@@ -797,6 +808,7 @@ class PDAG(nx.DiGraph):
 
         Examples
         --------
+
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
@@ -805,4 +817,37 @@ class PDAG(nx.DiGraph):
         dag.add_nodes_from(self.nodes())
         dag.add_edges_from(self.directed_edges)
 
-        # TODO
+        pdag = self.copy()
+        while pdag.number_of_nodes() > 0:
+            # find node with (1) no directed outgoing edges and
+            #                (2) the set of undirecte neighbors is either empty or 
+            #                    undirected neighbors + parents of X are a clique
+            found = False
+            for X in pdag.nodes():
+                directed_outgoing_edges = set(pdag.successors(X)) - set(pdag.predecessors(X))
+                undirected_neighbors = set(pdag.successors(X)) & set(pdag.predecessors(X))
+                neighbors_are_clique = all((pdag.has_edge(Y, Z) for Z in pdag.predecessors(X) for Y in undirected_neighbors if not Y==Z))
+
+                if not directed_outgoing_edges and (not undirected_neighbors or neighbors_are_clique):
+                    found = True
+                    # add all edges of X as outgoing edges to dag
+                    for Y in pdag.predecessors(X):
+                        dag.add_edge(Y, X)
+                    pdag.remove_node(X)
+                    break
+
+            if not found:
+                warn(
+                    "PDAG has no faithful extension (= no oriented DAG with the "
+                    + "same v-structures as PDAG). Remaining undirected PDAG edges "
+                    + "oriented arbitrarily."
+                )
+                for X, Y in pdag.edges():
+                    if not dag.has_edge(Y, X):
+                        try:
+                            dag.add_edge(X, Y)
+                        except ValueError:
+                            pass
+                break
+            return dag
+
