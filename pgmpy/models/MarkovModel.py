@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import networkx as nx
 import numpy as np
+from networkx.algorithms.components import connected_components
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors.discrete import DiscreteFactor
@@ -631,7 +632,8 @@ class MarkovModel(UndirectedGraph):
 
         The ordering of parents may not remain constant. It would depend on the
         ordering of variable in the junction tree (which is not constant) all the
-        time.
+        time. Also, if the model is not connected, the connected components are
+        treated as separate models, converted, and then joined together.
 
         Examples
         --------
@@ -648,39 +650,51 @@ class MarkovModel(UndirectedGraph):
         """
         from pgmpy.models import BayesianModel
 
-        bm = BayesianModel()
-        var_clique_dict = defaultdict(tuple)
-        var_order = []
+        # If the graph is not connected, treat them as separate models and join them together in the end.
+        bms = []
+        for node_set in connected_components(self):
+            bm = BayesianModel()
+            var_clique_dict = defaultdict(tuple)
+            var_order = []
 
-        # Create a junction tree from the markov model.
-        # Creation of clique tree involves triangulation, finding maximal cliques
-        # and creating a tree from these cliques
-        junction_tree = self.to_junction_tree()
+            subgraph = self.subgraph(node_set)
 
-        # create an ordering of the nodes based on the ordering of the clique
-        # in which it appeared first
-        root_node = next(iter(junction_tree.nodes()))
-        bfs_edges = nx.bfs_edges(junction_tree, root_node)
-        for node in root_node:
-            var_clique_dict[node] = root_node
-            var_order.append(node)
-        for edge in bfs_edges:
-            clique_node = edge[1]
-            for node in clique_node:
-                if not var_clique_dict[node]:
-                    var_clique_dict[node] = clique_node
-                    var_order.append(node)
+            # Create a junction tree from the markov model.
+            # Creation of clique tree involves triangulation, finding maximal cliques
+            # and creating a tree from these cliques
+            junction_tree = MarkovModel(subgraph.edges()).to_junction_tree()
 
-        # create a bayesian model by adding edges from parent of node to node as
-        # par(x_i) = (var(c_k) - x_i) \cap {x_1, ..., x_{i-1}}
-        for node_index in range(len(var_order)):
-            node = var_order[node_index]
-            node_parents = (set(var_clique_dict[node]) - set([node])).intersection(
-                set(var_order[:node_index])
-            )
-            bm.add_edges_from([(parent, node) for parent in node_parents])
-            # TODO : Convert factor into CPDs
-        return bm
+            # create an ordering of the nodes based on the ordering of the clique
+            # in which it appeared first
+            root_node = next(iter(junction_tree.nodes()))
+            bfs_edges = nx.bfs_edges(junction_tree, root_node)
+            for node in root_node:
+                var_clique_dict[node] = root_node
+                var_order.append(node)
+            for edge in bfs_edges:
+                clique_node = edge[1]
+                for node in clique_node:
+                    if not var_clique_dict[node]:
+                        var_clique_dict[node] = clique_node
+                        var_order.append(node)
+
+            # create a bayesian model by adding edges from parent of node to node as
+            # par(x_i) = (var(c_k) - x_i) \cap {x_1, ..., x_{i-1}}
+            for node_index in range(len(var_order)):
+                node = var_order[node_index]
+                node_parents = (set(var_clique_dict[node]) - set([node])).intersection(
+                    set(var_order[:node_index])
+                )
+                bm.add_edges_from([(parent, node) for parent in node_parents])
+                # TODO : Convert factor into CPDs
+            bms.append(bm)
+
+        # Join the bms in a single model.
+        final_bm = BayesianModel()
+        for bm in bms:
+            final_bm.add_edges_from(bm.edges())
+            final_bm.add_nodes_from(bm.nodes())
+        return final_bm
 
     def get_partition_function(self):
         """
