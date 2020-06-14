@@ -80,7 +80,6 @@ def chi_square(X, Y, Z, data, **kwargs):
         state_names = {
             var_name: data.loc[:, var_name].unique() for var_name in data.columns
         }
-
     num_params = (
         (len(state_names[X]) - 1)
         * (len(state_names[Y]) - 1)
