@@ -790,8 +790,10 @@ class PDAG(nx.DiGraph):
         -------
         PDAG instance: Returns a copy of self.
         """
-        return PDAG(directed_ebunch=list(self.directed_edges.copy()),
-                    undirected_ebunch=list(self.undirected_edges.copy()))
+        return PDAG(
+            directed_ebunch=list(self.directed_edges.copy()),
+            undirected_ebunch=list(self.undirected_edges.copy()),
+        )
 
     def to_dag(self, required_edges=[]):
         """
@@ -820,15 +822,28 @@ class PDAG(nx.DiGraph):
         pdag = self.copy()
         while pdag.number_of_nodes() > 0:
             # find node with (1) no directed outgoing edges and
-            #                (2) the set of undirecte neighbors is either empty or 
+            #                (2) the set of undirecte neighbors is either empty or
             #                    undirected neighbors + parents of X are a clique
             found = False
             for X in pdag.nodes():
-                directed_outgoing_edges = set(pdag.successors(X)) - set(pdag.predecessors(X))
-                undirected_neighbors = set(pdag.successors(X)) & set(pdag.predecessors(X))
-                neighbors_are_clique = all((pdag.has_edge(Y, Z) for Z in pdag.predecessors(X) for Y in undirected_neighbors if not Y==Z))
+                directed_outgoing_edges = set(pdag.successors(X)) - set(
+                    pdag.predecessors(X)
+                )
+                undirected_neighbors = set(pdag.successors(X)) & set(
+                    pdag.predecessors(X)
+                )
+                neighbors_are_clique = all(
+                    (
+                        pdag.has_edge(Y, Z)
+                        for Z in pdag.predecessors(X)
+                        for Y in undirected_neighbors
+                        if not Y == Z
+                    )
+                )
 
-                if not directed_outgoing_edges and (not undirected_neighbors or neighbors_are_clique):
+                if not directed_outgoing_edges and (
+                    not undirected_neighbors or neighbors_are_clique
+                ):
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.predecessors(X):
@@ -850,4 +865,3 @@ class PDAG(nx.DiGraph):
                             pass
                 break
             return dag
-
