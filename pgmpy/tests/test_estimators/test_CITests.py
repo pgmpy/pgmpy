@@ -6,7 +6,6 @@ from numpy import testing as np_test
 
 from pgmpy.estimators.CITests import pearsonr, chi_square
 
-
 np.random.seed(42)
 
 
