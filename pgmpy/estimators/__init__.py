@@ -8,6 +8,7 @@ from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
+from pgmpy.estimators.PC import PC
 
 __all__ = [
     "BaseEstimator",
@@ -26,4 +27,5 @@ __all__ = [
     "SEMEstimator",
     "IVEstimator",
     "MmhcEstimator",
+    "PC",
 ]

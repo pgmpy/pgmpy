@@ -8,7 +8,7 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.independencies import Independencies, IndependenceAssertion
-from pgmpy.estimators.CITests import ChiSquare, Pearsonr, IndependenceMatching
+from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
 class PC(StructureEstimator):
@@ -147,11 +147,17 @@ class PC(StructureEstimator):
 
         # Step 1: Run the PC algorithm to build the skeleton
         if variant == "orig":
-            skel, separating_sets = self.build_skeleton_orig(ci_test, max_cond_vars, significance_level, kwargs)
+            skel, separating_sets = self.build_skeleton_orig(
+                ci_test, max_cond_vars, significance_level, kwargs
+            )
         elif variant == "stable":
-            skel, separating_sets = self.build_skeleton_stable(ci_test, max_cond_vars, significance_level, kwargs)
+            skel, separating_sets = self.build_skeleton_stable(
+                ci_test, max_cond_vars, significance_level, kwargs
+            )
         elif variant == "parallel":
-            skel, separating_sets = self.build_skeleton_parallel(ci_test, max_cond_vars, significance_level, n_jobs, kwargs)
+            skel, separating_sets = self.build_skeleton_parallel(
+                ci_test, max_cond_vars, significance_level, n_jobs, kwargs
+            )
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
@@ -166,7 +172,9 @@ class PC(StructureEstimator):
                 f"return_type must be one of: dag, pdag, or cpdag. Got: {return_type}"
             )
 
-    def build_skeleton(self, ci_test='chi_square', max_cond_vars=5, significance_level=0.01, **kwargs):
+    def build_skeleton_orig(
+        self, ci_test="chi_square", max_cond_vars=5, significance_level=0.01, **kwargs
+    ):
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
         using (the first part of) the PC algorithm. The independencies can either be
@@ -221,9 +229,18 @@ class PC(StructureEstimator):
         >>> print(skel.edges())
         [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')]
         """
+
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
+        if ci_test == "chi_square":
+            ci_test = chi_square
+        elif ci_test == "pearsonr":
+            ci_test = pearsonr
+        elif callable(ci_test):
+            ci_test = ci_test
+        else:
+            raise ValueError("CI test must be this this")
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.nodes, create_using=nx.Graph)
