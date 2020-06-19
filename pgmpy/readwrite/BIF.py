@@ -345,9 +345,14 @@ class BIFReader(object):
         ]
         return edges
 
-    def get_model(self):
+    def get_model(self, state_name_type=str):
         """
-        Returns the fitted bayesian model
+        Returns the Bayesian Model read from the file/str.
+
+        Parameters
+        ----------
+        state_name_type: int, str or bool (default: str)
+            The data type to which to convert the state names of the variables.
 
         Example
         ----------
@@ -366,10 +371,10 @@ class BIFReader(object):
             for var in sorted(self.variable_cpds.keys()):
                 values = self.variable_cpds[var]
                 sn = {
-                    p_var: self.variable_states[p_var]
+                    p_var: list(map(state_name_type, self.variable_states[p_var]))
                     for p_var in self.variable_parents[var]
                 }
-                sn[var] = self.variable_states[var]
+                sn[var] = list(map(state_name_type, self.variable_states[var]))
                 cpd = TabularCPD(
                     var,
                     len(self.variable_states[var]),
