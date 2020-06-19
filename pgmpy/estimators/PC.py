@@ -145,9 +145,9 @@ class PC(StructureEstimator):
             )
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
-        skel, separating_sets = self.build_skeleton(ci_test, max_cond_vars,
-                                                    significance_level,
-                                                    variant, kwargs)
+        skel, separating_sets = self.build_skeleton(
+            ci_test, max_cond_vars, significance_level, variant, kwargs
+        )
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
@@ -163,7 +163,12 @@ class PC(StructureEstimator):
             )
 
     def build_skeleton(
-        self, ci_test="chi_square", max_cond_vars=5, significance_level=0.01, variant='stable', **kwargs
+        self,
+        ci_test="chi_square",
+        max_cond_vars=5,
+        significance_level=0.01,
+        variant="stable",
+        **kwargs,
     ):
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
@@ -237,11 +242,13 @@ class PC(StructureEstimator):
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while (not all([len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables])):
+        while not all(
+            [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
+        ):
 
-            # Step 2: Iterate over the edges and find a conditioning set of 
+            # Step 2: Iterate over the edges and find a conditioning set of
             # size `lim_neighbors` which makes u and v independent.
-            if variant == 'orig':
+            if variant == "orig":
                 for (u, v) in graph.edges():
                     for separating_set in combinations(
                         set(graph.neighbors(u)) - set([v]), lim_neighbors
@@ -253,21 +260,21 @@ class PC(StructureEstimator):
                             graph.remove_edge(u, v)
                             break
 
-            elif variant == 'stable':
+            elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for (u, v) in graph.edges():
                     for separating_set in combinations(
                         neighbors[u] - set([v]), lim_neighbors
                     ):
-                        # If a conditioning set exists remove the edge, store the 
+                        # If a conditioning set exists remove the edge, store the
                         # separating set and move on to finding conditioning set for next edge.
                         if ci_test(u, v, separating_set):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
 
-            elif variant == 'parallel':
+            elif variant == "parallel":
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for (u, v) in graph.edges():
                     # In case of parallel, precompute neighbors as this is the stable algorithm.
@@ -282,7 +289,9 @@ class PC(StructureEstimator):
                             break
 
             else:
-                raise ValueError(f"variant must be one of (orig, stable, parallel). Got: {variant}")
+                raise ValueError(
+                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
+                )
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
