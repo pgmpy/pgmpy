@@ -145,19 +145,10 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
 
-        # Step 1: Run the PC algorithm to build the skeleton
-        if variant == "orig":
-            skel, separating_sets = self.build_skeleton_orig(
-                ci_test, max_cond_vars, significance_level, kwargs
-            )
-        elif variant == "stable":
-            skel, separating_sets = self.build_skeleton_stable(
-                ci_test, max_cond_vars, significance_level, kwargs
-            )
-        elif variant == "parallel":
-            skel, separating_sets = self.build_skeleton_parallel(
-                ci_test, max_cond_vars, significance_level, n_jobs, kwargs
-            )
+        # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
+        skel, separating_sets = self.build_skeleton(ci_test, max_cond_vars,
+                                                    significance_level,
+                                                    variant, kwargs)
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
@@ -172,8 +163,8 @@ class PC(StructureEstimator):
                 f"return_type must be one of: dag, pdag, or cpdag. Got: {return_type}"
             )
 
-    def build_skeleton_orig(
-        self, ci_test="chi_square", max_cond_vars=5, significance_level=0.01, **kwargs
+    def build_skeleton(
+        self, ci_test="chi_square", max_cond_vars=5, significance_level=0.01, variant='stable', **kwargs
     ):
         """
         Estimates a graph skeleton (UndirectedGraph) from a set of independencies
@@ -257,61 +248,94 @@ class PC(StructureEstimator):
         ) or (lim_neighbors > max_conditional_variables):
             # Step 2: Iterate over the edges and find a conditioning set of size `lim_neighbors`
             # which makes u and v independent.
-            for (u, v) in graph.edges():
-                for separating_set in combinations(
-                    set(graph.neighbors(u)) - set([v]), lim_neighbors
-                ):
-                    # Step 3: If a conditioning set exists remove the edge, store the separating set
-                    #         and move on to finding conditioning set for next edge.
-                    if self.ci_test.test_independence(u, v, separating_set):
-                        separating_sets[(u, v)] = separating_set
-                        graph.remove_edge(u, v)
-                        break
 
-            # Step 4: After iterating over all the edges, expand the search space by increasing the size
+            if variant == 'orig':
+                for (u, v) in graph.edges():
+                    for separating_set in combinations(
+                        set(graph.neighbors(u)) - set([v]), lim_neighbors
+                    ):
+                        # If a conditioning set exists remove the edge, store the separating set
+                        # and move on to finding conditioning set for next edge.
+                        if self.ci_test.test_independence(u, v, separating_set):
+                            separating_sets[(u, v)] = separating_set
+                            graph.remove_edge(u, v)
+                            break
+
+            elif variant == 'stable':
+                for (u, v) in graph.edges():
+                    # In case of stable, precompute neighbors as this is the stable algorithm.
+                    neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                    for separating_set in combinations(
+                        neighbors[u] - set([v]), lim_neighbors
+                    ):
+                        # If a conditioning set exists remove the edge, store the separating set
+                        # and move on to finding conditioning set for next edge.
+                        if self.ci_test.test_independence(u, v, separating_set):
+                            separating_sets[(u, v)] = separating_set
+                            graph.remove_edge(u, v)
+                            break
+
+            elif variant == 'parallel':
+                for (u, v) in graph.edges():
+                    # In case of parallel, precompute neighbors as this is the stable algorithm.
+                    neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                    for separating_set in combinations(
+                        neighbors[u] - set([v]), lim_neighbors
+                    ):
+                        # If a conditioning set exists remove the edge, store the separating set
+                        # and move on to finding conditioning set for next edge.
+                        if self.ci_test.test_independence(u, v, separating_set):
+                            separating_sets[(u, v)] = separating_set
+                            graph.remove_edge(u, v)
+                            break
+
+            else:
+                raise ValueError(f"variant must be one of (orig, stable, parallel). Got: {variant}") 
+
+            # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             lim_neighbors += 1
 
         return graph, separating_sets
 
-    def build_skeleton_stable(self, n_jobs):
-        # Initialize initial values and structures.
-        lim_neighbors = 0
-        separating_sets = dict()
-
-        # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.nodes, create_using=nx.Graph)
-
-        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
-        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while (
-            not all(
-                [
-                    len(list(graph.neighbors(node))) < lim_neighbors
-                    for node in self.nodes
-                ]
-            )
-        ) or (lim_neighbors > max_conditional_variables):
-            # Step 2: Iterate over the edges and find a conditioning set of size `lim_neighbors`
-            # which makes u and v independent.
-            for (u, v) in graph.edges():
-                # Step 3: Precompute neighbors as this is the stable algorithm.
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
-                for separating_set in combinations(
-                    neighbors[u] - set([v]), lim_neighbors
-                ):
-                    # Step 4: If a conditioning set exists remove the edge, store the separating set
-                    #         and move on to finding conditioning set for next edge.
-                    if self.ci_test.test_independence(u, v, separating_set):
-                        separating_sets[(u, v)] = separating_set
-                        graph.remove_edge(u, v)
-                        break
-
-            # Step 5: After iterating over all the edges, expand the search space by increasing the size
-            #         of conditioning set by 1.
-            lim_neighbors += 1
-
-        return graph, separating_sets
+#    def build_skeleton_stable(self, n_jobs):
+#        # Initialize initial values and structures.
+#        lim_neighbors = 0
+#        separating_sets = dict()
+#
+#        # Step 1: Initialize a fully connected undirected graph
+#        graph = nx.complete_graph(n=self.nodes, create_using=nx.Graph)
+#
+#        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
+#        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
+#        while (
+#            not all(
+#                [
+#                    len(list(graph.neighbors(node))) < lim_neighbors
+#                    for node in self.nodes
+#                ]
+#            )
+#        ) or (lim_neighbors > max_conditional_variables):
+#            # Step 2: Iterate over the edges and find a conditioning set of size `lim_neighbors`
+#            # which makes u and v independent.
+#            for (u, v) in graph.edges():
+#                # Step 3: Precompute neighbors as this is the stable algorithm.
+#                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+#                for separating_set in combinations(
+#                    neighbors[u] - set([v]), lim_neighbors
+#                ):
+#                    # Step 4: If a conditioning set exists remove the edge, store the separating set
+#                    #         and move on to finding conditioning set for next edge.
+#                    if self.ci_test.test_independence(u, v, separating_set):
+#                        separating_sets[(u, v)] = separating_set
+#                        graph.remove_edge(u, v)
+#                        break
+#
+#            # Step 5: After iterating over all the edges, expand the search space by increasing the size
+#            #         of conditioning set by 1.
+#            lim_neighbors += 1
+#
+#        return graph, separating_sets
 
     @staticmethod
     def skeleton_to_pdag(skel, separating_sets):
