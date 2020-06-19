@@ -38,15 +38,15 @@ class BaseEstimator(object):
         self.data = data
         self.complete_samples_only = complete_samples_only
 
-        variables = list(data.columns.values)
+        self.variables = list(data.columns.values)
 
         if not isinstance(state_names, dict):
             self.state_names = {
-                var: self._collect_state_names(var) for var in variables
+                var: self._collect_state_names(var) for var in self.variables
             }
         else:
             self.state_names = dict()
-            for var in variables:
+            for var in self.variables:
                 if var in state_names:
                     if not set(self._collect_state_names(var)) <= set(state_names[var]):
                         raise ValueError(

@@ -11,7 +11,8 @@ class TestPCFakeCITest(unittest.TestCase):
         self.fake_data = pd.DataFrame(np.random.random((1000, 4)), columns=['A', 'B', 'C', 'D'])
         self.estimator = PC(self.fake_data)
 
-    def fake_ci_test(self, X, Y, Z=[]):
+    @staticmethod
+    def fake_ci_t(X, Y, Z=[]):
         """
         A mock CI testing function which gives False for every condition
         except for the following:
@@ -21,6 +22,7 @@ class TestPCFakeCITest(unittest.TestCase):
             4. A _|_ B | C
             5. A _|_ C | B
         """
+        Z = list(Z)
         if X == "B":
             if Y == "C" or Y == "D":
                 return True
@@ -42,25 +44,30 @@ class TestPCFakeCITest(unittest.TestCase):
         return False
 
     def test_build_skeleton_orig(self):
-        skel, sep_set = self.estimator.build_skeleton_orig(ci_test=self.fake_ci_test)
+        skel, sep_set = self.estimator.build_skeleton(ci_test=TestPCFakeCITest.fake_ci_t, variant='orig')
         expected_edges = {('A', 'C'), ('A', 'D')}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set = self.estimator.build_skeleton_orig(ci_test=self.fake_ci_test, max_cond_vars=0)
+        skel, sep_set = self.estimator.build_skeleton(ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant='orig')
         expected_edges = {('A', 'B'), ('A', 'C'), ('A', 'D')}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
     def test_build_skeleton_stable(self):
-        skel, sep_set = self.estimator.build_skeleton_stable(ci_test=self.fake_ci_test)
+        skel, sep_set = self.estimator.build_skeleton(ci_test=TestPCFakeCITest.fake_ci_t, variant='stable')
         expected_edges = {('A', 'D')}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        skel, sep_set = self.estimator.build_skeleton_orig(ci_test=self.fake_ci_test, max_cond_vars=0)
+        skel, sep_set = self.estimator.build_skeleton(ci_test=TestPCFakeCITest.fake_ci_t, max_cond_vars=0, variant='stable')
         expected_edges = {('A', 'B'), ('A', 'C'), ('A', 'D')}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
 
+#class TestPCEstimator(unittest.TestCase):
+#    def test_build_skeleton(self):
+#        ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
+#        ind = ind.closure()
+#        estimator = PC()

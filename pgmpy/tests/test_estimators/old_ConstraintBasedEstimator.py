@@ -10,7 +10,7 @@ from pgmpy.models import BayesianModel
 from pgmpy.base import DAG, UndirectedGraph
 
 
-class TestConstraintBasedEstimator(unittest.TestCase):
+class ConstraintBasedEstimator(unittest.TestCase):
     def test_build_skeleton(self):
         ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
         ind = ind.closure()
