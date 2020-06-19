@@ -355,7 +355,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         with open("dog_problem_output.xbif", "r") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
-        model = reader.get_model()
+        model = reader.get_model(state_name_type=str)
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
@@ -363,21 +363,13 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
         with open("grade_problem_output.xbif", "r") as f:
             reader = XMLBIFReader(f)
-        model = reader.get_model()
+        model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual(
-            {
-                "G": ["0", "1", "2"],
-                "I": ["0", "1"],
-                "D": ["0", "1"],
-                "S": ["0", "1"],
-                "L": ["0", "1"],
-            },
-            model.get_cpds("D").state_names,
+            {"D": [0, 1],}, model.get_cpds("D").state_names,
         )
         os.remove("grade_problem_output.xbif")
 
-    @unittest.skip("Fix this when #1221 is resolved")
     def assert_models_equivelent(self, expected, got):
         self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
         for node in expected.nodes():
