@@ -165,11 +165,11 @@ class PC(StructureEstimator):
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
-                ci_test=ci_test,
-                max_cond_vars=max_cond_vars,
-                significance_level=significance_level,
-                variant=variant,
-                **kwargs
+            ci_test=ci_test,
+            max_cond_vars=max_cond_vars,
+            significance_level=significance_level,
+            variant=variant,
+            **kwargs,
         )
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
@@ -282,7 +282,13 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the separating set
                         # and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
+                        if ci_test(
+                            u,
+                            v,
+                            separating_set,
+                            data=self.data,
+                            independencies=self.independencies,
+                        ):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
@@ -296,7 +302,13 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the
                         # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
+                        if ci_test(
+                            u,
+                            v,
+                            separating_set,
+                            data=self.data,
+                            independencies=self.independencies,
+                        ):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
@@ -310,7 +322,13 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the separating set
                         # and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
+                        if ci_test(
+                            u,
+                            v,
+                            separating_set,
+                            data=self.data,
+                            independencies=self.independencies,
+                        ):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break

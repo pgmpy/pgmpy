@@ -36,7 +36,7 @@ class BaseEstimator(object):
         """
 
         self.data = data
-        # data can be None in the case when learning structre from 
+        # data can be None in the case when learning structre from
         # independence conditions. Look into PC.py.
         if self.data is not None:
             self.complete_samples_only = complete_samples_only
@@ -51,7 +51,9 @@ class BaseEstimator(object):
                 self.state_names = dict()
                 for var in self.variables:
                     if var in state_names:
-                        if not set(self._collect_state_names(var)) <= set(state_names[var]):
+                        if not set(self._collect_state_names(var)) <= set(
+                            state_names[var]
+                        ):
                             raise ValueError(
                                 f"Data contains unexpected states for variable: {var}."
                             )
