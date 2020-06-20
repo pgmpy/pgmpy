@@ -4,8 +4,12 @@ import pandas as pd
 import numpy as np
 
 from pgmpy.estimators import PC
+from pgmpy.independencies import Independencies
 
 
+# This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
+# high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
+# on computational biology and bioinformatics (2016).
 class TestPCFakeCITest(unittest.TestCase):
     def setUp(self):
         self.fake_data = pd.DataFrame(
@@ -14,7 +18,7 @@ class TestPCFakeCITest(unittest.TestCase):
         self.estimator = PC(self.fake_data)
 
     @staticmethod
-    def fake_ci_t(X, Y, Z=[]):
+    def fake_ci_t(X, Y, Z=[], **kwargs):
         """
         A mock CI testing function which gives False for every condition
         except for the following:
@@ -76,8 +80,201 @@ class TestPCFakeCITest(unittest.TestCase):
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
 
-# class TestPCEstimator(unittest.TestCase):
-#    def test_build_skeleton(self):
-#        ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
-#        ind = ind.closure()
-#        estimator = PC()
+class TestPCEstimatorFromIndependencies(unittest.TestCase):
+    def test_build_skeleton(self):
+        # Specify a set of independencies
+        ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
+        ind = ind.closure()
+        estimator = PC(independencies=ind)
+        skel, sep_sets = estimator.estimate(
+            ci_test="independence_match", return_type="skeleton"
+        )
+
+        expected_edges = {("A", "D"), ("B", "D"), ("C", "D")}
+        expected_sepsets = {("A", "C"): (), ("A", "B"): (), ("C", "B"): ()}
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertSetEqual(expected_sepsets, sep_sets)
+
+        # Generate independencies from a model.
+        model = BayesianModel([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+        estimator = PC(independencies=model.get_independencies())
+        skel, sep_sets = estimator.estimate(
+            ci_test="independence_match", return_type="skeleton"
+        )
+
+        expected_edges = model.edges()
+        expected_sepsets = {
+            ("D", "C"): ("B"),
+            ("E", "B"): ("C"),
+            ("A", "D"): (),
+            ("E", "D"): ("C"),
+            ("E", "A"): ("C"),
+            ("A", "B"): (),
+        }
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertEqual(sep_sets, expected_sepsets)
+
+    def test_skeleton_to_pdag(self):
+        data = pd.DataFrame(
+            np.random.randint(0, 3, size=(1000, 3)), columns=list("ABD")
+        )
+        data["C"] = data["A"] - data["B"]
+        data["D"] += data["A"]
+        estimator = PC(data=data)
+        skel, sep_set = estimator.build_skeleton(ci_test="chi_square")
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_set)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
+        )
+
+        skel = UndirectedGraph([("A", "B"), ("A", "C")])
+        sep_sets1 = {frozenset({"B", "C"}): ()}
+        self.assertSetEqual(
+            set(PC.skeleton_to_pdag(skeleton=skel, separating_set=sep_sets1).edges()),
+            set([("B", "A"), ("C", "A")]),
+        )
+
+        sep_sets2 = {frozenset({"B", "C"}): ("A",)}
+        pdag2 = PC.skeleton_to_pdag(skeleton=skel, separating_set=sep_sets2)
+        self.assertSetEqual(
+            set(c.skeleton_to_pdag(skel, sep_sets2).edges()),
+            set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
+        )
+
+    def test_estimate_dag(self):
+        ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
+        ind = ind.closure()
+        estimator = PC(independencies=ind)
+        model = estimator.estimate(ci_test="independence_match", return_type="dag")
+        expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
+        self.assertEqual(model.edges(), expected_edges)
+
+        model = BayesianModel([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+        estimator = PC(independencies=model.get_independencies())
+        estimated_model = estimator.estimate(
+            ci_test="independence_match", return_type="dag"
+        )
+        expected_edges_1 = set(model.edges())
+        expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
+        self.assertTrue(
+            (set(estimated_model.edges()) == expected_edges_1)
+            or (set(estimated_model.edges()) == expected_edges_2)
+        )
+
+
+class TestPCEstimatorFromDiscreteData(unittest.TestCase):
+    def test_build_skeleton(self):
+        # Fake dataset no: 1
+        data = pd.DataFrame(
+            np.random.randint(0, 2, size=(1000, 5)), columns=list("ABCDE")
+        )
+        data["F"] = data["A"] + data["B"] + data["C"]
+        est = PC(data=data)
+        skel, sep_sets = est.estimate(ci_test="chi_square", return_type="skeleton")
+        expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
+        expected_sepsets = {
+            ("D", "F"): (),
+            ("D", "B"): (),
+            ("A", "C"): (),
+            ("D", "E"): (),
+            ("E", "F"): (),
+            ("E", "C"): (),
+            ("E", "B"): (),
+            ("D", "C"): (),
+            ("A", "B"): (),
+            ("A", "E"): (),
+            ("B", "C"): (),
+            ("A", "D"): (),
+        }
+
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertEqual(sep_sets, expected_sepsets)
+
+        # Fake dataset no: 2
+        data = pd.DataFrame(
+            np.random.randint(0, 2, size=(1000, 3)), columns=list("XYZ")
+        )
+        data["X"] += data["Z"]
+        data["Y"] += data["Z"]
+        est = PC(data=data)
+        skel, sep_sets = est.estimate_skeleton(
+            ci_test="chi_square", return_type="skeleton"
+        )
+        expected_edges = {("X", "Z"), ("Y", "Z")}
+        expected_sepsets = {("X", "Y"): ("Z",)}
+
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertEqual(sep_sets, expected_sepsets)
+
+    def test_build_dag(self):
+        data = pd.DataFrame(
+            np.random.randint(0, 3, size=(1000, 3)), columns=list("XYZ")
+        )
+        data["sum"] = data.sum(axis=1)
+        est = PC(data=data)
+        dag = est.estimate(ci_test="chi_square", return_type="dag")
+
+        expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
+        self.assertEqual(set(dag.edges()), expected_edges)
+
+
+class TestPCEstimatorFromContinuousData(unittest.TestCase):
+    def test_build_skeleton(self):
+        # Fake dataset no: 1
+        data = pd.DataFrame(
+            np.random.randn(1000, 5), columns=list("ABCDE")
+        )
+        data["F"] = data["A"] + data["B"] + data["C"]
+        est = PC(data=data)
+        skel, sep_sets = est.estimate(ci_test="pearsonr", return_type="skeleton")
+        expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
+        expected_sepsets = {
+            ("D", "F"): (),
+            ("D", "B"): (),
+            ("A", "C"): (),
+            ("D", "E"): (),
+            ("E", "F"): (),
+            ("E", "C"): (),
+            ("E", "B"): (),
+            ("D", "C"): (),
+            ("A", "B"): (),
+            ("A", "E"): (),
+            ("B", "C"): (),
+            ("A", "D"): (),
+        }
+
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertEqual(sep_sets, expected_sepsets)
+
+        # Fake dataset no: 2
+        data = pd.DataFrame(
+            np.random.randn(1000, 3), columns=list("XYZ")
+        )
+        data["X"] += data["Z"]
+        data["Y"] += data["Z"]
+        est = PC(data=data)
+        skel, sep_sets = est.estimate_skeleton(
+            ci_test="pearsonr", return_type="skeleton"
+        )
+        expected_edges = {("X", "Z"), ("Y", "Z")}
+        expected_sepsets = {("X", "Y"): ("Z",)}
+
+        for u, v in skel.edges():
+            self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
+        self.assertEqual(sep_sets, expected_sepsets)
+
+    def test_build_dag(self):
+        data = pd.DataFrame(
+            np.random.randn(1000, 3), columns=list("XYZ")
+        )
+        data["sum"] = data.sum(axis=1)
+        est = PC(data=data)
+        dag = est.estimate(ci_test="pearsonr", return_type="dag")
+
+        expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
+        self.assertEqual(set(dag.edges()), expected_edges)

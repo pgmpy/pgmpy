@@ -11,7 +11,7 @@ from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
 class BaseEstimator(object):
-    def __init__(self, data, state_names=None, complete_samples_only=True):
+    def __init__(self, data=None, state_names=None, complete_samples_only=True):
         """
         Base class for estimators in pgmpy; `ParameterEstimator`,
         `StructureEstimator` and `StructureScore` derive from this class.
@@ -36,25 +36,28 @@ class BaseEstimator(object):
         """
 
         self.data = data
-        self.complete_samples_only = complete_samples_only
+        # data can be None in the case when learning structre from 
+        # independence conditions. Look into PC.py.
+        if self.data is not None:
+            self.complete_samples_only = complete_samples_only
 
-        self.variables = list(data.columns.values)
+            self.variables = list(data.columns.values)
 
-        if not isinstance(state_names, dict):
-            self.state_names = {
-                var: self._collect_state_names(var) for var in self.variables
-            }
-        else:
-            self.state_names = dict()
-            for var in self.variables:
-                if var in state_names:
-                    if not set(self._collect_state_names(var)) <= set(state_names[var]):
-                        raise ValueError(
-                            f"Data contains unexpected states for variable: {var}."
-                        )
-                    self.state_names[var] = state_names[var]
-                else:
-                    self.state_names[var] = self._collect_state_names(var)
+            if not isinstance(state_names, dict):
+                self.state_names = {
+                    var: self._collect_state_names(var) for var in self.variables
+                }
+            else:
+                self.state_names = dict()
+                for var in self.variables:
+                    if var in state_names:
+                        if not set(self._collect_state_names(var)) <= set(state_names[var]):
+                            raise ValueError(
+                                f"Data contains unexpected states for variable: {var}."
+                            )
+                        self.state_names[var] = state_names[var]
+                    else:
+                        self.state_names[var] = self._collect_state_names(var)
 
     def _collect_state_names(self, variable):
         "Return a list of states that the variable takes in the data"
@@ -274,7 +277,7 @@ class ParameterEstimator(BaseEstimator):
 
 
 class StructureEstimator(BaseEstimator):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data=None, independencies=None, **kwargs):
         """
         Base class for structure estimators in pgmpy.
 
@@ -297,7 +300,11 @@ class StructureEstimator(BaseEstimator):
             This sets the behavior of the `state_count`-method.
         """
 
-        super(StructureEstimator, self).__init__(data, **kwargs)
+        self.independencies = independencies
+        if self.independencies is not None:
+            self.variables = self.independencies.all_vars
+
+        super(StructureEstimator, self).__init__(data=data, **kwargs)
 
     def estimate(self):
         pass

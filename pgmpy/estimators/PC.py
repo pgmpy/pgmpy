@@ -5,14 +5,14 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.independencies import Independencies, IndependenceAssertion
 from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
 class PC(StructureEstimator):
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data=None, independencies=None, **kwargs):
         """
         Class for constraint-based estimation of DAGs using the PC algorithm
         from a given data set.  Identifies (conditional) dependencies in data
@@ -34,7 +34,7 @@ class PC(StructureEstimator):
             2009, Section 18.2
         [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         """
-        super(PC, self).__init__(data=data, **kwargs)
+        super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
@@ -80,11 +80,14 @@ class PC(StructureEstimator):
             The maximum number of conditional variables allowed to do the statistical
             test with.
 
-        return_type: str (one of "dag", "cpdag", "pdag")
-            The type of structure to return. If `return_type=pdag` or `return_type=cpdag`,
-            a partially directed structure is returned. If `return_type=dag`, a
-            fully directed structure is returned if it is possible to orient all
-            the edges.
+        return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
+            The type of structure to return.
+
+            If `return_type=pdag` or `return_type=cpdag`: a partially directed structure                is returned.
+            If `return_type=dag`, a fully directed structure is returned if it
+                is possible to orient all the edges.
+            If `return_type="skeleton", returns an undirected graph along
+                with the separating sets.
 
         significance_level: float (default: 0.01)
             The statistical tests use this value to compare with the p-value of
@@ -97,10 +100,10 @@ class PC(StructureEstimator):
 
         Returns
         -------
-        model: DAG-instance or PDAG-instance
+        model: DAG-instance, PDAG-instance, or (networkx.UndirectedGraph, dict)
                 The estimated model structure, can be a partially directed graph (PDAG)
-                or a fully directed graph (DAG) depending on the value of `return_type`
-                argument.
+                or a fully directed graph (DAG), or (Undirected Graph, separating sets)
+                depending on the value of `return_type` argument.
 
         References
         ----------
@@ -139,14 +142,34 @@ class PC(StructureEstimator):
         >>> print(model.edges())
         [('Z', 'sum'), ('X', 'sum'), ('Y', 'sum')]
         """
+        # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
             raise ValueError(
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
+        elif (not callable(ci_test)) and (
+            ci_test not in ("chi_square", "independence_match", "pearsonr")
+        ):
+            raise ValueError(
+                "ci_test must be a callable or one of: chi_square, pearsonr, independence_match"
+            )
+
+        if (ci_test == "independence_match") and (self.independencies is None):
+            raise ValueError(
+                "For using independence_match, independencies argument must be specified"
+            )
+        elif (ci_test in ("chi_square", "pearsonr")) and (self.data is None):
+            raise ValueError(
+                "For using Chi Square or Pearsonr, data arguement must be specified"
+            )
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
-            ci_test, max_cond_vars, significance_level, variant, kwargs
+                ci_test=ci_test,
+                max_cond_vars=max_cond_vars,
+                significance_level=significance_level,
+                variant=variant,
+                **kwargs
         )
 
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
@@ -157,9 +180,11 @@ class PC(StructureEstimator):
             return pdag
         elif return_type.lower() == "dag":
             return pdag.to_dag()
+        elif return_type.lower() == "skeleton":
+            return skel, separating_sets
         else:
             raise ValueError(
-                f"return_type must be one of: dag, pdag, or cpdag. Got: {return_type}"
+                f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
             )
 
     def build_skeleton(
@@ -232,6 +257,8 @@ class PC(StructureEstimator):
             ci_test = chi_square
         elif ci_test == "pearsonr":
             ci_test = pearsonr
+        elif ci_test == "independence_match":
+            ci_test = independence_match
         elif callable(ci_test):
             ci_test = ci_test
         else:
@@ -255,7 +282,7 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the separating set
                         # and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set):
+                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
@@ -269,7 +296,7 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the
                         # separating set and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set):
+                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
@@ -283,7 +310,7 @@ class PC(StructureEstimator):
                     ):
                         # If a conditioning set exists remove the edge, store the separating set
                         # and move on to finding conditioning set for next edge.
-                        if ci_test(u, v, separating_set):
+                        if ci_test(u, v, separating_set, data=self.data, independencies=self.independencies):
                             separating_sets[(u, v)] = separating_set
                             graph.remove_edge(u, v)
                             break
@@ -302,13 +329,13 @@ class PC(StructureEstimator):
         return graph, separating_sets
 
     @staticmethod
-    def skeleton_to_pdag(skel, separating_sets):
+    def skeleton_to_pdag(skeleton, separating_sets):
         """Orients the edges of a graph skeleton based on information from
         `separating_sets` to form a DAG pattern (DAG).
 
         Parameters
         ----------
-        skel: UndirectedGraph
+        skeleton: UndirectedGraph
             An undirected graph skeleton as e.g. produced by the
             estimate_skeleton method.
 
@@ -345,14 +372,14 @@ class PC(StructureEstimator):
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """
 
-        pdag = skel.to_directed()
+        pdag = skeleton.to_directed()
         node_pairs = combinations(pdag.nodes(), 2)
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
         for X, Y in node_pairs:
-            if not skel.has_edge(X, Y):
-                for Z in set(skel.neighbors(X)) & set(skel.neighbors(Y)):
+            if not skeleton.has_edge(X, Y):
+                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
@@ -395,4 +422,13 @@ class PC(StructureEstimator):
 
             progress = num_edges > pdag.number_of_edges()
 
-        return pdag
+        # TODO: This is temp fix to get a PDAG object.
+        edges = set(pdag.edges())
+        undirected_edges = []
+        directed_edges = []
+        for u, v in edges:
+            if (v, u) in edges:
+                undirected_edges.append((u, v))
+            else:
+                directed_edges.append((u, v))
+        return PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)

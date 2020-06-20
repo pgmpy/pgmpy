@@ -7,7 +7,7 @@ from scipy import stats
 from pgmpy.independencies import IndependenceAssertion
 
 
-def independence_match(X, Y, Z, independencies):
+def independence_match(X, Y, Z, independencies, **kwargs):
     """
     Checks if `X _|_ Y | Z` is in `independencies`. This method is implemneted to
     have an uniform API when the independencies are provided instead of data.
@@ -181,7 +181,7 @@ def chi_square(X, Y, Z, data, **kwargs):
     return chi2, significance_level
 
 
-def pearsonr(X, Y, Z, data):
+def pearsonr(X, Y, Z, data, **kwargs):
     r"""
     Computes Pearson correlation coefficient and p-value for testing non-correlation. Should be used
     only on continuous data. In case when :math:`Z != \null` uses linear regression and computes pearson
