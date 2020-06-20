@@ -652,7 +652,7 @@ $properties}\n"""
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> model = BIFReader('dog-problem.bif').get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.write_bif(filname='test_file.bif')
+        >>> writer.write_bif(filename='test_file.bif')
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
