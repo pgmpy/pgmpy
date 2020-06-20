@@ -774,7 +774,7 @@ class PDAG(nx.DiGraph):
         # TODO: Fix the cycle issue
         # import pdb; pdb.set_trace()
         # try:
-        #     # Filter out undirected edges as they also form a cycle in 
+        #     # Filter out undirected edges as they also form a cycle in
         #     # themself when represented using directed edges.
         #     cycles = filter(lambda t: len(t) > 2, nx.simple_cycles(self))
         #     if cycles:
