@@ -2,7 +2,7 @@
 
 import unittest
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 import pgmpy.tests.help_functions as hf
 import networkx as nx
 
@@ -179,3 +179,85 @@ class TestDoOperator(unittest.TestCase):
         dag_do_x = self.graph.do("A")
         self.assertEqual(set(dag_do_x.nodes()), set(self.graph.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B"), ("A", "Y")])
+
+
+class TestPDAG(unittest.TestCase):
+    def setUp(self):
+        self.pdag_mix = PDAG(directed_ebunch=[('A', 'C'), ('D', 'C')],
+                             undirected_ebunch=[('B', 'A'), ('B', 'D')])
+        self.pdag_dir = PDAG(directed_ebunch=[('A', 'B'), ('D', 'B'), ('A', 'C'), ('D', 'C')])
+        self.pdag_undir = PDAG(undirected_ebunch=[('A', 'C'), ('D', 'C'), ('B', 'A'), ('B', 'D')])
+
+    def test_init_normal(self):
+        # Mix directed and undirected
+        directed_edges = [('A', 'C'), ('D', 'C')]
+        undirected_edges = [('B', 'A'), ('B', 'D')]
+        pdag = PDAG(directed_ebunch=directed_edges,
+                    undirected_ebunch=undirected_edges)
+        expected_edges = {('A', 'C'), ('D', 'C'), ('A', 'B'), ('B', 'A'),
+                          ('B', 'D'), ('D', 'B')}
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.nodes()), {'A', 'B', 'C', 'D'})
+        self.assertEqual(pdag.directed_edges, set(directed_edges))
+        self.assertEqual(pdag.undirected_edges, set(undirected_edges))
+
+        # Only undirected
+        undirected_edges = [('A', 'C'), ('D', 'C'), ('B', 'A'), ('B', 'D')]
+        pdag = PDAG(undirected_ebunch=undirected_edges)
+        expected_edges = {('A', 'C'), ('C', 'A'),
+                          ('D', 'C'), ('C', 'D'),
+                          ('B', 'A'), ('A', 'B'),
+                          ('B', 'D'), ('D', 'B')}
+        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.nodes()), {'A', 'B', 'C', 'D'})
+        self.assertEqual(pdag.directed_edges, set())
+        self.assertEqual(pdag.undirected_edges, set(undirected_edges))
+
+        # Only directed
+        directed_edges = [('A', 'B'), ('D', 'B'), ('A', 'C'), ('D', 'C')]
+        pdag = PDAG(directed_ebunch=directed_edges)
+        self.assertEqual(set(pdag.edges()), set(directed_edges))
+        self.assertEqual(set(pdag.nodes()), {'A', 'B', 'C', 'D'})
+        self.assertEqual(pdag.directed_edges, set(directed_edges))
+        self.assertEqual(pdag.undirected_edges, set())
+
+        # TODO: Fix the cycle issue.
+        # Test cycle
+        # directed_edges = [('A', 'C')]
+        # undirected_edges = [('A', 'B'), ('B', 'D'), ('D', 'C')]
+        # self.assertRaises(ValueError, PDAG, directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+
+    def test_copy(self):
+        pdag_copy = self.pdag_mix.copy()
+        expected_edges = {('A', 'C'), ('D', 'C'), ('A', 'B'), ('B', 'A'),
+                          ('B', 'D'), ('D', 'B')}
+        expected_dir = [('A', 'C'), ('D', 'C')]
+        expected_undir = [('B', 'A'), ('B', 'D')]
+        self.assertEqual(set(pdag_copy.edges()), expected_edges)
+        self.assertEqual(set(pdag_copy.nodes()), {'A', 'B', 'C', 'D'})
+        self.assertEqual(pdag_copy.directed_edges, set([('A', 'C'), ('D', 'C')]))
+        self.assertEqual(pdag_copy.undirected_edges, set([('B', 'A'), ('B', 'D')]))
+
+    def test_pdag_to_dag(self):
+        # PDAG no: 1  Possibility of creating a v-structure
+        pdag = PDAG(directed_ebunch=[('A', 'B'), ('C', 'B')],
+                    undirected_ebunch=[('C', 'D'), ('D', 'A')])
+        dag = pdag.to_dag()
+        self.assertTrue(('A', 'B') in dag.edges())
+        self.assertTrue(('C', 'B') in dag.edges())
+        self.assertFalse((('A', 'D') in dag.edges()) and (('C', 'D') in dag.edges()))
+        self.assertTrue(len(dag.edges()) == 4)
+
+        # PDAG no: 2  No possibility of creation of v-structure.
+        pdag = PDAG(directed_ebunch=[('B', 'C'), ('A', 'C')], undirected_ebunch=[('A', 'D')])
+        dag = pdag.to_dag()
+        self.assertTrue(('B', 'C') in dag.edges())
+        self.assertTrue(('A', 'C') in dag.edges())
+        self.assertTrue((('A', 'D') in dag.edges()) or (('D', 'A') in dag.edges()))
+
+        # PDAG no: 3  Already existing v-structure, possiblity to add another
+        pdag = PDAG(directed_ebunch=[('B', 'C'), ('A', 'C')], undirected_ebunch=[('C', 'D')])
+        dag = pdag.to_dag()
+        expected_edges = {('B', 'C'), ('C', 'D'), ('A', 'C')}
+        self.assertEqual(expected_edges, set(dag.edges()))
+
