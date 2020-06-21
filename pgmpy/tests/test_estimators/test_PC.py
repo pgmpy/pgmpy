@@ -93,9 +93,11 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
         )
 
         expected_edges = {("A", "D"), ("B", "D"), ("C", "D")}
-        expected_sepsets = {frozenset(("A", "C")): tuple(),
-                            frozenset(("A", "B")): tuple(),
-                            frozenset(("C", "B")): tuple()}
+        expected_sepsets = {
+            frozenset(("A", "C")): tuple(),
+            frozenset(("A", "B")): tuple(),
+            frozenset(("C", "B")): tuple(),
+        }
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
         self.assertEqual(sep_sets, expected_sepsets)
@@ -109,11 +111,11 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
 
         expected_edges = model.edges()
         expected_sepsets = {
-            frozenset(("D", "C")): ("B", ),
-            frozenset(("E", "B")): ("C", ),
+            frozenset(("D", "C")): ("B",),
+            frozenset(("E", "B")): ("C",),
             frozenset(("A", "D")): tuple(),
-            frozenset(("E", "D")): ("C", ),
-            frozenset(("E", "A")): ("C", ),
+            frozenset(("E", "D")): ("C",),
+            frozenset(("E", "A")): ("C",),
             frozenset(("A", "B")): tuple(),
         }
         for u, v in skel.edges():

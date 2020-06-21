@@ -125,9 +125,18 @@ class TestIndependencies(unittest.TestCase):
         )
 
     def test_get_all_variables(self):
-        self.assertEqual(self.Independencies3.get_all_variables(), frozenset(('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h')))
-        self.assertEqual(self.Independencies4.get_all_variables(), frozenset(('f', 'd', 'e', 'c', 'h', 'g', 'b', 'c', 'a')))
-        self.assertEqual(self.Independencies5.get_all_variables(), frozenset(('a', 'b', 'c', 'd', 'e', 'f', 'g')))
+        self.assertEqual(
+            self.Independencies3.get_all_variables(),
+            frozenset(("a", "b", "c", "d", "e", "f", "g", "h")),
+        )
+        self.assertEqual(
+            self.Independencies4.get_all_variables(),
+            frozenset(("f", "d", "e", "c", "h", "g", "b", "c", "a")),
+        )
+        self.assertEqual(
+            self.Independencies5.get_all_variables(),
+            frozenset(("a", "b", "c", "d", "e", "f", "g")),
+        )
 
     def test_closure(self):
         ind1 = Independencies(("A", ["B", "C"], "D"))
