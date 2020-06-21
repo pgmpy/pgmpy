@@ -49,9 +49,6 @@ class Independencies(object):
     def __init__(self, *assertions):
         self.independencies = []
         self.add_assertions(*assertions)
-        self.all_vars = frozenset().union(
-            *[ind.all_vars for ind in self.independencies]
-        )
 
     def __str__(self):
         string = "\n".join([str(assertion) for assertion in self.independencies])
@@ -103,6 +100,12 @@ class Independencies(object):
         return assertion in self.get_assertions()
 
     __contains__ = contains
+
+    def get_all_variables(self):
+        """
+        Returns a set of all the variables in all the independence assertions.
+        """
+        return frozenset().union(*[ind.all_vars for ind in self.independencies])
 
     def get_assertions(self):
         """
