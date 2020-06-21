@@ -23,8 +23,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     Z: list/array-like
         A list of conditional variable for testing the condition X _|_ Y | Z
 
-    data: pandas.DataFrame
-        The dataset in which to test the indepenedence condition.
+    data: pandas.DataFrame The dataset in which to test the indepenedence condition.
 
     Returns
     -------
@@ -33,7 +32,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     return IndependenceAssertion(X, Y, Z) in independencies
 
 
-def chi_square(X, Y, Z, data, **kwargs):
+def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     """
     Chi-square conditional independence test.
     Tests the null hypothesis that X is independent from Y given Zs.
@@ -57,6 +56,15 @@ def chi_square(X, Y, Z, data, **kwargs):
         This is the separating set that (potentially) makes X and Y independent.
         Default: []
 
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
     Returns
     -------
     chi2: float
@@ -75,6 +83,7 @@ def chi_square(X, Y, Z, data, **kwargs):
         (c() denotes the variable cardinality).
 
 
+
     References
     ----------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
@@ -88,18 +97,15 @@ def chi_square(X, Y, Z, data, **kwargs):
     --------
     >>> import pandas as pd
     >>> import numpy as np
-    >>> from pgmpy.estimators import ConstraintBasedEstimator
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> c = ConstraintBasedEstimator(data)
-    >>> print(c.test_conditional_independence('A', 'C'))  # independent
+    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
     True
-    >>> print(c.test_conditional_independence('A', 'B', 'D'))  # independent
+    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
     True
-    >>> print(c.test_conditional_independence('A', 'B', ['D', 'E']))  # dependent
+    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
     False
     """
-
     if isinstance(Z, (frozenset, list, set, tuple)):
         Z = list(Z)
     else:
@@ -176,12 +182,18 @@ def chi_square(X, Y, Z, data, **kwargs):
         *((o, e) for o, e in zip(observed, expected) if not e == 0)
     )
 
-    chi2, significance_level = stats.chisquare(observed, expected)
+    chi2, p_value = stats.chisquare(observed, expected)
 
-    return chi2, significance_level
+    if boolean:
+        if p_value >= kwargs["significance_level"]:
+            return True
+        else:
+            return False
+    else:
+        return chi2, p_value
 
 
-def pearsonr(X, Y, Z, data, **kwargs):
+def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     r"""
     Computes Pearson correlation coefficient and p-value for testing non-correlation. Should be used
     only on continuous data. In case when :math:`Z != \null` uses linear regression and computes pearson
@@ -200,6 +212,13 @@ def pearsonr(X, Y, Z, data, **kwargs):
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the pearson correlation coefficient and p_value
+            of the test.
 
     Returns
     -------
@@ -234,4 +253,11 @@ def pearsonr(X, Y, Z, data, **kwargs):
         residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
         residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
 
-        return stats.pearsonr(residual_X, residual_Y)
+        coef, p_value = stats.pearsonr(residual_X, residual_Y)
+        if boolean:
+            if p_value >= kwargs["significance_level"]:
+                return True
+            else:
+                return False
+        else:
+            return coef, p_value

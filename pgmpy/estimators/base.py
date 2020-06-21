@@ -162,33 +162,6 @@ class BaseEstimator(object):
 
         return state_counts
 
-    def test_conditional_independence(
-        self, X, Y, Zs=[], method="chi_square", tol=0.01, **kwargs
-    ):
-        """
-        Method to perform a stastical test if `X_|_Y|Zs`. All the tests are implemented
-        in CITests.py. This method provides a uniform wrapper over all the different
-        tests.
-        """
-        if method == "chi_square":
-            param, p_value = chi_square(
-                X=X, Y=Y, Z=Zs, data=self.data, state_names=self.state_names
-            )
-            if p_value >= tol:
-                return True
-            else:
-                return False
-
-        elif method == "pearsonr":
-            param, p_value = pearsonr(X=X, Y=Y, Z=Zs, data=self.data, **kwargs)
-            if abs(param) <= tol:
-                return True
-            else:
-                return False
-
-        elif method == "independence_match":
-            return independence_match(X, Y, Zs, independencies=kwargs["independencies"])
-
 
 class ParameterEstimator(BaseEstimator):
     def __init__(self, model, data, **kwargs):
