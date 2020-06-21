@@ -277,7 +277,7 @@ class StructureEstimator(BaseEstimator):
 
         self.independencies = independencies
         if self.independencies is not None:
-            self.variables = self.independencies.all_vars
+            self.variables = self.independencies.get_all_variables()
 
         super(StructureEstimator, self).__init__(data=data, **kwargs)
 

@@ -172,6 +172,9 @@ class PC(StructureEstimator):
             **kwargs,
         )
 
+        if return_type.lower() == "skeleton":
+            return skel, separating_sets
+
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
 
@@ -180,8 +183,6 @@ class PC(StructureEstimator):
             return pdag
         elif return_type.lower() == "dag":
             return pdag.to_dag()
-        elif return_type.lower() == "skeleton":
-            return skel, separating_sets
         else:
             raise ValueError(
                 f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
@@ -288,8 +289,9 @@ class PC(StructureEstimator):
                             separating_set,
                             data=self.data,
                             independencies=self.independencies,
+                            significance_level=significance_level,
                         ):
-                            separating_sets[(u, v)] = separating_set
+                            separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
                             break
 
@@ -308,8 +310,9 @@ class PC(StructureEstimator):
                             separating_set,
                             data=self.data,
                             independencies=self.independencies,
+                            significance_level=significance_level,
                         ):
-                            separating_sets[(u, v)] = separating_set
+                            separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
                             break
 
@@ -328,8 +331,9 @@ class PC(StructureEstimator):
                             separating_set,
                             data=self.data,
                             independencies=self.independencies,
+                            significance_level=significance_level,
                         ):
-                            separating_sets[(u, v)] = separating_set
+                            separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
                             break
 

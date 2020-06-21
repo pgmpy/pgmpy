@@ -405,7 +405,6 @@ class DAG(nx.DiGraph):
                         independencies.add_assertions(
                             [start, d_seperated_variables, observed]
                         )
-
         independencies.reduce()
 
         if not latex:
