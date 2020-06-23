@@ -8,7 +8,6 @@ from pgmpy.base import DAG
 
 
 class TreeSearch(StructureEstimator):
-
     def __init__(self, data, root_node, **kwargs):
         """
         Search class for learning tree graph structure from a given set of variables.
