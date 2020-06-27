@@ -61,7 +61,7 @@ class CausalInference(object):
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
-        return "{classname}({vars})".format(self.__class__.__name__, variables)
+        return f"{self.__class__.__name__}({variables})"
 
     def _is_d_separated(self, X, Y, Z=None):
         return not self.dag.is_active_trail(X, Y, observed=Z)
@@ -264,13 +264,12 @@ class CausalInference(object):
 
             parents = list(self.dag.predecessors(node))
             if not parents:
-                p = "P({})".format(node)
+                p = f"P({node})"
             else:
                 parents = [
-                    "do({})".format(n) if n in self.set_nodes else str(n)
-                    for n in parents
+                    f"do({n})" if n in self.set_nodes else str(n) for n in parents
                 ]
-                p = "P({}|{})".format(node, ",".join(parents))
+                p = f"P({node}|{','.join(parents)})"
             products.append(p)
         return "".join(products)
 
@@ -299,7 +298,7 @@ class CausalInference(object):
         data,
         estimand_strategy="smallest",
         estimator_type="linear",
-        **kwargs
+        **kwargs,
     ):
         """
         Estimate the average treatment effect (ATE) of X on Y.
@@ -354,9 +353,7 @@ class CausalInference(object):
             assert estimator_type in valid_estimators
         except AssertionError:
             print(
-                "{} if not a valid estimator_type.  Please select from {}".format(
-                    estimator_type, valid_estimators
-                )
+                f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}"
             )
 
         if isinstance(estimand_strategy, frozenset):

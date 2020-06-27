@@ -105,17 +105,12 @@ def optimize(
         opt.step(closure=closure)
 
         if isclose(init_loss, closure().item(), abs_tol=exit_delta):
-            warnings.warn(
-                "Converged after {iterations} iterations.".format(iterations=t)
-            )
+            warnings.warn(f"Converged after {t} iterations.")
             return params
         else:
             init_loss = closure().item()
 
     warnings.warn(
-        """Couldn't converge after {iterations} iterations. Try increasing max_iter or change
-                     optimizer parameters""".format(
-            iterations=max_iter
-        )
+        f"Couldn't converge after {max_iter} iterations. Try increasing max_iter or change optimizer parameters"
     )
     return params

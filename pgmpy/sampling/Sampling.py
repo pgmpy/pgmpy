@@ -75,7 +75,7 @@ class BayesianModelSampling(Inference):
 
         pbar = tqdm(self.topological_order)
         for node in pbar:
-            pbar.set_description("Generating for node: {node}".format(node=node))
+            pbar.set_description(f"Generating for node: {node}")
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]

@@ -72,8 +72,7 @@ class JunctionTree(ClusterGraph):
         """
         if u in self.nodes() and v in self.nodes() and nx.has_path(self, u, v):
             raise ValueError(
-                "Addition of edge between {u} and {v} forms a cycle breaking the "
-                "properties of Junction Tree".format(u=str(u), v=str(v))
+                f"Addition of edge between {str(u)} and {str(v)} forms a cycle breaking the properties of Junction Tree"
             )
 
         super(JunctionTree, self).add_edge(u, v, **kwargs)

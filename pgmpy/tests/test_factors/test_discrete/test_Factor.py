@@ -1112,21 +1112,15 @@ class TestTabularCPDMethods(unittest.TestCase):
         )
         self.assertEqual(
             repr(grade_cpd),
-            "<TabularCPD representing P(grade:3 | intel:3, diff:2) at {address}>".format(
-                address=hex(id(grade_cpd))
-            ),
+            f"<TabularCPD representing P(grade:3 | intel:3, diff:2) at {hex(id(grade_cpd))}>",
         )
         self.assertEqual(
             repr(intel_cpd),
-            "<TabularCPD representing P(intel:3) at {address}>".format(
-                address=hex(id(intel_cpd))
-            ),
+            f"<TabularCPD representing P(intel:3) at {hex(id(intel_cpd))}>",
         )
         self.assertEqual(
             repr(diff_cpd),
-            "<TabularCPD representing P(grade:3 | diff:2) at {address}>".format(
-                address=hex(id(diff_cpd))
-            ),
+            f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>",
         )
 
     def test_copy(self):
@@ -1397,9 +1391,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.jpd1),
-            "<Joint Distribution representing P(x1:2, x2:3, x3:2) at {address}>".format(
-                address=hex(id(self.jpd1))
-            ),
+            f"<Joint Distribution representing P(x1:2, x2:3, x3:2) at {hex(id(self.jpd1))}>",
         )
 
     def test_is_imap(self):

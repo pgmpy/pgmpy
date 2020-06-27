@@ -234,7 +234,7 @@ class LinearGaussianCPD(BaseFactor):
                 parents=", ".join([str(var) for var in self.evidence]),
                 mu=" + ".join(
                     [
-                        "{coeff}*{parent}".format(coeff=coeff, parent=parent)
+                        f"{coeff}*{parent}"
                         for coeff, parent in zip(self.mean, self.evidence)
                     ]
                 ),

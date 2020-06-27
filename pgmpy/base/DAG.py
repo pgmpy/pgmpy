@@ -78,7 +78,7 @@ class DAG(nx.DiGraph):
         else:
             out_str = "Cycles are not allowed in a DAG."
             out_str += "\nEdges indicating the path taken for a loop: "
-            out_str += "".join(["({0},{1}) ".format(u, v) for (u, v) in cycles])
+            out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
     def add_node(self, node, weight=None):
@@ -670,7 +670,7 @@ class DAG(nx.DiGraph):
 
         for node in obs_nodes_list:
             if node not in self.nodes():
-                raise ValueError("Node {s} not in not in graph".format(s=node))
+                raise ValueError(f"Node {node} not in not in graph")
 
         ancestors_list = set()
         nodes_list = set(obs_nodes_list)

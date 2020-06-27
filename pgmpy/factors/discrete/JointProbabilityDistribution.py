@@ -79,14 +79,9 @@ class JointProbabilityDistribution(DiscreteFactor):
 
     def __repr__(self):
         var_card = ", ".join(
-            [
-                "{var}:{card}".format(var=var, card=card)
-                for var, card in zip(self.variables, self.cardinality)
-            ]
+            [f"{var}:{card}" for var, card in zip(self.variables, self.cardinality)]
         )
-        return "<Joint Distribution representing P({var_card}) at {address}>".format(
-            address=hex(id(self)), var_card=var_card
-        )
+        return f"<Joint Distribution representing P({var_card}) at {hex(id(self))}>"
 
     def __str__(self):
         return self._str(phi_or_p="P")

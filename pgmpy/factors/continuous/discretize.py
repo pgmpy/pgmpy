@@ -91,8 +91,7 @@ class BaseDiscretizer(ABCMeta):
         """
         step = (self.high - self.low) / self.cardinality
         labels = [
-            "x={i}".format(i=str(i))
-            for i in np.round(np.arange(self.low, self.high, step), 3)
+            f"x={str(i)}" for i in np.round(np.arange(self.low, self.high, step), 3)
         ]
         return labels
 
@@ -253,7 +252,7 @@ class UnbiasedDiscretizer(BaseDiscretizer):
 
     def get_labels(self):
         labels = list(
-            "x={i}".format(i=str(i))
+            f"x={str(i)}"
             for i in np.round(np.linspace(self.low, self.high, self.cardinality), 3)
         )
         return labels

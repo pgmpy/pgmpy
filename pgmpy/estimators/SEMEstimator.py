@@ -25,10 +25,7 @@ class SEMEstimator(object):
             self.model = model
         else:
             raise ValueError(
-                """model should be an instance of either SEMGraph or SEMAlg class.
-                                Got type: {t}""".format(
-                    t=type(model)
-                )
+                f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
             )
 
         # Initialize trainable and fixed mask tensors
@@ -202,7 +199,7 @@ class SEMEstimator(object):
         init_values="random",
         exit_delta=1e-4,
         max_iter=1000,
-        **kwargs
+        **kwargs,
     ):
         """
         Estimate the parameters of the model from the data.
@@ -241,16 +238,11 @@ class SEMEstimator(object):
         """
         # Check if given arguements are valid
         if not isinstance(data, (pd.DataFrame, Data)):
-            raise ValueError(
-                "data must be a pandas DataFrame. Got type: {t}".format(t=type(data))
-            )
+            raise ValueError(f"data must be a pandas DataFrame. Got type: {type(data)}")
 
         if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError(
-                """The column names data do not match the variables in the model. Expected:
-                                {expected}. Got: {got}""".format(
-                    expected=sorted(self.model.observed), got=sorted(data.columns)
-                )
+                f"The column names data do not match the variables in the model. Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
             )
 
         # Initialize the values of parameters as tensors.
