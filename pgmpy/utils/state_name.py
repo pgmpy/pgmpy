@@ -29,9 +29,7 @@ class StateNameMixin:
                         "The state names must be for the form: {variable: list_of_states}"
                     )
                 elif not len(set(value)) == len(value):
-                    raise ValueError(
-                        "Repeated statenames for variable: {var}".format(var=key)
-                    )
+                    raise ValueError(f"Repeated statenames for variable: {key}")
 
             # Make a copy, so that the original object does't get modified after operations.
             self.state_names = state_names.copy()

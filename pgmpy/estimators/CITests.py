@@ -89,10 +89,7 @@ def chi_square(X, Y, Z, data, **kwargs):
 
     if not sufficient_data:
         warn(
-            "Insufficient data for testing {0} _|_ {1} | {2}. ".format(X, Y, Z)
-            + "At least {0} samples recommended, {1} present.".format(
-                5 * num_params, len(data)
-            )
+            f"Insufficient data for testing {X} _|_ {Y} | {Z}. At least {5*num_params} samples recommended, {len(data)} present."
         )
 
     # compute actual frequency/state_count table:
@@ -185,17 +182,13 @@ def pearsonr(X, Y, Z, data):
     """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
-        raise ValueError(
-            "Variable Z. Expected type: iterable. Got type: {t}".format(t=type(Z))
-        )
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
     else:
         Z = list(Z)
 
     if not isinstance(data, pd.DataFrame):
         raise ValueError(
-            "Variable data. Expected type: pandas.DataFrame. Got type: {t}".format(
-                t=type(data)
-            )
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
     # Step 2: If Z is empty compute a non-conditional test.

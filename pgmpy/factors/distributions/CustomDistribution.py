@@ -31,9 +31,7 @@ class CustomDistribution(BaseDistribution):
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
-                "variables: Expected type: iterable, got: {type}".format(
-                    type=type(variables)
-                )
+                f"variables: Expected type: iterable, got: {type(variables)}"
             )
 
         if len(set(variables)) != len(variables):
@@ -222,14 +220,11 @@ class CustomDistribution(BaseDistribution):
         24.0
         """
         if not isinstance(values, (list, tuple, np.ndarray)):
-            raise TypeError(
-                "variables: Expected type: iterable, "
-                "got: {var_type}".format(var_type=type(values))
-            )
+            raise TypeError(f"variables: Expected type: iterable, got: {type(values)}")
 
         for var, value in values:
             if var not in self.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
+                raise ValueError(f"{var} not in scope.")
 
         phi = self if inplace else self.copy()
 
@@ -306,13 +301,12 @@ class CustomDistribution(BaseDistribution):
 
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
-                "variables: Expected type iterable, "
-                "got: {var_type}".format(var_type=type(variables))
+                f"variables: Expected type iterable, got: {type(variables)}"
             )
 
         for var in variables:
             if var not in self.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
+                raise ValueError(f"{var} not in scope.")
 
         phi = self if inplace else self.copy()
 
@@ -419,10 +413,7 @@ class CustomDistribution(BaseDistribution):
         """
         if not isinstance(other, CustomDistribution):
             raise TypeError(
-                "CustomDistribution objects can only be multiplied "
-                "or divided with another CustomDistribution  "
-                "object. Got {other_type}, expected: "
-                "CustomDistribution.".format(other_type=type(other))
+                f"CustomDistribution objects can only be multiplied or divided with another CustomDistribution object. Got {type(other)}, expected: CustomDistribution."
             )
 
         phi = self if inplace else self.copy()

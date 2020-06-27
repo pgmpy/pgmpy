@@ -667,7 +667,7 @@ class TestBeliefPropagation(unittest.TestCase):
 
         # Nodes
         parents = ["parent"]
-        children = ["child_{}".format(i) for i in range(10)]
+        children = [f"child_{i}" for i in range(10)]
 
         # Add nodes and edges
         model.add_nodes_from(parents + children)

@@ -161,9 +161,7 @@ class BayesianEstimator(ParameterEstimator):
                 pseudo_counts = np.array(pseudo_counts)
                 if pseudo_counts.shape != cpd_shape:
                     raise ValueError(
-                        "The shape of pseudo_counts for the node: {node} must be of shape: {shape}".format(
-                            node=node, shape=str(cpd_shape)
-                        )
+                        f"The shape of pseudo_counts for the node: {node} must be of shape: {str(cpd_shape)}"
                     )
         else:
             raise ValueError("'prior_type' not specified")

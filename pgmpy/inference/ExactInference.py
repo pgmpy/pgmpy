@@ -169,7 +169,7 @@ class VariableElimination(Inference):
 
         for var in pbar:
             if show_progress:
-                pbar.set_description("Eliminating: {var}".format(var=var))
+                pbar.set_description(f"Eliminating: {var}")
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)
             factors = [

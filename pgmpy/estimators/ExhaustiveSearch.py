@@ -94,8 +94,8 @@ class ExhaustiveSearch(StructureEstimator):
         if len(nodes) > 6:
             warn("Generating all DAGs of n nodes likely not feasible for n>6!")
             warn(
-                "Attempting to search through {0} graphs".format(
-                    2 ** (len(nodes) * (len(nodes) - 1))
+                "Attempting to search through {n} graphs".format(
+                    n=2 ** (len(nodes) * (len(nodes) - 1))
                 )
             )
 

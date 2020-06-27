@@ -139,23 +139,18 @@ class TabularCPD(DiscreteFactor):
         )
 
     def __repr__(self):
-        var_str = "<TabularCPD representing P({var}:{card}".format(
-            var=self.variable, card=self.variable_card
-        )
+        var_str = f"<TabularCPD representing P({self.variable}:{self.variable_card}"
 
         evidence = self.variables[1:]
         evidence_card = self.cardinality[1:]
         if evidence:
             evidence_str = " | " + ", ".join(
-                [
-                    "{var}:{card}".format(var=var, card=card)
-                    for var, card in zip(evidence, evidence_card)
-                ]
+                [f"{var}:{card}" for var, card in zip(evidence, evidence_card)]
             )
         else:
             evidence_str = ""
 
-        return var_str + evidence_str + ") at {address}>".format(address=hex(id(self)))
+        return var_str + evidence_str + f") at {hex(id(self))}>"
 
     def get_values(self):
         """
@@ -206,7 +201,7 @@ class TabularCPD(DiscreteFactor):
             else:
                 for i in range(len(evidence_card)):
                     column_header = [str(evidence[i])] + [
-                        "{s}_{d}".format(s=evidence[i], d=d) for d in col_indexes.T[i]
+                        f"{evidence[i]}_{d}" for d in col_indexes.T[i]
                     ]
                     headers_list.append(column_header)
 
@@ -222,10 +217,7 @@ class TabularCPD(DiscreteFactor):
             ]
         else:
             variable_array = [
-                [
-                    "{s}_{d}".format(s=self.variable, d=i)
-                    for i in range(self.variable_card)
-                ]
+                [f"{self.variable}_{i}" for i in range(self.variable_card)]
             ]
         # Stack with data
         labeled_rows = np.hstack(

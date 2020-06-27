@@ -9,7 +9,7 @@ from pgmpy.factors.distributions import GaussianDistribution
 
 
 class CanonicalDistribution(BaseDistribution):
-    u"""
+    """
     The intermediate factors in a Gaussian network can be described
     compactly using a simple parametric representation called the
     canonical form. This representation is closed under the basic
@@ -83,11 +83,7 @@ class CanonicalDistribution(BaseDistribution):
 
         if self.K.shape != (no_of_var, no_of_var):
             raise ValueError(
-                "The K matrix should be a square matrix with "
-                "order equal to the number of variables. Got: "
-                "{got_shape}, Expected: {exp_shape}".format(
-                    got_shape=self.K.shape, exp_shape=(no_of_var, no_of_var)
-                )
+                f"The K matrix should be a square matrix with order equal to the number of variables. Got: {self.K.shape}, Expected: {(no_of_var, no_of_var)}"
             )
 
     @property
@@ -269,8 +265,7 @@ class CanonicalDistribution(BaseDistribution):
         """
         if not isinstance(values, (list, tuple, np.ndarray)):
             raise TypeError(
-                "variables: Expected type list or array-like, "
-                "got type {var_type}".format(var_type=type(values))
+                f"variables: Expected type list or array-like, got type {type(values)}"
             )
 
         if not all([var in self.variables for var, value in values]):
@@ -309,7 +304,7 @@ class CanonicalDistribution(BaseDistribution):
             return phi
 
     def marginalize(self, variables, inplace=True):
-        u"""
+        """
         Modifies the factor with marginalized values.
 
         Let C(X,Y ; K, h, g) be some canonical form over X,Y where,
@@ -375,8 +370,7 @@ class CanonicalDistribution(BaseDistribution):
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
-                "variables: Expected type list or array-like, "
-                "got type {var_type}".format(var_type=type(variables))
+                f"variables: Expected type list or array-like, got type {type(variables)}"
             )
 
         if not all([var in self.variables for var in variables]):
@@ -484,9 +478,7 @@ class CanonicalDistribution(BaseDistribution):
         """
         if not isinstance(other, CanonicalDistribution):
             raise TypeError(
-                "CanonicalDistribution object can only be multiplied or divided "
-                "with an another CanonicalDistribution object. Got {other_type}, "
-                "expected CanonicalDistribution.".format(other_type=type(other))
+                f"CanonicalDistribution object can only be multiplied or divided with an another CanonicalDistribution object. Got {type(other)}, expected CanonicalDistribution."
             )
 
         phi = self if inplace else self.copy()

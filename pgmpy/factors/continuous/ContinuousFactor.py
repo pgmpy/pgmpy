@@ -41,8 +41,7 @@ class ContinuousFactor(BaseFactor):
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             raise TypeError(
-                "variables: Expected type list or array-like, "
-                "got type {var_type}".format(var_type=type(variables))
+                f"variables: Expected type list or array-like, got type {type(variables)}"
             )
 
         if len(set(variables)) != len(variables):
@@ -59,8 +58,7 @@ class ContinuousFactor(BaseFactor):
                 )
             else:
                 raise NotImplementedError(
-                    "{dist} distribution not supported.",
-                    "Please use CustomDistribution".format(dist=pdf),
+                    f"{pdf} distribution not supported. Please use CustomDistribution"
                 )
 
         elif isinstance(pdf, CustomDistribution):
@@ -73,8 +71,7 @@ class ContinuousFactor(BaseFactor):
 
         else:
             raise ValueError(
-                "pdf: Expected type: str or function, ",
-                "Got: {instance}".format(instance=type(variables)),
+                f"pdf: Expected type: str or function, Got: {type(variables)}"
             )
 
     @property
@@ -335,11 +332,9 @@ class ContinuousFactor(BaseFactor):
         """
         if not isinstance(other, ContinuousFactor):
             raise TypeError(
-                "ContinuousFactor objects can only be multiplied ",
-                "or divided with another ContinuousFactor object. ",
-                "Got {other_type}, expected: ContinuousFactor.".format(
-                    other_type=type(other)
-                ),
+                f"ContinuousFactor objects can only be multiplied ",
+                f"or divided with another ContinuousFactor object. ",
+                f"Got {type(other)}, expected: ContinuousFactor.",
             )
 
         phi = self if inplace else self.copy()

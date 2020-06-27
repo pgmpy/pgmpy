@@ -110,9 +110,7 @@ class SEMGraph(DAG):
                 self.graph.add_edge(t[0], t[1], weight=np.NaN)
             else:
                 raise ValueError(
-                    "Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
-                        t=t, shape=len(t)
-                    )
+                    f"Expected tuple length: 2 or 3. Got {t} of len {len(t)}"
                 )
 
         self.latents = set(latents)
@@ -128,9 +126,7 @@ class SEMGraph(DAG):
                 self.err_graph.add_edge(t[0], t[1], weight=t[2])
             else:
                 raise ValueError(
-                    "Expected tuple length: 2 or 3. Got {t} of len {shape}".format(
-                        t=t, shape=len(t)
-                    )
+                    f"Expected tuple length: 2 or 3. Got {t} of len {len(t)}"
                 )
 
         # Set the error variances
@@ -253,9 +249,7 @@ class SEMGraph(DAG):
             graph_struct = struct
         else:
             raise ValueError(
-                "Expected struct to be str or nx.DiGraph. Got {t}".format(
-                    t=type(struct)
-                )
+                f"Expected struct to be str or nx.DiGraph. Got {type(struct)}"
             )
 
         ancestors_list = set()
@@ -335,9 +329,7 @@ class SEMGraph(DAG):
         full_graph = self.full_graph_struct.copy()
 
         if not (X, Y) in full_graph.edges():
-            raise ValueError(
-                "The edge from {X} -> {Y} doesn't exist in the graph".format(X=X, Y=Y)
-            )
+            raise ValueError(f"The edge from {X} -> {Y} doesn't exist in the graph")
 
         if (X in self.observed) and (Y in self.observed):
             full_graph.remove_edge(X, Y)
@@ -394,9 +386,7 @@ class SEMGraph(DAG):
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
             warnings.warn(
-                "{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`".format(
-                    Y=Y, X=X
-                )
+                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 
         transformed_graph, dependent_var = self._iv_transformations(
@@ -554,9 +544,7 @@ class SEMGraph(DAG):
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
             warnings.warn(
-                "{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`".format(
-                    Y=Y, X=X
-                )
+                f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 
         transformed_graph, dependent_var = self._iv_transformations(

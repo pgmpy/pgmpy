@@ -359,10 +359,7 @@ class ConstraintBasedEstimator(StructureEstimator):
         """
 
         if not isinstance(model, DAG):
-            raise TypeError(
-                "model: Expected DAG instance, "
-                + "got type {model_type}".format(model_type=type(model))
-            )
+            raise TypeError(f"model: Expected DAG instance, got type {type(model)}")
 
         skel, separating_sets = ConstraintBasedEstimator.build_skeleton(
             model.nodes(), model.get_independencies()

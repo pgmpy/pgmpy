@@ -94,8 +94,7 @@ class Independencies(object):
         """
         if not isinstance(assertion, IndependenceAssertion):
             raise TypeError(
-                "' in <Independencies()>' requires IndependenceAssertion"
-                + " as left operand, not {0}".format(type(assertion))
+                f"' in <Independencies()>' requires IndependenceAssertion as left operand, not {type(assertion)}"
             )
 
         return assertion in self.get_assertions()
