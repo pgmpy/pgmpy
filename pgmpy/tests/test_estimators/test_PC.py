@@ -83,7 +83,7 @@ class TestPCFakeCITest(unittest.TestCase):
 
 
 class TestPCEstimatorFromIndependencies(unittest.TestCase):
-    def test_build_skeleton(self):
+    def test_build_skeleton_from_ind(self):
         # Specify a set of independencies
         ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
         ind = ind.closure()
@@ -110,7 +110,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
         )
 
         expected_edges = model.edges()
-        expected_sepsets = {
+        expected_sepsets1 = {
             frozenset(("D", "C")): ("B",),
             frozenset(("E", "B")): ("C",),
             frozenset(("A", "D")): tuple(),
@@ -118,37 +118,40 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             frozenset(("E", "A")): ("C",),
             frozenset(("A", "B")): tuple(),
         }
+        expected_sepsets2 = {
+            frozenset(("D", "C")): ("B",),
+            frozenset(("E", "B")): ("C",),
+            frozenset(("A", "D")): tuple(),
+            frozenset(("E", "D")): ("B",),
+            frozenset(("E", "A")): ("C",),
+            frozenset(("A", "B")): tuple(),
+        }
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
-        self.assertEqual(sep_sets, expected_sepsets)
+
+        self.assertTrue((sep_sets == expected_sepsets1) or (sep_sets == expected_sepsets2))
 
     def test_skeleton_to_pdag(self):
-        data = pd.DataFrame(
-            np.random.randint(0, 3, size=(1000, 3)), columns=list("ABD")
-        )
-        data["C"] = data["A"] - data["B"]
-        data["D"] += data["A"]
-        estimator = PC(data=data)
-        skel, sep_set = estimator.estimate(
-            variant="orig", ci_test="chi_square", return_type="skeleton"
-        )
-
-        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_set)
+        skel = nx.Graph([('A', 'D'), ('A', 'C'), ('B', 'C')])
+        sep_sets = {frozenset({'D', 'C'}): ('A',),
+                    frozenset({'A', 'B'}): tuple(),
+                    frozenset({'D', 'B'}): ('A',)}
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
         )
 
-        skel = nx.UndirectedGraph([("A", "B"), ("A", "C")])
-        sep_sets1 = {frozenset({"B", "C"}): ()}
+        skel = nx.Graph([("A", "B"), ("A", "C")])
+        sep_sets = {frozenset({"B", "C"}): ()}
         self.assertSetEqual(
-            set(PC.skeleton_to_pdag(skeleton=skel, separating_set=sep_sets1).edges()),
+            set(PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets).edges()),
             set([("B", "A"), ("C", "A")]),
         )
 
-        sep_sets2 = {frozenset({"B", "C"}): ("A",)}
-        pdag2 = PC.skeleton_to_pdag(skeleton=skel, separating_set=sep_sets2)
+        sep_sets = {frozenset({"B", "C"}): ("A",)}
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
         self.assertSetEqual(
-            set(c.skeleton_to_pdag(skel, sep_sets2).edges()),
+            set(PC.skeleton_to_pdag(skel, sep_sets).edges()),
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
@@ -216,7 +219,6 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}
         expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
-
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
         self.assertEqual(sep_sets, expected_sepsets)
@@ -257,7 +259,6 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             frozenset(("B", "C")): tuple(),
             frozenset(("A", "D")): tuple(),
         }
-
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
         self.assertEqual(sep_sets, expected_sepsets)
@@ -267,7 +268,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
         data["X"] += data["Z"]
         data["Y"] += data["Z"]
         est = PC(data=data)
-        skel, sep_sets = est.estimate_skeleton(
+        skel, sep_sets = est.estimate(
             variant="orig", ci_test="pearsonr", return_type="skeleton"
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}

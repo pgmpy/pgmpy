@@ -173,7 +173,6 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
                     * YZ_state_counts.loc[Y_val]
                     / float(Z_state_counts)
                 )
-
     observed = XYZ_state_counts.values.flatten()
     expected = XYZ_expected.fillna(0).values.flatten()
     # remove elements where the expected value is 0;
@@ -243,7 +242,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
     # Step 2: If Z is empty compute a non-conditional test.
     if len(Z) == 0:
-        return stats.pearsonr(data.loc[:, X], data.loc[:, Y])
+        coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
 
     # Step 3: If Z is non-empty, use linear regression to compute residuals and test independence on it.
     else:
@@ -252,12 +251,12 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
         residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
         residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
-
         coef, p_value = stats.pearsonr(residual_X, residual_Y)
-        if boolean:
-            if p_value >= kwargs["significance_level"]:
-                return True
-            else:
-                return False
+
+    if boolean:
+        if p_value >= kwargs["significance_level"]:
+            return True
         else:
-            return coef, p_value
+            return False
+    else:
+        return coef, p_value
