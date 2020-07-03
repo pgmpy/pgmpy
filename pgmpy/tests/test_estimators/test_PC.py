@@ -202,20 +202,25 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             frozenset(("B", "C")): tuple(),
             frozenset(("A", "D")): tuple(),
         }
-
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
         self.assertEqual(sep_sets, expected_sepsets)
 
-        # Fake dataset no: 2
-        data = pd.DataFrame(
-            np.random.randint(0, 2, size=(1000, 3)), columns=list("XYZ")
-        )
-        data["X"] += data["Z"]
-        data["Y"] += data["Z"]
-        est = PC(data=data)
+        # Fake dataset no: 2 Expected structure X <- Z -> Y
+        def fake_ci(X, Y, Z=tuple(), **kwargs):
+            if X == 'X' and Y == 'Y' and Z == ('Z',):
+                return True
+            elif X == 'Y' and Y == 'X' and Z == ('Z',):
+                return True
+            else:
+                return False
+
+        fake_data = pd.DataFrame(
+            np.random.randint(low=0, high=2, size=(1000, 3)),
+            columns=['X', 'Y', 'Z'])
+        est = PC(data=fake_data)
         skel, sep_sets = est.estimate(
-            variant="orig", ci_test="chi_square", return_type="skeleton"
+            variant="orig", ci_test=fake_ci, return_type="skeleton"
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}
         expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
