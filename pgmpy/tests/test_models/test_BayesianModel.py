@@ -271,7 +271,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         )
 
     def test_markov_blanket_G3(self):
-        self.assertEqual(set(G3.get_markov_blanket("CH4")), set(["FFEC", "REC"]))
+        self.assertEqual(set(self.G3.get_markov_blanket("CH4")), set(["FFEC", "REC"]))
 
     def test_get_immoralities(self):
         G = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
