@@ -129,13 +129,17 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 
-        self.assertTrue((sep_sets == expected_sepsets1) or (sep_sets == expected_sepsets2))
+        self.assertTrue(
+            (sep_sets == expected_sepsets1) or (sep_sets == expected_sepsets2)
+        )
 
     def test_skeleton_to_pdag(self):
-        skel = nx.Graph([('A', 'D'), ('A', 'C'), ('B', 'C')])
-        sep_sets = {frozenset({'D', 'C'}): ('A',),
-                    frozenset({'A', 'B'}): tuple(),
-                    frozenset({'D', 'B'}): ('A',)}
+        skel = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
+        sep_sets = {
+            frozenset({"D", "C"}): ("A",),
+            frozenset({"A", "B"}): tuple(),
+            frozenset({"D", "B"}): ("A",),
+        }
         pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
         self.assertSetEqual(
             set(pdag.edges()), set([("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")])
@@ -208,16 +212,16 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
         # Fake dataset no: 2 Expected structure X <- Z -> Y
         def fake_ci(X, Y, Z=tuple(), **kwargs):
-            if X == 'X' and Y == 'Y' and Z == ('Z',):
+            if X == "X" and Y == "Y" and Z == ("Z",):
                 return True
-            elif X == 'Y' and Y == 'X' and Z == ('Z',):
+            elif X == "Y" and Y == "X" and Z == ("Z",):
                 return True
             else:
                 return False
 
         fake_data = pd.DataFrame(
-            np.random.randint(low=0, high=2, size=(1000, 3)),
-            columns=['X', 'Y', 'Z'])
+            np.random.randint(low=0, high=2, size=(1000, 3)), columns=["X", "Y", "Z"]
+        )
         est = PC(data=fake_data)
         skel, sep_sets = est.estimate(
             variant="orig", ci_test=fake_ci, return_type="skeleton"

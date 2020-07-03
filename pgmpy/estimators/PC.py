@@ -318,13 +318,11 @@ class PC(StructureEstimator):
 
             elif variant == "parallel":
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
-                for (u, v) in graph.edges():
-                    # In case of parallel, precompute neighbors as this is the stable algorithm.
+
+                def _parallel_fun(u, v):
                     for separating_set in combinations(
                         neighbors[u] - set([v]), lim_neighbors
                     ):
-                        # If a conditioning set exists remove the edge, store the separating set
-                        # and move on to finding conditioning set for next edge.
                         if ci_test(
                             u,
                             v,
@@ -333,9 +331,16 @@ class PC(StructureEstimator):
                             independencies=self.independencies,
                             significance_level=significance_level,
                         ):
-                            separating_sets[frozenset((u, v))] = separating_set
-                            graph.remove_edge(u, v)
-                            break
+                            return (u, v), separating_set
+
+                results = Parallel(n_jobs=n_jobs, prefer="threads")(
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
+                )
+                for results in results:
+                    if result is not None:
+                        (u, v), sep_set = result
+                        graph.remove(u, v)
+                        separating_sets[frozenset((u, v))] = sep_set
 
             else:
                 raise ValueError(
