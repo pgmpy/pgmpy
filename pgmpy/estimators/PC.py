@@ -2,6 +2,7 @@
 
 from warnings import warn
 from itertools import combinations
+from joblib import Parallel, delayed
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
@@ -169,6 +170,7 @@ class PC(StructureEstimator):
             max_cond_vars=max_cond_vars,
             significance_level=significance_level,
             variant=variant,
+            n_jobs=n_jobs,
             **kwargs,
         )
 
@@ -194,6 +196,7 @@ class PC(StructureEstimator):
         max_cond_vars=5,
         significance_level=0.01,
         variant="stable",
+        n_jobs=-1,
         **kwargs,
     ):
         """
@@ -336,10 +339,10 @@ class PC(StructureEstimator):
                 results = Parallel(n_jobs=n_jobs, prefer="threads")(
                     delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
                 )
-                for results in results:
+                for result in results:
                     if result is not None:
                         (u, v), sep_set = result
-                        graph.remove(u, v)
+                        graph.remove_edge(u, v)
                         separating_sets[frozenset((u, v))] = sep_set
 
             else:
