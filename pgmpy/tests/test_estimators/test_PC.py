@@ -272,13 +272,18 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
         self.assertEqual(sep_sets, expected_sepsets)
 
-        # Fake dataset no: 2
+        # Fake dataset no: 2. Expected model structure X <- Z -> Y
+        def fake_ci(X, Y, Z=tuple(), **kwargs):
+            if X == "X" and Y == "Y" and Z == ("Z",):
+                return True
+            elif X == "Y" and Y == "X" and Z == ("Z",):
+                return True
+            else:
+                return False
         data = pd.DataFrame(np.random.randn(1000, 3), columns=list("XYZ"))
-        data["X"] += data["Z"]
-        data["Y"] += data["Z"]
         est = PC(data=data)
         skel, sep_sets = est.estimate(
-            variant="orig", ci_test="pearsonr", return_type="skeleton"
+            variant="orig", ci_test=fake_ci, return_type="skeleton"
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}
         expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
