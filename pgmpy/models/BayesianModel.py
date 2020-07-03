@@ -783,5 +783,5 @@ class BayesianModel(DAG):
         for child_node in children:
             blanket_nodes.extend(self.get_parents(child_node))
         blanket_nodes = set(blanket_nodes)
-        blanket_nodes.remove(node)
+        blanket_nodes.discard(node)
         return list(blanket_nodes)
