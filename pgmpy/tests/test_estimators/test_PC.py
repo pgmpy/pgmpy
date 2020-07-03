@@ -280,6 +280,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 return True
             else:
                 return False
+
         data = pd.DataFrame(np.random.randn(1000, 3), columns=list("XYZ"))
         est = PC(data=data)
         skel, sep_sets = est.estimate(
