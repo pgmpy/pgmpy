@@ -104,17 +104,17 @@ class BayesianEstimator(ParameterEstimator):
         prior_type: 'dirichlet', 'BDeu', 'K2',
             string indicting which type of prior to use for the model parameters.
             - If 'prior_type' is 'dirichlet', the following must be provided:
-                'pseudo_counts' = dirichlet hyperparameters; a single number or 2-D array of shape
-                 (node_card, product of parents_card) with a "virtual" count for
-                 each variable state in the CPD.
-                 The virtual counts are added to the actual state counts found in the data.
-                 (if a list is provided, a lexicographic ordering of states is assumed)
+                'pseudo_counts' = dirichlet hyperparameters; a single number or 2-D array
+                 of shape (node_card, product of parents_card) with a "virtual" count for
+                 each variable state in the CPD. The virtual counts are added to the
+                 actual state counts found in the data. (if a list is provided, a 
+                 lexicographic ordering of states is assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
-                must be specified instead of 'pseudo_counts'. This is equivalent to
-                'prior_type=dirichlet' and using uniform 'pseudo_counts' of
-                `equivalent_sample_size/(node_cardinality*np.prod(parents_cardinalities))`.
-            - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to 1,
-                regardless of the cardinality of the variable.
+                 must be specified instead of 'pseudo_counts'. This is equivalent to
+                 'prior_type=dirichlet' and using uniform 'pseudo_counts' of
+                 `equivalent_sample_size/(node_cardinality*np.prod(parents_cardinalities))`.
+            - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every
+              pseudo_count to 1, regardless of the cardinality of the variable.
 
         Returns
         -------

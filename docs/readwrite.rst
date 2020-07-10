@@ -12,11 +12,6 @@ PomdpX
 
 .. automodule:: pgmpy.readwrite.PomdpX
 
-ProbModelXML
-------------
-
-.. automodule:: pgmpy.readwrite.ProbModelXML
-
 UAI
 ---
 

@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-try:  # pragma: no cover
+try: 
     import torch
-except ImportError:  # pragma: no cover
+except ImportError:
     torch = None
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
@@ -362,6 +362,7 @@ class IVEstimator:
 
         Examples
         --------
+
         """
         self.model = model
 
@@ -392,6 +393,7 @@ class IVEstimator:
 
         Examples
         --------
+
         """
         if (ivs is None) and (civs is None):
             ivs = self.model.get_ivs(X, Y)
