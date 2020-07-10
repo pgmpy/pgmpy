@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-try: 
+try:
     import torch
 except ImportError:
     torch = None

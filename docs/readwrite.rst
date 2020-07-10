@@ -11,19 +11,23 @@ PomdpX
 ------
 
 .. automodule:: pgmpy.readwrite.PomdpX
+   :members:
 
 UAI
 ---
 
 .. automodule:: pgmpy.readwrite.UAI
+   :members:
 
 XMLBeliefNetwork
 ----------------
 
 .. automodule:: pgmpy.readwrite.XMLBeliefNetwork
+   :members:
 
 XMLBIF
 ------
 
 .. automodule:: pgmpy.readwrite.XMLBIF
+   :members:
 
