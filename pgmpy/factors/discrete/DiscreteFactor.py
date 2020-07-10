@@ -1,5 +1,3 @@
-from __future__ import division
-
 from itertools import product
 from collections import namedtuple
 from warnings import warn
