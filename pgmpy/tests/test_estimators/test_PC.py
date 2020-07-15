@@ -8,6 +8,7 @@ from pgmpy.estimators import PC
 from pgmpy.models import BayesianModel
 from pgmpy.independencies import Independencies
 
+np.random.seed(42)
 
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
 # high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
