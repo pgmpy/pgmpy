@@ -108,10 +108,10 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     """
 
     # Step 1: Check if the arguments are valid and type conversions.
-    if hasattr(Z, '__iter__'):
+    if hasattr(Z, "__iter__"):
         Z = list(Z)
     else:
-        raise(f"Z must be an iterable. Got object type: {type(Z)}")
+        raise (f"Z must be an iterable. Got object type: {type(Z)}")
 
     if (X in Z) or (Y in Z):
         raise ValueError(f"The variables X or Y can't be in Z")
@@ -119,15 +119,18 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-                                        data.groupby([X, Y]).size().unstack(Y))
+            data.groupby([X, Y]).size().unstack(Y)
+        )
 
-    # Step 3: If there are conditionals variables, iterate over unique states and do 
+    # Step 3: If there are conditionals variables, iterate over unique states and do
     #         the contingency test.
     else:
         chi = 0
         dof = 0
         for _, df in data.groupby(Z):
-            c, _, d, _ = stats.chi2_contingency(df.groupby([X, Y]).size().unstack(Y, fill_value=0))
+            c, _, d, _ = stats.chi2_contingency(
+                df.groupby([X, Y]).size().unstack(Y, fill_value=0)
+            )
             chi += c
             dof += d
 

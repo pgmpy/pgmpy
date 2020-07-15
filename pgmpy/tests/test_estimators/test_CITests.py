@@ -132,7 +132,9 @@ class TestChiSquare(unittest.TestCase):
         )
         np_test.assert_almost_equal(coef, 481.96, decimal=1)
         # Same here; Really small hence rounded
-        np_test.assert_almost_equal(math.floor(np.log(p_value)), math.floor(-155.17), decimal=1)
+        np_test.assert_almost_equal(
+            math.floor(np.log(p_value)), math.floor(-155.17), decimal=1
+        )
         self.assertEqual(dof, 58)
 
         # Tests for when boolean=True
