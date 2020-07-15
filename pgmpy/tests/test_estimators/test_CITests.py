@@ -1,4 +1,5 @@
 import unittest
+import math
 
 import numpy as np
 import pandas as pd
@@ -82,25 +83,28 @@ class TestChiSquare(unittest.TestCase):
 
     def test_chisquare_adult_dataset(self):
         # Comparision values taken from dagitty (DAGitty)
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 57.75, decimal=1)
-        self.assertTrue(p_value < 0.05)
+        np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
+        self.assertEqual(dof, 4)
 
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 56.25, decimal=1)
-        self.assertTrue(p_value < 0.05)
+        np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
+        self.assertEqual(dof, 4)
 
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 289.62, decimal=1)
-        self.assertTrue(p_value < 0.05)
+        np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
+        self.assertEqual(dof, 4)
 
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Education",
             Y="HoursPerWeek",
             Z=["Age", "Immigrant", "Race", "Sex"],
@@ -108,15 +112,18 @@ class TestChiSquare(unittest.TestCase):
             boolean=False,
         )
         np_test.assert_almost_equal(coef, 1460.11, decimal=1)
-        self.assertTrue(p_value < 0.05)
+        # Really small value; hence rounded in this case.
+        np_test.assert_almost_equal(math.ceil(np.log(p_value)), -335, decimal=1)
+        self.assertEqual(dof, 316)
 
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 0.2724, decimal=1)
-        self.assertTrue(p_value > 0.05)
+        np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
+        self.assertEqual(dof, 1)
 
-        coef, p_value = chi_square(
+        coef, dof, p_value = chi_square(
             X="Education",
             Y="MaritalStatus",
             Z=["Age", "Sex"],
@@ -124,7 +131,9 @@ class TestChiSquare(unittest.TestCase):
             boolean=False,
         )
         np_test.assert_almost_equal(coef, 481.96, decimal=1)
-        self.assertTrue(p_value < 0.05)
+        # Same here; Really small hence rounded
+        np_test.assert_almost_equal(math.floor(np.log(p_value)), math.floor(-155.17), decimal=1)
+        self.assertEqual(dof, 58)
 
         # Tests for when boolean=True
         self.assertFalse(
