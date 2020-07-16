@@ -6,8 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.12] - Expected 2020-09-30
 ### Added
+1. PC estimator with original, stable, and parallel variants.
+2. PDAG class to represent partially directed DAGs.
 
 ### Changed
+1. Refactors ConstraintBasedEstimators into PC with a lot of general improvements.
+2. Improved (faster, new arguments) indepenedence tests with changes in argument.
 
 ### Fixed
 
