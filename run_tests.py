@@ -13,6 +13,7 @@ if __name__ == "__main__":
         "--cov-report",
         "term",
         "--cov=" + package_name,
+        "--verbose"
     ]
     pytest_args = pytest_args + sys.argv[1:]
     sys.exit(pytest.main(pytest_args))
