@@ -7,7 +7,6 @@ import pandas as pd
 from scipy.stats import chisquare
 
 from pgmpy.utils.decorators import convert_args_tuple
-from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
 class BaseEstimator(object):

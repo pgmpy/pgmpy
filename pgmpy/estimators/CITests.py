@@ -114,7 +114,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         raise (f"Z must be an iterable. Got object type: {type(Z)}")
 
     if (X in Z) or (Y in Z):
-        raise ValueError(f"The variables X or Y can't be in Z")
+        raise ValueError(f"The variables X or Y can't be in Z. Found {X if X in Z else Y} in Z.")
 
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:

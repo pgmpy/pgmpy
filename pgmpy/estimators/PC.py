@@ -5,10 +5,8 @@ from itertools import combinations
 from joblib import Parallel, delayed
 import networkx as nx
 
-from pgmpy.base import UndirectedGraph
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.independencies import Independencies, IndependenceAssertion
 from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
 
 
