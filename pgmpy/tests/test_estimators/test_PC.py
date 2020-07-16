@@ -187,7 +187,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
     def test_build_skeleton(self):
         # Fake dataset no: 1
         data = pd.DataFrame(
-            np.random.randint(0, 2, size=(1000, 5)), columns=list("ABCDE")
+            np.random.randint(0, 2, size=(10000, 5)), columns=list("ABCDE")
         )
         data["F"] = data["A"] + data["B"] + data["C"]
         est = PC(data=data)
@@ -221,11 +221,11 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 return False
 
         fake_data = pd.DataFrame(
-            np.random.randint(low=0, high=2, size=(1000, 3)), columns=["X", "Y", "Z"]
+            np.random.randint(low=0, high=2, size=(10000, 3)), columns=["X", "Y", "Z"]
         )
         est = PC(data=fake_data)
         skel, sep_sets = est.estimate(
-            variant="orig", ci_test=fake_ci, return_type="skeleton"
+            variant="orig", ci_test="chi_square", return_type="skeleton"
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}
         expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
@@ -235,7 +235,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
     def test_build_dag(self):
         data = pd.DataFrame(
-            np.random.randint(0, 3, size=(1000, 3)), columns=list("XYZ")
+            np.random.randint(0, 3, size=(10000, 3)), columns=list("XYZ")
         )
         data["sum"] = data.sum(axis=1)
         est = PC(data=data)
@@ -248,7 +248,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
         # Fake dataset no: 1
-        data = pd.DataFrame(np.random.randn(1000, 5), columns=list("ABCDE"))
+        data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
         data["F"] = data["A"] + data["B"] + data["C"]
         est = PC(data=data)
         skel, sep_sets = est.estimate(
@@ -282,7 +282,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             else:
                 return False
 
-        data = pd.DataFrame(np.random.randn(1000, 3), columns=list("XYZ"))
+        data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
         est = PC(data=data)
         skel, sep_sets = est.estimate(
             variant="orig", ci_test=fake_ci, return_type="skeleton"
@@ -295,7 +295,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
         self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        data = pd.DataFrame(np.random.randn(1000, 3), columns=list("XYZ"))
+        data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
         data["sum"] = data.sum(axis=1)
         est = PC(data=data)
         dag = est.estimate(variant="orig", ci_test="pearsonr", return_type="dag")
