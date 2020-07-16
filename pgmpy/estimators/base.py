@@ -7,11 +7,10 @@ import pandas as pd
 from scipy.stats import chisquare
 
 from pgmpy.utils.decorators import convert_args_tuple
-from pgmpy.estimators.CITests import chi_square, pearsonr
 
 
 class BaseEstimator(object):
-    def __init__(self, data, state_names=None, complete_samples_only=True):
+    def __init__(self, data=None, state_names=None, complete_samples_only=True):
         """
         Base class for estimators in pgmpy; `ParameterEstimator`,
         `StructureEstimator` and `StructureScore` derive from this class.
@@ -36,25 +35,30 @@ class BaseEstimator(object):
         """
 
         self.data = data
-        self.complete_samples_only = complete_samples_only
+        # data can be None in the case when learning structre from
+        # independence conditions. Look into PC.py.
+        if self.data is not None:
+            self.complete_samples_only = complete_samples_only
 
-        variables = list(data.columns.values)
+            self.variables = list(data.columns.values)
 
-        if not isinstance(state_names, dict):
-            self.state_names = {
-                var: self._collect_state_names(var) for var in variables
-            }
-        else:
-            self.state_names = dict()
-            for var in variables:
-                if var in state_names:
-                    if not set(self._collect_state_names(var)) <= set(state_names[var]):
-                        raise ValueError(
-                            f"Data contains unexpected states for variable: {var}."
-                        )
-                    self.state_names[var] = state_names[var]
-                else:
-                    self.state_names[var] = self._collect_state_names(var)
+            if not isinstance(state_names, dict):
+                self.state_names = {
+                    var: self._collect_state_names(var) for var in self.variables
+                }
+            else:
+                self.state_names = dict()
+                for var in self.variables:
+                    if var in state_names:
+                        if not set(self._collect_state_names(var)) <= set(
+                            state_names[var]
+                        ):
+                            raise ValueError(
+                                f"Data contains unexpected states for variable: {var}."
+                            )
+                        self.state_names[var] = state_names[var]
+                    else:
+                        self.state_names[var] = self._collect_state_names(var)
 
     def _collect_state_names(self, variable):
         "Return a list of states that the variable takes in the data"
@@ -157,25 +161,6 @@ class BaseEstimator(object):
 
         return state_counts
 
-    def test_conditional_independence(
-        self, X, Y, Zs=[], method="chi_square", tol=0.01, **kwargs
-    ):
-        if method == "chi_square":
-            param, p_value = chi_square(
-                X=X, Y=Y, Z=Zs, data=self.data, state_names=self.state_names
-            )
-            if p_value >= tol:
-                return True
-            else:
-                return False
-
-        elif method == "pearsonr":
-            param, p_value = pearsonr(X=X, Y=Y, Z=Zs, data=self.data, **kwargs)
-            if abs(param) <= tol:
-                return True
-            else:
-                return False
-
 
 class ParameterEstimator(BaseEstimator):
     def __init__(self, model, data, **kwargs):
@@ -266,7 +251,7 @@ class ParameterEstimator(BaseEstimator):
 
 
 class StructureEstimator(BaseEstimator):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data=None, independencies=None, **kwargs):
         """
         Base class for structure estimators in pgmpy.
 
@@ -289,7 +274,11 @@ class StructureEstimator(BaseEstimator):
             This sets the behavior of the `state_count`-method.
         """
 
-        super(StructureEstimator, self).__init__(data, **kwargs)
+        self.independencies = independencies
+        if self.independencies is not None:
+            self.variables = self.independencies.get_all_variables()
+
+        super(StructureEstimator, self).__init__(data=data, **kwargs)
 
     def estimate(self):
         pass
