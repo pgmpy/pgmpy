@@ -225,7 +225,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
         )
         est = PC(data=fake_data)
         skel, sep_sets = est.estimate(
-            variant="orig", ci_test="chi_square", return_type="skeleton"
+            variant="orig", ci_test=fake_ci, return_type="skeleton"
         )
         expected_edges = {("X", "Z"), ("Y", "Z")}
         expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
