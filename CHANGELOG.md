@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 1. PC estimator with original, stable, and parallel variants.
 2. PDAG class to represent partially directed DAGs.
+3. `pgmpy.utils.get_example_model` function to fetch models from bnlearn repository.
 
 ### Changed
 1. Refactors ConstraintBasedEstimators into PC with a lot of general improvements.
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Removed
+1. `Data` class.
 
 ## [0.1.11] - 2020-06-30
 ### Added
