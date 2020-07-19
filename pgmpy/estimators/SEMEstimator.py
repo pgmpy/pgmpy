@@ -8,7 +8,6 @@ except ImportError:
     torch = None
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
-from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
 
@@ -237,7 +236,7 @@ class SEMEstimator(object):
         .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
         """
         # Check if given arguements are valid
-        if not isinstance(data, (pd.DataFrame, Data)):
+        if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data must be a pandas DataFrame. Got type: {type(data)}")
 
         if not sorted(data.columns) == sorted(self.model.y):
