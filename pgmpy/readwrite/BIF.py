@@ -271,7 +271,9 @@ class BIFReader(object):
         names = self.probability_expr.searchString(block)
         var_name, parents = names[0][0], names[0][1:]
         cpds = self.cpd_expr.searchString(block)
-        if "table" in block:
+
+        # Check if the block is a table.
+        if bool(re.search(".*\\n[ ]*table .*\n.*", block)):
             arr = np.array([float(j) for i in cpds for j in i])
             arr = arr.reshape(
                 (
