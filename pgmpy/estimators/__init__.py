@@ -8,7 +8,6 @@ from pgmpy.estimators.BicScore import BicScore
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
-from pgmpy.estimators.TreeAugmentedNaiveBayesSearch import TreeAugmentedNaiveBayesSearch
 from pgmpy.estimators.ConstraintBasedEstimator import ConstraintBasedEstimator
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
@@ -22,7 +21,6 @@ __all__ = [
     "ExhaustiveSearch",
     "HillClimbSearch",
     "TreeSearch",
-    "TreeAugmentedNaiveBayesSearch",
     "ConstraintBasedEstimator",
     "StructureScore",
     "K2Score",
