@@ -14,7 +14,15 @@ from pgmpy.base import DAG
 
 
 class TreeSearch(StructureEstimator):
-    def __init__(self, data, root_node, return_type='chow-liu', class_node=None, n_jobs=-1, **kwargs):
+    def __init__(
+        self,
+        data,
+        root_node,
+        return_type="chow-liu",
+        class_node=None,
+        n_jobs=-1,
+        **kwargs
+    ):
         """
         Search class for learning tree related graph structure.  The algorithms supported are Chow-Liu and 
         Tree-augmented naive bayes (TAN).
@@ -109,7 +117,7 @@ class TreeSearch(StructureEstimator):
         if self.root_node not in self.data.columns:
             raise ValueError("Root node %s not found in data columns" % self.root_node)
 
-        if self.return_type not in ['chow-liu', 'tan']:
+        if self.return_type not in ["chow-liu", "tan"]:
             raise ValueError("Invalid return_type %s" % self.return_type)
 
         data = self.data
@@ -118,7 +126,7 @@ class TreeSearch(StructureEstimator):
         return_type = self.return_type
         class_node = self.class_node
 
-        if return_type == 'chow-liu':
+        if return_type == "chow-liu":
             # construct tree with chow-liu algorithm
             return DAG(self.chow_liu(data, root_node, n_jobs))
 
@@ -127,7 +135,10 @@ class TreeSearch(StructureEstimator):
                 raise ValueError("Class node %s not found in data columns" % class_node)
 
             if root_node == class_node:
-                raise ValueError("Root node %s and class node %s are identical" % (root_node, class_node))
+                raise ValueError(
+                    "Root node %s and class node %s are identical"
+                    % (root_node, class_node)
+                )
 
             # construct tree with chow-liu algorithm
             df_features = data.loc[:, data.columns != class_node]
@@ -142,26 +153,32 @@ class TreeSearch(StructureEstimator):
     def chow_liu(self, data, root_node, n_jobs):
         # create a fully connected graph over the independent variables
         def calculate_mi(u_index, v_index):
-            return (u_index, v_index, mutual_info_score(data.iloc[:, u_index], data.iloc[:, v_index]))
+            return (
+                u_index,
+                v_index,
+                mutual_info_score(data.iloc[:, u_index], data.iloc[:, v_index]),
+            )
 
         total_cols = len(data.columns)
-        pbar = tqdm(combinations(enumerate(data.columns), 2), total=(total_cols*(total_cols-1)/2))
+        pbar = tqdm(
+            combinations(enumerate(data.columns), 2),
+            total=(total_cols * (total_cols - 1) / 2),
+        )
         pbar.set_description("Building tree")
 
         vals = Parallel(n_jobs=n_jobs)(
-            delayed(calculate_mi)(
-                u_index = u_index,
-                v_index = v_index
-            )
+            delayed(calculate_mi)(u_index=u_index, v_index=v_index)
             for (u_index, u), (v_index, v) in pbar
         )
 
         weights = pd.DataFrame(0.0, index=data.columns, columns=data.columns)
         for u_index, v_index, mi in vals:
-            weights.iat[u_index, v_index] = mi 
+            weights.iat[u_index, v_index] = mi
 
         # construct maximum spanning tree
-        T = nx.maximum_spanning_tree(nx.from_pandas_adjacency(weights, create_using=nx.Graph))
+        T = nx.maximum_spanning_tree(
+            nx.from_pandas_adjacency(weights, create_using=nx.Graph)
+        )
 
         # create DAG by directing edges away from root node
         D = nx.bfs_tree(T, root_node)
