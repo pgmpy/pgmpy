@@ -16,42 +16,43 @@ Base Estimator Classes
 Bayesian Estimator
 ------------------
 
-.. autoclass:: pgmpy.estimators.BayesianEstimator.BayesianEstimator
+.. autoclass:: pgmpy.estimators.BayesianEstimator
    :members:
 
-Bdeu Score
+BDeu Score
 ----------
 
-.. autoclass:: pgmpy.estimators.BDeuScore.BDeuScore
+.. autoclass:: pgmpy.estimators.BDeuScore
    :members:
 
 Bic Score
 ---------
 
-.. autoclass:: pgmpy.estimators.BicScore.BicScore :members:
+.. autoclass:: pgmpy.estimators.BicScore
+   :members:
 
 Contraint Based Estimator
 -------------------------
 
-.. autoclass:: pgmpy.estimators.ConstraintBasedEstimator.ConstraintBasedEstimator
+.. autoclass:: pgmpy.estimators.ConstraintBasedEstimator
    :members:
 
 Exhaustive Search
 -----------------
 
-.. autoclass:: pgmpy.estimators.ExhaustiveSearch.ExhaustiveSearch
+.. autoclass:: pgmpy.estimators.ExhaustiveSearch
    :members:
 
 Hill Climb Search
 -----------------
 
-.. autoclass:: pgmpy.estimators.HillClimbSearch.HillClimbSearch
+.. autoclass:: pgmpy.estimators.HillClimbSearch
    :members:
 
 K2 Score
 --------
 
-.. autoclass:: pgmpy.estimators.K2Score.K2Score
+.. autoclass:: pgmpy.estimators.K2Score
    :members:
 
 Maximum Likelihood Estimator
@@ -63,20 +64,20 @@ Maximum Likelihood Estimator
 Structure Score
 ---------------
 
-.. autoclass:: pgmpy.estimators.StructureScore.StructureScore
+.. autoclass:: pgmpy.estimators.StructureScore
    :members:
 
 Structural Equation Model Estimators
 ------------------------------------
 
-.. autoclass:: pgmpy.estimators.SEMEstimator.IVEstimator
+.. autoclass:: pgmpy.estimators.IVEstimator
    :members:
 
-.. autoclass:: pgmpy.estimators.SEMEstimator.SEMEstimator
+.. autoclass:: pgmpy.estimators.SEMEstimator
    :members:
 
 Mmhc Estimator
 --------------
 
-.. autoclass:: pgmpy.estimators.MmhcEstimator.MmhcEstimator
+.. autoclass:: pgmpy.estimators.MmhcEstimator
    :members:

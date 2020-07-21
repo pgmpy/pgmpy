@@ -2,7 +2,6 @@
 """
     A collection of methods for sampling from continuous models in pgmpy
 """
-from __future__ import division
 from math import sqrt
 
 import numpy as np

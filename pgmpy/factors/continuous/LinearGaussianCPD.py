@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import division
-
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
@@ -234,7 +231,7 @@ class LinearGaussianCPD(BaseFactor):
                 parents=", ".join([str(var) for var in self.evidence]),
                 mu=" + ".join(
                     [
-                        "{coeff}*{parent}".format(coeff=coeff, parent=parent)
+                        f"{coeff}*{parent}"
                         for coeff, parent in zip(self.mean, self.evidence)
                     ]
                 ),

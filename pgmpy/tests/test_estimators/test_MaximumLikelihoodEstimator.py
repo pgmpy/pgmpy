@@ -101,12 +101,12 @@ class TestMLE(unittest.TestCase):
                 3,
                 [
                     [0.0, 0.0, 1.0, 1.0 / 3, 1.0 / 3, 1.0 / 3],
-                    [1.0, 1.0, 0.0, 1.0 / 3, 1.0 / 3, 1.0 / 3],
                     [0.0, 0.0, 0.0, 1.0 / 3, 1.0 / 3, 1.0 / 3],
+                    [1.0, 1.0, 0.0, 1.0 / 3, 1.0 / 3, 1.0 / 3],
                 ],
                 evidence=["A", "B"],
                 evidence_card=[3, 2],
-                state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 1, 42]},
+                state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 42, 1]},
             ),
         ]
         self.assertSetEqual(set(mle.get_parameters()), set(cpds))

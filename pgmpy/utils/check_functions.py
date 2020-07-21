@@ -11,9 +11,9 @@ def _check_1d_array_object(parameter, name_param):
     if isinstance(parameter, (np.ndarray, list, tuple, np.matrix)):
         parameter = np.array(parameter)
         if parameter.ndim != 1:
-            raise TypeError("{} should be a 1d array type object".format(name_param))
+            raise TypeError(f"{name_param} should be a 1d array type object")
     else:
-        raise TypeError("{} should be a 1d array type object".format(name_param))
+        raise TypeError(f"{name_param} should be a 1d array type object")
 
     return parameter
 
@@ -24,7 +24,5 @@ def _check_length_equal(param_1, param_2, name_param_1, name_param_2):
     """
     if len(param_1) != len(param_2):
         raise ValueError(
-            "Length of {} must be same as Length of {}".format(
-                name_param_1, name_param_2
-            )
+            f"Length of {name_param_1} must be same as Length of {name_param_2}"
         )

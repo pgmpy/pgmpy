@@ -2,13 +2,12 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-try:  # pragma: no cover
+try:
     import torch
-except ImportError:  # pragma: no cover
+except ImportError:
     torch = None
 
 from pgmpy.models import SEMGraph, SEMAlg, SEM
-from pgmpy.data import Data
 from pgmpy.global_vars import device, dtype
 from pgmpy.utils import optimize, pinverse
 
@@ -25,10 +24,7 @@ class SEMEstimator(object):
             self.model = model
         else:
             raise ValueError(
-                """model should be an instance of either SEMGraph or SEMAlg class.
-                                Got type: {t}""".format(
-                    t=type(model)
-                )
+                f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
             )
 
         # Initialize trainable and fixed mask tensors
@@ -202,7 +198,7 @@ class SEMEstimator(object):
         init_values="random",
         exit_delta=1e-4,
         max_iter=1000,
-        **kwargs
+        **kwargs,
     ):
         """
         Estimate the parameters of the model from the data.
@@ -240,17 +236,12 @@ class SEMEstimator(object):
         .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
         """
         # Check if given arguements are valid
-        if not isinstance(data, (pd.DataFrame, Data)):
-            raise ValueError(
-                "data must be a pandas DataFrame. Got type: {t}".format(t=type(data))
-            )
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"data must be a pandas DataFrame. Got type: {type(data)}")
 
         if not sorted(data.columns) == sorted(self.model.y):
             raise ValueError(
-                """The column names data do not match the variables in the model. Expected:
-                                {expected}. Got: {got}""".format(
-                    expected=sorted(self.model.observed), got=sorted(data.columns)
-                )
+                f"The column names data do not match the variables in the model. Expected: {sorted(self.model.observed)}. Got: {sorted(data.columns)}"
             )
 
         # Initialize the values of parameters as tensors.
@@ -370,6 +361,7 @@ class IVEstimator:
 
         Examples
         --------
+
         """
         self.model = model
 
@@ -400,6 +392,7 @@ class IVEstimator:
 
         Examples
         --------
+
         """
         if (ivs is None) and (civs is None):
             ivs = self.model.get_ivs(X, Y)

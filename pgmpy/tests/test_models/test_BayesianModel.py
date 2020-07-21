@@ -134,6 +134,22 @@ class TestBayesianModelMethods(unittest.TestCase):
         )
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
         self.G2 = BayesianModel([("d", "g"), ("g", "l"), ("i", "g"), ("i", "l")])
+        self.G3 = BayesianModel(
+            [
+                ("Pop", "EC"),
+                ("Urb", "EC"),
+                ("GDP", "EC"),
+                ("EC", "FFEC"),
+                ("EC", "REC"),
+                ("EC", "EI"),
+                ("REC", "CO2"),
+                ("REC", "CH4"),
+                ("REC", "N2O"),
+                ("FFEC", "CO2"),
+                ("FFEC", "CH4"),
+                ("FFEC", "N2O"),
+            ]
+        )
 
     def test_moral_graph(self):
         moral_graph = self.G.moralize()
@@ -253,6 +269,9 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(
             set(G.get_markov_blanket("y")), set(["s", "w", "x", "u", "z", "v"])
         )
+
+    def test_markov_blanket_G3(self):
+        self.assertEqual(set(self.G3.get_markov_blanket("CH4")), set(["FFEC", "REC"]))
 
     def test_get_immoralities(self):
         G = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])

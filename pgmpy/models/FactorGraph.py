@@ -240,9 +240,7 @@ class FactorGraph(UndirectedGraph):
             for variable, cardinality in zip(factor.scope(), factor.cardinality):
                 if cardinalities[variable] != cardinality:
                     raise ValueError(
-                        "Cardinality of variable {var} not matching among factors".format(
-                            var=variable
-                        )
+                        f"Cardinality of variable {variable} not matching among factors"
                     )
 
         return True

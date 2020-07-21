@@ -7,7 +7,7 @@ Describe your issue here.
 * Operating System
 
 ### Steps to reproduce
-Tell us how to reproduce this issue. Please provide a minimal reproducible code of
+Tell us how to reproduce this issue. Please provide a **minimal reproducible code** of
 the issue you are facing if possible.
 
 ### Expected behaviour

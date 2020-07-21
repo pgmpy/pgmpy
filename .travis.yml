@@ -18,8 +18,8 @@ cache:
 python:
   - "3.6"
   - "3.7"
-  #- "3.8"  no torch for 3.8 yet
-  #
+  - "3.8"
+
 before_install:
   - pip install pip -U
   # run a linter before doing anything else

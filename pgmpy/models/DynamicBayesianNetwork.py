@@ -197,9 +197,7 @@ class DynamicBayesianNetwork(DAG):
             and nx.has_path(self, end, start)
         ):
             raise ValueError(
-                "Loops are not allowed. Adding the edge from ({start} --> {end}) forms a loop.".format(
-                    start=str(start), end=str(end)
-                )
+                f"Loops are not allowed. Adding the edge from ({str(start)} --> {str(end)}) forms a loop."
             )
 
         super(DynamicBayesianNetwork, self).add_edge(start, end, **kwargs)
@@ -495,8 +493,7 @@ class DynamicBayesianNetwork(DAG):
                 parents = self.get_parents(node)
                 if set(evidence) != set(parents if parents else []):
                     raise ValueError(
-                        "CPD associated with {node} doesn't have "
-                        "proper parents associated with it.".format(node=node)
+                        f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
                 if not np.allclose(
                     cpd.to_factor()
@@ -506,8 +503,7 @@ class DynamicBayesianNetwork(DAG):
                     atol=0.01,
                 ):
                     raise ValueError(
-                        "Sum of probabilities of states for node {node}"
-                        " is not equal to 1".format(node=node)
+                        f"Sum of probabilities of states for node {node} is not equal to 1"
                     )
         return True
 

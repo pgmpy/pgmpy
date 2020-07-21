@@ -116,16 +116,12 @@ class MarkovChain(object):
         state_vars = {s.var for s in state}
         if not state_vars == set(self.variables):
             raise ValueError(
-                "Start state must represent a complete assignment to all variables."
-                "Expected variables in state: {svar}, Got: {mvar}.".format(
-                    svar=state_vars, mvar=set(self.variables)
-                )
+                f"Start state must represent a complete assignment to all variables."
+                f"Expected variables in state: {state_vars}, Got: {set(self.variables)}."
             )
         for var, val in state:
             if val >= self.cardinalities[var]:
-                raise ValueError(
-                    "Assignment {val} to {var} invalid.".format(val=val, var=var)
-                )
+                raise ValueError(f"Assignment {val} to {var} invalid.")
         return True
 
     def add_variable(self, variable, card=0):
@@ -148,7 +144,7 @@ class MarkovChain(object):
         if variable not in self.variables:
             self.variables.append(variable)
         else:
-            warn("Variable {var} already exists.".format(var=variable))
+            warn(f"Variable {variable} already exists.")
         self.cardinalities[variable] = card
         self.transition_models[variable] = {}
 
@@ -206,15 +202,11 @@ class MarkovChain(object):
                 raise ValueError("Transition model must be a dict or numpy array")
             elif len(transition_model.shape) != 2:
                 raise ValueError(
-                    "Transition model must be 2d array.given {t}".format(
-                        t=transition_model.shape
-                    )
+                    f"Transition model must be 2d array.given {transition_model.shape}"
                 )
             elif transition_model.shape[0] != transition_model.shape[1]:
                 raise ValueError(
-                    "Dimension mismatch {d1}!={d2}".format(
-                        d1=transition_model.shape[0], d2=transition_model.shape[1]
-                    )
+                    f"Dimension mismatch {transition_model.shape[0]}!={transition_model.shape[1]}"
                 )
             else:
                 # convert the matrix to dict
@@ -233,10 +225,7 @@ class MarkovChain(object):
         tm_states = set(transition_model.keys())
         if not exp_states == tm_states:
             raise ValueError(
-                "Transitions must be defined for all states of variable {v}. "
-                "Expected states: {es}, Got: {ts}.".format(
-                    v=variable, es=exp_states, ts=tm_states
-                )
+                f"Transitions must be defined for all states of variable {variable}. Expected states: {exp_states}, Got: {tm_states}."
             )
 
         for _, transition in transition_model.items():
