@@ -201,7 +201,19 @@ class XMLBIFReader(object):
         }
         return variable_property
 
-    def get_model(self):
+    def get_model(self, state_name_type=str):
+        """
+        Returns a Bayesian Model instance from the file/string.
+
+        Parameters
+        ----------
+        state_name_type: int, str, or bool (default: str)
+            The data type to which to convert the state names of the variables.
+
+        Returns
+        -------
+        BayesianModel instance: The read model.
+        """
         model = BayesianModel()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
@@ -220,7 +232,7 @@ class XMLBIFReader(object):
                 evidence=self.variable_parents[var],
                 evidence_card=evidence_card,
                 state_names={
-                    var: self.state_names[var]
+                    var: list(map(state_name_type, self.state_names[var]))
                     for var in chain([var], self.variable_parents[var])
                 },
             )

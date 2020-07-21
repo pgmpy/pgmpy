@@ -1,5 +1,3 @@
-from __future__ import division
-
 from itertools import product
 from collections import namedtuple
 from warnings import warn
@@ -91,11 +89,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             )
 
         if values.size != np.product(cardinality):
-            raise ValueError(
-                "Values array must be of size: {size}".format(
-                    size=np.product(cardinality)
-                )
-            )
+            raise ValueError(f"Values array must be of size: {np.product(cardinality)}")
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
@@ -270,7 +264,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         for var in variables:
             if var not in phi.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
+                raise ValueError(f"{var} not in scope.")
 
         var_indexes = [phi.variables.index(var) for var in variables]
 
@@ -326,7 +320,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         for var in variables:
             if var not in phi.variables:
-                raise ValueError("{var} not in scope.".format(var=var))
+                raise ValueError(f"{var} not in scope.")
 
         var_indexes = [phi.variables.index(var) for var in variables]
 
@@ -779,11 +773,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 If True, the user defined state names are displayed.
         """
         string_header = list(map(str, self.scope()))
-        string_header.append(
-            "{phi_or_p}({variables})".format(
-                phi_or_p=phi_or_p, variables=",".join(string_header)
-            )
-        )
+        string_header.append(f"{phi_or_p}({','.join(string_header)})")
 
         value_index = 0
         factor_table = []
@@ -798,7 +788,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 ]
             else:
                 prob_list = [
-                    "{s}_{d}".format(s=list(self.variables)[i], d=prob[i])
+                    f"{list(self.variables)[i]}_{prob[i]}"
                     for i in range(len(self.variables))
                 ]
 
@@ -812,14 +802,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
     def __repr__(self):
         var_card = ", ".join(
-            [
-                "{var}:{card}".format(var=var, card=card)
-                for var, card in zip(self.variables, self.cardinality)
-            ]
+            [f"{var}:{card}" for var, card in zip(self.variables, self.cardinality)]
         )
-        return "<DiscreteFactor representing phi({var_card}) at {address}>".format(
-            address=hex(id(self)), var_card=var_card
-        )
+        return f"<DiscreteFactor representing phi({var_card}) at {hex(id(self))}>"
 
     def __mul__(self, other):
         return self.product(other, inplace=False)

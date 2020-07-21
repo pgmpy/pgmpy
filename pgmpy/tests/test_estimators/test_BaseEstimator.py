@@ -51,32 +51,5 @@ class TestBaseEstimator(unittest.TestCase):
             [[0, 0, 0, 0], [1, 0, 0, 0]],
         )
 
-    def test_test_conditional_independence(self):
-        data = pd.DataFrame(
-            np.random.randint(0, 2, size=(1000, 4)), columns=list("ABCD")
-        )
-        data["E"] = data["A"] + data["B"] + data["C"]
-        est = BaseEstimator(data)
-
-        self.assertTrue(est.test_conditional_independence("A", "C"))  # independent
-        self.assertTrue(est.test_conditional_independence("A", "B", "D"))  # independent
-        self.assertFalse(
-            est.test_conditional_independence("A", "B", ["D", "E"])
-        )  # dependent
-
-    def test_test_conditional_independence_titanic(self):
-        est = BaseEstimator(self.titanic_data)
-
-        self.assertTrue(est.test_conditional_independence("Embarked", "Sex"))
-        self.assertFalse(
-            est.test_conditional_independence("Pclass", "Survived", ["Embarked"])
-        )
-        self.assertTrue(
-            est.test_conditional_independence("Embarked", "Survived", ["Sex", "Pclass"])
-        )
-        # insufficient data test commented out, because generates warning
-        # self.assertEqual(est.test_conditional_independence('Sex', 'Survived', ["Age", "Embarked"]),
-        #                 (235.51133052530713, 0.99999999683394869, False))
-
     def tearDown(self):
         del self.d1

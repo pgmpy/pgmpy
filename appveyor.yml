@@ -1,12 +1,13 @@
 environment:
   matrix:
     # pytorch only seems to work on 64bit Python versions on Windows
+    - PYTHON: "C:\\Python38-x64" 
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python36-x64"
 
 install:
   - "%PYTHON%\\python.exe -m pip install pip -U"
-  - "%PYTHON%\\python.exe -m pip install torch==1.3.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+  - "%PYTHON%\\python.exe -m pip install torch==1.4.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
   - "%PYTHON%\\python.exe -m pip install -r requirements.txt -U"
   - "%PYTHON%\\python.exe -m pip install -e ."
 

@@ -75,7 +75,7 @@ class BayesianModelSampling(Inference):
 
         pbar = tqdm(self.topological_order)
         for node in pbar:
-            pbar.set_description("Generating for node: {node}".format(node=node))
+            pbar.set_description(f"Generating for node: {node}")
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
@@ -87,7 +87,7 @@ class BayesianModelSampling(Inference):
                 weights = cpd.values
             sampled[node] = sample_discrete(states, weights, size)
 
-        return _return_samples(return_type, sampled)
+        return _return_samples(return_type, sampled, self.state_names_map)
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
@@ -104,7 +104,7 @@ class BayesianModelSampling(Inference):
 
         return cached_values
 
-    def rejection_sample(self, evidence=None, size=1, return_type="dataframe"):
+    def rejection_sample(self, evidence=[], size=1, return_type="dataframe"):
         """
         Generates sample(s) from joint distribution of the bayesian network,
         given the evidence.
@@ -144,13 +144,25 @@ class BayesianModelSampling(Inference):
         0         0          0          1
         1         0          0          1
         """
-        if evidence is None:
+        # Covert evidence state names to number
+        evidence = [
+            (var, self.model.get_cpds(var).get_state_no(var, state))
+            for var, state in evidence
+        ]
+
+        # If no evidence is given, it is equivalent to forward sampling.
+        if len(evidence) == 0:
             return self.forward_sample(size)
+
+        # Setup array to be returned
         types = [(var_name, "int") for var_name in self.topological_order]
         sampled = np.zeros(0, dtype=types).view(np.recarray)
         prob = 1
         i = 0
 
+        # Do the sampling by generating samples from forward sampling and rejecting the
+        # samples which do not match our evidence. Keep doing until we have enough
+        # samples.
         pbar = tqdm(total=size)
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
@@ -166,7 +178,8 @@ class BayesianModelSampling(Inference):
             pbar.update(len(_sampled))
         pbar.close()
 
-        return _return_samples(return_type, sampled)
+        # Post process: Correct return type and replace state numbers with names.
+        return _return_samples(return_type, sampled, self.state_names_map)
 
     def likelihood_weighted_sample(self, evidence=[], size=1, return_type="dataframe"):
         """
@@ -209,12 +222,20 @@ class BayesianModelSampling(Inference):
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
+        # Covert evidence state names to number
+        evidence = [
+            (var, self.model.get_cpds(var).get_state_no(var, state))
+            for var, state in evidence
+        ]
+
+        # Prepare the return array
         types = [(var_name, "int") for var_name in self.topological_order]
         types.append(("_weight", "float"))
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled["_weight"] = np.ones(size)
         evidence_dict = {var: st for var, st in evidence}
 
+        # Do the sampling
         for node in self.topological_order:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
@@ -240,7 +261,8 @@ class BayesianModelSampling(Inference):
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
-        return _return_samples(return_type, sampled)
+        # Postprocess the samples: Correct return type and change state numbers to names
+        return _return_samples(return_type, sampled, self.state_names_map)
 
 
 class GibbsSampling(MarkovChain):

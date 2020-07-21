@@ -255,9 +255,7 @@ class BayesianModel(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning(
-                        "Replacing existing CPD for {var}".format(var=cpd.variable)
-                    )
+                    logging.warning(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -386,19 +384,17 @@ class BayesianModel(DAG):
             cpd = self.get_cpds(node=node)
 
             if cpd is None:
-                raise ValueError("No CPD associated with {}".format(node))
+                raise ValueError(f"No CPD associated with {node}")
             elif isinstance(cpd, (TabularCPD, ContinuousFactor)):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
                 if set(evidence if evidence else []) != set(parents if parents else []):
                     raise ValueError(
-                        "CPD associated with {node} doesn't have "
-                        "proper parents associated with it.".format(node=node)
+                        f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
                 if not cpd.is_valid_cpd():
                     raise ValueError(
-                        "Sum or integral of conditional probabilites for node {node}"
-                        " is not equal to 1.".format(node=node)
+                        f"Sum or integral of conditional probabilites for node {node} is not equal to 1."
                     )
         return True
 
@@ -421,6 +417,7 @@ class BayesianModel(DAG):
         """
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
+        mm.add_nodes_from(moral_graph.nodes())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 
         return mm
@@ -544,7 +541,7 @@ class BayesianModel(DAG):
         >>> train_data = values[:800]
         >>> predict_data = values[800:]
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
-        >>> model.fit(values)
+        >>> model.fit(train_data)
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop('E', axis=1, inplace=True)
         >>> y_pred = model.predict(predict_data)
@@ -786,5 +783,5 @@ class BayesianModel(DAG):
         for child_node in children:
             blanket_nodes.extend(self.get_parents(child_node))
         blanket_nodes = set(blanket_nodes)
-        blanket_nodes.remove(node)
+        blanket_nodes.discard(node)
         return list(blanket_nodes)

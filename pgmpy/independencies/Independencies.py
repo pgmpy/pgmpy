@@ -94,13 +94,18 @@ class Independencies(object):
         """
         if not isinstance(assertion, IndependenceAssertion):
             raise TypeError(
-                "' in <Independencies()>' requires IndependenceAssertion"
-                + " as left operand, not {0}".format(type(assertion))
+                f"' in <Independencies()>' requires IndependenceAssertion as left operand, not {type(assertion)}"
             )
 
         return assertion in self.get_assertions()
 
     __contains__ = contains
+
+    def get_all_variables(self):
+        """
+        Returns a set of all the variables in all the independence assertions.
+        """
+        return frozenset().union(*[ind.all_vars for ind in self.independencies])
 
     def get_assertions(self):
         """
@@ -414,6 +419,7 @@ class IndependenceAssertion(object):
         self.event1 = frozenset(self._return_list_if_str(event1))
         self.event2 = frozenset(self._return_list_if_str(event2))
         self.event3 = frozenset(self._return_list_if_str(event3))
+        self.all_vars = frozenset().union(self.event1, self.event2, self.event3)
 
     def __str__(self):
         if self.event3:

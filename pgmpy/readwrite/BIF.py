@@ -271,7 +271,9 @@ class BIFReader(object):
         names = self.probability_expr.searchString(block)
         var_name, parents = names[0][0], names[0][1:]
         cpds = self.cpd_expr.searchString(block)
-        if "table" in block:
+
+        # Check if the block is a table.
+        if bool(re.search(".*\\n[ ]*table .*\n.*", block)):
             arr = np.array([float(j) for i in cpds for j in i])
             arr = arr.reshape(
                 (
@@ -345,9 +347,14 @@ class BIFReader(object):
         ]
         return edges
 
-    def get_model(self):
+    def get_model(self, state_name_type=str):
         """
-        Returns the fitted bayesian model
+        Returns the Bayesian Model read from the file/str.
+
+        Parameters
+        ----------
+        state_name_type: int, str or bool (default: str)
+            The data type to which to convert the state names of the variables.
 
         Example
         ----------
@@ -366,10 +373,10 @@ class BIFReader(object):
             for var in sorted(self.variable_cpds.keys()):
                 values = self.variable_cpds[var]
                 sn = {
-                    p_var: self.variable_states[p_var]
+                    p_var: list(map(state_name_type, self.variable_states[p_var]))
                     for p_var in self.variable_parents[var]
                 }
-                sn[var] = self.variable_states[var]
+                sn[var] = list(map(state_name_type, self.variable_states[var]))
                 cpd = TabularCPD(
                     var,
                     len(self.variable_states[var]),
@@ -647,7 +654,7 @@ $properties}\n"""
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> model = BIFReader('dog-problem.bif').get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.write_bif(filname='test_file.bif')
+        >>> writer.write_bif(filename='test_file.bif')
         """
         writer = self.__str__()
         with open(filename, "w") as fout:

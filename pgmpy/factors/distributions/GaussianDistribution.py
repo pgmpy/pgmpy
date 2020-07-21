@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import division
-
 import numpy as np
 from scipy.stats import multivariate_normal
 
@@ -66,11 +63,7 @@ class GaussianDistribution(BaseDistribution):
 
         if self.covariance.shape != (no_of_var, no_of_var):
             raise ValueError(
-                "The Covariance matrix should be a square matrix",
-                " with order equal to the number of variables. ",
-                "Got: {got_shape}, Expected: {exp_shape}".format(
-                    got_shape=self.covariance.shape, exp_shape=(no_of_var, no_of_var)
-                ),
+                f"The Covariance matrix should be a square matrix  with order equal to the number of variables. Got: {self.covariance.shape}, Expected: {(no_of_var, no_of_var)}"
             )
 
     @property
@@ -204,8 +197,7 @@ class GaussianDistribution(BaseDistribution):
         """
         if not isinstance(variables, list):
             raise TypeError(
-                "variables: Expected type list or array-like,"
-                "got type {var_type}".format(var_type=type(variables))
+                f"variables: Expected type list or array-like, got type {type(variables)}"
             )
 
         phi = self if inplace else self.copy()
@@ -283,8 +275,7 @@ class GaussianDistribution(BaseDistribution):
         """
         if not isinstance(values, list):
             raise TypeError(
-                "values: Expected type list or array-like, ",
-                "got type {var_type}".format(var_type=type(values)),
+                f"values: Expected type list or array-like, got type {type(values)}"
             )
 
         phi = self if inplace else self.copy()
@@ -377,7 +368,7 @@ class GaussianDistribution(BaseDistribution):
         return copy_distribution
 
     def to_canonical_factor(self):
-        u"""
+        """
         Returns an equivalent CanonicalDistribution object.
 
         The formulas for calculating the canonical factor parameters
@@ -565,8 +556,8 @@ class GaussianDistribution(BaseDistribution):
         return self._operate(other, operation="divide", inplace=inplace)
 
     def __repr__(self):
-        return "GaussianDistribution representing N({var}) at {address}".format(
-            var=self.variables, address=hex(id(self))
+        return (
+            f"GaussianDistribution representing N({self.variables}) at {hex(id(self))}"
         )
 
     def __mul__(self, other):

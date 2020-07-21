@@ -11,24 +11,23 @@ PomdpX
 ------
 
 .. automodule:: pgmpy.readwrite.PomdpX
-
-ProbModelXML
-------------
-
-.. automodule:: pgmpy.readwrite.ProbModelXML
+   :members:
 
 UAI
 ---
 
 .. automodule:: pgmpy.readwrite.UAI
+   :members:
 
 XMLBeliefNetwork
 ----------------
 
 .. automodule:: pgmpy.readwrite.XMLBeliefNetwork
+   :members:
 
 XMLBIF
 ------
 
 .. automodule:: pgmpy.readwrite.XMLBIF
+   :members:
 

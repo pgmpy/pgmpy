@@ -197,7 +197,13 @@ class MmhcEstimator(StructureEstimator):
             for neigh in neighbors[node]:
                 other_neighbors = [n for n in neighbors[node] if n != neigh]
                 for sep_set in powerset(other_neighbors):
-                    if self.test_conditional_independence(node, neigh, sep_set):
+                    if chi_square(
+                        X=node,
+                        Y=neigh,
+                        Z=sep_set,
+                        data=self.data,
+                        significance_level=significance_level,
+                    ):
                         neighbors[node].remove(neigh)
                         break
 
