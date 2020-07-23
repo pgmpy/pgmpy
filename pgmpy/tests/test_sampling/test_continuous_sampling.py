@@ -210,7 +210,7 @@ class TestNUTSInference(unittest.TestCase):
 
         np.random.seed(921312312)
         samples = self.nuts_sampler.generate_sample(
-            initial_pos=[0.2, 0.4, 2.2], num_adapt=10000, num_samples=10000
+            initial_pos=[0.2, 0.4, 2.2], num_adapt=10000, num_samples=30000
         )
         samples_array = np.array([sample for sample in samples])
         sample_covariance = np.cov(samples_array.T)
