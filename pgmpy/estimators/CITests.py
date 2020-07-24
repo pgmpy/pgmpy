@@ -121,7 +121,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-            data.groupby([X, Y]).size().unstack(Y)
+            data.groupby([X, Y]).size().unstack(Y, fill_value=0)
         )
 
     # Step 3: If there are conditionals variables, iterate over unique states and do

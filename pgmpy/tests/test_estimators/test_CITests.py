@@ -187,3 +187,12 @@ class TestChiSquare(unittest.TestCase):
                 significance_level=0.05,
             )
         )
+
+    def test_exactly_same_vars(self):
+        x = np.random.choice([0, 1], size=1000)
+        y = x.copy()
+        df = pd.DataFrame({"x": x, "y": y})
+        chi, dof, p_value = chi_square(X="x", Y="y", Z=[], data=df, boolean=False)
+        np_test.assert_almost_equal(chi, 996.0, decimal=1)
+        self.assertEqual(dof, 1)
+        np_test.assert_almost_equal(p_value, 0, decimal=5)
