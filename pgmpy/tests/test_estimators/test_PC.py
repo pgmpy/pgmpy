@@ -285,21 +285,14 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 frozenset(("A", "E")): tuple(),
                 frozenset(("B", "C")): tuple(),
                 frozenset(("A", "D")): tuple(),
-                frozenset(
-                    ("C", "B")
-                ): tuple(),  # This one is only for the stable version
+                # This one is only for stable version.
+                frozenset(("C", "B")): tuple(),
             }
-            if variant == "stable":
-                for u, v in skel.edges():
-                    self.assertTrue(
-                        ((u, v) in expected_edges_stable)
-                        or ((v, u) in expected_edges_stable)
-                    )
-            else:
-                for u, v in skel.edges():
-                    self.assertTrue(
-                        ((u, v) in expected_edges) or ((v, u) in expected_edges)
-                    )
+            for u, v in skel.edges():
+                self.assertTrue(
+                    ((u, v) in expected_edges_stable)
+                    or ((v, u) in expected_edges_stable)
+                )
 
             for key, value in sep_sets.items():
                 self.assertEqual(sep_sets[key], expected_sepsets[key])
