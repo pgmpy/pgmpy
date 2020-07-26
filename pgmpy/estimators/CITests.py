@@ -135,8 +135,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
             )
             chi += c
             dof += d
-
-        p_value = stats.chi2.pdf(chi, df=dof)
+        p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
     if boolean:
