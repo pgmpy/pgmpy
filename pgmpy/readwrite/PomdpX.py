@@ -54,13 +54,13 @@ class PomdpXReader(object):
         """
         Return the problem description
 
-        Example
+        Examples
+        --------
         >>> reader = PomdpXReader('Test_Pomdpx.xml')
         >>> reader.get_description()
         'RockSample problem for map size 1 x 3.
         Rock is at 0, Rover’s initial position is at 1.
         Exit is at 2.'
-        --------
         >>> reader = PomdpXReader('Test_PomdpX.xml')
         >>> reader.get_description()
         'RockSample problem for map size 1 x 3.

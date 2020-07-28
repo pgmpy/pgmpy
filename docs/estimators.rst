@@ -34,7 +34,7 @@ Bic Score
 Contraint Based Estimator
 -------------------------
 
-.. autoclass:: pgmpy.estimators.ConstraintBasedEstimator
+.. autoclass:: pgmpy.estimators.PC
    :members:
 
 Exhaustive Search
@@ -80,4 +80,10 @@ Mmhc Estimator
 --------------
 
 .. autoclass:: pgmpy.estimators.MmhcEstimator
+   :members:
+
+Tree Search
+-----------
+
+.. autoclass:: pgmpy.estimators.TreeSearch
    :members:

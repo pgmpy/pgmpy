@@ -367,7 +367,7 @@ class IVEstimator:
 
     def fit(self, X, Y, data, ivs=None, civs=None):
         """
-        Estimates the parameter :math: `X \rightarrow Y`.
+        Estimates the parameter X -> Y.
 
         Parameters
         ----------
@@ -392,7 +392,7 @@ class IVEstimator:
 
         Examples
         --------
-
+        >>> from pgmpy.estimators import IVEstimator # TODO: Finish example.
         """
         if (ivs is None) and (civs is None):
             ivs = self.model.get_ivs(X, Y)

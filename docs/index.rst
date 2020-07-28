@@ -15,15 +15,17 @@ Getting Started:
 
 Basic Examples:
 
+For a complete list check: https://github.com/pgmpy/pgmpy/tree/dev/examples
+
 .. toctree::
    :maxdepth: 3
 
-   Monty Hall Problem <https://github.com/pgmpy/pgmpy/blob/dev/examples/Monty%20Hall%20Problem.ipynb>
-   Creating a Bayesian Network in pgmpy <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Bayesian%20Network.ipynb>
-   Inference in Bayesian Network using Asia model <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Bayesian%20Networks.ipynb>
-   Learning from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20from%20data.ipynb>
+   Defining a Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Bayesian%20Network.ipynb>
+   Probabilitistic Inference in Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Bayesian%20Networks.ipynb>
+   Causal Inference <https://github.com/pgmpy/pgmpy/blob/dev/examples/Causal_Games.ipynb>
+   Learning Bayesian Networks from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20from%20data.ipynb>     
 
-Notebooks:
+Detailed Notebooks:
 
 .. toctree::
    :maxdepth: 2

@@ -277,6 +277,7 @@ class GibbsSampling(MarkovChain):
     Examples
     --------
     Initialization from a BayesianModel object:
+
     >>> from pgmpy.factors.discrete import TabularCPD
     >>> from pgmpy.models import BayesianModel
     >>> intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
@@ -287,7 +288,6 @@ class GibbsSampling(MarkovChain):
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-    Sample from it:
     >>> gibbs_chain.sample(size=3)
        intel  sat
     0      0    0

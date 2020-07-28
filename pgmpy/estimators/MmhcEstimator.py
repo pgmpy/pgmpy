@@ -116,11 +116,10 @@ class MmhcEstimator(StructureEstimator):
             seperating set ("witnessing set") of variables that makes then
             conditionally independent. (needed for edge orientation)
 
-
-        Reference
-        ---------
-        Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005),
-        Algorithm 1 & 2
+        References
+        ----------
+        Tsamardinos et al., The max-min hill-climbing Bayesian network structure
+        learning algorithm (2005), Algorithm 1 & 2
         http://www.dsl-lab.org/supplements/mmhc_paper/paper_online.pdf
 
         Examples
@@ -128,7 +127,6 @@ class MmhcEstimator(StructureEstimator):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import ConstraintBasedEstimator
-        >>>
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
         >>> data['F'] = data['A'] + data['B'] + data ['C']
         >>> est = ConstraintBasedEstimator(data)
@@ -140,7 +138,6 @@ class MmhcEstimator(StructureEstimator):
         {('D', 'A'): (), ('C', 'A'): (), ('C', 'E'): (), ('E', 'F'): (), ('B', 'D'): (),
          ('B', 'E'): (), ('D', 'F'): (), ('D', 'E'): (), ('A', 'E'): (), ('B', 'A'): (),
          ('B', 'C'): (), ('C', 'D'): ()}
-        >>>
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 3)), columns=list('XYZ'))
         >>> data['X'] += data['Z']
         >>> data['Y'] += data['Z']

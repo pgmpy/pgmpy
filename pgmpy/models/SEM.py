@@ -1226,6 +1226,7 @@ class SEM(SEMGraph):
         r"""
         Initializes a `SEM` instance using LISREL notation. The LISREL notation is defined as:
         ..math::
+
             \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\Gamma \xi} + mathbf{\zeta} \\
             \mathbf{y} = \mathbf{\wedge_y \eta} + \mathbf{\epsilon} \\
             \mathbf{x} = \mathbf{\wedge_x \xi} + \mathbf{\delta}
@@ -1328,7 +1329,9 @@ class SEM(SEMGraph):
         r"""
         Initializes a `SEM` instance using Reticular Action Model(RAM) notation. The model
         is defined as:
+
         ..math::
+
             \mathbf{\eta} = \mathbf{B \eta} + \mathbf{\epsilon} \\
             \mathbf{\y} = \wedge_y \mathbf{\eta}
             \zeta = COV(\mathbf{\epsilon})

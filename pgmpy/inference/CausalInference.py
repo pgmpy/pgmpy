@@ -311,11 +311,12 @@ class CausalInference(object):
         Y: str
             Target Variable
 
-        data: pandas DataFrame
+        data: pandas.DataFrame
             All observed data for this Bayesian Network.
 
         estimand_strategy: str or frozenset
-            Either specify a specific backdoor adjustment set or a strategy.  The available options are:
+            Either specify a specific backdoor adjustment set or a strategy.
+            The available options are:
                 smallest:
                     Use the smallest estimand of observed variables
                 all:
@@ -342,8 +343,8 @@ class CausalInference(object):
         Examples
         --------
         >>> game1 = BayesianModel([('X', 'A'),
-                                   ('A', 'Y'),
-                                   ('A', 'B')])
+        ...                        ('A', 'Y'),
+        ...                        ('A', 'B')])
         >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
         >>> inference = CausalInference(model=game1)
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")

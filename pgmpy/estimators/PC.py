@@ -56,13 +56,13 @@ class PC(StructureEstimator):
         ----------
         variant: str (one of "orig", "stable", "parallel")
             The variant of PC algorithm to run.
-                "orig": The original PC algorithm. Might not give the same
-                        results in different runs but does less independence
-                        tests compared to stable.
-                "stable": Gives the same result in every run but does needs to
-                        do more statistical independence tests.
-                "parallel": Parallel version of PC Stable. Can run on multiple
-                        cores with the same result on each run.
+            "orig": The original PC algorithm. Might not give the same
+                    results in different runs but does less independence
+                    tests compared to stable.
+            "stable": Gives the same result in every run but does needs to
+                    do more statistical independence tests.
+            "parallel": Parallel version of PC Stable. Can run on multiple
+                    cores with the same result on each run.
 
         ci_test: str or fun
             The statistical test to use for testing conditional independence in
