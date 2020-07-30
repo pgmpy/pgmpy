@@ -146,9 +146,10 @@ class BayesianEstimator(ParameterEstimator):
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
         cpd_shape = (node_cardinality, np.prod(parents_cardinalities, dtype=int))
 
-        if prior_type == "K2":
+        prior_type = prior_type.lower()
+        if prior_type == "k2":
             pseudo_counts = np.ones(cpd_shape, dtype=int)
-        elif prior_type == "BDeu":
+        elif prior_type == "bdeu":
             alpha = float(equivalent_sample_size) / (
                 node_cardinality * np.prod(parents_cardinalities)
             )
