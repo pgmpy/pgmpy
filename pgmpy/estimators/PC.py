@@ -2,8 +2,10 @@
 
 from warnings import warn
 from itertools import combinations
-from joblib import Parallel, delayed
+
 import networkx as nx
+from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
@@ -43,6 +45,7 @@ class PC(StructureEstimator):
         return_type="dag",
         significance_level=0.01,
         n_jobs=-1,
+        show_progress=True,
         **kwargs,
     ):
         """
@@ -169,6 +172,7 @@ class PC(StructureEstimator):
             significance_level=significance_level,
             variant=variant,
             n_jobs=n_jobs,
+            show_progress=show_progress,
             **kwargs,
         )
 
@@ -195,6 +199,7 @@ class PC(StructureEstimator):
         significance_level=0.01,
         variant="stable",
         n_jobs=-1,
+        show_progress=True,
         **kwargs,
     ):
         """
@@ -264,7 +269,12 @@ class PC(StructureEstimator):
         elif callable(ci_test):
             ci_test = ci_test
         else:
-            raise ValueError("CI test must be this this")
+            raise ValueError(
+                f"ci_test must either be chi_square, pearsonr, independence_match, or a function. Got: {ci_test}"
+            )
+
+        if show_progress:
+            pbar = tqdm(total=lim_neighbors)
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
@@ -354,6 +364,11 @@ class PC(StructureEstimator):
                 warn("Reached maximum number of allowed conditional variables. Exiting")
             lim_neighbors += 1
 
+            if show_progress:
+                pbar.update(1)
+
+        if show_progress:
+            pbar.close()
         return graph, separating_sets
 
     @staticmethod

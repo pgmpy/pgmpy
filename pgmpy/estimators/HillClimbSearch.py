@@ -2,6 +2,7 @@
 from itertools import permutations
 
 import networkx as nx
+from tqdm import trange
 
 from pgmpy.estimators import StructureEstimator, K2Score, ScoreCache
 from pgmpy.base import DAG
@@ -135,6 +136,7 @@ class HillClimbSearch(StructureEstimator):
         white_list=None,
         epsilon=1e-4,
         max_iter=1e6,
+        show_progress=True,
     ):
         """
         Performs local hill climb search to estimates the `DAG` structure
@@ -207,10 +209,12 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        iter_no = 0
-        while iter_no <= max_iter:
-            iter_no += 1
+        if show_progress:
+            iteration = trange(int(max_iter))
+        else:
+            iteration = range(int(max_iter))
 
+        for iter_no in iteration:
             best_score_delta = 0
             best_operation = None
 
