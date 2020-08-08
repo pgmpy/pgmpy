@@ -8,9 +8,9 @@ from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 class CausalInference(object):
     """
-    This is an inference class for performing Causal Inference over Bayesian Networks or Strucural Equation Models.
+    This is an inference class for performing Causal Inference over Bayesian Networks or Structural Equation Models.
 
-    This class will accept queries of the form: P(Y | do(X)) and utilize it's methods to provide an estimand which:
+    This class will accept queries of the form: P(Y | do(X)) and utilize its methods to provide an estimand which:
      * Identifies adjustment variables
      * Backdoor Adjustment
      * Front Door Adjustment
@@ -33,7 +33,7 @@ class CausalInference(object):
                             ('A', 'Y'),
                             ('A', 'B')])
     Load the graph into the CausalInference object to make causal queries.
-    >>> from pgmpy.inference.causal_inferece import CausalInference
+    >>> from pgmpy.inference.causal_inference import CausalInference
     >>> inference = CausalInference(game)
     >>> inference.get_all_backdoor_adjustment_sets(X="X", Y="Y")
     >>> inference.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
@@ -105,7 +105,7 @@ class CausalInference(object):
         """
         Returns a list of all adjustment sets per the back-door criterion.
 
-        A set of variables Z satisfies the back-door criterion relative to an ordered pair ofvariabies (Xi, Xj) in a DAG G if:
+        A set of variables Z satisfies the back-door criterion relative to an ordered pair of variabies (Xi, Xj) in a DAG G if:
             (i) no node in Z is a descendant of Xi; and
             (ii) Z blocks every path between Xi and Xj that contains an arrow into Xi.
 
