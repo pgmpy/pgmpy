@@ -109,7 +109,7 @@ class HillClimbSearch(StructureEstimator):
         # Step 3: Get all legal operations for flipping edges
         for (X, Y) in model.edges():
             # Check if flipping creates any cycles
-            if any(map(lambda path: len(path) > 1, nx.all_simple_paths(model, X, Y))):
+            if not any(map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))):
                 operation = ("flip", (X, Y))
                 if (
                     ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
@@ -133,7 +133,7 @@ class HillClimbSearch(StructureEstimator):
     def estimate(
         self,
         start=None,
-        tabu_length=0,
+        tabu_length=100,
         max_indegree=None,
         black_list=None,
         white_list=None,
