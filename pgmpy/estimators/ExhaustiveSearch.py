@@ -104,9 +104,8 @@ class ExhaustiveSearch(StructureEstimator):
         all_graphs = powerset(edges)  # 2^(n*(n-1)) graphs
 
         for graph_edges in all_graphs:
-            graph = nx.DiGraph()
+            graph = nx.DiGraph(graph_edges)
             graph.add_nodes_from(nodes)
-            graph.add_edges_from(graph_edges)
             if nx.is_directed_acyclic_graph(graph):
                 yield graph
 

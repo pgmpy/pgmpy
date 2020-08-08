@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from itertools import permutations
+from collections import deque
 
 import networkx as nx
 from tqdm import trange
@@ -57,9 +58,7 @@ class HillClimbSearch(StructureEstimator):
 
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
-    def _legal_operations(
-        self, model, tabu_list=[], max_indegree=None, black_list=None, white_list=None
-    ):
+    def _legal_operations(self, model, tabu_list, max_indegree, black_list, white_list):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
         (1) add, (2) remove, or (3) flip a single edge. For details on scoring
@@ -71,30 +70,34 @@ class HillClimbSearch(StructureEstimator):
         """
 
         local_score = self.scoring_method.local_score
-        nodes = self.state_names.keys()
+        tabu_list = set(tabu_list)
+
+        # Step 1: Get all legal operations for adding edges.
         potential_new_edges = (
-            set(permutations(nodes, 2))
+            set(permutations(self.variables, 2))
             - set(model.edges())
             - set([(Y, X) for (X, Y) in model.edges()])
         )
 
-        for (X, Y) in potential_new_edges:  # (1) add single edge
-            if nx.is_directed_acyclic_graph(nx.DiGraph(list(model.edges()) + [(X, Y)])):
+        for (X, Y) in potential_new_edges:
+            # Check if adding (X, Y) will create a cycle.
+            if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
                 if (
-                    operation not in tabu_list
-                    and (black_list is None or (X, Y) not in black_list)
-                    and (white_list is None or (X, Y) in white_list)
+                    (operation not in tabu_list)
+                    and ((X, Y) not in black_list)
+                    and ((X, Y) in white_list)
                 ):
                     old_parents = model.get_parents(Y)
                     new_parents = old_parents + [X]
-                    if max_indegree is None or len(new_parents) <= max_indegree:
+                    if len(new_parents) <= max_indegree:
                         score_delta = local_score(Y, new_parents) - local_score(
                             Y, old_parents
                         )
                         yield (operation, score_delta)
 
-        for (X, Y) in model.edges():  # (2) remove single edge
+        # Step 2: Get all legal operations for removing edges
+        for (X, Y) in model.edges():
             operation = ("-", (X, Y))
             if operation not in tabu_list:
                 old_parents = model.get_parents(Y)
@@ -103,23 +106,22 @@ class HillClimbSearch(StructureEstimator):
                 score_delta = local_score(Y, new_parents) - local_score(Y, old_parents)
                 yield (operation, score_delta)
 
-        for (X, Y) in model.edges():  # (3) flip single edge
-            new_edges = list(model.edges()) + [(Y, X)]
-            new_edges.remove((X, Y))
-            if nx.is_directed_acyclic_graph(nx.DiGraph(new_edges)):
+        # Step 3: Get all legal operations for flipping edges
+        for (X, Y) in model.edges():
+            # Check if flipping creates any cycles
+            if any(map(lambda path: len(path) > 1, nx.all_simple_paths(model, X, Y))):
                 operation = ("flip", (X, Y))
                 if (
-                    operation not in tabu_list
-                    and ("flip", (Y, X)) not in tabu_list
-                    and (black_list is None or (Y, X) not in black_list)
-                    and (white_list is None or (Y, X) in white_list)
+                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                    and ((Y, X) not in black_list)
+                    and ((Y, X) in white_list)
                 ):
                     old_X_parents = model.get_parents(X)
                     old_Y_parents = model.get_parents(Y)
                     new_X_parents = old_X_parents + [Y]
                     new_Y_parents = old_Y_parents[:]
                     new_Y_parents.remove(X)
-                    if max_indegree is None or len(new_X_parents) <= max_indegree:
+                    if len(new_X_parents) <= max_indegree:
                         score_delta = (
                             local_score(X, new_X_parents)
                             + local_score(Y, new_Y_parents)
@@ -198,16 +200,29 @@ class HillClimbSearch(StructureEstimator):
         >>> est.estimate(max_indegree=1).edges()
         [('J', 'A'), ('B', 'J')]
         """
-        nodes = self.state_names.keys()
+
+        # Step 1: Initial checks for arguments
         if start is None:
             start = DAG()
-            start.add_nodes_from(nodes)
-        elif not isinstance(start, DAG) or not set(start.nodes()) == set(nodes):
+            start.add_nodes_from(self.variables)
+        elif not isinstance(start, DAG) or not set(start.nodes()) == set(
+            self.variables
+        ):
             raise ValueError(
                 "'start' should be a DAG with the same variables as the data set, or 'None'."
             )
 
-        tabu_list = []
+        black_list = set() if black_list is None else set(black_list)
+        white_list = (
+            set([(u, v) for u in self.variables for v in self.variables])
+            if white_list is None
+            else set(white_list)
+        )
+        if max_indegree is None:
+            max_indegree = float("inf")
+
+        # Step 2: Initialize variables
+        tabu_list = deque(maxlen=tabu_length)
         current_model = start
 
         if show_progress and SHOW_PROGRESS:
@@ -215,29 +230,29 @@ class HillClimbSearch(StructureEstimator):
         else:
             iteration = range(int(max_iter))
 
-        for iter_no in iteration:
-            best_score_delta = 0
-            best_operation = None
-
-            for operation, score_delta in self._legal_operations(
-                current_model, tabu_list, max_indegree, black_list, white_list
-            ):
-                if score_delta > best_score_delta:
-                    best_operation = operation
-                    best_score_delta = score_delta
+        # Step 3: For each iteration, find the best scoring operation and
+        #         do that to the current model.
+        for _ in iteration:
+            best_operation, best_score_delta = max(
+                self._legal_operations(
+                    current_model, tabu_list, max_indegree, black_list, white_list
+                ),
+                key=lambda t: t[1],
+            )
 
             if best_operation is None or best_score_delta < epsilon:
                 break
             elif best_operation[0] == "+":
                 current_model.add_edge(*best_operation[1])
-                tabu_list = ([("-", best_operation[1])] + tabu_list)[:tabu_length]
+                tabu_list.append(("-", best_operation[1]))
             elif best_operation[0] == "-":
                 current_model.remove_edge(*best_operation[1])
-                tabu_list = ([("+", best_operation[1])] + tabu_list)[:tabu_length]
+                tabu_list.append(("+", best_operation[1]))
             elif best_operation[0] == "flip":
                 X, Y = best_operation[1]
                 current_model.remove_edge(X, Y)
                 current_model.add_edge(Y, X)
-                tabu_list = ([best_operation] + tabu_list)[:tabu_length]
+                tabu_list.append(best_operation)
 
+        # Step 4: Return if no more improvements or maximum iterations reached.
         return current_model
