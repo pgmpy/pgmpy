@@ -6,6 +6,7 @@ from tqdm import trange
 
 from pgmpy.estimators import StructureEstimator, K2Score, ScoreCache
 from pgmpy.base import DAG
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class HillClimbSearch(StructureEstimator):
@@ -209,7 +210,7 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = []
         current_model = start
 
-        if show_progress:
+        if show_progress and SHOW_PROGRESS:
             iteration = trange(int(max_iter))
         else:
             iteration = range(int(max_iter))

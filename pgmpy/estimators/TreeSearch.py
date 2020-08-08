@@ -13,8 +13,9 @@ from sklearn.metrics import (
     normalized_mutual_info_score,
 )
 
-from pgmpy.estimators import StructureEstimator
 from pgmpy.base import DAG
+from pgmpy.estimators import StructureEstimator
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class TreeSearch(StructureEstimator):
@@ -202,7 +203,7 @@ class TreeSearch(StructureEstimator):
 
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
-        if show_progress:
+        if show_progress and SHOW_PROGRESS:
             pbar = tqdm(
                 combinations(data.columns, 2), total=(n_vars * (n_vars - 1) / 2)
             )

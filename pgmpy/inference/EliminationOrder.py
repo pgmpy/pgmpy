@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 
 from pgmpy.models import BayesianModel
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class BaseEliminationOrder:
@@ -87,7 +88,7 @@ class BaseEliminationOrder:
         nodes = set(nodes)
 
         ordering = []
-        if show_progress:
+        if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=len(nodes))
             pbar.set_description("Finding Elimination Order: ")
 
@@ -99,7 +100,7 @@ class BaseEliminationOrder:
             self.bayesian_model.remove_node(min_score_node)
             self.moralized_model.remove_node(min_score_node)
 
-            if show_progress:
+            if show_progress and SHOW_PROGRESS:
                 pbar.update(1)
         return ordering
 

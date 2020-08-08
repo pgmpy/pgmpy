@@ -10,6 +10,7 @@ from pgmpy.inference import Inference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 from pgmpy.sampling import _return_samples
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 State = namedtuple("State", ["var", "state"])
@@ -34,7 +35,7 @@ class BayesianModelSampling(Inference):
         self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
-    def forward_sample(self, size=1, return_type="dataframe"):
+    def forward_sample(self, size=1, return_type="dataframe", show_progress=True):
         """
         Generates sample(s) from joint distribution of the bayesian network.
 
@@ -73,9 +74,15 @@ class BayesianModelSampling(Inference):
         types = [(var_name, "int") for var_name in self.topological_order]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
 
-        pbar = tqdm(self.topological_order)
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(self.topological_order)
+        else:
+            pbar = self.topological_order
+
         for node in pbar:
-            pbar.set_description(f"Generating for node: {node}")
+            if show_progress and SHOW_PROGRESS:
+                pbar.set_description(f"Generating for node: {node}")
+
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
@@ -104,7 +111,9 @@ class BayesianModelSampling(Inference):
 
         return cached_values
 
-    def rejection_sample(self, evidence=[], size=1, return_type="dataframe"):
+    def rejection_sample(
+        self, evidence=[], size=1, return_type="dataframe", show_progress=True
+    ):
         """
         Generates sample(s) from joint distribution of the bayesian network,
         given the evidence.
@@ -163,7 +172,9 @@ class BayesianModelSampling(Inference):
         # Do the sampling by generating samples from forward sampling and rejecting the
         # samples which do not match our evidence. Keep doing until we have enough
         # samples.
-        pbar = tqdm(total=size)
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=size)
+
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
             _sampled = self.forward_sample(_size, "recarray")
@@ -175,8 +186,12 @@ class BayesianModelSampling(Inference):
             sampled = np.append(sampled, _sampled)[:size]
 
             i += len(_sampled)
-            pbar.update(len(_sampled))
-        pbar.close()
+
+            if show_progress and SHOW_PROGRESS:
+                pbar.update(len(_sampled))
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.close()
 
         # Post process: Correct return type and replace state numbers with names.
         return _return_samples(return_type, sampled, self.state_names_map)

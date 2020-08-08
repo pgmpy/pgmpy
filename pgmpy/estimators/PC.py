@@ -10,6 +10,7 @@ from joblib import Parallel, delayed
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class PC(StructureEstimator):
@@ -273,8 +274,9 @@ class PC(StructureEstimator):
                 f"ci_test must either be chi_square, pearsonr, independence_match, or a function. Got: {ci_test}"
             )
 
-        if show_progress:
+        if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=lim_neighbors)
+            pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
@@ -364,10 +366,13 @@ class PC(StructureEstimator):
                 warn("Reached maximum number of allowed conditional variables. Exiting")
             lim_neighbors += 1
 
-            if show_progress:
+            if show_progress and SHOW_PROGRESS:
                 pbar.update(1)
+                pbar.set_description(
+                    f"Working for n conditional variables: {lim_neighbors}"
+                )
 
-        if show_progress:
+        if show_progress and SHOW_PROGRESS:
             pbar.close()
         return graph, separating_sets
 
