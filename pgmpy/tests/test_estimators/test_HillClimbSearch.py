@@ -201,7 +201,10 @@ class TestHillClimbEstimator(unittest.TestCase):
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
-        self.assertTrue(("Pclass", "Survived") in self.est_titanic2.estimate(fixed_edges=[("Pclass", "Survived")]).edges())
+        self.assertTrue(
+            ("Pclass", "Survived")
+            in self.est_titanic2.estimate(fixed_edges=[("Pclass", "Survived")]).edges()
+        )
 
     def tearDown(self):
         del self.rand_data

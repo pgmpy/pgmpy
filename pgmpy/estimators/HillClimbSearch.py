@@ -110,7 +110,8 @@ class HillClimbSearch(StructureEstimator):
             ):
                 operation = ("flip", (X, Y))
                 if (
-                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list) and ((X, Y) not in fixed_edges)
+                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                    and ((X, Y) not in fixed_edges)
                     and ((Y, X) not in black_list)
                     and ((Y, X) in white_list)
                 ):
