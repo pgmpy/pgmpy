@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1. PC estimator with original, stable, and parallel variants.
 2. PDAG class to represent partially directed DAGs.
 3. `pgmpy.utils.get_example_model` function to fetch models from bnlearn repository.
+4. Refactor HillClimbSearch with a new feature to specify fixed edges in the model.
+5. Adds a global `SHOW_PROGRESS` variable.
+6. Adds Chow-Liu structure learning algorithm.
+7. Add `pgmpy.utils.get_example_model` to fetch models from bnlearn's repository.
 
 ### Changed
 1. Refactors ConstraintBasedEstimators into PC with a lot of general improvements.
