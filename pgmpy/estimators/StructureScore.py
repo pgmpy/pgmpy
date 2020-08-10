@@ -129,8 +129,7 @@ class K2Score(StructureScore):
         gammaln(counts + 1, out=log_gamma_counts)
 
         # Compute the log-gamma conditional sample size
-        log_gamma_conds = np.zeros(counts.shape[1], dtype=np.float_)
-        np.sum(counts, axis=0, out=log_gamma_conds)
+        log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
         gammaln(log_gamma_conds + var_cardinality, out=log_gamma_conds)
 
         score = (np.sum(log_gamma_counts) - np.sum(log_gamma_conds)
@@ -186,29 +185,25 @@ class BDeuScore(StructureScore):
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
         state_counts = self.state_counts(variable, parents)
-        num_parents_states = float(len(state_counts.columns))
+        num_parents_states = float(state_counts.shape[1])
 
-        score = 0
-        for (
-            parents_state
-        ) in state_counts:  # iterate over df columns (only 1 if no parents)
-            conditional_sample_size = sum(state_counts[parents_state])
+        counts = np.asarray(state_counts)
+        log_gamma_counts = np.zeros_like(counts, dtype=np.float_)
 
-            score += lgamma(self.equivalent_sample_size / num_parents_states) - lgamma(
-                conditional_sample_size
-                + self.equivalent_sample_size / num_parents_states
-            )
+        alpha = self.equivalent_sample_size / num_parents_states
+        beta = self.equivalent_sample_size / counts.size
 
-            for state in var_states:
-                if state_counts[parents_state][state] > 0:
-                    score += lgamma(
-                        state_counts[parents_state][state]
-                        + self.equivalent_sample_size
-                        / (num_parents_states * var_cardinality)
-                    ) - lgamma(
-                        self.equivalent_sample_size
-                        / (num_parents_states * var_cardinality)
-                    )
+        # Compute log(gamma(counts + beta))
+        gammaln(counts + beta, out=log_gamma_counts)
+
+        # Compute the log-gamma conditional sample size
+        log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
+        gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
+
+        score = (np.sum(log_gamma_counts) - np.sum(log_gamma_conds)
+                 + num_parents_states * lgamma(alpha)
+                 - counts.size * lgamma(beta))
+
         return score
 
 
@@ -264,13 +259,12 @@ class BicScore(StructureScore):
         np.log(counts, out=log_likelihoods, where=counts > 0)
 
         # Compute the log-conditional sample size
-        log_conditionals = np.zeros(counts.shape[1], dtype=np.float_)
-        np.sum(counts, axis=0, out=log_conditionals)
+        log_conditionals = np.sum(counts, axis=0, dtype=np.float_)
         np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
 
         # Compute the log-likelihoods
-        np.subtract(log_likelihoods, log_conditionals, out=log_likelihoods)
-        np.multiply(log_likelihoods, counts, out=log_likelihoods)
+        log_likelihoods -= log_conditionals
+        log_likelihoods *= counts
 
         score = np.sum(log_likelihoods)
         score -= 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
