@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import numpy as np
 from math import lgamma, log
 
 from pgmpy.estimators import BaseEstimator
@@ -253,19 +254,22 @@ class BicScore(StructureScore):
         sample_size = len(self.data)
         num_parents_states = float(len(state_counts.columns))
 
-        score = 0
-        for (
-            parents_state
-        ) in state_counts:  # iterate over df columns (only 1 if no parents)
-            conditional_sample_size = sum(state_counts[parents_state])
+        counts = np.asarray(state_counts)
+        log_likelihoods = np.zeros_like(counts, dtype=np.float_)
 
-            for state in var_states:
-                if state_counts[parents_state][state] > 0:
-                    score += state_counts[parents_state][state] * (
-                        log(state_counts[parents_state][state])
-                        - log(conditional_sample_size)
-                    )
+        # Compute the log-counts
+        np.log(counts, out=log_likelihoods, where=counts > 0)
 
+        # Compute the log-conditional sample size
+        log_conditionals = np.zeros(counts.shape[1], dtype=np.float_)
+        np.sum(counts, axis=0, out=log_conditionals)
+        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
+
+        # Compute the log-likelihoods
+        np.subtract(log_likelihoods, log_conditionals, out=log_likelihoods)
+        np.multiply(log_likelihoods, counts, out=log_likelihoods)
+
+        score = np.sum(log_likelihoods)
         score -= 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
 
         return score
