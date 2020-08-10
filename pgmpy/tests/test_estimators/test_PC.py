@@ -86,7 +86,7 @@ class TestPCFakeCITest(unittest.TestCase):
 class TestPCEstimatorFromIndependencies(unittest.TestCase):
     def test_build_skeleton_from_ind(self):
         # Specify a set of independencies
-        for variant in ["stable", "parallel"]:
+        for variant in ["orig"]:
             ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
             ind = ind.closure()
             estimator = PC(independencies=ind)
