@@ -445,7 +445,9 @@ def _return_samples(return_type, samples, state_names_map=None):
             if state_names_map is not None:
                 for var in df.columns:
                     if var != "_weight":
-                        df[var] = df[var].apply(lambda t: state_names_map[var][t])
+                        num_categories = len(state_names_map[var])
+                        categories = [state_names_map[var][t] for t in range(num_categories)]
+                        df[var] = pandas.Categorical.from_codes(df[var], categories)
             return df
         else:
             warn("Pandas installation not found. Returning numpy.recarray object")
