@@ -86,7 +86,7 @@ class TestPCFakeCITest(unittest.TestCase):
 class TestPCEstimatorFromIndependencies(unittest.TestCase):
     def test_build_skeleton_from_ind(self):
         # Specify a set of independencies
-        for variant in ["orig"]:
+        for variant in ["orig", "stable", "parallel"]:
             ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
             ind = ind.closure()
             estimator = PC(independencies=ind)
@@ -248,7 +248,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for variant in ["orig", "stable", "parallel"]:
+        for variant in ["stable", "parallel"]:
             data = pd.DataFrame(
                 np.random.randint(0, 3, size=(10000, 3)), columns=list("XYZ")
             )
