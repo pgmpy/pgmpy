@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+from scipy.special import gammaln
 from math import lgamma, log
 
 from pgmpy.estimators import BaseEstimator
@@ -119,20 +120,22 @@ class K2Score(StructureScore):
         var_states = self.state_names[variable]
         var_cardinality = len(var_states)
         state_counts = self.state_counts(variable, parents)
+        num_parents_states = float(state_counts.shape[1])
 
-        score = 0
-        for (
-            parents_state
-        ) in state_counts:  # iterate over df columns (only 1 if no parents)
-            conditional_sample_size = sum(state_counts[parents_state])
+        counts = np.asarray(state_counts)
+        log_gamma_counts = np.zeros_like(counts, dtype=np.float_)
 
-            score += lgamma(var_cardinality) - lgamma(
-                conditional_sample_size + var_cardinality
-            )
+        # Compute log(gamma(counts + 1))
+        gammaln(counts + 1, out=log_gamma_counts)
 
-            for state in var_states:
-                if state_counts[parents_state][state] > 0:
-                    score += lgamma(state_counts[parents_state][state] + 1)
+        # Compute the log-gamma conditional sample size
+        log_gamma_conds = np.zeros(counts.shape[1], dtype=np.float_)
+        np.sum(counts, axis=0, out=log_gamma_conds)
+        gammaln(log_gamma_conds + var_cardinality, out=log_gamma_conds)
+
+        score = (np.sum(log_gamma_counts) - np.sum(log_gamma_conds)
+                 + num_parents_states * lgamma(var_cardinality))
+
         return score
 
 
@@ -252,7 +255,7 @@ class BicScore(StructureScore):
         var_cardinality = len(var_states)
         state_counts = self.state_counts(variable, parents)
         sample_size = len(self.data)
-        num_parents_states = float(len(state_counts.columns))
+        num_parents_states = float(state_counts.shape[1])
 
         counts = np.asarray(state_counts)
         log_likelihoods = np.zeros_like(counts, dtype=np.float_)
