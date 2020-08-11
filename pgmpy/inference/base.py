@@ -67,7 +67,7 @@ class Inference(object):
         self.factors = defaultdict(list)
 
         if isinstance(model, BayesianModel):
-            self.state_names_map = {}
+            self.state_names = {}
             for node in model.nodes():
                 cpd = model.get_cpds(node)
                 if isinstance(cpd, TabularCPD):
@@ -75,7 +75,7 @@ class Inference(object):
                     cpd = cpd.to_factor()
                 for var in cpd.scope():
                     self.factors[var].append(cpd)
-                self.state_names_map.update(cpd.no_to_name)
+                self.state_names[node] = cpd.state_names[node]
 
         elif isinstance(model, (MarkovModel, FactorGraph, JunctionTree)):
             self.cardinality = model.get_cardinality()

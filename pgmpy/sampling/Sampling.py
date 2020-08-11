@@ -94,7 +94,7 @@ class BayesianModelSampling(Inference):
                 weights = cpd.values
             sampled[node] = sample_discrete(states, weights, size)
 
-        return _return_samples(return_type, sampled, self.state_names_map)
+        return _return_samples(return_type, sampled, self.state_names)
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
@@ -194,7 +194,7 @@ class BayesianModelSampling(Inference):
             pbar.close()
 
         # Post process: Correct return type and replace state numbers with names.
-        return _return_samples(return_type, sampled, self.state_names_map)
+        return _return_samples(return_type, sampled, self.state_names)
 
     def likelihood_weighted_sample(self, evidence=[], size=1, return_type="dataframe"):
         """
@@ -277,7 +277,7 @@ class BayesianModelSampling(Inference):
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
         # Postprocess the samples: Correct return type and change state numbers to names
-        return _return_samples(return_type, sampled, self.state_names_map)
+        return _return_samples(return_type, sampled, self.state_names)
 
 
 class GibbsSampling(MarkovChain):

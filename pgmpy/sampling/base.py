@@ -435,17 +435,19 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
         return position_bar, momentum_bar, grad_log
 
 
-def _return_samples(return_type, samples, state_names_map=None):
+def _return_samples(return_type, samples, state_names=None):
     """
         A utility function to return samples according to type
     """
     if return_type.lower() == "dataframe":
         if HAS_PANDAS:
             df = pandas.DataFrame.from_records(samples)
-            if state_names_map is not None:
+            if state_names is not None:
                 for var in df.columns:
-                    if var != "_weight":
-                        df[var] = df[var].apply(lambda t: state_names_map[var][t])
+                    if var in state_names:
+                        df[var] = pandas.Categorical.from_codes(
+                            df[var], state_names[var]
+                        )
             return df
         else:
             warn("Pandas installation not found. Returning numpy.recarray object")
