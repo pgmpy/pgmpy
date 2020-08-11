@@ -96,21 +96,25 @@ class TestHillClimbEstimator(unittest.TestCase):
         legal_ops_indegree = est._legal_operations(start_model, max_indegree=1)
         self.assertEqual(len(list(legal_ops_indegree)), 11)
 
-        legal_ops_both = est._legal_operations(
-            start_model, tabu_list=tabu_list, max_indegree=1
+        legal_ops_both = list(
+            est._legal_operations(start_model, tabu_list=tabu_list, max_indegree=1)
         )
-        legal_ops_both_ref = [
-            (("+", ("Embarked", "Survived")), 10.050632580087608),
-            (("+", ("Survived", "Pclass")), 41.88868046549101),
-            (("+", ("Age", "Survived")), -23.635716036430836),
-            (("+", ("Pclass", "Survived")), 41.81314459373226),
-            (("+", ("Sex", "Pclass")), 4.772261678792802),
-            (("-", ("Pclass", "Age")), 11.546515590731815),
-            (("-", ("Pclass", "Embarked")), -32.171482832532774),
-            (("flip", ("Pclass", "Embarked")), 3.3563814191281836),
-            (("flip", ("Survived", "Sex")), 0.039737027979640516),
-        ]
-        self.assertSetEqual(set(legal_ops_both), set(legal_ops_both_ref))
+        legal_ops_both_ref = {
+            ("+", ("Embarked", "Survived")): 10.050632580087495,
+            ("+", ("Survived", "Pclass")): 41.8886804654893,
+            ("+", ("Age", "Survived")): -23.635716036430722,
+            ("+", ("Pclass", "Survived")): 41.81314459373152,
+            ("+", ("Sex", "Pclass")): 4.772261678791324,
+            ("-", ("Pclass", "Age")): 11.546515590730905,
+            ("-", ("Pclass", "Embarked")): -32.17148283253266,
+            ("flip", ("Pclass", "Embarked")): 3.3563814191275583,
+            ("flip", ("Survived", "Sex")): 0.0397370279797542,
+        }
+        self.assertSetEqual(
+            set([op for op, score in legal_ops_both]), set(legal_ops_both_ref)
+        )
+        for op, score in legal_ops_both:
+            self.assertAlmostEqual(score, legal_ops_both_ref[op])
 
     def test_estimate_rand(self):
         est1 = self.est_rand.estimate()
