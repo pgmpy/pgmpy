@@ -132,8 +132,11 @@ class K2Score(StructureScore):
         log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
         gammaln(log_gamma_conds + var_cardinality, out=log_gamma_conds)
 
-        score = (np.sum(log_gamma_counts) - np.sum(log_gamma_conds)
-                 + num_parents_states * lgamma(var_cardinality))
+        score = (
+            np.sum(log_gamma_counts)
+            - np.sum(log_gamma_conds)
+            + num_parents_states * lgamma(var_cardinality)
+        )
 
         return score
 
@@ -200,9 +203,12 @@ class BDeuScore(StructureScore):
         log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
-        score = (np.sum(log_gamma_counts) - np.sum(log_gamma_conds)
-                 + num_parents_states * lgamma(alpha)
-                 - counts.size * lgamma(beta))
+        score = (
+            np.sum(log_gamma_counts)
+            - np.sum(log_gamma_conds)
+            + num_parents_states * lgamma(alpha)
+            - counts.size * lgamma(beta)
+        )
 
         return score
 
