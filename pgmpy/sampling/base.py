@@ -445,7 +445,9 @@ def _return_samples(return_type, samples, state_names=None):
             if state_names is not None:
                 for var in df.columns:
                     if var in state_names:
-                        df[var] = pandas.Categorical.from_codes(df[var], state_names[var])
+                        df[var] = pandas.Categorical.from_codes(
+                            df[var], state_names[var]
+                        )
             return df
         else:
             warn("Pandas installation not found. Returning numpy.recarray object")
