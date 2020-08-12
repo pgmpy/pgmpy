@@ -262,7 +262,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for variant in ["orig", "stable", "parallel"]:
+        for variant in ["stable", "parallel"]:
             # Fake dataset no: 1
             data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
             data["F"] = data["A"] + data["B"] + data["C"]
