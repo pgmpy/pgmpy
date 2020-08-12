@@ -199,7 +199,10 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             data["F"] = data["A"] + data["B"] + data["C"]
             est = PC(data=data)
             skel, sep_sets = est.estimate(
-                variant=variant, ci_test="chi_square", return_type="skeleton"
+                variant=variant,
+                ci_test="chi_square",
+                return_type="skeleton",
+                significance_level=0.005,
             )
             expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
             expected_sepsets = {
@@ -248,13 +251,18 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for variant in ["stable", "parallel"]:
+        for variant in ["orig", "stable", "parallel"]:
             data = pd.DataFrame(
                 np.random.randint(0, 3, size=(10000, 3)), columns=list("XYZ")
             )
             data["sum"] = data.sum(axis=1)
             est = PC(data=data)
-            dag = est.estimate(variant=variant, ci_test="chi_square", return_type="dag")
+            dag = est.estimate(
+                variant=variant,
+                ci_test="chi_square",
+                return_type="dag",
+                significance_level=0.001,
+            )
 
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
@@ -262,7 +270,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for variant in ["stable", "parallel"]:
+        for variant in ["orig", "stable", "parallel"]:
             # Fake dataset no: 1
             data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
             data["F"] = data["A"] + data["B"] + data["C"]
