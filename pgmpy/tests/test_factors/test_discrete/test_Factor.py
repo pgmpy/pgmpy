@@ -13,6 +13,7 @@ from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
+from pgmpy.utils import get_example_model
 
 
 class TestFactorInit(unittest.TestCase):
@@ -283,6 +284,15 @@ class TestFactorMethods(unittest.TestCase):
     def test_get_cardinality_typeerror(self):
         self.assertRaises(TypeError, self.phi.get_cardinality, "x1")
         self.assertRaises(TypeError, self.phi_sn.get_cardinality, "x1")
+
+    def test_get_value(self):
+        model = get_example_model("asia")
+        phi = model.get_cpds("either").to_factor()
+        self.assertEqual(phi.get_value(lung="yes", tub="no", either="yes"), 1.0)
+        self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 1.0)
+        self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 1.0)
+        self.assertRaises(ValueError, phi.get_value, lung="yes", either="yes")
+        self.assertRaises(ValueError, phi.get_value, lung="yes", tub="no", boo="yes")
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])

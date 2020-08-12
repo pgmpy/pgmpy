@@ -150,6 +150,44 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         return {var: self.cardinality[self.variables.index(var)] for var in variables}
 
+    def get_value(self, **kwargs):
+        """
+        Returns the probability values of the given variable states.
+
+        Parameters
+        ----------
+        kwargs: named arguments of the form variable=state_name
+            Spcifies the state of each of the variable for which to get
+            the probability value.
+
+        Returns
+        -------
+        float: The probability value of states.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("asia")
+        >>> phi = model.get_cpds("either").to_factor()
+        >>> phi.get_value(lung="yes", tub="no", either="yes")
+        1.0000
+        """
+        for variable in kwargs.keys():
+            if variable not in self.variables:
+                raise ValueError(f"Factor doesn't have the variable: {variable}")
+
+        slice_ = []
+        for var in self.variables:
+            if var not in kwargs.keys():
+                raise ValueError(f"Variable: {var} not found in arguments")
+            elif isinstance(kwargs[var], str):
+                state_index = self.name_to_no[var][kwargs[var]]
+                slice_.append(slice(state_index, state_index + 1))
+            else:
+                warn(f"Using {var} state as number instead of name.")
+                slice_.append(slice(kwargs[var], kwargs[var] + 1))
+        return self.values[tuple(slice_)].flatten()[0]
+
     def assignment(self, index):
         """
         Returns a list of assignments for the corresponding index.
