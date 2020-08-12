@@ -8,13 +8,12 @@ from pgmpy.estimators import PC
 from pgmpy.models import BayesianModel
 from pgmpy.independencies import Independencies
 
-np.random.seed(42)
-
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
 # high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
 # on computational biology and bioinformatics (2016).
 class TestPCFakeCITest(unittest.TestCase):
     def setUp(self):
+        np.random.seed(42)
         self.fake_data = pd.DataFrame(
             np.random.random((1000, 4)), columns=["A", "B", "C", "D"]
         )
@@ -193,6 +192,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
     def test_build_skeleton(self):
         for variant in ["orig", "stable", "parallel"]:
             # Fake dataset no: 1
+            np.random.seed(42)
             data = pd.DataFrame(
                 np.random.randint(0, 2, size=(10000, 5)), columns=list("ABCDE")
             )
@@ -234,6 +234,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 else:
                     return False
 
+            np.random.seed(42)
             fake_data = pd.DataFrame(
                 np.random.randint(low=0, high=2, size=(10000, 3)),
                 columns=["X", "Y", "Z"],
@@ -252,6 +253,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
     def test_build_dag(self):
         for variant in ["orig", "stable", "parallel"]:
+            np.random.seed(42)
             data = pd.DataFrame(
                 np.random.randint(0, 3, size=(10000, 3)), columns=list("XYZ")
             )
@@ -263,7 +265,6 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 return_type="dag",
                 significance_level=0.001,
             )
-
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
 
@@ -272,6 +273,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
         for variant in ["orig", "stable", "parallel"]:
             # Fake dataset no: 1
+            np.random.seed(42)
             data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
             data["F"] = data["A"] + data["B"] + data["C"]
             est = PC(data=data)
@@ -314,6 +316,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
                 else:
                     return False
 
+            np.random.seed(42)
             data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
             est = PC(data=data)
             skel, sep_sets = est.estimate(
@@ -330,6 +333,7 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
 
     def test_build_dag(self):
         for variant in ["orig", "stable", "parallel"]:
+            np.random.seed(42)
             data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
             data["sum"] = data.sum(axis=1)
             est = PC(data=data)
