@@ -450,6 +450,79 @@ class DAG(nx.DiGraph):
                 )
         return independencies
 
+    def implied_conditional_independencies(self):
+        """
+        Returns a list of implied conditional independencies of the network structure.
+
+        Returns
+        -------
+        list: A list of pgmpy.independencies.IndependenceAssertion objects.
+        """
+        indep = Independencies()
+        edges = set(self.edges())
+        for p_edge in combinations(self.nodes(), 2):
+            if p_edge not in edges:
+                # TODO: Compute the minimal separator
+                event3 = "Minimal separator of p_edge[0] and p_edge[1]"
+                indep.add_assertion(
+                    IndependenceAssertion(
+                        event1=p_edge[0], event2=p_edge[1], event3=min_separator
+                    )
+                )
+
+        return indep
+
+    def minimal_separator(self, u, v):
+        """
+        Finds the set of minimal variables which d-separates u and v in the model.
+
+        Parameters
+        ----------
+        u, v: node (any hashable object)
+            The node whose minimal separator is to be found.
+
+        Returns
+        -------
+        set: The set of nodes which are the minmal d-separator of u and v.
+        """
+        # TODO: Write the algorithm.
+        pass
+
+    def criticize(self, data, test="chi-square"):
+        """
+        Tests whether the implied conditional independencies of the model structure
+        hold in data.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame instance
+            The dataset against which to test the implied conditional independencies
+            of the model.
+
+        test: str
+            Specifies the statistical test to use for testing the conditional
+            independence condition.
+
+        Returns
+        -------
+        None
+        """
+        from pgmpy.estimators.CITests import *
+
+        tests = {"chi-square": chi_square, "pearsonr": pearsonr}
+        results = []
+        imp_conditions = self.get_implied_conditional_independencies()
+        for assertion in self.get_implied_conditional_independencies():
+            res = tests[test](
+                X=assertion.event1,
+                Y=assertion.event2,
+                Z=assertion.event3,
+                data=data,
+                boolean=False,
+            )
+            results.append(res)
+        return results
+
     def is_iequivalent(self, model):
         """
         Checks whether the given model is I-equivalent
