@@ -647,14 +647,16 @@ class DAG(nx.DiGraph):
             active_trails[start] = active_nodes
         return active_trails
 
-    def _get_ancestors_of(self, obs_nodes_list):
+    def _get_ancestors_of(self, nodes):
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
+
         Parameters
         ----------
-        obs_nodes_list: string, list-type
+        nodes: string, list-type
             name of all the observed nodes
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -665,15 +667,15 @@ class DAG(nx.DiGraph):
         >>> model._get_ancestors_of(['G', 'I'])
         {'D', 'G', 'I'}
         """
-        if not isinstance(obs_nodes_list, (list, tuple)):
-            obs_nodes_list = [obs_nodes_list]
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
 
-        for node in obs_nodes_list:
+        for node in nodes:
             if node not in self.nodes():
                 raise ValueError(f"Node {node} not in not in graph")
 
         ancestors_list = set()
-        nodes_list = set(obs_nodes_list)
+        nodes_list = set(nodes)
         while nodes_list:
             node = nodes_list.pop()
             if node not in ancestors_list:
@@ -734,6 +736,31 @@ class DAG(nx.DiGraph):
         for parent in parents:
             dag_do_x.remove_edge(parent, node)
         return dag_do_x
+
+    def get_ancestral_graph(self, nodes):
+        """
+        Returns the ancestral graph of the given `nodes`. The ancestral graph only
+        contains the nodes which are ancestors of atleast one of the variables in 
+        node.
+
+        Parameters
+        ----------
+        node: iterable
+            List of nodes whose ancestral graph needs to be computed.
+
+        Returns
+        -------
+        pgmpy.base.DAG instance: The ancestral graph.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('A', 'C'), ('B', 'C'), ('D', 'A'), ('D', 'B')])
+        >>> anc_dag = dag.get_ancestral_graph(nodes=['A', 'B'])
+        >>> anc_dag.edges()
+        [('D', 'A'), ('D', 'B')]
+        """
+        return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 
 
 class PDAG(nx.DiGraph):

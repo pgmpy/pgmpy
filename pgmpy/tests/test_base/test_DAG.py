@@ -132,6 +132,12 @@ class TestDAGCreation(unittest.TestCase):
         self.assertRaises(ValueError, DAG, [("a", "b"), ("b", "a")])
         self.assertRaises(ValueError, DAG, [("a", "b"), ("b", "c"), ("c", "a")])
 
+    def test_get_ancestral_graph(self):
+        dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
+        anc_dag = dag.get_ancestral_graph(["A", "B"])
+        self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
+        self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
+
     def tearDown(self):
         del self.graph
 
