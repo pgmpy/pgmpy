@@ -139,10 +139,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
     # Step 4: Return the values
     if boolean:
-        if p_value >= kwargs["significance_level"]:
-            return True
-        else:
-            return False
+        return p_value >= kwargs["significance_level"]
     else:
         return chi, dof, p_value
 

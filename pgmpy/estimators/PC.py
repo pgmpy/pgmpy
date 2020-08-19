@@ -300,6 +300,7 @@ class PC(StructureEstimator):
                             data=self.data,
                             independencies=self.independencies,
                             significance_level=significance_level,
+                            **kwargs,
                         ):
                             separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
@@ -321,6 +322,7 @@ class PC(StructureEstimator):
                             data=self.data,
                             independencies=self.independencies,
                             significance_level=significance_level,
+                            **kwargs,
                         ):
                             separating_sets[frozenset((u, v))] = separating_set
                             graph.remove_edge(u, v)
@@ -340,6 +342,7 @@ class PC(StructureEstimator):
                             data=self.data,
                             independencies=self.independencies,
                             significance_level=significance_level,
+                            **kwargs,
                         ):
                             return (u, v), separating_set
 
