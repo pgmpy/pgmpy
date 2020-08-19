@@ -53,9 +53,9 @@ class TabularCPD(DiscreteFactor):
     [0.8,0.8,0.8,0.8,0.8,0.8]]
 
     >>> cpd = TabularCPD('grade',3,[[0.1,0.1,0.1,0.1,0.1,0.1],
-                                    [0.1,0.1,0.1,0.1,0.1,0.1],
-                                    [0.8,0.8,0.8,0.8,0.8,0.8]],
-                                    evidence=['diff', 'intel'], evidence_card=[2,3])
+    ...                             [0.1,0.1,0.1,0.1,0.1,0.1],
+    ...                             [0.8,0.8,0.8,0.8,0.8,0.8]],
+    ...                             evidence=['diff', 'intel'], evidence_card=[2,3])
     >>> print(cpd)
     +---------+---------+---------+---------+---------+---------+---------+
     | diff    | diff_0  | diff_0  | diff_0  | diff_1  | diff_1  | diff_1  |
@@ -245,7 +245,6 @@ class TabularCPD(DiscreteFactor):
         >>> copy.values
         array([[[ 0.7,  0.6],
                 [ 0.6,  0.2]],
-
                [[ 0.3,  0.4],
                 [ 0.4,  0.8]]])
         """
@@ -309,7 +308,7 @@ class TabularCPD(DiscreteFactor):
         >>> cpd_table.marginalize(['diff'])
         >>> cpd_table.get_values()
         array([[ 0.65,  0.4 ],
-                [ 0.35,  0.6 ]])
+               [ 0.35,  0.6 ]])
         """
         if self.variable in variables:
             raise ValueError(
@@ -417,7 +416,6 @@ class TabularCPD(DiscreteFactor):
         +----------+----------+----------+----------+----------+----------+----------+
         | grade(2) | 0.6      | 0.7      | 0.9      | 0.2      | 0.5      | 0.7      |
         +----------+----------+----------+----------+----------+----------+----------+
-
         >>> cpd.values
         array([[[ 0.1,  0.1,  0. ],
                 [ 0.4,  0.2,  0.1]],
@@ -433,12 +431,10 @@ class TabularCPD(DiscreteFactor):
         'grade'
         >>> cpd.variable_card
         3
-
         >>> cpd.reorder_parents(['intel', 'diff'])
         array([[0.1, 0.4, 0.1, 0.2, 0. , 0.1],
                [0.3, 0.4, 0.2, 0.3, 0.1, 0.2],
                [0.6, 0.2, 0.7, 0.5, 0.9, 0.7]])
-
         >>> print(cpd)
         +----------+----------+----------+----------+----------+----------+----------+
         | intel    | intel(0) | intel(0) | intel(1) | intel(1) | intel(2) | intel(2) |
@@ -451,7 +447,6 @@ class TabularCPD(DiscreteFactor):
         +----------+----------+----------+----------+----------+----------+----------+
         | grade(2) | 0.6      | 0.2      | 0.7      | 0.5      | 0.9      | 0.7      |
         +----------+----------+----------+----------+----------+----------+----------+
-
         >>> cpd.values
         array([[[0.1, 0.4],
                 [0.1, 0.2],
@@ -462,7 +457,6 @@ class TabularCPD(DiscreteFactor):
                [[0.6, 0.2],
                 [0.7, 0.5],
                 [0.9, 0.7]]])
-
         >>> cpd.variables
         ['grade', 'intel', 'diff']
         >>> cpd.cardinality

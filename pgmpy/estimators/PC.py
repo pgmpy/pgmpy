@@ -122,7 +122,7 @@ class PC(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.estimators import PC
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(2500, 3)), columns=list('XYZ'))
         >>> data['sum'] = data.sum(axis=1)
         >>> print(data)
@@ -138,7 +138,6 @@ class PC(StructureEstimator):
         2497  0  4  2    6
         2498  0  0  0    0
         2499  2  4  0    6
-
         [2500 rows x 4 columns]
         >>> c = PC(data)
         >>> model = c.estimate()
@@ -238,22 +237,20 @@ class PC(StructureEstimator):
 
         Examples
         --------
-        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.estimators import PC 
         >>> from pgmpy.models import DAG
         >>> from pgmpy.independencies import Independencies
-
         >>> # build skeleton from list of independencies:
         ... ind = Independencies(['B', 'C'], ['A', ['B', 'C'], 'D'])
         >>> # we need to compute closure, otherwise this set of independencies doesn't
         ... # admit a faithful representation:
         ... ind = ind.closure()
-        >>> skel, sep_sets = ConstraintBasedEstimator.build_skeleton("ABCD", ind)
+        >>> skel, sep_sets = PC.build_skeleton("ABCD", ind)
         >>> print(skel.edges())
         [('A', 'D'), ('B', 'D'), ('C', 'D')]
-
         >>> # build skeleton from d-seperations of DAG:
         ... model = DAG([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
-        >>> skel, sep_sets = ConstraintBasedEstimator.build_skeleton(model.nodes(), model.get_independencies())
+        >>> skel, sep_sets = PC.build_skeleton(model.nodes(), model.get_independencies())
         >>> print(skel.edges())
         [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')]
         """

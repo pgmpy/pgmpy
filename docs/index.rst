@@ -13,17 +13,16 @@ Getting Started:
 
    Installation <https://github.com/pgmpy/pgmpy#installation>
 
-Basic Examples:
-
-For a complete list check: https://github.com/pgmpy/pgmpy/tree/dev/examples
+Basic Examples: For a complete list check: https://github.com/pgmpy/pgmpy/tree/dev/examples
 
 .. toctree::
    :maxdepth: 3
 
-   Defining a Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Bayesian%20Network.ipynb>
-   Probabilitistic Inference in Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Bayesian%20Networks.ipynb>
-   Causal Inference <https://github.com/pgmpy/pgmpy/blob/dev/examples/Causal_Games.ipynb>
-   Learning Bayesian Networks from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20from%20data.ipynb>     
+   Defining a Discrete Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb>
+   Statistical Inference in Discrete Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb>
+   Causal Inference <https://github.com/pgmpy/pgmpy/blob/dev/examples/Causal%20Games.ipynb>
+   Learning Discrete Bayesian Networks from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb>
+   Learning Bayesian Networks structures from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb>
 
 Detailed Notebooks:
 
