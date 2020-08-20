@@ -364,6 +364,7 @@ class PC(StructureEstimator):
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
                 warn("Reached maximum number of allowed conditional variables. Exiting")
+                break
             lim_neighbors += 1
 
             if show_progress and SHOW_PROGRESS:

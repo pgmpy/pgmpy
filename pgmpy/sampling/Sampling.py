@@ -35,7 +35,9 @@ class BayesianModelSampling(Inference):
         self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
-    def forward_sample(self, size=1, return_type="dataframe", show_progress=True):
+    def forward_sample(
+        self, size=1, return_type="dataframe", seed=None, show_progress=True
+    ):
         """
         Generates sample(s) from joint distribution of the bayesian network.
 
@@ -92,9 +94,9 @@ class BayesianModelSampling(Inference):
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence.T))
             else:
                 weights = cpd.values
-            sampled[node] = sample_discrete(states, weights, size)
+            sampled[node] = sample_discrete(states, weights, size, seed=seed)
 
-        return _return_samples(return_type, sampled, self.state_names)
+        return _return_samples(return_type, sampled, self.state_names_map)
 
     def pre_compute_reduce(self, variable):
         variable_cpd = self.model.get_cpds(variable)
@@ -112,7 +114,12 @@ class BayesianModelSampling(Inference):
         return cached_values
 
     def rejection_sample(
-        self, evidence=[], size=1, return_type="dataframe", show_progress=True
+        self,
+        evidence=[],
+        size=1,
+        return_type="dataframe",
+        seed=None,
+        show_progress=True,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network,
@@ -161,7 +168,7 @@ class BayesianModelSampling(Inference):
 
         # If no evidence is given, it is equivalent to forward sampling.
         if len(evidence) == 0:
-            return self.forward_sample(size)
+            return self.forward_sample(size, seed=seed)
 
         # Setup array to be returned
         types = [(var_name, "int") for var_name in self.topological_order]
@@ -177,7 +184,7 @@ class BayesianModelSampling(Inference):
 
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
-            _sampled = self.forward_sample(_size, "recarray")
+            _sampled = self.forward_sample(_size, "recarray", seed=seed)
 
             for evid in evidence:
                 _sampled = _sampled[_sampled[evid[0]] == evid[1]]
@@ -194,9 +201,11 @@ class BayesianModelSampling(Inference):
             pbar.close()
 
         # Post process: Correct return type and replace state numbers with names.
-        return _return_samples(return_type, sampled, self.state_names)
+        return _return_samples(return_type, sampled, self.state_names_map)
 
-    def likelihood_weighted_sample(self, evidence=[], size=1, return_type="dataframe"):
+    def likelihood_weighted_sample(
+        self, evidence=[], size=1, return_type="dataframe", seed=None
+    ):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
         network, that comply with the given evidence.
@@ -207,8 +216,10 @@ class BayesianModelSampling(Inference):
         ----------
         evidence: list of `pgmpy.factor.State` namedtuples
             None if no evidence
+
         size: int
             size of sample to be generated
+
         return_type: string (dataframe | recarray)
             Return type for samples, either of 'dataframe' or 'recarray'.
             Defaults to 'dataframe'
@@ -267,17 +278,17 @@ class BayesianModelSampling(Inference):
                     for i in range(size):
                         sampled["_weight"][i] *= weights[i][evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(states, weights)
+                    sampled[node] = sample_discrete(states, weights, seed=seed)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
                         sampled["_weight"][i] *= cpd.values[evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(states, cpd.values, size)
+                    sampled[node] = sample_discrete(states, cpd.values, size, seed=seed)
 
         # Postprocess the samples: Correct return type and change state numbers to names
-        return _return_samples(return_type, sampled, self.state_names)
+        return _return_samples(return_type, sampled, self.state_names_map)
 
 
 class GibbsSampling(MarkovChain):
@@ -388,7 +399,7 @@ class GibbsSampling(MarkovChain):
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
 
-    def sample(self, start_state=None, size=1, return_type="dataframe"):
+    def sample(self, start_state=None, size=1, return_type="dataframe", seed=None):
         """
         Sample from the Markov Chain.
 
@@ -438,13 +449,14 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
+                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = tuple(st for var, st in self.state)
 
         return _return_samples(return_type, sampled)
 
-    def generate_sample(self, start_state=None, size=1):
+    def generate_sample(self, start_state=None, size=1, seed=None):
         """
         Generator version of self.sample
 
@@ -479,6 +491,7 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
+                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]

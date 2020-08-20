@@ -7,6 +7,8 @@ import networkx as nx
 from pgmpy.estimators import PC
 from pgmpy.models import BayesianModel
 from pgmpy.independencies import Independencies
+from pgmpy.utils import get_example_model
+from pgmpy.sampling import BayesianModelSampling
 
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
 # high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
@@ -341,3 +343,17 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
 
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
+
+
+class TestPCRealModels(unittest.TestCase):
+    def test_pc_alarm(self):
+        alarm_model = get_example_model("alarm")
+        data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e3), seed=42)
+        est = PC(data)
+        dag = est.estimate(variant="stable", max_cond_vars=1)
+
+    def test_pc_asia(self):
+        asia_model = get_example_model("asia")
+        data = BayesianModelSampling(asia_model).forward_sample(size=int(1e3), seed=42)
+        est = PC(data)
+        dag = est.estimate(variant="stable", max_cond_vars=1)

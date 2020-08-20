@@ -129,12 +129,24 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     else:
         chi = 0
         dof = 0
-        for _, df in data.groupby(Z):
-            c, _, d, _ = stats.chi2_contingency(
-                df.groupby([X, Y]).size().unstack(Y, fill_value=0)
-            )
-            chi += c
-            dof += d
+        for z_state, df in data.groupby(Z):
+            try:
+                c, _, d, _ = stats.chi2_contingency(
+                    df.groupby([X, Y]).size().unstack(Y, fill_value=0)
+                )
+                chi += c
+                dof += d
+            except ValueError:
+                # If one of the values is 0 in the 2x2 table.
+                if isinstance(z_state, str):
+                    warn(
+                        f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples"
+                    )
+                else:
+                    z_str = ", ".join(
+                        [f"{var}={state}" for var, state in zip(Z, z_state)]
+                    )
+                    warn(f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples")
         p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
