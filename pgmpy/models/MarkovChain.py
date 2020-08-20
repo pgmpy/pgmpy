@@ -245,7 +245,7 @@ class MarkovChain(object):
 
         self.transition_models[variable] = transition_model
 
-    def sample(self, start_state=None, size=1):
+    def sample(self, start_state=None, size=1, seed=None):
         """
         Sample from the Markov Chain.
 
@@ -296,7 +296,7 @@ class MarkovChain(object):
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
                 samples[var][st] = sample_discrete(
-                    var_states[var][st], var_values[var][st], size=size
+                    var_states[var][st], var_values[var][st], size=size, seed=seed
                 )
 
         for i in range(size - 1):
@@ -344,7 +344,7 @@ class MarkovChain(object):
 
         return probabilities / window_size
 
-    def generate_sample(self, start_state=None, size=1):
+    def generate_sample(self, start_state=None, size=1, seed=None):
         """
         Generator version of self.sample
 
@@ -380,6 +380,7 @@ class MarkovChain(object):
                 next_st = sample_discrete(
                     list(self.transition_models[var][st].keys()),
                     list(self.transition_models[var][st].values()),
+                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
