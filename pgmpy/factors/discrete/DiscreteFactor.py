@@ -152,7 +152,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
     def get_value(self, **kwargs):
         """
-        Returns the probability values of the given variable states.
+        Returns the value of the given variable states.
 
         Parameters
         ----------
@@ -176,17 +176,16 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             if variable not in self.variables:
                 raise ValueError(f"Factor doesn't have the variable: {variable}")
 
-        slice_ = []
+        value = self.values
         for var in self.variables:
             if var not in kwargs.keys():
                 raise ValueError(f"Variable: {var} not found in arguments")
             elif isinstance(kwargs[var], str):
-                state_index = self.name_to_no[var][kwargs[var]]
-                slice_.append(slice(state_index, state_index + 1))
+                value = value[self.name_to_no[var][kwargs[var]]]
             else:
                 warn(f"Using {var} state as number instead of name.")
-                slice_.append(slice(kwargs[var], kwargs[var] + 1))
-        return self.values[tuple(slice_)].flatten()[0]
+                value = value[kwargs[var]]
+        return value
 
     def assignment(self, index):
         """

@@ -288,11 +288,13 @@ class TestFactorMethods(unittest.TestCase):
     def test_get_value(self):
         model = get_example_model("asia")
         phi = model.get_cpds("either").to_factor()
+        phi_copy = phi.copy()
         self.assertEqual(phi.get_value(lung="yes", tub="no", either="yes"), 1.0)
         self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 1.0)
         self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 1.0)
         self.assertRaises(ValueError, phi.get_value, lung="yes", either="yes")
         self.assertRaises(ValueError, phi.get_value, lung="yes", tub="no", boo="yes")
+        self.assertEqual(phi, phi_copy)
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])
