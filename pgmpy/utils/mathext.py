@@ -56,7 +56,7 @@ def cartesian(arrays, out=None):
     return out
 
 
-def sample_discrete(values, weights, size=1, rng=None):
+def sample_discrete(values, weights, size=1, rng=None, seed=None):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -84,6 +84,8 @@ def sample_discrete(values, weights, size=1, rng=None):
     """
     if rng is None:
         rng = np.random
+        if seed is not None:
+            rng.seed(seed)
     weights = np.array(weights)
     if weights.ndim == 1:
         return rng.choice(values, size=size, p=weights)

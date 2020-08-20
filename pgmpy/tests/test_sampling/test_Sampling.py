@@ -151,12 +151,6 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
         self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
 
-    @patch("pgmpy.sampling.BayesianModelSampling.forward_sample", autospec=True)
-    def test_rejection_sample_less_arg(self, forward_sample):
-        sample = self.sampling_inference.rejection_sample(size=5)
-        forward_sample.assert_called_once_with(self.sampling_inference, 5)
-        self.assertEqual(sample, forward_sample.return_value)
-
     def test_likelihood_weighted_sample(self):
         # Test without state names
         sample = self.sampling_inference.likelihood_weighted_sample()
