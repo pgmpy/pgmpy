@@ -278,7 +278,7 @@ class BayesianModelSampling(Inference):
                     for i in range(size):
                         sampled["_weight"][i] *= weights[i][evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(states, weights, seed=seed)
+                    sampled[node] = sample_discrete(states, weights, size, seed=seed)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
