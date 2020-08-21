@@ -56,7 +56,7 @@ def cartesian(arrays, out=None):
     return out
 
 
-def sample_discrete(values, weights, size=1, rng=None, seed=None):
+def sample_discrete(values, weights, size=1, seed=None):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -82,15 +82,20 @@ def sample_discrete(values, weights, size=1, rng=None, seed=None):
     >>> sample_discrete(values, probabilities, 10, rng=rng).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if rng is None:
-        rng = np.random
-        if seed is not None:
-            rng.seed(seed)
+    if seed is not None:
+        np.random.seed(seed)
+
     weights = np.array(weights)
     if weights.ndim == 1:
-        return rng.choice(values, size=size, p=weights)
+        return np.random.choice(values, size=size, p=weights)
     else:
-        return np.fromiter(map(lambda t: rng.choice(values, p=t), weights), dtype="int")
+        samples = np.zeros(size, dtype=int)
+        unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
+        for index, size in enumerate(counts):
+            samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
+                values, size=size, p=unique_weights[index]
+            )
+        return samples
 
 
 def powerset(l):
