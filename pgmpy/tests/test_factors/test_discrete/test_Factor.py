@@ -287,14 +287,56 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_get_value(self):
         model = get_example_model("asia")
-        phi = model.get_cpds("either").to_factor()
-        phi_copy = phi.copy()
-        self.assertEqual(phi.get_value(lung="yes", tub="no", either="yes"), 1.0)
-        self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 1.0)
-        self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 1.0)
-        self.assertRaises(ValueError, phi.get_value, lung="yes", either="yes")
-        self.assertRaises(ValueError, phi.get_value, lung="yes", tub="no", boo="yes")
-        self.assertEqual(phi, phi_copy)
+        cpd = model.get_cpds("either")
+
+        for phi in [cpd, cpd.to_factor()]:
+            phi_copy = phi.copy()
+            self.assertEqual(phi.get_value(lung="yes", tub="no", either="yes"), 1.0)
+            self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 1.0)
+            self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 1.0)
+            self.assertRaises(ValueError, phi.get_value, lung="yes", either="yes")
+            self.assertRaises(
+                ValueError, phi.get_value, lung="yes", tub="no", boo="yes"
+            )
+            self.assertEqual(phi, phi_copy)
+
+    def test_set_value(self):
+        model = get_example_model("asia")
+        cpd = model.get_cpds("either")
+        for phi in [cpd, cpd.to_factor()]:
+            phi_copy = phi.copy()
+
+            phi.set_value(value=0.1, lung="yes", tub="no", either="yes")
+            self.assertEqual(phi.get_value(lung="yes", tub="no", either="yes"), 0.1)
+
+            phi.set_value(value=0.2, lung=0, tub=1, either=0)
+            self.assertEqual(phi.get_value(lung=0, tub=1, either=0), 0.2)
+
+            phi.set_value(value=0.3, lung="yes", tub=1, either="yes")
+            self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 0.3)
+
+            phi.set_value(value=5, lung="yes", tub=1, either="yes")
+            self.assertEqual(phi.get_value(lung="yes", tub=1, either="yes"), 5)
+
+            self.assertRaises(
+                ValueError, phi.set_value, value=0.1, lung="yes", either="yes"
+            )
+            self.assertRaises(
+                ValueError, phi.set_value, value=0.1, lung="yes", tub="no", boo="yes"
+            )
+            self.assertRaises(
+                ValueError, phi.set_value, value="a", lung="yes", tub="no", either="yes"
+            )
+            self.assertRaises(
+                ValueError,
+                phi.set_value,
+                value=None,
+                lung="yes",
+                tub="no",
+                either="yes",
+            )
+
+            self.assertNotEqual(phi, phi_copy)
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])

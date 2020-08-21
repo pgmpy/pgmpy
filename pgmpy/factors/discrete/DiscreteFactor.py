@@ -176,16 +176,61 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             if variable not in self.variables:
                 raise ValueError(f"Factor doesn't have the variable: {variable}")
 
-        value = self.values
+        index = []
         for var in self.variables:
             if var not in kwargs.keys():
                 raise ValueError(f"Variable: {var} not found in arguments")
             elif isinstance(kwargs[var], str):
-                value = value[self.name_to_no[var][kwargs[var]]]
+                index.append(self.name_to_no[var][kwargs[var]])
             else:
                 warn(f"Using {var} state as number instead of name.")
-                value = value[kwargs[var]]
-        return value
+                index.append(kwargs[var])
+        return self.values[tuple(index)]
+
+    def set_value(self, value, **kwargs):
+        """
+        Sets the probability values of the given variable states.
+
+        Parameters
+        ----------
+        value: float
+            The value for the specified state.
+
+        kwargs: named arguments of the form variable=state_name
+            Spcifies the state of each of the variable for which to get
+            the probability value.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("asia")
+        >>> phi = model.get_cpds("either").to_factor()
+        >>> phi.set_value(value=0.1, lung="yes", tub="no", either="yes")
+        >>> phi.get_value(lung='yes', tub='no', either='yes')
+        0.1
+        """
+        if not isinstance(value, (float, int)):
+            raise ValueError(f"value must be float. Got: {type(value)}.")
+
+        for variable in kwargs.keys():
+            if variable not in self.variables:
+                raise ValueError(f"Factor doesn't have the variable: {variable}")
+
+        index = []
+        for var in self.variables:
+            if var not in kwargs.keys():
+                raise ValueError(f"Variable: {var} not found in arguments")
+            elif isinstance(kwargs[var], str):
+                index.append(self.name_to_no[var][kwargs[var]])
+            else:
+                warn(f"Using {var} state as number instead of name.")
+                index.append(kwargs[var])
+
+        self.values[tuple(index)] = value
 
     def assignment(self, index):
         """
