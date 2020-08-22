@@ -272,7 +272,7 @@ class PC(StructureEstimator):
             )
 
         if show_progress and SHOW_PROGRESS:
-            pbar = tqdm(total=lim_neighbors)
+            pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
         # Step 1: Initialize a fully connected undirected graph
