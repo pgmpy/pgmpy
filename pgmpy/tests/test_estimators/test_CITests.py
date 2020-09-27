@@ -140,7 +140,6 @@ class TestChiSquare(unittest.TestCase):
             Y="Race",
             Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
             data=self.df_adult,
-            boolean=False,
         )
         np_test.assert_almost_equal(coef, 99.25, decimal=1)
         np_test.assert_almost_equal(p_value, 0.99, decimal=1)
@@ -151,7 +150,6 @@ class TestChiSquare(unittest.TestCase):
             Y="Income",
             Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
             data=self.df_adult,
-            boolean=False,
         )
         np_test.assert_almost_equal(coef, 107.79, decimal=1)
         np_test.assert_almost_equal(p_value, 0.931, decimal=2)
@@ -164,19 +162,20 @@ class TestChiSquare(unittest.TestCase):
                 Y="Immigrant",
                 Z=[],
                 data=self.df_adult,
+                use_sig=True,
                 significance_level=0.05,
             )
         )
 
         self.assertFalse(
             chi_square(
-                X="Age", Y="Race", Z=[], data=self.df_adult, significance_level=0.05
+                X="Age", Y="Race", Z=[], data=self.df_adult, use_sig=True, significance_level=0.05
             )
         )
 
         self.assertFalse(
             chi_square(
-                X="Age", Y="Sex", Z=[], data=self.df_adult, significance_level=0.05
+                X="Age", Y="Sex", Z=[], data=self.df_adult, use_sig=True, significance_level=0.05
             )
         )
 
@@ -186,6 +185,7 @@ class TestChiSquare(unittest.TestCase):
                 Y="HoursPerWeek",
                 Z=["Age", "Immigrant", "Race", "Sex"],
                 data=self.df_adult,
+                use_sig=True,
                 significance_level=0.05,
             )
         )
@@ -195,6 +195,7 @@ class TestChiSquare(unittest.TestCase):
                 Y="Sex",
                 Z=[],
                 data=self.df_adult,
+                use_sig=True,
                 significance_level=0.05,
             )
         )
@@ -204,6 +205,7 @@ class TestChiSquare(unittest.TestCase):
                 Y="MaritalStatus",
                 Z=["Age", "Sex"],
                 data=self.df_adult,
+                use_sig=True,
                 significance_level=0.05,
             )
         )

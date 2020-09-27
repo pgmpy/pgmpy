@@ -6,6 +6,7 @@ from pgmpy.estimators import StructureEstimator, HillClimbSearch, BDeuScore
 from pgmpy.independencies import Independencies, IndependenceAssertion
 from pgmpy.estimators.CITests import chi_square
 
+from tqdm import tqdm
 
 class MmhcEstimator(StructureEstimator):
     def __init__(self, data, **kwargs):
@@ -177,7 +178,7 @@ class MmhcEstimator(StructureEstimator):
 
         # Find parents and children for each node
         neighbors = dict()
-        for node in nodes:
+        for node in tqdm(nodes):
             neighbors[node] = []
 
             # Forward Phase
@@ -205,14 +206,14 @@ class MmhcEstimator(StructureEstimator):
                         break
 
         # correct for false positives
-        for node in nodes:
+        for node in tqdm(nodes):
             for neigh in neighbors[node]:
                 if node not in neighbors[neigh]:
                     neighbors[node].remove(neigh)
 
         skel = UndirectedGraph()
         skel.add_nodes_from(nodes)
-        for node in nodes:
+        for node in tqdm(nodes):
             skel.add_edges_from([(node, neigh) for neigh in neighbors[node]])
 
         return skel

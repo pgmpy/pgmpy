@@ -204,6 +204,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 variant=variant,
                 ci_test="chi_square",
                 return_type="skeleton",
+                use_sig=True,
                 significance_level=0.005,
             )
             expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
@@ -265,6 +266,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 variant=variant,
                 ci_test="chi_square",
                 return_type="dag",
+                use_sig=True,
                 significance_level=0.001,
             )
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}

@@ -32,7 +32,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
     return IndependenceAssertion(X, Y, Z) in independencies
 
 
-def chi_square(X, Y, Z, data, boolean=True, **kwargs):
+def chi_square(X, Y, Z, data, use_sig=False, **kwargs):
     """
     Chi-square conditional independence test.
     Tests the null hypothesis that X is independent from Y given Zs.
@@ -59,17 +59,17 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     data: pandas.DataFrame
         The dataset on which to test the independence condition.
 
-    boolean: bool
-        If boolean=True, an additional argument `significance_level` must
+    use_sig: bool
+        If use_sig=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
-        If boolean=False, returns the chi2 and p_value of the test.
+        If use_sig=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
+    If use_sig = False, Returns 3 values:
         chi: float
-            The chi-squre test statistic.
+            The chi-square test statistic.
 
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
@@ -79,7 +79,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         dof: int
             The degrees of freedom of the test.
 
-    If boolean = True, returns:
+    If use_sig = True, returns:
         independent: boolean
             If the p_value of the test is greater than significance_level, returns True.
             Else returns False.
@@ -99,11 +99,11 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     >>> import numpy as np
     >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
     >>> data['E'] = data['A'] + data['B'] + data['C']
-    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    >>> chi_square(X='A', Y='C', Z=[], data=data, use_sig=True, significance_level=0.05)
     True
-    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    >>> chi_square(X='A', Y='B', Z=['D'], data=data, use_sig=True, significance_level=0.05)
     True
-    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, use_sig=True, significance_level=0.05)
     False
     """
 
@@ -150,7 +150,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
-    if boolean:
+    if use_sig:
         return p_value >= kwargs["significance_level"]
     else:
         return chi, dof, p_value
