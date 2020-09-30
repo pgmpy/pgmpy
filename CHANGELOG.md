@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 5. Adds a global `SHOW_PROGRESS` variable.
 6. Adds Chow-Liu structure learning algorithm.
 7. Add `pgmpy.utils.get_example_model` to fetch models from bnlearn's repository.
+8. Adds `get_value` and `set_value` method to `DiscreteFactor` to get/set a single value.
+9. Adds `get_acestral_graph` to `DAG`.
 
 ### Changed
 1. Refactors ConstraintBasedEstimators into PC with a lot of general improvements.
 2. Improved (faster, new arguments) indepenedence tests with changes in argument.
+3. Refactors `sample_discrete` method. Sampling algorithms much faster.
+4. Refactors `HillClimbSearch` to be faster.
+5. Sampling methods now return dataframe of type categorical.
 
 ### Fixed
 
