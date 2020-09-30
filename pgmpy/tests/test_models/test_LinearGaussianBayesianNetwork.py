@@ -9,12 +9,22 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 class TestLGBNMethods(unittest.TestCase):
-    @unittest.skip("TODO")
     def setUp(self):
         self.model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         self.cpd1 = LinearGaussianCPD("x1", [1], 4)
         self.cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
         self.cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+
+    def test_cpds_simple(self):
+        self.assertEqual("x1", self.cpd1.variable)
+        self.assertEqual(4, self.cpd1.variance)
+        self.assertEqual([1], self.cpd1.mean)
+
+        self.model.add_cpds(self.cpd1)
+        cpd = self.model.get_cpds("x1")
+        self.assertEqual(cpd.variable, self.cpd1.variable)
+        self.assertEqual(cpd.variance, self.cpd1.variance)
+        self.assertEqual(cpd.mean, self.cpd1.mean)
 
     @unittest.skip("TODO")
     def test_add_cpds(self):
