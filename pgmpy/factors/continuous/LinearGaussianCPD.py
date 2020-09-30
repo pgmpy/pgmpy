@@ -79,9 +79,9 @@ class LinearGaussianCPD(BaseFactor):
         self.evidence = evidence
         self.sigma_yx = None
 
-        variables = [variable] + evidence
+        self.variables = [variable] + evidence
         super(LinearGaussianCPD, self).__init__(
-            variables, pdf="gaussian", mean=self.mean, covariance=self.variance
+            self.variables, pdf="gaussian", mean=self.mean, covariance=self.variance
         )
 
     def sum_of_product(self, xi, xj):
