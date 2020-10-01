@@ -4,7 +4,7 @@ from urllib.request import urlretrieve
 
 def get_example_model(model):
     """
-    Fetches the specified model from bnlearn repository and returns a 
+    Fetches the specified model from bnlearn repository and returns a
     pgmpy.model instance.
 
     Parameter

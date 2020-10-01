@@ -69,7 +69,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         x1_1  x2_0  x3_1         0.1250
         x1_1  x2_1  x3_0         0.1250
         x1_1  x2_1  x3_1         0.1250
-       """
+        """
         if np.isclose(np.sum(values), 1):
             super(JointProbabilityDistribution, self).__init__(
                 variables, cardinality, values

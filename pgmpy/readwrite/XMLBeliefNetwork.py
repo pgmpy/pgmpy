@@ -149,7 +149,7 @@ class XBNReader(object):
         Returns a dictionary of name and its distribution. Distribution is a ndarray.
 
         The ndarray is stored in the standard way such that the rightmost variable
-        changes most often. Consider a CPD of variable 'd' which has parents 'b' and 
+        changes most often. Consider a CPD of variable 'd' which has parents 'b' and
         'c' (distribution['CONDSET'] = ['b', 'c'])
 
                   |  d_0     d_1

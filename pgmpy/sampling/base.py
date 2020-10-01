@@ -437,7 +437,7 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
 
 def _return_samples(return_type, samples, state_names_map=None):
     """
-        A utility function to return samples according to type
+    A utility function to return samples according to type
     """
     if return_type.lower() == "dataframe":
         if HAS_PANDAS:
