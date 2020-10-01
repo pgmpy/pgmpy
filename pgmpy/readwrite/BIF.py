@@ -97,7 +97,7 @@ class BIFReader(object):
 
     def get_variable_grammar(self):
         """
-         A method that returns variable grammar
+        A method that returns variable grammar
         """
         # Defining a expression for valid word
         word_expr = Word(alphanums + "_" + "-")

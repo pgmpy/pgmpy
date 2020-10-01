@@ -145,7 +145,7 @@ class MarkovModel(UndirectedGraph):
         Parameters
         ----------
         node: any hashable python object (optional)
-            The node whose factor we want. If node is not specified
+           The node whose factor we want. If node is not specified
 
         Examples
         --------
@@ -153,13 +153,13 @@ class MarkovModel(UndirectedGraph):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> factor1 = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 values=np.random.rand(4))
+        ...                          values=np.random.rand(4))
         >>> factor2 = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 3],
-        ...					values=np.ones(6))
+        ...                          values=np.ones(6))
         >>> student.add_factors(factor1,factor2)
         >>> student.get_factors()
         [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>,
-         <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x7f8a0e9bf5f8>]
+        <DiscreteFactor representing phi(Bob:2, Charles:3) at 0x7f8a0e9bf5f8>]
         >>> student.get_factors('Alice')
         [<DiscreteFactor representing phi(Alice:2, Bob:2) at 0x7f8a0e9bf630>]
         """

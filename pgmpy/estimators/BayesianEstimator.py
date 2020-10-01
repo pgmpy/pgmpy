@@ -107,7 +107,7 @@ class BayesianEstimator(ParameterEstimator):
                 'pseudo_counts' = dirichlet hyperparameters; a single number or 2-D array
                  of shape (node_card, product of parents_card) with a "virtual" count for
                  each variable state in the CPD. The virtual counts are added to the
-                 actual state counts found in the data. (if a list is provided, a 
+                 actual state counts found in the data. (if a list is provided, a
                  lexicographic ordering of states is assumed)
             - If 'prior_type' is 'BDeu', then an 'equivalent_sample_size'
                  must be specified instead of 'pseudo_counts'. This is equivalent to

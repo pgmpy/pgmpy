@@ -366,7 +366,10 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual(
-            {"D": [0, 1],}, model.get_cpds("D").state_names,
+            {
+                "D": [0, 1],
+            },
+            model.get_cpds("D").state_names,
         )
         os.remove("grade_problem_output.xbif")
 

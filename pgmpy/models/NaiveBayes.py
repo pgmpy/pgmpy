@@ -74,7 +74,7 @@ class NaiveBayes(BayesianModel):
         Adds edges to the model.
 
         Each tuple of the form (u, v) in ebunch adds a new edge in the model.
-        Since there can only be one dependent variable in a Naive Bayes model, `u` should 
+        Since there can only be one dependent variable in a Naive Bayes model, `u` should
         be the same for each tuple in `ebunch`.
 
         Parameters

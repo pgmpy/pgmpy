@@ -740,7 +740,7 @@ class DAG(nx.DiGraph):
     def get_ancestral_graph(self, nodes):
         """
         Returns the ancestral graph of the given `nodes`. The ancestral graph only
-        contains the nodes which are ancestors of atleast one of the variables in 
+        contains the nodes which are ancestors of atleast one of the variables in
         node.
 
         Parameters

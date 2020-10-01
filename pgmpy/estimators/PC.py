@@ -237,7 +237,7 @@ class PC(StructureEstimator):
 
         Examples
         --------
-        >>> from pgmpy.estimators import PC 
+        >>> from pgmpy.estimators import PC
         >>> from pgmpy.models import DAG
         >>> from pgmpy.independencies import Independencies
         >>> # build skeleton from list of independencies:
