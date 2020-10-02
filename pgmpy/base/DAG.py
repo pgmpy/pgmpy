@@ -400,7 +400,7 @@ class DAG(nx.DiGraph):
                     d_seperated_variables = (
                         rest
                         - set(observed)
-                        - set(self.active_trail_nodes(start, observed=observed)[start])
+                        - set(self.active_trail_nodes([start], observed=observed)[start])
                     )
                     if d_seperated_variables:
                         independencies.add_assertions(
