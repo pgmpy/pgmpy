@@ -422,17 +422,25 @@ class IndependenceAssertion(object):
         self.all_vars = frozenset().union(self.event1, self.event2, self.event3)
 
     def __str__(self):
+        def _format_event(event):
+            if all(isinstance(item, tuple) for item in event):
+                # Dynamic case
+                return ", ".join(f'{item}' for item in event)
+            else:
+                # Static case
+                return ", ".join(event)
+
         if self.event3:
             return "({event1} _|_ {event2} | {event3})".format(
-                event1=", ".join(self.event1),
-                event2=", ".join(self.event2),
-                event3=", ".join(self.event3),
+                event1=_format_event(self.event1),
+                event2=_format_event(self.event2),
+                event3=_format_event(self.event3),
             )
         else:
             return "({event1} _|_ {event2})".format(
-                event1=", ".join(self.event1), event2=", ".join(self.event2)
+                event1=_format_event(self.event1), event2=_format_event(self.event2)
             )
-
+        
     __repr__ = __str__
 
     def __eq__(self, other):
@@ -456,7 +464,7 @@ class IndependenceAssertion(object):
         If variable is a string returns a list containing variable.
         Else returns variable itself.
         """
-        if isinstance(event, str):
+        if isinstance(event, (str, tuple)):
             return [event]
         else:
             return event
