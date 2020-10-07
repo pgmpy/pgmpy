@@ -156,7 +156,7 @@ class MmhcEstimator(StructureEstimator):
             """Measure for (conditional) association between variables. Use negative
             p-value of independence test.
             """
-            return 1 - chi_square(X, Y, Zs, self.data)[1]
+            return 1 - chi_square(X, Y, Zs, self.data, boolean=False)[1]
 
         def min_assoc(X, Y, Zs):
             "Minimal association of X, Y given any subset of Zs."
