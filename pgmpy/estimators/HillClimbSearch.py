@@ -203,8 +203,8 @@ class HillClimbSearch(StructureEstimator):
         ... data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 9)), columns=list('ABCDEFGHI'))
         >>> # add 10th dependent variable
         ... data['J'] = data['A'] * data['B']
-        >>> est = HillClimbSearch(data, scoring_method=BicScore(data))
-        >>> best_model = est.estimate()
+        >>> est = HillClimbSearch(data)
+        >>> best_model = est.estimate(scoring_method=BicScore(data))
         >>> sorted(best_model.nodes())
         ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         >>> best_model.edges()
@@ -221,9 +221,12 @@ class HillClimbSearch(StructureEstimator):
             "bdeuscore": BDeuScore,
             "bicscore": BicScore,
         }
-        if (scoring_method.lower() not in supported_methods) and (
-            not isinstance(scoring_method, StructureScore)
-        ):
+        if (
+            (
+                isinstance(scoring_method, str)
+                and (scoring_method.lower() not in supported_methods)
+            )
+        ) and (not isinstance(scoring_method, StructureScore)):
             raise ValueError(
                 "scoring_method should either be one of k2score, bdeuscore, bicscore, or an instance of StructureScore"
             )
@@ -231,7 +234,7 @@ class HillClimbSearch(StructureEstimator):
         if isinstance(scoring_method, str):
             score = supported_methods[scoring_method.lower()](data=self.data)
         else:
-            score = scoring_method(data=self.data)
+            score = scoring_method
 
         if self.use_cache:
             score_fn = ScoreCache.ScoreCache(score, self.data).local_score
