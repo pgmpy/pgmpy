@@ -284,7 +284,8 @@ class HillClimbSearch(StructureEstimator):
             iteration = range(int(max_iter))
 
         # Step 2: For each iteration, find the best scoring operation and
-        #         do that to the current model.
+        #         do that to the current model. If no legal operation is
+        #         possible, sets best_operation=None.
         for _ in iteration:
             best_operation, best_score_delta = max(
                 self._legal_operations(
@@ -297,6 +298,7 @@ class HillClimbSearch(StructureEstimator):
                     fixed_edges,
                 ),
                 key=lambda t: t[1],
+                default=(None, None),
             )
 
             if best_operation is None or best_score_delta < epsilon:
