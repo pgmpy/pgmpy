@@ -206,6 +206,25 @@ class TestHillClimbEstimator(unittest.TestCase):
             in self.est_titanic2.estimate(fixed_edges=[("Pclass", "Survived")]).edges()
         )
 
+    def test_no_legal_operation(self):
+        data = pd.DataFrame(
+            [
+                [1, 0, 0, 1, 0, 0, 1, 1, 0],
+                [1, 0, 1, 0, 0, 1, 0, 1, 0],
+                [1, 0, 0, 0, 0, 1, 0, 1, 1],
+                [1, 1, 0, 1, 0, 1, 1, 0, 0],
+                [0, 0, 1, 0, 0, 1, 1, 0, 0],
+            ],
+            columns=list("ABCDEFGHI"),
+        )
+        est = HillClimbSearch(data)
+        best_model = est.estimate(
+            fixed_edges=[("A", "B"), ("B", "C")], white_list=[("F", "C")]
+        )
+        self.assertEqual(
+            set(best_model.edges()), set([("A", "B"), ("B", "C"), ("F", "C")])
+        )
+
     def tearDown(self):
         del self.rand_data
         del self.est_rand
