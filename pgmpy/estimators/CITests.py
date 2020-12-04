@@ -86,12 +86,502 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-    Section 18.2.2.3 (page 789)
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.3 (page 600ff)
-        http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-    [3] Chi-square test https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test#Test_of_independence
-    [4] Tsamardinos et al., The max-min hill-climbing BN structure learning algorithm, 2005, Section 4
+    [1] https://en.wikipedia.org/wiki/Chi-squared_test
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> chi_square(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> chi_square(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs
+    )
+
+
+def g_sq(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    G squared test for conditional independence. Also commonly known as G-test,
+    likelihood-ratio or maximum likelihood statistical significance test.
+    Tests the null hypothesis that X is independent of Y given Zs.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+    [1] https://en.wikipedia.org/wiki/G-test
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> g_sq(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> g_sq(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> g_sq(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
+    )
+
+
+def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    Log likelihood ratio test for conditional independence. Also commonly known
+    as G-test, G-squared test or maximum likelihood statistical significance
+    test.  Tests the null hypothesis that X is independent of Y given Zs.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+    [1] https://en.wikipedia.org/wiki/G-test
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs
+    )
+
+
+def freeman_tuckey(X, Y, Z, data, boolean=True, **kwargs):
+    """
+        Freeman Tuckey test for conditional independence [1].
+        Tests the null hypothesis that X is independent of Y given Zs.
+
+        Parameters
+        ----------
+        X: int, string, hashable object
+            A variable name contained in the data set
+
+        Y: int, string, hashable object
+            A variable name contained in the data set, different from X
+
+        Z: list (array-like)
+            A list of variable names contained in the data set, different from X and Y.
+            This is the separating set that (potentially) makes X and Y independent.
+            Default: []
+
+        data: pandas.DataFrame
+            The dataset on which to test the independence condition.
+
+        boolean: bool
+            If boolean=True, an additional argument `significance_level` must
+                be specified. If p_value of the test is greater than equal to
+                `significance_level`, returns True. Otherwise returns False.
+            If boolean=False, returns the chi2 and p_value of the test.
+
+        Returns
+        -------
+        If boolean = False, Returns 3 values:
+            chi: float
+                The chi-squre test statistic.
+
+            p_value: float
+                The p_value, i.e. the probability of observing the computed chi-square
+                statistic (or an even higher value), given the null hypothesis
+                that X _|_ Y | Zs.
+
+            dof: int
+                The degrees of freedom of the test.
+
+        If boolean = True, returns:
+            independent: boolean
+                If the p_value of the test is greater than significance_level, returns True.
+                Else returns False.
+
+        References
+        ----------
+    [1] Read, Campbell B. "Freeman—Tukey chi-squared goodness-of-fit statistics." Statistics & probability letters 18.4 (1993): 271-278.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+        >>> data['E'] = data['A'] + data['B'] + data['C']
+        >>> freeman_tuckey(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+        True
+        >>> freeman_tuckey(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+        True
+        >>> freeman_tuckey(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+        False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="freeman-tuckey", **kwargs
+    )
+
+
+def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    Modified log likelihood ratio test for conditional independence.
+    Tests the null hypothesis that X is independent of Y given Zs.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> modified_log_likelihood(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> modified_log_likelihood(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> modified_log_likelihood(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X,
+        Y=Y,
+        Z=Z,
+        data=data,
+        boolean=boolean,
+        lambda_="mod-log-likelihood",
+        **kwargs,
+    )
+
+
+def neyman(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    Neyman's test for conditional independence[1].
+    Tests the null hypothesis that X is independent of Y given Zs.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+    [1] https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> neyman(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> neyman(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> neyman(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="neyman", **kwargs
+    )
+
+
+def cressie_read(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    Cressie Read statistic for conditional independence[1].
+    Tests the null hypothesis that X is independent of Y given Zs.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> cressie_read(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> cressie_read(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> cressie_read(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
+    """
+    return power_divergence(
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="cressie-read", **kwargs
+    )
+
+
+def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwargs):
+    """
+    Computes the Cressie-Read power divergence statistic [1]. The null hypothesis
+    for the test is X is independent of Y given Z. A lot of the frequency comparision
+    based statistics (eg. chi-square, G-test etc) belong to power divergence family,
+    and are special cases of this test.
+
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
+
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
+
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
+
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
+
+    lambda_: float or string
+        The lambda parameter for the power_divergence statistic. Some values of
+        lambda_ results in other well known tests:
+            "pearson"             1          "Chi-squared test"
+            "log-likelihood"      0          "G-test or log-likelihood"
+            "freeman-tuckey"     -1/2        "Freeman-Tuckey Statistic"
+            "mod-log-likelihood"  -1         "Modified Log-likelihood"
+            "neyman"              -2         "Neyman's statistic"
+            "cressie-read"        2/3        "The value recommended in the paper[1]"
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+        If boolean=False, returns the chi2 and p_value of the test.
+
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
+
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X _|_ Y | Zs.
+
+        dof: int
+            The degrees of freedom of the test.
+
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
+    [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
 
     Examples
     --------
@@ -121,7 +611,8 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-            data.groupby([X, Y]).size().unstack(Y, fill_value=0)
+            data.groupby([X, Y]).size().unstack(Y, fill_value=0),
+            lambda_=lambda_,
         )
 
     # Step 3: If there are conditionals variables, iterate over unique states and do
@@ -132,7 +623,8 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         for z_state, df in data.groupby(Z):
             try:
                 c, _, d, _ = stats.chi2_contingency(
-                    df.groupby([X, Y]).size().unstack(Y, fill_value=0)
+                    df.groupby([X, Y]).size().unstack(Y, fill_value=0),
+                    lambda_=lambda_,
                 )
                 chi += c
                 dof += d
