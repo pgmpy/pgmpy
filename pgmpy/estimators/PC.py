@@ -448,8 +448,8 @@ class PC(StructureEstimator):
             # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
             for pair in node_pairs:
                 X, Y = pair 
-                if pdag.has_edge(Y, X) and pdag.has_edge(X, Y) and
-                 len(list(nx.all_simple_paths(pdag, X, Y))) > 1:
+                if (pdag.has_edge(Y, X) and pdag.has_edge(X, Y) and 
+                    len(list(nx.all_simple_paths(pdag, X, Y))) > 1):
                     pdag.remove_edge(Y, X)
 
             # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
