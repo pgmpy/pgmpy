@@ -308,7 +308,7 @@ def freeman_tuckey(X, Y, Z, data, boolean=True, **kwargs):
         False
     """
     return power_divergence(
-        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="freeman-tuckey", **kwargs
+        X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="freeman-tukey", **kwargs
     )
 
 

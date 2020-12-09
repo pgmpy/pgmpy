@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy import testing as np_test
 
-from pgmpy.estimators.CITests import pearsonr, chi_square
+from pgmpy.estimators.CITests import *
 
 np.random.seed(42)
 
@@ -83,55 +83,55 @@ class TestChiSquare(unittest.TestCase):
 
     def test_chisquare_adult_dataset(self):
         # Comparision values taken from dagitty (DAGitty)
-        #         coef, dof, p_value = chi_square(
-        #             X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
-        #         )
-        #         np_test.assert_almost_equal(coef, 57.75, decimal=1)
-        #         np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
-        #         self.assertEqual(dof, 4)
-        #
-        #         coef, dof, p_value = chi_square(
-        #             X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
-        #         )
-        #         np_test.assert_almost_equal(coef, 56.25, decimal=1)
-        #         np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
-        #         self.assertEqual(dof, 4)
-        #
-        #         coef, dof, p_value = chi_square(
-        #             X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        #         )
-        #         np_test.assert_almost_equal(coef, 289.62, decimal=1)
-        #         np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
-        #         self.assertEqual(dof, 4)
-        #
-        #         coef, dof, p_value = chi_square(
-        #             X="Education",
-        #             Y="HoursPerWeek",
-        #             Z=["Age", "Immigrant", "Race", "Sex"],
-        #             data=self.df_adult,
-        #             boolean=False,
-        #         )
-        #         np_test.assert_almost_equal(coef, 1460.11, decimal=1)
-        #         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        #         self.assertEqual(dof, 316)
-        #
-        #         coef, dof, p_value = chi_square(
-        #             X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
-        #         )
-        #         np_test.assert_almost_equal(coef, 0.2724, decimal=1)
-        #         np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
-        #         self.assertEqual(dof, 1)
-        #
-        #         coef, dof, p_value = chi_square(
-        #             X="Education",
-        #             Y="MaritalStatus",
-        #             Z=["Age", "Sex"],
-        #             data=self.df_adult,
-        #             boolean=False,
-        #         )
-        #         np_test.assert_almost_equal(coef, 481.96, decimal=1)
-        #         np_test.assert_almost_equal(p_value, 0, decimal=1)
-        #         self.assertEqual(dof, 58)
+        coef, dof, p_value = chi_square(
+                    X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
+                )
+        np_test.assert_almost_equal(coef, 57.75, decimal=1)
+        np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
+        self.assertEqual(dof, 4)
+
+        coef, dof, p_value = chi_square(
+            X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
+        )
+        np_test.assert_almost_equal(coef, 56.25, decimal=1)
+        np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
+        self.assertEqual(dof, 4)
+
+        coef, dof, p_value = chi_square(
+            X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
+        )
+        np_test.assert_almost_equal(coef, 289.62, decimal=1)
+        np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
+        self.assertEqual(dof, 4)
+
+        coef, dof, p_value = chi_square(
+            X="Education",
+            Y="HoursPerWeek",
+            Z=["Age", "Immigrant", "Race", "Sex"],
+            data=self.df_adult,
+            boolean=False,
+        )
+        np_test.assert_almost_equal(coef, 1460.11, decimal=1)
+        np_test.assert_almost_equal(p_value, 0, decimal=1)
+        self.assertEqual(dof, 316)
+
+        coef, dof, p_value = chi_square(
+            X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
+        )
+        np_test.assert_almost_equal(coef, 0.2724, decimal=1)
+        np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
+        self.assertEqual(dof, 1)
+
+        coef, dof, p_value = chi_square(
+            X="Education",
+            Y="MaritalStatus",
+            Z=["Age", "Sex"],
+            data=self.df_adult,
+            boolean=False,
+        )
+        np_test.assert_almost_equal(coef, 481.96, decimal=1)
+        np_test.assert_almost_equal(p_value, 0, decimal=1)
+        self.assertEqual(dof, 58)
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples
@@ -157,56 +157,61 @@ class TestChiSquare(unittest.TestCase):
         np_test.assert_almost_equal(p_value, 0.931, decimal=2)
         self.assertEqual(dof, 131)
 
-        # Tests for when boolean=True
-        self.assertFalse(
-            chi_square(
-                X="Age",
-                Y="Immigrant",
-                Z=[],
-                data=self.df_adult,
-                significance_level=0.05,
+    def test_discrete_tests(self):
+        for t in [chi_square, g_sq, log_likelihood, freeman_tuckey, modified_log_likelihood, neyman, cressie_read]:
+            self.assertFalse(
+                t(
+                    X="Age",
+                    Y="Immigrant",
+                    Z=[],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
+                )
             )
-        )
 
-        self.assertFalse(
-            chi_square(
-                X="Age", Y="Race", Z=[], data=self.df_adult, significance_level=0.05
+            self.assertFalse(
+                t(
+                    X="Age", Y="Race", Z=[], data=self.df_adult, boolean=True, significance_level=0.05
+                )
             )
-        )
 
-        self.assertFalse(
-            chi_square(
-                X="Age", Y="Sex", Z=[], data=self.df_adult, significance_level=0.05
+            self.assertFalse(
+                t(
+                    X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=True, significance_level=0.05
+                )
             )
-        )
 
-        self.assertFalse(
-            chi_square(
-                X="Education",
-                Y="HoursPerWeek",
-                Z=["Age", "Immigrant", "Race", "Sex"],
-                data=self.df_adult,
-                significance_level=0.05,
+            self.assertFalse(
+                t(
+                    X="Education",
+                    Y="HoursPerWeek",
+                    Z=["Age", "Immigrant", "Race", "Sex"],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
+                )
             )
-        )
-        self.assertTrue(
-            chi_square(
-                X="Immigrant",
-                Y="Sex",
-                Z=[],
-                data=self.df_adult,
-                significance_level=0.05,
+            self.assertTrue(
+                t(
+                    X="Immigrant",
+                    Y="Sex",
+                    Z=[],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
+                )
             )
-        )
-        self.assertFalse(
-            chi_square(
-                X="Education",
-                Y="MaritalStatus",
-                Z=["Age", "Sex"],
-                data=self.df_adult,
-                significance_level=0.05,
+            self.assertFalse(
+                t(
+                    X="Education",
+                    Y="MaritalStatus",
+                    Z=["Age", "Sex"],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
+                )
             )
-        )
 
     def test_exactly_same_vars(self):
         x = np.random.choice([0, 1], size=1000)
