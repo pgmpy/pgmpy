@@ -422,11 +422,12 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = combinations(pdag.nodes(), 2)
+        node_pairs = list(combinations(pdag.nodes(), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for X, Y in node_pairs:
+        for pair in node_pairs:
+            X, Y = pair 
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
@@ -437,25 +438,22 @@ class PC(StructureEstimator):
             num_edges = pdag.number_of_edges()
 
             # 2) for each X->Z-Y, orient edges to Z->Y
-            for X, Y in node_pairs:
+            for pair in node_pairs:
+                X, Y = pair
                 for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
                     set(pdag.successors(Y)) & set(pdag.predecessors(Y))
                 ):
-                    pdag.remove(Y, Z)
+                    pdag.remove_edge(Y, Z)
 
             # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
-            for X, Y in node_pairs:
-                for path in nx.all_simple_paths(pdag, X, Y):
-                    is_directed = True
-                    for src, dst in path:
-                        if pdag.has_edge(dst, src):
-                            is_directed = False
-                    if is_directed:
-                        pdag.remove(Y, X)
-                        break
+            for pair in node_pairs:
+                X, Y = pair 
+                if pdag.has_edge(Y, X) and pdag.has_edge(X, Y) and len(list(nx.all_simple_paths(pdag, X, Y))) > 1:
+                    pdag.remove_edge(Y, X)
 
             # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
-            for X, Y in node_pairs:
+            for pair in node_pairs:
+                X, Y = pair
                 for Z in (
                     set(pdag.successors(X))
                     & set(pdag.predecessors(X))
@@ -467,7 +465,7 @@ class PC(StructureEstimator):
                         & (set(pdag.successors(Y)) - set(pdag.predecessors(Y)))
                         & (set(pdag.successors(Z)) & set(pdag.predecessors(Z)))
                     ):
-                        pdag.remove(W, Z)
+                        pdag.remove_edge(W, Z)
 
             progress = num_edges > pdag.number_of_edges()
 
