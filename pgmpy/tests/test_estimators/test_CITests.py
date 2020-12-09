@@ -84,8 +84,8 @@ class TestChiSquare(unittest.TestCase):
     def test_chisquare_adult_dataset(self):
         # Comparision values taken from dagitty (DAGitty)
         coef, dof, p_value = chi_square(
-                    X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
-                )
+            X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
+        )
         np_test.assert_almost_equal(coef, 57.75, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
         self.assertEqual(dof, 4)
@@ -158,7 +158,15 @@ class TestChiSquare(unittest.TestCase):
         self.assertEqual(dof, 131)
 
     def test_discrete_tests(self):
-        for t in [chi_square, g_sq, log_likelihood, freeman_tuckey, modified_log_likelihood, neyman, cressie_read]:
+        for t in [
+            chi_square,
+            g_sq,
+            log_likelihood,
+            freeman_tuckey,
+            modified_log_likelihood,
+            neyman,
+            cressie_read,
+        ]:
             self.assertFalse(
                 t(
                     X="Age",
@@ -172,13 +180,23 @@ class TestChiSquare(unittest.TestCase):
 
             self.assertFalse(
                 t(
-                    X="Age", Y="Race", Z=[], data=self.df_adult, boolean=True, significance_level=0.05
+                    X="Age",
+                    Y="Race",
+                    Z=[],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
                 )
             )
 
             self.assertFalse(
                 t(
-                    X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=True, significance_level=0.05
+                    X="Age",
+                    Y="Sex",
+                    Z=[],
+                    data=self.df_adult,
+                    boolean=True,
+                    significance_level=0.05,
                 )
             )
 
@@ -217,7 +235,16 @@ class TestChiSquare(unittest.TestCase):
         x = np.random.choice([0, 1], size=1000)
         y = x.copy()
         df = pd.DataFrame({"x": x, "y": y})
-        chi, dof, p_value = chi_square(X="x", Y="y", Z=[], data=df, boolean=False)
-        np_test.assert_almost_equal(chi, 996.0, decimal=1)
-        self.assertEqual(dof, 1)
-        np_test.assert_almost_equal(p_value, 0, decimal=5)
+
+        for t in [
+            chi_square,
+            g_sq,
+            log_likelihood,
+            freeman_tuckey,
+            modified_log_likelihood,
+            neyman,
+            cressie_read,
+        ]:
+            stat, dof, p_value = t(X="x", Y="y", Z=[], data=df, boolean=False)
+            self.assertEqual(dof, 1)
+            np_test.assert_almost_equal(p_value, 0, decimal=5)
