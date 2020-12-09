@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from warnings import warn
-from itertools import combinations
+from itertools import combinations, permutations
 
 import networkx as nx
 from tqdm import tqdm
@@ -422,12 +422,12 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(combinations(pdag.nodes(), 2))
+        node_pairs = list(permutations(pdag.nodes(), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
         for pair in node_pairs:
-            X, Y = pair 
+            X, Y = pair
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
@@ -438,19 +438,27 @@ class PC(StructureEstimator):
             num_edges = pdag.number_of_edges()
 
             # 2) for each X->Z-Y, orient edges to Z->Y
+            # (Explanation in Koller & Friedman PGM, page 88)
             for pair in node_pairs:
                 X, Y = pair
-                for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
-                    set(pdag.successors(Y)) & set(pdag.predecessors(Y))
-                ):
-                    pdag.remove_edge(Y, Z)
+                if not pdag.has_edge(X, Y):
+                    for Z in (set(pdag.successors(X)) - set(pdag.predecessors(X))) & (
+                        set(pdag.successors(Y)) & set(pdag.predecessors(Y))
+                    ):
+                        pdag.remove_edge(Y, Z)
 
             # 3) for each X-Y with a directed path from X to Y, orient edges to X->Y
             for pair in node_pairs:
-                X, Y = pair 
-                if (pdag.has_edge(Y, X) and pdag.has_edge(X, Y) and 
-                    len(list(nx.all_simple_paths(pdag, X, Y))) > 1):
-                    pdag.remove_edge(Y, X)
+                X, Y = pair
+                if pdag.has_edge(Y, X) and pdag.has_edge(X, Y):
+                    for path in nx.all_simple_paths(pdag, X, Y):
+                        is_directed = True
+                        for src, dst in list(zip(path, path[1:])):
+                            if pdag.has_edge(dst, src):
+                                is_directed = False
+                        if is_directed:
+                            pdag.remove_edge(Y, X)
+                            break
 
             # 4) for each X-Z-Y with X->W, Y->W, and Z-W, orient edges to Z->W
             for pair in node_pairs:
