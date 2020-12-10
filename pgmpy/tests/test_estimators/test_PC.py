@@ -168,7 +168,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
 
         skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
         sep_sets = {
-            frozenset({"A", "B"}): ("D",),
+            frozenset({"A", "B"}): tuple(),
             frozenset({"A", "D"}): ("C",),
             frozenset({"B", "D"}): ("C",),
         }
