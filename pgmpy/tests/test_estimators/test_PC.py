@@ -166,6 +166,47 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             set([("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")]),
         )
 
+        skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
+        sep_sets = {
+            frozenset({"A", "B"}): tuple(),
+            frozenset({"A", "D"}): ("C",),
+            frozenset({"B", "D"}): ("C",),
+        }
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("A", "C"), ("B", "C"), ("C", "D")])
+        )
+
+        skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
+        sep_sets = {
+            frozenset({"A", "D"}): ("C",),
+            frozenset({"C", "D"}): ("B",),
+        }
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        self.assertSetEqual(
+            set(pdag.edges()), set([("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")])
+        )
+
+        skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
+        sep_sets = {
+            frozenset({"A", "C"}): ("B",),
+        }
+        pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
+        self.assertSetEqual(
+            set(pdag.edges()),
+            set(
+                [
+                    ("A", "B"),
+                    ("B", "A"),
+                    ("B", "C"),
+                    ("C", "B"),
+                    ("A", "D"),
+                    ("B", "D"),
+                    ("C", "D"),
+                ]
+            ),
+        )
+
     def test_estimate_dag(self):
         for variant in ["orig", "stable", "parallel"]:
             ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
