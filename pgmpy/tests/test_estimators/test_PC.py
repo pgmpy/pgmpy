@@ -179,8 +179,8 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
 
         skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
         sep_sets = {
-            frozenset({"A", "D"}): ("C",),
-            frozenset({"C", "D"}): ("B",),
+            frozenset({"A", "D"}): tuple(),
+            frozenset({"C", "D"}): ("A", "B"),
         }
         pdag = PC.skeleton_to_pdag(skeleton=skel, separating_sets=sep_sets)
         self.assertSetEqual(
