@@ -4,7 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.12] - Expected 2020-09-30
+## [0.1.13] - Expected 2020-12-30
+### Added
+1. New conditional independence tests for discrete variables
+
+### Changed
+1. Adds warning in BayesianEstimator when using dirichlet prior.
+
+### Fixed
+1. Bug in `PC.skeleton_to_pdag`.
+2. Bug in `HillClimbSearch` when no legal operations.
+
+### Removed
+
+## [0.1.12] - 2020-09-30
 ### Added
 1. PC estimator with original, stable, and parallel variants.
 2. PDAG class to represent partially directed DAGs.
