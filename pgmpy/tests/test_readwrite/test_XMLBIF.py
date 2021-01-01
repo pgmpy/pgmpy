@@ -365,12 +365,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
-        self.assertDictEqual(
-            {
-                "D": [0, 1],
-            },
-            model.get_cpds("D").state_names,
-        )
+        self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
         os.remove("grade_problem_output.xbif")
 
     def assert_models_equivelent(self, expected, got):
