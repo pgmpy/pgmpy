@@ -416,7 +416,7 @@ class TestXBNWriter(unittest.TestCase):
         self.maxDiff = None
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
-    @unittest.skipIf(sys.version_info[1] == 8, "xml ordering different in python 3.8")
+    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_file(self):
         self.expected_xml = etree.XML(
             """<ANALYSISNOTEBOOK>
