@@ -1033,7 +1033,7 @@ class TestPomdpXWriter(unittest.TestCase):
 
         self.writer = PomdpXWriter(model_data=self.model_data)
 
-    @unittest.skipIf(sys.version_info[1] == 8, "xml ordering different in python 3.8")
+    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_variables(self):
         expected_variables = etree.XML(
             """
@@ -1293,7 +1293,7 @@ class TestPomdpXWriter(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(self.writer.add_initial_belief(), etree.tostring(expected_xml))
 
-    @unittest.skipIf(sys.version_info[1] == 8, "xml ordering different in python 3.8")
+    @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_state_transition_function_dd(self):
         self.model_data = {
             "state_transition_function": [
@@ -1487,7 +1487,7 @@ class TestPomdpXWriter(unittest.TestCase):
         )
 
     @unittest.skipIf(
-        sys.version_info[1] == 8, "Ordering of the xml different in python 3.8"
+        sys.version_info[1] >= 8, "Ordering of the xml different in python 3.8"
     )
     def test_obs_function_dd(self):
         self.model_data = {
