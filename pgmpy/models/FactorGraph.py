@@ -83,7 +83,7 @@ class FactorGraph(UndirectedGraph):
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
-        >>> G.add_nodes_from([phi1, phi2])
+        >>> G.add_nodes_from([phi1])
         >>> G.add_edge('a', phi1)
         """
         if u != v:
@@ -174,7 +174,7 @@ class FactorGraph(UndirectedGraph):
         Examples
         --------
         >>> from pgmpy.models import FactorGraph
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
@@ -184,10 +184,10 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> G.add_factors(phi1, phi2)
         >>> G.get_cardinality()
-            defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
+        defaultdict(<class 'int'>, {'c': 2, 'b': 2, 'a': 2})
 
         >>> G.get_cardinality('a')
-            2
+        2
         """
         if node:
             for factor in self.factors:
@@ -265,7 +265,7 @@ class FactorGraph(UndirectedGraph):
         >>> G.add_edges_from([('a', phi1), ('b', phi1),
         ...                   ('b', phi2), ('c', phi2)])
         >>> G.get_variable_nodes()
-        ['a', 'b']
+        ['a', 'c', 'b']
         """
         self.check_model()
 
@@ -449,7 +449,7 @@ class FactorGraph(UndirectedGraph):
         >>> from pgmpy.models import FactorGraph
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> G = FactorGraph()
-        >>> G.add_nodes_from([('a', 'b'), ('b', 'c')])
+        >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> phi1 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
         >>> phi2 = DiscreteFactor(['b', 'c'], [2, 2], np.random.rand(4))
         >>> G.add_factors(phi1, phi2)
@@ -458,8 +458,8 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> G_copy = G.copy()
         >>> G_copy.nodes()
-        [<Factor representing phi(b:2, c:2) at 0xb4badd4c>, 'b', 'c',
-          'a', <Factor representing phi(a:2, b:2) at 0xb4badf2c>]
+        NodeView((<Factor representing phi(b:2, c:2) at 0xb4badd4c>, 'b', 'c',
+          'a', <Factor representing phi(a:2, b:2) at 0xb4badf2c>))
 
         """
         copy = FactorGraph(self.edges())

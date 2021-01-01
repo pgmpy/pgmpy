@@ -170,7 +170,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> model = get_example_model("asia")
         >>> phi = model.get_cpds("either").to_factor()
         >>> phi.get_value(lung="yes", tub="no", either="yes")
-        1.0000
+        1.0
         """
         for variable in kwargs.keys():
             if variable not in self.variables:
@@ -298,7 +298,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         array([[[ 1.,  1.],
                 [ 1.,  1.],
                 [ 1.,  1.]],
-
                [[ 1.,  1.],
                 [ 1.,  1.],
                 [ 1.,  1.]]])
@@ -334,7 +333,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.marginalize(['x1', 'x3'])
         >>> phi.values
-        array([ 14.,  22.,  30.])
+        array([14., 22., 30.])
         >>> phi.variables
         ['x2']
         """
@@ -384,7 +383,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [3, 2, 2], [0.25, 0.35, 0.08, 0.16, 0.05, 0.07,
         ...                                              0.00, 0.00, 0.15, 0.21, 0.09, 0.18])
         >>> phi.variables
-        ['x1','x2','x3']
+        ['x1', 'x2', 'x3']
         >>> phi.maximize(['x2'])
         >>> phi.variables
         ['x1', 'x3']
@@ -436,12 +435,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
         >>> phi.values
-        array([[[ 0,  1],
-                [ 2,  3],
-                [ 4,  5]],
-               [[ 6,  7],
-                [ 8,  9],
-                [10, 11]]])
+        array([[[ 0.,  1.],
+                [ 2.,  3.],
+                [ 4.,  5.]],
+               [[ 6.,  7.],
+                [ 8.,  9.],
+                [10., 11.]]])
         >>> phi.normalize()
         >>> phi.variables
         ['x1', 'x2', 'x3']
@@ -570,20 +569,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi1.values
         array([[[[ 0,  0],
                  [ 4,  6]],
-
                 [[ 0,  4],
                  [12, 18]],
-
                 [[ 0,  8],
                  [20, 30]]],
-
-
                [[[ 6, 18],
                  [35, 49]],
-
                 [[ 8, 24],
                  [45, 63]],
-
                 [[10, 30],
                  [55, 77]]]])
         """
@@ -662,20 +655,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi1.values
         array([[[[ 0,  0],
                  [ 4,  6]],
-
                 [[ 0,  4],
                  [12, 18]],
-
                 [[ 0,  8],
                  [20, 30]]],
-
-
                [[[ 6, 18],
                  [35, 49]],
-
                 [[ 8, 24],
                  [45, 63]],
-
                 [[10, 30],
                  [55, 77]]]]
         """
@@ -756,7 +743,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         array([[[ 0.        ,  0.33333333],
                 [ 2.        ,  1.        ],
                 [ 4.        ,  1.66666667]],
-
                [[ 3.        ,  1.75      ],
                 [ 4.        ,  2.25      ],
                 [ 5.        ,  2.75      ]]])
@@ -816,7 +802,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         array([[[ 0,  1,  2],
                 [ 3,  4,  5],
                 [ 6,  7,  8]],
-
                [[ 9, 10, 11],
                 [12, 13, 14],
                 [15, 16, 17]]])

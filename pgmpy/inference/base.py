@@ -32,8 +32,8 @@ class Inference(object):
     >>> from pgmpy.models import BayesianModel
     >>> from pgmpy.factors.discrete import TabularCPD
     >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
-    >>> diff_cpd = TabularCPD('diff', 2, [[0.2, 0.8]])
-    >>> intel_cpd = TabularCPD('intel', 2, [[0.3, 0.7]])
+    >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
+    >>> intel_cpd = TabularCPD('intel', 2, [[0.3], [0.7]])
     >>> grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1],
     ...                                     [0.1, 0.1, 0.1, 0.1],
     ...                                     [0.8, 0.8, 0.8, 0.8]],
@@ -42,7 +42,7 @@ class Inference(object):
     >>> model = Inference(student)
 
     >>> from pgmpy.models import MarkovModel
-    >>> from pgmpy.factors import DiscreteFactor
+    >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> import numpy as np
     >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
     ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])

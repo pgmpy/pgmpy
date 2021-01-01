@@ -117,7 +117,7 @@ class JunctionTree(ClusterGraph):
         >>> G.add_factors(phi1,phi2)
         >>> modelCopy = G.copy()
         >>> modelCopy.edges()
-        [(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))]
+        EdgeView([(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))])
         >>> G.factors
         [<DiscreteFactor representing phi(a:1, b:2) at 0xb720ee4c>,
          <DiscreteFactor representing phi(a:1, c:2) at 0xb4e1e06c>]

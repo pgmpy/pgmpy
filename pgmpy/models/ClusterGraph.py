@@ -204,7 +204,8 @@ class ClusterGraph(UndirectedGraph):
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> student = ClusterGraph()
         >>> factor = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
-        ...                 value=np.random.rand(4))
+        ...                         values=np.random.rand(4))
+        >>> student.add_node(('Alice', 'Bob'))
         >>> student.add_factors(factor)
         >>> student.remove_factors(factor)
         """
@@ -239,7 +240,7 @@ class ClusterGraph(UndirectedGraph):
         >>> student.add_node(('Alice', 'Bob'))
         >>> student.add_factors(factor)
         >>> student.get_cardinality()
-        defaultdict(<class 'int'>, {'Bob': 2, 'Alice': 2})
+        defaultdict(<class 'int'>, {'Alice': 2, 'Bob': 2})
 
         >>> student.get_cardinality(node='Alice')
         2

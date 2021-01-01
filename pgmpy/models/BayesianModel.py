@@ -346,14 +346,14 @@ class BayesianModel(DAG):
         >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
-        >>> cpd_diff = TabularCPD('diff',2,[[0.6,0.4]]);
-        >>> cpd_intel = TabularCPD('intel',2,[[0.7,0.3]]);
+        >>> cpd_diff = TabularCPD('diff', 2, [[0.6], [0.4]]);
+        >>> cpd_intel = TabularCPD('intel', 2, [[0.7], [0.3]]);
         >>> cpd_grade = TabularCPD('grade', 2, [[0.1, 0.9, 0.2, 0.7],
         ...                                     [0.9, 0.1, 0.8, 0.3]],
         ...                                 ['intel', 'diff'], [2, 2])
         >>> student.add_cpds(cpd_diff,cpd_intel,cpd_grade)
         >>> student.get_cardinality()
-        defaultdict(int, {'diff': 2, 'grade': 2, 'intel': 2})
+        defaultdict(<class 'int'>, {'diff': 2, 'intel': 2, 'grade': 2})
 
         >>> student.get_cardinality('intel')
         2
@@ -410,10 +410,9 @@ class BayesianModel(DAG):
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> mm = G.to_markov_model()
         >>> mm.nodes()
-        ['diff', 'grade', 'intel', 'SAT', 'letter']
+        NodeView(('diff', 'grade', 'intel', 'letter', 'SAT'))
         >>> mm.edges()
-        [('diff', 'intel'), ('diff', 'grade'), ('intel', 'grade'),
-        ('intel', 'SAT'), ('grade', 'letter')]
+        EdgeView([('diff', 'grade'), ('diff', 'intel'), ('grade', 'letter'), ('grade', 'intel'), ('intel', 'SAT')])
         """
         moral_graph = self.moralize()
         mm = MarkovModel(moral_graph.edges())
@@ -730,21 +729,19 @@ class BayesianModel(DAG):
         >>> model = BayesianModel([('A', 'B'), ('B', 'C')])
         >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
         >>> cpd_b = TabularCPD('B', 2, [[0.3, 0.7], [0.7, 0.3]],
-                               evidence=['A'],
-                               evidence_card=[2])
+        ...                    evidence=['A'],
+        ...                    evidence_card=[2])
         >>> cpd_c = TabularCPD('C', 2, [[0.1, 0.9], [0.9, 0.1]],
-                               evidence=['B'],
-                               evidence_card=[2])
+        ...                    evidence=['B'],
+        ...                    evidence_card=[2])
         >>> model.add_cpds(cpd_a, cpd_b, cpd_c)
         >>> copy_model = model.copy()
         >>> copy_model.nodes()
-        ['C', 'A', 'B']
+        NodeView(('A', 'B', 'C'))
         >>> copy_model.edges()
-        [('A', 'B'), ('B', 'C')]
-        >>> copy_model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x7f2824930a58>,
-         <TabularCPD representing P(B:2 | A:2) at 0x7f2824930a90>,
-         <TabularCPD representing P(C:2 | B:2) at 0x7f2824944240>]
+        OutEdgeView([('A', 'B'), ('B', 'C')])
+        >>> len(copy_model.get_cpds())
+        3
         """
         model_copy = BayesianModel()
         model_copy.add_nodes_from(self.nodes())
@@ -774,8 +771,8 @@ class BayesianModel(DAG):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> G = BayesianModel([('x', 'y'), ('z', 'y'), ('y', 'w'), ('y', 'v'), ('u', 'w'),
         ...                    ('s', 'v'), ('w', 't'), ('w', 'm'), ('v', 'n'), ('v', 'q')])
-        >>> bayes_model.get_markov_blanket('y')
-        ['s', 'w', 'x', 'u', 'z', 'v']
+        >>> G.get_markov_blanket('y')
+        ['s', 'u', 'w', 'v', 'z', 'x']
         """
         children = self.get_children(node)
         parents = self.get_parents(node)

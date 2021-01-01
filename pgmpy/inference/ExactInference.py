@@ -409,7 +409,6 @@ class VariableElimination(Inference):
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
-        <networkx.classes.graph.Graph at 0x7f34ac8c5160>
         """
         # If the elimination order does not contain the same variables as the model
         if set(elimination_order) != set(self.variables):

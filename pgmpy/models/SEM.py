@@ -157,7 +157,7 @@ class SEMGraph(DAG):
         ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
         ...                latents=[],
         ...                err_corr=[('yrsmill', 'age')])
-        >>> sem.get_full_graph_struct()
+        >>> sem._get_full_graph_struct()
         """
         full_graph = self.graph.copy()
 
@@ -377,7 +377,7 @@ class SEMGraph(DAG):
         >>> from pgmpy.models import SEMGraph
         >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y')],
         ...                  latents=[],
-        ...                  err_corr=['X', 'Y'])
+        ...                  err_corr=[('X', 'Y')])
         >>> model.get_ivs('X', 'Y')
         {'I'}
         """
@@ -535,7 +535,7 @@ class SEMGraph(DAG):
         >>> from pgmpy.models import SEMGraph
         >>> model = SEMGraph(ebunch=[('I', 'X'), ('X', 'Y'), ('W', 'I')],
         ...                  latents=[],
-        ...                  err_corr=['W', 'Y'])
+        ...                  err_corr=[('W', 'Y')])
         >>> model.get_ivs('X', 'Y')
         [('I', {'W'})]
         """

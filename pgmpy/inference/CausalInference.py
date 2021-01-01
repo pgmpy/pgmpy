@@ -29,11 +29,11 @@ class CausalInference(object):
     --------
     Create a small Bayesian Network.
     >>> from pgmpy.models.BayesianModel import BayesianModel
-    >>> game = CausalGraph([('X', 'A'),
-                            ('A', 'Y'),
-                            ('A', 'B')])
+    >>> game = BayesianModel([('X', 'A'),
+    ...                       ('A', 'Y'),
+    ...                       ('A', 'B')])
     Load the graph into the CausalInference object to make causal queries.
-    >>> from pgmpy.inference.causal_inference import CausalInference
+    >>> from pgmpy.inference.CausalInference import CausalInference
     >>> inference = CausalInference(game)
     >>> inference.get_all_backdoor_adjustment_sets(X="X", Y="Y")
     >>> inference.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
@@ -88,8 +88,8 @@ class CausalInference(object):
         Examples
         --------
         >>> game1 = BayesianModel([('X', 'A'),
-                                   ('A', 'Y'),
-                                   ('A', 'B')])
+        ...                        ('A', 'Y'),
+        ...                        ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
@@ -137,7 +137,7 @@ class CausalInference(object):
                                    ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
-        frozenset([])
+        frozenset()
 
         References
         ----------
@@ -342,6 +342,7 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> import pandas as pd
         >>> game1 = BayesianModel([('X', 'A'),
         ...                        ('A', 'Y'),
         ...                        ('A', 'B')])
