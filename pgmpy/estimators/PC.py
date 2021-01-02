@@ -238,14 +238,14 @@ class PC(StructureEstimator):
         Examples
         --------
         >>> from pgmpy.estimators import PC
-        >>> from pgmpy.models import DAG
+        >>> from pgmpy.base import DAG
         >>> from pgmpy.independencies import Independencies
         >>> # build skeleton from list of independencies:
         ... ind = Independencies(['B', 'C'], ['A', ['B', 'C'], 'D'])
         >>> # we need to compute closure, otherwise this set of independencies doesn't
         ... # admit a faithful representation:
         ... ind = ind.closure()
-        >>> skel, sep_sets = PC.build_skeleton("ABCD", ind)
+        >>> skel, sep_sets = PC(independencies=ind).build_skeleton("ABCD", ind)
         >>> print(skel.edges())
         [('A', 'D'), ('B', 'D'), ('C', 'D')]
         >>> # build skeleton from d-seperations of DAG:
@@ -411,12 +411,12 @@ class PC(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.estimators import PC
         >>> data = pd.DataFrame(np.random.randint(0, 4, size=(5000, 3)), columns=list('ABD'))
         >>> data['C'] = data['A'] - data['B']
         >>> data['D'] += data['A']
-        >>> c = ConstraintBasedEstimator(data)
-        >>> pdag = c.skeleton_to_pdag(*c.estimate_skeleton())
+        >>> c = PC(data)
+        >>> pdag = c.skeleton_to_pdag(*c.build_skeleton())
         >>> pdag.edges() # edges: A->C, B->C, A--D (not directed)
         [('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')]
         """

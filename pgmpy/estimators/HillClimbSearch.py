@@ -208,10 +208,10 @@ class HillClimbSearch(StructureEstimator):
         >>> sorted(best_model.nodes())
         ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         >>> best_model.edges()
-        [('B', 'J'), ('A', 'J')]
+        OutEdgeView([('B', 'J'), ('A', 'J')])
         >>> # search a model with restriction on the number of parents:
         >>> est.estimate(max_indegree=1).edges()
-        [('J', 'A'), ('B', 'J')]
+        OutEdgeView([('J', 'A'), ('B', 'J')])
         """
 
         # Step 1: Initial checks and setup for arguments

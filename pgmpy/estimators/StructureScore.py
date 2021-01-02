@@ -58,6 +58,7 @@ class StructureScore(BaseEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
+        >>> from pgmpy.models import BayesianModel
         >>> from pgmpy.estimators import K2Score
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
