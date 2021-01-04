@@ -53,8 +53,8 @@ class BIFReader(object):
         # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
-        >>> reader = BIFReader("bif_test.bif")
         <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
+        >>> model = reader.get_model()
         """
         if path:
             with open(path, "r") as network:
@@ -425,9 +425,12 @@ class BIFWriter(object):
         Examples
         ---------
         >>> from pgmpy.readwrite import BIFWriter
-        >>> writer = BIFWriter(model)
+        >>> from pgmpy.utils import get_example_model
+        >>> asia = get_example_model('asia')
+        >>> writer = BIFWriter(asia)
         >>> writer
         <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+        >>> writer.write_bif('asia.bif')
         """
         if not isinstance(model, BayesianModel):
             raise TypeError("model must be an instance of BayesianModel")
@@ -651,10 +654,11 @@ $properties}\n"""
 
         Example
         -------
+        >>> from pgmpy.utils import get_example_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader('dog-problem.bif').get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.write_bif(filename='test_file.bif')
+        >>> asia = get_example_model('asia')
+        >>> writer = BIFWriter(asia)
+        >>> writer.write_bif(filename='asia.bif')
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
