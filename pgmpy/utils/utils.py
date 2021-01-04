@@ -63,31 +63,31 @@ def get_example_model(model):
     """
     from pgmpy.readwrite import BIFReader
 
-    model_links = {
-        "asia": "http://www.bnlearn.com/bnrepository/asia/asia.bif.gz",
-        "cancer": "http://www.bnlearn.com/bnrepository/cancer/cancer.bif.gz",
-        "earthquake": "http://www.bnlearn.com/bnrepository/earthquake/earthquake.bif.gz",
-        "sachs": "http://www.bnlearn.com/bnrepository/sachs/sachs.bif.gz",
-        "survey": "http://www.bnlearn.com/bnrepository/survey/survey.bif.gz",
-        "alarm": "http://www.bnlearn.com/bnrepository/alarm/alarm.bif.gz",
-        "barley": "http://www.bnlearn.com/bnrepository/barley/barley.bif.gz",
-        "child": "http://www.bnlearn.com/bnrepository/child/child.bif.gz",
-        "insurance": "http://www.bnlearn.com/bnrepository/insurance/insurance.bif.gz",
-        "mildew": "http://www.bnlearn.com/bnrepository/mildew/mildew.bif.gz",
-        "water": "http://www.bnlearn.com/bnrepository/water/water.bif.gz",
-        "hailfinder": "http://www.bnlearn.com/bnrepository/hailfinder/hailfinder.bif.gz",
-        "hepar2": "http://www.bnlearn.com/bnrepository/hepar2/hepar2.bif.gz",
-        "win95pts": "http://www.bnlearn.com/bnrepository/win95pts/win95pts.bif.gz",
-        "andes": "http://www.bnlearn.com/bnrepository/andes/andes.bif.gz",
-        "diabetes": "http://www.bnlearn.com/bnrepository/diabetes/diabetes.bif.gz",
-        "link": "http://www.bnlearn.com/bnrepository/link/link.bif.gz",
-        "munin1": "http://www.bnlearn.com/bnrepository/munin4/munin1.bif.gz",
-        "munin2": "http://www.bnlearn.com/bnrepository/munin4/munin2.bif.gz",
-        "munin3": "http://www.bnlearn.com/bnrepository/munin4/munin3.bif.gz",
-        "munin4": "http://www.bnlearn.com/bnrepository/munin4/munin4.bif.gz",
-        "pathfinder": "http://www.bnlearn.com/bnrepository/pathfinder/pathfinder.bif.gz",
-        "pigs": "http://www.bnlearn.com/bnrepository/pigs/pigs.bif.gz",
-        "munin": "http://www.bnlearn.com/bnrepository/munin/munin.bif.gz",
+    filenames = {
+        "asia": "pgmpy/utils/example_models/asia.bif.gz",
+        "cancer": "pgmpy/utils/example_models/cancer.bif.gz",
+        "earthquake": "pgmpy/utils/example_models/earthquake.bif.gz",
+        "sachs": "pgmpy/utils/example_models/sachs.bif.gz",
+        "survey": "pgmpy/utils/example_models/survey.bif.gz",
+        "alarm": "pgmpy/utils/example_models/alarm.bif.gz",
+        "barley": "pgmpy/utils/example_models/barley.bif.gz",
+        "child": "pgmpy/utils/example_models/child.bif.gz",
+        "insurance": "pgmpy/utils/example_models/insurance.bif.gz",
+        "mildew": "pgmpy/utils/example_models/mildew.bif.gz",
+        "water": "pgmpy/utils/example_models/water.bif.gz",
+        "hailfinder": "pgmpy/utils/example_models/hailfinder.bif.gz",
+        "hepar2": "pgmpy/utils/example_models/hepar2.bif.gz",
+        "win95pts": "pgmpy/utils/example_models/win95pts.bif.gz",
+        "andes": "pgmpy/utils/example_models/andes.bif.gz",
+        "diabetes": "pgmpy/utils/example_models/diabetes.bif.gz",
+        "link": "pgmpy/utils/example_models/link.bif.gz",
+        "munin1": "pgmpy/utils/example_models/munin1.bif.gz",
+        "munin2": "pgmpy/utils/example_models/munin2.bif.gz",
+        "munin3": "pgmpy/utils/example_models/munin3.bif.gz",
+        "munin4": "pgmpy/utils/example_models/munin4.bif.gz",
+        "pathfinder": "pgmpy/utils/example_models/pathfinder.bif.gz",
+        "pigs": "pgmpy/utils/example_models/pigs.bif.gz",
+        "munin": "pgmpy/utils/example_models/munin.bif.gz",
         "ecoli70": "",
         "magic-niab": "",
         "magic-irri": "",
@@ -96,13 +96,12 @@ def get_example_model(model):
         "mehra": "",
     }
 
-    if model not in model_links.keys():
+    if model not in filenames.keys():
         raise ValueError("dataset should be one of the options")
-    if model_links[model] == "":
+    if filenames[model] == "":
         raise NotImplementedError("The specified dataset isn't supported")
 
-    filename, _ = urlretrieve(model_links[model])
-    with gzip.open(filename, "rb") as f:
+    with gzip.open(filenames[model], "rb") as f:
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
