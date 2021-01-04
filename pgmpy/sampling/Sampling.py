@@ -420,7 +420,7 @@ class GibbsSampling(MarkovChain):
 
         Examples
         --------
-        >>> from pgmpy.factors import DiscreteFactor
+        >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
         >>> from pgmpy.models import MarkovModel
         >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
