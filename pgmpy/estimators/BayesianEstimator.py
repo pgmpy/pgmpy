@@ -129,7 +129,9 @@ class BayesianEstimator(ParameterEstimator):
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
         >>> estimator = BayesianEstimator(model, data)
-        >>> cpd_C = estimator.estimate_cpd('C', prior_type="dirichlet", pseudo_counts=[1, 2])
+        >>> cpd_C = estimator.estimate_cpd('C', prior_type="dirichlet",
+        ...                                pseudo_counts=[[1, 1, 1, 1],
+        ...                                               [2, 2, 2, 2]])
         >>> print(cpd_C)
         ╒══════╤══════╤══════╤══════╤════════════════════╕
         │ A    │ A(0) │ A(0) │ A(1) │ A(1)               │

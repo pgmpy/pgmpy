@@ -72,7 +72,7 @@ class MmhcEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.estimators import PC
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(2500, 4)), columns=list('XYZW'))
         >>> data['sum'] = data.sum(axis=1)
         >>> est = MmhcEstimator(data)
@@ -126,10 +126,10 @@ class MmhcEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import ConstraintBasedEstimator
+        >>> from pgmpy.estimators import PC
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
         >>> data['F'] = data['A'] + data['B'] + data ['C']
-        >>> est = ConstraintBasedEstimator(data)
+        >>> est = PC(data)
         >>> skel, sep_sets = est.estimate_skeleton()
         >>> skel.edges()
         [('A', 'F'), ('B', 'F'), ('C', 'F')]
@@ -141,7 +141,7 @@ class MmhcEstimator(StructureEstimator):
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 3)), columns=list('XYZ'))
         >>> data['X'] += data['Z']
         >>> data['Y'] += data['Z']
-        >>> est = ConstraintBasedEstimator(data)
+        >>> est = PC(data)
         >>> skel, sep_sets = est.estimate_skeleton()
         >>> skel.edges()
         [('X', 'Z'), ('Y', 'Z')]

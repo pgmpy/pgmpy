@@ -25,9 +25,11 @@ class UAIReader(object):
         string : str
             String containing UAI information.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUai.uai')
+        >>> model = reader.get_model()
 
         Reference
         ---------
@@ -100,8 +102,9 @@ class UAIReader(object):
         string : str
             String containing network type.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_network_type()
         'MARKOV'
@@ -120,8 +123,9 @@ class UAIReader(object):
         -------
         list: list of variables
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_variables()
         ['var_0', 'var_1', 'var_2']
@@ -141,8 +145,9 @@ class UAIReader(object):
         -------
         dict: dictionary containing variables and their domains
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_domain()
         {'var_0': '2', 'var_1': '2', 'var_2': '3'}
@@ -161,8 +166,9 @@ class UAIReader(object):
         -------
         set: set containing the edges of the network
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_edges()
         {('var_0', 'var_1'), ('var_0', 'var_2'), ('var_1', 'var_2')}
@@ -194,8 +200,9 @@ class UAIReader(object):
         list : list of tuples of child variable and values in Bayesian
             list of tuples of scope of variables and values in case of Markov.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_tables()
         [(['var_0', 'var_1'], ['4.000', '2.400', '1.000', '0.000']),
@@ -236,6 +243,7 @@ class UAIReader(object):
 
         Examples
         --------
+        >>> from pgmpy.readwrite import UAIReader
         >>> reader = UAIReader('TestUAI.uai')
         >>> reader.get_model()
         """
@@ -286,6 +294,14 @@ class UAIWriter(object):
         ----------
         model: A Bayesian or Markov model
             The model to write
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> writer = UAIWriter(asia)
+        >>> writer.write_uai('asia.uai')
         """
         if isinstance(model, BayesianModel):
             self.network = "BAYES\n"
@@ -321,8 +337,9 @@ class UAIWriter(object):
         """
         Adds variables to the network.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIWriter
         >>> writer = UAIWriter(model)
         >>> writer.get_nodes()
         """
@@ -333,8 +350,9 @@ class UAIWriter(object):
         """
         Adds domain of each variable to the network.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIWriter
         >>> writer = UAIWriter(model)
         >>> writer.get_domain()
         """
@@ -361,8 +379,9 @@ class UAIWriter(object):
         """
         Adds functions to the network.
 
-        Example
-        -------
+        Examples
+        -------_
+        >>> from pgmpy.readwrite import UAIWriter
         >>> writer = UAIWriter(model)
         >>> writer.get_functions()
         """
@@ -400,8 +419,9 @@ class UAIWriter(object):
         """
         Adds tables to the network.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIWriter
         >>> writer = UAIWriter(model)
         >>> writer.get_tables()
         """
@@ -432,9 +452,12 @@ class UAIWriter(object):
         filename: Name of the file.
 
         Examples
-        -------
-        >>> writer = UAIWriter(model)
-        >>> writer.write_xmlbif(test_file)
+        --------
+        >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> writer = UAIWriter(asia)
+        >>> writer.write_uai('asia.uai')
         """
         writer = self.__str__()
         with open(filename, "w") as fout:

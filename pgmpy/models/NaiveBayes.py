@@ -59,7 +59,7 @@ class NaiveBayes(BayesianModel):
         >>> G.add_edge('a', 'b')
         >>> G.add_edge('a', 'c')
         >>> G.edges()
-        [('a', 'c'), ('a', 'b')]
+        OutEdgeView([('a', 'b'), ('a', 'c')])
         """
         if self.dependent and u != self.dependent:
             raise ValueError(
@@ -93,7 +93,7 @@ class NaiveBayes(BayesianModel):
         >>> G.add_nodes_from(['a', 'b', 'c'])
         >>> G.add_edges_from([('a', 'b'), ('a', 'c')])
         >>> G.edges()
-        [('a', 'c'), ('a', 'b')]
+        OutEdgeView([('a', 'b'), ('a', 'c')])
         """
         for (u, v) in ebunch:
             self.add_edge(u, v)
@@ -129,7 +129,7 @@ class NaiveBayes(BayesianModel):
         >>> model.add_nodes_from(['a', 'b', 'c', 'd'])
         >>> model.add_edges_from([('a', 'b'), ('a', 'c'), ('a', 'd')])
         >>> model.active_trail_nodes('a')
-        {'a', 'b', 'c', 'd'}
+        {'a', 'd', 'c', 'b'}
         >>> model.active_trail_nodes('a', ['b', 'c'])
         {'a', 'd'}
         >>> model.active_trail_nodes('b', ['a'])

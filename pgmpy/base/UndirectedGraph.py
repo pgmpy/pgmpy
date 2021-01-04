@@ -86,15 +86,15 @@ class UndirectedGraph(nx.Graph):
         >>> G = UndirectedGraph()
         >>> G.add_node(node='A')
         >>> G.nodes()
-        ['A']
+        NodeView(('A',))
 
         Adding a node with some weight.
         >>> G.add_node(node='B', weight=0.3)
 
         The weight of these nodes can be accessed as:
-        >>> G.node['B']
+        >>> G.nodes['B']
         {'weight': 0.3}
-        >>> G.node['A']
+        >>> G.nodes['A']
         {'weight': None}
         """
         # Check for networkx 2.0 syntax
@@ -128,15 +128,15 @@ class UndirectedGraph(nx.Graph):
         >>> G = UndirectedGraph()
         >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
         >>> G.nodes()
-        ['A', 'B', 'C']
+        NodeView(('A', 'B', 'C'))
 
         Adding nodes with weights:
         >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
-        >>> G.node['D']
+        >>> G.nodes['D']
         {'weight': 0.3}
-        >>> G.node['E']
+        >>> G.nodes['E']
         {'weight': 0.6}
-        >>> G.node['A']
+        >>> G.nodes['A']
         {'weight': None}
         """
         nodes = list(nodes)
@@ -174,16 +174,16 @@ class UndirectedGraph(nx.Graph):
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edge(u='Alice', v='Bob')
         >>> G.nodes()
-        ['Alice', 'Bob', 'Charles']
+        NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob')]
+        EdgeView([('Alice', 'Bob')])
 
         When the node is not already present in the graph:
         >>> G.add_edge(u='Alice', v='Ankur')
         >>> G.nodes()
-        ['Alice', 'Ankur', 'Bob', 'Charles']
+        NodeView('Alice', 'Ankur', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Alice', 'Ankur')]
+        EdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
         >>> G.add_edge('Ankur', 'Maria', weight=0.1)
@@ -219,16 +219,16 @@ class UndirectedGraph(nx.Graph):
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> G.nodes()
-        ['Alice', 'Bob', 'Charles']
+        NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Bob', 'Charles')]
+        EdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
 
         When the node is not already in the model:
         >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
         >>> G.nodes()
-        ['Alice', 'Ankur', 'Charles', 'Bob']
+        NodeView(('Alice', 'Ankur', 'Charles', 'Bob'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')]
+        EdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
 
         Adding edges with weights:
         >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],

@@ -28,7 +28,7 @@ class DBNInference(Inference):
         >>> dbnet = DBN()
         >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
         ...                       (('Z', 0), ('Z', 1))])
-        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5], [0.5]])
         >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
         ...                                    [0.4, 0.1]],
         ...                      evidence=[('Z', 0)],
@@ -45,11 +45,9 @@ class DBNInference(Inference):
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.start_junction_tree.nodes()
-        [(('X', 0), ('Z', 0)), (('X', 0), ('Y', 0))]
+        NodeView(((('X', 0), ('Y', 0)), (('X', 0), ('Z', 0))))
         >>> dbn_inf.one_and_half_junction_tree.nodes()
-        [(('Z', 1), ('Z', 0)),
-         (('Y', 1), ('X', 1)),
-         (('Z', 1), ('X', 1))]
+        NodeView(((('Z', 1), ('Z', 0)), (('Y', 1), ('X', 1)), (('Z', 1), ('X', 1))))
 
         References
         ----------
@@ -239,7 +237,7 @@ class DBNInference(Inference):
         >>> dbnet = DBN()
         >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
         ...                       (('Z', 0), ('Z', 1))])
-        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5], [0.5]])
         >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
         ...                                    [0.4, 0.1]],
         ...                      evidence=[('Z', 0)],
@@ -256,7 +254,7 @@ class DBNInference(Inference):
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.forward_inference([('X', 2)], {('Y', 0):1, ('Y', 1):0, ('Y', 2):1})[('X', 2)].values
-        array([ 0.76738736,  0.23261264])
+        array([0.76738736, 0.23261264])
         """
         variable_dict = defaultdict(list)
         for var in variables:
@@ -353,7 +351,7 @@ class DBNInference(Inference):
         >>> dbnet = DBN()
         >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
         ...                       (('Z', 0), ('Z', 1))])
-        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5], [0.5]])
         >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
         ...                                    [0.4, 0.1]],
         ...                      evidence=[('Z', 0)],
@@ -370,7 +368,7 @@ class DBNInference(Inference):
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.backward_inference([('X', 0)], {('Y', 0):0, ('Y', 1):1, ('Y', 2):1})[('X', 0)].values
-        array([ 0.66594382,  0.33405618])
+        array([0.66594382, 0.33405618])
         """
         variable_dict = defaultdict(list)
         for var in variables:
@@ -451,7 +449,7 @@ class DBNInference(Inference):
         >>> dbnet = DBN()
         >>> dbnet.add_edges_from([(('Z', 0), ('X', 0)), (('X', 0), ('Y', 0)),
         ...                       (('Z', 0), ('Z', 1))])
-        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5, 0.5]])
+        >>> z_start_cpd = TabularCPD(('Z', 0), 2, [[0.5], [0.5]])
         >>> x_i_cpd = TabularCPD(('X', 0), 2, [[0.6, 0.9],
         ...                                    [0.4, 0.1]],
         ...                      evidence=[('Z', 0)],
@@ -468,7 +466,7 @@ class DBNInference(Inference):
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.query([('X', 0)], {('Y', 0):0, ('Y', 1):1, ('Y', 2):1})[('X', 0)].values
-        array([ 0.66594382,  0.33405618])
+        array([0.66594382, 0.33405618])
         """
         if args == "exact":
             return self.backward_inference(variables, evidence)

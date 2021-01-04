@@ -459,7 +459,7 @@ class MarkovChain(object):
         >>> from pgmpy.models import MarkovChain as MC
         >>> model = MC(['intel', 'diff'], [2, 3])
         >>> model.random_state()
-        [State('diff', 2), State('intel', 1)]
+        [State(var='diff', state=2), State(var='intel', state=1)]
         """
         return [
             State(var, np.random.randint(self.cardinalities[var]))
@@ -484,11 +484,11 @@ class MarkovChain(object):
         >>> model.add_transition_model('intel', intel_tm)
         >>> diff_tm = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.25, 1:0.75}}
         >>> model.add_transition_model('diff', diff_tm)
-        >>> model.set_start_state([State('intel', 0), State('diff', 2)])
+        >>> model.set_start_state([State('intel', 0), State('diff', 1)])
         >>> model_copy = model.copy()
         >>> model_copy.transition_models
         >>> {'diff': {0: {0: 0.1, 1: 0.5, 2: 0.4}, 1: {0: 0.2, 1: 0.2, 2: 0.6}, 2: {0: 0.7, 1: 0.15, 2: 0.15}},
-             'intel': {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}}
+        ...  'intel': {0: {0: 0.25, 1: 0.75}, 1: {0: 0.5, 1: 0.5}}}
         """
         markovchain_copy = MarkovChain(
             variables=list(self.cardinalities.keys()),

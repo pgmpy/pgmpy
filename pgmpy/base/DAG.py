@@ -106,9 +106,9 @@ class DAG(nx.DiGraph):
         >>> G.add_node(node='B', weight=0.3)
 
         The weight of these nodes can be accessed as:
-        >>> G.node['B']
+        >>> G.nodes['B']
         {'weight': 0.3}
-        >>> G.node['A']
+        >>> G.nodes['A']
         {'weight': None}
         """
 
@@ -143,16 +143,16 @@ class DAG(nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> G = DAG()
         >>> G.add_nodes_from(nodes=['A', 'B', 'C'])
-        >>> sorted(G.nodes())
-        ['A', 'B', 'C']
+        >>> G.nodes()
+        NodeView(('A', 'B', 'C'))
 
         Adding nodes with weights:
         >>> G.add_nodes_from(nodes=['D', 'E'], weights=[0.3, 0.6])
-        >>> G.node['D']
+        >>> G.nodes['D']
         {'weight': 0.3}
-        >>> G.node['E']
+        >>> G.nodes['E']
         {'weight': 0.6}
-        >>> G.node['A']
+        >>> G.nodes['A']
         {'weight': None}
         """
         nodes = list(nodes)
@@ -190,16 +190,16 @@ class DAG(nx.DiGraph):
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edge(u='Alice', v='Bob')
         >>> G.nodes()
-        ['Alice', 'Bob', 'Charles']
+        NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob')]
+        OutEdgeView([('Alice', 'Bob')])
 
         When the node is not already present in the graph:
         >>> G.add_edge(u='Alice', v='Ankur')
         >>> G.nodes()
-        ['Alice', 'Ankur', 'Bob', 'Charles']
+        NodeView(('Alice', 'Ankur', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Alice', 'Ankur')]
+        OutEdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
 
         Adding edges with weight:
         >>> G.add_edge('Ankur', 'Maria', weight=0.1)
@@ -235,16 +235,16 @@ class DAG(nx.DiGraph):
         >>> G.add_nodes_from(nodes=['Alice', 'Bob', 'Charles'])
         >>> G.add_edges_from(ebunch=[('Alice', 'Bob'), ('Bob', 'Charles')])
         >>> G.nodes()
-        ['Alice', 'Bob', 'Charles']
+        NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Bob', 'Charles')]
+        OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles')])
 
         When the node is not already in the model:
         >>> G.add_edges_from(ebunch=[('Alice', 'Ankur')])
         >>> G.nodes()
-        ['Alice', 'Bob', 'Charles', 'Ankur']
+        NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
         >>> G.edges()
-        [('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')]
+        OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
 
         Adding edges with weights:
         >>> G.add_edges_from([('Ankur', 'Maria'), ('Maria', 'Mason')],
@@ -301,7 +301,7 @@ class DAG(nx.DiGraph):
         >>> G = DAG(ebunch=[('diff', 'grade'), ('intel', 'grade')])
         >>> moral_graph = G.moralize()
         >>> moral_graph.edges()
-        [('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')]
+        EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
         """
         moral_graph = UndirectedGraph()
         moral_graph.add_nodes_from(self.nodes())
@@ -425,7 +425,7 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import DAG
+        >>> from pgmpy.base import DAG
         >>> student = DAG()
         >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
         >>>                         ('grade', 'letter'), ('intel', 'SAT')])
@@ -509,7 +509,7 @@ class DAG(nx.DiGraph):
         >>> student.add_edges_from([('diff', 'grade'), ('intel', 'grade'),
         ...                         ('intel', 'SAT'), ('grade', 'letter')])
         >>> student.get_immoralities()
-        {('diff','intel')}
+        {('diff', 'intel')}
         """
         immoralities = set()
         for node in self.nodes():
@@ -602,6 +602,7 @@ class DAG(nx.DiGraph):
         {'diff': {'diff', 'grades'}}
         >>> student.active_trail_nodes(['diff', 'intel'], observed='grades')
         {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+
         References
         ----------
         Details of the algorithm can be found in 'Probabilistic Graphical Model
@@ -718,13 +719,13 @@ class DAG(nx.DiGraph):
         Initialize a DAG
         >>> graph = DAG()
         >>> graph.add_edges_from([('X', 'A'),
-                                  ('A', 'Y'),
-                                  ('A', 'B')])
-        Applying the do-operator will return a new DAG with the desired structure.
-        >>> graph_do_A = self.graph.do('A')
-        Which we can verify is missing the edges we would expect.
+        ...                       ('A', 'Y'),
+        ...                       ('A', 'B')])
+        >>> # Applying the do-operator will return a new DAG with the desired structure.
+        >>> graph_do_A = graph.do('A')
+        >>> # Which we can verify is missing the edges we would expect.
         >>> graph_do_A.edges
-        [('A', 'B'), ('A', 'Y')]
+        OutEdgeView([('A', 'B'), ('A', 'Y')])
 
         References
         ----------
@@ -758,7 +759,7 @@ class DAG(nx.DiGraph):
         >>> dag = DAG([('A', 'C'), ('B', 'C'), ('D', 'A'), ('D', 'B')])
         >>> anc_dag = dag.get_ancestral_graph(nodes=['A', 'B'])
         >>> anc_dag.edges()
-        [('D', 'A'), ('D', 'B')]
+        OutEdgeView([('D', 'A'), ('D', 'B')])
         """
         return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 

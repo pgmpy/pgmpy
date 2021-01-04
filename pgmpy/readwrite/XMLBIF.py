@@ -40,6 +40,7 @@ class XMLBIFReader(object):
         path : file or str
             File of XMLBIF data
             File of XMLBIF data
+
         string : str
             String of XMLBIF data
 
@@ -47,7 +48,9 @@ class XMLBIFReader(object):
         --------
         # xmlbif_test.xml is the file present in
         # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+        >>> from pgmpy.readwrite import XMLBIFReader
         >>> reader = XMLBIFReader("xmlbif_test.xml")
+        >>> model = reader.get_model()
         """
         if path:
             self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
@@ -213,6 +216,12 @@ class XMLBIFReader(object):
         Returns
         -------
         BayesianModel instance: The read model.
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite import XMLBIFReader
+        >>> reader = XMLBIFReader("xmlbif_test.xml")
+        >>> model = reader.get_model()
         """
         model = BayesianModel()
         model.add_nodes_from(self.variables)
@@ -262,14 +271,20 @@ class XMLBIFWriter(object):
         ----------
         model: BayesianModel Instance
             Model to write
+
         encoding: str (optional)
             Encoding for text data
+
         prettyprint: Bool(optional)
             Indentation in output XML if true
 
         Examples
         --------
+        >>> from pgmpy.readwrite import XMLBIFWriter
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
         >>> writer = XMLBIFWriter(model)
+        >>> writer.write_xmlbif('asia.xml')
         """
         if not isinstance(model, BayesianModel):
             raise TypeError("model must an instance of BayesianModel")
@@ -493,9 +508,12 @@ class XMLBIFWriter(object):
         filename: Name of the file.
 
         Examples
-        -------
+        --------
+        >>> from pgmpy.readwrite import XMLBIFWriter
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
         >>> writer = XMLBIFWriter(model)
-        >>> writer.write_xmlbif(test_file)
+        >>> writer.write_xmlbif('asia.xml')
         """
         with open(filename, "w") as fout:
             fout.write(self.__str__())

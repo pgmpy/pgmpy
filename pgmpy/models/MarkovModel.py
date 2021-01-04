@@ -602,7 +602,7 @@ class MarkovModel(UndirectedGraph):
         >>> mm.add_edges_from([('x1', 'x3'), ('x1', 'x4'), ('x2', 'x4'),
         ...                    ('x2', 'x5'), ('x3', 'x6'), ('x4', 'x6'),
         ...                    ('x4', 'x7'), ('x5', 'x7')])
-        >>> mm.get_local_independecies()
+        >>> mm.get_local_independencies()
         """
         local_independencies = Independencies()
 
@@ -746,7 +746,7 @@ class MarkovModel(UndirectedGraph):
         >>> G.add_edge(('a', 'b'), ('b', 'c'))
         >>> G_copy = G.copy()
         >>> G_copy.edges()
-        [(('a', 'b'), ('b', 'c'))]
+        EdgeView([(('a', 'b'), ('b', 'c'))])
         >>> G_copy.nodes()
         [('a', 'b'), ('b', 'c')]
         >>> factor = DiscreteFactor([('a', 'b')], cardinality=[3],

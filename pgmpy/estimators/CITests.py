@@ -611,8 +611,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
         chi, p_value, dof, expected = stats.chi2_contingency(
-            data.groupby([X, Y]).size().unstack(Y, fill_value=0),
-            lambda_=lambda_,
+            data.groupby([X, Y]).size().unstack(Y, fill_value=0), lambda_=lambda_
         )
 
     # Step 3: If there are conditionals variables, iterate over unique states and do
@@ -623,8 +622,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         for z_state, df in data.groupby(Z):
             try:
                 c, _, d, _ = stats.chi2_contingency(
-                    df.groupby([X, Y]).size().unstack(Y, fill_value=0),
-                    lambda_=lambda_,
+                    df.groupby([X, Y]).size().unstack(Y, fill_value=0), lambda_=lambda_
                 )
                 chi += c
                 dof += d
