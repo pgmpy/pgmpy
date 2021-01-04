@@ -32,6 +32,7 @@ class CausalInference(object):
     >>> game = BayesianModel([('X', 'A'),
     ...                       ('A', 'Y'),
     ...                       ('A', 'B')])
+
     Load the graph into the CausalInference object to make causal queries.
     >>> from pgmpy.inference.CausalInference import CausalInference
     >>> inference = CausalInference(game)

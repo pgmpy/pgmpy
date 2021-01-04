@@ -45,9 +45,9 @@ class DBNInference(Inference):
         >>> dbnet.initialize_initial_state()
         >>> dbn_inf = DBNInference(dbnet)
         >>> dbn_inf.start_junction_tree.nodes()
-        NodeView((('X', 0), ('Y', 0)), (('X', 0), ('Z', 0)))
+        NodeView(((('X', 0), ('Y', 0)), (('X', 0), ('Z', 0))))
         >>> dbn_inf.one_and_half_junction_tree.nodes()
-        NodeView((('Z', 1), ('Z', 0)), (('Y', 1), ('X', 1)), (('Z', 1), ('X', 1)))
+        NodeView(((('Z', 1), ('Z', 0)), (('Y', 1), ('X', 1)), (('Z', 1), ('X', 1))))
 
         References
         ----------

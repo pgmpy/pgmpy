@@ -46,10 +46,14 @@ class Inference(object):
     >>> import numpy as np
     >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
     ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
-    >>> factor_a_b = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2], value=np.random.rand(4))
-    >>> factor_b_c = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 2], value=np.random.rand(4))
-    >>> factor_c_d = DiscreteFactor(['Charles', 'Debbie'], cardinality=[2, 2], value=np.random.rand(4))
-    >>> factor_d_a = DiscreteFactor(['Debbie', 'Alice'], cardinality=[2, 2], value=np.random.rand(4))
+    >>> factor_a_b = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
+    ...                             values=np.random.rand(4))
+    >>> factor_b_c = DiscreteFactor(['Bob', 'Charles'], cardinality=[2, 2],
+    ...                             values=np.random.rand(4))
+    >>> factor_c_d = DiscreteFactor(['Charles', 'Debbie'], cardinality=[2, 2],
+    ...                             values=np.random.rand(4))
+    >>> factor_d_a = DiscreteFactor(['Debbie', 'Alice'], cardinality=[2, 2],
+    ...                             values=np.random.rand(4))
     >>> student.add_factors(factor_a_b, factor_b_c, factor_c_d, factor_d_a)
     >>> model = Inference(student)
     """
