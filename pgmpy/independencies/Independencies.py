@@ -474,8 +474,13 @@ class IndependenceAssertion(object):
         return self.event1, self.event2, self.event3
 
     def latex_string(self):
-        return r"%s \perp %s \mid %s" % (
-            ", ".join(self.event1),
-            ", ".join(self.event2),
-            ", ".join(self.event3),
-        )
+        if len(self.event3) == 0:
+            return r"{event1} \perp {event2}".format(
+                event1=", ".join(self.event1), event2=", ".join(self.event2)
+            )
+        else:
+            return r"{event1} \perp {event2} \mid {event3}".format(
+                event1=", ".join(self.event1),
+                event2=", ".join(self.event2),
+                event3=", ".join(self.event3),
+            )
