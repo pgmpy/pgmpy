@@ -9,19 +9,19 @@ from pgmpy.independencies import IndependenceAssertion
 
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
-    Checks if `X _|_ Y | Z` is in `independencies`. This method is implemneted to
+    Checks if `X \u27C2 Y | Z` is in `independencies`. This method is implemneted to
     have an uniform API when the independencies are provided instead of data.
 
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X _|_ Y | Z
+        The first variable for testing the independence condition X \u27C2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X _|_ Y | Z
+        The second variable for testing the independence condition X \u27C2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X _|_ Y | Z
+        A list of conditional variable for testing the condition X \u27C2 Y | Z
 
     data: pandas.DataFrame The dataset in which to test the indepenedence condition.
 
@@ -74,7 +74,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -143,7 +143,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -212,7 +212,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -280,7 +280,7 @@ def freeman_tuckey(X, Y, Z, data, boolean=True, **kwargs):
             p_value: float
                 The p_value, i.e. the probability of observing the computed chi-square
                 statistic (or an even higher value), given the null hypothesis
-                that X _|_ Y | Zs.
+                that X \u27C2 Y | Zs.
 
             dof: int
                 The degrees of freedom of the test.
@@ -348,7 +348,7 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -421,7 +421,7 @@ def neyman(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -489,7 +489,7 @@ def cressie_read(X, Y, Z, data, boolean=True, **kwargs):
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -569,7 +569,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         p_value: float
             The p_value, i.e. the probability of observing the computed chi-square
             statistic (or an even higher value), given the null hypothesis
-            that X _|_ Y | Zs.
+            that X \u27C2 Y | Zs.
 
         dof: int
             The degrees of freedom of the test.
@@ -630,13 +630,15 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
                 # If one of the values is 0 in the 2x2 table.
                 if isinstance(z_state, str):
                     warn(
-                        f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples"
+                        f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
-                    warn(f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples")
+                    warn(
+                        f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
+                    )
         p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
     # Step 4: Return the values
@@ -655,13 +657,13 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     Parameters
     ----------
     X: str
-        The first variable for testing the independence condition X _|_ Y | Z
+        The first variable for testing the independence condition X \u27C2 Y | Z
 
     Y: str
-        The second variable for testing the independence condition X _|_ Y | Z
+        The second variable for testing the independence condition X \u27C2 Y | Z
 
     Z: list/array-like
-        A list of conditional variable for testing the condition X _|_ Y | Z
+        A list of conditional variable for testing the condition X \u27C2 Y | Z
 
     data: pandas.DataFrame
         The dataset in which to test the indepenedence condition.
