@@ -33,15 +33,15 @@ def independence_match(X, Y, Z, independencies, **kwargs):
 
 
 def chi_square(X, Y, Z, data, boolean=True, **kwargs):
-    """
+    r"""
     Chi-square conditional independence test.
     Tests the null hypothesis that X is independent from Y given Zs.
 
     This is done by comparing the observed frequencies with the expected
     frequencies if X,Y were conditionally independent, using a chisquare
     deviance statistic. The expected frequencies given independence are
-    `P(X,Y,Zs) = P(X|Zs)*P(Y|Zs)*P(Zs)`. The latter term can be computed
-    as `P(X,Zs)*P(Y,Zs)/P(Zs).
+    :math:`P(X,Y,Zs) = P(X|Zs)*P(Y|Zs)*P(Zs)`. The latter term can be computed
+    as :math:`P(X,Zs)*P(Y,Zs)/P(Zs).
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     Y: int, string, hashable object
         A variable name contained in the data set, different from X
 
-    Z: list (array-like)
+    Z: list, array-like
         A list of variable names contained in the data set, different from X and Y.
         This is the separating set that (potentially) makes X and Y independent.
         Default: []
@@ -63,6 +63,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -132,6 +133,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -201,6 +203,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -246,66 +249,67 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
 
 def freeman_tuckey(X, Y, Z, data, boolean=True, **kwargs):
     """
-        Freeman Tuckey test for conditional independence [1].
-        Tests the null hypothesis that X is independent of Y given Zs.
+    Freeman Tuckey test for conditional independence [1].
+    Tests the null hypothesis that X is independent of Y given Zs.
 
-        Parameters
-        ----------
-        X: int, string, hashable object
-            A variable name contained in the data set
+    Parameters
+    ----------
+    X: int, string, hashable object
+        A variable name contained in the data set
 
-        Y: int, string, hashable object
-            A variable name contained in the data set, different from X
+    Y: int, string, hashable object
+        A variable name contained in the data set, different from X
 
-        Z: list (array-like)
-            A list of variable names contained in the data set, different from X and Y.
-            This is the separating set that (potentially) makes X and Y independent.
-            Default: []
+    Z: list (array-like)
+        A list of variable names contained in the data set, different from X and Y.
+        This is the separating set that (potentially) makes X and Y independent.
+        Default: []
 
-        data: pandas.DataFrame
-            The dataset on which to test the independence condition.
+    data: pandas.DataFrame
+        The dataset on which to test the independence condition.
 
-        boolean: bool
-            If boolean=True, an additional argument `significance_level` must
-                be specified. If p_value of the test is greater than equal to
-                `significance_level`, returns True. Otherwise returns False.
-            If boolean=False, returns the chi2 and p_value of the test.
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
 
-        Returns
-        -------
-        If boolean = False, Returns 3 values:
-            chi: float
-                The chi-squre test statistic.
+        If boolean=False, returns the chi2 and p_value of the test.
 
-            p_value: float
-                The p_value, i.e. the probability of observing the computed chi-square
-                statistic (or an even higher value), given the null hypothesis
-                that X \u27C2 Y | Zs.
+    Returns
+    -------
+    If boolean = False, Returns 3 values:
+        chi: float
+            The chi-squre test statistic.
 
-            dof: int
-                The degrees of freedom of the test.
+        p_value: float
+            The p_value, i.e. the probability of observing the computed chi-square
+            statistic (or an even higher value), given the null hypothesis
+            that X \u27C2 Y | Zs.
 
-        If boolean = True, returns:
-            independent: boolean
-                If the p_value of the test is greater than significance_level, returns True.
-                Else returns False.
+        dof: int
+            The degrees of freedom of the test.
 
-        References
-        ----------
+    If boolean = True, returns:
+        independent: boolean
+            If the p_value of the test is greater than significance_level, returns True.
+            Else returns False.
+
+    References
+    ----------
     [1] Read, Campbell B. "Freeman—Tukey chi-squared goodness-of-fit statistics." Statistics & probability letters 18.4 (1993): 271-278.
 
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
-        >>> data['E'] = data['A'] + data['B'] + data['C']
-        >>> freeman_tuckey(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
-        True
-        >>> freeman_tuckey(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
-        True
-        >>> freeman_tuckey(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
-        False
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = pd.DataFrame(np.random.randint(0, 2, size=(50000, 4)), columns=list('ABCD'))
+    >>> data['E'] = data['A'] + data['B'] + data['C']
+    >>> freeman_tuckey(X='A', Y='C', Z=[], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> freeman_tuckey(X='A', Y='B', Z=['D'], data=data, boolean=True, significance_level=0.05)
+    True
+    >>> freeman_tuckey(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
+    False
     """
     return power_divergence(
         X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="freeman-tukey", **kwargs
@@ -337,6 +341,7 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -357,9 +362,6 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         independent: boolean
             If the p_value of the test is greater than significance_level, returns True.
             Else returns False.
-
-    References
-    ----------
 
     Examples
     --------
@@ -410,6 +412,7 @@ def neyman(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -478,6 +481,7 @@ def cressie_read(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -536,7 +540,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     Y: int, string, hashable object
         A variable name contained in the data set, different from X
 
-    Z: list (array-like)
+    Z: list, array-like
         A list of variable names contained in the data set, different from X and Y.
         This is the separating set that (potentially) makes X and Y independent.
         Default: []
@@ -558,6 +562,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
@@ -650,9 +655,9 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     r"""
-    Computes Pearson correlation coefficient and p-value for testing non-correlation. Should be used
-    only on continuous data. In case when :math:`Z != \null` uses linear regression and computes pearson
-    coefficient on residuals.
+    Computes Pearson correlation coefficient and p-value for testing non-correlation.
+    Should be used only on continuous data. In case when :math:`Z != \null` uses
+    linear regression and computes pearson coefficient on residuals.
 
     Parameters
     ----------
@@ -672,6 +677,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         If boolean=True, an additional argument `significance_level` must
             be specified. If p_value of the test is greater than equal to
             `significance_level`, returns True. Otherwise returns False.
+
         If boolean=False, returns the pearson correlation coefficient and p_value
             of the test.
 
