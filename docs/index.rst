@@ -50,6 +50,7 @@ Documentation:
    inference
    readwrite
    estimators
+   citests
    contributing
 
 Indices and tables
