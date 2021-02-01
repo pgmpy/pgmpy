@@ -152,7 +152,7 @@ class BayesianEstimator(ParameterEstimator):
         prior_type = prior_type.lower()
 
         # Throw a warning if pseudo_count is specified without prior_type=dirichlet
-        if (pseudo_counts != []) and (prior_type != "dirichlet"):
+        if (pseudo_counts and pseudo_counts != []) and (prior_type != "dirichlet"):
             warn(
                 f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
             )
