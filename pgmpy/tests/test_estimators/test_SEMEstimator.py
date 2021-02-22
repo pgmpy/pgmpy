@@ -168,4 +168,4 @@ class TestIVEstimator(unittest.TestCase):
     def test_fit(self):
         estimator = IVEstimator(self.model)
         param, summary = estimator.fit(X="X", Y="Y", data=self.generated_data)
-        self.assertTrue((param - 1) < 0.01)
+        self.assertTrue((param - 1) < 0.027)
