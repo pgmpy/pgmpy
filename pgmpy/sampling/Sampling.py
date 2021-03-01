@@ -1,12 +1,11 @@
 from collections import namedtuple
 import itertools
 
-import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
 from pgmpy.factors import factor_product
-from pgmpy.inference import Inference
+from pgmpy.inference import BayesianModelInference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete
 from pgmpy.sampling import _return_samples
@@ -16,7 +15,7 @@ from pgmpy.global_vars import SHOW_PROGRESS
 State = namedtuple("State", ["var", "state"])
 
 
-class BayesianModelSampling(Inference):
+class BayesianModelSampling(BayesianModelInference):
     """
     Class for sampling methods specific to Bayesian Models
 
@@ -27,12 +26,6 @@ class BayesianModelSampling(Inference):
     """
 
     def __init__(self, model):
-        if not isinstance(model, BayesianModel):
-            raise TypeError(
-                "Model expected type: BayesianModel, got type: ", type(model)
-            )
-
-        self.topological_order = list(nx.topological_sort(model))
         super(BayesianModelSampling, self).__init__(model)
 
     def forward_sample(
@@ -97,21 +90,6 @@ class BayesianModelSampling(Inference):
             sampled[node] = sample_discrete(states, weights, size, seed=seed)
 
         return _return_samples(return_type, sampled, self.state_names_map)
-
-    def pre_compute_reduce(self, variable):
-        variable_cpd = self.model.get_cpds(variable)
-        variable_evid = variable_cpd.variables[:0:-1]
-        cached_values = {}
-
-        for state_combination in itertools.product(
-            *[range(self.cardinality[var]) for var in variable_evid]
-        ):
-            states = list(zip(variable_evid, state_combination))
-            cached_values[state_combination] = variable_cpd.reduce(
-                states, inplace=False
-            ).values
-
-        return cached_values
 
     def rejection_sample(
         self,
