@@ -7,8 +7,8 @@ import itertools
 
 
 class BayesianModelInference(Inference):
-    """Inference class specific to Bayesian Models
-    """
+    """Inference class specific to Bayesian Models"""
+
     def __init__(self, model):
         """Class to calculate probability (pmf) values specific to Bayesian Models
 
@@ -18,7 +18,9 @@ class BayesianModelInference(Inference):
             model on which inference queries will be computed
         """
         if not isinstance(model, BayesianModel):
-            raise TypeError("Model expected type: BayesianModel, got type: ", type(model))
+            raise TypeError(
+                "Model expected type: BayesianModel, got type: ", type(model)
+            )
         super(BayesianModelInference, self).__init__(model)
 
         self.topological_order = list(nx.topological_sort(model))
@@ -44,7 +46,7 @@ class BayesianModelInference(Inference):
         cached_values = {}
 
         for state_combination in itertools.product(
-                *[range(self.cardinality[var]) for var in variable_evid]
+            *[range(self.cardinality[var]) for var in variable_evid]
         ):
             states = list(zip(variable_evid, state_combination))
             cached_values[state_combination] = variable_cpd.reduce(
@@ -55,8 +57,8 @@ class BayesianModelInference(Inference):
 
 
 class BayesianModelProbability(BayesianModelInference):
-    """Class to calculate probability (pmf) values specific to Bayesian Models
-    """
+    """Class to calculate probability (pmf) values specific to Bayesian Models"""
+
     def __init__(self, model):
         """Class to calculate probability (pmf) values specific to Bayesian Models
 
@@ -90,6 +92,7 @@ class BayesianModelProbability(BayesianModelInference):
             probability densities, so values will be low for high-dimensional
             data.
         """
+
         def vec_translate(a, my_dict):
             return np.vectorize(my_dict.__getitem__)(a)
 
@@ -153,7 +156,12 @@ class BayesianModelProbability(BayesianModelInference):
         if ordering is None:
             ordering = self.topological_order
 
-        logp = np.array([self._log_probability_node(data, ordering, node) for node in self.topological_order])
+        logp = np.array(
+            [
+                self._log_probability_node(data, ordering, node)
+                for node in self.topological_order
+            ]
+        )
         return np.sum(logp, axis=0)
 
     def score(self, data, ordering=None):
