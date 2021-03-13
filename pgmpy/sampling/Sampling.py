@@ -74,6 +74,9 @@ class BayesianModelSampling(BayesianModelInference):
         else:
             pbar = self.topological_order
 
+        if seed is not None:
+            np.random.seed(seed)
+
         for node in pbar:
             if show_progress and SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
@@ -87,7 +90,7 @@ class BayesianModelSampling(BayesianModelInference):
                 weights = list(map(lambda t: cached_values[tuple(t)], evidence.T))
             else:
                 weights = cpd.values
-            sampled[node] = sample_discrete(states, weights, size, seed=seed)
+            sampled[node] = sample_discrete(states, weights, size)
 
         return _return_samples(return_type, sampled, self.state_names_map)
 
@@ -144,9 +147,12 @@ class BayesianModelSampling(BayesianModelInference):
             for var, state in evidence
         ]
 
+        if seed is not None:
+            np.random.seed(seed)
+
         # If no evidence is given, it is equivalent to forward sampling.
         if len(evidence) == 0:
-            return self.forward_sample(size, seed=seed)
+            return self.forward_sample(size)
 
         # Setup array to be returned
         types = [(var_name, "int") for var_name in self.topological_order]
@@ -162,7 +168,7 @@ class BayesianModelSampling(BayesianModelInference):
 
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
-            _sampled = self.forward_sample(_size, "recarray", seed=seed)
+            _sampled = self.forward_sample(_size, "recarray")
 
             for evid in evidence:
                 _sampled = _sampled[_sampled[evid[0]] == evid[1]]
@@ -226,7 +232,10 @@ class BayesianModelSampling(BayesianModelInference):
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
-        # Covert evidence state names to number
+        if seed is not None:
+            np.random.seed(seed)
+
+        # Convert evidence state names to number
         evidence = [
             (var, self.model.get_cpds(var).get_state_no(var, state))
             for var, state in evidence
@@ -256,14 +265,14 @@ class BayesianModelSampling(BayesianModelInference):
                     for i in range(size):
                         sampled["_weight"][i] *= weights[i][evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(states, weights, size, seed=seed)
+                    sampled[node] = sample_discrete(states, weights, size)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     for i in range(size):
                         sampled["_weight"][i] *= cpd.values[evidence_dict[node]]
                 else:
-                    sampled[node] = sample_discrete(states, cpd.values, size, seed=seed)
+                    sampled[node] = sample_discrete(states, cpd.values, size)
 
         # Postprocess the samples: Correct return type and change state numbers to names
         return _return_samples(return_type, sampled, self.state_names_map)
@@ -418,6 +427,9 @@ class GibbsSampling(MarkovChain):
         elif start_state is not None:
             self.set_start_state(start_state)
 
+        if seed is not None:
+            np.random.seed(seed)
+
         types = [(var_name, "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled[0] = tuple(st for var, st in self.state)
@@ -427,7 +439,6 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
-                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = tuple(st for var, st in self.state)
@@ -457,6 +468,8 @@ class GibbsSampling(MarkovChain):
         [[State(var='C', state=1), State(var='B', state=1), State(var='A', state=0)],
          [State(var='C', state=0), State(var='B', state=1), State(var='A', state=1)]]
         """
+        if seed is not None:
+            np.random.seed(seed)
 
         if start_state is None and self.state is None:
             self.state = self.random_state()
@@ -469,7 +482,6 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
-                    seed=seed,
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
