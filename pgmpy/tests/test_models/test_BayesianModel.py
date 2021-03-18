@@ -778,6 +778,32 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         np_test.assert_array_equal(p2.values.ravel(), p2_res)
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
 
+    def test_predict_stochastic(self):
+        titanic = BayesianModel()
+        titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic.fit(self.titanic_data2[500:])
+
+        p1 = titanic.predict(
+            self.titanic_data2[["Sex", "Pclass"]][:30], stochastic=True
+        )
+        p2 = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30], stochastic=True
+        )
+        p3 = titanic.predict(
+            self.titanic_data2[["Survived", "Sex"]][:30], stochastic=True
+        )
+
+        # Acceptable range between 15 - 20.
+        # TODO: Is there a better way to test this?
+        self.assertTrue(p1.value_counts().values[0] <= 23)
+        self.assertTrue(p1.value_counts().values[0] >= 15)
+
+        self.assertTrue(p2.value_counts().values[0] <= 22)
+        self.assertTrue(p2.value_counts().values[0] >= 15)
+
+        self.assertTrue(p3.value_counts().values[0] <= 19)
+        self.assertTrue(p3.value_counts().values[0] >= 8)
+
     def test_connected_predict(self):
         np.random.seed(42)
         values = pd.DataFrame(
