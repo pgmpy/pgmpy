@@ -736,6 +736,30 @@ class TestFactorMethods(unittest.TestCase):
         )
         self.assertTrue(phi3 == phi4)
 
+    def test_sample(self):
+        phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
+        samples = phi1.sample(int(1e5))
+        self.assertEqual(samples.shape, (1e5, 2))
+        np_test.assert_almost_equal(
+            (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
+            np.array([1, 2, 3, 4]) / 10,
+            decimal=2,
+        )
+
+        phi1 = DiscreteFactor(
+            ["x1", "x2"],
+            [2, 2],
+            [1, 2, 3, 4],
+            state_names={"x1": ["a1", "a2"], "x2": ["b1", "b2"]},
+        )
+        samples = phi1.sample(int(1e5))
+        self.assertEqual(samples.shape, (1e5, 2))
+        np_test.assert_almost_equal(
+            (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
+            np.array([1, 2, 3, 4]) / 10,
+            decimal=2,
+        )
+
     def test_hash(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
         phi2 = DiscreteFactor(["x2", "x1"], [2, 2], [1, 3, 2, 4])

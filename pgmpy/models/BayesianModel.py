@@ -521,14 +521,21 @@ class BayesianModel(DAG):
         cpds_list = _estimator.get_parameters(**kwargs)
         self.add_cpds(*cpds_list)
 
-    def predict(self, data, n_jobs=-1):
+    def predict(self, data, stochastic=False, n_jobs=-1):
         """
         Predicts states of all the missing variables.
 
         Parameters
         ----------
-        data : pandas DataFrame object
+        data: pandas DataFrame object
             A DataFrame object with column names same as the variables in the model.
+
+        stochastic: boolean
+            If True, does prediction by sampling from the distribution of predicted variable(s).
+            If False, returns the states with the highest probability value (i.e MAP) for the
+                    predicted variable(s).
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. If -1, uses all available cores.
 
         Examples
         --------
@@ -568,27 +575,52 @@ class BayesianModel(DAG):
         elif set(data.columns) - set(self.nodes()):
             raise ValueError("Data has variables which are not in the model")
 
-        data_unique = data.drop_duplicates()
-        missing_variables = set(self.nodes()) - set(data_unique.columns)
-        #         pred_values = defaultdict(list)
-        pred_values = []
-
-        # Send state_names dict from one of the estimated CPDs to the inference class.
+        missing_variables = set(self.nodes()) - set(data.columns)
         model_inference = VariableElimination(self)
-        pred_values = Parallel(n_jobs=n_jobs)(
-            delayed(model_inference.map_query)(
-                variables=missing_variables,
-                evidence=data_point.to_dict(),
-                show_progress=False,
-            )
-            for index, data_point in tqdm(
-                data_unique.iterrows(), total=data_unique.shape[0]
-            )
-        )
 
-        df_results = pd.DataFrame(pred_values, index=data_unique.index)
-        data_with_results = pd.concat([data_unique, df_results], axis=1)
-        return data.merge(data_with_results, how="left").loc[:, missing_variables]
+        if stochastic:
+            data_unique_indexes = data.groupby(list(data.columns)).apply(
+                lambda t: t.index.tolist()
+            )
+            data_unique = data_unique_indexes.index.to_frame()
+
+            pred_values = Parallel(n_jobs=n_jobs)(
+                delayed(model_inference.query)(
+                    variables=missing_variables,
+                    evidence=data_point.to_dict(),
+                    show_progress=False,
+                )
+                for index, data_point in tqdm(
+                    data_unique.iterrows(), total=data_unique.shape[0]
+                )
+            )
+            predictions = pd.DataFrame()
+            for i, row in enumerate(data_unique_indexes):
+                p = pred_values[i].sample(n=len(row))
+                p.index = row
+                predictions = pd.concat((predictions, p), copy=False)
+
+            return predictions.reindex(data.index)
+
+        else:
+            data_unique = data.drop_duplicates()
+            pred_values = []
+
+            # Send state_names dict from one of the estimated CPDs to the inference class.
+            pred_values = Parallel(n_jobs=n_jobs)(
+                delayed(model_inference.map_query)(
+                    variables=missing_variables,
+                    evidence=data_point.to_dict(),
+                    show_progress=False,
+                )
+                for index, data_point in tqdm(
+                    data_unique.iterrows(), total=data_unique.shape[0]
+                )
+            )
+
+            df_results = pd.DataFrame(pred_values, index=data_unique.index)
+            data_with_results = pd.concat([data_unique, df_results], axis=1)
+            return data.merge(data_with_results, how="left").loc[:, missing_variables]
 
     def predict_probability(self, data):
         """

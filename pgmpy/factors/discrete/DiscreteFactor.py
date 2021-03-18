@@ -3,6 +3,7 @@ from collections import namedtuple
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin
@@ -779,6 +780,36 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         if not inplace:
             return phi
+
+    def sample(self, n):
+        """
+        Normalizes the factor and samples state combinations from it.
+
+        Parameters
+        ----------
+        n: int
+            No. of samples to return
+
+        Examples
+        --------
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> phi1 = DiscreteFactor(['x1', 'x2', 'x3'], [2, 3, 2], range(12))
+        >>> phi1.sample(5)
+        """
+        phi = self.normalize(inplace=False)
+        p = phi.values.ravel()
+        indexes = np.random.choice(range(len(p)), size=n, p=p)
+        samples = []
+        index_to_state = {}
+        for index in indexes:
+            if index in index_to_state:
+                samples.append(index_to_state[index])
+            else:
+                assignment = self.assignment([index])[0]
+                samples.append(assignment)
+                index_to_state[index] = assignment
+
+        return pd.DataFrame([{k: v for k, v in s} for s in samples])
 
     def copy(self):
         """
