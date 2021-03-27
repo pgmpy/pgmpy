@@ -763,6 +763,128 @@ class DAG(nx.DiGraph):
         """
         return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 
+    def to_daft(
+        self, node_pos=None, latex=True, pgm_params={}, edge_params={}, node_params={}
+    ):
+        """
+        Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
+        publication quality plots. The returned object's render method can be called to see the plots.
+
+        Parameters
+        ----------
+        node_pos: str or dict (optional)
+            If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
+                spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
+
+            If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
+            node.
+
+            If no argument is provided uses random layout.
+
+        latex: boolean
+            Whether to use latex for rendering the node names.
+
+        pgm_params: dict (optional)
+            Any additional parameters that need to be passed to `daft.PGM` initializer.
+            Should be of the form: {param_name: param_value}
+
+        edge_params: dict (optional)
+            Any additional edge parameters that need to be passed to `daft.add_edge` method.
+            Should be of the form: {(u1, v1): {param_name: param_value}, (u2, v2): {...} }
+
+        node_params: dict (optional)
+            Any additional node parameters that need to be passed to `daft.add_node` method.
+            Should be of the form: {node1: {param_name: param_value}, node2: {...} }
+
+        Returns
+        -------
+        daft.PGM object: A plot of the DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('a', 'b'), ('b', 'c'), ('d', 'c')])
+        >>> dag.to_daft(node_pos={'a': (0, 0), 'b': (1, 0), 'c': (2, 0), 'd': (1, 1)})
+        <daft.PGM at 0x7fc756e936d0>
+        >>> dag.to_daft(node_pos="circular")
+        <daft.PGM at 0x7f9bb48c5eb0>
+        >>> dag.to_daft(node_pos="circular", pgm_params={'observed_style': 'inner'})
+        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(node_pos="circular",
+        ...             edge_params={('a', 'b'): {'label': 2}},
+        ...             node_params={'a': {'shape': 'rectangle'}})
+        <daft.PGM at 0x7f9bb48b0bb0>
+        """
+        try:
+            from daft import PGM
+        except ImportError as e:
+            raise ImportError(
+                "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+            )
+
+        if node_pos is None:
+            node_pos = nx.random_layout(self)
+        elif isinstance(node_pos, str):
+            supported_layouts = {
+                "circular": nx.circular_layout,
+                "kamada_kawai": nx.kamada_kawai_layout,
+                "planar": nx.planar_layout,
+                "random": nx.random_layout,
+                "shell": nx.shell_layout,
+                "spring": nx.spring_layout,
+                "spectral": nx.spectral_layout,
+                "spiral": nx.spiral_layout,
+            }
+            if node_pos not in supported_layouts.keys():
+                raise ValueError(
+                    "Unknown node_pos argument. Please refer docstring for accepted values"
+                )
+            else:
+                node_pos = supported_layouts[node_pos](self)
+        elif isinstance(node_pos, dict):
+            for node in self.nodes():
+                if node not in node_pos.keys():
+                    raise ValueError(f"No position specified for {node}.")
+        else:
+            raise ValueError(
+                "Argument node_pos not valid. Please refer to the docstring."
+            )
+
+        daft_pgm = PGM(**pgm_params)
+        for node in self.nodes():
+            try:
+                extra_params = node_params[node]
+            except KeyError:
+                extra_params = dict()
+
+            if latex:
+                daft_pgm.add_node(
+                    node,
+                    fr"${node}$",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
+                )
+            else:
+                daft_pgm.add_node(
+                    node,
+                    f"{node}",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
+                )
+
+        for u, v in self.edges():
+            try:
+                extra_params = edge_params[(u, v)]
+            except KeyError:
+                extra_params = dict()
+            daft_pgm.add_edge(u, v, **extra_params)
+
+        return daft_pgm
+
 
 class PDAG(nx.DiGraph):
     """
