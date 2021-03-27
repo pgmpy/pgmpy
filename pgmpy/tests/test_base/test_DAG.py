@@ -138,6 +138,32 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
         self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
 
+    def test_to_daft(self):
+        dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
+        dag.to_daft(node_pos=None)
+
+        self.assertRaises(ValueError, dag.to_daft, node_pos="abcd")
+        self.assertRaises(ValueError, dag.to_daft, node_pos={"A": (0, 2)})
+        self.assertRaises(ValueError, dag.to_daft, node_pos=["random"])
+
+        for layout in [
+            "circular",
+            "kamada_kawai",
+            "planar",
+            "random",
+            "shell",
+            "spring",
+            "spectral",
+            "spiral",
+        ]:
+            dag.to_daft(node_pos=layout)
+            dag.to_daft(node_pos=layout, pgm_params={"observed_style": "inner"})
+            dag.to_daft(
+                node_pos=layout,
+                edge_params={("A", "C"): {"label": 2}},
+                node_params={"A": {"shape": "rectangle"}},
+            )
+
     def tearDown(self):
         del self.graph
 
