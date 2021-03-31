@@ -7,10 +7,13 @@ import itertools
 
 
 class BayesianModelInference(Inference):
-    """Inference class specific to Bayesian Models"""
+    """
+    Inference class specific to Bayesian Models
+    """
 
     def __init__(self, model):
-        """Class to calculate probability (pmf) values specific to Bayesian Models
+        """
+        Class to calculate probability (pmf) values specific to Bayesian Models
 
         Parameters
         ----------
@@ -26,7 +29,8 @@ class BayesianModelInference(Inference):
         self.topological_order = list(nx.topological_sort(model))
 
     def pre_compute_reduce(self, variable):
-        """Get probability arrays for a node as function of conditional dependencies
+        """
+        Get probability arrays for a node as function of conditional dependencies
 
         Internal function used for Bayesian networks, eg. in BayesianModelSampling
         and BayesianModelProbability.
@@ -57,10 +61,13 @@ class BayesianModelInference(Inference):
 
 
 class BayesianModelProbability(BayesianModelInference):
-    """Class to calculate probability (pmf) values specific to Bayesian Models"""
+    """
+    Class to calculate probability (pmf) values specific to Bayesian Models
+    """
 
     def __init__(self, model):
-        """Class to calculate probability (pmf) values specific to Bayesian Models
+        """
+        Class to calculate probability (pmf) values specific to Bayesian Models
 
         Parameters
         ----------
@@ -70,7 +77,8 @@ class BayesianModelProbability(BayesianModelInference):
         super(BayesianModelProbability, self).__init__(model)
 
     def _log_probability_node(self, data, ordering, node):
-        """Evaluate the log probability of each datapoint for a specific node.
+        """
+        Evaluate the log probability of each datapoint for a specific node.
 
         Internal function used by log_probability().
 
@@ -79,9 +87,11 @@ class BayesianModelProbability(BayesianModelInference):
         data: array_like, shape (n_samples, n_features)
             List of n_features-dimensional data points.  Each row
             corresponds to a single data point.
+
         ordering: list
             ordering of columns in data, used by the Bayesian model.
             default is topological ordering used by model.
+
         node: Bayesian Model Node
             node from the Bayesian network.
 
@@ -131,13 +141,15 @@ class BayesianModelProbability(BayesianModelInference):
         return np.log(probability_node)
 
     def log_probability(self, data, ordering=None):
-        """Evaluate the logarithmic probability of each point in a data set.
+        """
+        Evaluate the logarithmic probability of each point in a data set.
 
         Parameters
         ----------
         data: pandas dataframe OR array_like, shape (n_samples, n_features)
             List of n_features-dimensional data points.  Each row
             corresponds to a single data point.
+
         ordering: list
             ordering of columns in data, used by the Bayesian model.
             default is topological ordering used by model.
@@ -165,13 +177,15 @@ class BayesianModelProbability(BayesianModelInference):
         return np.sum(logp, axis=0)
 
     def score(self, data, ordering=None):
-        """Compute the total log probability density under the model.
+        """
+        Compute the total log probability density under the model.
 
         Parameters
         ----------
         data: pandas dataframe OR array_like, shape (n_samples, n_features)
             List of n_features-dimensional data points.  Each row
             corresponds to a single data point.
+
         ordering: list
             ordering of columns in data, used by the Bayesian model.
             default is topological ordering used by model.
