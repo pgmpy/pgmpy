@@ -659,6 +659,41 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_divide_non_factor_arg(self):
         self.assertRaises(TypeError, factor_divide, 1, 1)
 
+    def test_factor_sum(self):
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(8))
+        phi1.sum(phi2, inplace=True)
+
+        self.assertEqual(sorted(phi1.variables), ["x1", "x2", "x3", "x4"])
+        self.assertEqual(
+            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2, "x4": 2}
+        )
+        np_test.assert_almost_equal(
+            phi1.values,
+            np.array(
+                [
+                    [
+                        [[0.0, 2.0], [5.0, 7.0]],
+                        [[2.0, 4.0], [7.0, 9.0]],
+                        [[4.0, 6.0], [9.0, 11.0]],
+                    ],
+                    [
+                        [[7.0, 9.0], [12.0, 14.0]],
+                        [[9.0, 11.0], [14.0, 16.0]],
+                        [[11.0, 13.0], [16.0, 18.0]],
+                    ],
+                ]
+            ),
+        )
+
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        phi1.sum(2, inplace=True)
+        self.assertEqual(phi1.variables, ["x1", "x2", "x3"])
+        self.assertEqual(
+            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2}
+        )
+        np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
+
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)
