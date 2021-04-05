@@ -13,11 +13,6 @@ from pgmpy.sampling import BayesianModelSampling
 class TestTreeSearch(unittest.TestCase):
     def setUp(self):
         # test data for chow-liu
-        self.data11 = pd.DataFrame(
-            data=[[1, 1, 0], [1, 1, 1], [1, 1, 0]], columns=["B", "C", "D"]
-        )
-
-        # test data for chow-liu
         self.data12 = pd.DataFrame(
             np.random.randint(low=0, high=2, size=(100, 5)),
             columns=["A", "B", "C", "D", "E"],
@@ -63,12 +58,6 @@ class TestTreeSearch(unittest.TestCase):
         model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
         inference = BayesianModelSampling(model)
         self.data13 = inference.forward_sample(size=10000, return_type="dataframe")
-
-        # test data for TAN
-        self.data21 = pd.DataFrame(
-            data=[[0, 1, 1, 0], [1, 1, 1, 1], [0, 1, 1, 0]],
-            columns=["A", "B", "C", "D"],
-        )
 
         # test data for TAN
         model = BayesianModel(
@@ -135,33 +124,6 @@ class TestTreeSearch(unittest.TestCase):
     def test_estimate_chow_liu(self):
         # learn tree structure using D as root node
         for n_jobs in [-1, 1]:
-            est = TreeSearch(self.data11, root_node="D", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
-
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["B", "C", "D"])
-            self.assertCountEqual(dag.edges(), [("D", "B"), ("D", "C")])
-
-            # check tree structure exists
-            self.assertTrue(dag.has_edge("D", "B"))
-            self.assertTrue(dag.has_edge("D", "C"))
-
-            # learn tree structure using B as root node
-            est = TreeSearch(self.data11, root_node="B", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
-
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["B", "C", "D"])
-            self.assertCountEqual(dag.edges(), [("B", "D"), ("D", "C")])
-
-            # check tree structure exists
-            self.assertTrue(dag.has_edge("B", "D"))
-            self.assertTrue(dag.has_edge("D", "C"))
-
-            # check invalid root node
-            with self.assertRaises(ValueError):
-                est = TreeSearch(self.data11, root_node="A", n_jobs=n_jobs)
-
             # learn graph structure
             est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
             dag = est.estimate(estimator_type="chow-liu")
@@ -190,39 +152,6 @@ class TestTreeSearch(unittest.TestCase):
 
     def test_estimate_tan(self):
         for n_jobs in [-1, 1]:
-            # learn graph structure
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="tan", class_node="A")
-
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D"])
-            self.assertCountEqual(
-                dag.edges(),
-                [("A", "B"), ("A", "C"), ("A", "D"), ("D", "B"), ("D", "C")],
-            )
-
-            # check directed edge between dependent and independent variables
-            self.assertTrue(dag.has_edge("A", "B"))
-            self.assertTrue(dag.has_edge("A", "C"))
-            self.assertTrue(dag.has_edge("A", "D"))
-
-            # check tree structure exists over independent variables
-            self.assertTrue(dag.has_edge("D", "B"))
-            self.assertTrue(dag.has_edge("D", "C"))
-
-            # check invalid root node
-            with self.assertRaises(ValueError):
-                est = TreeSearch(self.data21, root_node="X", n_jobs=n_jobs)
-
-            # check invalid class node
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            with self.assertRaises(ValueError):
-                est.estimate(estimator_type="tan", class_node="X")
-
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            with self.assertRaises(ValueError):
-                est.estimate(estimator_type="tan", class_node="D")
-
             # learn graph structure
             est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
             dag = est.estimate(estimator_type="tan", class_node="A")
@@ -257,7 +186,5 @@ class TestTreeSearch(unittest.TestCase):
             self.assertTrue(dag.has_edge("R", "E"))
 
     def tearDown(self):
-        del self.data11
         del self.data12
-        del self.data21
         del self.data22
