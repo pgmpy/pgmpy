@@ -14,7 +14,7 @@ init:
 
 install:
   - "%PYTHON%\\python.exe -m pip install pip -U"
-  - "%PYTHON%\\python.exe -m pip install torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+  - "%PYTHON%\\python.exe -m pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html"
   - "%PYTHON%\\python.exe -m pip install -r requirements.txt -U"
   - "%PYTHON%\\python.exe -m pip install -e ."
 
