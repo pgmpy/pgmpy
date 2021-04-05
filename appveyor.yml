@@ -10,7 +10,7 @@ environment:
     - PYTHON: "C:\\Python36-x64"
 
 install:
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - "%CMD_IN_ENV% SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "%CMD_IN_ENV% python --version"
   - "%CMD_IN_ENV% python -m pip install pip -U"
   - "%CMD_IN_ENV% pip install torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
