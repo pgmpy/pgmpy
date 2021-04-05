@@ -10,15 +10,16 @@ environment:
     - PYTHON: "C:\\Python36-x64"
 
 install:
-  - "%PYTHON%\\python.exe -m pip install pip -U"
-  - "%PYTHON%\\python.exe -m pip install torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
-  - "%PYTHON%\\python.exe -m pip install -r requirements.txt -U"
-  - "%PYTHON%\\python.exe -m pip install -e ."
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - "%CMD_IN_ENV% pip install pip -U"
+  - "%CMD_IN_ENV% pip install torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+  - "%CMD_IN_ENV% pip install -r requirements.txt -U"
+  - "%CMD_IN_ENV% pip install -e ."
 
 build: off
 
 test_script:
-  - "%PYTHON%\\python.exe -m pytest"
+  - "%CMD_IN_ENV% pytest"
 
 notifications:
   - provider: Webhook
