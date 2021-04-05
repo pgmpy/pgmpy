@@ -2,6 +2,9 @@ environment:
   matrix:
     # pytorch only seems to work on 64bit Python versions on Windows
     - PYTHON: "C:\\Python39-x64"
+      PYTHON_VERSION: "3.9.0"
+      PYTHON_ARCH: "64"
+      VS: "Visual Studio 14 2015 Win64"
     - PYTHON: "C:\\Python38-x64" 
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python36-x64"
