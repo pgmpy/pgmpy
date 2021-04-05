@@ -1,7 +1,7 @@
 networkx
 numpy
 scipy
-scikit-learn==0.23.2
+scikit-learn
 pandas
 pyparsing
 torch
