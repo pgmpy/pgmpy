@@ -254,11 +254,13 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Make a copy of the original model as it will be replaced during pruning.
+        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
-        return self._variable_elimination(
+        result = self._variable_elimination(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
@@ -266,6 +268,9 @@ class VariableElimination(Inference):
             joint=joint,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
+        return result
 
     def max_marginal(
         self,
@@ -314,6 +319,8 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Make a copy of the original model and replace self.model with it later.
+        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -326,6 +333,7 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
+        self.model = orig_model
         return np.max(final_distribution.values)
 
     def map_query(
@@ -378,6 +386,8 @@ class VariableElimination(Inference):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
+        # Make a copy of the original model and replace self.model with it later
+        orig_model = self.model
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
             variables=variables,
@@ -387,6 +397,8 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
 
@@ -898,6 +910,7 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -909,6 +922,8 @@ class BeliefPropagation(Inference):
             joint=joint,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
         if joint:
             return result.normalize(inplace=False)
         else:
@@ -970,6 +985,8 @@ class BeliefPropagation(Inference):
         if not variables:
             variables = list(self.model.nodes())
 
+        # Make a copy of the original model and then replace self.model with it later.
+        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -980,6 +997,8 @@ class BeliefPropagation(Inference):
             evidence=evidence,
             show_progress=show_progress,
         )
+
+        self.model = orig_model
 
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.
