@@ -96,7 +96,9 @@ class Inference(object):
         elif isinstance(self.model, DynamicBayesianNetwork):
             self.start_bayesian_model = BayesianModel(self.model.get_intra_edges(0))
             self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
-            cpd_inter = [self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)]
+            cpd_inter = [
+                self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
+            ]
             self.interface_nodes = self.model.get_interface_nodes(0)
             self.one_and_half_model = BayesianModel(
                 self.model.get_inter_edges() + self.model.get_intra_edges(1)
@@ -137,7 +139,9 @@ class Inference(object):
 
         # Step 1: Remove all the variables that are d-separated from `variables` when conditioned
         #         on `evidence`
-        d_connected = bn.active_trail_nodes(variables=variables, observed=list(evidence.keys()))
+        d_connected = bn.active_trail_nodes(
+            variables=variables, observed=list(evidence.keys())
+        )
         d_connected = set.union(*d_connected.values()).union(evidence.keys())
         bn = bn.subgraph(d_connected)
         evidence = {var: state for var, state in evidence.items() if var in d_connected}
