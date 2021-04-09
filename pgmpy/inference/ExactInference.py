@@ -382,12 +382,13 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Make a copy of the original model and replace self.model with it later
+        orig_model = self.model
+
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
-        # Make a copy of the original model and replace self.model with it later
-        orig_model = self.model
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
             variables=variables,
