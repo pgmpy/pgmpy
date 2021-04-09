@@ -36,6 +36,7 @@ class TestInferenceBase(unittest.TestCase):
 
     def test_bayesian_inference_init(self):
         infer_bayesian = Inference(self.bayesian)
+        infer_bayesian._initialize_structures()
         self.assertEqual(set(infer_bayesian.variables), {"a", "b", "c", "d", "e"})
         self.assertEqual(
             infer_bayesian.cardinality, {"a": 2, "b": 2, "c": 2, "d": 2, "e": 2}
@@ -84,6 +85,7 @@ class TestInferenceBase(unittest.TestCase):
 
     def test_markov_inference_init(self):
         infer_markov = Inference(self.markov)
+        infer_markov._initialize_structures()
         self.assertEqual(set(infer_markov.variables), {"a", "b", "c", "d"})
         self.assertEqual(infer_markov.cardinality, {"a": 2, "b": 2, "c": 2, "d": 2})
         self.assertEqual(
