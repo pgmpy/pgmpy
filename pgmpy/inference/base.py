@@ -136,6 +136,7 @@ class Inference(object):
         """
         bn = self.model.copy()
         evidence = {} if evidence is None else evidence
+        variables = list(self.model.nodes()) if len(variables)==0 else list(variables)
 
         # Step 1: Remove all the variables that are d-separated from `variables` when conditioned
         #         on `evidence`

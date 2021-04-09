@@ -93,7 +93,6 @@ class TestVariableElimination(unittest.TestCase):
                 variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
             ),
         )
-
         query_result = self.bayesian_inference.query(["Q", "J"])
         query_result = self.bayesian_inference.query(["Q", "J"])
         self.assertEqual(

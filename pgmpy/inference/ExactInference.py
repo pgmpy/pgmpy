@@ -281,9 +281,11 @@ class VariableElimination(Inference):
         ----------
         variables: list
             list of variables over which we want to compute the max-marginal.
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
@@ -330,8 +332,7 @@ class VariableElimination(Inference):
         self,
         variables=None,
         evidence=None,
-        elimination_order="MinFill",
-        show_progress=True,
+        elimination_order="MinFill", show_progress=True,
     ):
         """
         Computes the MAP Query over the variables given the evidence.
@@ -363,9 +364,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables if variables is not None else [])
-        )
+        variables = [] if variables is None else variables
+        common_vars = set(evidence if evidence is not None else []).intersection(variables)
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -953,9 +953,9 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.map_query(variables=['J', 'Q'],
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables if variables is not None else [])
-        )
+        variables = [] if variables is None else variables
+        common_vars = set(evidence if evidence is not None else []).intersection(variables)
+
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -963,7 +963,7 @@ class BeliefPropagation(Inference):
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         if not variables:
-            variables = set(self.model.nodes())
+            variables = list(self.model.nodes())
 
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)

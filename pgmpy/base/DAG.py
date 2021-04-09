@@ -586,12 +586,15 @@ class DAG(nx.DiGraph):
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
+
         Parameters
         ----------
         variables: str or array like
             variables whose active trails are to be found.
+
         observed : List of nodes (optional)
             If given the active trails would be computed assuming these nodes to be observed.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
