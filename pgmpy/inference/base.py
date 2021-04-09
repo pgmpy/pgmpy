@@ -138,11 +138,9 @@ class Inference(object):
         # Step 1: Remove all the variables that are d-separated from `variables` when conditioned
         #         on `evidence`
         d_connected = bn.active_trail_nodes(variables=variables, observed=list(evidence.keys()))
-        d_connected = set.union(*d_connected.values())
+        d_connected = set.union(*d_connected.values()).union(evidence.keys())
         bn = bn.subgraph(d_connected)
         evidence = {var: state for var, state in evidence.items() if var in d_connected}
-
-        import pdb; pdb.set_trace()
 
         # Step 2: Reduce the model to ancestral graph of [`variables` + `evidence`]
         bn = bn.get_ancestral_graph(list(variables) + list(evidence.keys()))
