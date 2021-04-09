@@ -332,7 +332,8 @@ class VariableElimination(Inference):
         self,
         variables=None,
         evidence=None,
-        elimination_order="MinFill", show_progress=True,
+        elimination_order="MinFill",
+        show_progress=True,
     ):
         """
         Computes the MAP Query over the variables given the evidence.
@@ -365,7 +366,9 @@ class VariableElimination(Inference):
         >>> phi_query = inference.map_query(['A', 'B'])
         """
         variables = [] if variables is None else variables
-        common_vars = set(evidence if evidence is not None else []).intersection(variables)
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            variables
+        )
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -954,7 +957,9 @@ class BeliefPropagation(Inference):
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         variables = [] if variables is None else variables
-        common_vars = set(evidence if evidence is not None else []).intersection(variables)
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            variables
+        )
 
         if common_vars:
             raise ValueError(
