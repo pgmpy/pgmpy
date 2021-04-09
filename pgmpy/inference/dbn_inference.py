@@ -56,6 +56,8 @@ class DBNInference(Inference):
             http://www.cs.ubc.ca/~murphyk/Thesis/thesis.pdf
         """
         super(DBNInference, self).__init__(model)
+        self._initialize_structures()
+
         self.interface_nodes_0 = model.get_interface_nodes(time_slice=0)
         self.interface_nodes_1 = model.get_interface_nodes(time_slice=1)
 

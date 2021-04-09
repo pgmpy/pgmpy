@@ -254,6 +254,10 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
         return self._variable_elimination(
             variables=variables,
             operation="marginalize",
@@ -307,6 +311,10 @@ class VariableElimination(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
 
         final_distribution = self._variable_elimination(
             variables=variables,
@@ -363,6 +371,10 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
             variables=variables,
@@ -410,6 +422,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         """
+        self._initialize_structures()
+
         # If the elimination order does not contain the same variables as the model
         if set(elimination_order) != set(self.variables):
             raise ValueError(
@@ -881,6 +895,10 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
         result = self._query(
             variables=variables,
             operation="marginalize",
@@ -945,7 +963,11 @@ class BeliefPropagation(Inference):
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         if not variables:
-            variables = set(self.variables)
+            variables = set(self.model.nodes())
+
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
 
         final_distribution = self._query(
             variables=variables,

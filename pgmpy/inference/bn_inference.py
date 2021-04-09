@@ -25,6 +25,7 @@ class BayesianModelInference(Inference):
                 "Model expected type: BayesianModel, got type: ", type(model)
             )
         super(BayesianModelInference, self).__init__(model)
+        self._initialize_structures()
 
         self.topological_order = list(nx.topological_sort(model))
 
