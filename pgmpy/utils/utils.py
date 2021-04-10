@@ -103,7 +103,7 @@ def get_example_model(model):
         raise NotImplementedError("The specified dataset isn't supported")
 
     path = filenames[model]
-    with gzip.open(resource_filename('pgmpy', path), "rb") as f:
+    with gzip.open(resource_filename("pgmpy", path), "rb") as f:
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
