@@ -1,5 +1,6 @@
 import gzip
 from urllib.request import urlretrieve
+from pkg_resources import resource_filename
 
 
 def get_example_model(model):
@@ -64,30 +65,30 @@ def get_example_model(model):
     from pgmpy.readwrite import BIFReader
 
     filenames = {
-        "asia": "pgmpy/utils/example_models/asia.bif.gz",
-        "cancer": "pgmpy/utils/example_models/cancer.bif.gz",
-        "earthquake": "pgmpy/utils/example_models/earthquake.bif.gz",
-        "sachs": "pgmpy/utils/example_models/sachs.bif.gz",
-        "survey": "pgmpy/utils/example_models/survey.bif.gz",
-        "alarm": "pgmpy/utils/example_models/alarm.bif.gz",
-        "barley": "pgmpy/utils/example_models/barley.bif.gz",
-        "child": "pgmpy/utils/example_models/child.bif.gz",
-        "insurance": "pgmpy/utils/example_models/insurance.bif.gz",
-        "mildew": "pgmpy/utils/example_models/mildew.bif.gz",
-        "water": "pgmpy/utils/example_models/water.bif.gz",
-        "hailfinder": "pgmpy/utils/example_models/hailfinder.bif.gz",
-        "hepar2": "pgmpy/utils/example_models/hepar2.bif.gz",
-        "win95pts": "pgmpy/utils/example_models/win95pts.bif.gz",
-        "andes": "pgmpy/utils/example_models/andes.bif.gz",
-        "diabetes": "pgmpy/utils/example_models/diabetes.bif.gz",
-        "link": "pgmpy/utils/example_models/link.bif.gz",
-        "munin1": "pgmpy/utils/example_models/munin1.bif.gz",
-        "munin2": "pgmpy/utils/example_models/munin2.bif.gz",
-        "munin3": "pgmpy/utils/example_models/munin3.bif.gz",
-        "munin4": "pgmpy/utils/example_models/munin4.bif.gz",
-        "pathfinder": "pgmpy/utils/example_models/pathfinder.bif.gz",
-        "pigs": "pgmpy/utils/example_models/pigs.bif.gz",
-        "munin": "pgmpy/utils/example_models/munin.bif.gz",
+        "asia": "utils/example_models/asia.bif.gz",
+        "cancer": "utils/example_models/cancer.bif.gz",
+        "earthquake": "utils/example_models/earthquake.bif.gz",
+        "sachs": "utils/example_models/sachs.bif.gz",
+        "survey": "utils/example_models/survey.bif.gz",
+        "alarm": "utils/example_models/alarm.bif.gz",
+        "barley": "utils/example_models/barley.bif.gz",
+        "child": "utils/example_models/child.bif.gz",
+        "insurance": "utils/example_models/insurance.bif.gz",
+        "mildew": "utils/example_models/mildew.bif.gz",
+        "water": "utils/example_models/water.bif.gz",
+        "hailfinder": "utils/example_models/hailfinder.bif.gz",
+        "hepar2": "utils/example_models/hepar2.bif.gz",
+        "win95pts": "utils/example_models/win95pts.bif.gz",
+        "andes": "utils/example_models/andes.bif.gz",
+        "diabetes": "utils/example_models/diabetes.bif.gz",
+        "link": "utils/example_models/link.bif.gz",
+        "munin1": "utils/example_models/munin1.bif.gz",
+        "munin2": "utils/example_models/munin2.bif.gz",
+        "munin3": "utils/example_models/munin3.bif.gz",
+        "munin4": "utils/example_models/munin4.bif.gz",
+        "pathfinder": "utils/example_models/pathfinder.bif.gz",
+        "pigs": "utils/example_models/pigs.bif.gz",
+        "munin": "utils/example_models/munin.bif.gz",
         "ecoli70": "",
         "magic-niab": "",
         "magic-irri": "",
@@ -101,7 +102,8 @@ def get_example_model(model):
     if filenames[model] == "":
         raise NotImplementedError("The specified dataset isn't supported")
 
-    with gzip.open(filenames[model], "rb") as f:
+    path = filenames[model]
+    with gzip.open(resource_filename("pgmpy", path), "rb") as f:
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
