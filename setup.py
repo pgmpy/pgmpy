@@ -125,6 +125,8 @@ if __name__ == "__main__":
         version=VERSION,
         description="A library for Probabilistic Graphical Models",
         packages=find_packages(exclude=["tests"]),
+        include_package_data=True,
+        package_data={'': ['utils/example_models/*.bif.gz']},
         author="Ankur Ankan",
         author_email="ankurankan@gmail.com",
         url="https://github.com/pgmpy/pgmpy",
