@@ -183,6 +183,47 @@ class TestVariableElimination(unittest.TestCase):
             evidence=["J"],
         )
 
+    def test_elimination_order(self):
+        # Check all the heuristics give the same results.
+        for elimination_order in [
+            "WeightedMinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "MinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                ["J"], elimination_order=elimination_order
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
+            )
+
+            query_result = self.bayesian_inference.query(
+                variables=["J"], evidence={"A": 0, "R": 1}
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            )
+
+        # Check when elimination order has extra variables. Because of pruning.
+        query_result = self.bayesian_inference.query(
+            ["J"], elimination_order=["A", "R", "L", "Q", "G"]
+        )
+        self.assertEqual(
+            query_result,
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
+        )
+
+        # Check for when elimination order doesn't have all the variables
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.query,
+            variables=["J"],
+            elimination_order=["A"],
+        )
+
     def test_induced_graph(self):
         induced_graph = self.bayesian_inference.induced_graph(
             ["G", "Q", "A", "J", "L", "R"]
