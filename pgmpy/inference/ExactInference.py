@@ -74,6 +74,7 @@ class VariableElimination(Inference):
         )
 
         # Step 1: If elimination_order is a list, verify it's correct and return.
+        # Step 1.1: Check that not of the `variables` and `evidence` is in the elimination_order.
         if hasattr(elimination_order, "__iter__") and (
             not isinstance(elimination_order, str)
         ):
@@ -87,8 +88,21 @@ class VariableElimination(Inference):
                     "Elimination order contains variables which are in"
                     " variables or evidence args"
                 )
-            else:
-                return elimination_order
+            # Step 1.2: Check if elimination_order has variables which are not in the model.
+            elif any(var not in self.model.nodes() for var in elimination_order):
+                elimination_order = list(
+                    filter(lambda t: t in self.model.nodes(), elimination_order)
+                )
+
+            # Step 1.3: Check if the elimination_order has all the variables that need to be eliminated.
+            elif to_eliminate != set(elimination_order):
+                raise ValueError(
+                    f"Elimination order doesn't contain all the variables"
+                    f"which need to be eliminated. The variables which need to"
+                    f"be eliminated are {to_eliminate}"
+                )
+
+            return elimination_order
 
         # Step 2: If elimination order is None or a Markov model, return a random order.
         elif (elimination_order is None) or (not isinstance(self.model, BayesianModel)):
