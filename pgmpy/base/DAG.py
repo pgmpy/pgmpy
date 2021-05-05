@@ -69,8 +69,9 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set()):
         super(DAG, self).__init__(ebunch)
+        self.latents = set(latents)
         cycles = []
         try:
             cycles = list(nx.find_cycle(self))
@@ -82,7 +83,7 @@ class DAG(nx.DiGraph):
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
-    def add_node(self, node, weight=None):
+    def add_node(self, node, weight=None, latent=False):
         """
         Adds a single node to the Graph.
 
@@ -93,6 +94,9 @@ class DAG(nx.DiGraph):
 
         weight: int, float
             The weight of the node.
+
+        latent: boolean (default: False)
+            Specifies whether the variable is latent or not.
 
         Examples
         --------
@@ -120,9 +124,12 @@ class DAG(nx.DiGraph):
         else:
             attrs = {"weight": weight}
 
+        if latent:
+            self.latents.add(node)
+
         super(DAG, self).add_node(node, weight=weight)
 
-    def add_nodes_from(self, nodes, weights=None):
+    def add_nodes_from(self, nodes, weights=None, latent=False):
         """
         Add multiple nodes to the Graph.
 
@@ -137,6 +144,10 @@ class DAG(nx.DiGraph):
         weights: list, tuple (default=None)
             A container of weights (int, float). The weight value at index i
             is associated with the variable at index i.
+
+        latent: list, tuple (default=False)
+            A container of boolean. The value at index i tells whether the
+            node at index i is latent or not.
 
         Examples
         --------
@@ -157,16 +168,19 @@ class DAG(nx.DiGraph):
         """
         nodes = list(nodes)
 
+        if isinstance(latent, bool):
+            latent = [latent] * len(nodes)
+
         if weights:
             if len(nodes) != len(weights):
                 raise ValueError(
                     "The number of elements in nodes and weights" "should be equal."
                 )
             for index in range(len(nodes)):
-                self.add_node(node=nodes[index], weight=weights[index])
+                self.add_node(node=nodes[index], weight=weights[index], latent=latent[index])
         else:
-            for node in nodes:
-                self.add_node(node=node)
+            for index in range(len(nodes)):
+                self.add_node(node=nodes[index], latent=latent[index])
 
     def add_edge(self, u, v, weight=None):
         """
@@ -374,7 +388,7 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(self, latex=False):
+    def get_independencies(self, latex=False, include_latents=False):
         """
         Computes independencies in the DAG, by checking d-seperation.
 
@@ -384,6 +398,10 @@ class DAG(nx.DiGraph):
             If latex=True then latex string of the independence assertion
             would be created.
 
+        include_latents: boolean
+            If True, includes latent variables in the independencies. Otherwise,
+            only generates independencies on observed variables.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -392,15 +410,22 @@ class DAG(nx.DiGraph):
         (X \u27C2 Z | Y)
         (Z \u27C2 X | Y)
         """
+        if not include_latents:
+            nodes = set(self.nodes()) - self.latents
+
         independencies = Independencies()
-        for start in self.nodes():
-            rest = set(self.nodes()) - {start}
+        for start in nodes:
+            if not include_latents:
+                rest = set(self.nodes()) - {start} - self.latents
+            else:
+                rest = set(self.nodes()) - {start}
+
             for r in range(len(rest)):
                 for observed in itertools.combinations(rest, r):
                     d_seperated_variables = (
                         rest
                         - set(observed)
-                        - set(self.active_trail_nodes(start, observed=observed)[start])
+                        - set(self.active_trail_nodes(start, observed=observed, include_latents=include_latents)[start])
                     )
                     if d_seperated_variables:
                         independencies.add_assertions(
@@ -582,7 +607,7 @@ class DAG(nx.DiGraph):
         blanket_nodes.remove(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables, observed=None):
+    def active_trail_nodes(self, variables, observed=None, include_latents=False):
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
@@ -593,7 +618,11 @@ class DAG(nx.DiGraph):
             variables whose active trails are to be found.
 
         observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be observed.
+            If given the active trails would be computed assuming these nodes to be 
+            observed.
+
+        include_latents: boolean (default: False)
+            Whether to include the latent variables in the returned active trail nodes.
 
         Examples
         --------
@@ -648,7 +677,11 @@ class DAG(nx.DiGraph):
                         if node in ancestors_list:
                             for parent in self.predecessors(node):
                                 visit_list.add((parent, "up"))
-            active_trails[start] = active_nodes
+            if include_latents:
+                active_trails[start] = active_nodes
+            else:
+                active_trails[start] = active_nodes - self.latents
+
         return active_trails
 
     def _get_ancestors_of(self, nodes):
@@ -898,7 +931,7 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch=[], undirected_ebunch=[]):
+    def __init__(self, directed_ebunch=[], undirected_ebunch=[], latents=[]):
         """
         Initializes a PDAG class.
 
@@ -909,6 +942,9 @@ class PDAG(nx.DiGraph):
 
         undirected_ebunch: list, array-like of 2-tuples
             List of undirected edges in the PDAG.
+
+        latents: list, array-like
+            List of nodes which are latent variables.
 
         Returns
         -------
@@ -922,6 +958,7 @@ class PDAG(nx.DiGraph):
             + undirected_ebunch
             + [(Y, X) for (X, Y) in undirected_ebunch]
         )
+        self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
         # TODO: Fix the cycle issue
@@ -949,6 +986,7 @@ class PDAG(nx.DiGraph):
         return PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
+            latents=self.latents,
         )
 
     def to_dag(self, required_edges=[]):
@@ -974,6 +1012,7 @@ class PDAG(nx.DiGraph):
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
         dag.add_edges_from(self.directed_edges)
+        dag.latents = self.latents
 
         pdag = self.copy()
         while pdag.number_of_nodes() > 0:
