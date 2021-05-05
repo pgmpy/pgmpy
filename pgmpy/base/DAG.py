@@ -177,7 +177,9 @@ class DAG(nx.DiGraph):
                     "The number of elements in nodes and weights" "should be equal."
                 )
             for index in range(len(nodes)):
-                self.add_node(node=nodes[index], weight=weights[index], latent=latent[index])
+                self.add_node(
+                    node=nodes[index], weight=weights[index], latent=latent[index]
+                )
         else:
             for index in range(len(nodes)):
                 self.add_node(node=nodes[index], latent=latent[index])
@@ -425,7 +427,13 @@ class DAG(nx.DiGraph):
                     d_seperated_variables = (
                         rest
                         - set(observed)
-                        - set(self.active_trail_nodes(start, observed=observed, include_latents=include_latents)[start])
+                        - set(
+                            self.active_trail_nodes(
+                                start,
+                                observed=observed,
+                                include_latents=include_latents,
+                            )[start]
+                        )
                     )
                     if d_seperated_variables:
                         independencies.add_assertions(
@@ -618,7 +626,7 @@ class DAG(nx.DiGraph):
             variables whose active trails are to be found.
 
         observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be 
+            If given the active trails would be computed assuming these nodes to be
             observed.
 
         include_latents: boolean (default: False)

@@ -22,12 +22,12 @@ class TestDAGCreation(unittest.TestCase):
         )
         self.assertEqual(self.graph.latents, set())
 
-        self.graph = DAG([("a", "b"), ("b", "c")], latents=['b'])
+        self.graph = DAG([("a", "b"), ("b", "c")], latents=["b"])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
         self.assertListEqual(
             hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]]
         )
-        self.assertEqual(self.graph.latents, set(['b']))
+        self.assertEqual(self.graph.latents, set(["b"]))
 
     def test_add_node_string(self):
         self.graph = DAG()
@@ -56,12 +56,14 @@ class TestDAGCreation(unittest.TestCase):
         self.graph = DAG()
         self.graph.add_nodes_from(["a", "b", "c", "d"], latent=True)
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
-        self.assertEqual(self.graph.latents, set(['a', 'b', 'c', 'd']))
+        self.assertEqual(self.graph.latents, set(["a", "b", "c", "d"]))
 
         self.graph = DAG()
-        self.graph.add_nodes_from(["a", "b", "c", "d"], latent=[True, False, True, False])
+        self.graph.add_nodes_from(
+            ["a", "b", "c", "d"], latent=[True, False, True, False]
+        )
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
-        self.assertEqual(self.graph.latents, set(['a', 'c']))
+        self.assertEqual(self.graph.latents, set(["a", "c"]))
 
     def test_add_nodes_from_non_string(self):
         self.graph = DAG()
@@ -91,16 +93,20 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
 
         self.graph = DAG()
-        self.graph.add_nodes_from(["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=True)
+        self.graph.add_nodes_from(
+            ["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=True
+        )
         self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
         self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
-        self.assertEqual(self.graph.latents, set(['weighted_b', 'weighted_c']))
+        self.assertEqual(self.graph.latents, set(["weighted_b", "weighted_c"]))
 
         self.graph = DAG()
-        self.graph.add_nodes_from(["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=[True, False])
+        self.graph.add_nodes_from(
+            ["weighted_b", "weighted_c"], weights=[0.5, 0.6], latent=[True, False]
+        )
         self.assertEqual(self.graph.nodes["weighted_b"]["weight"], 0.5)
         self.assertEqual(self.graph.nodes["weighted_c"]["weight"], 0.6)
-        self.assertEqual(self.graph.latents, set(['weighted_b']))
+        self.assertEqual(self.graph.latents, set(["weighted_b"]))
 
         self.graph.add_nodes_from(["e", "f"])
         self.assertEqual(self.graph.nodes["e"]["weight"], None)
@@ -286,7 +292,7 @@ class TestPDAG(unittest.TestCase):
         self.pdag_latent = PDAG(
             directed_ebunch=[("A", "C"), ("D", "C")],
             undirected_ebunch=[("B", "A"), ("B", "D")],
-            latents=['A', 'D']
+            latents=["A", "D"],
         )
 
     def test_init_normal(self):
@@ -309,7 +315,11 @@ class TestPDAG(unittest.TestCase):
 
         directed_edges = [("A", "C"), ("D", "C")]
         undirected_edges = [("B", "A"), ("B", "D")]
-        pdag = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges, latents=['A', 'C'])
+        pdag = PDAG(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+            latents=["A", "C"],
+        )
         expected_edges = {
             ("A", "C"),
             ("D", "C"),
@@ -322,7 +332,7 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(set(pdag.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag.directed_edges, set(directed_edges))
         self.assertEqual(pdag.undirected_edges, set(undirected_edges))
-        self.assertEqual(pdag.latents, set(['A', 'C']))
+        self.assertEqual(pdag.latents, set(["A", "C"]))
 
         # Only undirected
         undirected_edges = [("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
@@ -343,7 +353,7 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set(undirected_edges))
 
         undirected_edges = [("A", "C"), ("D", "C"), ("B", "A"), ("B", "D")]
-        pdag = PDAG(undirected_ebunch=undirected_edges, latents=['A', 'D'])
+        pdag = PDAG(undirected_ebunch=undirected_edges, latents=["A", "D"])
         expected_edges = {
             ("A", "C"),
             ("C", "A"),
@@ -358,7 +368,7 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(set(pdag.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag.directed_edges, set())
         self.assertEqual(pdag.undirected_edges, set(undirected_edges))
-        self.assertEqual(pdag.latents, set(['A', 'D']))
+        self.assertEqual(pdag.latents, set(["A", "D"]))
 
         # Only directed
         directed_edges = [("A", "B"), ("D", "B"), ("A", "C"), ("D", "C")]
@@ -369,12 +379,12 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_edges, set())
 
         directed_edges = [("A", "B"), ("D", "B"), ("A", "C"), ("D", "C")]
-        pdag = PDAG(directed_ebunch=directed_edges, latents=['D'])
+        pdag = PDAG(directed_ebunch=directed_edges, latents=["D"])
         self.assertEqual(set(pdag.edges()), set(directed_edges))
         self.assertEqual(set(pdag.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag.directed_edges, set(directed_edges))
         self.assertEqual(pdag.undirected_edges, set())
-        self.assertEqual(pdag.latents, set(['D']))
+        self.assertEqual(pdag.latents, set(["D"]))
 
         # TODO: Fix the cycle issue.
         # Test cycle
@@ -415,7 +425,7 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(set(pdag_copy.nodes()), {"A", "B", "C", "D"})
         self.assertEqual(pdag_copy.directed_edges, set([("A", "C"), ("D", "C")]))
         self.assertEqual(pdag_copy.undirected_edges, set([("B", "A"), ("B", "D")]))
-        self.assertEqual(pdag_copy.latents, set(['A', 'D']))
+        self.assertEqual(pdag_copy.latents, set(["A", "D"]))
 
     def test_pdag_to_dag(self):
         # PDAG no: 1  Possibility of creating a v-structure
@@ -433,13 +443,13 @@ class TestPDAG(unittest.TestCase):
         pdag = PDAG(
             directed_ebunch=[("A", "B"), ("C", "B")],
             undirected_ebunch=[("C", "D"), ("D", "A")],
-            latents=['A']
+            latents=["A"],
         )
         dag = pdag.to_dag()
         self.assertTrue(("A", "B") in dag.edges())
         self.assertTrue(("C", "B") in dag.edges())
         self.assertFalse((("A", "D") in dag.edges()) and (("C", "D") in dag.edges()))
-        self.assertEqual(dag.latents,  set(['A']))
+        self.assertEqual(dag.latents, set(["A"]))
         self.assertTrue(len(dag.edges()) == 4)
 
         # PDAG no: 2  No possibility of creation of v-structure.
@@ -453,14 +463,15 @@ class TestPDAG(unittest.TestCase):
 
         # With latents
         pdag = PDAG(
-            directed_ebunch=[("B", "C"), ("A", "C")], undirected_ebunch=[("A", "D")],
-            latents=['A']
+            directed_ebunch=[("B", "C"), ("A", "C")],
+            undirected_ebunch=[("A", "D")],
+            latents=["A"],
         )
         dag = pdag.to_dag()
         self.assertTrue(("B", "C") in dag.edges())
         self.assertTrue(("A", "C") in dag.edges())
         self.assertTrue((("A", "D") in dag.edges()) or (("D", "A") in dag.edges()))
-        self.assertEqual(dag.latents, set(['A']))
+        self.assertEqual(dag.latents, set(["A"]))
 
         # PDAG no: 3  Already existing v-structure, possiblity to add another
         pdag = PDAG(
@@ -472,10 +483,11 @@ class TestPDAG(unittest.TestCase):
 
         # With latents
         pdag = PDAG(
-            directed_ebunch=[("B", "C"), ("A", "C")], undirected_ebunch=[("C", "D")],
-            latents=['A']
+            directed_ebunch=[("B", "C"), ("A", "C")],
+            undirected_ebunch=[("C", "D")],
+            latents=["A"],
         )
         dag = pdag.to_dag()
         expected_edges = {("B", "C"), ("C", "D"), ("A", "C")}
         self.assertEqual(expected_edges, set(dag.edges()))
-        self.assertEqual(dag.latents, set(['A']))
+        self.assertEqual(dag.latents, set(["A"]))
