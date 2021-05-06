@@ -226,9 +226,10 @@ class TestBayesianModelMethods(unittest.TestCase):
         )
 
         # Latent variables
-        fork = BayesianModel([("Y", "X"), ("Y", "Z")], latents=['Y'])
+        fork = BayesianModel([("Y", "X"), ("Y", "Z")], latents=["Y"])
         self.assertEqual(
-            fork.get_independencies(include_latents=True), Independencies(("X", "Z", "Y"), ("Z", "X", "Y"))
+            fork.get_independencies(include_latents=True),
+            Independencies(("X", "Z", "Y"), ("Z", "X", "Y")),
         )
         self.assertEqual(
             fork.get_independencies(include_latents=False), Independencies()
@@ -336,7 +337,9 @@ class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
-        self.G_latent = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")], latents=['d', 'g'])
+        self.G_latent = DAG(
+            [("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")], latents=["d", "g"]
+        )
 
     def test_active_trail_nodes(self):
         self.assertEqual(sorted(self.G2.active_trail_nodes("d")["d"]), ["d", "g", "l"])
@@ -348,20 +351,34 @@ class TestBayesianModelCPD(unittest.TestCase):
         )
 
         # For model with latent variables
-        self.assertEqual(sorted(self.G_latent.active_trail_nodes("d", include_latents=True)["d"]), ["d", "g", "l"])
         self.assertEqual(
-            sorted(self.G_latent.active_trail_nodes("i", include_latents=True)["i"]), ["g", "i", "l", "s"]
+            sorted(self.G_latent.active_trail_nodes("d", include_latents=True)["d"]),
+            ["d", "g", "l"],
         )
         self.assertEqual(
-            sorted(self.G_latent.active_trail_nodes(["d", "i"], include_latents=True)["d"]), ["d", "g", "l"]
+            sorted(self.G_latent.active_trail_nodes("i", include_latents=True)["i"]),
+            ["g", "i", "l", "s"],
+        )
+        self.assertEqual(
+            sorted(
+                self.G_latent.active_trail_nodes(["d", "i"], include_latents=True)["d"]
+            ),
+            ["d", "g", "l"],
         )
 
-        self.assertEqual(sorted(self.G_latent.active_trail_nodes("d", include_latents=False)["d"]), ["l"])
         self.assertEqual(
-            sorted(self.G_latent.active_trail_nodes("i", include_latents=False)["i"]), ["i", "l", "s"]
+            sorted(self.G_latent.active_trail_nodes("d", include_latents=False)["d"]),
+            ["l"],
         )
         self.assertEqual(
-            sorted(self.G_latent.active_trail_nodes(["d", "i"], include_latents=False)["d"]), ["l"]
+            sorted(self.G_latent.active_trail_nodes("i", include_latents=False)["i"]),
+            ["i", "l", "s"],
+        )
+        self.assertEqual(
+            sorted(
+                self.G_latent.active_trail_nodes(["d", "i"], include_latents=False)["d"]
+            ),
+            ["l"],
         )
 
     def test_active_trail_nodes_args(self):
