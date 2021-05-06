@@ -11,6 +11,8 @@ from pgmpy.factors.discrete import TabularCPD
 class TestMLE(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([("A", "C"), ("B", "C")])
+        self.model_latents = BayesianModel([("A", "C"), ("B", "C")], latents=["C"])
+
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
@@ -32,6 +34,11 @@ class TestMLE(unittest.TestCase):
             ),
         ]
         self.mle1 = MaximumLikelihoodEstimator(self.m1, self.d1)
+
+    def test_error_latent_model(self):
+        self.assertRaises(
+            ValueError, MaximumLikelihoodEstimator, self.model_latents, self.d1
+        )
 
     def test_get_parameters_incomplete_data(self):
         self.assertSetEqual(set(self.mle1.get_parameters()), set(self.cpds))
