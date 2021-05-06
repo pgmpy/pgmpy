@@ -412,6 +412,7 @@ class DAG(nx.DiGraph):
         (X \u27C2 Z | Y)
         (Z \u27C2 X | Y)
         """
+        nodes = set(self.nodes())
         if not include_latents:
             nodes = set(self.nodes()) - self.latents
 
