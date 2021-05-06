@@ -27,7 +27,7 @@ class BayesianModel(DAG):
     Base class for Bayesian Models.
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set()):
         """
         Initializes a Bayesian Model.
         A models stores nodes and edges with conditional probability
@@ -46,6 +46,9 @@ class BayesianModel(DAG):
             Data to initialize graph.  If data=None (default) an empty
             graph is created.  The data can be an edge list, or any
             NetworkX graph object.
+
+        latents: list, array-like
+            List of variables which are latent (i.e. unobserved) in the model.
 
         Examples
         --------
@@ -92,9 +95,7 @@ class BayesianModel(DAG):
         >>> len(G)  # number of nodes in graph
         3
         """
-        super(BayesianModel, self).__init__()
-        if ebunch:
-            self.add_edges_from(ebunch)
+        super(BayesianModel, self).__init__(ebunch=ebunch, latents=latents)
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
@@ -173,6 +174,9 @@ class BayesianModel(DAG):
 
         if self.get_cpds(node=node):
             self.remove_cpds(node)
+
+        self.latents = self.latents - set([node])
+
         super(BayesianModel, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
@@ -780,6 +784,7 @@ class BayesianModel(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+        model_copy.latents = self.latents
         return model_copy
 
     def get_markov_blanket(self, node):

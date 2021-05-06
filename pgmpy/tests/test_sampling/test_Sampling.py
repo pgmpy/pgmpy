@@ -25,6 +25,23 @@ class TestBayesianModelSampling(unittest.TestCase):
         cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
         self.sampling_inference = BayesianModelSampling(self.bayesian_model)
+        # Bayesian Model without state names and with latent variables
+        self.bayesian_model_lat = BayesianModel(
+            [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
+            latents=["R", "Q"],
+        )
+        cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
+        cpd_r = TabularCPD("R", 2, [[0.4], [0.6]])
+        cpd_j = TabularCPD(
+            "J", 2, [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]], ["R", "A"], [2, 2]
+        )
+        cpd_q = TabularCPD("Q", 2, [[0.9, 0.2], [0.1, 0.8]], ["J"], [2])
+        cpd_l = TabularCPD(
+            "L", 2, [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]], ["G", "J"], [2, 2]
+        )
+        cpd_g = TabularCPD("G", 2, [[0.6], [0.4]])
+        self.bayesian_model_lat.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
+        self.sampling_inference_lat = BayesianModelSampling(self.bayesian_model_lat)
 
         # Bayesian Model with state names
         self.bayesian_model_names = BayesianModel(
@@ -68,6 +85,53 @@ class TestBayesianModelSampling(unittest.TestCase):
         )
 
         self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
+
+        # Bayesian Model with state names and with latent variables
+        self.bayesian_model_names_lat = BayesianModel(
+            [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
+            latents=["R", "Q"],
+        )
+        cpd_a_names = TabularCPD(
+            "A", 2, [[0.2], [0.8]], state_names={"A": ["a0", "a1"]}
+        )
+        cpd_r_names = TabularCPD(
+            "R", 2, [[0.4], [0.6]], state_names={"R": ["r0", "r1"]}
+        )
+        cpd_j_names = TabularCPD(
+            "J",
+            2,
+            [[0.9, 0.6, 0.7, 0.1], [0.1, 0.4, 0.3, 0.9]],
+            ["R", "A"],
+            [2, 2],
+            state_names={"J": ["j0", "j1"], "R": ["r0", "r1"], "A": ["a0", "a1"]},
+        )
+        cpd_q_names = TabularCPD(
+            "Q",
+            2,
+            [[0.9, 0.2], [0.1, 0.8]],
+            ["J"],
+            [2],
+            state_names={"Q": ["q0", "q1"], "J": ["j0", "j1"]},
+        )
+        cpd_l_names = TabularCPD(
+            "L",
+            2,
+            [[0.9, 0.45, 0.8, 0.1], [0.1, 0.55, 0.2, 0.9]],
+            ["G", "J"],
+            [2, 2],
+            state_names={"L": ["l0", "l1"], "G": ["g0", "g1"], "J": ["j0", "j1"]},
+        )
+        cpd_g_names = TabularCPD(
+            "G", 2, [[0.6], [0.4]], state_names={"G": ["g0", "g1"]}
+        )
+        self.bayesian_model_names_lat.add_cpds(
+            cpd_a_names, cpd_g_names, cpd_j_names, cpd_l_names, cpd_q_names, cpd_r_names
+        )
+
+        self.sampling_inference_names_lat = BayesianModelSampling(
+            self.bayesian_model_names_lat
+        )
+
         self.markov_model = MarkovModel()
 
     def test_init(self):
@@ -92,6 +156,24 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({0, 1}))
         self.assertTrue(set(sample.L).issubset({0, 1}))
 
+        # Test without state names and with latents
+        sample = self.sampling_inference_lat.forward_sample(25, include_latents=True)
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertEqual(set(sample.columns), set(["A", "J", "R", "Q", "G", "L"]))
+        self.assertTrue(set(sample.A).issubset({0, 1}))
+        self.assertTrue(set(sample.J).issubset({0, 1}))
+        self.assertTrue(set(sample.R).issubset({0, 1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
+
+        sample = self.sampling_inference_lat.forward_sample(25, include_latents=False)
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 4)
+        self.assertFalse("R" in sample.columns)
+        self.assertFalse("Q" in sample.columns)
+
         # Test with state names
         sample = self.sampling_inference_names.forward_sample(25)
         self.assertEquals(len(sample), 25)
@@ -109,6 +191,28 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
         self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
 
+        # Test with state names and with latents
+        sample = self.sampling_inference_names_lat.forward_sample(
+            25, include_latents=True
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertEqual(set(sample.columns), set(["A", "J", "R", "Q", "G", "L"]))
+        self.assertTrue(set(sample.A).issubset({"a0", "a1"}))
+        self.assertTrue(set(sample.J).issubset({"j0", "j1"}))
+        self.assertTrue(set(sample.R).issubset({"r0", "r1"}))
+        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
+        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
+        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+
+        sample = self.sampling_inference_names_lat.forward_sample(
+            25, include_latents=False
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 4)
+        self.assertFalse("R" in sample.columns)
+        self.assertFalse("Q" in sample.columns)
+
     def test_rejection_sample_basic(self):
         # Test without state names
         sample = self.sampling_inference.rejection_sample()
@@ -117,16 +221,34 @@ class TestBayesianModelSampling(unittest.TestCase):
         )
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 6)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
+        self.assertEqual(set(sample.columns), set(["A", "J", "R", "Q", "G", "L"]))
         self.assertTrue(set(sample.A).issubset({1}))
         self.assertTrue(set(sample.J).issubset({1}))
         self.assertTrue(set(sample.R).issubset({1}))
         self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
+
+        # Test without state names with latent variables
+        sample = self.sampling_inference_lat.rejection_sample(
+            [State("A", 1), State("J", 1), State("R", 1)], 25, include_latents=True
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertTrue(set(sample.A).issubset({1}))
+        self.assertTrue(set(sample.J).issubset({1}))
+        self.assertTrue(set(sample.R).issubset({1}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
+
+        sample = self.sampling_inference_lat.rejection_sample(
+            [State("A", 1), State("J", 1), State("R", 1)], 25, include_latents=False
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 4)
+        self.assertTrue(set(sample.A).issubset({1}))
+        self.assertTrue(set(sample.J).issubset({1}))
         self.assertTrue(set(sample.G).issubset({0, 1}))
         self.assertTrue(set(sample.L).issubset({0, 1}))
 
@@ -135,19 +257,42 @@ class TestBayesianModelSampling(unittest.TestCase):
         sample = self.sampling_inference_names.rejection_sample(
             [State("A", "a1"), State("J", "j1"), State("R", "r1")], 25
         )
-
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 6)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
+        self.assertEqual(set(sample.columns), set(["A", "J", "R", "Q", "G", "L"]))
         self.assertTrue(set(sample.A).issubset({"a1"}))
         self.assertTrue(set(sample.J).issubset({"j1"}))
         self.assertTrue(set(sample.R).issubset({"r1"}))
         self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
+        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
+        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+
+        # Test with state names and latent variables
+        sample = self.sampling_inference_names_lat.rejection_sample(
+            [State("A", "a1"), State("J", "j1"), State("R", "r1")],
+            25,
+            include_latents=True,
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 6)
+        self.assertEqual(set(sample.columns), set(["A", "J", "R", "Q", "G", "L"]))
+        self.assertTrue(set(sample.A).issubset({"a1"}))
+        self.assertTrue(set(sample.J).issubset({"j1"}))
+        self.assertTrue(set(sample.R).issubset({"r1"}))
+        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
+        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
+        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+
+        sample = self.sampling_inference_names_lat.rejection_sample(
+            [State("A", "a1"), State("J", "j1"), State("R", "r1")],
+            25,
+            include_latents=False,
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 4)
+        self.assertEqual(set(sample.columns), set(["A", "J", "G", "L"]))
+        self.assertTrue(set(sample.A).issubset({"a1"}))
+        self.assertTrue(set(sample.J).issubset({"j1"}))
         self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
         self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
 
@@ -159,17 +304,40 @@ class TestBayesianModelSampling(unittest.TestCase):
         )
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 7)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
-        self.assertIn("_weight", sample.columns)
+        self.assertEqual(
+            set(sample.columns), set(["A", "J", "R", "Q", "G", "L", "_weight"])
+        )
         self.assertTrue(set(sample.A).issubset({0}))
         self.assertTrue(set(sample.J).issubset({1}))
         self.assertTrue(set(sample.R).issubset({0}))
         self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
+
+        # Test without state names and with latent variables
+        sample = self.sampling_inference_lat.likelihood_weighted_sample(
+            [State("A", 0), State("J", 1), State("R", 0)], 25, include_latents=True
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 7)
+        self.assertEqual(
+            set(sample.columns), set(["A", "J", "R", "Q", "G", "L", "_weight"])
+        )
+        self.assertTrue(set(sample.A).issubset({0}))
+        self.assertTrue(set(sample.J).issubset({1}))
+        self.assertTrue(set(sample.R).issubset({0}))
+        self.assertTrue(set(sample.Q).issubset({0, 1}))
+        self.assertTrue(set(sample.G).issubset({0, 1}))
+        self.assertTrue(set(sample.L).issubset({0, 1}))
+
+        sample = self.sampling_inference_lat.likelihood_weighted_sample(
+            [State("A", 0), State("J", 1), State("R", 0)], 25, include_latents=False
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 5)
+        self.assertEqual(set(sample.columns), set(["A", "J", "G", "L", "_weight"]))
+        self.assertTrue(set(sample.A).issubset({0}))
+        self.assertTrue(set(sample.J).issubset({1}))
         self.assertTrue(set(sample.G).issubset({0, 1}))
         self.assertTrue(set(sample.L).issubset({0, 1}))
 
@@ -180,17 +348,44 @@ class TestBayesianModelSampling(unittest.TestCase):
         )
         self.assertEquals(len(sample), 25)
         self.assertEquals(len(sample.columns), 7)
-        self.assertIn("A", sample.columns)
-        self.assertIn("J", sample.columns)
-        self.assertIn("R", sample.columns)
-        self.assertIn("Q", sample.columns)
-        self.assertIn("G", sample.columns)
-        self.assertIn("L", sample.columns)
-        self.assertIn("_weight", sample.columns)
+        self.assertEqual(
+            set(sample.columns), set(["A", "J", "R", "Q", "G", "L", "_weight"])
+        )
         self.assertTrue(set(sample.A).issubset({"a0"}))
         self.assertTrue(set(sample.J).issubset({"j1"}))
         self.assertTrue(set(sample.R).issubset({"r0"}))
         self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
+        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
+        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+
+        # Test with state names and with latent variables
+        sample = self.sampling_inference_names_lat.likelihood_weighted_sample(
+            [State("A", "a0"), State("J", "j1"), State("R", "r0")],
+            25,
+            include_latents=True,
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 7)
+        self.assertEqual(
+            set(sample.columns), set(["A", "J", "R", "Q", "G", "L", "_weight"])
+        )
+        self.assertTrue(set(sample.A).issubset({"a0"}))
+        self.assertTrue(set(sample.J).issubset({"j1"}))
+        self.assertTrue(set(sample.R).issubset({"r0"}))
+        self.assertTrue(set(sample.Q).issubset({"q0", "q1"}))
+        self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
+        self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
+
+        sample = self.sampling_inference_names_lat.likelihood_weighted_sample(
+            [State("A", "a0"), State("J", "j1"), State("R", "r0")],
+            25,
+            include_latents=False,
+        )
+        self.assertEquals(len(sample), 25)
+        self.assertEquals(len(sample.columns), 5)
+        self.assertEqual(set(sample.columns), set(["A", "J", "G", "L", "_weight"]))
+        self.assertTrue(set(sample.A).issubset({"a0"}))
+        self.assertTrue(set(sample.J).issubset({"j1"}))
         self.assertTrue(set(sample.G).issubset({"g0", "g1"}))
         self.assertTrue(set(sample.L).issubset({"l0", "l1"}))
 

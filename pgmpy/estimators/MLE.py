@@ -49,6 +49,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for BayesianModel"
             )
+        elif len(model.latents) != 0:
+            raise ValueError(
+                f"Maximum Likelihood Estimator works only for models with all observed variables. Found latent variables: {model.latents}"
+            )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 

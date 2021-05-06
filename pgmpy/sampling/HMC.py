@@ -294,7 +294,7 @@ class HamiltonianMC(object):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        return _return_samples(return_type, samples)
+        return _return_samples(samples)
 
     def generate_sample(
         self, initial_pos, num_samples, trajectory_length, stepsize=None
@@ -562,7 +562,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
         self.acceptance_rate = self.accepted_proposals / num_samples
 
-        return _return_samples(return_type, samples)
+        return _return_samples(samples)
 
     def generate_sample(
         self, initial_pos, num_adapt, num_samples, trajectory_length, stepsize=None

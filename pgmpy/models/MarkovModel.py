@@ -73,11 +73,12 @@ class MarkovModel(UndirectedGraph):
     3
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=[]):
         super(MarkovModel, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
         self.factors = []
+        self.latents = latents
 
     def add_edge(self, u, v, **kwargs):
         """

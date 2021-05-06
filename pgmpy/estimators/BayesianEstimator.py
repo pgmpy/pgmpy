@@ -21,6 +21,10 @@ class BayesianEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for BayesianModel"
             )
+        elif len(model.latents) != 0:
+            raise ValueError(
+                f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+            )
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 

@@ -57,7 +57,7 @@ class TestTreeSearch(unittest.TestCase):
 
         model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
         inference = BayesianModelSampling(model)
-        self.data13 = inference.forward_sample(size=10000, return_type="dataframe")
+        self.data13 = inference.forward_sample(size=10000)
 
         # test data for TAN
         model = BayesianModel(
@@ -119,7 +119,7 @@ class TestTreeSearch(unittest.TestCase):
         )
         model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
         inference = BayesianModelSampling(model)
-        self.data22 = inference.forward_sample(size=10000, return_type="dataframe")
+        self.data22 = inference.forward_sample(size=10000)
 
     def test_estimate_chow_liu(self):
         # learn tree structure using D as root node
