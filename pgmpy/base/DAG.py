@@ -554,18 +554,20 @@ class DAG(nx.DiGraph):
                     immoralities.add(tuple(sorted(parents)))
         return immoralities
 
-    def is_active_trail(self, start, end, observed=None):
+    def is_dconnected(self, start, end, observed=None):
         """
-        Returns True if there is any active trail between start and end node
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
         Parameters
         ----------
-        start : Graph Node
-        end : Graph Node
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -573,9 +575,9 @@ class DAG(nx.DiGraph):
         >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
         >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
         ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
+        >>> student.is_dconnected('diff', 'intel')
         False
-        >>> student.is_active_trail('grades', 'sat')
+        >>> student.is_dconnected('grades', 'sat')
         True
         """
         if end in self.active_trail_nodes(start, observed)[start]:

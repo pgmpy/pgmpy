@@ -47,25 +47,18 @@ class CausalInference(object):
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
 
-    def __init__(self, model, latent_vars=None, set_nodes=None):
+    def __init__(self, model, set_nodes=None):
         if not isinstance(model, BayesianModel):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianModels at this time."
             )
         self.dag = model
-        self.graph = self.dag.to_undirected()
-        self.latent_variables = _variable_or_iterable_to_set(latent_vars)
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        self.observed_variables = frozenset(self.dag.nodes()).difference(
-            self.latent_variables
-        )
+        self.observed_variables = frozenset(self.dag.nodes()).difference(model.latents)
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
         return f"{self.__class__.__name__}({variables})"
-
-    def _is_d_separated(self, X, Y, Z=None):
-        return not self.dag.is_active_trail(X, Y, observed=Z)
 
     def is_valid_backdoor_adjustment_set(self, X, Y, Z=[]):
         """
@@ -99,7 +92,7 @@ class CausalInference(object):
         observed = [X] + Z_
         parents_d_sep = []
         for p in self.dag.predecessors(X):
-            parents_d_sep.append(self._is_d_separated(p, Y, Z=observed))
+            parents_d_sep.append(not self.dag.is_dconnected(p, Y, observed=observed))
         return all(parents_d_sep)
 
     def get_all_backdoor_adjustment_sets(self, X, Y):

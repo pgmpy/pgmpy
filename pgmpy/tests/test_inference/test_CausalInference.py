@@ -15,8 +15,10 @@ class TestCausalGraphMethods(unittest.TestCase):
         self.inference = CausalInference(self.game)
 
     def test_is_d_separated(self):
-        self.assertFalse(self.inference._is_d_separated("X", "Y", Z=None))
-        self.assertTrue(self.inference._is_d_separated("B", "Y", Z=("C", "X")))
+        self.assertTrue(self.inference.dag.is_dconnected("X", "Y", observed=None))
+        self.assertFalse(
+            self.inference.dag.is_dconnected("B", "Y", observed=("C", "X"))
+        )
 
     def test_backdoor_validation(self):
         self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")

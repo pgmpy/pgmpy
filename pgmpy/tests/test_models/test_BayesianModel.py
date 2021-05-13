@@ -397,27 +397,27 @@ class TestBayesianModelCPD(unittest.TestCase):
             ["g", "i", "s"],
         )
 
-    def test_is_active_trail_triplets(self):
-        self.assertTrue(self.G.is_active_trail("d", "l"))
-        self.assertTrue(self.G.is_active_trail("g", "s"))
-        self.assertFalse(self.G.is_active_trail("d", "i"))
-        self.assertTrue(self.G.is_active_trail("d", "i", observed="g"))
-        self.assertFalse(self.G.is_active_trail("d", "l", observed="g"))
-        self.assertFalse(self.G.is_active_trail("i", "l", observed="g"))
-        self.assertTrue(self.G.is_active_trail("d", "i", observed="l"))
-        self.assertFalse(self.G.is_active_trail("g", "s", observed="i"))
+    def test_is_dconnected_triplets(self):
+        self.assertTrue(self.G.is_dconnected("d", "l"))
+        self.assertTrue(self.G.is_dconnected("g", "s"))
+        self.assertFalse(self.G.is_dconnected("d", "i"))
+        self.assertTrue(self.G.is_dconnected("d", "i", observed="g"))
+        self.assertFalse(self.G.is_dconnected("d", "l", observed="g"))
+        self.assertFalse(self.G.is_dconnected("i", "l", observed="g"))
+        self.assertTrue(self.G.is_dconnected("d", "i", observed="l"))
+        self.assertFalse(self.G.is_dconnected("g", "s", observed="i"))
 
-    def test_is_active_trail(self):
-        self.assertFalse(self.G.is_active_trail("d", "s"))
-        self.assertTrue(self.G.is_active_trail("s", "l"))
-        self.assertTrue(self.G.is_active_trail("d", "s", observed="g"))
-        self.assertFalse(self.G.is_active_trail("s", "l", observed="g"))
+    def test_is_dconnected(self):
+        self.assertFalse(self.G.is_dconnected("d", "s"))
+        self.assertTrue(self.G.is_dconnected("s", "l"))
+        self.assertTrue(self.G.is_dconnected("d", "s", observed="g"))
+        self.assertFalse(self.G.is_dconnected("s", "l", observed="g"))
 
-    def test_is_active_trail_args(self):
-        self.assertFalse(self.G.is_active_trail("s", "l", "i"))
-        self.assertFalse(self.G.is_active_trail("s", "l", "g"))
-        self.assertTrue(self.G.is_active_trail("d", "s", "l"))
-        self.assertFalse(self.G.is_active_trail("d", "s", ["i", "l"]))
+    def test_is_dconnected_args(self):
+        self.assertFalse(self.G.is_dconnected("s", "l", "i"))
+        self.assertFalse(self.G.is_dconnected("s", "l", "g"))
+        self.assertTrue(self.G.is_dconnected("d", "s", "l"))
+        self.assertFalse(self.G.is_dconnected("d", "s", ["i", "l"]))
 
     def test_get_cpds(self):
         cpd_d = TabularCPD("d", 2, values=np.random.rand(2, 1))
