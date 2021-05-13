@@ -268,13 +268,17 @@ class TestDAGMoralization(unittest.TestCase):
 
 class TestDoOperator(unittest.TestCase):
     def setUp(self):
-        self.graph = DAG()
-        self.graph.add_edges_from([("X", "A"), ("A", "Y"), ("A", "B")])
+        self.g1 = DAG([("X", "A"), ("A", "Y"), ("A", "B")])
+        self.g2 = DAG([("X", "A"), ("A", "Y"), ("A", "B"), ("Z", "Y")])
 
     def test_do(self):
-        dag_do_x = self.graph.do("A")
-        self.assertEqual(set(dag_do_x.nodes()), set(self.graph.nodes()))
+        dag_do_x = self.g1.do("A")
+        self.assertEqual(set(dag_do_x.nodes()), set(self.g1.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B"), ("A", "Y")])
+
+        dag_do_x = self.g2.do(["A", "Y"])
+        self.assertEqual(set(dag_do_x.nodes()), set(self.g2.nodes()))
+        self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B")])
 
 
 class TestPDAG(unittest.TestCase):

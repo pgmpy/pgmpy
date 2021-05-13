@@ -745,21 +745,26 @@ class DAG(nx.DiGraph):
         """
         pass
 
-    def do(self, node):
+    def do(self, nodes, inplace=False):
         """
-        Applies the do operator to the graph and returns a new DAG with the transformed graph.
+        Applies the do operator to the graph and returns a new DAG with the
+        transformed graph.
 
-        The do-operator, do(X = x) has the effect of removing all edges from the parents of X and setting X to the
-        given value x.
+        The do-operator, do(X = x) has the effect of removing all edges from
+        the parents of X and setting X to the given value x.
 
         Parameters
         ----------
-        node : string
-            The name of the node to apply the do-operator to.
+        nodes : list, array-like
+            The names of the nodes to apply the do-operator for.
+
+        inplace: boolean (default: False)
+            If inplace=True, makes the changes to the current object,
+            otherwise returns a new instance.
 
         Returns
         -------
-        DAG: A new instance of DAG modified by the do-operator
+        pgmpy.base.DAG: A new instance of DAG modified by the do-operator
 
         Examples
         --------
@@ -778,12 +783,23 @@ class DAG(nx.DiGraph):
         ----------
         Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
         """
-        assert node in self.nodes()
-        dag_do_x = self.copy()
-        parents = list(dag_do_x.predecessors(node))
-        for parent in parents:
-            dag_do_x.remove_edge(parent, node)
-        return dag_do_x
+        dag = self if inplace else self.copy()
+
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+            )
+
+        for node in nodes:
+            parents = list(dag.predecessors(node))
+            for parent in parents:
+                dag.remove_edge(parent, node)
+        return dag
 
     def get_ancestral_graph(self, nodes):
         """
