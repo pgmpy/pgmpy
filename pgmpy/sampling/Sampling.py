@@ -8,7 +8,7 @@ from tqdm import tqdm
 from pgmpy.factors import factor_product
 from pgmpy.inference import BayesianModelInference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
-from pgmpy.utils.mathext import sample_discrete
+from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
 
@@ -89,12 +89,14 @@ class BayesianModelSampling(BayesianModelInference):
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
             if evidence:
-                cached_values = self.pre_compute_reduce(variable=node)
+                cached_index, widx_2_wgt = self.pre_compute_reduce_maps(variable=node)
                 evidence = np.vstack([sampled[i] for i in evidence])
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence.T))
+                unique, inverse = np.unique(evidence.T, axis=0, return_inverse=True)
+                windex = np.array([cached_index[tuple(u)] for u in unique])[inverse]
+                sampled[node] = sample_discrete_maps(states, windex, widx_2_wgt, size)
             else:
                 weights = cpd.values
-            sampled[node] = sample_discrete(states, weights, size)
+                sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:

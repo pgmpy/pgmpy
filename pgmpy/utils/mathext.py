@@ -98,6 +98,43 @@ def sample_discrete(values, weights, size=1, seed=None):
         return samples
 
 
+def sample_discrete_maps(states, windex, widx_2_wgt, size=1, seed=None):
+    """
+    Generate a sample of given size, given a probability mass function.
+
+    Parameters
+    ----------
+    values: numpy.array: Array of all possible values that the random variable
+            can take.
+    weights: numpy.array or list of numpy.array: Array(s) representing the PMF of the random variable.
+    size: int: Size of the sample to be generated.
+    rng : numpy.random.RandomState | None : random number generator
+
+    Returns
+    -------
+    numpy.array: of values of the random variable sampled from the given PMF.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from pgmpy.utils.mathext import sample_discrete
+    >>> values = np.array(['v_0', 'v_1', 'v_2'])
+    >>> probabilities = np.array([0.2, 0.5, 0.3])
+    >>> rng = np.random.RandomState(0)
+    >>> sample_discrete(values, probabilities, 10, rng=rng).tolist()
+    ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    samples = np.zeros(size, dtype=int)
+    unique_widx, counts = np.unique(windex, return_counts=True)
+
+    for size, uwi in zip(counts, unique_widx):
+        samples[windex == uwi] = np.random.choice(states, size=size, p=widx_2_wgt[uwi])
+    return samples
+
+
 def powerset(l):
     """
     Generates all subsets of list `l` (as tuples).

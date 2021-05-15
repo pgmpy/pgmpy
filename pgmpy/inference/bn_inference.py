@@ -60,6 +60,43 @@ class BayesianModelInference(Inference):
 
         return cached_values
 
+    def pre_compute_reduce_maps(self, variable):
+        """
+        Get probability array-maps for a node as function of conditional dependencies
+
+        Internal function used for Bayesian networks, eg. in BayesianModelSampling
+        and BayesianModelProbability.
+
+        Parameters
+        ----------
+        variable: Bayesian Model Node
+            node of the Bayesian network
+
+        Returns
+        -------
+        dict: dictionary with probability array-index for node as function of conditional dependency values,
+            dictionary with mapping of probability array-index to probability array.
+        """
+        variable_cpd = self.model.get_cpds(variable)
+        variable_evid = variable_cpd.variables[:0:-1]
+
+        state_combinations = \
+            np.array([sc for sc in itertools.product(*[range(self.cardinality[var]) for var in variable_evid])])
+        weights_list = \
+            np.array([variable_cpd.reduce(list(zip(variable_evid, sc)), inplace=False).values
+                      for sc in state_combinations])
+
+        unique_weights, windices = np.unique(weights_list, axis=0, return_inverse=True)
+        n_unique = len(unique_weights)
+
+        # convert weights to index; make mapping of state to index
+        cached_index = {tuple(sc): w for sc, w in zip(state_combinations, windices)}
+        # make mapping of index to weights
+        widx_2_wgt = dict(zip(range(n_unique), unique_weights))
+
+        # return mappings of state to index, and index to weight
+        return cached_index, widx_2_wgt
+
 
 class BayesianModelProbability(BayesianModelInference):
     """
