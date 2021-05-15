@@ -317,6 +317,25 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
         self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
 
+    def test_get_random(self):
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.5)
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=range(2, 7))
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
     def test_remove_node(self):
         self.G1.remove_node("diff")
         self.assertEqual(sorted(self.G1.nodes()), sorted(["grade", "intel"]))

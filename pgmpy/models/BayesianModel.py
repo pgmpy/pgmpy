@@ -830,3 +830,80 @@ class BayesianModel(DAG):
         blanket_nodes = set(blanket_nodes)
         blanket_nodes.discard(node)
         return list(blanket_nodes)
+
+    @staticmethod
+    def get_random(n_nodes=5, edge_prob=0.5, n_states=None):
+        """
+        Returns a randomly generated bayesian network on `n_nodes` variables
+        with edge probabiliy of `edge_prob` between variables.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        n_states: int or list (array-like) (default: None)
+            The number of states of each variable. When None randomly
+            generates the number of states.
+
+        Returns
+        -------
+        pgmpy.base.DAG instance: The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> model = BayesianModel.get_random(n_nodes=5)
+        >>> model.nodes()
+        NodeView((0, 1, 3, 4, 2))
+        >>> model.edges()
+        OutEdgeView([(0, 1), (0, 3), (1, 3), (1, 4), (3, 4), (2, 3)])
+        >>> model.cpds
+        [<TabularCPD representing P(0:0) at 0x7f97e16eabe0>,
+         <TabularCPD representing P(1:1 | 0:0) at 0x7f97e16ea670>,
+         <TabularCPD representing P(3:3 | 0:0, 1:1, 2:2) at 0x7f97e16820d0>,
+         <TabularCPD representing P(4:4 | 1:1, 3:3) at 0x7f97e16eae80>,
+         <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
+        """
+        if n_states is None:
+            n_states = np.random.randint(low=1, high=5, size=n_nodes)
+        elif isinstance(n_states, int):
+            n_states = np.array([n_states] * n_nodes)
+        else:
+            n_states = np.array(n_states)
+
+        n_states_dict = {i: n_states[i] for i in range(n_nodes)}
+
+        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
+        bn_model = BayesianModel(dag.edges())
+        bn_model.add_nodes_from(dag.nodes())
+
+        cpds = []
+        for node in bn_model.nodes():
+            parents = list(bn_model.predecessors(node))
+            if len(parents) == 0:
+                values = np.random.rand(n_states_dict[node], 1)
+                values = values / np.sum(values, axis=0)
+                node_cpd = TabularCPD(
+                    variable=node, variable_card=n_states_dict[node], values=values
+                )
+            else:
+                parent_card = [n_states_dict[pa] for pa in parents]
+                values = np.random.rand(n_states_dict[node], np.product(parent_card))
+                values = values / np.sum(values, axis=0)
+                node_cpd = TabularCPD(
+                    variable=node,
+                    variable_card=n_states_dict[node],
+                    values=values,
+                    evidence=parents,
+                    evidence_card=parent_card,
+                )
+
+            cpds.append(node_cpd)
+
+        bn_model.add_cpds(*cpds)
+        return bn_model
