@@ -466,7 +466,13 @@ class BayesianModel(DAG):
         return mm.to_junction_tree()
 
     def fit(
-        self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs
+        self,
+        data,
+        estimator=None,
+        state_names=[],
+        complete_samples_only=True,
+        n_jobs=-1,
+        **kwargs,
     ):
         """
         Estimates the CPD for each variable based on a given data set.
@@ -495,6 +501,11 @@ class BayesianModel(DAG):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
 
+        n_jobs: int (default: -1)
+            Number of threads/processes to use for estimation. It improves speed only
+            for large networks (>100 nodes). For smaller networks might reduce
+            performance.
+
         Examples
         --------
         >>> import pandas as pd
@@ -522,7 +533,7 @@ class BayesianModel(DAG):
             state_names=state_names,
             complete_samples_only=complete_samples_only,
         )
-        cpds_list = _estimator.get_parameters(**kwargs)
+        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
         self.add_cpds(*cpds_list)
 
     def predict(self, data, stochastic=False, n_jobs=-1):

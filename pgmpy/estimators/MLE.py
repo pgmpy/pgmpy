@@ -3,6 +3,7 @@
 from itertools import chain
 
 import numpy as np
+from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
@@ -56,7 +57,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self):
+    def get_parameters(self, n_jobs=-1):
         """
         Method to estimate the model parameters (CPDs) using Maximum Likelihood Estimation.
 
@@ -64,6 +65,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         -------
         parameters: list
             List of TabularCPDs, one for each variable of the model
+
+        n_jobs: int
+            Number of processes to spawn
 
         Examples
         --------
@@ -81,11 +85,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
-        parameters = []
 
-        for node in sorted(self.model.nodes()):
-            cpd = self.estimate_cpd(node)
-            parameters.append(cpd)
+        parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
+            delayed(self.estimate_cpd)(node) for node in self.model.nodes()
+        )
 
         return parameters
 
