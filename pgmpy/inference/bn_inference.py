@@ -171,7 +171,7 @@ class BayesianModelProbability(BayesianModelInference):
             cached_index, widx_2_wgt = self.pre_compute_reduce_maps(variable=node)
             unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
             windex = np.array([cached_index[tuple(u)] for u in unique])
-            weights = vec_translate(windex, widx_2_wgt)[inverse]
+            weights = np.array([widx_2_wgt[wi] for wi in windex])[inverse]
         else:
             # there are NO conditional dependencies for this node
             # retrieve array: p(x[n]).  We do this for each x in data.
