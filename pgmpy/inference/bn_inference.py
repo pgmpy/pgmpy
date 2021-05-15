@@ -164,8 +164,14 @@ class BayesianModelProbability(BayesianModelInference):
             # there are conditional dependencies E for data[n] for this node
             # Here we retrieve the array: p(x[n]|E). We do this for each x in data.
             # We pick the specific node value from the arrays below.
-            cached_values = self.pre_compute_reduce(variable=node)
-            weights = np.array([cached_values[tuple(en)] for en in evidence_no])
+
+            #cached_values = self.pre_compute_reduce(variable=node)
+            #weights = np.array([cached_values[tuple(en)] for en in evidence_no])
+
+            cached_index, widx_2_wgt = self.pre_compute_reduce_maps(variable=node)
+            unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
+            windex = np.array([cached_index[tuple(u)] for u in unique])
+            weights = vec_translate(windex, widx_2_wgt)[inverse]
         else:
             # there are NO conditional dependencies for this node
             # retrieve array: p(x[n]).  We do this for each x in data.
