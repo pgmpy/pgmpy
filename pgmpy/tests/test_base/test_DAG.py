@@ -2,9 +2,11 @@
 
 import unittest
 
+import networkx as nx
+import numpy as np
+
 from pgmpy.base import DAG, PDAG
 import pgmpy.tests.help_functions as hf
-import networkx as nx
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -227,6 +229,14 @@ class TestDAGCreation(unittest.TestCase):
                 edge_params={("A", "C"): {"label": 2}},
                 node_params={"A": {"shape": "rectangle"}},
             )
+
+    def test_random_dag(self):
+        for i in range(100):
+            n_nodes = np.random.randint(low=2, high=100)
+            edge_prob = np.random.uniform()
+            dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
+            self.assertEqual(len(dag.nodes()), n_nodes)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
 
     def tearDown(self):
         del self.graph

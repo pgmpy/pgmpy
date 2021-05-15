@@ -4,6 +4,7 @@ import itertools
 from warnings import warn
 
 import networkx as nx
+import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.independencies import Independencies
@@ -947,6 +948,49 @@ class DAG(nx.DiGraph):
             daft_pgm.add_edge(u, v, **extra_params)
 
         return daft_pgm
+
+    @staticmethod
+    def get_random(n_nodes=5, edge_prob=0.5):
+        """
+        Returns a randomly generated DAG with `n_nodes` number of nodes with
+        edge probability being `edge_prob`.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        Returns
+        -------
+        pgmpy.base.DAG instance: The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3)
+        >>> random_dag.nodes()
+        NodeView((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+        >>> random_dag.edges()
+        OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
+        """
+        # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
+        adj_mat = np.random.choice(
+            [0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob]
+        )
+
+        # Step 2: Use the upper triangular part of the matrix as adjacency.
+        nodes = list(range(n_nodes))
+        edges = nx.convert_matrix.from_numpy_matrix(
+            np.triu(adj_mat, k=1), create_using=nx.DiGraph
+        ).edges()
+
+        dag = DAG(edges)
+        dag.add_nodes_from(nodes)
+        return dag
 
 
 class PDAG(nx.DiGraph):
