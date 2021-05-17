@@ -532,7 +532,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         var_index_to_keep = sorted(
             set(range(len(phi.variables))) - set(var_index_to_del)
         )
-        # set difference is not gaurenteed to maintain ordering
+        # set difference is not guaranteed to maintain ordering
         phi.variables = [phi.variables[index] for index in var_index_to_keep]
         phi.cardinality = phi.cardinality[var_index_to_keep]
         phi.del_state_names([var for var, _ in values])
