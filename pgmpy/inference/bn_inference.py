@@ -178,7 +178,9 @@ class BayesianModelProbability(BayesianModelInference):
                 variable=node
             )
             unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
-            weights = np.array([index_to_weight[state_to_index[tuple(u)]] for u in unique])[inverse]
+            weights = np.array(
+                [index_to_weight[state_to_index[tuple(u)]] for u in unique]
+            )[inverse]
         else:
             # there are NO conditional dependencies for this node
             # retrieve array: p(x[n]).  We do this for each x in data.
