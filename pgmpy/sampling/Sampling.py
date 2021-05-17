@@ -157,11 +157,6 @@ class BayesianModelSampling(BayesianModelInference):
         0         0          0          1
         1         0          0          1
         """
-        # Covert evidence state names to number
-        # evidence = [
-        #     (var, self.model.get_cpds(var).get_state_no(var, state))
-        #     for var, state in evidence
-        # ]
 
         if seed is not None:
             np.random.seed(seed)
