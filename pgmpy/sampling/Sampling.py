@@ -264,7 +264,7 @@ class BayesianModelSampling(BayesianModelInference):
         # Prepare the return dataframe
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
         sampled["_weight"] = np.ones(size)
-        evidence_dict = {var: st for var, st in evidence}
+        evidence_dict = dict(evidence)
 
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
@@ -282,21 +282,42 @@ class BayesianModelSampling(BayesianModelInference):
 
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
-                cached_values = self.pre_compute_reduce(node)
-                weights = list(
-                    map(lambda t: cached_values[tuple(t)], evidence_values.T)
+
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node
                 )
+                unique, inverse = np.unique(
+                    evidence_values.T, axis=0, return_inverse=True
+                )
+                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                    inverse
+                ]
+
                 if node in evidence_dict:
-                    sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled.loc[i, "_weight"] *= weights[i][evidence_dict[node]]
+                    evidence_value = evidence_dict[node]
+                    sampled[node] = evidence_value
+                    sampled.loc[:, "_weight"] *= np.array(
+                        list(
+                            map(
+                                lambda i: index_to_weight[weight_index[i]][
+                                    evidence_value
+                                ],
+                                range(size),
+                            )
+                        )
+                    )
                 else:
-                    sampled[node] = sample_discrete(states, weights, size)
+                    sampled[node] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled.loc[i, "_weight"] *= cpd.values[evidence_dict[node]]
+                    sampled.loc[:, "_weight"] *= np.array(
+                        list(
+                            map(lambda _: cpd.values[evidence_dict[node]], range(size))
+                        )
+                    )
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
