@@ -89,11 +89,20 @@ class BayesianModelSampling(BayesianModelInference):
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
             if evidence:
-                cached_index, widx_2_wgt = self.pre_compute_reduce_maps(variable=node)
-                evidence = np.vstack([sampled[i] for i in evidence])
-                unique, inverse = np.unique(evidence.T, axis=0, return_inverse=True)
-                windex = np.array([cached_index[tuple(u)] for u in unique])[inverse]
-                sampled[node] = sample_discrete_maps(states, windex, widx_2_wgt, size)
+                evidence_values = np.vstack([sampled[i] for i in evidence])
+
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node
+                )
+                unique, inverse = np.unique(
+                    evidence_values.T, axis=0, return_inverse=True
+                )
+                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                    inverse
+                ]
+                sampled[node] = sample_discrete_maps(
+                    states, weight_index, index_to_weight, size
+                )
             else:
                 weights = cpd.values
                 sampled[node] = sample_discrete(states, weights, size)
@@ -182,8 +191,8 @@ class BayesianModelSampling(BayesianModelInference):
                 size=_size, include_latents=True, show_progress=False
             )
 
-            for evid in evidence:
-                _sampled = _sampled[_sampled[evid[0]] == evid[1]]
+            for var, state in evidence:
+                _sampled = _sampled[_sampled[var] == state]
 
             prob = max(len(_sampled) / _size, 0.01)
             sampled = sampled.append(_sampled).iloc[:size, :]
@@ -449,6 +458,9 @@ class GibbsSampling(MarkovChain):
 
         size: int
             Number of samples to be generated.
+
+        seed: int (default: None)
+            If a value is provided, sets the seed for numpy.random.
 
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
