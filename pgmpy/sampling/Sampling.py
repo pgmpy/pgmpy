@@ -190,7 +190,9 @@ class BayesianModelSampling(BayesianModelInference):
             i += _sampled.shape[0]
 
             if show_progress and SHOW_PROGRESS:
-                pbar.update(len(_sampled))
+                # Update at maximum to `size`
+                comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
+                pbar.update(comp)
 
         if show_progress and SHOW_PROGRESS:
             pbar.close()
