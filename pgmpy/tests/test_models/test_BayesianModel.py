@@ -1172,6 +1172,50 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             ValueError, self.model_connected.predict_probability, predict_data
         )
 
+    def test_do(self):
+        # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
+        model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
+        cpd_s = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"S": ["m", "f"]},
+        )
+        cpd_t = TabularCPD(
+            variable="T",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["S"],
+            evidence_card=[2],
+            state_names={"S": ["m", "f"], "T": [0, 1]},
+        )
+        cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["S", "T"],
+            evidence_card=[2, 2],
+            state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
+        )
+        model.add_cpds(cpd_s, cpd_t, cpd_c)
+
+        model_do_inplace = model.do(["T"], inplace=True)
+        model_do_new = model.do(["T"], inplace=False)
+
+        for m in [model_do_inplace, model_do_new]:
+            self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
+            self.assertEqual(len(m.cpds), 3)
+            np_test.assert_array_equal(
+                m.get_cpds(node="S").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="T").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="C").values,
+                np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
+            )
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected

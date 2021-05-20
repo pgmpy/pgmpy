@@ -910,3 +910,46 @@ class BayesianModel(DAG):
 
         bn_model.add_cpds(*cpds)
         return bn_model
+
+    def do(self, nodes, inplace=False):
+        """
+        Applies the do operation. The do operation removes all incoming edges
+        to variables in `nodes` and marginalizes their CPDs to only contain the
+        variable itself.
+
+        Parameters
+        ----------
+        nodes : list, array-like
+            The names of the nodes to apply the do-operator for.
+
+        inplace: boolean (default: False)
+            If inplace=True, makes the changes to the current object,
+            otherwise returns a new instance.
+
+        Returns
+        -------
+        pgmpy.models.BayesianModel: Instance of BayesianModel modified by the
+            do operation
+
+        Examples
+        --------
+
+        """
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+            )
+
+        model = self if inplace else self.copy()
+        adj_model = DAG.do(model, nodes, inplace=inplace)
+
+        if adj_model.cpds:
+            for node in nodes:
+                cpd = adj_model.get_cpds(node=node)
+                cpd.marginalize(cpd.variables[1:], inplace=True)
+        return adj_model

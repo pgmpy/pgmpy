@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 import numpy as np
 import networkx as nx
 
@@ -52,9 +54,11 @@ class CausalInference(object):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianModels at this time."
             )
-        self.dag = model
+        self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        self.observed_variables = frozenset(self.dag.nodes()).difference(model.latents)
+        self.observed_variables = frozenset(self.model.nodes()).difference(
+            model.latents
+        )
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
@@ -91,8 +95,8 @@ class CausalInference(object):
         Z_ = list(Z)
         observed = [X] + Z_
         parents_d_sep = []
-        for p in self.dag.predecessors(X):
-            parents_d_sep.append(not self.dag.is_dconnected(p, Y, observed=observed))
+        for p in self.model.predecessors(X):
+            parents_d_sep.append(not self.model.is_dconnected(p, Y, observed=observed))
         return all(parents_d_sep)
 
     def get_all_backdoor_adjustment_sets(self, X, Y):
@@ -147,7 +151,10 @@ class CausalInference(object):
             return frozenset()
 
         possible_adjustment_variables = (
-            set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
+            set(self.observed_variables)
+            - {X}
+            - {Y}
+            - set(nx.descendants(self.model, X))
         )
 
         valid_adjustment_sets = []
@@ -185,7 +192,7 @@ class CausalInference(object):
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
-        directed_paths = list(nx.all_simple_paths(self.dag, X, Y))
+        directed_paths = list(nx.all_simple_paths(self.model, X, Y))
 
         if directed_paths == []:
             return False
@@ -252,11 +259,11 @@ class CausalInference(object):
         Returns a string representing the factorized distribution implied by the CGM.
         """
         products = []
-        for node in nx.topological_sort(self.dag):
+        for node in nx.topological_sort(self.model):
             if node in self.set_nodes:
                 continue
 
-            parents = list(self.dag.predecessors(node))
+            parents = list(self.model.predecessors(node))
             if not parents:
                 p = f"P({node})"
             else:
@@ -361,10 +368,96 @@ class CausalInference(object):
                 adjustment_sets = frozenset({self.simple_decision(adjustment_sets)})
 
         if estimator_type == "linear":
-            self.estimator = LinearEstimator(self.dag)
+            self.estimator = LinearEstimator(self.model)
 
         ate = [
             self.estimator.fit(X=X, Y=Y, Z=s, data=data, **kwargs)._get_ate()
             for s in adjustment_sets
         ]
         return np.mean(ate)
+
+    def query(self, variables, do=None, evidence=None, inference_algo="ve", **kwargs):
+        """
+        Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
+        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables in the query i.e. `X` in :math:`P(X | do(Y), Z)`.
+
+        do: dict (default: None)
+            Dictionary of the form {variable_name: variable_state} representing
+            the variables on which to apply the do operation i.e. `Y` in
+            :math:`P(X | do(Y), Z)`.
+
+        evidence: dict (default: None)
+            Dictionary of the form {variable_name: variable_state} repesenting
+            the conditional variables in the query i.e. `Z` in :math:`P(X |
+            do(Y), Z)`.
+
+        inference_algo: str or pgmpy.inference.Inference instance
+            The inference algorithm to use to compute the probability values.
+            String options are: 1) ve: Variable Elimination 2) bp: Belief
+            Propagation.
+
+        kwargs: Any
+            Additional paramters which needs to be passed to inference
+            algorithms.  Please refer to the pgmpy.inference.Inference for
+            details.
+
+        Returns
+        -------
+        pgmpy.factor.DiscreteFactor: A factor object representing the joint distribution
+            over the variables in `variables`.
+
+        Examples
+        --------
+        """
+        # Step 1: Check if all the arguments are valid and get them to uniform types.
+        if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):
+            raise ValueError(
+                f"variables much be a list (array-like). Got type: {type(variables)}."
+            )
+        elif not all([node in self.model.nodes() for node in variables]):
+            raise ValueError(
+                f"Some of the variables in `variables` are not in the model."
+            )
+        else:
+            variables = list(variables)
+
+        if do is None:
+            do = {}
+        elif not isinstance(do, dict):
+            raise ValueError(
+                "`do` must be a dict of the form: {variable_name: variable_state}"
+            )
+        if evidence is None:
+            evidence = {}
+        elif not isinstance(evidence, dict):
+            raise ValueError(
+                "`evidence` must be a dict of the form: {variable_name: variable_state}"
+            )
+
+        from pgmpy.inference import Inference
+
+        if inference_algo == "ve":
+            from pgmpy.inference import VariableElimination
+
+            inference_algo = VariableElimination
+        elif inference_algo == "bp":
+            from pgmpy.inference import BeliefPropagation
+
+            inference_algo = BeliefPropagation
+        elif not isinstance(inference_algo, Inference):
+            raise ValueError(
+                f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
+            )
+
+        # Step 2: Apply the do operation on the model.
+        do_vars = [var for var, state in do.items()]
+        model_do = self.model.do(nodes=do_vars, inplace=False)
+
+        # Step 3: Run the inference algorithm to compute the final distribution.
+        infer = inference_algo(model_do)
+        return infer.query(variables=variables, evidence={**evidence, **do}, **kwargs)
