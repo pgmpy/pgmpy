@@ -832,7 +832,7 @@ class BayesianModel(DAG):
         return list(blanket_nodes)
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, n_states=None):
+    def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
         """
         Returns a randomly generated bayesian network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
@@ -849,6 +849,9 @@ class BayesianModel(DAG):
         n_states: int or list (array-like) (default: None)
             The number of states of each variable. When None randomly
             generates the number of states.
+
+        latents: bool (default: False)
+            If True, also creates latent variables.
 
         Returns
         -------
@@ -878,8 +881,8 @@ class BayesianModel(DAG):
 
         n_states_dict = {i: n_states[i] for i in range(n_nodes)}
 
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
-        bn_model = BayesianModel(dag.edges())
+        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, latents=latents)
+        bn_model = BayesianModel(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
 
         cpds = []

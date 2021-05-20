@@ -237,6 +237,9 @@ class TestDAGCreation(unittest.TestCase):
             dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
             self.assertEqual(len(dag.nodes()), n_nodes)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            self.assertTrue(len(dag.latents) == 0)
+
+        dag_latents = DAG.get_random(n_nodes=n_nodes, edge_prob=0.5, latents=True)
 
     def tearDown(self):
         del self.graph

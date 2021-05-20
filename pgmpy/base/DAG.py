@@ -950,7 +950,7 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5):
+    def get_random(n_nodes=5, edge_prob=0.5, latents=False):
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -963,6 +963,9 @@ class DAG(nx.DiGraph):
         edge_prob: float
             The probability of edge between any two nodes in the topologically
             sorted DAG.
+
+        latents: bool (default: False)
+            If True, includes latent variables in the generated DAG.
 
         Returns
         -------
@@ -990,6 +993,12 @@ class DAG(nx.DiGraph):
 
         dag = DAG(edges)
         dag.add_nodes_from(nodes)
+        if latents:
+            dag.latents = set(
+                np.random.choice(
+                    dag.nodes(), np.random.randint(low=0, high=len(dag.nodes()))
+                )
+            )
         return dag
 
 
