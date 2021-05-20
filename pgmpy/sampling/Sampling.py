@@ -8,7 +8,7 @@ from tqdm import tqdm
 from pgmpy.factors import factor_product
 from pgmpy.inference import BayesianModelInference
 from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
-from pgmpy.utils.mathext import sample_discrete
+from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
 
@@ -89,12 +89,23 @@ class BayesianModelSampling(BayesianModelInference):
             states = range(self.cardinality[node])
             evidence = cpd.variables[:0:-1]
             if evidence:
-                cached_values = self.pre_compute_reduce(variable=node)
-                evidence = np.vstack([sampled[i] for i in evidence])
-                weights = list(map(lambda t: cached_values[tuple(t)], evidence.T))
+                evidence_values = np.vstack([sampled[i] for i in evidence])
+
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node
+                )
+                unique, inverse = np.unique(
+                    evidence_values.T, axis=0, return_inverse=True
+                )
+                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                    inverse
+                ]
+                sampled[node] = sample_discrete_maps(
+                    states, weight_index, index_to_weight, size
+                )
             else:
                 weights = cpd.values
-            sampled[node] = sample_discrete(states, weights, size)
+                sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
@@ -155,11 +166,6 @@ class BayesianModelSampling(BayesianModelInference):
         0         0          0          1
         1         0          0          1
         """
-        # Covert evidence state names to number
-        # evidence = [
-        #     (var, self.model.get_cpds(var).get_state_no(var, state))
-        #     for var, state in evidence
-        # ]
 
         if seed is not None:
             np.random.seed(seed)
@@ -185,15 +191,17 @@ class BayesianModelSampling(BayesianModelInference):
                 size=_size, include_latents=True, show_progress=False
             )
 
-            for evid in evidence:
-                _sampled = _sampled[_sampled[evid[0]] == evid[1]]
+            for var, state in evidence:
+                _sampled = _sampled[_sampled[var] == state]
 
             prob = max(len(_sampled) / _size, 0.01)
             sampled = sampled.append(_sampled).iloc[:size, :]
             i += _sampled.shape[0]
 
             if show_progress and SHOW_PROGRESS:
-                pbar.update(len(_sampled))
+                # Update at maximum to `size`
+                comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
+                pbar.update(comp)
 
         if show_progress and SHOW_PROGRESS:
             pbar.close()
@@ -265,7 +273,7 @@ class BayesianModelSampling(BayesianModelInference):
         # Prepare the return dataframe
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
         sampled["_weight"] = np.ones(size)
-        evidence_dict = {var: st for var, st in evidence}
+        evidence_dict = dict(evidence)
 
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
@@ -283,21 +291,42 @@ class BayesianModelSampling(BayesianModelInference):
 
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
-                cached_values = self.pre_compute_reduce(node)
-                weights = list(
-                    map(lambda t: cached_values[tuple(t)], evidence_values.T)
+
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node
                 )
+                unique, inverse = np.unique(
+                    evidence_values.T, axis=0, return_inverse=True
+                )
+                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                    inverse
+                ]
+
                 if node in evidence_dict:
-                    sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled.loc[i, "_weight"] *= weights[i][evidence_dict[node]]
+                    evidence_value = evidence_dict[node]
+                    sampled[node] = evidence_value
+                    sampled.loc[:, "_weight"] *= np.array(
+                        list(
+                            map(
+                                lambda i: index_to_weight[weight_index[i]][
+                                    evidence_value
+                                ],
+                                range(size),
+                            )
+                        )
+                    )
                 else:
-                    sampled[node] = sample_discrete(states, weights, size)
+                    sampled[node] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
-                    for i in range(size):
-                        sampled.loc[i, "_weight"] *= cpd.values[evidence_dict[node]]
+                    sampled.loc[:, "_weight"] *= np.array(
+                        list(
+                            map(lambda _: cpd.values[evidence_dict[node]], range(size))
+                        )
+                    )
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
 
@@ -429,6 +458,9 @@ class GibbsSampling(MarkovChain):
 
         size: int
             Number of samples to be generated.
+
+        seed: int (default: None)
+            If a value is provided, sets the seed for numpy.random.
 
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.

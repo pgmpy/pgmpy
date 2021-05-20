@@ -60,6 +60,52 @@ class BayesianModelInference(Inference):
 
         return cached_values
 
+    def pre_compute_reduce_maps(self, variable):
+        """
+        Get probability array-maps for a node as function of conditional dependencies
+
+        Internal function used for Bayesian networks, eg. in BayesianModelSampling
+        and BayesianModelProbability.
+
+        Parameters
+        ----------
+        variable: Bayesian Model Node
+            node of the Bayesian network
+
+        Returns
+        -------
+        dict: dictionary with probability array-index for node as function of conditional dependency values,
+            dictionary with mapping of probability array-index to probability array.
+        """
+        variable_cpd = self.model.get_cpds(variable)
+        variable_evid = variable_cpd.variables[:0:-1]
+
+        state_combinations = [
+            tuple(sc)
+            for sc in itertools.product(
+                *[range(self.cardinality[var]) for var in variable_evid]
+            )
+        ]
+        weights_list = np.array(
+            [
+                variable_cpd.reduce(list(zip(variable_evid, sc)), inplace=False).values
+                for sc in state_combinations
+            ]
+        )
+
+        unique_weights, weights_indices = np.unique(
+            weights_list, axis=0, return_inverse=True
+        )
+
+        # convert weights to index; make mapping of state to index
+        state_to_index = dict(zip(state_combinations, weights_indices))
+
+        # make mapping of index to weights
+        index_to_weight = dict(enumerate(unique_weights))
+
+        # return mappings of state to index, and index to weight
+        return state_to_index, index_to_weight
+
 
 class BayesianModelProbability(BayesianModelInference):
     """
@@ -127,8 +173,14 @@ class BayesianModelProbability(BayesianModelInference):
             # there are conditional dependencies E for data[n] for this node
             # Here we retrieve the array: p(x[n]|E). We do this for each x in data.
             # We pick the specific node value from the arrays below.
-            cached_values = self.pre_compute_reduce(variable=node)
-            weights = np.array([cached_values[tuple(en)] for en in evidence_no])
+
+            state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                variable=node
+            )
+            unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
+            weights = np.array(
+                [index_to_weight[state_to_index[tuple(u)]] for u in unique]
+            )[inverse]
         else:
             # there are NO conditional dependencies for this node
             # retrieve array: p(x[n]).  We do this for each x in data.

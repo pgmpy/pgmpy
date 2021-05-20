@@ -443,5 +443,5 @@ def _return_samples(samples, state_names_map=None):
     if state_names_map is not None:
         for var in df.columns:
             if var != "_weight":
-                df[var] = df[var].apply(lambda t: state_names_map[var][t])
+                df[var] = df[var].map(state_names_map[var])
     return df
