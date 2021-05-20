@@ -1,9 +1,11 @@
 import unittest
 
 import numpy as np
+import numpy.testing as np_test
 import pandas as pd
 
 from pgmpy.models.BayesianModel import BayesianModel
+from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
 
 
@@ -15,9 +17,9 @@ class TestCausalGraphMethods(unittest.TestCase):
         self.inference = CausalInference(self.game)
 
     def test_is_d_separated(self):
-        self.assertTrue(self.inference.dag.is_dconnected("X", "Y", observed=None))
+        self.assertTrue(self.inference.model.is_dconnected("X", "Y", observed=None))
         self.assertFalse(
-            self.inference.dag.is_dconnected("B", "Y", observed=("C", "X"))
+            self.inference.model.is_dconnected("B", "Y", observed=("C", "X"))
         )
 
     def test_backdoor_validation(self):
@@ -109,6 +111,79 @@ class TestBackdoorPaths(unittest.TestCase):
                     frozenset({"B", "D"}),
                 }
             ),
+        )
+
+
+class TestDoQuery(unittest.TestCase):
+    def setUp(self):
+        self.simpson_model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
+        cpd_s = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"S": ["m", "f"]},
+        )
+        cpd_t = TabularCPD(
+            variable="T",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["S"],
+            evidence_card=[2],
+            state_names={"S": ["m", "f"], "T": [0, 1]},
+        )
+        cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["S", "T"],
+            evidence_card=[2, 2],
+            state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
+        )
+
+        self.simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
+        self.infer = CausalInference(self.simpson_model)
+
+    def test_query(self):
+        for algo in ["ve", "bp"]:
+            query_nodo1 = self.infer.query(
+                variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.5, 0.5]))
+
+            query_nodo2 = self.infer.query(
+                variables=["C"], do=None, evidence={"T": 0}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_nodo2.values, np.array([0.6, 0.4]))
+
+            query1 = self.infer.query(variables=["C"], do={"T": 1}, inference_algo=algo)
+            np_test.assert_array_almost_equal(query1.values, np.array([0.6, 0.4]))
+
+            query2 = self.infer.query(variables=["C"], do={"T": 0}, inference_algo=algo)
+            np_test.assert_array_almost_equal(query2.values, np.array([0.5, 0.5]))
+
+            query_evi1 = self.infer.query(
+                variables=["C"], do={"T": 1}, evidence={"S": "m"}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_evi1.values, np.array([0.4, 0.6]))
+
+            query_evi2 = self.infer.query(
+                variables=["C"], do={"T": 0}, evidence={"S": "m"}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_evi2.values, np.array([0.3, 0.7]))
+
+    def test_query_error(self):
+        self.assertRaises(ValueError, self.infer.query, variables="C", do={"T": 1})
+        self.assertRaises(ValueError, self.infer.query, variables=["E"], do={"T": 1})
+        self.assertRaises(ValueError, self.infer.query, variables=["C"], do="T")
+        self.assertRaises(
+            ValueError, self.infer.query, variables=["C"], do={"T": 1}, evidence="S"
+        )
+        self.assertRaises(
+            ValueError,
+            self.infer.query,
+            variables=["C"],
+            do={"T": 1},
+            inference_algo="random",
         )
 
 
