@@ -195,6 +195,10 @@ class TreeSearch(StructureEstimator):
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":
             edge_weights_fn = mutual_info_score
+        elif edge_weights_fn == "adjusted_mutual_info":
+            edge_weights_fn = adjusted_mutual_info_score
+        elif edge_weights_fn == "normalized_mutual_info":
+            edge_weights_fn = normalized_mutual_info_score
         elif not callable(edge_weights_fn):
             raise ValueError(
                 f"edge_weights_fn should either be 'mutual_info', 'adjusted_mutual_info', "
