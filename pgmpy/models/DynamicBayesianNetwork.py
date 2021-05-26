@@ -564,13 +564,13 @@ class DynamicBayesianNetwork(DAG):
                             new_cpd = TabularCPD(
                                 temp_var,
                                 cpd.variable_card,
-                                np.reshape(initial_cpd.values, (-1, 2)),
+                                np.reshape(initial_cpd.values, (2, -1)),
                             )
                         else:
                             new_cpd = TabularCPD(
                                 temp_var,
                                 cpd.variable_card,
-                                np.reshape(cpd.values, (-1, 2)),
+                                np.reshape(cpd.values, (2, -1)),
                             )
                     self.add_cpds(new_cpd)
             self.check_model()

@@ -3,6 +3,8 @@ import unittest
 import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import DBNInference
+
 import numpy as np
 
 
@@ -495,3 +497,148 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
 
     def tearDown(self):
         del self.G
+
+
+class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
+    def setUp(self):
+        self.cancer_model = DynamicBayesianNetwork()
+        #########################    1    ######################
+        self.cpd_poll = TabularCPD(variable=('Pollution', 0), variable_card=2,
+                            values=[[0.9], [0.1]])
+        self.cpd_smoke = TabularCPD(variable=('Smoker', 0), variable_card=2,
+                            values=[[0.3], [0.7]])
+        self.cpd_cancer = TabularCPD(variable=('Cancer', 0), variable_card=2,
+                                values=[[0.03, 0.05, 0.001, 0.02],
+                                        [0.97, 0.95, 0.999, 0.98]],
+                                evidence=[('Smoker', 0), ('Pollution', 0)],
+                                evidence_card=[2, 2])
+        self.cpd_xray = TabularCPD(variable=('Xray', 0), variable_card=2,
+                            values=[[0.9, 0.2], [0.1, 0.8]],
+                            evidence=[('Cancer', 0)], evidence_card=[2])
+        self.cpd_dysp = TabularCPD(variable=('Dyspnoea', 0), variable_card=2,
+                            values=[[0.65, 0.3], [0.35, 0.7]],
+                            evidence=[('Cancer', 0)], evidence_card=[2])
+
+        #########################    2    ######################
+        self.cpd_poll2 = TabularCPD(variable=('Pollution', 1), variable_card=2,
+                            values=[[0.9, 0.1], [0.1, 0.9]],
+                            evidence=[('Pollution', 0)], evidence_card=[2])
+        self.cpd_smoke2 = TabularCPD(variable=('Smoker', 1), variable_card=2,
+                                values=[[0.7, 0.3], [0.3, 0.7]],
+                                evidence=[('Smoker', 0)], evidence_card=[2])
+        self.cpd_cancer2 = TabularCPD(variable=('Cancer', 1), variable_card=2,
+                                values=[[0.03, 0.05, 0.001, 0.02],
+                                        [0.97, 0.95, 0.999, 0.98]],
+                                evidence=[('Smoker', 1), ('Pollution', 1)],
+                                evidence_card=[2, 2])
+        self.cpd_xray2 = TabularCPD(variable=('Xray', 1), variable_card=2,
+                            values=[[0.9, 0.2], [0.1, 0.8]],
+                            evidence=[('Cancer', 1)], evidence_card=[2])
+        self.cpd_dysp2 = TabularCPD(variable=('Dyspnoea', 1), variable_card=2,
+                            values=[[0.65, 0.3], [0.35, 0.7]],
+                            evidence=[('Cancer', 1)], evidence_card=[2])
+
+        #########################    3    ######################
+        self.cpd_poll3 = TabularCPD(variable=('Pollution', 2), variable_card=2,
+                            values=[[0.9, 0.1], [0.1, 0.9]],
+                            evidence=[('Pollution', 1)], evidence_card=[2])
+        self.cpd_smoke3 = TabularCPD(variable=('Smoker', 2), variable_card=2,
+                                values=[[0.7, 0.3], [0.3, 0.7]],
+                                evidence=[('Smoker', 1)], evidence_card=[2])
+        self.cpd_cancer3 = TabularCPD(variable=('Cancer', 2), variable_card=2,
+                                values=[[0.03, 0.05, 0.001, 0.02],
+                                        [0.97, 0.95, 0.999, 0.98]],
+                                evidence=[('Smoker', 2), ('Pollution', 2)],
+                                evidence_card=[2, 2])
+        self.cpd_xray3 = TabularCPD(variable=('Xray', 2), variable_card=2,
+                            values=[[0.9, 0.2], [0.1, 0.8]],
+                            evidence=[('Cancer', 2)], evidence_card=[2])
+        self.cpd_dysp3 = TabularCPD(variable=('Dyspnoea', 2), variable_card=2,
+                            values=[[0.65, 0.3], [0.35, 0.7]],
+                            evidence=[('Cancer', 2)], evidence_card=[2])
+
+    def test_initialize_and_infer1(self):
+        self.cancer_model.add_edges_from([(('Pollution', 0), ('Cancer', 0)),
+                            (('Smoker', 0), ('Cancer', 0)),
+                            (('Cancer', 0), ('Xray', 0)),
+                            (('Cancer', 0), ('Dyspnoea', 0))])
+
+        self.cancer_model.add_cpds(self.cpd_poll, self.cpd_smoke, self.cpd_cancer, self.cpd_xray, self.cpd_dysp)
+        self.cancer_model.initialize_initial_state()
+        
+        self.assertEqual(len(self.cancer_model.cpds), 10)
+
+        self.cancer_inf = DBNInference(self.cancer_model)
+        self.cancer_query_result = self.cancer_inf.query([('Xray', 0)], {('Smoker', 0): 0})[
+            ('Xray', 0)].values
+
+        self.assertAlmostEqual(self.cancer_query_result[0], 0.2224, 4)
+        self.assertAlmostEqual(self.cancer_query_result[1], 0.7776, 4)
+
+    def test_initialize_and_infer2(self):
+        self.cancer_model.add_edges_from([(('Pollution', 0), ('Cancer', 0)),
+                                          (('Smoker', 0), ('Cancer', 0)),
+                                          (('Cancer', 0), ('Xray', 0)),
+                                          (('Cancer', 0), ('Dyspnoea', 0)),
+                                          (('Pollution', 0), ('Pollution', 1)),
+                                          (('Smoker', 0), ('Smoker', 1)),
+                                          (('Pollution', 1), ('Cancer', 1)),
+                                          (('Smoker', 1), ('Cancer', 1)),
+                                          (('Cancer', 1), ('Xray', 1)),
+                                          (('Cancer', 1), ('Dyspnoea', 1))
+                                          ])
+
+        self.cancer_model.add_cpds(
+            self.cpd_poll, self.cpd_smoke, self.cpd_cancer, self.cpd_xray, self.cpd_dysp,
+            self.cpd_poll2, self.cpd_smoke2, self.cpd_cancer2, self.cpd_xray2, self.cpd_dysp2,
+        )
+        self.cancer_model.initialize_initial_state()
+
+        self.assertEqual(len(self.cancer_model.cpds), 10)
+
+        self.cancer_inf = DBNInference(self.cancer_model)
+        self.cancer_query_result = self.cancer_inf.query([('Xray', 1)], {('Smoker', 0): 0})[
+            ('Xray', 1)].values
+
+        self.assertAlmostEqual(self.cancer_query_result[0], 0.213307, 4)
+        self.assertAlmostEqual(self.cancer_query_result[1], 0.786693, 4)
+
+    #### Test is currently marked out until issue of multiple generations is resolved - 
+    #### either remove test or fix issue
+    # def test_initialize_and_infer3(self):
+    #     self.cancer_model.add_edges_from([(('Pollution', 0), ('Cancer', 0)),
+    #                                       (('Smoker', 0), ('Cancer', 0)),
+    #                                       (('Cancer', 0), ('Xray', 0)),
+    #                                       (('Cancer', 0), ('Dyspnoea', 0)),
+    #                                       (('Pollution', 0), ('Pollution', 1)),
+    #                                       (('Smoker', 0), ('Smoker', 1)),
+    #                                       (('Pollution', 1), ('Cancer', 1)),
+    #                                       (('Smoker', 1), ('Cancer', 1)),
+    #                                       (('Cancer', 1), ('Xray', 1)),
+    #                                       (('Cancer', 1), ('Dyspnoea', 1)),
+    #                                       (('Pollution', 1), ('Pollution', 2)),
+    #                                       (('Smoker', 1), ('Smoker', 2)),
+    #                                       (('Pollution', 2), ('Cancer', 2)),
+    #                                       (('Smoker', 2), ('Cancer', 2)),
+    #                                       (('Cancer', 2), ('Xray', 2)),
+    #                                       (('Cancer', 2), ('Dyspnoea', 2))
+    #                                       ])
+
+    #     self.cancer_model.add_cpds(
+    #         self.cpd_poll, self.cpd_smoke, self.cpd_cancer, self.cpd_xray, self.cpd_dysp,
+    #         self.cpd_poll2, self.cpd_smoke2, self.cpd_cancer2, self.cpd_xray2, self.cpd_dysp2,
+    #         self.cpd_poll3, self.cpd_smoke3, self.cpd_cancer3, self.cpd_xray3, self.cpd_dysp3
+    #     )
+    #     self.cancer_model.initialize_initial_state()
+
+    #     self.assertEqual(len(self.cancer_model.cpds), 10)
+
+    #     self.cancer_inf = DBNInference(self.cancer_model)
+    #     self.cancer_query_result = self.cancer_inf.query([('Xray', 2)], {('Smoker', 0): 0})[
+    #         ('Xray', 2)].values
+
+    #     self.assertAlmostEqual(self.cancer_query_result[0], 1, 4)
+    #     self.assertAlmostEqual(self.cancer_query_result[1], 0.0, 4)
+
+    def tearDown(self):
+        del self.cancer_model
