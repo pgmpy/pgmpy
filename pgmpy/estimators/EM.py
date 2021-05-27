@@ -112,7 +112,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         return parameters
 
-    def estimate_cpd(self, node, n_iter):
+    def estimate_cpd(self, node, n_iter=1):
         """
         Method to estimate the CPD for a given variable.
 
