@@ -131,7 +131,7 @@ class TestTreeSearch(unittest.TestCase):
             for n_jobs in [-1, 1]:
                 # learn graph structure
                 est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
-                dag = est.estimate(estimator_type="chow-liu")
+                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
 
                 # check number of nodes and edges are as expected
                 self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E"])
@@ -139,7 +139,7 @@ class TestTreeSearch(unittest.TestCase):
 
                 # learn tree structure using A as root node
                 est = TreeSearch(self.data13, root_node="A", n_jobs=n_jobs)
-                dag = est.estimate(estimator_type="chow-liu")
+                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
 
                 # check number of nodes and edges are as expected
                 self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "F"])
@@ -164,7 +164,9 @@ class TestTreeSearch(unittest.TestCase):
             for n_jobs in [-1, 1]:
                 # learn graph structure
                 est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
-                dag = est.estimate(estimator_type="tan", class_node="A")
+                dag = est.estimate(
+                    estimator_type="tan", class_node="A", edge_weights_fn=weight_fn
+                )
 
                 # check number of nodes and edges are as expected
                 self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "R"])
