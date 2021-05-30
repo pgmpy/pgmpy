@@ -12,6 +12,9 @@ from pgmpy.sampling import BayesianModelSampling
 
 class TestTreeSearch(unittest.TestCase):
     def setUp(self):
+        # set random seed
+        np.random.seed(0)
+
         # test data for chow-liu
         self.data12 = pd.DataFrame(
             np.random.randint(low=0, high=2, size=(100, 5)),
@@ -196,6 +199,38 @@ class TestTreeSearch(unittest.TestCase):
                 self.assertTrue(dag.has_edge("R", "C"))
                 self.assertTrue(dag.has_edge("R", "D"))
                 self.assertTrue(dag.has_edge("R", "E"))
+
+    def test_estimate_chow_liu_auto_root_node(self):
+        # learn tree structure using auto root node
+        est = TreeSearch(self.data12)
+
+        # root node selection
+        weights = est._get_weights(self.data12)
+        sum_weights = weights.sum(axis=0)
+        maxw_idx = np.argsort(sum_weights)[::-1]
+        root_node = self.data12.columns[maxw_idx[0]]
+
+        dag = est.estimate(estimator_type="chow-liu")
+        nodes = list(dag.nodes())
+        np.testing.assert_equal(nodes[0], root_node)
+        np.testing.assert_array_equal(nodes, ["D", "A", "C", "B", "E"])
+
+    def test_estimate_tan_auto_class_node(self):
+        # learn tree structure using auto root and class node
+        est = TreeSearch(self.data22)
+
+        # root and class node selection
+        weights = est._get_weights(self.data22)
+        sum_weights = weights.sum(axis=0)
+        maxw_idx = np.argsort(sum_weights)[::-1]
+        root_node = self.data22.columns[maxw_idx[0]]
+        class_node = self.data22.columns[maxw_idx[1]]
+
+        dag = est.estimate(estimator_type="tan")
+        nodes = list(dag.nodes())
+        np.testing.assert_equal(nodes[0], root_node)
+        np.testing.assert_equal(nodes[-1], class_node)
+        np.testing.assert_array_equal(nodes, ["C", "R", "A", "D", "E", "B"])
 
     def tearDown(self):
         del self.data12
