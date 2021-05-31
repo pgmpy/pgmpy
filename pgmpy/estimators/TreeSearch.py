@@ -125,7 +125,7 @@ class TreeSearch(StructureEstimator):
         # Step 1. Argument checks
         if estimator_type not in {"chow-liu", "tan"}:
             raise ValueError(
-                f"Invalid estimator_type. Expected either chow-liu or tan. Got: {self.return_type}"
+                f"Invalid estimator_type. Expected either chow-liu or tan. Got: {estimator_type}"
             )
 
         # Step 2. determine all edge weights, and find columns with maximum sums weights
