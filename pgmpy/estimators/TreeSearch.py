@@ -132,39 +132,43 @@ class TreeSearch(StructureEstimator):
         weights = TreeSearch._get_weights(
             self.data, edge_weights_fn, self.n_jobs, show_progress
         )
-        sum_weights = weights.sum(axis=0)
-        maxw_idx = np.argsort(sum_weights)[::-1]
-        root_node = (
-            self.data.columns[maxw_idx[0]] if self.root_node is None else self.root_node
-        )
+
+        # compute edge weights sum if one of the arguments is None
+        if self.root_node is None or (estimator_type == "tan" and class_node is None):
+            sum_weights = weights.sum(axis=0)
+            maxw_idx = np.argsort(sum_weights)[::-1]
+
+        if self.root_node is None:
+            self.root_node = self.data.columns[maxw_idx[0]]
 
         # Step 3: If estimator_type = "chow-liu", estimate the DAG and return.
         if estimator_type == "chow-liu":
             return TreeSearch._create_tree_and_dag(
-                weights, self.data.columns, root_node
+                weights, self.data.columns, self.root_node
             )
 
         # Step 4: If estimator_type = "tan":
         elif estimator_type == "tan":
 
             # Step 4.1: Checks for class_node and root_node != class_node
-            columns = self.data.columns.to_numpy()
-            class_node = columns[maxw_idx[1]] if class_node is None else class_node
-
-            if class_node not in self.data.columns:
+            if class_node is None:
+                class_node = self.data.columns[maxw_idx[1]]
+            elif class_node not in self.data.columns:
                 raise ValueError(f"Class node: {class_node} not found in data columns")
 
-            elif root_node == class_node:
+            if self.root_node == class_node:
                 raise ValueError(
-                    f"Root node: {root_node} and class node: {class_node} are identical"
+                    f"Root node: {self.root_node} and class node: {class_node} are identical"
                 )
 
             # Step 4.2: Construct chow-liu DAG on {data.columns - class_node}
-            class_node_idx = np.where(columns == class_node)[0][0]
+            class_node_idx = np.where(self.data.columns == class_node)[0][0]
             weights = np.delete(weights, class_node_idx, axis=0)
             weights = np.delete(weights, class_node_idx, axis=1)
-            reduced_columns = np.delete(columns, class_node_idx)
-            D = TreeSearch._create_tree_and_dag(weights, reduced_columns, root_node)
+            reduced_columns = np.delete(self.data.columns, class_node_idx)
+            D = TreeSearch._create_tree_and_dag(
+                weights, reduced_columns, self.root_node
+            )
 
             # Step 4.3: Add edges from class_node to all other nodes.
             D.add_edges_from([(class_node, node) for node in reduced_columns])
