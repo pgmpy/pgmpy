@@ -454,6 +454,11 @@ class CausalInference(object):
                 f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
+        if len(self.model.latents) != 0:
+            raise ValueError(
+                "Causal inference with models containing latent variables isn't supported yet."
+            )
+
         # Step 2: Apply the do operation on the model.
         do_vars = [var for var, state in do.items()]
         model_do = self.model.do(nodes=do_vars, inplace=False)
