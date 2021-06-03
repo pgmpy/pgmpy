@@ -171,6 +171,39 @@ class TestDoQuery(unittest.TestCase):
             )
             np_test.assert_array_almost_equal(query_evi2.values, np.array([0.3, 0.7]))
 
+    def test_adjustment_query(self):
+        adj_model = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
+        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
+
+        cpd_x = TabularCPD(
+            variable="X",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["Z"],
+            evidence_card=[2],
+        )
+
+        cpd_w = TabularCPD(
+            variable="W",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["Z"],
+            evidence_card=[2],
+        )
+
+        cpd_y = TabularCPD(
+            variable="Y",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["X", "W"],
+            evidence_card=[2, 2],
+        )
+        adj_model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+        infer_adj = CausalInference(adj_model)
+
+        infer_adj.query(variables=["Y"], do={"X": 1}, adjustment_set={"Z"})
+        infer_adj.query(variables=["Y"], do={"X": 1}, adjustment_set={"W"})
+
     def test_query_error(self):
         self.assertRaises(ValueError, self.infer.query, variables="C", do={"T": 1})
         self.assertRaises(ValueError, self.infer.query, variables=["E"], do={"T": 1})

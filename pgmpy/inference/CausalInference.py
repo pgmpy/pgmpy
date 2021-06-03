@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from itertools import chain
 
 import numpy as np
 import networkx as nx
@@ -376,7 +377,15 @@ class CausalInference(object):
         ]
         return np.mean(ate)
 
-    def query(self, variables, do=None, evidence=None, inference_algo="ve", **kwargs):
+    def query(
+        self,
+        variables,
+        do=None,
+        evidence=None,
+        adjustment_set=None,
+        inference_algo="ve",
+        **kwargs,
+    ):
         """
         Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
         is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
@@ -454,14 +463,27 @@ class CausalInference(object):
                 f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
-        if len(self.model.latents) != 0:
-            raise ValueError(
-                "Causal inference with models containing latent variables isn't supported yet."
-            )
+        # Step 2: Apply the do operation on the model. If adjustment set is
+        #         specified remove all incoming edges to them. If not specified,
+        #         do a normal do operation if all parents are observed.
+        if adjustment_set is not None:
+            model_do = self.model.copy()
+            for var in adjustment_set:
+                model_do.remove_edges_from(
+                    [(pa_var, var) for pa_var in self.model.predecessors(var)]
+                )
+                cpd = model_do.get_cpds(node=var)
+                cpd.marginalize(cpd.variables[1:], inplace=True)
 
-        # Step 2: Apply the do operation on the model.
-        do_vars = [var for var, state in do.items()]
-        model_do = self.model.do(nodes=do_vars, inplace=False)
+        else:
+            do_vars = [var for var, state in do.items()]
+            all_parents = set(chain(*[self.model.predecessors(var) for var in do_vars]))
+            if len(all_parents.intersection(self.model.latents)) == 0:
+                model_do = self.model.do(nodes=do_vars, inplace=False)
+            else:
+                raise ValueError(
+                    "Not all parents of do variables are observed. Please specify an adjustment set."
+                )
 
         # Step 3: Run the inference algorithm to compute the final distribution.
         infer = inference_algo(model_do)
