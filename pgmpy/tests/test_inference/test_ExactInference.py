@@ -466,6 +466,34 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.assertEqual(2, result_width)
 
+    def test_issue_1421(self):
+        model = BayesianModel([("X", "Y"), ("Z", "X"), ("W", "Y")])
+        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
+
+        cpd_x = TabularCPD(
+            variable="X",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["Z"],
+            evidence_card=[2],
+        )
+
+        cpd_w = TabularCPD(variable="W", variable_card=2, values=[[0.5], [0.5]])
+        cpd_y = TabularCPD(
+            variable="Y",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["X", "W"],
+            evidence_card=[2, 2],
+        )
+
+        model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+
+        infer = VariableElimination(model)
+        np_test.assert_array_almost_equal(
+            infer.query(["Y"], evidence={"X": 0}).values, [0.35, 0.65]
+        )
+
     def tearDown(self):
         del self.markov_inference
         del self.markov_model

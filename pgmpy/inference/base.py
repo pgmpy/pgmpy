@@ -150,7 +150,18 @@ class Inference(object):
         # Step 2: Reduce the model to ancestral graph of [`variables` + `evidence`]
         bn = bn.get_ancestral_graph(list(variables) + list(evidence.keys()))
 
-        # Step 3: Since all the CPDs are lost, add them back.
-        bn.add_cpds(*[self.model.get_cpds(var) for var in bn.nodes()])
+        # Step 3: Since all the CPDs are lost, add them back. Also marginalize them if some
+        #         of the variables in scope aren't in the network anymore.
+        cpds = []
+        for var in bn.nodes():
+            cpd = self.model.get_cpds(var)
+            if set(cpd.scope()) < set(bn.nodes()):
+                cpds.append(cpd)
+            else:
+                cpds.append(
+                    cpd.marginalize(set(cpd.scope()) - set(bn.nodes()), inplace=False)
+                )
+
+        bn.add_cpds(*cpds)
 
         return bn, evidence
