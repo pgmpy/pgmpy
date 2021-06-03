@@ -67,7 +67,7 @@ class BaseEstimator(object):
 
     @convert_args_tuple
     @lru_cache(maxsize=2048)
-    def state_counts(self, variable, parents=[], complete_samples_only=None):
+    def state_counts(self, variable, parents=[], complete_samples_only=None, weighted=False):
         """
         Return counts how often each state of 'variable' occurred in the data.
         If a list of parents is provided, counting is done conditionally
@@ -87,6 +87,10 @@ class BaseEstimator(object):
             that contain `np.NaN` somewhere are ignored. If `False` then
             every row where neither the variable nor its parents are `np.NaN` is used.
             Desired default behavior can be passed to the class constructor.
+
+        weighted: bool
+            If True, data must have a `_weight` column specifying the weight of the
+            datapoint (row). If False, each datapoint has a weight of `1`.
 
         Returns
         -------
@@ -129,9 +133,16 @@ class BaseEstimator(object):
             else self.data.dropna(subset=[variable] + parents)
         )
 
+        if weighted and ("_weight" not in self.data.columns):
+            raise ValueError("data must contain a `_weight` column if weighted=True")
+
         if not parents:
             # count how often each state of 'variable' occured
-            state_count_data = data.loc[:, variable].value_counts()
+            if weighted:
+                state_count_data = data.groupby([variable]).sum()['_weight']
+            else:
+                state_count_data = data.loc[:, variable].value_counts()
+
             state_counts = (
                 state_count_data.reindex(self.state_names[variable])
                 .fillna(0)
@@ -141,9 +152,14 @@ class BaseEstimator(object):
         else:
             parents_states = [self.state_names[parent] for parent in parents]
             # count how often each state of 'variable' occured, conditional on parents' states
-            state_count_data = (
-                data.groupby([variable] + parents).size().unstack(parents)
-            )
+            if weighted:
+                state_count_data = data.groupby([variable] + parents).sum()['_weight'].unstack(parents)
+
+            else:
+                state_count_data = (
+                    data.groupby([variable] + parents).size().unstack(parents)
+                )
+
             if not isinstance(state_count_data.columns, pd.MultiIndex):
                 state_count_data.columns = pd.MultiIndex.from_arrays(
                     [state_count_data.columns]
@@ -189,7 +205,7 @@ class ParameterEstimator(BaseEstimator):
             This sets the behavior of the `state_count`-method.
         """
 
-        if not set(model.nodes()) <= set(data.columns.values):
+        if not (set(model.nodes()) - model.latents) <= set(data.columns.values):
             raise ValueError(
                 "variable names of the model must be identical to column names in data"
             )
