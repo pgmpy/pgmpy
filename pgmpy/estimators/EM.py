@@ -128,7 +128,6 @@ class ExpectationMaximization(ParameterEstimator):
         if latent_card is None:
             latent_card = {var: 2 for var in self.model.latents}
 
-        import pdb; pdb.set_trace()
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
         n_states_dict.update(latent_card)
 
@@ -159,5 +158,8 @@ class ExpectationMaximization(ParameterEstimator):
 
         for i in range(100):
             import pdb; pdb.set_trace()
+            # Expectation Step: Computes the likelihood of each data point.
             weighted_data = self._compute_weights(latent_card)
+
+            # Maximization Step: Uses the weights of the dataset for estimation.
             self.model.add_cpds(*MaximumLikelihoodEstimator(self.model, weighted_data).get_parameters())
