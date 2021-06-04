@@ -67,7 +67,9 @@ class BaseEstimator(object):
 
     @convert_args_tuple
     @lru_cache(maxsize=2048)
-    def state_counts(self, variable, parents=[], complete_samples_only=None, weighted=False):
+    def state_counts(
+        self, variable, parents=[], complete_samples_only=None, weighted=False
+    ):
         """
         Return counts how often each state of 'variable' occurred in the data.
         If a list of parents is provided, counting is done conditionally
@@ -139,7 +141,7 @@ class BaseEstimator(object):
         if not parents:
             # count how often each state of 'variable' occured
             if weighted:
-                state_count_data = data.groupby([variable]).sum()['_weight']
+                state_count_data = data.groupby([variable]).sum()["_weight"]
             else:
                 state_count_data = data.loc[:, variable].value_counts()
 
@@ -153,7 +155,9 @@ class BaseEstimator(object):
             parents_states = [self.state_names[parent] for parent in parents]
             # count how often each state of 'variable' occured, conditional on parents' states
             if weighted:
-                state_count_data = data.groupby([variable] + parents).sum()['_weight'].unstack(parents)
+                state_count_data = (
+                    data.groupby([variable] + parents).sum()["_weight"].unstack(parents)
+                )
 
             else:
                 state_count_data = (

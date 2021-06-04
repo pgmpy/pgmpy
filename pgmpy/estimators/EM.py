@@ -76,7 +76,9 @@ class ExpectationMaximization(ParameterEstimator):
             if tuple(self.data.iloc[i]) not in cache.keys():
                 v = list(product(*[range(card) for card in latent_card.values()]))
                 latent_combinations = np.array(v, dtype=int)
-                df = self.data.iloc[[i] * latent_combinations.shape[0]].reset_index(drop=True)
+                df = self.data.iloc[[i] * latent_combinations.shape[0]].reset_index(
+                    drop=True
+                )
                 for index, latent_var in enumerate(latent_card.keys()):
                     df[latent_var] = latent_combinations[:, index]
 
@@ -85,9 +87,17 @@ class ExpectationMaximization(ParameterEstimator):
 
                 cache[tuple(self.data.iloc[i])] = df
 
-        return pd.concat([cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])])
+        return pd.concat(
+            [cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])]
+        )
 
-    def get_parameters(self, latent_card=None, n_jobs=-1):
+    def _is_converged(self, new_cpds):
+        for cpd in new_cpds:
+            if cpd != self.model.get_cpds(node=cpd.scope()[0]):
+                return False
+        return True
+
+    def get_parameters(self, latent_card=None, n_jobs=-1, max_iter=100):
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -134,32 +144,26 @@ class ExpectationMaximization(ParameterEstimator):
         cpds = []
         for node in self.model.nodes():
             parents = list(self.model.predecessors(node))
-            if len(parents) == 0:
-                values = np.random.rand(n_states_dict[node], 1)
-                values = values / np.sum(values, axis=0)
-                node_cpd = TabularCPD(
-                    variable=node, variable_card=n_states_dict[node], values=values
-                )
-            else:
-                parent_card = [n_states_dict[pa] for pa in parents]
-                values = np.random.rand(n_states_dict[node], np.product(parent_card))
-                values = values / np.sum(values, axis=0)
-                node_cpd = TabularCPD(
+            cpds.append(
+                TabularCPD.get_random(
                     variable=node,
-                    variable_card=n_states_dict[node],
-                    values=values,
                     evidence=parents,
-                    evidence_card=parent_card,
                 )
-
-            cpds.append(node_cpd)
+            )
 
         self.model.add_cpds(*cpds)
 
-        for i in range(100):
-            import pdb; pdb.set_trace()
+        for i in range(max_iter):
             # Expectation Step: Computes the likelihood of each data point.
             weighted_data = self._compute_weights(latent_card)
+            import pdb
 
+            pdb.set_trace()
             # Maximization Step: Uses the weights of the dataset for estimation.
-            self.model.add_cpds(*MaximumLikelihoodEstimator(self.model, weighted_data).get_parameters())
+            new_cpds = MaximumLikelihoodEstimator(
+                self.model, weighted_data
+            ).get_parameters()
+            if self._is_converged(new_cpds):
+                return new_cpds
+            else:
+                self.model.add_cpds(*new_cpds)
