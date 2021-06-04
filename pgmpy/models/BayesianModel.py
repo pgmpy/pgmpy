@@ -888,25 +888,11 @@ class BayesianModel(DAG):
         cpds = []
         for node in bn_model.nodes():
             parents = list(bn_model.predecessors(node))
-            if len(parents) == 0:
-                values = np.random.rand(n_states_dict[node], 1)
-                values = values / np.sum(values, axis=0)
-                node_cpd = TabularCPD(
-                    variable=node, variable_card=n_states_dict[node], values=values
+            cpds.append(
+                TabularCPD.get_random(
+                    variable=node, evidence=parents, cardinality=n_states_dict
                 )
-            else:
-                parent_card = [n_states_dict[pa] for pa in parents]
-                values = np.random.rand(n_states_dict[node], np.product(parent_card))
-                values = values / np.sum(values, axis=0)
-                node_cpd = TabularCPD(
-                    variable=node,
-                    variable_card=n_states_dict[node],
-                    values=values,
-                    evidence=parents,
-                    evidence_card=parent_card,
-                )
-
-            cpds.append(node_cpd)
+            )
 
         bn_model.add_cpds(*cpds)
         return bn_model

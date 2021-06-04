@@ -1363,6 +1363,32 @@ class TestTabularCPDMethods(unittest.TestCase):
                 ),
             )
 
+    def test_get_random(self):
+        cpd = TabularCPD.get_random(variable="A", evidence=None, cardinality={"A": 3})
+        self.assertEqual(cpd.variables, ["A"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
+        self.assertEqual(cpd.values.shape, (3,))
+
+        cpd = TabularCPD.get_random(
+            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd.values.shape, (2, 3, 4))
+
+        cpd = TabularCPD.get_random(variable="A", evidence=["B", "C"])
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+
+        self.assertRaises(
+            ValueError,
+            TabularCPD.get_random,
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3},
+        )
+
     def tearDown(self):
         del self.cpd
 

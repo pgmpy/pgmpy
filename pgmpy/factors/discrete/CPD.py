@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
-from itertools import product
+from itertools import product, chain
 from warnings import warn
 import numbers
 
@@ -513,3 +513,65 @@ class TabularCPD(DiscreteFactor):
         Returns the evidence variables of the CPD.
         """
         return self.variables[:0:-1]
+
+    @staticmethod
+    def get_random(variable, evidence=None, cardinality=None):
+        """
+        Generates a TabularCPD instance with random values on `variable` with
+        parents/evidence `evidence` with cardinality/number of states as given
+        in `cardinality`.
+
+        Parameters
+        ----------
+        variable: str, int or any hashable python object.
+            The variable on which to define the TabularCPD.
+
+        evidence: list, array-like
+            A list of variable names which are the parents/evidence of `variable`.
+
+        cardinality: dict (default: None)
+            A dict of the form {var_name: card} specifying the number of states/
+            cardinality of each of the variables. If None, assigns each variable
+            2 states.
+
+        Returns
+        -------
+        pgmpy.factors.discrete.TabularCPD: A TabularCPD object on `variable` with
+            evidence as `evidence` with random values.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> TabularCPD(variable='A', evidence=['C', 'D'],
+        ...            cardinality={'A': 3, 'B': 2, 'C': 4})
+        <TabularCPD representing P(A:3 | C:4, B:2) at 0x7f95e22b8040>
+        """
+        if evidence is None:
+            evidence = []
+
+        if cardinality is None:
+            cardinality = {var: 2 for var in chain([variable], evidence)}
+        else:
+            for var in chain([variable], evidence):
+                if var not in cardinality.keys():
+                    raise ValueError(f"Cardinality for variable: {var} not specified.")
+
+        if len(evidence) == 0:
+            values = np.random.rand(cardinality[variable], 1)
+            values = values / np.sum(values, axis=0)
+            node_cpd = TabularCPD(
+                variable=variable, variable_card=cardinality[variable], values=values
+            )
+        else:
+            parent_card = [cardinality[var] for var in evidence]
+            values = np.random.rand(cardinality[variable], np.product(parent_card))
+            values = values / np.sum(values, axis=0)
+            node_cpd = TabularCPD(
+                variable=variable,
+                variable_card=cardinality[variable],
+                values=values,
+                evidence=evidence,
+                evidence_card=parent_card,
+            )
+
+        return node_cpd
