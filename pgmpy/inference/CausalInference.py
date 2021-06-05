@@ -384,6 +384,7 @@ class CausalInference(object):
         evidence=None,
         adjustment_set=None,
         inference_algo="ve",
+        show_progress=True,
         **kwargs,
     ):
         """
@@ -487,4 +488,9 @@ class CausalInference(object):
 
         # Step 3: Run the inference algorithm to compute the final distribution.
         infer = inference_algo(model_do)
-        return infer.query(variables=variables, evidence={**evidence, **do}, **kwargs)
+        return infer.query(
+            variables=variables,
+            evidence={**evidence, **do},
+            show_progress=show_progress,
+            **kwargs,
+        )
