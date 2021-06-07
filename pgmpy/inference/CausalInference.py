@@ -390,7 +390,7 @@ class CausalInference(object):
     ):
         """
         Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
-        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`. 
+        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
 
         Parameters
         ----------
