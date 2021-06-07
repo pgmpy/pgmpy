@@ -133,8 +133,8 @@ class CausalInference(object):
         Examples
         --------
         >>> game1 = BayesianModel([('X', 'A'),
-                                   ('A', 'Y'),
-                                   ('A', 'B')])
+        ...                        ('A', 'Y'),
+        ...                        ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
@@ -390,7 +390,7 @@ class CausalInference(object):
     ):
         """
         Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
-        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
+        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`. 
 
         Parameters
         ----------
@@ -406,6 +406,10 @@ class CausalInference(object):
             Dictionary of the form {variable_name: variable_state} repesenting
             the conditional variables in the query i.e. `Z` in :math:`P(X |
             do(Y), Z)`.
+
+        adjustment_set: str or list (default=None)
+            Specifies the adjustment set to use. If None, uses the parents of the
+            do variables as the adjustment set.
 
         inference_algo: str or pgmpy.inference.Inference instance
             The inference algorithm to use to compute the probability values.
@@ -424,6 +428,11 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> infer = CausalInference(model)
+        >>> infer.query(['HISTORY'], do={'CVP': 'LOW'}, evidence={'HR': 'LOW'})
+        <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.
         if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):
