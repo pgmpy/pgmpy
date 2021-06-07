@@ -1,7 +1,9 @@
 from collections.abc import Iterable
+from itertools import chain, product
 
 import numpy as np
 import networkx as nx
+from tqdm import tqdm
 
 from pgmpy.models.BayesianModel import BayesianModel
 from pgmpy.estimators.LinearModel import LinearEstimator
@@ -131,8 +133,8 @@ class CausalInference(object):
         Examples
         --------
         >>> game1 = BayesianModel([('X', 'A'),
-                                   ('A', 'Y'),
-                                   ('A', 'B')])
+        ...                        ('A', 'Y'),
+        ...                        ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
@@ -376,7 +378,16 @@ class CausalInference(object):
         ]
         return np.mean(ate)
 
-    def query(self, variables, do=None, evidence=None, inference_algo="ve", **kwargs):
+    def query(
+        self,
+        variables,
+        do=None,
+        evidence=None,
+        adjustment_set=None,
+        inference_algo="ve",
+        show_progress=True,
+        **kwargs,
+    ):
         """
         Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
         is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
@@ -396,6 +407,10 @@ class CausalInference(object):
             the conditional variables in the query i.e. `Z` in :math:`P(X |
             do(Y), Z)`.
 
+        adjustment_set: str or list (default=None)
+            Specifies the adjustment set to use. If None, uses the parents of the
+            do variables as the adjustment set.
+
         inference_algo: str or pgmpy.inference.Inference instance
             The inference algorithm to use to compute the probability values.
             String options are: 1) ve: Variable Elimination 2) bp: Belief
@@ -413,6 +428,11 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> infer = CausalInference(model)
+        >>> infer.query(['HISTORY'], do={'CVP': 'LOW'}, evidence={'HR': 'LOW'})
+        <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.
         if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):
@@ -454,15 +474,44 @@ class CausalInference(object):
                 f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
-        if len(self.model.latents) != 0:
-            raise ValueError(
-                "Causal inference with models containing latent variables isn't supported yet."
+        # Step 2: Check if adjustment set is provided, otherwise calcualte it.
+        if adjustment_set is None:
+            do_vars = [var for var, state in do.items()]
+            adjustment_set = set(
+                chain(*[self.model.predecessors(var) for var in do_vars])
+            )
+            if len(adjustment_set.intersection(self.model.latents)) != 0:
+                raise ValueError(
+                    "Not all parents of do variables are observed. Please specify an adjustment set."
+                )
+
+        infer = inference_algo(self.model)
+
+        # Step 3: If no do variable specified, do a normal probabilistic inference.
+        if do == {}:
+            return infer.query(variables, evidence, show_progress=False)
+
+        # Step 3: Compute \sum_{z} p(variables | do, z) p(z)
+        values = []
+        p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
+        adj_states = [
+            self.model.get_cpds(var).state_names[var] for var in adjustment_set
+        ]
+
+        if show_progress:
+            pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
+
+        for state_comb in product(*adj_states):
+            adj_evidence = {
+                var: state for var, state in zip(adjustment_set, state_comb)
+            }
+            evidence = {**do, **adj_evidence}
+            values.append(
+                infer.query(variables, evidence=evidence, show_progress=False)
+                * p_z.get_value(**adj_evidence)
             )
 
-        # Step 2: Apply the do operation on the model.
-        do_vars = [var for var, state in do.items()]
-        model_do = self.model.do(nodes=do_vars, inplace=False)
+            if show_progress:
+                pbar.update(1)
 
-        # Step 3: Run the inference algorithm to compute the final distribution.
-        infer = inference_algo(model_do)
-        return infer.query(variables=variables, evidence={**evidence, **do}, **kwargs)
+        return sum(values).normalize(inplace=False)
