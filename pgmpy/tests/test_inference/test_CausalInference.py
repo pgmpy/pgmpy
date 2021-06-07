@@ -161,24 +161,14 @@ class TestDoQuery(unittest.TestCase):
             query2 = self.infer.query(variables=["C"], do={"T": 0}, inference_algo=algo)
             np_test.assert_array_almost_equal(query2.values, np.array([0.5, 0.5]))
 
-            query_evi1 = self.infer.query(
-                variables=["C"], do={"T": 1}, evidence={"S": "m"}, inference_algo=algo
-            )
-            np_test.assert_array_almost_equal(query_evi1.values, np.array([0.4, 0.6]))
-
-            query_evi2 = self.infer.query(
-                variables=["C"], do={"T": 0}, evidence={"S": "m"}, inference_algo=algo
-            )
-            np_test.assert_array_almost_equal(query_evi2.values, np.array([0.3, 0.7]))
-
     def test_adjustment_query(self):
-        adj_model = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
-        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
+        model = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
+        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
 
         cpd_x = TabularCPD(
             variable="X",
             variable_card=2,
-            values=[[0.25, 0.75], [0.75, 0.25]],
+            values=[[0.1, 0.3], [0.9, 0.7]],
             evidence=["Z"],
             evidence_card=[2],
         )
@@ -186,7 +176,7 @@ class TestDoQuery(unittest.TestCase):
         cpd_w = TabularCPD(
             variable="W",
             variable_card=2,
-            values=[[0.25, 0.75], [0.75, 0.25]],
+            values=[[0.2, 0.9], [0.8, 0.1]],
             evidence=["Z"],
             evidence_card=[2],
         )
@@ -198,11 +188,21 @@ class TestDoQuery(unittest.TestCase):
             evidence=["X", "W"],
             evidence_card=[2, 2],
         )
-        adj_model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
-        infer_adj = CausalInference(adj_model)
 
-        infer_adj.query(variables=["Y"], do={"X": 1}, adjustment_set={"Z"})
-        infer_adj.query(variables=["Y"], do={"X": 1}, adjustment_set={"W"})
+        model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+
+        for algo in ["ve", "bp"]:
+            infer_adj = CausalInference(model)
+
+            query = infer_adj.query(
+                variables=["Y"], do={"X": 1}, adjustment_set={"Z"}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query.values, np.array([0.7240, 0.2760]))
+
+            query = infer_adj.query(
+                variables=["Y"], do={"X": 1}, adjustment_set={"W"}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query.values, np.array([0.7240, 0.2760]))
 
     def test_query_error(self):
         self.assertRaises(ValueError, self.infer.query, variables="C", do={"T": 1})
