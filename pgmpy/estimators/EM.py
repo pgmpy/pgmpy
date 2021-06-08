@@ -7,6 +7,25 @@ from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.models import BayesianModel
 
+def moveaxis(in_array,in_labels, out_labels):
+    """
+    a helper function to move the axis of an array based on two lists of labels
+     
+    Parameters
+    ----------
+    in_array: the input np.ndarray
+
+    in_labels: the list of labels that describe the axis of in_array
+
+    out_labels: the reordering of the labels that is desired
+
+    Returns
+    -------
+    out_array: in_array with its axes moved to correspond to out_labels
+    """
+    in_idx = range(len(in_labels))
+    out_idx = [in_labels.index(label) for label in out_labels]
+    return np.moveaxis(in_array,out_idx,in_idx)
 
 class ExpectationMaximization(ParameterEstimator):
     def __init__(self, model, data, **kwargs):
