@@ -13,22 +13,24 @@ from pgmpy.models import BayesianModel
 class ExpectationMaximization(ParameterEstimator):
     def __init__(self, model, data, **kwargs):
         """
-        Class used to compute parameters for a model using Expectation Maximization
+        Class used to compute parameters for a model using Expectation
+        Maximization
 
 
         Parameters
         ----------
         model: A pgmpy.models.BayesianModel instance
-                note that the prior CPDs must be specified in this model, this is
-                because the prior CPDs are used along with a VariableElimination class
-                to compute the Expectation Step for the missing data instances
+                note that the prior CPDs must be specified in this model, this
+                is because the prior CPDs are used along with a
+                VariableElimination class to compute the Expectation Step for
+                the missing data instances
 
         data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names of the
-                network.
-            (If some values in the data are missing the data cells should be set to
-                `numpy.NaN`. Note that pandas converts each column containing
-                `numpy.NaN`s to dtype `float`.)
+            DataFrame object with column names identical to the variable names
+            of the network.
+            (If some values in the data are missing the data cells should be
+                set to `numpy.NaN`. Note that pandas converts each column
+                containing `numpy.NaN`s to dtype `float`.)
 
         Examples
         --------
@@ -62,9 +64,10 @@ class ExpectationMaximization(ParameterEstimator):
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self,n_iter=1):
+    def get_parameters(self, n_iter=1):
         """
-        Method to estimate teh model parameters (CPDs) using Expectation Maximization.
+        Method to estimate teh model parameters (CPDs) using Expectation
+        Maximization.
 
         Parameters
         ----------
@@ -131,54 +134,62 @@ class ExpectationMaximization(ParameterEstimator):
         --------
         """
 
-        # this will be very similar to MLE estimation, except we will add partial
-        #   counts to the state_counts field
+        # this will be very similar to MLE estimation, except we will add
+        #  partial counts to the state_counts field
 
         # get the parents, state_names, etc for the node
         parents = sorted(self.model.get_parents(node))
 
         state_names = self.model.get_cpds(node).state_names
+        state_names = {k: v for k, v in state_names.items() if k in [node] + parents}
+
+        node_cardinality = len(state_names[node])
 
         parents_cardinalities = [len(state_names[parent]) for parent in parents]
         node_cardinality = len(state_names[node])
 
+        variable_names = sorted(state_names.keys())
+
         # get counts of the cases where the node and all parents are observed
-        complete_data = self.data.dropna(subset=[node] + parents)
+        complete_data = self.data.dropna(subset=variable_names)
 
-        state_counts_data = complete_data.groupby([node] + parents).size()
-
-        if not isinstance(state_counts_data.index, pd.MultiIndex):
-            state_counts_data.index = pd.MultiIndex.from_arrays(
-                [state_counts_data.index]
-            )
-
-        row_index = pd.MultiIndex.from_product(
-            iterables=[v for v in state_names.values()],
-            names=[k for k in state_names.keys()],
-        )
-
-        factor = state_counts_data.reindex(index=row_index).fillna(0)
-
-        # count the partial cases based on ve inference for the cases where either the
-        #   node or a parent or both are missing
+        # count the partial cases based on ve inference for the cases where
+        #  either the node or a parent or both are missing
         missing_data = self.data.drop(
-            index=self.data.dropna(subset=[node] + parents).index
+            index=self.data.dropna(subset=variable_names).index
         )
 
-        # we don't necessarily want to update the estimators model, lets leave that to
-        #  the user to do once returning the cpds
-        model = copy.deepcopy(self.model)
+        state_counts = complete_data.groupby(variable_names).size()
+
+        # if there are no parents, the groupby index will not be a multi index,
+        if not parents:
+            tmp_idx = pd.MultiIndex.from_product(
+                iterables=[state_counts.index.values], 
+                names=state_counts.index.names
+            )
+            state_counts.index = tmp_idx
+
+        factor_idx = pd.MultiIndex.from_product(
+            iterables=[state_names[n] for n in variable_names],
+            names=state_counts.index.names,
+        )
+
+        factor = state_counts.reindex(factor_idx).fillna(0)
+
+        # we don't necessarily want to update the estimators model, lets leave
+        #  that to the user to do once returning the cpds
+        model = self.model.copy()
 
         # for n_iter iterations calculate the update
         for i_iter in range(n_iter):
 
-            # we want to start with a new factor and Variable Elimination object for
-            #   every iteration
-            iter_factor = copy.deepcopy(factor)
+            # we want to start with a new factor and Variable Elimination
+            #  object for every iteration
+            iter_factor = factor.copy()
             ve = VariableElimination(model)
 
-            # for every sample that includes missing data for this cpd, calculate
-            #   the factor with the known data
+            # for every sample that includes missing data for this cpd,
+            #  calculate the factor with the known data
             for isamp, sample in missing_data.iterrows():
                 # we need to separate the variables into evidence (observed) and
                 #   variables (unobserved) to run VE
@@ -193,76 +204,125 @@ class ExpectationMaximization(ParameterEstimator):
 
                 # run VE on this sample
                 q_factor = ve.query(
-                    variables=variables, evidence=evidence, show_progress=False
+                    variables=variables,
+                    evidence=evidence,
+                    show_progress=False,
                 )
 
-                # we need to marginalize over variables that are possibly unobserved
-                #   but nevertheless not in [node] + parents
-                marg_list = [v for v in q_factor.variables if v not in [node] + parents]
+                # we need to marginalize over variables that are possibly
+                #  unobserved but nevertheless not in [node] + parents
+                marg_list = [v for v in q_factor.variables if v not in variable_names]
 
                 if marg_list:
                     q_factor.marginalize(marg_list)
 
-                # now we want to reindex this returned factor so that we can directly
-                #   add it to factor and then marginalize
-                idx_dict = q_factor.state_names
-                idx_dict.update(evidence)
-
-                iterables = [
-                    idx_dict[v] if isinstance(idx_dict[v], list) else [idx_dict[v]]
-                    for v in iter_factor.index.names
+                # find teh variables that are in variable_names (part of this
+                #  factor) but also in evidence and hence observed
+                evidence_factor_variables = [
+                    v for v in variable_names if v in evidence.keys()
                 ]
-                names = list(iter_factor.index.names)
 
-                qfs = pd.Series(
-                    data=q_factor.values.flatten(),
-                    index=pd.MultiIndex.from_product(iterables, names=names),
-                )
+                if evidence_factor_variables:
+                    # because the variables in evidence factor are all observed
+                    #  their cardinality is 1
+                    evidence_factor_cardinality = [1] * len(evidence_factor_variables)
 
-                qfs = qfs.reindex(iter_factor.index).fillna(0)
+                    # now "fake" the statenames by just grabbing them from the
+                    #  evidence
+                    evidence_factor_state_names = {
+                        v: [evidence[v]] for v in evidence_factor_variables
+                    }
 
-                iter_factor = iter_factor + qfs
+                    # the values should just be [1] because all of the
+                    #  cardinalities are 1 but lets do the multiplication just
+                    #  for completeness
+                    evidence_factor_values = [1] * np.prod(evidence_factor_cardinality)
 
-            # right now iter_factor is a pd.Series with all variables in the multiindex
-            #   we want to unstack the parents to format it into a 2d factor to update
-            #   the CPD
-            iter_factor = iter_factor.unstack(parents)
-
-            if not isinstance(iter_factor, pd.DataFrame):
-                iter_factor = iter_factor.to_frame()
-
-            iter_factor.loc[:, (iter_factor == 0).all()] = 1
-
-            # reindex the factor so that for node the state_names are in the same order
-            #   as state_names
-            if not isinstance(iter_factor.index, pd.MultiIndex):
-                iter_factor.index = pd.MultiIndex.from_arrays([iter_factor.index])
-
-
-            iter_factor = iter_factor.reindex(
-                pd.MultiIndex.from_arrays([state_names[node]], names=[node])
-            )
-
-            if parents:
-                if not isinstance(iter_factor.columns, pd.MultiIndex):
-                    iter_factor.columns = pd.MultiIndex.from_arrays(
-                        [iter_factor.columns]
+                    # now we have a factor that only has unobserved variables
+                    #  for this sample that are in [node] + parents but if
+                    #  there was a node that was observed and is in [node] +
+                    #  parents it wont be in this factor so now we need to
+                    #  create an evidence factor
+                    evidence_factor = DiscreteFactor(
+                        variables=evidence_factor_variables,
+                        cardinality=evidence_factor_cardinality,
+                        state_names=evidence_factor_state_names,
+                        values=evidence_factor_values,
                     )
 
-                column_index = pd.MultiIndex.from_product(
-                    iterables=[state_names[p] for p in parents], names=parents
+                    # now get the product of q_factor and evidence_factor, this
+                    #  is done inplace
+                    q_factor.product(evidence_factor)
+
+                # now we need to get this factor as a series with the same
+                #  multiindex ordering as factor and sum the two
+                q_factor_idx = pd.MultiIndex.from_product(
+                    iterables=[q_factor.state_names[n] for n in variable_names],
+                    names=variable_names,
                 )
 
-                iter_factor = iter_factor.reindex(columns=column_index)
+                # now get the data to create this index, we will have to swap
+                #  axes before the flatten
+                q_factor_series = pd.Series(
+                    data=moveaxis(
+                        q_factor.values,
+                        q_factor.variables,
+                        q_factor_idx.names,
+                    ).flatten(),
+                    index=q_factor_idx,
+                )
+
+                # now reindex to get the q_factor_series with the same index as
+                #  iter_factor
+                q_factor_series = q_factor_series.reindex(factor_idx).fillna(0)
+
+                iter_factor = iter_factor + q_factor_series
+
+            cpd_array = np.array(iter_factor)
+            # alright enough messing around with this pandas bs, we have a 1d
+            #  ndarray that we want to get into shape (card(node),
+            #  prod(card(parents))) and, and, and, preserve the order of the
+            #  variables
+
+            # lets get this 1d array into a <num_variables>-d array
+            cpd_array = cpd_array.reshape([len(state_names[n]) for n in variable_names])
+
+            # now we want the node to be the 0th dimension, and the parents to
+            #  be lexically sorted after that
+            cpd_array = moveaxis(
+                cpd_array,  # original array
+                variable_names,  # sorted variable names
+                [node] + sorted(parents),  # desired ordering of variable names
+            )
+
+            # now we are going to reshape it so the rowas are the states of the
+            # node and the columns are the unique states of the parents
+            cpd_array = cpd_array.reshape(
+                [
+                    len(state_names[node]),
+                    inte(np.prod([len(state_names[p]) for p in parents])),
+                ]
+            )
+
+            # now we need to decide what to do with the columns that don't have
+            # any counts, two options are
+            #    1) set to uniform distribution
+            #    2) set to prior
+            # lets choose option 1) for now since it is easier to intert into
+            #  numpy however, we are slinging around the priors so much that
+            #  may be a good thing to use here as well
 
             cpd = TabularCPD(
                 node,
                 node_cardinality,
-                np.array(iter_factor),
+                cpd_array,
                 evidence=parents,
                 evidence_card=parents_cardinalities,
                 state_names=state_names,
             )
+
+            old_cpd = model.get_cpds(node)
+            model.remove_cpds(old_cpd)
 
             cpd.normalize()
             model.add_cpds(cpd)
