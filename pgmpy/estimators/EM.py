@@ -332,6 +332,8 @@ class ExpectationMaximization(ParameterEstimator):
             #  numpy however, we are slinging around the priors so much that
             #  may be a good thing to use here as well
 
+            cpd_array[:,np.sum(cpd_array, axis=0) == 0] = 1
+
             cpd = TabularCPD(
                 node,
                 node_cardinality,
