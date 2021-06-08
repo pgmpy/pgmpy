@@ -74,6 +74,7 @@ class VariableElimination(Inference):
         )
 
         # Step 1: If elimination_order is a list, verify it's correct and return.
+        # Step 1.1: Check that not of the `variables` and `evidence` is in the elimination_order.
         if hasattr(elimination_order, "__iter__") and (
             not isinstance(elimination_order, str)
         ):
@@ -87,8 +88,21 @@ class VariableElimination(Inference):
                     "Elimination order contains variables which are in"
                     " variables or evidence args"
                 )
-            else:
-                return elimination_order
+            # Step 1.2: Check if elimination_order has variables which are not in the model.
+            elif any(var not in self.model.nodes() for var in elimination_order):
+                elimination_order = list(
+                    filter(lambda t: t in self.model.nodes(), elimination_order)
+                )
+
+            # Step 1.3: Check if the elimination_order has all the variables that need to be eliminated.
+            elif to_eliminate != set(elimination_order):
+                raise ValueError(
+                    f"Elimination order doesn't contain all the variables"
+                    f"which need to be eliminated. The variables which need to"
+                    f"be eliminated are {to_eliminate}"
+                )
+
+            return elimination_order
 
         # Step 2: If elimination order is None or a Markov model, return a random order.
         elif (elimination_order is None) or (not isinstance(self.model, BayesianModel)):
@@ -254,7 +268,13 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        return self._variable_elimination(
+        # Make a copy of the original model as it will be replaced during pruning.
+        orig_model = self.model
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
+        result = self._variable_elimination(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
@@ -262,6 +282,9 @@ class VariableElimination(Inference):
             joint=joint,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
+        return result
 
     def max_marginal(
         self,
@@ -277,9 +300,11 @@ class VariableElimination(Inference):
         ----------
         variables: list
             list of variables over which we want to compute the max-marginal.
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
@@ -308,6 +333,12 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Make a copy of the original model and replace self.model with it later.
+        orig_model = self.model
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
         final_distribution = self._variable_elimination(
             variables=variables,
             operation="maximize",
@@ -316,6 +347,7 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
+        self.model = orig_model
         return np.max(final_distribution.values)
 
     def map_query(
@@ -355,13 +387,21 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
         """
+        variables = [] if variables is None else variables
         common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables if variables is not None else [])
+            variables
         )
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+
+        # Make a copy of the original model and replace self.model with it later
+        orig_model = self.model
+
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = self._variable_elimination(
@@ -372,6 +412,8 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
 
@@ -410,6 +452,8 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
         """
+        self._initialize_structures()
+
         # If the elimination order does not contain the same variables as the model
         if set(elimination_order) != set(self.variables):
             raise ValueError(
@@ -881,6 +925,11 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        orig_model = self.model
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
+
         result = self._query(
             variables=variables,
             operation="marginalize",
@@ -888,6 +937,8 @@ class BeliefPropagation(Inference):
             joint=joint,
             show_progress=show_progress,
         )
+        self.model = orig_model
+
         if joint:
             return result.normalize(inplace=False)
         else:
@@ -935,9 +986,11 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.map_query(variables=['J', 'Q'],
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
+        variables = [] if variables is None else variables
         common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables if variables is not None else [])
+            variables
         )
+
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -945,7 +998,13 @@ class BeliefPropagation(Inference):
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         if not variables:
-            variables = set(self.variables)
+            variables = list(self.model.nodes())
+
+        # Make a copy of the original model and then replace self.model with it later.
+        orig_model = self.model
+        if isinstance(self.model, BayesianModel):
+            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+        self._initialize_structures()
 
         final_distribution = self._query(
             variables=variables,
@@ -953,6 +1012,8 @@ class BeliefPropagation(Inference):
             evidence=evidence,
             show_progress=show_progress,
         )
+
+        self.model = orig_model
 
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.

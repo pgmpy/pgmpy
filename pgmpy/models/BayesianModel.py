@@ -27,7 +27,7 @@ class BayesianModel(DAG):
     Base class for Bayesian Models.
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set()):
         """
         Initializes a Bayesian Model.
         A models stores nodes and edges with conditional probability
@@ -46,6 +46,9 @@ class BayesianModel(DAG):
             Data to initialize graph.  If data=None (default) an empty
             graph is created.  The data can be an edge list, or any
             NetworkX graph object.
+
+        latents: list, array-like
+            List of variables which are latent (i.e. unobserved) in the model.
 
         Examples
         --------
@@ -92,9 +95,7 @@ class BayesianModel(DAG):
         >>> len(G)  # number of nodes in graph
         3
         """
-        super(BayesianModel, self).__init__()
-        if ebunch:
-            self.add_edges_from(ebunch)
+        super(BayesianModel, self).__init__(ebunch=ebunch, latents=latents)
         self.cpds = []
         self.cardinalities = defaultdict(int)
 
@@ -173,6 +174,9 @@ class BayesianModel(DAG):
 
         if self.get_cpds(node=node):
             self.remove_cpds(node)
+
+        self.latents = self.latents - set([node])
+
         super(BayesianModel, self).remove_node(node)
 
     def remove_nodes_from(self, nodes):
@@ -462,7 +466,13 @@ class BayesianModel(DAG):
         return mm.to_junction_tree()
 
     def fit(
-        self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs
+        self,
+        data,
+        estimator=None,
+        state_names=[],
+        complete_samples_only=True,
+        n_jobs=-1,
+        **kwargs,
     ):
         """
         Estimates the CPD for each variable based on a given data set.
@@ -491,6 +501,11 @@ class BayesianModel(DAG):
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
             every row where neither the variable nor its parents are `np.NaN` is used.
 
+        n_jobs: int (default: -1)
+            Number of threads/processes to use for estimation. It improves speed only
+            for large networks (>100 nodes). For smaller networks might reduce
+            performance.
+
         Examples
         --------
         >>> import pandas as pd
@@ -518,17 +533,24 @@ class BayesianModel(DAG):
             state_names=state_names,
             complete_samples_only=complete_samples_only,
         )
-        cpds_list = _estimator.get_parameters(**kwargs)
+        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
         self.add_cpds(*cpds_list)
 
-    def predict(self, data, n_jobs=-1):
+    def predict(self, data, stochastic=False, n_jobs=-1):
         """
         Predicts states of all the missing variables.
 
         Parameters
         ----------
-        data : pandas DataFrame object
+        data: pandas DataFrame object
             A DataFrame object with column names same as the variables in the model.
+
+        stochastic: boolean
+            If True, does prediction by sampling from the distribution of predicted variable(s).
+            If False, returns the states with the highest probability value (i.e MAP) for the
+                    predicted variable(s).
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. If -1, uses all available cores.
 
         Examples
         --------
@@ -568,27 +590,52 @@ class BayesianModel(DAG):
         elif set(data.columns) - set(self.nodes()):
             raise ValueError("Data has variables which are not in the model")
 
-        data_unique = data.drop_duplicates()
-        missing_variables = set(self.nodes()) - set(data_unique.columns)
-        #         pred_values = defaultdict(list)
-        pred_values = []
-
-        # Send state_names dict from one of the estimated CPDs to the inference class.
+        missing_variables = set(self.nodes()) - set(data.columns)
         model_inference = VariableElimination(self)
-        pred_values = Parallel(n_jobs=n_jobs)(
-            delayed(model_inference.map_query)(
-                variables=missing_variables,
-                evidence=data_point.to_dict(),
-                show_progress=False,
-            )
-            for index, data_point in tqdm(
-                data_unique.iterrows(), total=data_unique.shape[0]
-            )
-        )
 
-        df_results = pd.DataFrame(pred_values, index=data_unique.index)
-        data_with_results = pd.concat([data_unique, df_results], axis=1)
-        return data.merge(data_with_results, how="left").loc[:, missing_variables]
+        if stochastic:
+            data_unique_indexes = data.groupby(list(data.columns)).apply(
+                lambda t: t.index.tolist()
+            )
+            data_unique = data_unique_indexes.index.to_frame()
+
+            pred_values = Parallel(n_jobs=n_jobs)(
+                delayed(model_inference.query)(
+                    variables=missing_variables,
+                    evidence=data_point.to_dict(),
+                    show_progress=False,
+                )
+                for index, data_point in tqdm(
+                    data_unique.iterrows(), total=data_unique.shape[0]
+                )
+            )
+            predictions = pd.DataFrame()
+            for i, row in enumerate(data_unique_indexes):
+                p = pred_values[i].sample(n=len(row))
+                p.index = row
+                predictions = pd.concat((predictions, p), copy=False)
+
+            return predictions.reindex(data.index)
+
+        else:
+            data_unique = data.drop_duplicates()
+            pred_values = []
+
+            # Send state_names dict from one of the estimated CPDs to the inference class.
+            pred_values = Parallel(n_jobs=n_jobs)(
+                delayed(model_inference.map_query)(
+                    variables=missing_variables,
+                    evidence=data_point.to_dict(),
+                    show_progress=False,
+                )
+                for index, data_point in tqdm(
+                    data_unique.iterrows(), total=data_unique.shape[0]
+                )
+            )
+
+            df_results = pd.DataFrame(pred_values, index=data_unique.index)
+            data_with_results = pd.concat([data_unique, df_results], axis=1)
+            return data.merge(data_with_results, how="left").loc[:, missing_variables]
 
     def predict_probability(self, data):
         """
@@ -748,6 +795,7 @@ class BayesianModel(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+        model_copy.latents = self.latents
         return model_copy
 
     def get_markov_blanket(self, node):
@@ -782,3 +830,112 @@ class BayesianModel(DAG):
         blanket_nodes = set(blanket_nodes)
         blanket_nodes.discard(node)
         return list(blanket_nodes)
+
+    @staticmethod
+    def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
+        """
+        Returns a randomly generated bayesian network on `n_nodes` variables
+        with edge probabiliy of `edge_prob` between variables.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        n_states: int or list (array-like) (default: None)
+            The number of states of each variable. When None randomly
+            generates the number of states.
+
+        latents: bool (default: False)
+            If True, also creates latent variables.
+
+        Returns
+        -------
+        pgmpy.base.DAG instance: The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> model = BayesianModel.get_random(n_nodes=5)
+        >>> model.nodes()
+        NodeView((0, 1, 3, 4, 2))
+        >>> model.edges()
+        OutEdgeView([(0, 1), (0, 3), (1, 3), (1, 4), (3, 4), (2, 3)])
+        >>> model.cpds
+        [<TabularCPD representing P(0:0) at 0x7f97e16eabe0>,
+         <TabularCPD representing P(1:1 | 0:0) at 0x7f97e16ea670>,
+         <TabularCPD representing P(3:3 | 0:0, 1:1, 2:2) at 0x7f97e16820d0>,
+         <TabularCPD representing P(4:4 | 1:1, 3:3) at 0x7f97e16eae80>,
+         <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
+        """
+        if n_states is None:
+            n_states = np.random.randint(low=1, high=5, size=n_nodes)
+        elif isinstance(n_states, int):
+            n_states = np.array([n_states] * n_nodes)
+        else:
+            n_states = np.array(n_states)
+
+        n_states_dict = {i: n_states[i] for i in range(n_nodes)}
+
+        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, latents=latents)
+        bn_model = BayesianModel(dag.edges(), latents=dag.latents)
+        bn_model.add_nodes_from(dag.nodes())
+
+        cpds = []
+        for node in bn_model.nodes():
+            parents = list(bn_model.predecessors(node))
+            cpds.append(
+                TabularCPD.get_random(
+                    variable=node, evidence=parents, cardinality=n_states_dict
+                )
+            )
+
+        bn_model.add_cpds(*cpds)
+        return bn_model
+
+    def do(self, nodes, inplace=False):
+        """
+        Applies the do operation. The do operation removes all incoming edges
+        to variables in `nodes` and marginalizes their CPDs to only contain the
+        variable itself.
+
+        Parameters
+        ----------
+        nodes : list, array-like
+            The names of the nodes to apply the do-operator for.
+
+        inplace: boolean (default: False)
+            If inplace=True, makes the changes to the current object,
+            otherwise returns a new instance.
+
+        Returns
+        -------
+        pgmpy.models.BayesianModel: Instance of BayesianModel modified by the
+            do operation
+
+        Examples
+        --------
+
+        """
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+            )
+
+        model = self if inplace else self.copy()
+        adj_model = DAG.do(model, nodes, inplace=inplace)
+
+        if adj_model.cpds:
+            for node in nodes:
+                cpd = adj_model.get_cpds(node=node)
+                cpd.marginalize(cpd.variables[1:], inplace=True)
+        return adj_model

@@ -83,28 +83,28 @@ class TestChiSquare(unittest.TestCase):
 
     def test_chisquare_adult_dataset(self):
         # Comparision values taken from dagitty (DAGitty)
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 57.75, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -25.47, decimal=1)
         self.assertEqual(dof, 4)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Age", Y="Race", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 56.25, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -24.75, decimal=1)
         self.assertEqual(dof, 4)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Age", Y="Sex", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 289.62, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -139.82, decimal=1)
         self.assertEqual(dof, 4)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Education",
             Y="HoursPerWeek",
             Z=["Age", "Immigrant", "Race", "Sex"],
@@ -115,14 +115,14 @@ class TestChiSquare(unittest.TestCase):
         np_test.assert_almost_equal(p_value, 0, decimal=1)
         self.assertEqual(dof, 316)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Immigrant", Y="Sex", Z=[], data=self.df_adult, boolean=False
         )
         np_test.assert_almost_equal(coef, 0.2724, decimal=1)
         np_test.assert_almost_equal(np.log(p_value), -0.50, decimal=1)
         self.assertEqual(dof, 1)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Education",
             Y="MaritalStatus",
             Z=["Age", "Sex"],
@@ -135,7 +135,7 @@ class TestChiSquare(unittest.TestCase):
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
         # dataframes with very few samples
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Income",
             Y="Race",
             Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
@@ -146,7 +146,7 @@ class TestChiSquare(unittest.TestCase):
         np_test.assert_almost_equal(p_value, 0.99, decimal=1)
         self.assertEqual(dof, 136)
 
-        coef, dof, p_value = chi_square(
+        coef, p_value, dof = chi_square(
             X="Immigrant",
             Y="Income",
             Z=["Age", "Education", "HoursPerWeek", "MaritalStatus"],
@@ -245,6 +245,6 @@ class TestChiSquare(unittest.TestCase):
             neyman,
             cressie_read,
         ]:
-            stat, dof, p_value = t(X="x", Y="y", Z=[], data=df, boolean=False)
+            stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
             np_test.assert_almost_equal(p_value, 0, decimal=5)

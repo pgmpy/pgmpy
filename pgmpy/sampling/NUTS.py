@@ -355,7 +355,7 @@ class NoUTurnSampler(HamiltonianMCDA):
             position_m = self._sample(position_m, stepsize)
             samples[i] = tuple(position_m)
 
-        return _return_samples(return_type, samples)
+        return _return_samples(samples)
 
     def generate_sample(self, initial_pos, num_samples, stepsize=None):
         """
@@ -800,7 +800,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
             else:
                 stepsize = stepsize_bar
 
-        return _return_samples(return_type, samples)
+        return _return_samples(samples)
 
     def generate_sample(self, initial_pos, num_adapt, num_samples, stepsize=None):
         """

@@ -44,6 +44,7 @@ Documentation:
 .. toctree::
    :maxdepth: 3
 
+   base
    models
    factors
    sampling

@@ -1,5 +1,9 @@
+from collections.abc import Iterable
+from itertools import chain, product
+
 import numpy as np
 import networkx as nx
+from tqdm import tqdm
 
 from pgmpy.models.BayesianModel import BayesianModel
 from pgmpy.estimators.LinearModel import LinearEstimator
@@ -47,25 +51,20 @@ class CausalInference(object):
     reference. Available on GitHub: https://github.com/ijmbarr/causalgraphicalmodels
     """
 
-    def __init__(self, model, latent_vars=None, set_nodes=None):
+    def __init__(self, model, set_nodes=None):
         if not isinstance(model, BayesianModel):
             raise NotImplementedError(
                 "Causal Inference is only implemented for BayesianModels at this time."
             )
-        self.dag = model
-        self.graph = self.dag.to_undirected()
-        self.latent_variables = _variable_or_iterable_to_set(latent_vars)
+        self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
-        self.observed_variables = frozenset(self.dag.nodes()).difference(
-            self.latent_variables
+        self.observed_variables = frozenset(self.model.nodes()).difference(
+            model.latents
         )
 
     def __repr__(self):
         variables = ", ".join(map(str, sorted(self.observed_variables)))
         return f"{self.__class__.__name__}({variables})"
-
-    def _is_d_separated(self, X, Y, Z=None):
-        return not self.dag.is_active_trail(X, Y, observed=Z)
 
     def is_valid_backdoor_adjustment_set(self, X, Y, Z=[]):
         """
@@ -98,8 +97,8 @@ class CausalInference(object):
         Z_ = list(Z)
         observed = [X] + Z_
         parents_d_sep = []
-        for p in self.dag.predecessors(X):
-            parents_d_sep.append(self._is_d_separated(p, Y, Z=observed))
+        for p in self.model.predecessors(X):
+            parents_d_sep.append(not self.model.is_dconnected(p, Y, observed=observed))
         return all(parents_d_sep)
 
     def get_all_backdoor_adjustment_sets(self, X, Y):
@@ -134,8 +133,8 @@ class CausalInference(object):
         Examples
         --------
         >>> game1 = BayesianModel([('X', 'A'),
-                                   ('A', 'Y'),
-                                   ('A', 'B')])
+        ...                        ('A', 'Y'),
+        ...                        ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
@@ -154,7 +153,10 @@ class CausalInference(object):
             return frozenset()
 
         possible_adjustment_variables = (
-            set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
+            set(self.observed_variables)
+            - {X}
+            - {Y}
+            - set(nx.descendants(self.model, X))
         )
 
         valid_adjustment_sets = []
@@ -192,7 +194,7 @@ class CausalInference(object):
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
-        directed_paths = list(nx.all_simple_paths(self.dag, X, Y))
+        directed_paths = list(nx.all_simple_paths(self.model, X, Y))
 
         if directed_paths == []:
             return False
@@ -259,11 +261,11 @@ class CausalInference(object):
         Returns a string representing the factorized distribution implied by the CGM.
         """
         products = []
-        for node in nx.topological_sort(self.dag):
+        for node in nx.topological_sort(self.model):
             if node in self.set_nodes:
                 continue
 
-            parents = list(self.dag.predecessors(node))
+            parents = list(self.model.predecessors(node))
             if not parents:
                 p = f"P({node})"
             else:
@@ -368,10 +370,148 @@ class CausalInference(object):
                 adjustment_sets = frozenset({self.simple_decision(adjustment_sets)})
 
         if estimator_type == "linear":
-            self.estimator = LinearEstimator(self.dag)
+            self.estimator = LinearEstimator(self.model)
 
         ate = [
             self.estimator.fit(X=X, Y=Y, Z=s, data=data, **kwargs)._get_ate()
             for s in adjustment_sets
         ]
         return np.mean(ate)
+
+    def query(
+        self,
+        variables,
+        do=None,
+        evidence=None,
+        adjustment_set=None,
+        inference_algo="ve",
+        show_progress=True,
+        **kwargs,
+    ):
+        """
+        Performs a query on the model of the form :math:`P(X | do(Y), Z)` where :math:`X`
+        is `variables`, :math:`Y` is `do` and `Z` is the `evidence`.
+
+        Parameters
+        ----------
+        variables: list
+            list of variables in the query i.e. `X` in :math:`P(X | do(Y), Z)`.
+
+        do: dict (default: None)
+            Dictionary of the form {variable_name: variable_state} representing
+            the variables on which to apply the do operation i.e. `Y` in
+            :math:`P(X | do(Y), Z)`.
+
+        evidence: dict (default: None)
+            Dictionary of the form {variable_name: variable_state} repesenting
+            the conditional variables in the query i.e. `Z` in :math:`P(X |
+            do(Y), Z)`.
+
+        adjustment_set: str or list (default=None)
+            Specifies the adjustment set to use. If None, uses the parents of the
+            do variables as the adjustment set.
+
+        inference_algo: str or pgmpy.inference.Inference instance
+            The inference algorithm to use to compute the probability values.
+            String options are: 1) ve: Variable Elimination 2) bp: Belief
+            Propagation.
+
+        kwargs: Any
+            Additional paramters which needs to be passed to inference
+            algorithms.  Please refer to the pgmpy.inference.Inference for
+            details.
+
+        Returns
+        -------
+        pgmpy.factor.DiscreteFactor: A factor object representing the joint distribution
+            over the variables in `variables`.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> infer = CausalInference(model)
+        >>> infer.query(['HISTORY'], do={'CVP': 'LOW'}, evidence={'HR': 'LOW'})
+        <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
+        """
+        # Step 1: Check if all the arguments are valid and get them to uniform types.
+        if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):
+            raise ValueError(
+                f"variables much be a list (array-like). Got type: {type(variables)}."
+            )
+        elif not all([node in self.model.nodes() for node in variables]):
+            raise ValueError(
+                f"Some of the variables in `variables` are not in the model."
+            )
+        else:
+            variables = list(variables)
+
+        if do is None:
+            do = {}
+        elif not isinstance(do, dict):
+            raise ValueError(
+                "`do` must be a dict of the form: {variable_name: variable_state}"
+            )
+        if evidence is None:
+            evidence = {}
+        elif not isinstance(evidence, dict):
+            raise ValueError(
+                "`evidence` must be a dict of the form: {variable_name: variable_state}"
+            )
+
+        from pgmpy.inference import Inference
+
+        if inference_algo == "ve":
+            from pgmpy.inference import VariableElimination
+
+            inference_algo = VariableElimination
+        elif inference_algo == "bp":
+            from pgmpy.inference import BeliefPropagation
+
+            inference_algo = BeliefPropagation
+        elif not isinstance(inference_algo, Inference):
+            raise ValueError(
+                f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
+            )
+
+        # Step 2: Check if adjustment set is provided, otherwise calcualte it.
+        if adjustment_set is None:
+            do_vars = [var for var, state in do.items()]
+            adjustment_set = set(
+                chain(*[self.model.predecessors(var) for var in do_vars])
+            )
+            if len(adjustment_set.intersection(self.model.latents)) != 0:
+                raise ValueError(
+                    "Not all parents of do variables are observed. Please specify an adjustment set."
+                )
+
+        infer = inference_algo(self.model)
+
+        # Step 3: If no do variable specified, do a normal probabilistic inference.
+        if do == {}:
+            return infer.query(variables, evidence, show_progress=False)
+
+        # Step 3: Compute \sum_{z} p(variables | do, z) p(z)
+        values = []
+        p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
+        adj_states = [
+            self.model.get_cpds(var).state_names[var] for var in adjustment_set
+        ]
+
+        if show_progress:
+            pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
+
+        for state_comb in product(*adj_states):
+            adj_evidence = {
+                var: state for var, state in zip(adjustment_set, state_comb)
+            }
+            evidence = {**do, **adj_evidence}
+            values.append(
+                infer.query(variables, evidence=evidence, show_progress=False)
+                * p_z.get_value(**adj_evidence)
+            )
+
+            if show_progress:
+                pbar.update(1)
+
+        return sum(values).normalize(inplace=False)

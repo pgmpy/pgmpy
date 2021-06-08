@@ -650,7 +650,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     if boolean:
         return p_value >= kwargs["significance_level"]
     else:
-        return chi, dof, p_value
+        return chi, p_value, dof
 
 
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):

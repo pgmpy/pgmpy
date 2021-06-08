@@ -93,7 +93,6 @@ class TestVariableElimination(unittest.TestCase):
                 variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
             ),
         )
-
         query_result = self.bayesian_inference.query(["Q", "J"])
         query_result = self.bayesian_inference.query(["Q", "J"])
         self.assertEqual(
@@ -143,17 +142,17 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G"]), 0.5714, decimal=4
+            self.bayesian_inference.max_marginal(["G"]), 0.6, decimal=4
         )
 
     def test_max_marginal_var1(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R"]), 0.3740, decimal=4
+            self.bayesian_inference.max_marginal(["G", "R"]), 0.36, decimal=4
         )
 
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R", "A"]), 0.3061, decimal=4
+            self.bayesian_inference.max_marginal(["G", "R", "A"]), 0.288, decimal=4
         )
 
     def test_max_marginal_common_var(self):
@@ -182,6 +181,47 @@ class TestVariableElimination(unittest.TestCase):
             self.bayesian_inference.map_query,
             variables=["J"],
             evidence=["J"],
+        )
+
+    def test_elimination_order(self):
+        # Check all the heuristics give the same results.
+        for elimination_order in [
+            "WeightedMinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "MinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                ["J"], elimination_order=elimination_order
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
+            )
+
+            query_result = self.bayesian_inference.query(
+                variables=["J"], evidence={"A": 0, "R": 1}
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            )
+
+        # Check when elimination order has extra variables. Because of pruning.
+        query_result = self.bayesian_inference.query(
+            ["J"], elimination_order=["A", "R", "L", "Q", "G"]
+        )
+        self.assertEqual(
+            query_result,
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
+        )
+
+        # Check for when elimination order doesn't have all the variables
+        self.assertRaises(
+            ValueError,
+            self.bayesian_inference.query,
+            variables=["J"],
+            elimination_order=["A"],
         )
 
     def test_induced_graph(self):
@@ -425,6 +465,34 @@ class TestVariableEliminationMarkov(unittest.TestCase):
             ["G", "Q", "A", "J", "L", "R"]
         )
         self.assertEqual(2, result_width)
+
+    def test_issue_1421(self):
+        model = BayesianModel([("X", "Y"), ("Z", "X"), ("W", "Y")])
+        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
+
+        cpd_x = TabularCPD(
+            variable="X",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["Z"],
+            evidence_card=[2],
+        )
+
+        cpd_w = TabularCPD(variable="W", variable_card=2, values=[[0.5], [0.5]])
+        cpd_y = TabularCPD(
+            variable="Y",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["X", "W"],
+            evidence_card=[2, 2],
+        )
+
+        model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+
+        infer = VariableElimination(model)
+        np_test.assert_array_almost_equal(
+            infer.query(["Y"], evidence={"X": 0}).values, [0.35, 0.65]
+        )
 
     def tearDown(self):
         del self.markov_inference

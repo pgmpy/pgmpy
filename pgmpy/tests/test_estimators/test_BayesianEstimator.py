@@ -11,6 +11,7 @@ from pgmpy.factors.discrete import TabularCPD
 class TestBayesianEstimator(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([("A", "C"), ("B", "C")])
+        self.model_latent = BayesianModel([("A", "C"), ("B", "C")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
@@ -24,6 +25,9 @@ class TestBayesianEstimator(unittest.TestCase):
             self.m1, self.d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}
         )
         self.est3 = BayesianEstimator(self.m1, self.d2)
+
+    def test_error_latent_model(self):
+        self.assertRaises(ValueError, BayesianEstimator, self.model_latent, self.d1)
 
     def test_estimate_cpd_dirichlet(self):
         cpd_A = self.est1.estimate_cpd(

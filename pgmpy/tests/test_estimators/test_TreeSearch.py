@@ -12,10 +12,8 @@ from pgmpy.sampling import BayesianModelSampling
 
 class TestTreeSearch(unittest.TestCase):
     def setUp(self):
-        # test data for chow-liu
-        self.data11 = pd.DataFrame(
-            data=[[1, 1, 0], [1, 1, 1], [1, 1, 0]], columns=["B", "C", "D"]
-        )
+        # set random seed
+        np.random.seed(0)
 
         # test data for chow-liu
         self.data12 = pd.DataFrame(
@@ -62,13 +60,7 @@ class TestTreeSearch(unittest.TestCase):
 
         model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
         inference = BayesianModelSampling(model)
-        self.data13 = inference.forward_sample(size=10000, return_type="dataframe")
-
-        # test data for TAN
-        self.data21 = pd.DataFrame(
-            data=[[0, 1, 1, 0], [1, 1, 1, 1], [0, 1, 1, 0]],
-            columns=["A", "B", "C", "D"],
-        )
+        self.data13 = inference.forward_sample(size=10000)
 
         # test data for TAN
         model = BayesianModel(
@@ -130,134 +122,116 @@ class TestTreeSearch(unittest.TestCase):
         )
         model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
         inference = BayesianModelSampling(model)
-        self.data22 = inference.forward_sample(size=10000, return_type="dataframe")
+        self.data22 = inference.forward_sample(size=10000)
 
     def test_estimate_chow_liu(self):
         # learn tree structure using D as root node
-        for n_jobs in [-1, 1]:
-            est = TreeSearch(self.data11, root_node="D", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
+        for weight_fn in [
+            "mutual_info",
+            "adjusted_mutual_info",
+            "normalized_mutual_info",
+        ]:
+            for n_jobs in [-1, 1]:
+                # learn graph structure
+                est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
+                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
 
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["B", "C", "D"])
-            self.assertCountEqual(dag.edges(), [("D", "B"), ("D", "C")])
+                # check number of nodes and edges are as expected
+                self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E"])
+                self.assertTrue(nx.is_tree(dag))
 
-            # check tree structure exists
-            self.assertTrue(dag.has_edge("D", "B"))
-            self.assertTrue(dag.has_edge("D", "C"))
+                # learn tree structure using A as root node
+                est = TreeSearch(self.data13, root_node="A", n_jobs=n_jobs)
+                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
 
-            # learn tree structure using B as root node
-            est = TreeSearch(self.data11, root_node="B", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
+                # check number of nodes and edges are as expected
+                self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "F"])
+                self.assertCountEqual(
+                    dag.edges(),
+                    [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")],
+                )
 
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["B", "C", "D"])
-            self.assertCountEqual(dag.edges(), [("B", "D"), ("D", "C")])
-
-            # check tree structure exists
-            self.assertTrue(dag.has_edge("B", "D"))
-            self.assertTrue(dag.has_edge("D", "C"))
-
-            # check invalid root node
-            with self.assertRaises(ValueError):
-                est = TreeSearch(self.data11, root_node="A", n_jobs=n_jobs)
-
-            # learn graph structure
-            est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
-
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E"])
-            self.assertTrue(nx.is_tree(dag))
-
-            # learn tree structure using A as root node
-            est = TreeSearch(self.data13, root_node="A", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="chow-liu")
-
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "F"])
-            self.assertCountEqual(
-                dag.edges(),
-                [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")],
-            )
-
-            # check tree structure exists
-            self.assertTrue(dag.has_edge("A", "B"))
-            self.assertTrue(dag.has_edge("A", "C"))
-            self.assertTrue(dag.has_edge("B", "D"))
-            self.assertTrue(dag.has_edge("B", "E"))
-            self.assertTrue(dag.has_edge("C", "F"))
+                # check tree structure exists
+                self.assertTrue(dag.has_edge("A", "B"))
+                self.assertTrue(dag.has_edge("A", "C"))
+                self.assertTrue(dag.has_edge("B", "D"))
+                self.assertTrue(dag.has_edge("B", "E"))
+                self.assertTrue(dag.has_edge("C", "F"))
 
     def test_estimate_tan(self):
-        for n_jobs in [-1, 1]:
-            # learn graph structure
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="tan", class_node="A")
+        for weight_fn in [
+            "mutual_info",
+            "adjusted_mutual_info",
+            "normalized_mutual_info",
+        ]:
+            for n_jobs in [-1, 1]:
+                # learn graph structure
+                est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
+                dag = est.estimate(
+                    estimator_type="tan", class_node="A", edge_weights_fn=weight_fn
+                )
 
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D"])
-            self.assertCountEqual(
-                dag.edges(),
-                [("A", "B"), ("A", "C"), ("A", "D"), ("D", "B"), ("D", "C")],
-            )
+                # check number of nodes and edges are as expected
+                self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "R"])
+                self.assertCountEqual(
+                    dag.edges(),
+                    [
+                        ("A", "B"),
+                        ("A", "C"),
+                        ("A", "D"),
+                        ("A", "E"),
+                        ("A", "R"),
+                        ("R", "B"),
+                        ("R", "C"),
+                        ("R", "D"),
+                        ("R", "E"),
+                    ],
+                )
 
-            # check directed edge between dependent and independent variables
-            self.assertTrue(dag.has_edge("A", "B"))
-            self.assertTrue(dag.has_edge("A", "C"))
-            self.assertTrue(dag.has_edge("A", "D"))
+                # check directed edge between class and independent variables
+                self.assertTrue(dag.has_edge("A", "B"))
+                self.assertTrue(dag.has_edge("A", "C"))
+                self.assertTrue(dag.has_edge("A", "D"))
+                self.assertTrue(dag.has_edge("A", "E"))
 
-            # check tree structure exists over independent variables
-            self.assertTrue(dag.has_edge("D", "B"))
-            self.assertTrue(dag.has_edge("D", "C"))
+                # check tree structure exists over independent variables
+                self.assertTrue(dag.has_edge("R", "B"))
+                self.assertTrue(dag.has_edge("R", "C"))
+                self.assertTrue(dag.has_edge("R", "D"))
+                self.assertTrue(dag.has_edge("R", "E"))
 
-            # check invalid root node
-            with self.assertRaises(ValueError):
-                est = TreeSearch(self.data21, root_node="X", n_jobs=n_jobs)
+    def test_estimate_chow_liu_auto_root_node(self):
+        # learn tree structure using auto root node
+        est = TreeSearch(self.data12)
 
-            # check invalid class node
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            with self.assertRaises(ValueError):
-                est.estimate(estimator_type="tan", class_node="X")
+        # root node selection
+        weights = est._get_weights(self.data12)
+        sum_weights = weights.sum(axis=0)
+        maxw_idx = np.argsort(sum_weights)[::-1]
+        root_node = self.data12.columns[maxw_idx[0]]
 
-            est = TreeSearch(self.data21, root_node="D", n_jobs=n_jobs)
-            with self.assertRaises(ValueError):
-                est.estimate(estimator_type="tan", class_node="D")
+        dag = est.estimate(estimator_type="chow-liu")
+        nodes = list(dag.nodes())
+        np.testing.assert_equal(nodes[0], root_node)
+        np.testing.assert_array_equal(nodes, ["D", "A", "C", "B", "E"])
 
-            # learn graph structure
-            est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
-            dag = est.estimate(estimator_type="tan", class_node="A")
+    def test_estimate_tan_auto_class_node(self):
+        # learn tree structure using auto root and class node
+        est = TreeSearch(self.data22)
 
-            # check number of nodes and edges are as expected
-            self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "R"])
-            self.assertCountEqual(
-                dag.edges(),
-                [
-                    ("A", "B"),
-                    ("A", "C"),
-                    ("A", "D"),
-                    ("A", "E"),
-                    ("A", "R"),
-                    ("R", "B"),
-                    ("R", "C"),
-                    ("R", "D"),
-                    ("R", "E"),
-                ],
-            )
+        # root and class node selection
+        weights = est._get_weights(self.data22)
+        sum_weights = weights.sum(axis=0)
+        maxw_idx = np.argsort(sum_weights)[::-1]
+        root_node = self.data22.columns[maxw_idx[0]]
+        class_node = self.data22.columns[maxw_idx[1]]
 
-            # check directed edge between class and independent variables
-            self.assertTrue(dag.has_edge("A", "B"))
-            self.assertTrue(dag.has_edge("A", "C"))
-            self.assertTrue(dag.has_edge("A", "D"))
-            self.assertTrue(dag.has_edge("A", "E"))
-
-            # check tree structure exists over independent variables
-            self.assertTrue(dag.has_edge("R", "B"))
-            self.assertTrue(dag.has_edge("R", "C"))
-            self.assertTrue(dag.has_edge("R", "D"))
-            self.assertTrue(dag.has_edge("R", "E"))
+        dag = est.estimate(estimator_type="tan")
+        nodes = list(dag.nodes())
+        np.testing.assert_equal(nodes[0], root_node)
+        np.testing.assert_equal(nodes[-1], class_node)
+        np.testing.assert_array_equal(nodes, ["C", "R", "A", "D", "E", "B"])
 
     def tearDown(self):
-        del self.data11
         del self.data12
-        del self.data21
         del self.data22

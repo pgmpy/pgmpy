@@ -3,8 +3,9 @@
 from itertools import chain
 from warnings import warn
 
-import numpy as np
 import numbers
+import numpy as np
+from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
@@ -21,11 +22,15 @@ class BayesianEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for BayesianModel"
             )
+        elif len(model.latents) != 0:
+            raise ValueError(
+                f"Bayesian Parameter Estimation works only on models with all observed variables. Found latent variables: {model.latents}"
+            )
 
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(
-        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None
+        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None, n_jobs=-1
     ):
         """
         Method to estimate the model parameters (CPDs).
@@ -69,8 +74,8 @@ class BayesianEstimator(ParameterEstimator):
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
-        parameters = []
-        for node in self.model.nodes():
+
+        def _get_node_param(node):
             _equivalent_sample_size = (
                 equivalent_sample_size[node]
                 if isinstance(equivalent_sample_size, dict)
@@ -87,7 +92,11 @@ class BayesianEstimator(ParameterEstimator):
                 equivalent_sample_size=_equivalent_sample_size,
                 pseudo_counts=_pseudo_counts,
             )
-            parameters.append(cpd)
+            return cpd
+
+        parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
+            delayed(_get_node_param)(node) for node in self.model.nodes()
+        )
 
         return parameters
 
