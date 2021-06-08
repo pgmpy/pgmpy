@@ -320,7 +320,7 @@ class ExpectationMaximization(ParameterEstimator):
             cpd_array = cpd_array.reshape(
                 [
                     len(state_names[node]),
-                    inte(np.prod([len(state_names[p]) for p in parents])),
+                    int(np.prod([len(state_names[p]) for p in parents])),
                 ]
             )
 
