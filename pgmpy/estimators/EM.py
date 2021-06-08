@@ -1,12 +1,10 @@
 # coding:utf-8
 
-import copy
 import numpy as np
 import pandas as pd
 
 from pgmpy.estimators import ParameterEstimator
-from pgmpy.inference import VariableElimination
-from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.models import BayesianModel
 
 
@@ -133,6 +131,9 @@ class ExpectationMaximization(ParameterEstimator):
         Examples
         --------
         """
+
+        # to avoid circular imports lets import ve here
+        from pgmpy.inference import VariableElimination
 
         # this will be very similar to MLE estimation, except we will add
         #  partial counts to the state_counts field
