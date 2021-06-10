@@ -70,8 +70,6 @@ class TestBayesianEstimator(unittest.TestCase):
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
         self.assertEqual(cpd_C, cpd_C_exp)
-        
-
 
     def test_estimate_cpd_improper_prior(self):
         cpd_C = self.est1.estimate_cpd(
