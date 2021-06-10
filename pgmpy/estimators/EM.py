@@ -7,10 +7,11 @@ from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 from pgmpy.models import BayesianModel
 
-def moveaxis(in_array,in_labels, out_labels):
+
+def moveaxis(in_array, in_labels, out_labels):
     """
     a helper function to move the axis of an array based on two lists of labels
-     
+
     Parameters
     ----------
     in_array: the input np.ndarray
@@ -25,7 +26,8 @@ def moveaxis(in_array,in_labels, out_labels):
     """
     in_idx = range(len(in_labels))
     out_idx = [in_labels.index(label) for label in out_labels]
-    return np.moveaxis(in_array,out_idx,in_idx)
+    return np.moveaxis(in_array, out_idx, in_idx)
+
 
 class ExpectationMaximization(ParameterEstimator):
     def __init__(self, model, data, **kwargs):
@@ -184,8 +186,7 @@ class ExpectationMaximization(ParameterEstimator):
         # if there are no parents, the groupby index will not be a multi index,
         if not parents:
             tmp_idx = pd.MultiIndex.from_product(
-                iterables=[state_counts.index.values], 
-                names=state_counts.index.names
+                iterables=[state_counts.index.values], names=state_counts.index.names
             )
             state_counts.index = tmp_idx
 
@@ -332,7 +333,7 @@ class ExpectationMaximization(ParameterEstimator):
             #  numpy however, we are slinging around the priors so much that
             #  may be a good thing to use here as well
 
-            cpd_array[:,np.sum(cpd_array, axis=0) == 0] = 1
+            cpd_array[:, np.sum(cpd_array, axis=0) == 0] = 1
 
             cpd = TabularCPD(
                 node,
