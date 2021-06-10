@@ -71,6 +71,10 @@ class ExpectationMaximization(ParameterEstimator):
         return likelihood
 
     def _compute_weights(self, latent_card):
+        """
+        For each data point, creates extra data points for each possible combination
+        of states of latent variables and assigns weights to each of them.
+        """
         cache = {}
         for i in range(0, self.data.shape[0]):
             if tuple(self.data.iloc[i]) not in cache.keys():
@@ -91,13 +95,17 @@ class ExpectationMaximization(ParameterEstimator):
             [cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])]
         )
 
-    def _is_converged(self, new_cpds):
+    def _is_converged(self, new_cpds, atol=1e-08):
+        """
+        Checks if the values of `new_cpds` is within tolerance limits of current
+        model cpds.
+        """
         for cpd in new_cpds:
-            if cpd != self.model.get_cpds(node=cpd.scope()[0]):
+            if not cpd.__eq__(self.model.get_cpds(node=cpd.scope()[0]), atol=atol):
                 return False
         return True
 
-    def get_parameters(self, latent_card=None, n_jobs=-1, max_iter=100):
+    def get_parameters(self, latent_card=None, n_jobs=-1, max_iter=100, atol=1e-08):
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -156,13 +164,10 @@ class ExpectationMaximization(ParameterEstimator):
         for i in range(max_iter):
             # Expectation Step: Computes the likelihood of each data point.
             weighted_data = self._compute_weights(latent_card)
-            import pdb
-
-            pdb.set_trace()
             # Maximization Step: Uses the weights of the dataset for estimation.
             new_cpds = MaximumLikelihoodEstimator(
                 self.model, weighted_data
-            ).get_parameters()
+            ).get_parameters(weighted=True)
             if self._is_converged(new_cpds):
                 return new_cpds
             else:
