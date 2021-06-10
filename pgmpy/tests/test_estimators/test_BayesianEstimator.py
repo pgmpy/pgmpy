@@ -41,6 +41,13 @@ class TestBayesianEstimator(unittest.TestCase):
         )
         self.assertEqual(cpd_A, cpd_A_exp)
 
+        # also test passing pseudo_counts as np.array
+        pseudo_counts = np.array([[0], [1]])
+        cpd_A = self.est1.estimate_cpd(
+            "A", prior_type="dirichlet", pseudo_counts=pseudo_counts
+        )
+        self.assertEqual(cpd_A, cpd_A_exp)
+
         cpd_B = self.est1.estimate_cpd(
             "B", prior_type="dirichlet", pseudo_counts=[[9], [3]]
         )
@@ -63,6 +70,8 @@ class TestBayesianEstimator(unittest.TestCase):
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
         self.assertEqual(cpd_C, cpd_C_exp)
+        
+
 
     def test_estimate_cpd_improper_prior(self):
         cpd_C = self.est1.estimate_cpd(
