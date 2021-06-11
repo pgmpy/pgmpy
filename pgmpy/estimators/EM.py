@@ -1,4 +1,4 @@
-from itertools import product
+from itertools import product, chain
 
 import numpy as np
 import pandas as pd
@@ -156,6 +156,7 @@ class ExpectationMaximization(ParameterEstimator):
                 TabularCPD.get_random(
                     variable=node,
                     evidence=parents,
+                    state_names={var: self.state_names[var] for var in chain([node], parents)},
                 )
             )
 
