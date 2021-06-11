@@ -156,7 +156,13 @@ class ExpectationMaximization(ParameterEstimator):
                 TabularCPD.get_random(
                     variable=node,
                     evidence=parents,
-                    state_names={var: self.state_names[var] for var in chain([node], parents)},
+                    cardinality={
+                        var: len(self.state_names[var])
+                        for var in chain([node], parents)
+                    },
+                    state_names={
+                        var: self.state_names[var] for var in chain([node], parents)
+                    },
                 )
             )
 
