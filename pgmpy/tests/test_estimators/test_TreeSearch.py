@@ -228,9 +228,9 @@ class TestTreeSearch(unittest.TestCase):
 
         dag = est.estimate(estimator_type="tan")
         nodes = list(dag.nodes())
-        np.testing.assert_equal(nodes[0], root_node)
-        np.testing.assert_equal(nodes[-1], class_node)
-        np.testing.assert_array_equal(nodes, ["C", "R", "A", "D", "E", "B"])
+        self.assertEqual(nodes[0], root_node)
+        self.assertEqual(nodes[-1], class_node)
+        self.assertEqual(sorted(nodes), sorted(["C", "R", "A", "D", "E", "B"]))
 
     def tearDown(self):
         del self.data12

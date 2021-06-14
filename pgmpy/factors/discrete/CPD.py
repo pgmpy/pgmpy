@@ -515,7 +515,7 @@ class TabularCPD(DiscreteFactor):
         return self.variables[:0:-1]
 
     @staticmethod
-    def get_random(variable, evidence=None, cardinality=None):
+    def get_random(variable, evidence=None, cardinality=None, state_names=None):
         """
         Generates a TabularCPD instance with random values on `variable` with
         parents/evidence `evidence` with cardinality/number of states as given
@@ -534,6 +534,11 @@ class TabularCPD(DiscreteFactor):
             cardinality of each of the variables. If None, assigns each variable
             2 states.
 
+        state_names: dict (default: None)
+            A dict of the form {var_name: list of states} to specify the state names
+            for the variables in the CPD. If state_names=None, integral state names
+            starting from 0 is assigned.
+
         Returns
         -------
         pgmpy.factors.discrete.TabularCPD: A TabularCPD object on `variable` with
@@ -545,6 +550,11 @@ class TabularCPD(DiscreteFactor):
         >>> TabularCPD(variable='A', evidence=['C', 'D'],
         ...            cardinality={'A': 3, 'B': 2, 'C': 4})
         <TabularCPD representing P(A:3 | C:4, B:2) at 0x7f95e22b8040>
+        >>> TabularCPD(variable='A', evidence=['C', 'D'],
+        ...            cardinality={'A': 2, 'B': 2, 'C': 2},
+        ...            state_names={'A': ['a1', 'a2'],
+        ...                         'B': ['b1', 'b2'],
+        ...                         'C': ['c1', 'c2']})
         """
         if evidence is None:
             evidence = []
@@ -560,7 +570,10 @@ class TabularCPD(DiscreteFactor):
             values = np.random.rand(cardinality[variable], 1)
             values = values / np.sum(values, axis=0)
             node_cpd = TabularCPD(
-                variable=variable, variable_card=cardinality[variable], values=values
+                variable=variable,
+                variable_card=cardinality[variable],
+                values=values,
+                state_names=state_names,
             )
         else:
             parent_card = [cardinality[var] for var in evidence]
@@ -572,6 +585,7 @@ class TabularCPD(DiscreteFactor):
                 values=values,
                 evidence=evidence,
                 evidence_card=parent_card,
+                state_names=state_names,
             )
 
         return node_cpd

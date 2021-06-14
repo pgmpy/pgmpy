@@ -230,19 +230,17 @@ class TreeSearch(StructureEstimator):
 
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
+        pbar = combinations(data.columns, 2)
         if show_progress and SHOW_PROGRESS:
-            pbar = tqdm(
-                combinations(data.columns, 2), total=(n_vars * (n_vars - 1) / 2)
-            )
-            pbar.set_description("Building tree")
-        else:
-            pbar = combinations(data.columns, 2)
+            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
         vals = Parallel(n_jobs=n_jobs, prefer="threads")(
             delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))
-        weights[np.triu_indices(n_vars, k=1)] = vals
+        indices = np.triu_indices(n_vars, k=1)
+        weights[indices] = vals
+        weights.T[indices] = vals
 
         return weights
 

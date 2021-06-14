@@ -116,7 +116,14 @@ class TestBackdoorPaths(unittest.TestCase):
 
 class TestDoQuery(unittest.TestCase):
     def setUp(self):
-        self.simpson_model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
+        self.simpson_model = self.get_simpson_model()
+        self.simp_infer = CausalInference(self.simpson_model)
+
+        self.example_model = self.get_example_model()
+        self.example_infer = CausalInference(self.example_model)
+
+    def get_simpson_model(self):
+        simpson_model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
             variable="S",
             variable_card=2,
@@ -139,30 +146,13 @@ class TestDoQuery(unittest.TestCase):
             evidence_card=[2, 2],
             state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
         )
+        simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
 
-        self.simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
-        self.infer = CausalInference(self.simpson_model)
+        return simpson_model
 
-    def test_query(self):
-        for algo in ["ve", "bp"]:
-            query_nodo1 = self.infer.query(
-                variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo
-            )
-            np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.5, 0.5]))
-
-            query_nodo2 = self.infer.query(
-                variables=["C"], do=None, evidence={"T": 0}, inference_algo=algo
-            )
-            np_test.assert_array_almost_equal(query_nodo2.values, np.array([0.6, 0.4]))
-
-            query1 = self.infer.query(variables=["C"], do={"T": 1}, inference_algo=algo)
-            np_test.assert_array_almost_equal(query1.values, np.array([0.6, 0.4]))
-
-            query2 = self.infer.query(variables=["C"], do={"T": 0}, inference_algo=algo)
-            np_test.assert_array_almost_equal(query2.values, np.array([0.5, 0.5]))
-
-    def test_adjustment_query(self):
-        model = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
+    def get_example_model(self):
+        # Model structure: Z -> X -> Y; Z -> W -> Y
+        example_model = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
 
         cpd_x = TabularCPD(
@@ -189,31 +179,75 @@ class TestDoQuery(unittest.TestCase):
             evidence_card=[2, 2],
         )
 
-        model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+        example_model.add_cpds(cpd_z, cpd_x, cpd_w, cpd_y)
+
+        return example_model
+
+    def test_query(self):
+        for algo in ["ve", "bp"]:
+            query_nodo1 = self.simp_infer.query(
+                variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.5, 0.5]))
+
+            query_nodo2 = self.simp_infer.query(
+                variables=["C"], do=None, evidence={"T": 0}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query_nodo2.values, np.array([0.6, 0.4]))
+
+            query1 = self.simp_infer.query(
+                variables=["C"], do={"T": 1}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query1.values, np.array([0.6, 0.4]))
+
+            query2 = self.simp_infer.query(
+                variables=["C"], do={"T": 0}, inference_algo=algo
+            )
+            np_test.assert_array_almost_equal(query2.values, np.array([0.5, 0.5]))
+
+            query3 = self.simp_infer.query(["C"], adjustment_set=["S"])
+            np_test.assert_array_almost_equal(query3.values, np.array([0.55, 0.45]))
+
+    def test_adjustment_query(self):
 
         for algo in ["ve", "bp"]:
-            infer_adj = CausalInference(model)
-
-            query = infer_adj.query(
+            # Test adjustment with do operation.
+            query1 = self.example_infer.query(
                 variables=["Y"], do={"X": 1}, adjustment_set={"Z"}, inference_algo=algo
             )
-            np_test.assert_array_almost_equal(query.values, np.array([0.7240, 0.2760]))
+            np_test.assert_array_almost_equal(query1.values, np.array([0.7240, 0.2760]))
 
-            query = infer_adj.query(
+            query2 = self.example_infer.query(
                 variables=["Y"], do={"X": 1}, adjustment_set={"W"}, inference_algo=algo
             )
-            np_test.assert_array_almost_equal(query.values, np.array([0.7240, 0.2760]))
+            np_test.assert_array_almost_equal(query2.values, np.array([0.7240, 0.2760]))
+
+            # Test adjustment without do operation.
+            query3 = self.example_infer.query(["Y"], adjustment_set=["W"])
+            np_test.assert_array_almost_equal(query3.values, np.array([0.62, 0.38]))
+
+            query4 = self.example_infer.query(["Y"], adjustment_set=["Z"])
+            np_test.assert_array_almost_equal(query4.values, np.array([0.62, 0.38]))
+
+            query5 = self.example_infer.query(["Y"], adjustment_set=["W", "Z"])
+            np_test.assert_array_almost_equal(query5.values, np.array([0.62, 0.38]))
 
     def test_query_error(self):
-        self.assertRaises(ValueError, self.infer.query, variables="C", do={"T": 1})
-        self.assertRaises(ValueError, self.infer.query, variables=["E"], do={"T": 1})
-        self.assertRaises(ValueError, self.infer.query, variables=["C"], do="T")
+        self.assertRaises(ValueError, self.simp_infer.query, variables="C", do={"T": 1})
         self.assertRaises(
-            ValueError, self.infer.query, variables=["C"], do={"T": 1}, evidence="S"
+            ValueError, self.simp_infer.query, variables=["E"], do={"T": 1}
+        )
+        self.assertRaises(ValueError, self.simp_infer.query, variables=["C"], do="T")
+        self.assertRaises(
+            ValueError,
+            self.simp_infer.query,
+            variables=["C"],
+            do={"T": 1},
+            evidence="S",
         )
         self.assertRaises(
             ValueError,
-            self.infer.query,
+            self.simp_infer.query,
             variables=["C"],
             do={"T": 1},
             inference_algo="random",
