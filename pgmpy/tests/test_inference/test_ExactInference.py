@@ -254,6 +254,70 @@ class TestVariableElimination(unittest.TestCase):
         del self.bayesian_model
 
 
+class TestSnowNetwork(unittest.TestCase):
+    def setUp(self):
+        self.model = BayesianModel(
+            [
+                ("Snow", "Risk"),
+                ("Snow", "Traffic"),
+                ("Traffic", "Late"),
+                ("Risk", "Late"),
+            ]
+        )
+
+        cpd_snow = TabularCPD(
+            "Snow", 2, [[0.4], [0.6]], state_names={"Snow": ["yes", "no"]}
+        )
+        cpd_risk = TabularCPD(
+            "Risk",
+            2,
+            [[0.8, 0.4], [0.2, 0.6]],
+            evidence=["Snow"],
+            evidence_card=[2],
+            state_names={"Snow": ["yes", "no"], "Risk": ["yes", "no"]},
+        )
+        cpd_traffic = TabularCPD(
+            "Traffic",
+            2,
+            [[0.4, 0.65], [0.6, 0.35]],
+            evidence=["Snow"],
+            evidence_card=[2],
+            state_names={"Traffic": ["normal", "slow"], "Snow": ["yes", "no"]},
+        )
+        cpd_late = TabularCPD(
+            "Late",
+            2,
+            [[0.45, 0.85, 0.1, 0.7], [0.55, 0.15, 0.90, 0.30]],
+            evidence=["Risk", "Traffic"],
+            evidence_card=[2, 2],
+            state_names={
+                "Late": ["yes", "no"],
+                "Traffic": ["normal", "slow"],
+                "Risk": ["yes", "no"],
+            },
+        )
+        self.model.add_cpds(cpd_snow, cpd_risk, cpd_traffic, cpd_late)
+
+    def test_queries(self):
+        for algo in [VariableElimination, BeliefPropagation]:
+            infer = algo(self.model)
+            query1 = infer.query(["Snow"], evidence={"Traffic": "slow"})
+            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+
+            query2 = infer.query(["Risk"], evidence={"Traffic": "slow"})
+            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+
+            query3 = infer.query(["Late"], evidence={"Traffic": "slow"})
+            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+
+            self.assertRaises(
+                ValueError,
+                infer.query,
+                variables=["Traffic"],
+                evidence={"Traffic": "slow"},
+            )
+
+
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
         self.markov_model = MarkovModel([("A", "B"), ("A", "C")])
