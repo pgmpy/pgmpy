@@ -18,7 +18,7 @@ from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class HillClimbSearch(StructureEstimator):
-    def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
+    def __init__(self, data, use_cache=True, **kwargs):
         """
         Class for heuristic hill climb searches for DAGs, to learn
         network structure from data. `estimate` attempts to find a model with optimal score.
