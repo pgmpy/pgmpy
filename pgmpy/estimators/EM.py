@@ -148,6 +148,8 @@ class ExpectationMaximization(ParameterEstimator):
 
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
         n_states_dict.update(latent_card)
+        for var in self.model.latents:
+            self.state_names[var] = list(range(n_states_dict[var]))
 
         cpds = []
         for node in self.model.nodes():
@@ -157,8 +159,7 @@ class ExpectationMaximization(ParameterEstimator):
                     variable=node,
                     evidence=parents,
                     cardinality={
-                        var: len(self.state_names[var])
-                        for var in chain([node], parents)
+                        var: n_states_dict[var] for var in chain([node], parents)
                     },
                     state_names={
                         var: self.state_names[var] for var in chain([node], parents)
