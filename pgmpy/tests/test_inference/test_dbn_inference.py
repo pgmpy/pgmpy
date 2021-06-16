@@ -114,7 +114,7 @@ class TestDBNInference(unittest.TestCase):
             [("X", 0), ("X", 1)], {("Y", 0): 0, ("Y", 1): 1, ("Y", 2): 1}
         )
         np_test.assert_array_almost_equal(
-            query_result[("X", 0)].values, np.array([0.66594382, 0.33405618])
+            query_result[("X", 0)].values, np.array([0.677533, 0.322467])
         )
         np_test.assert_array_almost_equal(
             query_result[("X", 1)].values, np.array([0.7621772, 0.2378228])
