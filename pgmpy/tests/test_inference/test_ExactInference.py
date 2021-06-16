@@ -324,14 +324,27 @@ class TestSnowNetwork(unittest.TestCase):
             query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence])
             np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
 
+            map1 = infer.map_query(["Snow"], virtual_evidence=[virt_evidence])
+            self.assertEqual(map1, {"Snow": "no"})
+
             query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence])
             np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
+
+            map2 = infer.map_query(["Risk"], virtual_evidence=[virt_evidence])
+            self.assertEqual(map2, {"Risk": "yes"})
 
             query3 = infer.query(["Late"], virtual_evidence=[virt_evidence])
             np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
 
+            map3 = infer.map_query(["Late"], virtual_evidence=[virt_evidence])
+            self.assertEqual(map3, {"Late": "yes"})
+
             query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence])
             np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
+
+            # TODO: State name should be returned here.
+            map4 = infer.map_query(["Traffic"], virtual_evidence=[virt_evidence])
+            self.assertTrue(map4 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
         virt_evidence1 = TabularCPD("Risk", 2, [[0.7], [0.3]])
         for algo in [VariableElimination, BeliefPropagation]:
@@ -341,20 +354,37 @@ class TestSnowNetwork(unittest.TestCase):
             )
             np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
 
+            map1 = infer.map_query(
+                ["Snow"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
+            self.assertEqual(map1, {"Snow": "yes"})
+
             query2 = infer.query(
                 ["Risk"], virtual_evidence=[virt_evidence, virt_evidence1]
             )
             np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
+            map2 = infer.map_query(
+                ["Risk"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
+            self.assertTrue(map2 in [{"Risk": 0}, {"Risk": "yes"}])
 
             query3 = infer.query(
                 ["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1]
             )
             np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
+            map3 = infer.map_query(
+                ["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
+            self.assertTrue(map3 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
             query4 = infer.query(
                 ["Late"], virtual_evidence=[virt_evidence, virt_evidence1]
             )
             np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
+            map4 = infer.map_query(
+                ["Late"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
+            self.assertEqual(map4, {"Late": "yes"})
 
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):

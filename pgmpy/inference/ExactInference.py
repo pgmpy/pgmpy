@@ -240,13 +240,20 @@ class VariableElimination(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
-        elimination_order: list
+        virtual_evidence: list (default:None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
+
+        elimination_order: str or list
             order of variable eliminations (if nothing is provided) order is
-            computed automatically
+            computed automatically.
 
         joint: boolean (default: True)
             If True, returns a Joint Distribution over `variables`.
             If False, returns a dict of distributions over each of the `variables`.
+
+        show_progress: boolean
+            If True, shows a progress bar.
 
         Examples
         --------
@@ -261,7 +268,6 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
-
         evidence = evidence if evidence is not None else dict()
         orig_model = self.model.copy()
 
@@ -374,6 +380,7 @@ class VariableElimination(Inference):
         self,
         variables=None,
         evidence=None,
+        virtual_evidence=None,
         elimination_order="MinFill",
         show_progress=True,
     ):
@@ -387,12 +394,21 @@ class VariableElimination(Inference):
         ----------
         variables: list
             list of variables over which we want to compute the max-marginal.
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
+        virtual_evidence: list (default:None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
+
         elimination_order: list
             order of variable eliminations (if nothing is provided) order is
             computed automatically
+
+        show_progress: boolean
+            If True, shows a progress bar.
 
         Examples
         --------
@@ -408,6 +424,7 @@ class VariableElimination(Inference):
         >>> phi_query = inference.map_query(['A', 'B'])
         """
         variables = [] if variables is None else variables
+        evidence = evidence if evidence is not None else dict()
         common_vars = set(evidence if evidence is not None else []).intersection(
             variables
         )
@@ -418,6 +435,17 @@ class VariableElimination(Inference):
 
         # Make a copy of the original model and replace self.model with it later
         orig_model = self.model.copy()
+
+        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+            self._virtual_evidence(virtual_evidence)
+            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
+            return self.map_query(
+                variables=variables,
+                evidence={**evidence, **virt_evidence},
+                virtual_evidence=None,
+                elimination_order=elimination_order,
+                show_progress=show_progress,
+            )
 
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
@@ -913,9 +941,16 @@ class BeliefPropagation(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
+        virtual_evidence: list (default:None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
+
         joint: boolean
             If True, returns a Joint Distribution over `variables`.
             If False, returns a dict of distributions over each of the `variables`.
+
+        show_progress: boolean
+            If True shows a progress bar.
 
         Examples
         --------
@@ -988,7 +1023,9 @@ class BeliefPropagation(Inference):
         else:
             return result
 
-    def map_query(self, variables=None, evidence=None, show_progress=True):
+    def map_query(
+        self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
+    ):
         """
         MAP Query method using belief propagation.
 
@@ -999,9 +1036,17 @@ class BeliefPropagation(Inference):
         ----------
         variables: list
             list of variables for which you want to compute the probability
+
+        virtual_evidence: list (default:None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
+
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
+        show_progress: boolean
+            If True, shows a progress bar.
 
         Examples
         --------
@@ -1031,6 +1076,7 @@ class BeliefPropagation(Inference):
         ...                              evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         variables = [] if variables is None else variables
+        evidence = evidence if evidence is not None else dict()
         common_vars = set(evidence if evidence is not None else []).intersection(
             variables
         )
@@ -1046,6 +1092,17 @@ class BeliefPropagation(Inference):
 
         # Make a copy of the original model and then replace self.model with it later.
         orig_model = self.model.copy()
+
+        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+            self._virtual_evidence(virtual_evidence)
+            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
+            return self.map_query(
+                variables=variables,
+                evidence={**evidence, **virt_evidence},
+                virtual_evidence=None,
+                show_progress=show_progress,
+            )
+
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
