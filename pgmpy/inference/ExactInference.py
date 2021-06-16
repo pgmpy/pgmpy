@@ -263,6 +263,7 @@ class VariableElimination(Inference):
         """
 
         evidence = evidence if evidence is not None else dict()
+        orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -288,7 +289,6 @@ class VariableElimination(Inference):
 
         # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
-        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -302,7 +302,7 @@ class VariableElimination(Inference):
             joint=joint,
             show_progress=show_progress,
         )
-        self.model = orig_model
+        self.__init__(orig_model)
 
         return result
 
@@ -354,7 +354,7 @@ class VariableElimination(Inference):
             )
 
         # Make a copy of the original model and replace self.model with it later.
-        orig_model = self.model
+        orig_model = self.model.copy()
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -367,7 +367,7 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
-        self.model = orig_model
+        self.__init__(orig_model)
         return np.max(final_distribution.values)
 
     def map_query(
@@ -417,7 +417,7 @@ class VariableElimination(Inference):
             )
 
         # Make a copy of the original model and replace self.model with it later
-        orig_model = self.model
+        orig_model = self.model.copy()
 
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
@@ -432,7 +432,7 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
-        self.model = orig_model
+        self.__init__(orig_model)
 
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
@@ -945,6 +945,7 @@ class BeliefPropagation(Inference):
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         evidence = evidence if evidence is not None else dict()
+        orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -963,13 +964,11 @@ class BeliefPropagation(Inference):
                 variables=variables,
                 evidence={**evidence, **virt_evidence},
                 virtual_evidence=None,
-                elimination_order=elimination_order,
                 joint=joint,
                 show_progress=show_progress,
             )
 
         # Step 3: Do network pruning.
-        orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -982,7 +981,7 @@ class BeliefPropagation(Inference):
             joint=joint,
             show_progress=show_progress,
         )
-        self.model = orig_model
+        self.__init__(orig_model)
 
         if joint:
             return result.normalize(inplace=False)
@@ -1046,7 +1045,7 @@ class BeliefPropagation(Inference):
             variables = list(self.model.nodes())
 
         # Make a copy of the original model and then replace self.model with it later.
-        orig_model = self.model
+        orig_model = self.model.copy()
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
@@ -1058,7 +1057,7 @@ class BeliefPropagation(Inference):
             show_progress=show_progress,
         )
 
-        self.model = orig_model
+        self.__init__(orig_model)
 
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.

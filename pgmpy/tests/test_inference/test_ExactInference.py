@@ -325,13 +325,13 @@ class TestSnowNetwork(unittest.TestCase):
             np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
 
             query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence])
-            np_test.assert_array_almost_equal(query1.values, [0.387, 0.613])
+            np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
 
             query3 = infer.query(["Late"], virtual_evidence=[virt_evidence])
-            np_test.assert_array_almost_equal(query1.values, [0.616, 0.384])
+            np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
 
             query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence])
-            np_test.assert_array_almost_equal(query1.values, [0.344, 0.656])
+            np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
 
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
