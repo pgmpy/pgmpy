@@ -336,16 +336,24 @@ class TestSnowNetwork(unittest.TestCase):
         virt_evidence1 = TabularCPD("Risk", 2, [[0.7], [0.3]])
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
-            query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence, virt_evidence1])
+            query1 = infer.query(
+                ["Snow"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
             np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
 
-            query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence, virt_evidence1])
+            query2 = infer.query(
+                ["Risk"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
             np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
 
-            query3 = infer.query(["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1])
+            query3 = infer.query(
+                ["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
             np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
 
-            query4 = infer.query(["Late"], virtual_evidence=[virt_evidence, virt_evidence1])
+            query4 = infer.query(
+                ["Late"], virtual_evidence=[virt_evidence, virt_evidence1]
+            )
             np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
 
 
