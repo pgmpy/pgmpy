@@ -317,6 +317,22 @@ class TestSnowNetwork(unittest.TestCase):
                 evidence={"Traffic": "slow"},
             )
 
+    def test_virt_evidence(self):
+        virt_evidence = TabularCPD("Traffic", 2, [[0.3], [0.7]])
+        for algo in [VariableElimination, BeliefPropagation]:
+            infer = algo(self.model)
+            query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence])
+            np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
+
+            query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence])
+            np_test.assert_array_almost_equal(query1.values, [0.387, 0.613])
+
+            query3 = infer.query(["Late"], virtual_evidence=[virt_evidence])
+            np_test.assert_array_almost_equal(query1.values, [0.616, 0.384])
+
+            query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence])
+            np_test.assert_array_almost_equal(query1.values, [0.344, 0.656])
+
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):

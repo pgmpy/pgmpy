@@ -3,6 +3,8 @@
 from collections import defaultdict
 from itertools import chain
 
+import numpy as np
+
 from pgmpy.models import BayesianModel
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
@@ -165,3 +167,57 @@ class Inference(object):
         bn.add_cpds(*cpds)
 
         return bn, evidence
+
+    def _virtual_evidence(self, virtual_evidence):
+        """
+        Modifies the model to incorporate virtual evidence. For each virtual evidence
+        variable a binary variable is added as the child of the evidence variable to
+        the model. The state 0 probabilities of the child is the evidence.
+
+        Parameters
+        ----------
+        virtual_evidence: dict
+            A dict of TabularCPD instances specirfying the virtual evidence for each
+            of the evidence variables.
+
+        Returns
+        -------
+        None
+
+        References
+        ----------
+        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks: Presentation and comparison on a simple example." International Conference on Information Processing and Management of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
+        """
+        for cpd in virtual_evidence:
+            var = cpd.variables[0]
+            if var not in self.model.nodes():
+                raise ValueError(
+                    "Evidence provided for variable which is not in the model"
+                )
+            elif len(cpd.variables) > 1:
+                raise ValueError(
+                    "Virtual evidence should be defined on individual variables. Maybe you are looking for soft evidence."
+                )
+
+            elif self.model.get_cardinality(var) != cpd.get_cardinality([var])[var]:
+                raise ValueError(
+                    "The number of states/cardinality for the evidence should be same as the number of states/cardinality of the variable in the model"
+                )
+
+        bn = self.model.copy()
+        for cpd in virtual_evidence:
+            var = cpd.variables[0]
+            new_var = "__" + var
+            bn.add_edge(var, new_var)
+            values = np.vstack((cpd.values, 1 - cpd.values))
+            new_cpd = TabularCPD(
+                variable=new_var,
+                variable_card=2,
+                values=values,
+                evidence=[var],
+                evidence_card=[self.model.get_cardinality(var)],
+                state_names={new_var: [0, 1], var: cpd.state_names[var]},
+            )
+            bn.add_cpds(new_cpd)
+
+        self.__init__(bn)

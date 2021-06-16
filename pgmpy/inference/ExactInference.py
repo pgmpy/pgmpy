@@ -225,6 +225,7 @@ class VariableElimination(Inference):
         self,
         variables,
         evidence=None,
+        virtual_evidence=None,
         elimination_order="MinFill",
         joint=True,
         show_progress=True,
@@ -260,6 +261,10 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
         """
+
+        evidence = evidence if evidence is not None else dict()
+
+        # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
         )
@@ -268,12 +273,27 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Step 2: If virtual_evidence is provided, modify the network and query.
+        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+            self._virtual_evidence(virtual_evidence)
+            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
+            return self.query(
+                variables=variables,
+                evidence={**evidence, **virt_evidence},
+                virtual_evidence=None,
+                elimination_order=elimination_order,
+                joint=joint,
+                show_progress=show_progress,
+            )
+
+        # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
         orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
+        # Step 4: Do the actual variable elimination
         result = self._variable_elimination(
             variables=variables,
             operation="marginalize",
@@ -873,7 +893,14 @@ class BeliefPropagation(Inference):
                 variables=variables, evidence=evidence, show_progress=show_progress
             )
 
-    def query(self, variables, evidence=None, joint=True, show_progress=True):
+    def query(
+        self,
+        variables,
+        evidence=None,
+        virtual_evidence=None,
+        joint=True,
+        show_progress=True,
+    ):
         """
         Query method using belief propagation.
 
@@ -917,6 +944,9 @@ class BeliefPropagation(Inference):
         >>> belief_propagation.query(variables=['J', 'Q'],
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
+        evidence = evidence if evidence is not None else dict()
+
+        # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
         )
@@ -925,11 +955,26 @@ class BeliefPropagation(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
+        # Step 2: If virtual_evidence is provided, modify model and evidence.
+        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+            self._virtual_evidence(virtual_evidence)
+            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
+            return self.query(
+                variables=variables,
+                evidence={**evidence, **virt_evidence},
+                virtual_evidence=None,
+                elimination_order=elimination_order,
+                joint=joint,
+                show_progress=show_progress,
+            )
+
+        # Step 3: Do network pruning.
         orig_model = self.model
         if isinstance(self.model, BayesianModel):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
+        # Step 4: Run inference.
         result = self._query(
             variables=variables,
             operation="marginalize",
