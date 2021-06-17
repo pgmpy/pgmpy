@@ -78,23 +78,23 @@ class ExpectationMaximization(ParameterEstimator):
         of states of latent variables and assigns weights to each of them.
         """
         cache = {}
-        for i in range(0, self.data.shape[0]):
-            if tuple(self.data.iloc[i]) not in cache.keys():
-                v = list(product(*[range(card) for card in latent_card.values()]))
-                latent_combinations = np.array(v, dtype=int)
-                df = self.data.iloc[[i] * latent_combinations.shape[0]].reset_index(
+
+        data_unique = self.data.drop_duplicates()
+        for i in range(data_unique.shape[0]):
+            v = list(product(*[range(card) for card in latent_card.values()]))
+            latent_combinations = np.array(v, dtype=int)
+            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
                     drop=True
                 )
-                for index, latent_var in enumerate(latent_card.keys()):
-                    df[latent_var] = latent_combinations[:, index]
+            for index, latent_var in enumerate(latent_card.keys()):
+                df[latent_var] = latent_combinations[:, index]
 
-                weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
-                df["_weight"] = weights / weights.sum()
-
-                cache[tuple(self.data.iloc[i])] = df
+            weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
+            df["_weight"] = weights / weights.sum()
+            cache[tuple(data_unique.iloc[i])] = df
 
         return pd.concat(
-            [cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])]
+            [cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])], copy=False
         )
 
     def _is_converged(self, new_cpds, atol=1e-08):
