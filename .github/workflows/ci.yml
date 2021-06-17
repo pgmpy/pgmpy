@@ -11,6 +11,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Print python info
+        run: | 
+          which python
+          python --version
       - name: Install dependencies
         run: |
           pip install pip -U
@@ -20,10 +24,8 @@ jobs:
         run: |
           black --diff .
           black --check .
-      - name: Print environment info
+      - name: Print package versions 
         run: | 
-          which python
-          python --version
           pip freeze
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
