@@ -1,5 +1,5 @@
 name: pgmpy
-on: [push]
+on: [push, pull_request]
 jobs:
   build:
     name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
