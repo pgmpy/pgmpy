@@ -8,7 +8,7 @@ jobs:
       max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -16,9 +16,11 @@ jobs:
         run: |
           pip install pip -U
           pip install black -U
+          pip install -r requirements.txt -U
+      - name: Check formatting
+        run: |
           black --diff .
           black --check .
-          pip install -r requirements.txt -U
       - name: Print environment info
         run: | 
           which python
