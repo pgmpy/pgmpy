@@ -2,10 +2,12 @@ from itertools import product, chain
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from pgmpy.estimators import ParameterEstimator, MaximumLikelihoodEstimator
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -105,7 +107,7 @@ class ExpectationMaximization(ParameterEstimator):
                 return False
         return True
 
-    def get_parameters(self, latent_card=None, n_jobs=-1, max_iter=100, atol=1e-08):
+    def get_parameters(self, latent_card=None, max_iter=100, atol=1e-08, n_jobs=-1, show_progress=True):
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -116,16 +118,23 @@ class ExpectationMaximization(ParameterEstimator):
             cardinality (number of states) of each latent variable. If None,
             assumes `2` states for each latent variable.
 
+        max_iter: int (default: 100)
+            The maximum number of iterations the algorithm is allowed to run for.
+            If max_iter is reached, return the last value of parameters.
+
+        atol: int (default: 1e-08)
+            The absolute accepted tolerance for checking convergence. If the parameters
+            change is less than atol in an iteration, the algorithm will exit.
+
         n_jobs: int (default: -1)
             Number of jobs to run in parallel. Default: -1 uses all the processors.
 
+        show_progress: boolean (default: True)
+            Whether to show a progress bar for iterations.
+
         Returns
         -------
-        parameters: list
-            List of TabularCPDs, one for each variable of the model
-
-        n_jobs: int
-            Number of processes to spawn
+        list: A list of estimated CPDs for the model.
 
         Examples
         --------
@@ -143,14 +152,18 @@ class ExpectationMaximization(ParameterEstimator):
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
+        # Step 1: Parameter checks 
         if latent_card is None:
             latent_card = {var: 2 for var in self.model.latents}
 
+        # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
         n_states_dict.update(latent_card)
         for var in self.model.latents:
             self.state_names[var] = list(range(n_states_dict[var]))
+        n_iter = 0
 
+        # Step 3: Initialize random CPDs if starting values aren't provided.
         cpds = []
         for node in self.model.nodes():
             parents = list(self.model.predecessors(node))
@@ -169,14 +182,26 @@ class ExpectationMaximization(ParameterEstimator):
 
         self.model.add_cpds(*cpds)
 
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=max_iter)
+
+        # Step 4: Run the EM algorithm.
         for i in range(max_iter):
-            # Expectation Step: Computes the likelihood of each data point.
+            # Step 4.1: E-step: Expands the dataset and computes the likelihood of each 
+            #           possible state of latent variables.
             weighted_data = self._compute_weights(latent_card)
-            # Maximization Step: Uses the weights of the dataset for estimation.
+            # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = MaximumLikelihoodEstimator(
                 self.model, weighted_data
-            ).get_parameters(weighted=True)
-            if self._is_converged(new_cpds):
+            ).get_parameters(n_jobs=n_jobs, weighted=True)
+
+            # Step 4.3: Check of convergence and max_iter
+            if self._is_converged(new_cpds, atol=atol):
                 return new_cpds
             else:
-                self.model.add_cpds(*new_cpds)
+                self.model.cpds = new_cpds
+                pbar.update(1)
+                n_iter += 1
+
+                if n_iter > max_iter:
+                    return new_cpds
