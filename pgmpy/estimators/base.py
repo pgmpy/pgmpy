@@ -217,7 +217,7 @@ class ParameterEstimator(BaseEstimator):
 
         super(ParameterEstimator, self).__init__(data, **kwargs)
 
-    def state_counts(self, variable, **kwargs):
+    def state_counts(self, variable, weighted=False, **kwargs):
         """
         Return counts how often each state of 'variable' occurred in the data.
         If the variable has parents, counting is done conditionally
@@ -263,7 +263,7 @@ class ParameterEstimator(BaseEstimator):
 
         parents = sorted(self.model.get_parents(variable))
         return super(ParameterEstimator, self).state_counts(
-            variable, parents=parents, **kwargs
+            variable, parents=parents, weighted=weighted, **kwargs
         )
 
     def get_parameters(self):

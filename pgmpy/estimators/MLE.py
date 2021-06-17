@@ -147,7 +147,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ╘══════╧══════╧══════╧══════╧══════╛
         """
 
-        state_counts = self.state_counts(node)
+        state_counts = self.state_counts(node, weighted=weighted)
 
         # if a column contains only `0`s (no states observed for some configuration
         # of parents' states) fill that column uniformly instead
