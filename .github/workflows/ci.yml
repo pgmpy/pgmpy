@@ -1,0 +1,36 @@
+name: pgmpy
+on: [push, pull_request]
+jobs:
+  build:
+    name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{matrix.python-version}}
+      - name: Print python info
+        run: | 
+          which python
+          python --version
+      - name: Install dependencies
+        run: |
+          pip install pip -U
+          pip install black -U
+          pip install -r requirements.txt -U
+      - name: Check formatting
+        run: |
+          black --diff .
+          black --check .
+      - name: Print package versions 
+        run: | 
+          pip freeze
+      - name: Run tests
+        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
+      - name: After success
+        run: codecov
