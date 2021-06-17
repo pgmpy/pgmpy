@@ -5,7 +5,6 @@ jobs:
     name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest]
