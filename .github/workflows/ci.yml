@@ -1,0 +1,33 @@
+name: pgmpy
+on: [push]
+jobs:
+  build:
+    name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 6
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up anaconda for python ${{ matrix.python-version }}
+        uses: s-weigand/setup-conda@v1.0.0
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: anaconda, conda-forge, pytorch
+      - name: Print environment info
+        run: |
+          conda --version
+          which python
+      - name: Install dependencies
+        run: |
+          conda install -c pytorch pytorch --yes
+          conda install --file=requirements/runtime.txt --file=requirements/tests.txt --file=requirements/optional.txt --yes
+          pip install nose-exclude
+      - name: Run tests
+        run: ./run_tests.py
+      - name: After success
+        run: codecov
