@@ -80,9 +80,11 @@ class ExpectationMaximization(ParameterEstimator):
         For each data point, creates extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
         """
-        cache = {}
+        cache = []
 
         data_unique = self.data.drop_duplicates()
+        n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
+
         for i in range(data_unique.shape[0]):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
@@ -93,12 +95,10 @@ class ExpectationMaximization(ParameterEstimator):
                 df[latent_var] = latent_combinations[:, index]
 
             weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
-            df["_weight"] = weights / weights.sum()
-            cache[tuple(data_unique.iloc[i])] = df
+            df["_weight"] = (weights / weights.sum()) * n_counts[tuple(data_unique.iloc[i])]
+            cache.append(df)
 
-        return pd.concat(
-            [cache[tuple(self.data.iloc[i])] for i in range(self.data.shape[0])], copy=False
-        )
+        return pd.concat(cache, copy=False)
 
     def _is_converged(self, new_cpds, atol=1e-08):
         """
