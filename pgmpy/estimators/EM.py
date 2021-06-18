@@ -1,3 +1,4 @@
+import warnings
 from itertools import product, chain
 
 import numpy as np
@@ -65,11 +66,13 @@ class ExpectationMaximization(ParameterEstimator):
         them together.
         """
         likelihood = 1
-        for cpd in self.model.cpds:
-            scope = set(cpd.scope())
-            likelihood *= cpd.get_value(
-                **{key: value for key, value in datapoint.items() if key in scope}
-            )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for cpd in self.model.cpds:
+                scope = set(cpd.scope())
+                likelihood *= cpd.get_value(
+                    **{key: value for key, value in datapoint.items() if key in scope}
+                )
         return likelihood
 
     def _compute_weights(self, latent_card):
@@ -161,7 +164,6 @@ class ExpectationMaximization(ParameterEstimator):
         n_states_dict.update(latent_card)
         for var in self.model.latents:
             self.state_names[var] = list(range(n_states_dict[var]))
-        n_iter = 0
 
         # Step 3: Initialize random CPDs if starting values aren't provided.
         cpds = []
@@ -197,11 +199,13 @@ class ExpectationMaximization(ParameterEstimator):
 
             # Step 4.3: Check of convergence and max_iter
             if self._is_converged(new_cpds, atol=atol):
+                if show_progress and SHOW_PROGRESS:
+                    pbar.close()
                 return new_cpds
+
             else:
                 self.model.cpds = new_cpds
-                pbar.update(1)
-                n_iter += 1
+                if show_progress and SHOW_PROGRESS:
+                    pbar.update(1)
 
-                if n_iter > max_iter:
-                    return new_cpds
+        return cpds
