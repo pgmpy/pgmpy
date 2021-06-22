@@ -58,6 +58,7 @@ class ExpectationMaximization(ParameterEstimator):
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
+        self.model_copy = self.model.copy()
 
     def _get_likelihood(self, datapoint):
         """
@@ -68,7 +69,7 @@ class ExpectationMaximization(ParameterEstimator):
         likelihood = 1
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for cpd in self.model.cpds:
+            for cpd in self.model_copy.cpds:
                 scope = set(cpd.scope())
                 likelihood *= cpd.get_value(
                     **{key: value for key, value in datapoint.items() if key in scope}
@@ -106,7 +107,7 @@ class ExpectationMaximization(ParameterEstimator):
         model cpds.
         """
         for cpd in new_cpds:
-            if not cpd.__eq__(self.model.get_cpds(node=cpd.scope()[0]), atol=atol):
+            if not cpd.__eq__(self.model_copy.get_cpds(node=cpd.scope()[0]), atol=atol):
                 return False
         return True
 
@@ -157,18 +158,18 @@ class ExpectationMaximization(ParameterEstimator):
         """
         # Step 1: Parameter checks 
         if latent_card is None:
-            latent_card = {var: 2 for var in self.model.latents}
+            latent_card = {var: 2 for var in self.model_copy.latents}
 
         # Step 2: Create structures/variables to be used later.
         n_states_dict = {key: len(value) for key, value in self.state_names.items()}
         n_states_dict.update(latent_card)
-        for var in self.model.latents:
+        for var in self.model_copy.latents:
             self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize random CPDs if starting values aren't provided.
         cpds = []
-        for node in self.model.nodes():
-            parents = list(self.model.predecessors(node))
+        for node in self.model_copy.nodes():
+            parents = list(self.model_copy.predecessors(node))
             cpds.append(
                 TabularCPD.get_random(
                     variable=node,
@@ -182,7 +183,7 @@ class ExpectationMaximization(ParameterEstimator):
                 )
             )
 
-        self.model.add_cpds(*cpds)
+        self.model_copy.add_cpds(*cpds)
 
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
@@ -194,7 +195,7 @@ class ExpectationMaximization(ParameterEstimator):
             weighted_data = self._compute_weights(latent_card)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = MaximumLikelihoodEstimator(
-                self.model, weighted_data
+                self.model_copy, weighted_data
             ).get_parameters(n_jobs=n_jobs, weighted=True)
 
             # Step 4.3: Check of convergence and max_iter
@@ -204,7 +205,7 @@ class ExpectationMaximization(ParameterEstimator):
                 return new_cpds
 
             else:
-                self.model.cpds = new_cpds
+                self.model_copy.cpds = new_cpds
                 if show_progress and SHOW_PROGRESS:
                     pbar.update(1)
 
