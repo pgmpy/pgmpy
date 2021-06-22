@@ -9,6 +9,7 @@ from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
 from pgmpy.estimators.PC import PC
+from pgmpy.estimators.EM import ExpectationMaximization
 
 __all__ = [
     "BaseEstimator",
@@ -28,4 +29,5 @@ __all__ = [
     "IVEstimator",
     "MmhcEstimator",
     "PC",
+    "ExpectationMaximization",
 ]
