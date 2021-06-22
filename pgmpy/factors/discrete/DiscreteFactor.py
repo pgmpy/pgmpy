@@ -944,26 +944,39 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             return False
 
         else:
+            # Change the axis so that the variables are in the same order.
             phi = other.copy()
-            for axis in range(self.values.ndim):
-                exchange_index = phi.variables.index(self.variables[axis])
-                phi.variables[axis], phi.variables[exchange_index] = (
-                    phi.variables[exchange_index],
-                    phi.variables[axis],
-                )
-                phi.cardinality[axis], phi.cardinality[exchange_index] = (
-                    phi.cardinality[exchange_index],
-                    phi.cardinality[axis],
-                )
-                phi.values = phi.values.swapaxes(axis, exchange_index)
+            if self.variables != phi.variables:
+                for axis in range(self.values.ndim):
+                    exchange_index = phi.variables.index(self.variables[axis])
+                    phi.variables[axis], phi.variables[exchange_index] = (
+                        phi.variables[exchange_index],
+                        phi.variables[axis],
+                    )
+                    phi.cardinality[axis], phi.cardinality[exchange_index] = (
+                        phi.cardinality[exchange_index],
+                        phi.cardinality[axis],
+                    )
+                    phi.values = phi.values.swapaxes(axis, exchange_index)
+
+            # Check the state names order and match them
+            for axis, var in enumerate(self.variables):
+                if set(self.state_names[var]) != set(phi.state_names[var]):
+                    return False
+                elif self.state_names[var] != phi.state_names[var]:
+                    ref_index = []
+                    for state_name in self.state_names[var]:
+                        ref_index.append(phi.state_names[var].index(state_name))
+
+                    slice_ = [slice(None)] * len(self.variables)
+                    slice_[axis] = ref_index
+                    phi.values = phi.values[tuple(slice_)]
 
             if phi.values.shape != self.values.shape:
                 return False
             elif not np.allclose(phi.values, self.values):
                 return False
             elif not all(self.cardinality == phi.cardinality):
-                return False
-            elif not (self.state_names == phi.state_names):
                 return False
             else:
                 return True
