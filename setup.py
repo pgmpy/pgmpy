@@ -132,9 +132,9 @@ if __name__ == "__main__":
         url="https://github.com/pgmpy/pgmpy",
         license="MIT",
         classifiers=[
-            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
             "Intended Audience :: Education",
             "Intended Audience :: Science/Research",
             "Operating System :: Unix",
