@@ -134,7 +134,7 @@ class TestChiSquare(unittest.TestCase):
         self.assertEqual(dof, 58)
 
         # Values differ (for next 2 tests) from dagitty because dagitty ignores grouped
-        # dataframes with very few samples
+        # dataframes with very few samples. Update: Might be same from scipy=1.7.0
         coef, p_value, dof = chi_square(
             X="Income",
             Y="Race",
@@ -142,7 +142,7 @@ class TestChiSquare(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 99.25, decimal=1)
+        np_test.assert_almost_equal(coef, 66.39, decimal=1)
         np_test.assert_almost_equal(p_value, 0.99, decimal=1)
         self.assertEqual(dof, 136)
 
@@ -153,8 +153,8 @@ class TestChiSquare(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 107.79, decimal=1)
-        np_test.assert_almost_equal(p_value, 0.931, decimal=2)
+        np_test.assert_almost_equal(coef, 65.59, decimal=1)
+        np_test.assert_almost_equal(p_value, 0.999, decimal=2)
         self.assertEqual(dof, 131)
 
     def test_discrete_tests(self):
