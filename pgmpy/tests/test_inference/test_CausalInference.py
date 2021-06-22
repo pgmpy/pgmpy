@@ -26,6 +26,58 @@ class TestCausalGraphMethods(unittest.TestCase):
         self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")
 
 
+class TestAdjustmentSet(unittest.TestCase):
+    def setUp(self):
+        # Model example taken from Constructing Separators and Adjustment Sets
+        # in Ancestral Graphs UAI 2014.
+        self.model = BayesianModel(
+            [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
+        )
+        self.infer = CausalInference(self.model)
+
+    def test_proper_backdoor_graph_error(self):
+        self.assertRaises(
+            ValueError, self.infer.get_proper_backdoor_graph, X=["x3"], Y=["y1", "y2"]
+        )
+        self.assertRaises(
+            ValueError, self.infer.get_proper_backdoor_graph, X=["x2"], Y=["y1", "y3"]
+        )
+        self.assertRaises(
+            ValueError,
+            self.infer.get_proper_backdoor_graph,
+            X=["x3", "x2"],
+            Y=["y1", "y3"],
+        )
+
+    def test_proper_backdoor_graph(self):
+        bd_graph = self.infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
+        self.assertTrue(("x1", "y1") not in bd_graph.edges())
+        self.assertEqual(len(bd_graph.edges()), 4)
+        self.assertTrue(
+            set(bd_graph.edges()),
+            set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
+        )
+
+    def test_is_valid_adjustment_set(self):
+        self.assertTrue(
+            self.infer.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
+            )
+        )
+
+        self.assertFalse(
+            self.infer.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
+            )
+        )
+
+        self.assertTrue(
+            self.infer.is_valid_adjustment_set(
+                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
+            )
+        )
+
+
 class TestBackdoorPaths(unittest.TestCase):
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called

@@ -379,6 +379,72 @@ class CausalInference(object):
         ]
         return np.mean(ate)
 
+    def get_proper_backdoor_graph(self, X, Y, inplace=False):
+        """
+        Returns a proper backdoor graph for the exposure `X` and outcome `Y`.
+        A proper backdoor graph is a graph which remove the first edge of every
+        proper causal path from `X` to `Y`.
+
+        Parameters
+        ----------
+        X: list (array-like)
+            A list of exposure variables.
+
+        Y: list (array-like)
+            A list of outcome variables
+
+        inplace: boolean
+            If inplace is True, modifies the object itself. Otherwise retuns
+            a modified copy of self.
+        """
+        for var in chain(X, Y):
+            if var not in self.model.nodes():
+                raise ValueError(f"{var} not found in the model.")
+
+        model = self.model if inplace else self.model.copy()
+        edges_to_remove = []
+        for source in X:
+            paths = nx.all_simple_edge_paths(model, source, Y)
+            for path in paths:
+                edges_to_remove.append(path[0])
+        model.remove_edges_from(edges_to_remove)
+        return model
+
+    def is_valid_adjustment_set(self, X, Y, adjustment_set):
+        """
+        Method to test whether `adjustment_set` is a valid adjustment set for
+        identifying the causal effect of `X` on `Y`.
+
+        Parameters
+        ----------
+        X: list (array-like)
+            The set of cause variables.
+
+        Y: list (array-like)
+            The set of predictor variables.
+
+        adjustment_set: list (array-like)
+            The set of variables for which to test whether they satisfy the
+            adjustment set criteria.
+
+        Returns
+        -------
+        boolean: Returns True if `adjustment_set` is a valid adjustment set for
+                identifying the effect of `X` on `Y`. Else returns False.
+
+        Examples
+        --------
+
+        References
+        ----------
+        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        """
+        backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
+        for (x, y) in zip(X, Y):
+            if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
+                return False
+        return True
+
     def query(
         self,
         variables,
