@@ -12,6 +12,7 @@ class TestMLE(unittest.TestCase):
     def setUp(self):
         self.m1 = BayesianModel([("A", "C"), ("B", "C")])
         self.model_latents = BayesianModel([("A", "C"), ("B", "C")], latents=["C"])
+        self.data_latents = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0]})
 
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
@@ -37,7 +38,10 @@ class TestMLE(unittest.TestCase):
 
     def test_error_latent_model(self):
         self.assertRaises(
-            ValueError, MaximumLikelihoodEstimator, self.model_latents, self.d1
+            ValueError,
+            MaximumLikelihoodEstimator,
+            self.model_latents,
+            self.data_latents,
         )
 
     def test_get_parameters_incomplete_data(self):

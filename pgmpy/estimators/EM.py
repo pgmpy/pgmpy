@@ -90,13 +90,15 @@ class ExpectationMaximization(ParameterEstimator):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
             df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
-                    drop=True
-                )
+                drop=True
+            )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
 
             weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
-            df["_weight"] = (weights / weights.sum()) * n_counts[tuple(data_unique.iloc[i])]
+            df["_weight"] = (weights / weights.sum()) * n_counts[
+                tuple(data_unique.iloc[i])
+            ]
             cache.append(df)
 
         return pd.concat(cache, copy=False)
@@ -111,7 +113,15 @@ class ExpectationMaximization(ParameterEstimator):
                 return False
         return True
 
-    def get_parameters(self, latent_card=None, max_iter=100, atol=1e-08, n_jobs=-1, show_progress=True):
+    def get_parameters(
+        self,
+        latent_card=None,
+        max_iter=100,
+        atol=1e-08,
+        n_jobs=-1,
+        seed=None,
+        show_progress=True,
+    ):
         """
         Method to estimate all model parameters (CPDs) using Expecation Maximization.
 
@@ -156,7 +166,7 @@ class ExpectationMaximization(ParameterEstimator):
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
-        # Step 1: Parameter checks 
+        # Step 1: Parameter checks
         if latent_card is None:
             latent_card = {var: 2 for var in self.model_copy.latents}
 
@@ -167,6 +177,9 @@ class ExpectationMaximization(ParameterEstimator):
             self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize random CPDs if starting values aren't provided.
+        if seed is not None:
+            np.random.seed(seed)
+
         cpds = []
         for node in self.model_copy.nodes():
             parents = list(self.model_copy.predecessors(node))
@@ -190,7 +203,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         # Step 4: Run the EM algorithm.
         for i in range(max_iter):
-            # Step 4.1: E-step: Expands the dataset and computes the likelihood of each 
+            # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
             #           possible state of latent variables.
             weighted_data = self._compute_weights(latent_card)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
