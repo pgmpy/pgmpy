@@ -703,6 +703,22 @@ class TestFactorMethods(unittest.TestCase):
         self.assertFalse(self.phi5 == self.phi6)
         self.assertTrue(self.phi6 == self.phi6)
 
+    def test_eq_state_names_order(self):
+        phi = DiscreteFactor(
+            ["x", "y"],
+            [2, 2],
+            [0.1, 0.1, 0.9, 0.9],
+            state_names={"x": ["x1", "x2"], "y": ["y1", "y2"]},
+        )
+        phi2 = DiscreteFactor(
+            ["x", "y"],
+            [2, 2],
+            [0.9, 0.9, 0.1, 0.1],
+            state_names={"x": ["x2", "x1"], "y": ["y2", "y1"]},
+        )
+
+        self.assertTrue(phi == phi2)
+
     def test_eq1(self):
         phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 4, 3], range(24))
         phi2 = DiscreteFactor(
