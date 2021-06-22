@@ -4,7 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.13] - Expected 2020-12-30
+
+## [0.1.14] - 2021-03-31
+### Added
+1. Adds support for python 3.9.
+2. `BayesianModelProbability` class for calculating pmf for BNs.
+3. BayesianModel.predict has a new argument `stochastic` which returns stochastic results instead of MAP.
+4. Adds new method pgmpy.base.DAG.to_daft to easily convert models into publishable plots.
+
+### Changed
+1. `pgmpy.utils.get_example_model` now doesn't need internet connection to work. Files moved locally.
+
+### Fixed
+1. Latex output of `pgmpy.DAG.get_independencies`.
+2. Bug fix in PC algorithm as it was skipping some combinations.
+3. Error in sampling because of seed not correctly set.
+
+## [0.1.13] - 2020-12-30
 ### Added
 1. New conditional independence tests for discrete variables
 

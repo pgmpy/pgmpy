@@ -85,10 +85,12 @@ class MmhcEstimator(StructureEstimator):
 
         skel = self.mmpc(significance_level)
 
-        hc = HillClimbSearch(self.data, scoring_method=scoring_method)
+        hc = HillClimbSearch(self.data)
 
         model = hc.estimate(
-            white_list=skel.to_directed().edges(), tabu_length=tabu_length
+            scoring_method=scoring_method,
+            white_list=skel.to_directed().edges(),
+            tabu_length=tabu_length,
         )
 
         return model

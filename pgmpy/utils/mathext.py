@@ -14,6 +14,7 @@ def cartesian(arrays, out=None):
     ----------
     arrays : list of array-like
         1-D arrays to form the cartesian product of.
+
     out : ndarray
         Array to place the cartesian product in.
 
@@ -62,15 +63,22 @@ def sample_discrete(values, weights, size=1, seed=None):
 
     Parameters
     ----------
-    values: numpy.array: Array of all possible values that the random variable
-            can take.
-    weights: numpy.array or list of numpy.array: Array(s) representing the PMF of the random variable.
-    size: int: Size of the sample to be generated.
-    rng : numpy.random.RandomState | None : random number generator
+    values: numpy.array
+        Array of all possible values that the random variable can take.
+
+    weights: numpy.array or list of numpy.array
+        Array(s) representing the PMF of the random variable.
+
+    size: int
+        Size of the sample to be generated.
+
+    seed: int (default: None)
+        If a value is provided, sets the seed for numpy.random.
 
     Returns
     -------
-    numpy.array: of values of the random variable sampled from the given PMF.
+    samples: numpy.array
+        Array of values of the random variable sampled from the given PMF.
 
     Example
     -------
@@ -78,8 +86,7 @@ def sample_discrete(values, weights, size=1, seed=None):
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(['v_0', 'v_1', 'v_2'])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> rng = np.random.RandomState(0)
-    >>> sample_discrete(values, probabilities, 10, rng=rng).tolist()
+    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
     if seed is not None:
@@ -96,6 +103,54 @@ def sample_discrete(values, weights, size=1, seed=None):
                 values, size=size, p=unique_weights[index]
             )
         return samples
+
+
+def sample_discrete_maps(states, weight_indices, index_to_weight, size=1, seed=None):
+    """
+    Generate a sample of given size, given a probability mass function.
+
+    Parameters
+    ----------
+    states: numpy.array
+        Array of all possible states that the random variable can take.
+
+    weight_indices: numpy.array
+        Array with the weight indices for each sample
+
+    index_to_weight: numpy.array
+        Array mapping each weight index to a specific weight
+
+    size: int
+        Size of the sample to be generated.
+
+    seed: int (default: None)
+        If a value is provided, sets the seed for numpy.random.
+
+    Returns
+    -------
+    samples: numpy.array
+        Array of values of the random variable sampled from the given PMF.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from pgmpy.utils.mathext import sample_discrete
+    >>> values = np.array(['v_0', 'v_1', 'v_2'])
+    >>> probabilities = np.array([0.2, 0.5, 0.3])
+    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
+    ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    samples = np.zeros(size, dtype=int)
+    unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
+
+    for weight_size, weight_index in zip(counts, unique_weight_indices):
+        samples[weight_indices == weight_index] = np.random.choice(
+            states, size=weight_size, p=index_to_weight[weight_index]
+        )
+    return samples
 
 
 def powerset(l):

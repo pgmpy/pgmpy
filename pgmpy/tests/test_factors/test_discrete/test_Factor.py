@@ -659,6 +659,41 @@ class TestFactorMethods(unittest.TestCase):
     def test_factor_divide_non_factor_arg(self):
         self.assertRaises(TypeError, factor_divide, 1, 1)
 
+    def test_factor_sum(self):
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(8))
+        phi1.sum(phi2, inplace=True)
+
+        self.assertEqual(sorted(phi1.variables), ["x1", "x2", "x3", "x4"])
+        self.assertEqual(
+            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2, "x4": 2}
+        )
+        np_test.assert_almost_equal(
+            phi1.values,
+            np.array(
+                [
+                    [
+                        [[0.0, 2.0], [5.0, 7.0]],
+                        [[2.0, 4.0], [7.0, 9.0]],
+                        [[4.0, 6.0], [9.0, 11.0]],
+                    ],
+                    [
+                        [[7.0, 9.0], [12.0, 14.0]],
+                        [[9.0, 11.0], [14.0, 16.0]],
+                        [[11.0, 13.0], [16.0, 18.0]],
+                    ],
+                ]
+            ),
+        )
+
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        phi1.sum(2, inplace=True)
+        self.assertEqual(phi1.variables, ["x1", "x2", "x3"])
+        self.assertEqual(
+            phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2}
+        )
+        np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
+
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
         self.assertTrue(self.phi == self.phi)
@@ -667,6 +702,22 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(self.phi5 == self.phi5)
         self.assertFalse(self.phi5 == self.phi6)
         self.assertTrue(self.phi6 == self.phi6)
+
+    def test_eq_state_names_order(self):
+        phi = DiscreteFactor(
+            ["x", "y"],
+            [2, 2],
+            [0.1, 0.1, 0.9, 0.9],
+            state_names={"x": ["x1", "x2"], "y": ["y1", "y2"]},
+        )
+        phi2 = DiscreteFactor(
+            ["x", "y"],
+            [2, 2],
+            [0.9, 0.9, 0.1, 0.1],
+            state_names={"x": ["x2", "x1"], "y": ["y2", "y1"]},
+        )
+
+        self.assertTrue(phi == phi2)
 
     def test_eq1(self):
         phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 4, 3], range(24))
@@ -735,6 +786,30 @@ class TestFactorMethods(unittest.TestCase):
             ],
         )
         self.assertTrue(phi3 == phi4)
+
+    def test_sample(self):
+        phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
+        samples = phi1.sample(int(1e5))
+        self.assertEqual(samples.shape, (1e5, 2))
+        np_test.assert_almost_equal(
+            (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
+            np.array([1, 2, 3, 4]) / 10,
+            decimal=2,
+        )
+
+        phi1 = DiscreteFactor(
+            ["x1", "x2"],
+            [2, 2],
+            [1, 2, 3, 4],
+            state_names={"x1": ["a1", "a2"], "x2": ["b1", "b2"]},
+        )
+        samples = phi1.sample(int(1e5))
+        self.assertEqual(samples.shape, (1e5, 2))
+        np_test.assert_almost_equal(
+            (samples.groupby(["x1", "x2"]).size() / int(1e5)).values,
+            np.array([1, 2, 3, 4]) / 10,
+            decimal=2,
+        )
 
     def test_hash(self):
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
@@ -1303,6 +1378,72 @@ class TestTabularCPDMethods(unittest.TestCase):
                     ]
                 ),
             )
+
+    def test_get_random(self):
+        cpd = TabularCPD.get_random(variable="A", evidence=None, cardinality={"A": 3})
+        self.assertEqual(cpd.variables, ["A"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([3]))
+        self.assertEqual(cpd.values.shape, (3,))
+
+        cpd_sn = TabularCPD.get_random(
+            variable="A",
+            evidence=None,
+            cardinality={"A": 3},
+            state_names={"A": ["a1", "a2", "a3"]},
+        )
+        self.assertEqual(cpd_sn.variables, ["A"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([3]))
+        self.assertEqual(cpd_sn.values.shape, (3,))
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2", "a3"])
+
+        cpd = TabularCPD.get_random(
+            variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3, "C": 4}
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd.values.shape, (2, 3, 4))
+
+        cpd_sn = TabularCPD.get_random(
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3, "C": 4},
+            state_names={
+                "A": ["a1", "a2"],
+                "B": ["b1", "b2", "b3"],
+                "C": ["c1", "c2", "c3", "c4"],
+            },
+        )
+        self.assertEqual(cpd_sn.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd_sn.cardinality, np.array([2, 3, 4]))
+        self.assertEqual(cpd_sn.values.shape, (2, 3, 4))
+        self.assertEqual(cpd_sn.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd_sn.state_names["B"], ["b1", "b2", "b3"])
+        self.assertEqual(cpd_sn.state_names["C"], ["c1", "c2", "c3", "c4"])
+
+        cpd = TabularCPD.get_random(variable="A", evidence=["B", "C"])
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+
+        cpd = TabularCPD.get_random(
+            variable="A",
+            evidence=["B", "C"],
+            state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
+        )
+        self.assertEqual(cpd.variables, ["A", "B", "C"])
+        np_test.assert_array_equal(cpd.cardinality, np.array([2, 2, 2]))
+        self.assertEqual(cpd.values.shape, (2, 2, 2))
+        self.assertEqual(cpd.state_names["A"], ["a1", "a2"])
+        self.assertEqual(cpd.state_names["B"], ["b1", "b2"])
+        self.assertEqual(cpd.state_names["C"], ["c1", "c2"])
+
+        self.assertRaises(
+            ValueError,
+            TabularCPD.get_random,
+            variable="A",
+            evidence=["B", "C"],
+            cardinality={"A": 2, "B": 3},
+        )
 
     def tearDown(self):
         del self.cpd

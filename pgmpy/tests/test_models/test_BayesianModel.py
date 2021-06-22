@@ -225,6 +225,16 @@ class TestBayesianModelMethods(unittest.TestCase):
             collider.get_independencies(), Independencies(("X", "Z"), ("Z", "X"))
         )
 
+        # Latent variables
+        fork = BayesianModel([("Y", "X"), ("Y", "Z")], latents=["Y"])
+        self.assertEqual(
+            fork.get_independencies(include_latents=True),
+            Independencies(("X", "Z", "Y"), ("Z", "X", "Y")),
+        )
+        self.assertEqual(
+            fork.get_independencies(include_latents=False), Independencies()
+        )
+
     def test_is_imap(self):
         val = [
             0.01,
@@ -307,6 +317,25 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
         self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
 
+    def test_get_random(self):
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.5)
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=range(2, 7))
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
     def test_remove_node(self):
         self.G1.remove_node("diff")
         self.assertEqual(sorted(self.G1.nodes()), sorted(["grade", "intel"]))
@@ -327,6 +356,9 @@ class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianModel([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
+        self.G_latent = DAG(
+            [("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")], latents=["d", "g"]
+        )
 
     def test_active_trail_nodes(self):
         self.assertEqual(sorted(self.G2.active_trail_nodes("d")["d"]), ["d", "g", "l"])
@@ -335,6 +367,37 @@ class TestBayesianModelCPD(unittest.TestCase):
         )
         self.assertEqual(
             sorted(self.G2.active_trail_nodes(["d", "i"])["d"]), ["d", "g", "l"]
+        )
+
+        # For model with latent variables
+        self.assertEqual(
+            sorted(self.G_latent.active_trail_nodes("d", include_latents=True)["d"]),
+            ["d", "g", "l"],
+        )
+        self.assertEqual(
+            sorted(self.G_latent.active_trail_nodes("i", include_latents=True)["i"]),
+            ["g", "i", "l", "s"],
+        )
+        self.assertEqual(
+            sorted(
+                self.G_latent.active_trail_nodes(["d", "i"], include_latents=True)["d"]
+            ),
+            ["d", "g", "l"],
+        )
+
+        self.assertEqual(
+            sorted(self.G_latent.active_trail_nodes("d", include_latents=False)["d"]),
+            ["l"],
+        )
+        self.assertEqual(
+            sorted(self.G_latent.active_trail_nodes("i", include_latents=False)["i"]),
+            ["i", "l", "s"],
+        )
+        self.assertEqual(
+            sorted(
+                self.G_latent.active_trail_nodes(["d", "i"], include_latents=False)["d"]
+            ),
+            ["l"],
         )
 
     def test_active_trail_nodes_args(self):
@@ -353,27 +416,27 @@ class TestBayesianModelCPD(unittest.TestCase):
             ["g", "i", "s"],
         )
 
-    def test_is_active_trail_triplets(self):
-        self.assertTrue(self.G.is_active_trail("d", "l"))
-        self.assertTrue(self.G.is_active_trail("g", "s"))
-        self.assertFalse(self.G.is_active_trail("d", "i"))
-        self.assertTrue(self.G.is_active_trail("d", "i", observed="g"))
-        self.assertFalse(self.G.is_active_trail("d", "l", observed="g"))
-        self.assertFalse(self.G.is_active_trail("i", "l", observed="g"))
-        self.assertTrue(self.G.is_active_trail("d", "i", observed="l"))
-        self.assertFalse(self.G.is_active_trail("g", "s", observed="i"))
+    def test_is_dconnected_triplets(self):
+        self.assertTrue(self.G.is_dconnected("d", "l"))
+        self.assertTrue(self.G.is_dconnected("g", "s"))
+        self.assertFalse(self.G.is_dconnected("d", "i"))
+        self.assertTrue(self.G.is_dconnected("d", "i", observed="g"))
+        self.assertFalse(self.G.is_dconnected("d", "l", observed="g"))
+        self.assertFalse(self.G.is_dconnected("i", "l", observed="g"))
+        self.assertTrue(self.G.is_dconnected("d", "i", observed="l"))
+        self.assertFalse(self.G.is_dconnected("g", "s", observed="i"))
 
-    def test_is_active_trail(self):
-        self.assertFalse(self.G.is_active_trail("d", "s"))
-        self.assertTrue(self.G.is_active_trail("s", "l"))
-        self.assertTrue(self.G.is_active_trail("d", "s", observed="g"))
-        self.assertFalse(self.G.is_active_trail("s", "l", observed="g"))
+    def test_is_dconnected(self):
+        self.assertFalse(self.G.is_dconnected("d", "s"))
+        self.assertTrue(self.G.is_dconnected("s", "l"))
+        self.assertTrue(self.G.is_dconnected("d", "s", observed="g"))
+        self.assertFalse(self.G.is_dconnected("s", "l", observed="g"))
 
-    def test_is_active_trail_args(self):
-        self.assertFalse(self.G.is_active_trail("s", "l", "i"))
-        self.assertFalse(self.G.is_active_trail("s", "l", "g"))
-        self.assertTrue(self.G.is_active_trail("d", "s", "l"))
-        self.assertFalse(self.G.is_active_trail("d", "s", ["i", "l"]))
+    def test_is_dconnected_args(self):
+        self.assertFalse(self.G.is_dconnected("s", "l", "i"))
+        self.assertFalse(self.G.is_dconnected("s", "l", "g"))
+        self.assertTrue(self.G.is_dconnected("d", "s", "l"))
+        self.assertFalse(self.G.is_dconnected("d", "s", ["i", "l"]))
 
     def test_get_cpds(self):
         cpd_d = TabularCPD("d", 2, values=np.random.rand(2, 1))
@@ -778,6 +841,32 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         np_test.assert_array_equal(p2.values.ravel(), p2_res)
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
 
+    def test_predict_stochastic(self):
+        titanic = BayesianModel()
+        titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic.fit(self.titanic_data2[500:])
+
+        p1 = titanic.predict(
+            self.titanic_data2[["Sex", "Pclass"]][:30], stochastic=True
+        )
+        p2 = titanic.predict(
+            self.titanic_data2[["Survived", "Pclass"]][:30], stochastic=True
+        )
+        p3 = titanic.predict(
+            self.titanic_data2[["Survived", "Sex"]][:30], stochastic=True
+        )
+
+        # Acceptable range between 15 - 20.
+        # TODO: Is there a better way to test this?
+        self.assertTrue(p1.value_counts().values[0] <= 23)
+        self.assertTrue(p1.value_counts().values[0] >= 15)
+
+        self.assertTrue(p2.value_counts().values[0] <= 22)
+        self.assertTrue(p2.value_counts().values[0] >= 15)
+
+        self.assertTrue(p3.value_counts().values[0] <= 19)
+        self.assertTrue(p3.value_counts().values[0] >= 8)
+
     def test_connected_predict(self):
         np.random.seed(42)
         values = pd.DataFrame(
@@ -1082,6 +1171,50 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.assertRaises(
             ValueError, self.model_connected.predict_probability, predict_data
         )
+
+    def test_do(self):
+        # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
+        model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
+        cpd_s = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"S": ["m", "f"]},
+        )
+        cpd_t = TabularCPD(
+            variable="T",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["S"],
+            evidence_card=[2],
+            state_names={"S": ["m", "f"], "T": [0, 1]},
+        )
+        cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["S", "T"],
+            evidence_card=[2, 2],
+            state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
+        )
+        model.add_cpds(cpd_s, cpd_t, cpd_c)
+
+        model_do_inplace = model.do(["T"], inplace=True)
+        model_do_new = model.do(["T"], inplace=False)
+
+        for m in [model_do_inplace, model_do_new]:
+            self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
+            self.assertEqual(len(m.cpds), 3)
+            np_test.assert_array_equal(
+                m.get_cpds(node="S").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="T").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="C").values,
+                np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
+            )
 
     def tearDown(self):
         del self.model_connected

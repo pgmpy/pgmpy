@@ -223,7 +223,7 @@ class Independencies(object):
 
         @apply_left_and_right
         def sg2(ind):
-            "Weak Union rule: 'X ⟂ Y,W | Z' -> 'X ⟂ Y | W,Z', 'X ⟂ W | Y,Z' "
+            "Weak Union rule: 'X ⟂ Y,W | Z' -> 'X ⟂ Y | W,Z', 'X ⟂ W | Y,Z'"
             if single_var(ind.event2):
                 return []
             else:

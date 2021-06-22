@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from warnings import warn
-from itertools import combinations, permutations
+from itertools import combinations, permutations, chain
 
 import networkx as nx
 from tqdm import tqdm
@@ -288,8 +288,9 @@ class PC(StructureEstimator):
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for (u, v) in graph.edges():
-                    for separating_set in combinations(
-                        set(graph.neighbors(u)) - set([v]), lim_neighbors
+                    for separating_set in chain(
+                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
+                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
                     ):
                         # If a conditioning set exists remove the edge, store the separating set
                         # and move on to finding conditioning set for next edge.
@@ -310,8 +311,9 @@ class PC(StructureEstimator):
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for (u, v) in graph.edges():
-                    for separating_set in combinations(
-                        neighbors[u] - set([v]), lim_neighbors
+                    for separating_set in chain(
+                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
+                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
                     ):
                         # If a conditioning set exists remove the edge, store the
                         # separating set and move on to finding conditioning set for next edge.
@@ -332,8 +334,9 @@ class PC(StructureEstimator):
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
-                    for separating_set in combinations(
-                        neighbors[u] - set([v]), lim_neighbors
+                    for separating_set in chain(
+                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
+                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
                     ):
                         if ci_test(
                             u,

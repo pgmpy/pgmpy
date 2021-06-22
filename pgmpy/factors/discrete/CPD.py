@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
-from itertools import product
+from itertools import product, chain
 from warnings import warn
 import numbers
 
@@ -12,7 +12,7 @@ from pgmpy.extern import tabulate
 
 class TabularCPD(DiscreteFactor):
     """
-    Defines the conditional probability distribution table (cpd table)
+    Defines the conditional probability distribution table (CPD table)
 
     Parameters
     ----------
@@ -20,16 +20,17 @@ class TabularCPD(DiscreteFactor):
         The variable whose CPD is defined.
 
     variable_card: integer
-        cardinality of variable
+        Cardinality/no. of states of `variable`
 
-    values: 2d array, 2d list or 2d tuple
-        values of the cpd table
+    values: 2D array, 2D list or 2D tuple
+        Values for the CPD table. Please refer the example for the
+        exact format needed.
 
     evidence: array-like
-        evidences(if any) w.r.t. which cpd is defined
+        List of variables in evidences(if any) w.r.t. which CPD is defined.
 
-    evidence_card: integer, array-like
-        cardinality of evidences (if any)
+    evidence_card: array-like
+        cardinality/no. of states of variables in `evidence`(if any)
 
     Examples
     --------
@@ -152,7 +153,8 @@ class TabularCPD(DiscreteFactor):
 
     def get_values(self):
         """
-        Returns the cpd
+        Returns the values of the CPD as a 2-D array. The order of the
+        parents is the same as provided in evidence.
 
         Examples
         --------
@@ -227,7 +229,7 @@ class TabularCPD(DiscreteFactor):
 
     def copy(self):
         """
-        Returns a copy of the TabularCPD object.
+        Returns a copy of the `TabularCPD` object.
 
         Examples
         --------
@@ -261,7 +263,8 @@ class TabularCPD(DiscreteFactor):
 
     def normalize(self, inplace=True):
         """
-        Normalizes the cpd table.
+        Normalizes the cpd table. The method modifies each column of values such
+        that it sums to 1 without changing the proportion between states.
 
         Parameters
         ----------
@@ -288,7 +291,9 @@ class TabularCPD(DiscreteFactor):
 
     def marginalize(self, variables, inplace=True):
         """
-        Modifies the cpd table with marginalized values.
+        Modifies the CPD table with marginalized values. Marginalization refers to
+        summing out variables, hence that variable would no longer appear in the
+        CPD.
 
         Parameters
         ----------
@@ -325,7 +330,9 @@ class TabularCPD(DiscreteFactor):
 
     def reduce(self, values, inplace=True):
         """
-        Reduces the cpd table to the context of given variable values.
+        Reduces the cpd table to the context of given variable values. Reduce fixes the
+        state of given variable to specified value. The reduced variables will no longer
+        appear in the CPD.
 
         Parameters
         ----------
@@ -362,7 +369,9 @@ class TabularCPD(DiscreteFactor):
 
     def to_factor(self):
         """
-        Returns an equivalent factor with the same variables, cardinality, values as that of the cpd
+        Returns an equivalent factor with the same variables, cardinality, values as that of the CPD.
+        Since factor doesn't distinguish between conditional and non-conditional distributions,
+        evidence information will be lost.
 
         Examples
         --------
@@ -384,7 +393,7 @@ class TabularCPD(DiscreteFactor):
 
     def reorder_parents(self, new_order, inplace=True):
         """
-        Returns a new cpd table according to provided order.
+        Returns a new cpd table according to provided parent/evidence order.
 
         Parameters
         ----------
@@ -500,4 +509,83 @@ class TabularCPD(DiscreteFactor):
                 return self.get_values()
 
     def get_evidence(self):
+        """
+        Returns the evidence variables of the CPD.
+        """
         return self.variables[:0:-1]
+
+    @staticmethod
+    def get_random(variable, evidence=None, cardinality=None, state_names=None):
+        """
+        Generates a TabularCPD instance with random values on `variable` with
+        parents/evidence `evidence` with cardinality/number of states as given
+        in `cardinality`.
+
+        Parameters
+        ----------
+        variable: str, int or any hashable python object.
+            The variable on which to define the TabularCPD.
+
+        evidence: list, array-like
+            A list of variable names which are the parents/evidence of `variable`.
+
+        cardinality: dict (default: None)
+            A dict of the form {var_name: card} specifying the number of states/
+            cardinality of each of the variables. If None, assigns each variable
+            2 states.
+
+        state_names: dict (default: None)
+            A dict of the form {var_name: list of states} to specify the state names
+            for the variables in the CPD. If state_names=None, integral state names
+            starting from 0 is assigned.
+
+        Returns
+        -------
+        pgmpy.factors.discrete.TabularCPD: A TabularCPD object on `variable` with
+            evidence as `evidence` with random values.
+
+        Examples
+        --------
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> TabularCPD(variable='A', evidence=['C', 'D'],
+        ...            cardinality={'A': 3, 'B': 2, 'C': 4})
+        <TabularCPD representing P(A:3 | C:4, B:2) at 0x7f95e22b8040>
+        >>> TabularCPD(variable='A', evidence=['C', 'D'],
+        ...            cardinality={'A': 2, 'B': 2, 'C': 2},
+        ...            state_names={'A': ['a1', 'a2'],
+        ...                         'B': ['b1', 'b2'],
+        ...                         'C': ['c1', 'c2']})
+        """
+        if evidence is None:
+            evidence = []
+
+        if cardinality is None:
+            cardinality = {var: 2 for var in chain([variable], evidence)}
+        else:
+            for var in chain([variable], evidence):
+                if var not in cardinality.keys():
+                    raise ValueError(f"Cardinality for variable: {var} not specified.")
+
+        if len(evidence) == 0:
+            values = np.random.rand(cardinality[variable], 1)
+            values = values / np.sum(values, axis=0)
+            node_cpd = TabularCPD(
+                variable=variable,
+                variable_card=cardinality[variable],
+                values=values,
+                state_names=state_names,
+            )
+        else:
+            parent_card = [cardinality[var] for var in evidence]
+            values = np.random.rand(cardinality[variable], np.product(parent_card))
+            values = values / np.sum(values, axis=0)
+            node_cpd = TabularCPD(
+                variable=variable,
+                variable_card=cardinality[variable],
+                values=values,
+                evidence=evidence,
+                evidence_card=parent_card,
+                state_names=state_names,
+            )
+
+        return node_cpd

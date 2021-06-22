@@ -4,6 +4,7 @@ import itertools
 from warnings import warn
 
 import networkx as nx
+import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.independencies import Independencies
@@ -69,8 +70,9 @@ class DAG(nx.DiGraph):
     3
     """
 
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set()):
         super(DAG, self).__init__(ebunch)
+        self.latents = set(latents)
         cycles = []
         try:
             cycles = list(nx.find_cycle(self))
@@ -82,7 +84,7 @@ class DAG(nx.DiGraph):
             out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
             raise ValueError(out_str)
 
-    def add_node(self, node, weight=None):
+    def add_node(self, node, weight=None, latent=False):
         """
         Adds a single node to the Graph.
 
@@ -93,6 +95,9 @@ class DAG(nx.DiGraph):
 
         weight: int, float
             The weight of the node.
+
+        latent: boolean (default: False)
+            Specifies whether the variable is latent or not.
 
         Examples
         --------
@@ -120,9 +125,12 @@ class DAG(nx.DiGraph):
         else:
             attrs = {"weight": weight}
 
+        if latent:
+            self.latents.add(node)
+
         super(DAG, self).add_node(node, weight=weight)
 
-    def add_nodes_from(self, nodes, weights=None):
+    def add_nodes_from(self, nodes, weights=None, latent=False):
         """
         Add multiple nodes to the Graph.
 
@@ -137,6 +145,10 @@ class DAG(nx.DiGraph):
         weights: list, tuple (default=None)
             A container of weights (int, float). The weight value at index i
             is associated with the variable at index i.
+
+        latent: list, tuple (default=False)
+            A container of boolean. The value at index i tells whether the
+            node at index i is latent or not.
 
         Examples
         --------
@@ -157,16 +169,21 @@ class DAG(nx.DiGraph):
         """
         nodes = list(nodes)
 
+        if isinstance(latent, bool):
+            latent = [latent] * len(nodes)
+
         if weights:
             if len(nodes) != len(weights):
                 raise ValueError(
                     "The number of elements in nodes and weights" "should be equal."
                 )
             for index in range(len(nodes)):
-                self.add_node(node=nodes[index], weight=weights[index])
+                self.add_node(
+                    node=nodes[index], weight=weights[index], latent=latent[index]
+                )
         else:
-            for node in nodes:
-                self.add_node(node=node)
+            for index in range(len(nodes)):
+                self.add_node(node=nodes[index], latent=latent[index])
 
     def add_edge(self, u, v, weight=None):
         """
@@ -374,7 +391,7 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(self, latex=False):
+    def get_independencies(self, latex=False, include_latents=False):
         """
         Computes independencies in the DAG, by checking d-seperation.
 
@@ -384,6 +401,10 @@ class DAG(nx.DiGraph):
             If latex=True then latex string of the independence assertion
             would be created.
 
+        include_latents: boolean
+            If True, includes latent variables in the independencies. Otherwise,
+            only generates independencies on observed variables.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -392,15 +413,29 @@ class DAG(nx.DiGraph):
         (X \u27C2 Z | Y)
         (Z \u27C2 X | Y)
         """
+        nodes = set(self.nodes())
+        if not include_latents:
+            nodes = set(self.nodes()) - self.latents
+
         independencies = Independencies()
-        for start in self.nodes():
-            rest = set(self.nodes()) - {start}
+        for start in nodes:
+            if not include_latents:
+                rest = set(self.nodes()) - {start} - self.latents
+            else:
+                rest = set(self.nodes()) - {start}
+
             for r in range(len(rest)):
                 for observed in itertools.combinations(rest, r):
                     d_seperated_variables = (
                         rest
                         - set(observed)
-                        - set(self.active_trail_nodes(start, observed=observed)[start])
+                        - set(
+                            self.active_trail_nodes(
+                                start,
+                                observed=observed,
+                                include_latents=include_latents,
+                            )[start]
+                        )
                     )
                     if d_seperated_variables:
                         independencies.add_assertions(
@@ -520,18 +555,20 @@ class DAG(nx.DiGraph):
                     immoralities.add(tuple(sorted(parents)))
         return immoralities
 
-    def is_active_trail(self, start, end, observed=None):
+    def is_dconnected(self, start, end, observed=None):
         """
-        Returns True if there is any active trail between start and end node
+        Returns True if there is an active trail (i.e. d-connection) between
+        `start` and `end` node given that `observed` is observed.
+
         Parameters
         ----------
-        start : Graph Node
-        end : Graph Node
-        observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed.
-        additional_observed : List of nodes (optional)
-            If given the active trail would be computed assuming these nodes to be observed along with
-            the nodes marked as observed in the model.
+        start, end : int, str, any hashable python object.
+            The nodes in the DAG between which to check the d-connection/active trail.
+
+        observed : list, array-like (optional)
+            If given the active trail would be computed assuming these nodes to
+            be observed.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -539,9 +576,9 @@ class DAG(nx.DiGraph):
         >>> student.add_nodes_from(['diff', 'intel', 'grades', 'letter', 'sat'])
         >>> student.add_edges_from([('diff', 'grades'), ('intel', 'grades'), ('grades', 'letter'),
         ...                         ('intel', 'sat')])
-        >>> student.is_active_trail('diff', 'intel')
+        >>> student.is_dconnected('diff', 'intel')
         False
-        >>> student.is_active_trail('grades', 'sat')
+        >>> student.is_dconnected('grades', 'sat')
         True
         """
         if end in self.active_trail_nodes(start, observed)[start]:
@@ -582,16 +619,23 @@ class DAG(nx.DiGraph):
         blanket_nodes.remove(node)
         return list(blanket_nodes)
 
-    def active_trail_nodes(self, variables, observed=None):
+    def active_trail_nodes(self, variables, observed=None, include_latents=False):
         """
         Returns a dictionary with the given variables as keys and all the nodes reachable
         from that respective variable as values.
+
         Parameters
         ----------
         variables: str or array like
             variables whose active trails are to be found.
+
         observed : List of nodes (optional)
-            If given the active trails would be computed assuming these nodes to be observed.
+            If given the active trails would be computed assuming these nodes to be
+            observed.
+
+        include_latents: boolean (default: False)
+            Whether to include the latent variables in the returned active trail nodes.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -645,7 +689,11 @@ class DAG(nx.DiGraph):
                         if node in ancestors_list:
                             for parent in self.predecessors(node):
                                 visit_list.add((parent, "up"))
-            active_trails[start] = active_nodes
+            if include_latents:
+                active_trails[start] = active_nodes
+            else:
+                active_trails[start] = active_nodes - self.latents
+
         return active_trails
 
     def _get_ancestors_of(self, nodes):
@@ -698,21 +746,26 @@ class DAG(nx.DiGraph):
         """
         pass
 
-    def do(self, node):
+    def do(self, nodes, inplace=False):
         """
-        Applies the do operator to the graph and returns a new DAG with the transformed graph.
+        Applies the do operator to the graph and returns a new DAG with the
+        transformed graph.
 
-        The do-operator, do(X = x) has the effect of removing all edges from the parents of X and setting X to the
-        given value x.
+        The do-operator, do(X = x) has the effect of removing all edges from
+        the parents of X and setting X to the given value x.
 
         Parameters
         ----------
-        node : string
-            The name of the node to apply the do-operator to.
+        nodes : list, array-like
+            The names of the nodes to apply the do-operator for.
+
+        inplace: boolean (default: False)
+            If inplace=True, makes the changes to the current object,
+            otherwise returns a new instance.
 
         Returns
         -------
-        DAG: A new instance of DAG modified by the do-operator
+        pgmpy.base.DAG: A new instance of DAG modified by the do-operator
 
         Examples
         --------
@@ -731,12 +784,23 @@ class DAG(nx.DiGraph):
         ----------
         Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
         """
-        assert node in self.nodes()
-        dag_do_x = self.copy()
-        parents = list(dag_do_x.predecessors(node))
-        for parent in parents:
-            dag_do_x.remove_edge(parent, node)
-        return dag_do_x
+        dag = self if inplace else self.copy()
+
+        if isinstance(nodes, (str, int)):
+            nodes = [nodes]
+        else:
+            nodes = list(nodes)
+
+        if not set(nodes).issubset(set(self.nodes())):
+            raise ValueError(
+                f"Nodes not found in the model: {set(nodes) - set(self.nodes)}"
+            )
+
+        for node in nodes:
+            parents = list(dag.predecessors(node))
+            for parent in parents:
+                dag.remove_edge(parent, node)
+        return dag
 
     def get_ancestral_graph(self, nodes):
         """
@@ -763,6 +827,180 @@ class DAG(nx.DiGraph):
         """
         return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 
+    def to_daft(
+        self, node_pos=None, latex=True, pgm_params={}, edge_params={}, node_params={}
+    ):
+        """
+        Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
+        publication quality plots. The returned object's render method can be called to see the plots.
+
+        Parameters
+        ----------
+        node_pos: str or dict (optional)
+            If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
+                spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
+
+            If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
+            node.
+
+            If no argument is provided uses random layout.
+
+        latex: boolean
+            Whether to use latex for rendering the node names.
+
+        pgm_params: dict (optional)
+            Any additional parameters that need to be passed to `daft.PGM` initializer.
+            Should be of the form: {param_name: param_value}
+
+        edge_params: dict (optional)
+            Any additional edge parameters that need to be passed to `daft.add_edge` method.
+            Should be of the form: {(u1, v1): {param_name: param_value}, (u2, v2): {...} }
+
+        node_params: dict (optional)
+            Any additional node parameters that need to be passed to `daft.add_node` method.
+            Should be of the form: {node1: {param_name: param_value}, node2: {...} }
+
+        Returns
+        -------
+        daft.PGM object: A plot of the DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([('a', 'b'), ('b', 'c'), ('d', 'c')])
+        >>> dag.to_daft(node_pos={'a': (0, 0), 'b': (1, 0), 'c': (2, 0), 'd': (1, 1)})
+        <daft.PGM at 0x7fc756e936d0>
+        >>> dag.to_daft(node_pos="circular")
+        <daft.PGM at 0x7f9bb48c5eb0>
+        >>> dag.to_daft(node_pos="circular", pgm_params={'observed_style': 'inner'})
+        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(node_pos="circular",
+        ...             edge_params={('a', 'b'): {'label': 2}},
+        ...             node_params={'a': {'shape': 'rectangle'}})
+        <daft.PGM at 0x7f9bb48b0bb0>
+        """
+        try:
+            from daft import PGM
+        except ImportError as e:
+            raise ImportError(
+                "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
+            )
+
+        if node_pos is None:
+            node_pos = nx.random_layout(self)
+        elif isinstance(node_pos, str):
+            supported_layouts = {
+                "circular": nx.circular_layout,
+                "kamada_kawai": nx.kamada_kawai_layout,
+                "planar": nx.planar_layout,
+                "random": nx.random_layout,
+                "shell": nx.shell_layout,
+                "spring": nx.spring_layout,
+                "spectral": nx.spectral_layout,
+                "spiral": nx.spiral_layout,
+            }
+            if node_pos not in supported_layouts.keys():
+                raise ValueError(
+                    "Unknown node_pos argument. Please refer docstring for accepted values"
+                )
+            else:
+                node_pos = supported_layouts[node_pos](self)
+        elif isinstance(node_pos, dict):
+            for node in self.nodes():
+                if node not in node_pos.keys():
+                    raise ValueError(f"No position specified for {node}.")
+        else:
+            raise ValueError(
+                "Argument node_pos not valid. Please refer to the docstring."
+            )
+
+        daft_pgm = PGM(**pgm_params)
+        for node in self.nodes():
+            try:
+                extra_params = node_params[node]
+            except KeyError:
+                extra_params = dict()
+
+            if latex:
+                daft_pgm.add_node(
+                    node,
+                    fr"${node}$",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
+                )
+            else:
+                daft_pgm.add_node(
+                    node,
+                    f"{node}",
+                    node_pos[node][0],
+                    node_pos[node][1],
+                    observed=True,
+                    **extra_params,
+                )
+
+        for u, v in self.edges():
+            try:
+                extra_params = edge_params[(u, v)]
+            except KeyError:
+                extra_params = dict()
+            daft_pgm.add_edge(u, v, **extra_params)
+
+        return daft_pgm
+
+    @staticmethod
+    def get_random(n_nodes=5, edge_prob=0.5, latents=False):
+        """
+        Returns a randomly generated DAG with `n_nodes` number of nodes with
+        edge probability being `edge_prob`.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the randomly generated DAG.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the topologically
+            sorted DAG.
+
+        latents: bool (default: False)
+            If True, includes latent variables in the generated DAG.
+
+        Returns
+        -------
+        pgmpy.base.DAG instance: The randomly generated DAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3)
+        >>> random_dag.nodes()
+        NodeView((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+        >>> random_dag.edges()
+        OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
+        """
+        # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
+        adj_mat = np.random.choice(
+            [0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob]
+        )
+
+        # Step 2: Use the upper triangular part of the matrix as adjacency.
+        nodes = list(range(n_nodes))
+        edges = nx.convert_matrix.from_numpy_matrix(
+            np.triu(adj_mat, k=1), create_using=nx.DiGraph
+        ).edges()
+
+        dag = DAG(edges)
+        dag.add_nodes_from(nodes)
+        if latents:
+            dag.latents = set(
+                np.random.choice(
+                    dag.nodes(), np.random.randint(low=0, high=len(dag.nodes()))
+                )
+            )
+        return dag
+
 
 class PDAG(nx.DiGraph):
     """
@@ -773,7 +1011,7 @@ class PDAG(nx.DiGraph):
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
-    def __init__(self, directed_ebunch=[], undirected_ebunch=[]):
+    def __init__(self, directed_ebunch=[], undirected_ebunch=[], latents=[]):
         """
         Initializes a PDAG class.
 
@@ -784,6 +1022,9 @@ class PDAG(nx.DiGraph):
 
         undirected_ebunch: list, array-like of 2-tuples
             List of undirected edges in the PDAG.
+
+        latents: list, array-like
+            List of nodes which are latent variables.
 
         Returns
         -------
@@ -797,6 +1038,7 @@ class PDAG(nx.DiGraph):
             + undirected_ebunch
             + [(Y, X) for (X, Y) in undirected_ebunch]
         )
+        self.latents = set(latents)
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
         # TODO: Fix the cycle issue
@@ -824,6 +1066,7 @@ class PDAG(nx.DiGraph):
         return PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
+            latents=self.latents,
         )
 
     def to_dag(self, required_edges=[]):
@@ -849,6 +1092,7 @@ class PDAG(nx.DiGraph):
         # Add all the nodes and the directed edges
         dag.add_nodes_from(self.nodes())
         dag.add_edges_from(self.directed_edges)
+        dag.latents = self.latents
 
         pdag = self.copy()
         while pdag.number_of_nodes() > 0:

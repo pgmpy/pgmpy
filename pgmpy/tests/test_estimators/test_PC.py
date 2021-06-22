@@ -72,7 +72,7 @@ class TestPCFakeCITest(unittest.TestCase):
         skel, sep_set = self.estimator.build_skeleton(
             ci_test=TestPCFakeCITest.fake_ci_t, variant="stable"
         )
-        expected_edges = {("A", "D")}
+        expected_edges = {("A", "C"), ("A", "D")}
         for u, v in skel.edges():
             self.assertTrue(((u, v) in expected_edges) or ((v, u) in expected_edges))
 

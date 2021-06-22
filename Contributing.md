@@ -55,7 +55,7 @@ Summary of our git branching model:
 - Never use `git add .`: it can add unwanted files;
 - Avoid using `git commit -a` unless you know what you're doing;
 - Check every change with `git diff` before adding then to the index (stage
-  area) and with `git diff --cached` before commiting;
+  area) and with `git diff --cached` before committing;
 - If you have push access to the main repository, please do not commit directly
   to `dev`: your access should be used only to accept pull requests; if you
   want to make a new feature, you should use the same process as other
@@ -81,7 +81,7 @@ Summary of our git branching model:
 
 ### Tests
 
-We use [Travis CI](https://travis-ci.org/) for continous integration for linux systems
+We use [Travis CI](https://travis-ci.org/) for continuous integration for linux systems
 and [AppVeyor](https://www.appveyor.com/) for Windows systems.  We use python [unittest
 module](https://docs.python.org/2/library/unittest.html) for writing tests.  You should
 write tests for every feature you add or bug you solve in the code.  Having automated
