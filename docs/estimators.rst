@@ -19,6 +19,12 @@ Bayesian Estimator
 .. autoclass:: pgmpy.estimators.BayesianEstimator
    :members:
 
+Expectation Maximization (EM)
+-----------------------------
+
+.. autoclass:: pgmpy.estimators.ExpectationMaximization
+   :members:
+
 BDeu Score
 ----------
 
