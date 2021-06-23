@@ -143,6 +143,9 @@ class ExpectationMaximization(ParameterEstimator):
         n_jobs: int (default: -1)
             Number of jobs to run in parallel. Default: -1 uses all the processors.
 
+        seed: int
+            The random seed to use for generating the intial values.
+
         show_progress: boolean (default: True)
             Whether to show a progress bar for iterations.
 
