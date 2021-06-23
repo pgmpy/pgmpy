@@ -14,7 +14,9 @@ class TestHillClimbEstimator(unittest.TestCase):
         )
         self.rand_data["C"] = self.rand_data["B"]
         self.est_rand = HillClimbSearch(self.rand_data)
-        self.score_rand = K2Score(self.rand_data).local_score
+        k2score = K2Score(self.rand_data)
+        self.score_rand = k2score.local_score
+        self.score_structure_prior = k2score.structure_prior_ratio
 
         self.model1 = BayesianModel()
         self.model1.add_nodes_from(["A", "B", "C"])
@@ -47,6 +49,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             self.est_rand._legal_operations(
                 model=self.model2,
                 score=self.score_rand,
+                structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
                 black_list=set(),
@@ -72,6 +75,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             self.est_rand._legal_operations(
                 model=self.model2,
                 score=self.score_rand,
+                structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
                 black_list=set([("A", "B"), ("A", "C"), ("C", "A"), ("C", "B")]),
@@ -92,6 +96,7 @@ class TestHillClimbEstimator(unittest.TestCase):
             self.est_rand._legal_operations(
                 model=self.model2,
                 score=self.score_rand,
+                structure_score=self.score_structure_prior,
                 tabu_list=set(),
                 max_indegree=float("inf"),
                 black_list=set(),
@@ -118,6 +123,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         legal_ops = self.est_titanic1._legal_operations(
             model=start_model,
             score=self.score_titanic1,
+            structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=float("inf"),
             black_list=set(),
@@ -134,6 +140,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         legal_ops_tabu = self.est_titanic1._legal_operations(
             model=start_model,
             score=self.score_titanic1,
+            structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=float("inf"),
             black_list=set(),
@@ -145,6 +152,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         legal_ops_indegree = self.est_titanic1._legal_operations(
             model=start_model,
             score=self.score_titanic1,
+            structure_score=self.score_structure_prior,
             tabu_list=[],
             max_indegree=1,
             black_list=set(),
@@ -156,6 +164,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         legal_ops_both = self.est_titanic1._legal_operations(
             model=start_model,
             score=self.score_titanic1,
+            structure_score=self.score_structure_prior,
             tabu_list=tabu_list,
             max_indegree=1,
             black_list=set(),

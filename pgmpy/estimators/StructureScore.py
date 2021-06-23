@@ -79,6 +79,11 @@ class StructureScore(BaseEstimator):
         """A (log) prior distribution over models. Currently unused (= uniform)."""
         return 0
 
+    def structure_prior_ratio(self, operation):
+        """Return the log ratio of the prior probabilities for a given proposed change to the DAG.
+        Currently unused (=uniform)."""
+        return 0
+
 
 class K2Score(StructureScore):
     def __init__(self, data, **kwargs):
@@ -231,7 +236,8 @@ class BDsScore(BDeuScore):
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         equivalent_sample_size: int (default: 10)
-            The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet hyperparameters.
+            The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet
+            hyperparameters.
             The score is sensitive to this value, runs with different values might be useful.
 
         state_names: dict (optional)
@@ -255,6 +261,16 @@ class BDsScore(BDeuScore):
 
     def get_number_of_parent_states(self, state_counts):
         return float(len(np.where(state_counts.sum(axis=0) > 0)[0]))
+
+    def structure_prior_ratio(self, operation):
+        """Return the log ratio of the prior probabilities for a given proposed change to
+        the DAG.
+        """
+        if operation == "+":
+            return -log(2.0)
+        if operation == "-":
+            return log(2.0)
+        return 0
 
     def structure_prior(self, model):
         """
