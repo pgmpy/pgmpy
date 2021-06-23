@@ -163,7 +163,11 @@ class BayesianEstimator(ParameterEstimator):
         # Throw a warning if pseudo_count is specified without prior_type=dirichlet
         #     cast to np.array first to use the array.size attribute, which returns 0 also for [[],[]]
         #     (where len([[],[]]) evaluates to 2)
-        if np.array(pseudo_counts).size > 0 and (prior_type != "dirichlet"):
+        if (
+            pseudo_counts is not None
+            and np.array(pseudo_counts).size > 0
+            and (prior_type != "dirichlet")
+        ):
             warn(
                 f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
             )
