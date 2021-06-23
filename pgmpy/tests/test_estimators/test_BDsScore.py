@@ -8,7 +8,7 @@ from pgmpy.estimators import BDsScore
 
 class TestBDsScore(unittest.TestCase):
     def setUp(self):
-        """ Example taken from https://arxiv.org/pdf/1708.00689.pdf"""
+        """Example taken from https://arxiv.org/pdf/1708.00689.pdf"""
         self.d1 = pd.DataFrame(
             data={
                 "X": [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
