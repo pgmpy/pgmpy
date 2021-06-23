@@ -936,7 +936,15 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
     __div__ = __truediv__
 
-    def __eq__(self, other):
+    def __eq__(self, other, atol=1e-08):
+        """
+        Method for checking if two factors are equal.
+
+        Parameters
+        ----------
+        atol: float
+            The maximum allowed difference in values to be considered equal.
+        """
         if not (isinstance(self, DiscreteFactor) and isinstance(other, DiscreteFactor)):
             return False
 
@@ -974,7 +982,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
             if phi.values.shape != self.values.shape:
                 return False
-            elif not np.allclose(phi.values, self.values):
+            elif not np.allclose(phi.values, self.values, atol=atol):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False

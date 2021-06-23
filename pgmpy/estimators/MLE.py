@@ -45,21 +45,31 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> estimator = MaximumLikelihoodEstimator(model, data)
         """
-
         if not isinstance(model, BayesianModel):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for BayesianModel"
             )
-        elif len(model.latents) != 0:
+        elif set(model.nodes()) > set(data.columns):
             raise ValueError(
-                f"Maximum Likelihood Estimator works only for models with all observed variables. Found latent variables: {model.latents}"
+                f"Maximum Likelihood Estimator works only for models with all observed variables. Found latent variables: {model.latents}."
             )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, n_jobs=-1):
+    def get_parameters(self, n_jobs=-1, weighted=False):
         """
-        Method to estimate the model parameters (CPDs) using Maximum Likelihood Estimation.
+        Method to estimate the model parameters (CPDs) using Maximum Likelihood
+        Estimation.
+
+        Parameters
+        ----------
+        n_jobs: int (default: -1)
+            Number of jobs to run in parallel. Default: -1 uses all the processors.
+
+        weighted: bool
+            If weighted=True, the data must contain a `_weight` column specifying the
+            weight of each datapoint (row). If False, assigns an equal weight to each
+            datapoint.
 
         Returns
         -------
@@ -87,12 +97,12 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         """
 
         parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
-            delayed(self.estimate_cpd)(node) for node in self.model.nodes()
+            delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
         )
 
         return parameters
 
-    def estimate_cpd(self, node):
+    def estimate_cpd(self, node, weighted=False):
         """
         Method to estimate the CPD for a given variable.
 
@@ -100,6 +110,11 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ----------
         node: int, string (any hashable python object)
             The name of the variable for which the CPD is to be estimated.
+
+        weighted: bool
+            If weighted=True, the data must contain a `_weight` column specifying the
+            weight of each datapoint (row). If False, assigns an equal weight to each
+            datapoint.
 
         Returns
         -------
@@ -132,7 +147,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         ╘══════╧══════╧══════╧══════╧══════╛
         """
 
-        state_counts = self.state_counts(node)
+        state_counts = self.state_counts(node, weighted=weighted)
 
         # if a column contains only `0`s (no states observed for some configuration
         # of parents' states) fill that column uniformly instead

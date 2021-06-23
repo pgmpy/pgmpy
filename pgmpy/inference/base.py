@@ -143,7 +143,7 @@ class Inference(object):
         # Step 1: Remove all the variables that are d-separated from `variables` when conditioned
         #         on `evidence`
         d_connected = bn.active_trail_nodes(
-            variables=variables, observed=list(evidence.keys())
+            variables=variables, observed=list(evidence.keys()), include_latents=True
         )
         d_connected = set.union(*d_connected.values()).union(evidence.keys())
         bn = bn.subgraph(d_connected)

@@ -8,6 +8,7 @@ from pgmpy.estimators.TreeSearch import TreeSearch
 from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.MmhcEstimator import MmhcEstimator
+from pgmpy.estimators.EM import ExpectationMaximization
 from pgmpy.estimators.PC import PC
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "IVEstimator",
     "MmhcEstimator",
     "PC",
+    "ExpectationMaximization",
 ]
