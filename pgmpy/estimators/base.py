@@ -1,10 +1,7 @@
 #!/usr/bin/env python
-from warnings import warn
 from functools import lru_cache
 
-import numpy as np
 import pandas as pd
-from scipy.stats import chisquare
 
 from pgmpy.utils.decorators import convert_args_tuple
 
@@ -17,7 +14,6 @@ class BaseEstimator(object):
 
         Parameters
         ----------
-
         data: pandas DataFrame object datafame object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
@@ -61,7 +57,7 @@ class BaseEstimator(object):
                         self.state_names[var] = self._collect_state_names(var)
 
     def _collect_state_names(self, variable):
-        "Return a list of states that the variable takes in the data"
+        "Return a list of states that the variable takes in the data."
         states = sorted(list(self.data.loc[:, variable].dropna().unique()))
         return states
 
@@ -265,9 +261,6 @@ class ParameterEstimator(BaseEstimator):
         return super(ParameterEstimator, self).state_counts(
             variable, parents=parents, weighted=weighted, **kwargs
         )
-
-    def get_parameters(self):
-        pass
 
 
 class StructureEstimator(BaseEstimator):

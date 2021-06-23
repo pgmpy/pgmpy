@@ -15,7 +15,9 @@ class ExpectationMaximization(ParameterEstimator):
     def __init__(self, model, data, **kwargs):
         """
         Class used to compute parameters for a model using Expectation
-        Maximization (EM).  EM is an iterative algorithm commonly used for
+        Maximization (EM).
+
+        EM is an iterative algorithm commonly used for
         estimation in the case when there are latent variables in the model.
         The algorithm iteratively improves the parameter estimates maximizing
         the likelihood of the given data.
@@ -205,7 +207,7 @@ class ExpectationMaximization(ParameterEstimator):
             pbar = tqdm(total=max_iter)
 
         # Step 4: Run the EM algorithm.
-        for i in range(max_iter):
+        for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
             #           possible state of latent variables.
             weighted_data = self._compute_weights(latent_card)

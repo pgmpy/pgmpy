@@ -937,6 +937,14 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     __div__ = __truediv__
 
     def __eq__(self, other, atol=1e-08):
+        """
+        Method for checking if two factors are equal.
+
+        Parameters
+        ----------
+        atol: float
+            The maximum allowed difference in values to be considered equal.
+        """
         if not (isinstance(self, DiscreteFactor) and isinstance(other, DiscreteFactor)):
             return False
 
