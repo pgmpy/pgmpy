@@ -234,6 +234,11 @@ class TestHillClimbEstimator(unittest.TestCase):
             set(best_model.edges()), set([("A", "B"), ("B", "C"), ("F", "C")])
         )
 
+    def test_estimate(self):
+        for score in ["k2score", "bdeuscore", "bdsscore", "bicscore"]:
+            dag = self.est_rand.estimate(scoring_method=score)
+            dag = self.est_titanic1.estimate(scoring_method=score)
+
     def tearDown(self):
         del self.rand_data
         del self.est_rand
