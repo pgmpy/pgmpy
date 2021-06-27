@@ -77,6 +77,44 @@ class TestAdjustmentSet(unittest.TestCase):
             )
         )
 
+    def test_get_minimal_adjustment_set(self):
+        # Without latent variables
+        dag1 = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+        infer = CausalInference(dag1)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertEqual(adj_set, {"Z"})
+
+        # M graph
+        dag2 = BayesianModel(
+            [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")]
+        )
+        infer = CausalInference(dag2)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertEqual(adj_set, set())
+
+        # With latents
+        dag_lat1 = BayesianModel([("X", "Y"), ("Z", "X"), ("Z", "Y")], latents={"Z"})
+        infer = CausalInference(dag_lat1)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertIsNone(adj_set)
+
+        # Pearl's Simpson machine
+        dag_lat2 = BayesianModel(
+            [
+                ("X", "Y"),
+                ("Z1", "U"),
+                ("U", "X"),
+                ("Z1", "Z3"),
+                ("Z3", "Y"),
+                ("U", "Z2"),
+                ("Z3", "Z2"),
+            ],
+            latents={"U"},
+        )
+        infer = CausalInference(dag_lat2)
+        adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
+        self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
+
 
 class TestBackdoorPaths(unittest.TestCase):
     """

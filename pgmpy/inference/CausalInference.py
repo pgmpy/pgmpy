@@ -396,6 +396,20 @@ class CausalInference(object):
         inplace: boolean
             If inplace is True, modifies the object itself. Otherwise retuns
             a modified copy of self.
+
+        Examples
+        --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import CausalInference
+        >>> model = BayesianModel([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> c_infer = CausalInference(model)
+        >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
+        <pgmpy.models.BayesianModel.BayesianModel at 0x7fba501ad940>
+
+        References
+        ----------
+        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         for var in chain(X, Y):
             if var not in self.model.nodes():
@@ -434,6 +448,13 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.inference import CausalInference
+        >>> model = BayesianModel([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        ...                        ("z2", "x2"), ("y2", "z2")])
+        >>> c_infer = CausalInference(model)
+        >>> c_infer.is_valid_adjustment_set(X=['x1', 'x2'], Y=['y1', 'y2'], adjustment_set=['z1', 'z2'])
+        True
 
         References
         ----------
@@ -444,6 +465,34 @@ class CausalInference(object):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
                 return False
         return True
+
+    def get_minimal_adjustment_set(self, X, Y):
+        """
+        Method to test whether `adjustment_set` is a valid adjustment set for
+        identifying the causal effect of `X` on `Y`.
+
+        Parameters
+        ----------
+        X: str (variable name)
+            The cause/exposure variables.
+
+        Y: str (variable name)
+            The outcome variable
+
+        Returns
+        -------
+        set or None: A set of variables which are the minimal possible adjustment set.
+                If None, no adjutment set is possible.
+
+        Examples
+        --------
+
+        References
+        ----------
+        [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        """
+        backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
+        return backdoor_graph.minimal_dseparator(X, Y)
 
     def query(
         self,

@@ -204,6 +204,39 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(set(anc_dag.edges()), set([("D", "A"), ("D", "B")]))
         self.assertRaises(ValueError, dag.get_ancestral_graph, ["A", "gibber"])
 
+    def test_minimal_dseparator(self):
+        # Without latent variables
+
+        dag1 = DAG([("A", "B"), ("B", "C")])
+        self.assertEqual(dag1.minimal_dseparator(start="A", end="C"), {"B"})
+
+        dag2 = DAG([("A", "B"), ("B", "C"), ("C", "D"), ("A", "E"), ("E", "D")])
+        self.assertEqual(dag2.minimal_dseparator(start="A", end="D"), {"C", "E"})
+
+        dag3 = DAG(
+            [("B", "A"), ("B", "C"), ("A", "D"), ("D", "C"), ("A", "E"), ("C", "E")]
+        )
+        self.assertEqual(dag3.minimal_dseparator(start="A", end="C"), {"B", "D"})
+
+        # With latent variables
+
+        dag_lat1 = DAG([("A", "B"), ("B", "C")], latents={"B"})
+        self.assertIsNone(dag_lat1.minimal_dseparator(start="A", end="C"))
+
+        dag_lat2 = DAG([("A", "D"), ("D", "B"), ("B", "C")], latents={"B"})
+        self.assertEqual(dag_lat2.minimal_dseparator(start="A", end="C"), {"D"})
+
+        dag_lat3 = DAG([("A", "B"), ("B", "D"), ("D", "C")], latents={"B"})
+        self.assertEqual(dag_lat3.minimal_dseparator(start="A", end="C"), {"D"})
+
+        dag_lat4 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "C")], latents={"D"})
+        self.assertIsNone(dag_lat4.minimal_dseparator(start="A", end="C"))
+
+        dag_lat5 = DAG(
+            [("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"}
+        )
+        self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
+
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
         dag.to_daft(node_pos=None)

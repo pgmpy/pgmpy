@@ -586,6 +586,61 @@ class DAG(nx.DiGraph):
         else:
             return False
 
+    def minimal_dseparator(self, start, end):
+        """
+        Finds the minimal d-separating set for `start` and `end`.
+
+        Parameters
+        ----------
+        start: node
+            The first node.
+
+        end: node
+            The second node.
+
+        Examples
+        --------
+        >>> dag = DAG([('A', 'B'), ('B', 'C')])
+        >>> dag.minimal_dseparator(start='A', end='C')
+        {'B'}
+
+        References
+        ----------
+        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and Judea Pearl. Finding minimal d-separators. Computer Science Department, University of California, 1998.
+        """
+        if (end in self.neighbors(start)) or (start in self.neighbors(end)):
+            raise ValueError(
+                "No possible separators because start and end are adjacent"
+            )
+        an_graph = self.get_ancestral_graph([start, end])
+        separator = set(
+            itertools.chain(self.predecessors(start), self.predecessors(end))
+        )
+        # If any of the parents were latents, take the latent's parent
+        while len(separator.intersection(self.latents)) != 0:
+            separator_copy = separator.copy()
+            for u in separator:
+                if u in self.latents:
+                    separator_copy.remove(u)
+                    separator_copy.update(set(self.predecessors(u)))
+            separator = separator_copy
+        # Remove the start and end nodes in case it reaches there while removing latents.
+        separator.difference_update({start, end})
+
+        # If the initial set is not able to d-separate, no d-separator is possible.
+        if an_graph.is_dconnected(start, end, observed=separator):
+            return None
+
+        # Go through the separator set, remove one element and check if it remains
+        # a dseparating set.
+        minimal_separator = separator.copy()
+
+        for u in separator:
+            if not an_graph.is_dconnected(start, end, observed=minimal_separator - {u}):
+                minimal_separator.remove(u)
+
+        return minimal_separator
+
     def get_markov_blanket(self, node):
         """
         Returns a markov blanket for a random variable. In the case
@@ -654,6 +709,9 @@ class DAG(nx.DiGraph):
         Page 75 Algorithm 3.1
         """
         if observed:
+            if isinstance(observed, set):
+                observed = list(observed)
+
             observed_list = (
                 observed if isinstance(observed, (list, tuple)) else [observed]
             )
