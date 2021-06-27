@@ -11,6 +11,7 @@ from pgmpy.estimators import (
     K2Score,
     ScoreCache,
     BDeuScore,
+    BDsScore,
     BicScore,
 )
 from pgmpy.base import DAG
@@ -56,7 +57,15 @@ class HillClimbSearch(StructureEstimator):
         super(HillClimbSearch, self).__init__(data, **kwargs)
 
     def _legal_operations(
-        self, model, score, tabu_list, max_indegree, black_list, white_list, fixed_edges
+        self,
+        model,
+        score,
+        structure_score,
+        tabu_list,
+        max_indegree,
+        black_list,
+        white_list,
+        fixed_edges,
     ):
         """Generates a list of legal (= not in tabu_list) graph modifications
         for a given model, together with their score changes. Possible graph modifications:
@@ -90,6 +99,7 @@ class HillClimbSearch(StructureEstimator):
                     new_parents = old_parents + [X]
                     if len(new_parents) <= max_indegree:
                         score_delta = score(Y, new_parents) - score(Y, old_parents)
+                        score_delta += structure_score("+")
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
@@ -100,6 +110,7 @@ class HillClimbSearch(StructureEstimator):
                 new_parents = old_parents[:]
                 new_parents.remove(X)
                 score_delta = score(Y, new_parents) - score(Y, old_parents)
+                score_delta += structure_score("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -127,6 +138,7 @@ class HillClimbSearch(StructureEstimator):
                             - score(X, old_X_parents)
                             - score(Y, old_Y_parents)
                         )
+                        score_delta += structure_score("flip")
                         yield (operation, score_delta)
 
     def estimate(
@@ -153,7 +165,7 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2score, bdeuscore, bicscore. Also accepts a
+            structure scores: k2score, bdeuscore, bdsscore, bicscore. Also accepts a
             custom score but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
@@ -219,6 +231,7 @@ class HillClimbSearch(StructureEstimator):
         supported_methods = {
             "k2score": K2Score,
             "bdeuscore": BDeuScore,
+            "bdsscore": BDsScore,
             "bicscore": BicScore,
         }
         if (
@@ -228,7 +241,7 @@ class HillClimbSearch(StructureEstimator):
             )
         ) and (not isinstance(scoring_method, StructureScore)):
             raise ValueError(
-                "scoring_method should either be one of k2score, bdeuscore, bicscore, or an instance of StructureScore"
+                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, or an instance of StructureScore"
             )
 
         if isinstance(scoring_method, str):
@@ -291,6 +304,7 @@ class HillClimbSearch(StructureEstimator):
                 self._legal_operations(
                     current_model,
                     score_fn,
+                    score.structure_prior_ratio,
                     tabu_list,
                     max_indegree,
                     black_list,

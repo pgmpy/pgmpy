@@ -1,7 +1,13 @@
 from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEstimator
 from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
 from pgmpy.estimators.BayesianEstimator import BayesianEstimator
-from pgmpy.estimators.StructureScore import StructureScore, K2Score, BDeuScore, BicScore
+from pgmpy.estimators.StructureScore import (
+    StructureScore,
+    K2Score,
+    BDeuScore,
+    BDsScore,
+    BicScore,
+)
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
 from pgmpy.estimators.TreeSearch import TreeSearch
@@ -23,6 +29,7 @@ __all__ = [
     "StructureScore",
     "K2Score",
     "BDeuScore",
+    "BDsScore",
     "BicScore",
     "ScoreCache",
     "SEMEstimator",
