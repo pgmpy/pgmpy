@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15] - 2021-06-30
+### Added
+1. Adds network pruning for inference algrithms to reduce the size of network before
+   running inference.
+2. Adds support for latent variables in DAG and BayesianModel.
+3. Parallel implementation for parameter estimation algorithms.
+4. Adds `DAG.get_random` and `BayesianModel.get_random` methods to be able to generate random models.
+5. Adds `CausalInference.query` method for doing do operation inference with or without adjustment sets.
+6. Adds functionality to treesearch to do auto root and class node selection (#1418)
+7. Adds option to specify virtual evidence in bayesian network inference.
+8. Adds Expectation-Maximization (EM) algorithm for parameter estimation in latent variable models.
+9. Add `BDeuScore` as another option for structure score when using HillClimbSearch.
+10. Adds CausalInference.get_minimal_adjustment_set` for finding adjustment sets.
+
+### Changed
+1. Renames `DAG.is_active_trail` to `is_dconnected`.
+2. `DAG.do` can accept multiple variables in the argument.
+3. Optimizes sampling methods.
+4. CI moved from travis and appveyor to github actions.
+5. Drops support for python 3.6. Requires 3.7+.
+
+### Fixed
+1. Example model files were not getting included in the pypi and conda packages.
+2. The order of values returned by CI tests was wrong. #1403
+3. Adjusted and normalized MI wasn't working properly in TreeSearch.
+4. #1423: Value error in bayesian estimation.
+5. Fixes bug in `DiscreteFactor.__eq__` to also consider the state names order.
 
 ## [0.1.14] - 2021-03-31
 ### Added
