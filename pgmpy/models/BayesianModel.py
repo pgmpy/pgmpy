@@ -506,6 +506,10 @@ class BayesianModel(DAG):
             for large networks (>100 nodes). For smaller networks might reduce
             performance.
 
+        Returns
+        -------
+        None: Modifies the network inplace and adds the `cpds` property.
+
         Examples
         --------
         >>> import pandas as pd
@@ -535,6 +539,63 @@ class BayesianModel(DAG):
         )
         cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
         self.add_cpds(*cpds_list)
+
+    def fit_update(self, data, n_prev_samples=None, n_jobs=-1):
+        """
+        Method to update the parameters of the BayesianModel with more data.
+        Internally, uses BayesianEstimator with dirichlet prior, and uses
+        the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The new dataset which to use for updating the model.
+
+        n_prev_samples: int
+            The number of samples/datapoints on which the model was trained before.
+            This parameter determines how much weight should the new data be given.
+            If None, n_prev_samples = nrow(data).
+
+        n_jobs: int (default: -1)
+            Number of threads/processes to use for estimation. It improves speed only
+            for large networks (>100 nodes). For smaller networks might reduce
+            performance.
+
+        Returns
+        -------
+        None: Modifies the network inplace
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.sampling import BayesianModelSampling
+        >>> model = get_example_model('alarm')
+        >>> # Generate some new data.
+        >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
+        >>> model.fit_update(data)
+        """
+        from pgmpy.estimators import BayesianEstimator
+
+        if n_prev_samples is None:
+            n_prev_samples = data.shape[0]
+
+        # Step 1: Compute the pseudo_counts for the dirichlet prior.
+        pseudo_counts = {
+            var: self.get_cpds(var).get_values() * n_prev_samples
+            for var in data.columns
+        }
+
+        # Step 2: Get the current order of state names for aligning pseudo counts.
+        state_names = {}
+        for var in data.columns:
+            state_names.update(self.get_cpds(var).state_names)
+
+        # Step 3: Estimate the new CPDs.
+        _est = BayesianEstimator(self, data, state_names=state_names)
+        cpds = _est.get_parameters(
+            prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs
+        )
+        self.add_cpds(*cpds)
 
     def predict(self, data, stochastic=False, n_jobs=-1):
         """

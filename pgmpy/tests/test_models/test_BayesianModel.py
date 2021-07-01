@@ -20,6 +20,8 @@ from pgmpy.estimators import (
     MaximumLikelihoodEstimator,
 )
 from pgmpy.base import DAG
+from pgmpy.utils import get_example_model
+from pgmpy.sampling import BayesianModelSampling
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -687,6 +689,23 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.assertEqual(
             self.model2.get_cpds("B"), TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]])
         )
+
+    def test_fit_update(self):
+        model = get_example_model("asia")
+        model_copy = model.copy()
+        data = BayesianModelSampling(model).forward_sample(int(1e3))
+        model.fit_update(data, n_prev_samples=int(1e3))
+        for var in model.nodes():
+            self.assertTrue(
+                model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
+            )
+
+        model = model_copy.copy()
+        model.fit_update(data)
+        for var in model.nodes():
+            self.assertTrue(
+                model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
+            )
 
     def test_fit_missing_data(self):
         self.model2.fit(
