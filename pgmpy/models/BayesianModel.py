@@ -1000,3 +1000,37 @@ class BayesianModel(DAG):
                 cpd = adj_model.get_cpds(node=node)
                 cpd.marginalize(cpd.variables[1:], inplace=True)
         return adj_model
+
+    def simulate(self, n_samples=10, include_latents=False, seed=None):
+        """
+        Simulates data from the given model. Internally uses
+        BayesianModelSampling.forward_sample to generate the data.
+
+        Parameters
+        ----------
+        n_samples: int
+            The number of data samples to simulate from the model.
+
+        include_latents: boolean
+            Whether to include the latent variable values in the generated samples.
+
+        seed: int (default: None)
+            If a value is provided, sets the seed for numpy.random.
+
+        Returns
+        -------
+        pandas.DataFrame: A dataframe with the simulated data.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> model.simulate(n_samples=10)
+
+        """
+        from pgmpy.sampling import BayesianModelSampling
+
+        self.check_model()
+        return BayesianModelSampling(self).forward_sample(
+            size=n_samples, include_latents=include_latents, seed=seed
+        )

@@ -1235,6 +1235,12 @@ class TestBayesianModelFitPredict(unittest.TestCase):
                 np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
             )
 
+    def test_simulate(self):
+        asia = get_example_model("asia")
+        n_samples = int(1e3)
+        samples = asia.simulate(n_samples=n_samples)
+        self.assertEqual(samples.shape[0], n_samples)
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
