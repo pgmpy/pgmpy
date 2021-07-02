@@ -5,7 +5,7 @@ import numpy.testing as np_test
 
 from pgmpy.inference import VariableElimination
 from pgmpy.inference import BeliefPropagation
-from pgmpy.models import BayesianNetwork, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.models import JunctionTree
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.factors.discrete import DiscreteFactor
@@ -389,7 +389,7 @@ class TestSnowNetwork(unittest.TestCase):
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
-        self.markov_model = MarkovModel([("A", "B"), ("A", "C")])
+        self.markov_model = MarkovNetwork([("A", "B"), ("A", "C")])
         f1 = DiscreteFactor(
             variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2
         )
@@ -411,7 +411,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
         # are under consideration for inference so this should be fine.
-        self.markov_model = MarkovModel(
+        self.markov_model = MarkovNetwork(
             [
                 ("A", "J"),
                 ("R", "J"),

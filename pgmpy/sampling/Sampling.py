@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.inference import BayesianModelInference
-from pgmpy.models import BayesianNetwork, MarkovChain, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -343,7 +343,7 @@ class GibbsSampling(MarkovChain):
 
     Parameters
     ----------
-    model: BayesianNetwork or MarkovModel
+    model: BayesianNetwork or MarkovNetwork
         Model from which variables are inherited and transition probabilities computed.
 
     Examples
@@ -371,7 +371,7 @@ class GibbsSampling(MarkovChain):
         super(GibbsSampling, self).__init__()
         if isinstance(model, BayesianNetwork):
             self._get_kernel_from_bayesian_model(model)
-        elif isinstance(model, MarkovModel):
+        elif isinstance(model, MarkovNetwork):
             self._get_kernel_from_markov_model(model)
 
     def _get_kernel_from_bayesian_model(self, model):
@@ -412,7 +412,7 @@ class GibbsSampling(MarkovChain):
 
         Parameters
         ----------
-        model: MarkovModel
+        model: MarkovNetwork
             The model from which probabilities will be computed.
         """
         self.variables = np.array(model.nodes())
@@ -474,8 +474,8 @@ class GibbsSampling(MarkovChain):
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
-        >>> from pgmpy.models import MarkovModel
-        >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
+        >>> from pgmpy.models import MarkovNetwork
+        >>> model = MarkovNetwork([('A', 'B'), ('C', 'B')])
         >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
         >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
@@ -527,8 +527,8 @@ class GibbsSampling(MarkovChain):
         --------
         >>> from pgmpy.factors.discrete import DiscreteFactor
         >>> from pgmpy.sampling import GibbsSampling
-        >>> from pgmpy.models import MarkovModel
-        >>> model = MarkovModel([('A', 'B'), ('C', 'B')])
+        >>> from pgmpy.models import MarkovNetwork
+        >>> model = MarkovNetwork([('A', 'B'), ('C', 'B')])
         >>> factor_ab = DiscreteFactor(['A', 'B'], [2, 2], [1, 2, 3, 4])
         >>> factor_cb = DiscreteFactor(['C', 'B'], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)

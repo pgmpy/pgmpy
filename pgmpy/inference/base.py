@@ -6,7 +6,7 @@ from itertools import chain
 import numpy as np
 
 from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovModel
+from pgmpy.models import MarkovNetwork
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
 from pgmpy.models import DynamicBayesianNetwork
@@ -17,7 +17,7 @@ class Inference(object):
     """
     Base class for all inference algorithms.
 
-    Converts BayesianNetwork and MarkovModel to a uniform representation so that inference
+    Converts BayesianNetwork and MarkovNetwork to a uniform representation so that inference
     algorithms can be applied. Also it checks if all the associated CPDs / Factors are
     consistent with the model.
 
@@ -25,7 +25,7 @@ class Inference(object):
 
     Parameters
     ----------
-    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovModel or pgmpy.models.NoisyOrModel
+    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork or pgmpy.models.NoisyOrModel
         model for which to initialize the inference object.
 
     Examples
@@ -43,10 +43,10 @@ class Inference(object):
     >>> student.add_cpds(diff_cpd, intel_cpd, grade_cpd)
     >>> model = Inference(student)
 
-    >>> from pgmpy.models import MarkovModel
+    >>> from pgmpy.models import MarkovNetwork
     >>> from pgmpy.factors.discrete import DiscreteFactor
     >>> import numpy as np
-    >>> student = MarkovModel([('Alice', 'Bob'), ('Bob', 'Charles'),
+    >>> student = MarkovNetwork([('Alice', 'Bob'), ('Bob', 'Charles'),
     ...                        ('Charles', 'Debbie'), ('Debbie', 'Alice')])
     >>> factor_a_b = DiscreteFactor(['Alice', 'Bob'], cardinality=[2, 2],
     ...                             values=np.random.rand(4))
@@ -88,7 +88,7 @@ class Inference(object):
                     self.factors[var].append(cpd)
                 self.state_names_map.update(cpd.no_to_name)
 
-        elif isinstance(self.model, (MarkovModel, FactorGraph, JunctionTree)):
+        elif isinstance(self.model, (MarkovNetwork, FactorGraph, JunctionTree)):
             self.cardinality = self.model.get_cardinality()
 
             for factor in self.model.get_factors():

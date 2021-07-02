@@ -5,7 +5,6 @@ from collections import defaultdict
 import logging
 from operator import mul
 from functools import reduce
-import warnings
 
 import networkx as nx
 import numpy as np
@@ -20,7 +19,7 @@ from pgmpy.factors.discrete import (
     DiscreteFactor,
 )
 from pgmpy.factors.continuous import ContinuousFactor
-from pgmpy.models.MarkovModel import MarkovModel
+from pgmpy.models.MarkovNetwork import MarkovNetwork
 
 
 class BayesianNetwork(DAG):
@@ -420,7 +419,7 @@ class BayesianNetwork(DAG):
         EdgeView([('diff', 'grade'), ('diff', 'intel'), ('grade', 'letter'), ('grade', 'intel'), ('intel', 'SAT')])
         """
         moral_graph = self.moralize()
-        mm = MarkovModel(moral_graph.edges())
+        mm = MarkovNetwork(moral_graph.edges())
         mm.add_nodes_from(moral_graph.nodes())
         mm.add_factors(*[cpd.to_factor() for cpd in self.cpds])
 

@@ -1,4 +1,4 @@
-import warnings
+import logging
 from math import isclose
 
 
@@ -105,12 +105,12 @@ def optimize(
         opt.step(closure=closure)
 
         if isclose(init_loss, closure().item(), abs_tol=exit_delta):
-            warnings.warn(f"Converged after {t} iterations.")
+            logging.info(f"Converged after {t} iterations.")
             return params
         else:
             init_loss = closure().item()
 
-    warnings.warn(
+    logging.info(
         f"Couldn't converge after {max_iter} iterations. Try increasing max_iter or change optimizer parameters"
     )
     return params

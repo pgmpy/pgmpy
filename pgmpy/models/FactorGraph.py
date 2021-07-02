@@ -6,7 +6,7 @@ from collections import defaultdict
 import numpy as np
 from networkx.algorithms import bipartite
 
-from pgmpy.models.MarkovModel import MarkovModel
+from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
@@ -322,7 +322,7 @@ class FactorGraph(UndirectedGraph):
         ...                   ('b', phi2), ('c', phi2)])
         >>> mm = G.to_markov_model()
         """
-        mm = MarkovModel()
+        mm = MarkovNetwork()
 
         variable_nodes = self.get_variable_nodes()
 

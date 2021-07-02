@@ -1,6 +1,7 @@
+import logging
+import warnings
 from itertools import product
 from collections import namedtuple
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -186,7 +187,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             elif isinstance(kwargs[var], str):
                 index.append(self.name_to_no[var][kwargs[var]])
             else:
-                warn(f"Using {var} state as number instead of name.")
+                logging.info(f"Using {var} state as number instead of name.")
                 index.append(kwargs[var])
         return self.values[tuple(index)]
 
@@ -230,7 +231,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             elif isinstance(kwargs[var], str):
                 index.append(self.name_to_no[var][kwargs[var]])
             else:
-                warn(f"Using {var} state as number instead of name.")
+                logging.info(f"Using {var} state as number instead of name.")
                 index.append(kwargs[var])
 
         self.values[tuple(index)] = value
@@ -522,8 +523,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             ]
         except KeyError:
             if show_warnings:
-                warn(
-                    "Found unknown state name. Trying to switch to using all state names as state numbers"
+                warnings.warn(
+                    "Found unknown state name. Trying to switch to using all state names as state numbers",
+                    UserWarning,
                 )
 
         var_index_to_del = []

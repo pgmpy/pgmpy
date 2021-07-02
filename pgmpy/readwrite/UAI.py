@@ -4,7 +4,7 @@ import numpy as np
 
 from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
-from pgmpy.models import BayesianNetwork, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 
 
@@ -265,7 +265,7 @@ class UAIReader(object):
             return model
 
         elif self.network_type == "MARKOV":
-            model = MarkovModel(self.edges)
+            model = MarkovNetwork(self.edges)
 
             factors = []
             for table in self.tables:
@@ -305,7 +305,7 @@ class UAIWriter(object):
         """
         if isinstance(model, BayesianNetwork):
             self.network = "BAYES\n"
-        elif isinstance(model, MarkovModel):
+        elif isinstance(model, MarkovNetwork):
             self.network = "MARKOV\n"
         else:
             raise TypeError("Model must be an instance of Bayesian or Markov model.")
@@ -363,7 +363,7 @@ class UAIWriter(object):
             for cpd in cpds:
                 domain[cpd.variable] = str(cpd.variable_card)
             return domain
-        elif isinstance(self.model, MarkovModel):
+        elif isinstance(self.model, MarkovNetwork):
             factors = self.model.get_factors()
             domain = {}
             for factor in factors:
@@ -401,7 +401,7 @@ class UAIWriter(object):
                 )
                 functions.append(function)
             return functions
-        elif isinstance(self.model, MarkovModel):
+        elif isinstance(self.model, MarkovNetwork):
             factors = self.model.get_factors()
             functions = []
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -433,7 +433,7 @@ class UAIWriter(object):
                 values = list(map(str, cpd.values.ravel()))
                 tables.append(values)
             return tables
-        elif isinstance(self.model, MarkovModel):
+        elif isinstance(self.model, MarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:

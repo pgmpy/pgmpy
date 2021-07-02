@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovModel
+from pgmpy.models import MarkovNetwork
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import Inference
@@ -29,7 +29,7 @@ class TestInferenceBase(unittest.TestCase):
         )
         self.bayesian.add_cpds(a_cpd, b_cpd, c_cpd, d_cpd, e_cpd)
 
-        self.markov = MarkovModel([("a", "b"), ("b", "d"), ("a", "c"), ("c", "d")])
+        self.markov = MarkovNetwork([("a", "b"), ("b", "d"), ("a", "c"), ("c", "d")])
         factor_1 = DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100]))
         factor_2 = DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20]))
         factor_3 = DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1]))

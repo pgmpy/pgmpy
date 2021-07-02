@@ -1,4 +1,4 @@
-from warnings import warn
+import logging
 
 import numpy as np
 import pandas as pd
@@ -634,14 +634,14 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             except ValueError:
                 # If one of the values is 0 in the 2x2 table.
                 if isinstance(z_state, str):
-                    warn(
+                    logging.info(
                         f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
-                    warn(
+                    logging.info(
                         f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
                     )
         p_value = 1 - stats.chi2.cdf(chi, df=dof)

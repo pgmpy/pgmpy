@@ -6,26 +6,26 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork, MarkovModel, FactorGraph
+from pgmpy.models import BayesianNetwork, MarkovNetwork, FactorGraph
 from pgmpy.tests import help_functions as hf
 
 
-class TestMarkovModelCreation(unittest.TestCase):
+class TestMarkovNetworkCreation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovModel()
+        self.graph = MarkovNetwork()
 
     def test_class_init_without_data(self):
-        self.assertIsInstance(self.graph, MarkovModel)
+        self.assertIsInstance(self.graph, MarkovNetwork)
 
     def test_class_init_with_data_string(self):
-        self.g = MarkovModel([("a", "b"), ("b", "c")])
+        self.g = MarkovNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
         self.assertListEqual(
             hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]]
         )
 
     def test_class_init_with_data_nonstring(self):
-        self.g = MarkovModel([(1, 2), (2, 3)])
+        self.g = MarkovNetwork([(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.graph.add_node("a")
@@ -85,9 +85,9 @@ class TestMarkovModelCreation(unittest.TestCase):
         del self.graph
 
 
-class TestMarkovModelMethods(unittest.TestCase):
+class TestMarkovNetworkMethods(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovModel()
+        self.graph = MarkovNetwork()
 
     def test_get_cardinality(self):
 
@@ -293,7 +293,7 @@ class TestMarkovModelMethods(unittest.TestCase):
 
 class TestUndirectedGraphFactorOperations(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovModel()
+        self.graph = MarkovNetwork()
 
     def test_add_factor_raises_error(self):
         self.graph.add_edges_from(
@@ -366,7 +366,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
 
 class TestUndirectedGraphTriangulation(unittest.TestCase):
     def setUp(self):
-        self.graph = MarkovModel()
+        self.graph = MarkovNetwork()
 
     def test_check_clique(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])

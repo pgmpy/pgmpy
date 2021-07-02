@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from warnings import warn
+import logging
 from itertools import combinations
 
 import networkx as nx
@@ -92,8 +92,8 @@ class ExhaustiveSearch(StructureEstimator):
         if nodes is None:
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
-            warn("Generating all DAGs of n nodes likely not feasible for n>6!")
-            warn(
+            logging.info("Generating all DAGs of n nodes likely not feasible for n>6!")
+            logging.info(
                 "Attempting to search through {n} graphs".format(
                     n=2 ** (len(nodes) * (len(nodes) - 1))
                 )

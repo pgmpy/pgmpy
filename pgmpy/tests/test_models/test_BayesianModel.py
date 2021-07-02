@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.models import BayesianNetwork, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors.discrete import (
@@ -299,7 +299,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_is_iequivalent(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
-        self.assertRaises(TypeError, G.is_iequivalent, MarkovModel())
+        self.assertRaises(TypeError, G.is_iequivalent, MarkovNetwork())
         G1 = BayesianNetwork([("V", "W"), ("W", "X"), ("X", "Y"), ("Z", "Y")])
         G2 = BayesianNetwork([("W", "V"), ("X", "W"), ("X", "Y"), ("Z", "Y")])
         self.assertTrue(G1.is_iequivalent(G2))
