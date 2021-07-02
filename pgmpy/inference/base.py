@@ -5,7 +5,7 @@ from itertools import chain
 
 import numpy as np
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.models import MarkovModel
 from pgmpy.models import FactorGraph
 from pgmpy.models import JunctionTree
@@ -17,7 +17,7 @@ class Inference(object):
     """
     Base class for all inference algorithms.
 
-    Converts BayesianModel and MarkovModel to a uniform representation so that inference
+    Converts BayesianNetwork and MarkovModel to a uniform representation so that inference
     algorithms can be applied. Also it checks if all the associated CPDs / Factors are
     consistent with the model.
 
@@ -25,15 +25,15 @@ class Inference(object):
 
     Parameters
     ----------
-    model: pgmpy.models.BayesianModel or pgmpy.models.MarkovModel or pgmpy.models.NoisyOrModel
+    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovModel or pgmpy.models.NoisyOrModel
         model for which to initialize the inference object.
 
     Examples
     --------
     >>> from pgmpy.inference import Inference
-    >>> from pgmpy.models import BayesianModel
+    >>> from pgmpy.models import BayesianNetwork
     >>> from pgmpy.factors.discrete import TabularCPD
-    >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+    >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
     >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
     >>> intel_cpd = TabularCPD('intel', 2, [[0.3], [0.7]])
     >>> grade_cpd = TabularCPD('grade', 3, [[0.1, 0.1, 0.1, 0.1],
@@ -77,7 +77,7 @@ class Inference(object):
         self.cardinality = {}
         self.factors = defaultdict(list)
 
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.state_names_map = {}
             for node in self.model.nodes():
                 cpd = self.model.get_cpds(node)
@@ -96,13 +96,13 @@ class Inference(object):
                     self.factors[var].append(factor)
 
         elif isinstance(self.model, DynamicBayesianNetwork):
-            self.start_bayesian_model = BayesianModel(self.model.get_intra_edges(0))
+            self.start_bayesian_model = BayesianNetwork(self.model.get_intra_edges(0))
             self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
             cpd_inter = [
                 self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
             ]
             self.interface_nodes = self.model.get_interface_nodes(0)
-            self.one_and_half_model = BayesianModel(
+            self.one_and_half_model = BayesianNetwork(
                 self.model.get_inter_edges() + self.model.get_intra_edges(1)
             )
             self.one_and_half_model.add_cpds(
@@ -125,7 +125,7 @@ class Inference(object):
 
         Returns
         -------
-        instance of pgmpy.models.BayesianModel: The pruned model.
+        instance of pgmpy.models.BayesianNetwork: The pruned model.
 
         Examples
         --------

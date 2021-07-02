@@ -14,7 +14,7 @@ from pgmpy.inference.EliminationOrder import (
     MinFill,
     MinWeight,
 )
-from pgmpy.models import JunctionTree, BayesianModel
+from pgmpy.models import JunctionTree, BayesianNetwork
 from pgmpy.global_vars import SHOW_PROGRESS
 
 
@@ -105,12 +105,14 @@ class VariableElimination(Inference):
             return elimination_order
 
         # Step 2: If elimination order is None or a Markov model, return a random order.
-        elif (elimination_order is None) or (not isinstance(self.model, BayesianModel)):
+        elif (elimination_order is None) or (
+            not isinstance(self.model, BayesianNetwork)
+        ):
             return to_eliminate
 
         # Step 3: If elimination order is a str, compute the order using the specified heuristic.
         elif isinstance(elimination_order, str) and isinstance(
-            self.model, BayesianModel
+            self.model, BayesianNetwork
         ):
             heuristic_dict = {
                 "weightedminfill": WeightedMinFill,
@@ -208,7 +210,7 @@ class VariableElimination(Inference):
         final_distribution = [factor for factor, _ in final_distribution]
 
         if joint:
-            if isinstance(self.model, BayesianModel):
+            if isinstance(self.model, BayesianNetwork):
                 return factor_product(*final_distribution).normalize(inplace=False)
             else:
                 return factor_product(*final_distribution)
@@ -258,12 +260,12 @@ class VariableElimination(Inference):
         Examples
         --------
         >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
@@ -281,7 +283,7 @@ class VariableElimination(Inference):
             )
 
         # Step 2: If virtual_evidence is provided, modify the network and query.
-        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+        if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.query(
@@ -295,7 +297,7 @@ class VariableElimination(Inference):
 
         # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
@@ -339,11 +341,11 @@ class VariableElimination(Inference):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(['A', 'B'])
@@ -361,7 +363,7 @@ class VariableElimination(Inference):
 
         # Make a copy of the original model and replace self.model with it later.
         orig_model = self.model.copy()
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
@@ -413,12 +415,12 @@ class VariableElimination(Inference):
         Examples
         --------
         >>> from pgmpy.inference import VariableElimination
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(['A', 'B'])
@@ -436,7 +438,7 @@ class VariableElimination(Inference):
         # Make a copy of the original model and replace self.model with it later
         orig_model = self.model.copy()
 
-        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+        if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.map_query(
@@ -447,7 +449,7 @@ class VariableElimination(Inference):
                 show_progress=show_progress,
             )
 
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
@@ -491,11 +493,11 @@ class VariableElimination(Inference):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> inference.induced_graph(['C', 'D', 'A', 'B', 'E'])
@@ -555,11 +557,11 @@ class VariableElimination(Inference):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import VariableElimination
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> inference.induced_width(['C', 'D', 'A', 'B', 'E'])
@@ -579,7 +581,7 @@ class BeliefPropagation(Inference):
 
     Parameters
     ----------
-    model: BayesianModel, MarkovModel, FactorGraph, JunctionTree
+    model: BayesianNetwork, MarkovModel, FactorGraph, JunctionTree
         model for which inference is to performed
     """
 
@@ -745,10 +747,10 @@ class BeliefPropagation(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
-        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>> G = BayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
@@ -778,10 +780,10 @@ class BeliefPropagation(Inference):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.inference import BeliefPropagation
-        >>> G = BayesianModel([('diff', 'grade'), ('intel', 'grade'),
+        >>> G = BayesianNetwork([('diff', 'grade'), ('intel', 'grade'),
         ...                    ('intel', 'SAT'), ('grade', 'letter')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
@@ -824,12 +826,12 @@ class BeliefPropagation(Inference):
         Examples
         --------
         >>> from pgmpy.inference import BeliefPropagation
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> import numpy as np
         >>> import pandas as pd
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> model.fit(values)
         >>> inference = BeliefPropagation(model)
         >>> phi_query = inference.query(['A', 'B'])
@@ -955,9 +957,9 @@ class BeliefPropagation(Inference):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import BeliefPropagation
-        >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
+        >>> bayesian_model = BayesianNetwork([('A', 'J'), ('R', 'J'), ('J', 'Q'),
         ...                                 ('J', 'L'), ('G', 'L')])
         >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
         >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
@@ -992,7 +994,7 @@ class BeliefPropagation(Inference):
             )
 
         # Step 2: If virtual_evidence is provided, modify model and evidence.
-        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+        if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.query(
@@ -1004,7 +1006,7 @@ class BeliefPropagation(Inference):
             )
 
         # Step 3: Do network pruning.
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 
@@ -1051,9 +1053,9 @@ class BeliefPropagation(Inference):
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import BeliefPropagation
-        >>> bayesian_model = BayesianModel([('A', 'J'), ('R', 'J'), ('J', 'Q'),
+        >>> bayesian_model = BayesianNetwork([('A', 'J'), ('R', 'J'), ('J', 'Q'),
         ...                                 ('J', 'L'), ('G', 'L')])
         >>> cpd_a = TabularCPD('A', 2, [[0.2], [0.8]])
         >>> cpd_r = TabularCPD('R', 2, [[0.4], [0.6]])
@@ -1093,7 +1095,7 @@ class BeliefPropagation(Inference):
         # Make a copy of the original model and then replace self.model with it later.
         orig_model = self.model.copy()
 
-        if isinstance(self.model, BayesianModel) and (virtual_evidence is not None):
+        if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
             return self.map_query(
@@ -1103,7 +1105,7 @@ class BeliefPropagation(Inference):
                 show_progress=show_progress,
             )
 
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
         self._initialize_structures()
 

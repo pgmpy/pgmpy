@@ -1,3 +1,4 @@
+from .BayesianNetwork import BayesianNetwork
 from .BayesianModel import BayesianModel
 from .ClusterGraph import ClusterGraph
 from .DynamicBayesianNetwork import DynamicBayesianNetwork
@@ -12,6 +13,7 @@ from .SEM import SEMGraph, SEMAlg, SEM
 
 __all__ = [
     "BayesianModel",
+    "BayesianNetwork",
     "NoisyOrModel",
     "MarkovModel",
     "FactorGraph",

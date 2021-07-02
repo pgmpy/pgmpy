@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.inference import BayesianModelInference
-from pgmpy.models import BayesianModel, MarkovChain, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovChain, MarkovModel
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -22,7 +22,7 @@ class BayesianModelSampling(BayesianModelInference):
 
     Parameters
     ----------
-    model: instance of BayesianModel
+    model: instance of BayesianNetwork
         model on which inference queries will be computed
     """
 
@@ -56,10 +56,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         Examples
         --------
-        >>> from pgmpy.models.BayesianModel import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
         >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
@@ -148,11 +148,11 @@ class BayesianModelSampling(BayesianModelInference):
 
         Examples
         --------
-        >>> from pgmpy.models.BayesianModel import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import State
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
         >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
@@ -245,10 +245,10 @@ class BayesianModelSampling(BayesianModelInference):
         Examples
         --------
         >>> from pgmpy.factors.discrete import State
-        >>> from pgmpy.models.BayesianModel import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.sampling import BayesianModelSampling
-        >>> student = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> student = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> cpd_d = TabularCPD('diff', 2, [[0.6], [0.4]])
         >>> cpd_i = TabularCPD('intel', 2, [[0.7], [0.3]])
         >>> cpd_g = TabularCPD('grade', 3, [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25,
@@ -343,18 +343,18 @@ class GibbsSampling(MarkovChain):
 
     Parameters
     ----------
-    model: BayesianModel or MarkovModel
+    model: BayesianNetwork or MarkovModel
         Model from which variables are inherited and transition probabilities computed.
 
     Examples
     --------
-    Initialization from a BayesianModel object:
+    Initialization from a BayesianNetwork object:
 
     >>> from pgmpy.factors.discrete import TabularCPD
-    >>> from pgmpy.models import BayesianModel
+    >>> from pgmpy.models import BayesianNetwork
     >>> intel_cpd = TabularCPD('intel', 2, [[0.7], [0.3]])
     >>> sat_cpd = TabularCPD('sat', 2, [[0.95, 0.2], [0.05, 0.8]], evidence=['intel'], evidence_card=[2])
-    >>> student = BayesianModel()
+    >>> student = BayesianNetwork()
     >>> student.add_nodes_from(['intel', 'sat'])
     >>> student.add_edge('intel', 'sat')
     >>> student.add_cpds(intel_cpd, sat_cpd)
@@ -369,7 +369,7 @@ class GibbsSampling(MarkovChain):
 
     def __init__(self, model=None):
         super(GibbsSampling, self).__init__()
-        if isinstance(model, BayesianModel):
+        if isinstance(model, BayesianNetwork):
             self._get_kernel_from_bayesian_model(model)
         elif isinstance(model, MarkovModel):
             self._get_kernel_from_markov_model(model)
@@ -382,7 +382,7 @@ class GibbsSampling(MarkovChain):
 
         Parameters
         ----------
-        model: BayesianModel
+        model: BayesianNetwork
             The model from which probabilities will be computed.
         """
         self.variables = np.array(model.nodes())

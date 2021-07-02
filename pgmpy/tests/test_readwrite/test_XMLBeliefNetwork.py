@@ -8,7 +8,7 @@ import numpy.testing as np_test
 import networkx as nx
 
 from pgmpy.readwrite import XMLBeliefNetwork
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
 try:
@@ -360,7 +360,7 @@ class TestXBNWriter(unittest.TestCase):
                 "TYPE": "discrete",
             },
         }
-        model = BayesianModel()
+        model = BayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
         model.add_edges_from(
             [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]

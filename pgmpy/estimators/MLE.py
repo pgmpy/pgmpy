@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
@@ -17,7 +17,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         Parameters
         ----------
-        model: A pgmpy.models.BayesianModel instance
+        model: A pgmpy.models.BayesianNetwork instance
 
         data: pandas DataFrame object
             DataFrame object with column names identical to the variable names of the network.
@@ -38,16 +38,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> estimator = MaximumLikelihoodEstimator(model, data)
         """
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
-                "Maximum Likelihood Estimate is only implemented for BayesianModel"
+                "Maximum Likelihood Estimate is only implemented for BayesianNetwork"
             )
         elif set(model.nodes()) > set(data.columns):
             raise ValueError(
@@ -83,11 +83,11 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = MaximumLikelihoodEstimator(model, values)
         >>> estimator.get_parameters()
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
@@ -123,10 +123,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
+        >>> model = BayesianNetwork([('A', 'C'), ('B', 'C')])
         >>> cpd_A = MaximumLikelihoodEstimator(model, data).estimate_cpd('A')
         >>> print(cpd_A)
         ╒══════╤══════════╕

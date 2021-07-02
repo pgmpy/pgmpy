@@ -319,14 +319,14 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> bayesian_model.edges()
         [('x1', 'x3'), ('x2', 'x3')]
         """
-        from pgmpy.models import BayesianModel
+        from pgmpy.models import BayesianNetwork
 
         def get_subsets(u):
             for r in range(len(u) + 1):
                 for i in itertools.combinations(u, r):
                     yield i
 
-        G = BayesianModel()
+        G = BayesianNetwork()
         for variable_index in range(len(order)):
             u = order[:variable_index]
             for subset in get_subsets(u):
@@ -340,11 +340,11 @@ class JointProbabilityDistribution(DiscreteFactor):
 
     def is_imap(self, model):
         """
-        Checks whether the given BayesianModel is Imap of JointProbabilityDistribution
+        Checks whether the given BayesianNetwork is Imap of JointProbabilityDistribution
 
         Parameters
         ----------
-        model : An instance of BayesianModel Class, for which you want to
+        model : An instance of BayesianNetwork Class, for which you want to
             check the Imap
 
         Returns
@@ -354,10 +354,10 @@ class JointProbabilityDistribution(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
-        >>> bm = BayesianModel([('diff', 'grade'), ('intel', 'grade')])
+        >>> bm = BayesianNetwork([('diff', 'grade'), ('intel', 'grade')])
         >>> diff_cpd = TabularCPD('diff', 2, [[0.2], [0.8]])
         >>> intel_cpd = TabularCPD('intel', 3, [[0.5], [0.3], [0.2]])
         >>> grade_cpd = TabularCPD('grade', 3,
@@ -373,10 +373,10 @@ class JointProbabilityDistribution(DiscreteFactor):
         >>> JPD.is_imap(bm)
         True
         """
-        from pgmpy.models import BayesianModel
+        from pgmpy.models import BayesianNetwork
 
-        if not isinstance(model, BayesianModel):
-            raise TypeError("model must be an instance of BayesianModel")
+        if not isinstance(model, BayesianNetwork):
+            raise TypeError("model must be an instance of BayesianNetwork")
         factors = [cpd.to_factor() for cpd in model.get_cpds()]
         factor_prod = reduce(mul, factors)
         JPD_fact = DiscreteFactor(self.variables, self.cardinality, self.values)

@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovModel
 from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
 from pgmpy.factors.discrete import (
@@ -26,20 +26,20 @@ from pgmpy.sampling import BayesianModelSampling
 
 class TestBaseModelCreation(unittest.TestCase):
     def setUp(self):
-        self.G = BayesianModel()
+        self.G = BayesianNetwork()
 
     def test_class_init_without_data(self):
         self.assertIsInstance(self.G, nx.DiGraph)
 
     def test_class_init_with_data_string(self):
-        self.g = BayesianModel([("a", "b"), ("b", "c")])
+        self.g = BayesianNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
         self.assertListEqual(
             hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]]
         )
 
     def test_class_init_with_data_nonstring(self):
-        BayesianModel([(1, 2), (2, 3)])
+        BayesianNetwork([(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.G.add_node("a")
@@ -101,7 +101,7 @@ class TestBaseModelCreation(unittest.TestCase):
         )
 
     def test_update_node_parents_bm_constructor(self):
-        self.g = BayesianModel([("a", "b"), ("b", "c")])
+        self.g = BayesianNetwork([("a", "b"), ("b", "c")])
         self.assertListEqual(list(self.g.predecessors("a")), [])
         self.assertListEqual(list(self.g.predecessors("b")), ["a"])
         self.assertListEqual(list(self.g.predecessors("c")), ["b"])
@@ -119,8 +119,8 @@ class TestBaseModelCreation(unittest.TestCase):
 
 class TestBayesianModelMethods(unittest.TestCase):
     def setUp(self):
-        self.G = BayesianModel([("a", "d"), ("b", "d"), ("d", "e"), ("b", "c")])
-        self.G1 = BayesianModel([("diff", "grade"), ("intel", "grade")])
+        self.G = BayesianNetwork([("a", "d"), ("b", "d"), ("d", "e"), ("b", "c")])
+        self.G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
         diff_cpd = TabularCPD("diff", 2, values=[[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 3, values=[[0.5], [0.3], [0.2]])
         grade_cpd = TabularCPD(
@@ -135,8 +135,8 @@ class TestBayesianModelMethods(unittest.TestCase):
             evidence_card=[2, 3],
         )
         self.G1.add_cpds(diff_cpd, intel_cpd, grade_cpd)
-        self.G2 = BayesianModel([("d", "g"), ("g", "l"), ("i", "g"), ("i", "l")])
-        self.G3 = BayesianModel(
+        self.G2 = BayesianNetwork([("d", "g"), ("g", "l"), ("i", "g"), ("i", "l")])
+        self.G3 = BayesianNetwork(
             [
                 ("Pop", "EC"),
                 ("Urb", "EC"),
@@ -164,7 +164,9 @@ class TestBayesianModelMethods(unittest.TestCase):
             )
 
     def test_moral_graph_with_edge_present_over_parents(self):
-        G = BayesianModel([("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")])
+        G = BayesianNetwork(
+            [("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")]
+        )
         moral_graph = G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ["a", "b", "c", "d", "e"])
         for edge in moral_graph.edges():
@@ -214,21 +216,21 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(self.G1.local_independencies("grade"), Independencies())
 
     def test_get_independencies(self):
-        chain = BayesianModel([("X", "Y"), ("Y", "Z")])
+        chain = BayesianNetwork([("X", "Y"), ("Y", "Z")])
         self.assertEqual(
             chain.get_independencies(), Independencies(("X", "Z", "Y"), ("Z", "X", "Y"))
         )
-        fork = BayesianModel([("Y", "X"), ("Y", "Z")])
+        fork = BayesianNetwork([("Y", "X"), ("Y", "Z")])
         self.assertEqual(
             fork.get_independencies(), Independencies(("X", "Z", "Y"), ("Z", "X", "Y"))
         )
-        collider = BayesianModel([("X", "Y"), ("Z", "Y")])
+        collider = BayesianNetwork([("X", "Y"), ("Z", "Y")])
         self.assertEqual(
             collider.get_independencies(), Independencies(("X", "Z"), ("Z", "X"))
         )
 
         # Latent variables
-        fork = BayesianModel([("Y", "X"), ("Y", "Z")], latents=["Y"])
+        fork = BayesianNetwork([("Y", "X"), ("Y", "Z")], latents=["Y"])
         self.assertEqual(
             fork.get_independencies(include_latents=True),
             Independencies(("X", "Z", "Y"), ("Z", "X", "Y")),
@@ -286,20 +288,22 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(set(self.G3.get_markov_blanket("CH4")), set(["FFEC", "REC"]))
 
     def test_get_immoralities(self):
-        G = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
+        G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
         self.assertEqual(G.get_immoralities(), {("w", "x"), ("w", "z")})
-        G1 = BayesianModel([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
+        G1 = BayesianNetwork([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
         self.assertEqual(G1.get_immoralities(), {("w", "x"), ("w", "z")})
-        G2 = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")])
+        G2 = BayesianNetwork(
+            [("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")]
+        )
         self.assertEqual(G2.get_immoralities(), {("w", "z")})
 
     def test_is_iequivalent(self):
-        G = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
+        G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
         self.assertRaises(TypeError, G.is_iequivalent, MarkovModel())
-        G1 = BayesianModel([("V", "W"), ("W", "X"), ("X", "Y"), ("Z", "Y")])
-        G2 = BayesianModel([("W", "V"), ("X", "W"), ("X", "Y"), ("Z", "Y")])
+        G1 = BayesianNetwork([("V", "W"), ("W", "X"), ("X", "Y"), ("Z", "Y")])
+        G2 = BayesianNetwork([("W", "V"), ("X", "W"), ("X", "Y"), ("Z", "Y")])
         self.assertTrue(G1.is_iequivalent(G2))
-        G3 = BayesianModel([("W", "V"), ("W", "X"), ("Y", "X"), ("Z", "Y")])
+        G3 = BayesianNetwork([("W", "V"), ("W", "X"), ("Y", "X"), ("Z", "Y")])
         self.assertFalse(G3.is_iequivalent(G2))
 
     def test_copy(self):
@@ -320,19 +324,21 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
 
     def test_get_random(self):
-        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.5)
+        model = BayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
-        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
+        model = BayesianNetwork.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
-        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=range(2, 7))
+        model = BayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.6, n_states=range(2, 7)
+        )
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
@@ -356,7 +362,7 @@ class TestBayesianModelMethods(unittest.TestCase):
 
 class TestBayesianModelCPD(unittest.TestCase):
     def setUp(self):
-        self.G = BayesianModel([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
+        self.G = BayesianNetwork([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G_latent = DAG(
             [("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")], latents=["d", "g"]
@@ -461,7 +467,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertEqual(self.G.get_cpds("d").variable, "d")
 
     def test_get_cpds1(self):
-        self.model = BayesianModel([("A", "AB")])
+        self.model = BayesianNetwork([("A", "AB")])
         cpd_a = TabularCPD("A", 2, values=np.random.rand(2, 1))
         cpd_ab = TabularCPD(
             "AB", 2, values=np.random.rand(2, 2), evidence=["A"], evidence_card=[2]
@@ -650,13 +656,13 @@ class TestBayesianModelCPD(unittest.TestCase):
 
 class TestBayesianModelFitPredict(unittest.TestCase):
     def setUp(self):
-        self.model_disconnected = BayesianModel()
+        self.model_disconnected = BayesianNetwork()
         self.model_disconnected.add_nodes_from(["A", "B", "C", "D", "E"])
-        self.model_connected = BayesianModel(
+        self.model_connected = BayesianNetwork(
             [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
         )
 
-        self.model2 = BayesianModel([("A", "C"), ("B", "C")])
+        self.model2 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.data1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.data2 = pd.DataFrame(
             data={
@@ -745,7 +751,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             np_test.assert_array_equal(cpd.values, value)
 
     def test_predict(self):
-        titanic = BayesianModel()
+        titanic = BayesianNetwork()
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
         titanic.fit(self.titanic_data2[500:])
 
@@ -861,7 +867,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         np_test.assert_array_equal(p3.values.ravel(), p3_res)
 
     def test_predict_stochastic(self):
-        titanic = BayesianModel()
+        titanic = BayesianNetwork()
         titanic.add_edges_from([("Sex", "Survived"), ("Pclass", "Survived")])
         titanic.fit(self.titanic_data2[500:])
 
@@ -1193,7 +1199,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
     def test_do(self):
         # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
-        model = BayesianModel([("S", "T"), ("T", "C"), ("S", "C")])
+        model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
             variable="S",
             variable_card=2,
@@ -1248,7 +1254,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
 
 class TestDAGCPDOperations(unittest.TestCase):
     def setUp(self):
-        self.graph = BayesianModel()
+        self.graph = BayesianNetwork()
 
     def test_add_single_cpd(self):
         cpd = TabularCPD(

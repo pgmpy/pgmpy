@@ -1,5 +1,5 @@
 from pgmpy.inference import Inference
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 import pandas as pd
 import numpy as np
 import networkx as nx
@@ -20,9 +20,9 @@ class BayesianModelInference(Inference):
         model: Bayesian Model
             model on which inference queries will be computed
         """
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise TypeError(
-                "Model expected type: BayesianModel, got type: ", type(model)
+                "Model expected type: BayesianNetwork, got type: ", type(model)
             )
         super(BayesianModelInference, self).__init__(model)
         self._initialize_structures()

@@ -3,7 +3,7 @@ import networkx as nx
 import unittest
 
 from pgmpy.readwrite import UAIReader, UAIWriter
-from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovModel
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 
 
@@ -147,7 +147,7 @@ class TestUAIWriter(unittest.TestCase):
             "light-on": ["family-out"],
         }
 
-        self.bayesmodel = BayesianModel()
+        self.bayesmodel = BayesianNetwork()
         self.bayesmodel.add_nodes_from(variables)
         self.bayesmodel.add_edges_from(edges)
 

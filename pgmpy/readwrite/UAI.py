@@ -4,7 +4,7 @@ import numpy as np
 
 from pyparsing import alphas, Combine, Literal, Optional, nums, Word
 
-from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovModel
 from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 
 
@@ -248,7 +248,7 @@ class UAIReader(object):
         >>> reader.get_model()
         """
         if self.network_type == "BAYES":
-            model = BayesianModel()
+            model = BayesianNetwork()
             model.add_nodes_from(self.variables)
             model.add_edges_from(self.edges)
 
@@ -303,7 +303,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(asia)
         >>> writer.write_uai('asia.uai')
         """
-        if isinstance(model, BayesianModel):
+        if isinstance(model, BayesianNetwork):
             self.network = "BAYES\n"
         elif isinstance(model, MarkovModel):
             self.network = "MARKOV\n"
@@ -356,7 +356,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_domain()
         """
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             domain = {}
@@ -385,7 +385,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_functions()
         """
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             variables = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
@@ -425,7 +425,7 @@ class UAIWriter(object):
         >>> writer = UAIWriter(model)
         >>> writer.get_tables()
         """
-        if isinstance(self.model, BayesianModel):
+        if isinstance(self.model, BayesianNetwork):
             cpds = self.model.get_cpds()
             cpds.sort(key=lambda x: x.variable)
             tables = []

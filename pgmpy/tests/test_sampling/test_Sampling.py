@@ -3,14 +3,14 @@ import unittest
 from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
-from pgmpy.models import BayesianModel, MarkovModel
+from pgmpy.models import BayesianNetwork, MarkovModel
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 
 
 class TestBayesianModelSampling(unittest.TestCase):
     def setUp(self):
         # Bayesian Model without state names
-        self.bayesian_model = BayesianModel(
+        self.bayesian_model = BayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a = TabularCPD("A", 2, [[0.2], [0.8]])
@@ -26,7 +26,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
         self.sampling_inference = BayesianModelSampling(self.bayesian_model)
         # Bayesian Model without state names and with latent variables
-        self.bayesian_model_lat = BayesianModel(
+        self.bayesian_model_lat = BayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
             latents=["R", "Q"],
         )
@@ -44,7 +44,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.sampling_inference_lat = BayesianModelSampling(self.bayesian_model_lat)
 
         # Bayesian Model with state names
-        self.bayesian_model_names = BayesianModel(
+        self.bayesian_model_names = BayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
         )
         cpd_a_names = TabularCPD(
@@ -87,7 +87,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.sampling_inference_names = BayesianModelSampling(self.bayesian_model_names)
 
         # Bayesian Model with state names and with latent variables
-        self.bayesian_model_names_lat = BayesianModel(
+        self.bayesian_model_names_lat = BayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")],
             latents=["R", "Q"],
         )
@@ -399,7 +399,7 @@ class TestGibbsSampling(unittest.TestCase):
             evidence=["diff", "intel"],
             evidence_card=[2, 2],
         )
-        self.bayesian_model = BayesianModel()
+        self.bayesian_model = BayesianNetwork()
         self.bayesian_model.add_nodes_from(["diff", "intel", "grade"])
         self.bayesian_model.add_edges_from([("diff", "grade"), ("intel", "grade")])
         self.bayesian_model.add_cpds(diff_cpd, intel_cpd, grade_cpd)
@@ -424,7 +424,7 @@ class TestGibbsSampling(unittest.TestCase):
     )
     @patch("pgmpy.models.MarkovChain.__init__", autospec=True)
     def test_init_bayesian_model(self, init, get_kernel):
-        model = MagicMock(spec_set=BayesianModel)
+        model = MagicMock(spec_set=BayesianNetwork)
         gibbs = GibbsSampling(model)
         init.assert_called_once_with(gibbs)
         get_kernel.assert_called_once_with(gibbs, model)

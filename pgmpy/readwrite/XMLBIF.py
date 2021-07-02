@@ -22,7 +22,7 @@ except ImportError:
 
 import numpy as np
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD, State
 
 
@@ -206,7 +206,7 @@ class XMLBIFReader(object):
 
     def get_model(self, state_name_type=str):
         """
-        Returns a Bayesian Model instance from the file/string.
+        Returns a Bayesian Network instance from the file/string.
 
         Parameters
         ----------
@@ -215,7 +215,7 @@ class XMLBIFReader(object):
 
         Returns
         -------
-        BayesianModel instance: The read model.
+        BayesianNetwork instance: The read model.
 
         Examples
         --------
@@ -223,7 +223,7 @@ class XMLBIFReader(object):
         >>> reader = XMLBIFReader("xmlbif_test.xml")
         >>> model = reader.get_model()
         """
-        model = BayesianModel()
+        model = BayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
         model.name = self.network_name
@@ -269,7 +269,7 @@ class XMLBIFWriter(object):
 
         Parameters
         ----------
-        model: BayesianModel Instance
+        model: BayesianNetwork Instance
             Model to write
 
         encoding: str (optional)
@@ -286,8 +286,8 @@ class XMLBIFWriter(object):
         >>> writer = XMLBIFWriter(model)
         >>> writer.write_xmlbif('asia.xml')
         """
-        if not isinstance(model, BayesianModel):
-            raise TypeError("model must an instance of BayesianModel")
+        if not isinstance(model, BayesianNetwork):
+            raise TypeError("model must an instance of BayesianNetwork")
         self.model = model
 
         self.encoding = encoding

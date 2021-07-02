@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from pgmpy.estimators import ParameterEstimator, MaximumLikelihoodEstimator
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import SHOW_PROGRESS
 
@@ -24,7 +24,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         Parameters
         ----------
-        model: A pgmpy.models.BayesianModel instance
+        model: A pgmpy.models.BayesianNetwork instance
 
         data: pandas DataFrame object
             DataFrame object with column names identical to the variable names
@@ -47,16 +47,16 @@ class ExpectationMaximization(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization
         >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
         ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
         >>> estimator = ExpectationMaximization(model, data)
         """
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
-                "Expectation Maximization is only implemented for BayesianModel"
+                "Expectation Maximization is only implemented for BayesianNetwork"
             )
 
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
@@ -159,11 +159,11 @@ class ExpectationMaximization(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import ExpectationMaximization as EM
         >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 3)),
         ...                       columns=['A', 'C', 'D'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')], latents={'B'})
         >>> estimator = EM(model, data)
         >>> estimator.get_parameters(latent_card={'B': 3})
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,

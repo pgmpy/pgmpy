@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from pgmpy.utils.mathext import powerset
 from pgmpy.base import UndirectedGraph
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import StructureEstimator, HillClimbSearch, BDeuScore
 from pgmpy.independencies import Independencies, IndependenceAssertion
 from pgmpy.estimators.CITests import chi_square
@@ -11,7 +11,7 @@ class MmhcEstimator(StructureEstimator):
     def __init__(self, data, **kwargs):
         """
         Implements the MMHC hybrid structure estimation procedure for
-        learning BayesianModels from discrete data.
+        learning BayesianNetworks from discrete data.
 
         Parameters
         ----------
@@ -40,7 +40,7 @@ class MmhcEstimator(StructureEstimator):
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
         """
-        Estimates a BayesianModel for the data set, using MMHC. First estimates a
+        Estimates a BayesianNetwork for the data set, using MMHC. First estimates a
         graph skeleton using MMPC and then orients the edges using score-based local
         search (hill climbing).
 
@@ -60,7 +60,7 @@ class MmhcEstimator(StructureEstimator):
 
         Returns
         -------
-        model: BayesianModel()-instance, not yet parametrized.
+        model: BayesianNetwork()-instance, not yet parametrized.
 
         Reference
         ---------

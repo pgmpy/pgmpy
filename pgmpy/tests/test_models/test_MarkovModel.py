@@ -6,7 +6,7 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianModel, MarkovModel, FactorGraph
+from pgmpy.models import BayesianNetwork, MarkovModel, FactorGraph
 from pgmpy.tests import help_functions as hf
 
 
@@ -283,7 +283,7 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
         bm = self.graph.to_bayesian_model()
-        self.assertIsInstance(bm, BayesianModel)
+        self.assertIsInstance(bm, BayesianNetwork)
         self.assertListEqual(sorted(bm.nodes()), ["a", "b", "c", "d"])
         self.assertTrue(nx.is_chordal(bm.to_undirected()))
 

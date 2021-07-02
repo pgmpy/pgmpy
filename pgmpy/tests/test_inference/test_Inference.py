@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import unittest
 import numpy as np
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.models import MarkovModel
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import TabularCPD
@@ -11,7 +11,9 @@ from collections import defaultdict
 
 class TestInferenceBase(unittest.TestCase):
     def setUp(self):
-        self.bayesian = BayesianModel([("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")])
+        self.bayesian = BayesianNetwork(
+            [("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")]
+        )
         a_cpd = TabularCPD("a", 2, [[0.4], [0.6]])
         b_cpd = TabularCPD(
             "b", 2, [[0.2, 0.4], [0.8, 0.6]], evidence=["a"], evidence_card=[2]

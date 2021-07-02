@@ -3,7 +3,7 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.inference.EliminationOrder import (
     BaseEliminationOrder,
     WeightedMinFill,
@@ -15,7 +15,7 @@ from pgmpy.inference.EliminationOrder import (
 
 class BaseEliminationTest(TestCase):
     def setUp(self):
-        self.model = BayesianModel(
+        self.model = BayesianNetwork(
             [("diff", "grade"), ("intel", "grade"), ("intel", "sat"), ("grade", "reco")]
         )
         raw_data = np.random.randint(low=0, high=2, size=(1000, 5))

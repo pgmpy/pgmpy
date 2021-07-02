@@ -5,7 +5,7 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -311,7 +311,7 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = BayesianModel(
+        self.model_stateless = BayesianNetwork(
             [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
         )
         self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])

@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.estimators import PC
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.independencies import Independencies
 from pgmpy.utils import get_example_model
 from pgmpy.sampling import BayesianModelSampling
@@ -108,7 +108,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             self.assertEqual(sep_sets, expected_sepsets)
 
             # Generate independencies from a model.
-            model = BayesianModel([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
             estimator = PC(independencies=model.get_independencies())
             skel, sep_sets = estimator.estimate(
                 variant=variant, ci_test="independence_match", return_type="skeleton"
@@ -213,7 +213,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
             self.assertEqual(model.edges(), expected_edges)
 
-            model = BayesianModel([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
+            model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
             estimator = PC(independencies=model.get_independencies())
             estimated_model = estimator.estimate(
                 variant="orig", ci_test="independence_match", return_type="dag"

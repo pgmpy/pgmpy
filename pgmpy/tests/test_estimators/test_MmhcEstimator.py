@@ -5,7 +5,6 @@ import numpy as np
 
 from pgmpy.estimators import MmhcEstimator, K2Score
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianModel
 
 
 class TestMmhcEstimator(unittest.TestCase):

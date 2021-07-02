@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 
 
 class BayesianEstimator(ParameterEstimator):
@@ -18,9 +18,9 @@ class BayesianEstimator(ParameterEstimator):
         Class used to compute parameters for a model using Bayesian Parameter Estimation.
         See `MaximumLikelihoodEstimator` for constructor parameters.
         """
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
-                "Bayesian Parameter Estimation is only implemented for BayesianModel"
+                "Bayesian Parameter Estimation is only implemented for BayesianNetwork"
             )
         elif len(model.latents) != 0:
             raise ValueError(
@@ -62,11 +62,11 @@ class BayesianEstimator(ParameterEstimator):
         --------
         >>> import numpy as np
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
         >>> values = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 4)),
         ...                       columns=['A', 'B', 'C', 'D'])
-        >>> model = BayesianModel([('A', 'B'), ('C', 'B'), ('C', 'D')])
+        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D')])
         >>> estimator = BayesianEstimator(model, values)
         >>> estimator.get_parameters(prior_type='BDeu', equivalent_sample_size=5)
         [<TabularCPD representing P(C:2) at 0x7f7b534251d0>,
@@ -133,10 +133,10 @@ class BayesianEstimator(ParameterEstimator):
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import BayesianEstimator
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
-        >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
+        >>> model = BayesianNetwork([('A', 'C'), ('B', 'C')])
         >>> estimator = BayesianEstimator(model, data)
         >>> cpd_C = estimator.estimate_cpd('C', prior_type="dirichlet",
         ...                                pseudo_counts=[[1, 1, 1, 1],

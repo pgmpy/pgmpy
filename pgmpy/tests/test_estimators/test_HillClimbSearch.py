@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from pgmpy.estimators import HillClimbSearch, K2Score
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 
 
 class TestHillClimbEstimator(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         self.score_rand = k2score.local_score
         self.score_structure_prior = k2score.structure_prior_ratio
 
-        self.model1 = BayesianModel()
+        self.model1 = BayesianNetwork()
         self.model1.add_nodes_from(["A", "B", "C"])
         self.model1_possible_edges = set(
             [(u, v) for u in self.model1.nodes() for v in self.model1.nodes()]
@@ -114,7 +114,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         )
 
     def test_legal_operations_titanic(self):
-        start_model = BayesianModel(
+        start_model = BayesianNetwork(
             [("Survived", "Sex"), ("Pclass", "Age"), ("Pclass", "Embarked")]
         )
         all_possible_edges = set(
@@ -196,7 +196,9 @@ class TestHillClimbEstimator(unittest.TestCase):
             list(est1.edges()) == [("B", "C")] or list(est1.edges()) == [("C", "B")]
         )
 
-        est2 = self.est_rand.estimate(start_dag=BayesianModel([("A", "B"), ("A", "C")]))
+        est2 = self.est_rand.estimate(
+            start_dag=BayesianNetwork([("A", "B"), ("A", "C")])
+        )
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
