@@ -3,12 +3,12 @@ import logging
 import numpy as np
 import networkx as nx
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
 
 
-class LinearGaussianBayesianNetwork(BayesianModel):
+class LinearGaussianBayesianNetwork(BayesianNetwork):
     """
     A Linear Gaussian Bayesian Network is a Bayesian Network, all
     of whose variables are continuous, and where all of the CPDs
@@ -23,7 +23,7 @@ class LinearGaussianBayesianNetwork(BayesianModel):
     def add_cpds(self, *cpds):
         """
         Add linear Gaussian CPD (Conditional Probability Distribution)
-        to the Bayesian Model.
+        to the Bayesian Network.
 
         Parameters
         ----------

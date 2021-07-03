@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 from pgmpy.estimators import ExpectationMaximization as EM
 from pgmpy.utils import get_example_model
@@ -15,7 +15,7 @@ class TestEMObserved(unittest.TestCase):
         s = BayesianModelSampling(self.model1)
         self.data1 = s.forward_sample(int(1e4))
 
-        self.model2 = BayesianModel(self.model1.edges(), latents={"Smoker"})
+        self.model2 = BayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
         s = BayesianModelSampling(self.model2)
         self.data2 = s.forward_sample(int(1e4))

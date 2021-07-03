@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from warnings import warn
+import logging
 from itertools import combinations, permutations, chain
 
 import networkx as nx
@@ -366,7 +366,9 @@ class PC(StructureEstimator):
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                warn("Reached maximum number of allowed conditional variables. Exiting")
+                logging.info(
+                    "Reached maximum number of allowed conditional variables. Exiting"
+                )
                 break
             lim_neighbors += 1
 

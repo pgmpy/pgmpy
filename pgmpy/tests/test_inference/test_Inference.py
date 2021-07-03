@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import unittest
 import numpy as np
-from pgmpy.models import BayesianModel
-from pgmpy.models import MarkovModel
+from pgmpy.models import BayesianNetwork
+from pgmpy.models import MarkovNetwork
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import Inference
@@ -11,7 +11,9 @@ from collections import defaultdict
 
 class TestInferenceBase(unittest.TestCase):
     def setUp(self):
-        self.bayesian = BayesianModel([("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")])
+        self.bayesian = BayesianNetwork(
+            [("a", "b"), ("b", "c"), ("c", "d"), ("d", "e")]
+        )
         a_cpd = TabularCPD("a", 2, [[0.4], [0.6]])
         b_cpd = TabularCPD(
             "b", 2, [[0.2, 0.4], [0.8, 0.6]], evidence=["a"], evidence_card=[2]
@@ -27,7 +29,7 @@ class TestInferenceBase(unittest.TestCase):
         )
         self.bayesian.add_cpds(a_cpd, b_cpd, c_cpd, d_cpd, e_cpd)
 
-        self.markov = MarkovModel([("a", "b"), ("b", "d"), ("a", "c"), ("c", "d")])
+        self.markov = MarkovNetwork([("a", "b"), ("b", "d"), ("a", "c"), ("c", "d")])
         factor_1 = DiscreteFactor(["a", "b"], [2, 2], np.array([100, 1, 1, 100]))
         factor_2 = DiscreteFactor(["a", "c"], [2, 2], np.array([40, 30, 100, 20]))
         factor_3 = DiscreteFactor(["b", "d"], [2, 2], np.array([1, 100, 100, 1]))

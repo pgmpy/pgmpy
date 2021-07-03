@@ -3,15 +3,15 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.factors.discrete import TabularCPD
 
 
 class TestMLE(unittest.TestCase):
     def setUp(self):
-        self.m1 = BayesianModel([("A", "C"), ("B", "C")])
-        self.model_latents = BayesianModel([("A", "C"), ("B", "C")], latents=["C"])
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
+        self.model_latents = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
         self.data_latents = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0]})
 
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
@@ -53,7 +53,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
 
     def test_state_names1(self):
-        m = BayesianModel([("A", "B")])
+        m = BayesianNetwork([("A", "B")])
         d = pd.DataFrame(data={"A": [2, 3, 8, 8, 8], "B": ["X", "O", "X", "O", "X"]})
         cpd_b = TabularCPD(
             "B",
@@ -67,7 +67,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(mle2.estimate_cpd("B"), cpd_b)
 
     def test_state_names2(self):
-        m = BayesianModel([("Light?", "Color"), ("Fruit", "Color")])
+        m = BayesianNetwork([("Light?", "Color"), ("Fruit", "Color")])
         d = pd.DataFrame(
             data={
                 "Fruit": ["Apple", "Apple", "Apple", "Banana", "Banana"],

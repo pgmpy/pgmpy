@@ -19,7 +19,7 @@ from pyparsing import (
     printables,
 )
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -361,10 +361,10 @@ class BIFReader(object):
         >>> from pgmpy.readwrite import BIFReader
         >>> reader = BIFReader("bif_test.bif")
         >>> reader.get_model()
-        <pgmpy.models.BayesianModel.BayesianModel object at 0x7f20af154320>
+        <pgmpy.models.BayesianNetwork.BayesianNetwork object at 0x7f20af154320>
         """
         try:
-            model = BayesianModel()
+            model = BayesianNetwork()
             model.add_nodes_from(self.variable_names)
             model.add_edges_from(self.variable_edges)
             model.name = self.network_name
@@ -420,7 +420,7 @@ class BIFWriter(object):
 
         Parameters
         ----------
-        model: BayesianModel Instance
+        model: BayesianNetwork Instance
 
         Examples
         ---------
@@ -432,8 +432,8 @@ class BIFWriter(object):
         <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
         >>> writer.write_bif('asia.bif')
         """
-        if not isinstance(model, BayesianModel):
-            raise TypeError("model must be an instance of BayesianModel")
+        if not isinstance(model, BayesianNetwork):
+            raise TypeError("model must be an instance of BayesianNetwork")
         self.model = model
         if not self.model.name:
             self.network_name = "unknown"

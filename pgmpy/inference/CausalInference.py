@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
-from pgmpy.models.BayesianModel import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
@@ -33,10 +33,10 @@ class CausalInference(object):
     Examples
     --------
     Create a small Bayesian Network.
-    >>> from pgmpy.models.BayesianModel import BayesianModel
-    >>> game = BayesianModel([('X', 'A'),
-    ...                       ('A', 'Y'),
-    ...                       ('A', 'B')])
+    >>> from pgmpy.models import BayesianNetwork
+    >>> game = BayesianNetwork([('X', 'A'),
+    ...                         ('A', 'Y'),
+    ...                         ('A', 'B')])
 
     Load the graph into the CausalInference object to make causal queries.
     >>> from pgmpy.inference.CausalInference import CausalInference
@@ -53,9 +53,9 @@ class CausalInference(object):
     """
 
     def __init__(self, model, set_nodes=None):
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
-                "Causal Inference is only implemented for BayesianModels at this time."
+                "Causal Inference is only implemented for BayesianNetworks at this time."
             )
         self.model = model
         self.set_nodes = _variable_or_iterable_to_set(set_nodes)
@@ -88,9 +88,9 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = BayesianModel([('X', 'A'),
-        ...                        ('A', 'Y'),
-        ...                        ('A', 'B')])
+        >>> game1 = BayesianNetwork([('X', 'A'),
+        ...                          ('A', 'Y'),
+        ...                          ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
@@ -133,9 +133,9 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> game1 = BayesianModel([('X', 'A'),
-        ...                        ('A', 'Y'),
-        ...                        ('A', 'B')])
+        >>> game1 = BayesianNetwork([('X', 'A'),
+        ...                          ('A', 'Y'),
+        ...                          ('A', 'B')])
         >>> inference = CausalInference(game1)
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
@@ -347,9 +347,9 @@ class CausalInference(object):
         Examples
         --------
         >>> import pandas as pd
-        >>> game1 = BayesianModel([('X', 'A'),
-        ...                        ('A', 'Y'),
-        ...                        ('A', 'B')])
+        >>> game1 = BayesianNetwork([('X', 'A'),
+        ...                          ('A', 'Y'),
+        ...                          ('A', 'B')])
         >>> data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=['X', 'A', 'B', 'Y'])
         >>> inference = CausalInference(model=game1)
         >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
@@ -399,13 +399,13 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = BayesianModel([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        >>> model = BayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
         ...                        ("z2", "x2"), ("y2", "z2")])
         >>> c_infer = CausalInference(model)
         >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
-        <pgmpy.models.BayesianModel.BayesianModel at 0x7fba501ad940>
+        <pgmpy.models.BayesianNetwork.BayesianNetwork at 0x7fba501ad940>
 
         References
         ----------
@@ -448,9 +448,9 @@ class CausalInference(object):
 
         Examples
         --------
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.inference import CausalInference
-        >>> model = BayesianModel([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
+        >>> model = BayesianNetwork([("x1", "y1"), ("x1", "z1"), ("z1", "z2"),
         ...                        ("z2", "x2"), ("y2", "z2")])
         >>> c_infer = CausalInference(model)
         >>> c_infer.is_valid_adjustment_set(X=['x1', 'x2'], Y=['y1', 'y2'], adjustment_set=['z1', 'z2'])

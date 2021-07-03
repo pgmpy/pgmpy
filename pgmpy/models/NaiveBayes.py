@@ -1,8 +1,8 @@
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 
 
-class NaiveBayes(BayesianModel):
+class NaiveBayes(BayesianNetwork):
     """
     Class to represent Naive Bayes. Naive Bayes is a special case of Bayesian Model
     where the only edges in the model are from the feature variables to the dependent variable.
@@ -22,7 +22,7 @@ class NaiveBayes(BayesianModel):
 
         Returns
         -------
-        pgmpy.models.BayesianModel instance: An instance of a Bayesian Model with the
+        pgmpy.models.BayesianNetwork instance: An instance of a Bayesian Model with the
             initialized model structure.
         """
         self.dependent = dependent_var

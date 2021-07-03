@@ -185,8 +185,8 @@ class ParameterEstimator(BaseEstimator):
 
         Parameters
         ----------
-        model: pgmpy.models.BayesianModel or pgmpy.models.MarkovModel or pgmpy.models.NoisyOrModel
-            model for which parameter estimation is to be done
+        model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork or pgmpy.models.NoisyOrModel model
+            for which parameter estimation is to be done.
 
         data: pandas DataFrame object
             datafame object with column names identical to the variable names of the model.
@@ -238,9 +238,9 @@ class ParameterEstimator(BaseEstimator):
         Examples
         --------
         >>> import pandas as pd
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import ParameterEstimator
-        >>> model = BayesianModel([('A', 'C'), ('B', 'C')])
+        >>> model = BayesianNetwork([('A', 'C'), ('B', 'C')])
         >>> data = pd.DataFrame(data={'A': ['a1', 'a1', 'a2'],
                                       'B': ['b1', 'b2', 'b1'],
                                       'C': ['c1', 'c1', 'c2']})

@@ -15,7 +15,7 @@ except ImportError:
         # commented out as causing problem with dictionary attributes
         print("Failed to import ElementTree from any known place")
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -211,7 +211,7 @@ class XBNReader(object):
         """
         Returns an instance of Bayesian Model.
         """
-        model = BayesianModel()
+        model = BayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edges)
         model.name = self.model_name
@@ -245,7 +245,7 @@ class XBNWriter(object):
 
         Parameters
         ----------
-        model: BayesianModel Instance
+        model: BayesianNetwork Instance
             Model to write
         encoding: str(optional)
             Encoding for test data
@@ -260,7 +260,7 @@ class XBNWriter(object):
         --------
         >>> writer = XBNWriter(model)
         """
-        if not isinstance(model, BayesianModel):
+        if not isinstance(model, BayesianNetwork):
             raise TypeError("Model must be an instance of Bayesian Model.")
         self.model = model
 

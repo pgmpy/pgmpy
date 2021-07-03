@@ -3,15 +3,15 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import BayesianEstimator
 from pgmpy.factors.discrete import TabularCPD
 
 
 class TestBayesianEstimator(unittest.TestCase):
     def setUp(self):
-        self.m1 = BayesianModel([("A", "C"), ("B", "C")])
-        self.model_latent = BayesianModel([("A", "C"), ("B", "C")], latents=["C"])
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
+        self.model_latent = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={

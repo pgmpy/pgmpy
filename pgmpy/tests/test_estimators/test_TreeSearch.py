@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 
-from pgmpy.models.BayesianModel import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import TreeSearch
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.sampling import BayesianModelSampling
@@ -22,7 +22,7 @@ class TestTreeSearch(unittest.TestCase):
         )
 
         # test data for chow-liu
-        model = BayesianModel(
+        model = BayesianNetwork(
             [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")]
         )
         cpd_a = TabularCPD("A", 2, [[0.4], [0.6]])
@@ -63,7 +63,7 @@ class TestTreeSearch(unittest.TestCase):
         self.data13 = inference.forward_sample(size=10000)
 
         # test data for TAN
-        model = BayesianModel(
+        model = BayesianNetwork(
             [
                 ("A", "R"),
                 ("A", "B"),

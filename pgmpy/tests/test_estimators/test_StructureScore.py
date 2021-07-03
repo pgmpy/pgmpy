@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import BDeuScore, BDsScore, BicScore, K2Score
 
 
@@ -11,8 +11,8 @@ class TestBDeuScore(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianModel([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianModel([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -22,13 +22,13 @@ class TestBDeuScore(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(BDeuScore(self.d1).score(self.m1), -9.907103407446435)
-        self.assertEqual(BDeuScore(self.d1).score(BayesianModel()), 0)
+        self.assertEqual(BDeuScore(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = BDeuScore(self.titanic_data2, equivalent_sample_size=25)
-        titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1892.7383393910427)
-        titanic2 = BayesianModel([("Pclass", "Sex")])
+        titanic2 = BayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -51,9 +51,9 @@ class TestBDsScore(unittest.TestCase):
                 "W": [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1],
             }
         )
-        self.m1 = BayesianModel([("W", "X"), ("Z", "X")])
+        self.m1 = BayesianNetwork([("W", "X"), ("Z", "X")])
         self.m1.add_node("Y")
-        self.m2 = BayesianModel([("W", "X"), ("Z", "X"), ("Y", "X")])
+        self.m2 = BayesianNetwork([("W", "X"), ("Z", "X"), ("Y", "X")])
 
     def test_score(self):
         self.assertAlmostEqual(
@@ -76,8 +76,8 @@ class TestBicScore(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianModel([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianModel([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -87,13 +87,13 @@ class TestBicScore(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -10.698440814229318)
-        self.assertEqual(BicScore(self.d1).score(BayesianModel()), 0)
+        self.assertEqual(BicScore(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = BicScore(self.titanic_data2)
-        titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1896.7250012840179)
-        titanic2 = BayesianModel([("Pclass", "Sex")])
+        titanic2 = BayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 
@@ -110,8 +110,8 @@ class TestK2Score(unittest.TestCase):
         self.d1 = pd.DataFrame(
             data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0], "D": ["X", "Y", "Z"]}
         )
-        self.m1 = BayesianModel([("A", "C"), ("B", "C"), ("D", "B")])
-        self.m2 = BayesianModel([("C", "A"), ("C", "B"), ("A", "D")])
+        self.m1 = BayesianNetwork([("A", "C"), ("B", "C"), ("D", "B")])
+        self.m2 = BayesianNetwork([("C", "A"), ("C", "B"), ("A", "D")])
 
         # data_link - "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv(
@@ -121,13 +121,13 @@ class TestK2Score(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(K2Score(self.d1).score(self.m1), -10.73813429536977)
-        self.assertEqual(K2Score(self.d1).score(BayesianModel()), 0)
+        self.assertEqual(K2Score(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
         scorer = K2Score(self.titanic_data2)
-        titanic = BayesianModel([("Sex", "Survived"), ("Pclass", "Survived")])
+        titanic = BayesianNetwork([("Sex", "Survived"), ("Pclass", "Survived")])
         self.assertAlmostEqual(scorer.score(titanic), -1891.0630673606006)
-        titanic2 = BayesianModel([("Pclass", "Sex")])
+        titanic2 = BayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         self.assertLess(scorer.score(titanic2), scorer.score(titanic))
 

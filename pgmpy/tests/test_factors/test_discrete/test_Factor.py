@@ -11,8 +11,8 @@ from pgmpy.factors import factor_divide
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianModel
-from pgmpy.models import MarkovModel
+from pgmpy.models import BayesianNetwork
+from pgmpy.models import MarkovNetwork
 from pgmpy.utils import get_example_model
 
 
@@ -1590,7 +1590,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         )
 
     def test_is_imap(self):
-        G1 = BayesianModel([("diff", "grade"), ("intel", "grade")])
+        G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
         diff_cpd = TabularCPD("diff", 2, [[0.2], [0.8]])
         intel_cpd = TabularCPD("intel", 3, [[0.5], [0.3], [0.2]])
         grade_cpd = TabularCPD(
@@ -1627,7 +1627,7 @@ class TestJointProbabilityDistributionMethods(unittest.TestCase):
         ]
         jpd = JPD(["diff", "intel", "grade"], [2, 3, 3], val)
         self.assertTrue(jpd.is_imap(G1))
-        self.assertRaises(TypeError, jpd.is_imap, MarkovModel())
+        self.assertRaises(TypeError, jpd.is_imap, MarkovNetwork())
 
     def tearDown(self):
         del self.jpd

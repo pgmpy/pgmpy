@@ -40,13 +40,14 @@ class StructureScore(BaseEstimator):
 
     def score(self, model):
         """
-        Computes a score to measure how well the given `BayesianModel` fits to the data set.
-        (This method relies on the `local_score`-method that is implemented in each subclass.)
+        Computes a score to measure how well the given `BayesianNetwork` fits
+        to the data set.  (This method relies on the `local_score`-method that
+        is implemented in each subclass.)
 
         Parameters
         ----------
-        model: `BayesianModel` instance
-            The Bayesian network that is to be scored. Nodes of the BayesianModel need to coincide
+        model: BayesianNetwork instance
+            The Bayesian network that is to be scored. Nodes of the BayesianNetwork need to coincide
             with column names of data set.
 
         Returns
@@ -58,14 +59,14 @@ class StructureScore(BaseEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.models import BayesianModel
+        >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.estimators import K2Score
         >>> # create random data sample with 3 variables, where B and C are identical:
         >>> data = pd.DataFrame(np.random.randint(0, 5, size=(5000, 2)), columns=list('AB'))
         >>> data['C'] = data['B']
-        >>> K2Score(data).score(BayesianModel([['A','B'], ['A','C']]))
+        >>> K2Score(data).score(BayesianNetwork([['A','B'], ['A','C']]))
         -24242.367348745247
-        >>> K2Score(data).score(BayesianModel([['A','B'], ['B','C']]))
+        >>> K2Score(data).score(BayesianNetwork([['A','B'], ['B','C']]))
         -16273.793897051042
         """
 
@@ -88,7 +89,7 @@ class StructureScore(BaseEstimator):
 class K2Score(StructureScore):
     def __init__(self, data, **kwargs):
         """
-        Class for Bayesian structure scoring for BayesianModels with Dirichlet priors.
+        Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
         The K2 score is the result of setting all Dirichlet hyperparameters/pseudo_counts to 1.
         The `score`-method measures how well a model is able to describe the given data set.
 
@@ -150,7 +151,7 @@ class K2Score(StructureScore):
 class BDeuScore(StructureScore):
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
         """
-        Class for Bayesian structure scoring for BayesianModels with Dirichlet priors.
+        Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
         The BDeu score is the result of setting all Dirichlet hyperparameters/pseudo_counts to
         `equivalent_sample_size/variable_cardinality`.
         The `score`-method measures how well a model is able to describe the given data set.
@@ -222,11 +223,14 @@ class BDeuScore(StructureScore):
 class BDsScore(BDeuScore):
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
         """
-        Class for Bayesian structure scoring for BayesianModels with Dirichlet priors.
-        The BDs score is the result of setting all Dirichlet hyperparameters/pseudo_counts to
-        `equivalent_sample_size/modified_variable_cardinality` where for the modified_variable_cardinality
-        only the number of parent configurations where there were observed variable counts are considered.
-        The `score`-method measures how well a model is able to describe the given data set.
+        Class for Bayesian structure scoring for BayesianNetworks with
+        Dirichlet priors.  The BDs score is the result of setting all Dirichlet
+        hyperparameters/pseudo_counts to
+        `equivalent_sample_size/modified_variable_cardinality` where for the
+        modified_variable_cardinality only the number of parent configurations
+        where there were observed variable counts are considered.  The
+        `score`-method measures how well a model is able to describe the given
+        data set.
 
         Parameters
         ----------
@@ -287,10 +291,12 @@ class BDsScore(BDeuScore):
 class BicScore(StructureScore):
     def __init__(self, data, **kwargs):
         """
-        Class for Bayesian structure scoring for BayesianModels with Dirichlet priors.
-        The BIC/MDL score ("Bayesian Information Criterion", also "Minimal Descriptive Length") is a
-        log-likelihood score with an additional penalty for network complexity, to avoid overfitting.
-        The `score`-method measures how well a model is able to describe the given data set.
+        Class for Bayesian structure scoring for BayesianNetworks with
+        Dirichlet priors.  The BIC/MDL score ("Bayesian Information Criterion",
+        also "Minimal Descriptive Length") is a log-likelihood score with an
+        additional penalty for network complexity, to avoid overfitting.  The
+        `score`-method measures how well a model is able to describe the given
+        data set.
 
         Parameters
         ----------
