@@ -164,9 +164,7 @@ class TestBayesianModelMethods(unittest.TestCase):
             )
 
     def test_moral_graph_with_edge_present_over_parents(self):
-        G = BayesianModel(
-            [("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")]
-        )
+        G = BayesianModel([("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")])
         moral_graph = G.moralize()
         self.assertListEqual(sorted(moral_graph.nodes()), ["a", "b", "c", "d", "e"])
         for edge in moral_graph.edges():
@@ -292,9 +290,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(G.get_immoralities(), {("w", "x"), ("w", "z")})
         G1 = BayesianModel([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
         self.assertEqual(G1.get_immoralities(), {("w", "x"), ("w", "z")})
-        G2 = BayesianModel(
-            [("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")]
-        )
+        G2 = BayesianModel([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")])
         self.assertEqual(G2.get_immoralities(), {("w", "z")})
 
     def test_is_iequivalent(self):
@@ -336,9 +332,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
-        model = BayesianModel.get_random(
-            n_nodes=5, edge_prob=0.6, n_states=range(2, 7)
-        )
+        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=range(2, 7))
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
