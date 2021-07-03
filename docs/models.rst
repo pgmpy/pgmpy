@@ -1,15 +1,15 @@
 Models
 ======
 
-Bayesian Model
---------------
+Bayesian Network
+----------------
 
 .. automodule:: pgmpy.models.BayesianModel
    :members:
    :undoc-members:
 
-Markov Model
-------------
+Markov Network
+--------------
 .. automodule:: pgmpy.models.MarkovModel
    :members:
    :undoc-members:
