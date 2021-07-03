@@ -328,7 +328,7 @@ class TabularCPD(DiscreteFactor):
         if not inplace:
             return tabular_cpd
 
-    def reduce(self, values, inplace=True):
+    def reduce(self, values, inplace=True, show_warnings=True):
         """
         Reduces the cpd table to the context of given variable values. Reduce fixes the
         state of given variable to specified value. The reduced variables will no longer
@@ -361,7 +361,7 @@ class TabularCPD(DiscreteFactor):
 
         tabular_cpd = self if inplace else self.copy()
 
-        super(TabularCPD, tabular_cpd).reduce(values)
+        super(TabularCPD, tabular_cpd).reduce(values, show_warnings=show_warnings)
         tabular_cpd.normalize()
 
         if not inplace:

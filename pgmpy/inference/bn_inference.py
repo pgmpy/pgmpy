@@ -55,7 +55,7 @@ class BayesianModelInference(Inference):
         ):
             states = list(zip(variable_evid, state_combination))
             cached_values[state_combination] = variable_cpd.reduce(
-                states, inplace=False
+                states, inplace=False, show_warnings=False
             ).values
 
         return cached_values
@@ -88,7 +88,9 @@ class BayesianModelInference(Inference):
         ]
         weights_list = np.array(
             [
-                variable_cpd.reduce(list(zip(variable_evid, sc)), inplace=False).values
+                variable_cpd.reduce(
+                    list(zip(variable_evid, sc)), inplace=False, show_warnings=False
+                ).values
                 for sc in state_combinations
             ]
         )
