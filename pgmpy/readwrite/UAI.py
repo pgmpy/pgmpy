@@ -36,8 +36,8 @@ class UAIReader(object):
         http://graphmod.ics.uci.edu/uai08/FileFormat
         """
         if path:
-            data = open(path)
-            self.network = data.read()
+            with open(path, "r") as f:
+                self.network = f.read()
         elif string:
             self.network = string
         else:

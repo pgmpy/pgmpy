@@ -100,7 +100,7 @@ class HamiltonianMC(object):
 
         # acceptance_prob = P(position_bar, momentum_bar)/ P(position, momentum)
         potential_change = logp_bar - logp  # Negative change
-        kinetic_change = 0.5 * np.float(
+        kinetic_change = 0.5 * float(
             np.dot(momentum_bar.T, momentum_bar) - np.dot(momentum.T, momentum)
         )
 

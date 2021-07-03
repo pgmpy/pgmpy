@@ -37,7 +37,7 @@ class BaseGradLogPDF(object):
     ...     def _get_gradient_log_pdf(self):
     ...         sub_vec = self.position - self.model.mean.flatten()
     ...         grad = - np.dot(self.model.precision_matrix, sub_vec)
-    ...         log_pdf = 0.5 * np.float(np.dot(sub_vec, grad))
+    ...         log_pdf = 0.5 * float(np.dot(sub_vec, grad))
     ...         return grad, log_pdf
     >>> mean = np.array([1, 1])
     >>> covariance = np.array([[1, 0.2], [0.2, 7]])

@@ -137,7 +137,7 @@ class TestFactorMethods(unittest.TestCase):
         self.phi3 = DiscreteFactor(
             ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
             card3,
-            np.arange(np.prod(card3), dtype=np.float),
+            np.arange(np.prod(card3), dtype=float),
         )
 
         self.tup1 = ("x1", "x2")
@@ -163,7 +163,7 @@ class TestFactorMethods(unittest.TestCase):
                 self.tup3 + self.tup1,
             ],
             self.card6,
-            np.arange(np.prod(self.card6), dtype=np.float),
+            np.arange(np.prod(self.card6), dtype=float),
         )
 
         self.var1 = "x1"

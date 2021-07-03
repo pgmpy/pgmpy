@@ -129,13 +129,13 @@ class K2Score(StructureScore):
         num_parents_states = float(state_counts.shape[1])
 
         counts = np.asarray(state_counts)
-        log_gamma_counts = np.zeros_like(counts, dtype=np.float_)
+        log_gamma_counts = np.zeros_like(counts, dtype=float)
 
         # Compute log(gamma(counts + 1))
         gammaln(counts + 1, out=log_gamma_counts)
 
         # Compute the log-gamma conditional sample size
-        log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
+        log_gamma_conds = np.sum(counts, axis=0, dtype=float)
         gammaln(log_gamma_conds + var_cardinality, out=log_gamma_conds)
 
         score = (
@@ -200,14 +200,14 @@ class BDeuScore(StructureScore):
         num_parents_states = self.get_number_of_parent_states(state_counts)
 
         counts = np.asarray(state_counts)
-        log_gamma_counts = np.zeros_like(counts, dtype=np.float_)
+        log_gamma_counts = np.zeros_like(counts, dtype=float)
         alpha = self.equivalent_sample_size / num_parents_states
         beta = self.equivalent_sample_size / counts.size
         # Compute log(gamma(counts + beta))
         gammaln(counts + beta, out=log_gamma_counts)
 
         # Compute the log-gamma conditional sample size
-        log_gamma_conds = np.sum(counts, axis=0, dtype=np.float_)
+        log_gamma_conds = np.sum(counts, axis=0, dtype=float)
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
         score = (
@@ -330,13 +330,13 @@ class BicScore(StructureScore):
         num_parents_states = float(state_counts.shape[1])
 
         counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=np.float_)
+        log_likelihoods = np.zeros_like(counts, dtype=float)
 
         # Compute the log-counts
         np.log(counts, out=log_likelihoods, where=counts > 0)
 
         # Compute the log-conditional sample size
-        log_conditionals = np.sum(counts, axis=0, dtype=np.float_)
+        log_conditionals = np.sum(counts, axis=0, dtype=float)
         np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
 
         # Compute the log-likelihoods

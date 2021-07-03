@@ -42,7 +42,7 @@ class NoisyOrModel(nx.DiGraph):
         ...                                                      [0.1, 0.4]])
         """
         self.variables = np.array([])
-        self.cardinality = np.array([], dtype=np.int)
+        self.cardinality = np.array([], dtype=int)
         self.inhibitor_probability = []
         self.add_variables(variables, cardinality, inhibitor_probability)
 

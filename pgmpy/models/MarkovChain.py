@@ -425,7 +425,7 @@ class MarkovChain(object):
                     np.array(list(self.transition_models[k][i].values()))
                     for i in self.transition_models[k].keys()
                 ],
-                dtype=np.float,
+                dtype=float,
             )
             S, U = eig(transition_mat.T)
             stationary = np.array(U[:, np.where(np.abs(S - 1.0) < 1e-8)[0][0]].flat)
