@@ -239,7 +239,7 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_to_daft(self):
         dag = DAG([("A", "C"), ("B", "C"), ("D", "A"), ("D", "B")])
-        dag.to_daft(node_pos=None)
+        dag.to_daft(node_pos="circular")
 
         self.assertRaises(ValueError, dag.to_daft, node_pos="abcd")
         self.assertRaises(ValueError, dag.to_daft, node_pos={"A": (0, 2)})

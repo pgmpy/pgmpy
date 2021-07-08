@@ -886,7 +886,12 @@ class DAG(nx.DiGraph):
         return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
 
     def to_daft(
-        self, node_pos=None, latex=True, pgm_params={}, edge_params={}, node_params={}
+        self,
+        node_pos="circular",
+        latex=True,
+        pgm_params={},
+        edge_params={},
+        node_params={},
     ):
         """
         Returns a daft (https://docs.daft-pgm.org/en/latest/) object which can be rendered for
@@ -894,14 +899,14 @@ class DAG(nx.DiGraph):
 
         Parameters
         ----------
-        node_pos: str or dict (optional)
+        node_pos: str or dict (default: circular)
             If str: Must be one of the following: circular, kamada_kawai, planar, random, shell, sprint,
                 spectral, spiral. Please refer: https://networkx.org/documentation/stable//reference/drawing.html#module-networkx.drawing.layout for details on these layouts.
 
             If dict should be of the form {node: (x coordinate, y coordinate)} describing the x and y coordinate of each
             node.
 
-            If no argument is provided uses random layout.
+            If no argument is provided uses circular layout.
 
         latex: boolean
             Whether to use latex for rendering the node names.
@@ -944,9 +949,7 @@ class DAG(nx.DiGraph):
                 "Package daft required. Please visit: https://docs.daft-pgm.org/en/latest/ for installation instructions."
             )
 
-        if node_pos is None:
-            node_pos = nx.random_layout(self)
-        elif isinstance(node_pos, str):
+        if isinstance(node_pos, str):
             supported_layouts = {
                 "circular": nx.circular_layout,
                 "kamada_kawai": nx.kamada_kawai_layout,
