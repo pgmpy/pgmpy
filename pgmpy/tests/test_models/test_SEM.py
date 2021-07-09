@@ -1254,7 +1254,7 @@ class TestSEMGraph(unittest.TestCase):
                 self.demo.err_graph, nodelist=sorted(self.demo.err_graph.nodes())
             ),
             nx.to_numpy_matrix(
-                demo_graph, nodelist=sorted(demo_graph.err_graph.nodes())
+                demo_graph.err_graph, nodelist=sorted(demo_graph.err_graph.nodes())
             ),
         )
 
@@ -1286,7 +1286,7 @@ class TestSEMGraph(unittest.TestCase):
                 self.union.err_graph, nodelist=sorted(self.union.err_graph.nodes())
             ),
             nx.to_numpy_matrix(
-                union_graph, nodelist=sorted(union_graph.err_graph.nodes())
+                union_graph.err_graph, nodelist=sorted(union_graph.err_graph.nodes())
             ),
         )
 
@@ -1355,7 +1355,7 @@ class TestSEMGraph(unittest.TestCase):
                 self.custom.err_graph, nodelist=sorted(self.custom.err_graph.nodes())
             ),
             nx.to_numpy_matrix(
-                custom_graph, nodelist=sorted(custom_graph.err_graph.nodes())
+                custom_graph.err_graph, nodelist=sorted(custom_graph.err_graph.nodes())
             ),
         )
 

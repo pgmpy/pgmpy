@@ -222,12 +222,10 @@ class BayesianModelProbability(BayesianModelInference):
             data = data.values
         if ordering is None:
             ordering = self.topological_order
+            data = data.loc[:, ordering].values
 
         logp = np.array(
-            [
-                self._log_probability_node(data, ordering, node)
-                for node in self.topological_order
-            ]
+            [self._log_probability_node(data, ordering, node) for node in ordering]
         )
         return np.sum(logp, axis=0)
 
