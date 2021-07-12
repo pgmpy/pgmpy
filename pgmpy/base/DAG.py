@@ -492,9 +492,6 @@ class DAG(nx.DiGraph):
         Two graphs G1 and G2 are said to be I-equivalent if they have same skeleton
         and have same set of immoralities.
 
-        Note: For same skeleton different names of nodes can work but for immoralities
-        names of nodes must be same
-
         Parameters
         ----------
         model : A DAG object, for which you want to check I-equivalence
@@ -517,13 +514,12 @@ class DAG(nx.DiGraph):
 
         """
         if not isinstance(model, DAG):
-            raise TypeError("model must be an instance of DAG")
-        skeleton = nx.algorithms.isomorphism.GraphMatcher(
-            self.to_undirected(), model.to_undirected()
-        )
-        if (
-            skeleton.is_isomorphic()
-            and self.get_immoralities() == model.get_immoralities()
+            raise TypeError(
+                f"Model must be an instance of DAG. Got type: {type(model)}"
+            )
+
+        if (self.to_undirected().edges() == model.to_undirected().edges()) and (
+            self.get_immoralities() == model.get_immoralities()
         ):
             return True
         return False

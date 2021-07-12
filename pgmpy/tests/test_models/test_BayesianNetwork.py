@@ -306,6 +306,21 @@ class TestBayesianModelMethods(unittest.TestCase):
         G3 = BayesianNetwork([("W", "V"), ("W", "X"), ("Y", "X"), ("Z", "Y")])
         self.assertFalse(G3.is_iequivalent(G2))
 
+        # New examples
+        G = DAG([("I", "G"), ("I", "S")])
+        G1 = DAG([("S", "I"), ("G", "I")])
+        G2 = DAG([("I", "S"), ("S", "G")])
+        G3 = DAG([("S", "I"), ("G", "I"), ("S", "G")])
+
+        dags = [G, G1, G2, G3]
+        for g in dags:
+            self.assertTrue(g.is_iequivalent(g))
+
+        for i in range(4):
+            for j in range(4):
+                if i != j:
+                    self.assertFalse(dags[i].is_iequivalent(dags[j]))
+
     def test_copy(self):
         model_copy = self.G1.copy()
         self.assertEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
