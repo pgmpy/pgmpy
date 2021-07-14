@@ -490,6 +490,7 @@ class BayesianNetwork(DAG):
             - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
             or 'equivalent_sample_size' as additional keyword arguments.
             See `BayesianEstimator.get_parameters()` for usage.
+            - ExpectationMaximization
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states
