@@ -22,11 +22,11 @@ class DynamicNode:
         elif idx == 1:
             return self.time_slice
         else:
-            raise IndexError(f'Index {idx} out of bounds.')
-    
+            raise IndexError(f"Index {idx} out of bounds.")
+
     def __str__(self) -> str:
-        return f'{self.node}_{self.time_slice}'
-    
+        return f"{self.node}_{self.time_slice}"
+
     __repr__ = __str__
 
     def __lt__(self, other) -> True:
@@ -36,7 +36,7 @@ class DynamicNode:
             return False
         else:
             return self.time_slice < other.time_slice
-    
+
     def __le__(self, other) -> True:
         if self.node <= other.node:
             return True
@@ -226,7 +226,7 @@ class DynamicBayesianNetwork(DAG):
                 )
         except TypeError:
             raise ValueError("Nodes must be of type (node, time_slice).")
-        
+
         start = DynamicNode(*start)
         end = DynamicNode(*end)
 
@@ -248,7 +248,9 @@ class DynamicBayesianNetwork(DAG):
                 DynamicNode(start[0], 1 - start[1]), DynamicNode(end[0], 1 - end[1])
             )
         else:
-            super(DynamicBayesianNetwork, self).add_node(DynamicNode(end[0], 1 - end[1]))
+            super(DynamicBayesianNetwork, self).add_node(
+                DynamicNode(end[0], 1 - end[1])
+            )
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -682,22 +684,28 @@ class DynamicBayesianNetwork(DAG):
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)
         return dbn
-    
+
     def get_markov_blanket(self, node):
         # Wrap node into DynamicNode
         if not isinstance(node, DynamicNode):
             node = DynamicNode(*node)
         # Get standard Markov blanket
-        markov_blanket = set(super(DynamicBayesianNetwork, self).get_markov_blanket(node))
-        
+        markov_blanket = set(
+            super(DynamicBayesianNetwork, self).get_markov_blanket(node)
+        )
+
         # Augment Markov blanket:
         # if node is in the last time slice, unroll and add children nodes from next time slice
         max_ts = max([n.time_slice for n in self.nodes()])
         if node.time_slice == max_ts:
             # Move node to previous time slice and get children
-            temp_children = self.get_children(DynamicNode(node.node, node.time_slice - 1))
+            temp_children = self.get_children(
+                DynamicNode(node.node, node.time_slice - 1)
+            )
             # Move children to next time slice
-            next_children = {DynamicNode(child.node, child.time_slice + 1) for child in temp_children}
+            next_children = {
+                DynamicNode(child.node, child.time_slice + 1) for child in temp_children
+            }
             # Add them Markov blanket
             markov_blanket = markov_blanket | next_children
 
@@ -810,8 +818,9 @@ class DynamicBayesianNetwork(DAG):
             else:
                 variables = [DynamicNode(*v) for v in variables]
         if (
-            observed is not None and len(observed) > 0 and 
-            any([not isinstance(o, DynamicNode) for o in observed])
+            observed is not None
+            and len(observed) > 0
+            and any([not isinstance(o, DynamicNode) for o in observed])
         ):
             # Wrap observed in DynamicNode objects
             if len(observed) == 2 and isinstance(observed[1], int):
@@ -819,4 +828,6 @@ class DynamicBayesianNetwork(DAG):
             else:
                 observed = [DynamicNode(*o) for o in observed]
         # Call super method
-        return super(DynamicBayesianNetwork, self).active_trail_nodes(variables, observed, include_latents)
+        return super(DynamicBayesianNetwork, self).active_trail_nodes(
+            variables, observed, include_latents
+        )
