@@ -45,6 +45,14 @@ class DynamicNode:
         else:
             return self.time_slice <= other.time_slice
 
+    def __eq__(self, other) -> bool:
+        if isinstance(other, DynamicNode):
+            return (self.node, self.time_slice) == (other.node, other.time_slice)
+        elif isinstance(other, (list, tuple)):
+            return (self.node, self.time_slice) == tuple(other)
+        else:
+            return False
+
 
 class DynamicBayesianNetwork(DAG):
     def __init__(self, ebunch=None):
