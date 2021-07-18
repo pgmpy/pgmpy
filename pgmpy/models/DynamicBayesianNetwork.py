@@ -29,7 +29,7 @@ class DynamicNode:
 
     __repr__ = __str__
 
-    def __lt__(self, other) -> True:
+    def __lt__(self, other) -> bool:
         if self.node < other.node:
             return True
         elif self.node > other.node:
@@ -37,7 +37,7 @@ class DynamicNode:
         else:
             return self.time_slice < other.time_slice
 
-    def __le__(self, other) -> True:
+    def __le__(self, other) -> bool:
         if self.node <= other.node:
             return True
         elif self.node > other.node:
