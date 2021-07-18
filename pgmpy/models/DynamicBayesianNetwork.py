@@ -1,5 +1,7 @@
 from itertools import combinations
 from collections import defaultdict
+from dataclasses import dataclass
+import typing
 
 import numpy as np
 import pandas as pd
@@ -7,6 +9,41 @@ import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.base import DAG
+
+
+@dataclass(eq=True, frozen=True)
+class DynamicNode:
+    node: str
+    time_slice: int
+
+    def __getitem__(self, idx: int) -> typing.Union[str, int]:
+        if idx == 0:
+            return self.node
+        elif idx == 1:
+            return self.time_slice
+        else:
+            raise IndexError(f'Index {idx} out of bounds.')
+    
+    def __str__(self) -> str:
+        return f'{self.node}_{self.time_slice}'
+    
+    __repr__ = __str__
+
+    def __lt__(self, other) -> True:
+        if self.node < other.node:
+            return True
+        elif self.node > other.node:
+            return False
+        else:
+            return self.time_slice < other.time_slice
+    
+    def __le__(self, other) -> True:
+        if self.node <= other.node:
+            return True
+        elif self.node > other.node:
+            return False
+        else:
+            return self.time_slice <= other.time_slice
 
 
 class DynamicBayesianNetwork(DAG):
@@ -98,7 +135,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_node('A')
         ['A']
         """
-        super(DynamicBayesianNetwork, self).add_node((node, 0), **attr)
+        super(DynamicBayesianNetwork, self).add_node(DynamicNode(node, 0), **attr)
 
     def add_nodes_from(self, nodes, **attr):
         """
@@ -189,6 +226,9 @@ class DynamicBayesianNetwork(DAG):
                 )
         except TypeError:
             raise ValueError("Nodes must be of type (node, time_slice).")
+        
+        start = DynamicNode(*start)
+        end = DynamicNode(*end)
 
         if start == end:
             raise ValueError("Self Loops are not allowed")
@@ -205,10 +245,10 @@ class DynamicBayesianNetwork(DAG):
 
         if start[1] == end[1]:
             super(DynamicBayesianNetwork, self).add_edge(
-                (start[0], 1 - start[1]), (end[0], 1 - end[1])
+                DynamicNode(start[0], 1 - start[1]), DynamicNode(end[0], 1 - end[1])
             )
         else:
-            super(DynamicBayesianNetwork, self).add_node((end[0], 1 - end[1]))
+            super(DynamicBayesianNetwork, self).add_node(DynamicNode(end[0], 1 - end[1]))
 
     def add_edges_from(self, ebunch, **kwargs):
         """
@@ -267,7 +307,7 @@ class DynamicBayesianNetwork(DAG):
             )
 
         return [
-            tuple((x[0], time_slice) for x in edge)
+            tuple(DynamicNode(x[0], time_slice) for x in edge)
             for edge in self.edges()
             if edge[0][1] == edge[1][1] == 0
         ]
@@ -316,7 +356,7 @@ class DynamicBayesianNetwork(DAG):
                 "The timeslice should be a positive value greater than or equal to zero"
             )
 
-        return [(edge[0][0], time_slice) for edge in self.get_inter_edges()]
+        return [DynamicNode(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
     def get_slice_nodes(self, time_slice=0):
         """
@@ -340,7 +380,7 @@ class DynamicBayesianNetwork(DAG):
                 "The timeslice should be a positive value greater than or equal to zero"
             )
 
-        return [(node, time_slice) for node in self._nodes()]
+        return [DynamicNode(node, time_slice) for node in self._nodes()]
 
     def add_cpds(self, *cpds):
         """
@@ -542,7 +582,7 @@ class DynamicBayesianNetwork(DAG):
         >>> student.initialize_initial_state()
         """
         for cpd in self.cpds:
-            temp_var = (cpd.variable[0], 1 - cpd.variable[1])
+            temp_var = DynamicNode(cpd.variable[0], 1 - cpd.variable[1])
             parents = self.get_parents(temp_var)
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
