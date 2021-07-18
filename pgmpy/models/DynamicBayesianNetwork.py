@@ -781,3 +781,22 @@ class DynamicBayesianNetwork(DAG):
             )
 
         self.add_cpds(*cpds)
+
+    def active_trail_nodes(self, variables, observed=None, include_latents=False):
+        if not isinstance(variables, DynamicNode):
+            # Wrap variables in DynamicNode objects
+            if len(variables) == 2 and isinstance(variables[1], int):
+                variables = DynamicNode(*variables)
+            else:
+                variables = [DynamicNode(*v) for v in variables]
+        if (
+            observed is not None and len(observed) > 0 and 
+            any([not isinstance(o, DynamicNode) for o in observed])
+        ):
+            # Wrap observed in DynamicNode objects
+            if len(observed) == 2 and isinstance(observed[1], int):
+                observed = DynamicNode(*observed)
+            else:
+                observed = [DynamicNode(*o) for o in observed]
+        # Call super method
+        return super(DynamicBayesianNetwork, self).active_trail_nodes(variables, observed, include_latents)
