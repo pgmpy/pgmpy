@@ -682,6 +682,26 @@ class DynamicBayesianNetwork(DAG):
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)
         return dbn
+    
+    def get_markov_blanket(self, node):
+        # Wrap node into DynamicNode
+        if not isinstance(node, DynamicNode):
+            node = DynamicNode(*node)
+        # Get standard Markov blanket
+        markov_blanket = set(super(DynamicBayesianNetwork, self).get_markov_blanket(node))
+        
+        # Augment Markov blanket:
+        # if node is in the last time slice, unroll and add children nodes from next time slice
+        max_ts = max([n.time_slice for n in self.nodes()])
+        if node.time_slice == max_ts:
+            # Move node to previous time slice and get children
+            temp_children = self.get_children(DynamicNode(node.node, node.time_slice - 1))
+            # Move children to next time slice
+            next_children = {DynamicNode(child.node, child.time_slice + 1) for child in temp_children}
+            # Add them Markov blanket
+            markov_blanket = markov_blanket | next_children
+
+        return sorted(markov_blanket)
 
     def get_constant_bn(self):
         """
