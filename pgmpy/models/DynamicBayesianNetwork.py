@@ -2,6 +2,7 @@ from itertools import combinations
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
@@ -641,3 +642,102 @@ class DynamicBayesianNetwork(DAG):
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)
         return dbn
+
+    def get_constant_bn(self):
+        """
+        Returns a normal bayesian network object which has nodes from the first two
+        time slices and all the edges in the first time slice and edges going from
+        first to second time slice. The returned bayesian network bascially represents
+        the part of the DBN which remains constant.
+        """
+        from pgmpy.models import BayesianNetwork
+
+        return BayesianNetwork(
+            ebunch=[(f"{u[0]}_{u[1]}", f"{v[0]}_{v[1]}") for (u, v) in self.edges()]
+        )
+
+    def fit(self, data, estimator="MLE"):
+        """
+        Learns the CPD of the model from data.
+
+        Since the assumption is that the 2-TBN stays constant throughtout the model,
+        the algorithm iterates over every 2 consecutive time slices in the data and
+        updates the CPDs based on it.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame instance
+            The column names must be of the form (variable, time_slice). The
+            time-slices must start from 0.
+
+        estimator: str
+            Currently only Maximum Likelihood Estimator is supported.
+
+        Returns
+        -------
+        None: The CPDs are added to the model instance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> model = DBN(
+        >>>     [
+        >>>         (("A", 0), ("B", 0)),
+        >>>         (("A", 0), ("C", 0)),
+        >>>         (("B", 0), ("D", 0)),
+        >>>         (("C", 0), ("D", 0)),
+        >>>         (("A", 0), ("A", 1)),
+        >>>         (("B", 0), ("B", 1)),
+        >>>         (("C", 0), ("C", 1)),
+        >>>         (("D", 0), ("D", 1)),
+        >>>     ]
+        >>> )
+        >>> data = np.random.randint(low=0, high=2, size=(1000, 20))
+        >>> colnames = []
+        >>> for t in range(5):
+        ...     colnames.extend([("A", t), ("B", t), ("C", t), ("D", t)])
+        >>> df = pd.DataFrame(data, columns=colnames)
+        >>> model.fit(df)
+        """
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"data must be a pandas dataframe. Got: {type(data)}")
+
+        if min(data.columns, key=lambda t: t[1])[1] != 0:
+            raise ValueError("data column names must start from time slice 0.")
+
+        if estimator not in {"MLE", "mle"}:
+            raise ValueError("Only Maximum Likelihood Estimator is supported currently")
+
+        n_samples = data.shape[0]
+        const_bn = self.get_constant_bn()
+        n_time_slices = max(data.columns, key=lambda t: t[1])[1]
+
+        for t_slice in range(n_time_slices):
+            colnames = [(node, t_slice) for node in self._nodes()]
+            colnames.extend([(node, t_slice + 1) for node in self._nodes()])
+
+            df_slice = data.loc[:, colnames]
+            new_colnames = [f"{node}_{t - t_slice}" for (node, t) in df_slice.columns]
+            df_slice.columns = new_colnames
+            if t_slice == 0:
+                const_bn.fit(df_slice)
+            else:
+                const_bn.fit_update(df_slice, n_prev_samples=t_slice * n_samples)
+
+        cpds = []
+        for cpd in const_bn.cpds:
+            variables = [var.split("_") for var in cpd.variables]
+            variables = [(v, int(t)) for v, t in variables]
+            cpds.append(
+                TabularCPD(
+                    variable=variables[0],
+                    variable_card=cpd.variable_card,
+                    values=cpd.get_values(),
+                    evidence=variables[1:],
+                    evidence_card=cpd.cardinality[1:],
+                )
+            )
+
+        self.add_cpds(*cpds)

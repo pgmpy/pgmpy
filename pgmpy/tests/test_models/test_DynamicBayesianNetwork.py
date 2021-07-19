@@ -1,11 +1,13 @@
 import unittest
 
+import numpy as np
+import pandas as pd
+import numpy.testing as np_test
+
 import pgmpy.tests.help_functions as hf
 from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import DBNInference
-
-import numpy as np
 
 
 class TestDynamicBayesianNetworkCreation(unittest.TestCase):
@@ -302,6 +304,42 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertNotEqual(
             sorted(self.network.get_inter_edges()), sorted(copy.get_inter_edges())
         )
+
+    def test_fit(self):
+        model = DynamicBayesianNetwork(
+            [
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("C", 0)),
+                (("B", 0), ("D", 0)),
+                (("C", 0), ("D", 0)),
+                (("A", 0), ("A", 1)),
+                (("B", 0), ("B", 1)),
+                (("C", 0), ("C", 1)),
+                (("D", 0), ("D", 1)),
+            ]
+        )
+
+        data = np.random.randint(low=0, high=2, size=(10000, 20))
+        colnames = []
+        for t in range(5):
+            colnames.extend([("A", t), ("B", t), ("C", t), ("D", t)])
+        df = pd.DataFrame(data, columns=colnames)
+        model.fit(df)
+
+        self.assertTrue(model.check_model())
+        self.assertEqual(len(model.cpds), 8)
+        for cpd in model.cpds:
+            np_test.assert_almost_equal(cpd.values, 0.5, decimal=1)
+
+        self.assertRaises(ValueError, model.fit, df, "bayesian")
+        self.assertRaises(ValueError, model.fit, df.values)
+        wrong_colnames = []
+        for t in range(5):
+            wrong_colnames.extend(
+                [("A", t + 1), ("B", t + 1), ("C", t + 1), ("D", t + 1)]
+            )
+        df.columns = wrong_colnames
+        self.assertRaises(ValueError, model.fit, df)
 
     def tearDown(self):
         del self.network
