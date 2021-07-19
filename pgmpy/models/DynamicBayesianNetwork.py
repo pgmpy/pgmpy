@@ -13,6 +13,10 @@ from pgmpy.base import DAG
 
 @dataclass(eq=True, frozen=True)
 class DynamicNode:
+    """
+    Class for representing the nodes of Dynamic Bayesian Networks.
+    """
+
     node: str
     time_slice: int
 
@@ -52,6 +56,12 @@ class DynamicNode:
             return (self.node, self.time_slice) == tuple(other)
         else:
             return False
+
+    def to_tuple(self) -> tuple:
+        """
+        Returns a tuple representation as (node, time_slice) for DynamicNode object.
+        """
+        return (self.node, self.time_slice)
 
 
 class DynamicBayesianNetwork(DAG):
@@ -688,7 +698,8 @@ class DynamicBayesianNetwork(DAG):
         """
         dbn = DynamicBayesianNetwork()
         dbn.add_nodes_from(self._nodes())
-        dbn.add_edges_from(self.edges())
+        edges = [(u.to_tuple(), v.to_tuple()) for (u, v) in self.edges()]
+        dbn.add_edges_from(edges)
         cpd_copy = [cpd.copy() for cpd in self.get_cpds()]
         dbn.add_cpds(*cpd_copy)
         return dbn

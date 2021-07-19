@@ -7,9 +7,11 @@ class TestIndependenceAssertion(unittest.TestCase):
     def setUp(self):
         self.assertion = IndependenceAssertion()
 
-    def test_return_list_if_str(self):
-        self.assertListEqual(self.assertion._return_list_if_str("U"), ["U"])
-        self.assertListEqual(self.assertion._return_list_if_str(["U", "V"]), ["U", "V"])
+    def test_return_list_if_not_collection(self):
+        self.assertListEqual(self.assertion._return_list_if_not_collection("U"), ["U"])
+        self.assertListEqual(
+            self.assertion._return_list_if_not_collection(["U", "V"]), ["U", "V"]
+        )
 
     def test_get_assertion(self):
         self.assertTupleEqual(
