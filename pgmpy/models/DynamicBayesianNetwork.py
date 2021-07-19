@@ -725,8 +725,20 @@ class DynamicBayesianNetwork(DAG):
             next_children = {
                 DynamicNode(child.node, child.time_slice + 1) for child in temp_children
             }
-            # Add them Markov blanket
+            # Get children parents
+            next_parents = {self.get_parents(child) for child in temp_children}
+            # Get children's parents
+            temp_parents = {
+                parent for child in temp_children for parent in self.get_parents(child)
+            }
+            # Move children's parents to next time slice
+            next_parents = {
+                DynamicNode(parent.node, parent.time_slice + 1)
+                for parent in temp_parents
+            }
+            # Add them to Markov blanket
             markov_blanket = markov_blanket | next_children
+            markov_blanket = markov_blanket | next_parents
 
         return sorted(markov_blanket)
 
