@@ -341,6 +341,38 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         df.columns = wrong_colnames
         self.assertRaises(ValueError, model.fit, df)
 
+    def test_get_markov_blanket(self):
+        self.network.add_edges_from(
+            [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
+        )
+
+        markov_blanket = self.network.get_markov_blanket(("a", 1))
+        self.assertListEqual(
+            markov_blanket,
+            [
+                ("a", 0),  # parent
+                ("a", 1),  # child 1's parent
+                ("a", 2),  # child 1
+                ("b", 1),  # child 2's parent
+                ("b", 2),  # child 2
+            ],
+        )
+
+    def test_active_trail_nodes(self):
+        self.network.add_edges_from(
+            [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
+        )
+
+        active_trail = self.network.active_trail_nodes(("a", 0))
+        self.assertListEqual(
+            sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 1)]
+        )
+
+        active_trail = self.network.active_trail_nodes(("a", 0), observed=[("b", 1)])
+        self.assertListEqual(
+            sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 0)]
+        )
+
     def tearDown(self):
         del self.network
 
