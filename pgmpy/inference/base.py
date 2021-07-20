@@ -64,6 +64,11 @@ class Inference(object):
         self.model = model
         model.check_model()
 
+        if isinstance(self.model, JunctionTree):
+            self.variables = set(chain(*self.model.nodes()))
+        else:
+            self.variables = self.model.nodes()
+
     def _initialize_structures(self):
         """
         Initializes all the data structures which will

@@ -317,6 +317,14 @@ class TestSnowNetwork(unittest.TestCase):
                 evidence={"Traffic": "slow"},
             )
 
+    def test_get_elimination_order(self):
+        infer = VariableElimination(self.model)
+        for order in ["MinFill", "MinNeighbors", "MinWeight", "WeightedMinFill"]:
+            computed_order = infer._get_elimination_order(
+                variables=["Traffic"], evidence={}, elimination_order=order
+            )
+            self.assertEqual(set(computed_order), set({"Risk", "Late", "Snow"}))
+
     def test_virt_evidence(self):
         virt_evidence = TabularCPD("Traffic", 2, [[0.3], [0.7]])
         for algo in [VariableElimination, BeliefPropagation]:
