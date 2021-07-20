@@ -1,4 +1,4 @@
-from itertools import combinations
+from itertools import combinations, chain
 from collections import defaultdict
 from dataclasses import dataclass
 import typing
@@ -726,7 +726,7 @@ class DynamicBayesianNetwork(DAG):
                 DynamicNode(child.node, child.time_slice + 1) for child in temp_children
             }
             # Get children parents
-            next_parents = {self.get_parents(child) for child in temp_children}
+            next_parents = set(chain(*[self.get_parents(child) for child in temp_children]))
             # Get children's parents
             temp_parents = {
                 parent for child in temp_children for parent in self.get_parents(child)
