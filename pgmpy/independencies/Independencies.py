@@ -416,21 +416,22 @@ class IndependenceAssertion(object):
                 "event1" if not event1 else "event2" + " needs to be specified"
             )
 
-        self.event1 = frozenset(self._return_list_if_str(event1))
-        self.event2 = frozenset(self._return_list_if_str(event2))
-        self.event3 = frozenset(self._return_list_if_str(event3))
+        self.event1 = frozenset(self._return_list_if_not_collection(event1))
+        self.event2 = frozenset(self._return_list_if_not_collection(event2))
+        self.event3 = frozenset(self._return_list_if_not_collection(event3))
         self.all_vars = frozenset().union(self.event1, self.event2, self.event3)
 
     def __str__(self):
         if self.event3:
             return "({event1} \u27C2 {event2} | {event3})".format(
-                event1=", ".join(self.event1),
-                event2=", ".join(self.event2),
-                event3=", ".join(self.event3),
+                event1=", ".join([str(e) for e in self.event1]),
+                event2=", ".join([str(e) for e in self.event2]),
+                event3=", ".join([str(e) for e in self.event3]),
             )
         else:
             return "({event1} \u27C2 {event2})".format(
-                event1=", ".join(self.event1), event2=", ".join(self.event2)
+                event1=", ".join([str(e) for e in self.event1]),
+                event2=", ".join([str(e) for e in self.event2]),
             )
 
     __repr__ = __str__
@@ -451,7 +452,7 @@ class IndependenceAssertion(object):
         return hash((frozenset((self.event1, self.event2)), self.event3))
 
     @staticmethod
-    def _return_list_if_str(event):
+    def _return_list_if_not_collection(event):
         """
         If variable is a string returns a list containing variable.
         Else returns variable itself.
@@ -476,11 +477,12 @@ class IndependenceAssertion(object):
     def latex_string(self):
         if len(self.event3) == 0:
             return r"{event1} \perp {event2}".format(
-                event1=", ".join(self.event1), event2=", ".join(self.event2)
+                event1=", ".join([str(e) for e in self.event1]),
+                event2=", ".join([str(e) for e in self.event2]),
             )
         else:
             return r"{event1} \perp {event2} \mid {event3}".format(
-                event1=", ".join(self.event1),
-                event2=", ".join(self.event2),
-                event3=", ".join(self.event3),
+                event1=", ".join([str(e) for e in self.event1]),
+                event2=", ".join([str(e) for e in self.event2]),
+                event3=", ".join([str(e) for e in self.event3]),
             )
