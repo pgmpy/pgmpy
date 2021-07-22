@@ -9,6 +9,8 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import tabulate
 
+from shutil import get_terminal_size
+
 
 class TabularCPD(DiscreteFactor):
     """
@@ -183,8 +185,8 @@ class TabularCPD(DiscreteFactor):
 
     def _make_table_str(self, tablefmt="fancy_grid", print_state_names=True):
         headers_list = []
-        # build column headers
 
+        # Build column headers
         evidence = self.variables[1:]
         evidence_card = self.cardinality[1:]
         if evidence:
@@ -225,6 +227,44 @@ class TabularCPD(DiscreteFactor):
         ).tolist()
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
+
+        cdf_str = self._truncate_strtable(cdf_str)
+
+        return cdf_str
+
+    def _truncate_strtable(self, cdf_str):
+        terminal_width, terminal_height = get_terminal_size()
+
+        list_rows_str = cdf_str.split("\n")
+
+        table_width, table_height = len(list_rows_str[0]), len(list_rows_str)
+
+        colstr_i = np.array(
+            [pos for pos, char in enumerate(list_rows_str[0]) if char == "+"]
+        )
+
+        if table_width > terminal_width:
+            half_width = terminal_width // 2 - 3
+
+            left_i = colstr_i[colstr_i < half_width][-1]
+            right_i = colstr_i[(table_width - colstr_i) < half_width][0]
+
+            new_cdf_str = []
+            for temp_row_str in list_rows_str:
+                left = temp_row_str[: left_i + 1]
+                right = temp_row_str[right_i:]
+                if temp_row_str[left_i] == "+":
+                    joiner = "-----"
+                else:
+                    joiner = " ... "
+                new_cdf_str.append(left + joiner + right)
+
+            cdf_str = "\n".join(new_cdf_str)
+
+        # TODO: vertical limitator
+        # if table_height > terminal_height:
+        #     half_height = terminal_height // 2
+
         return cdf_str
 
     def copy(self):
