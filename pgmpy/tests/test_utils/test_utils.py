@@ -1,7 +1,7 @@
 import unittest
 import random
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from pgmpy.utils import get_example_model
 

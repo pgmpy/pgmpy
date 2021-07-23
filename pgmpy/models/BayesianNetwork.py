@@ -9,7 +9,7 @@ from functools import reduce
 import networkx as nx
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from joblib import Parallel, delayed
 
 from pgmpy.base import DAG

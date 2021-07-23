@@ -4,7 +4,7 @@ import logging
 from itertools import combinations, permutations, chain
 
 import networkx as nx
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from joblib import Parallel, delayed
 
 from pgmpy.base import PDAG

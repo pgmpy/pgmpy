@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from itertools import combinations
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 import numpy as np
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from pgmpy.sampling import HamiltonianMCDA, LeapFrog, _return_samples
 from pgmpy.utils import _check_1d_array_object, _check_length_equal

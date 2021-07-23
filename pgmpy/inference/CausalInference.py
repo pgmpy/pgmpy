@@ -3,7 +3,7 @@ from itertools import chain, product
 
 import numpy as np
 import networkx as nx
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators.LinearModel import LinearEstimator

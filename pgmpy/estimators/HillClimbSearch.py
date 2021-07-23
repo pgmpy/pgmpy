@@ -3,7 +3,7 @@ from itertools import permutations
 from collections import deque
 
 import networkx as nx
-from tqdm import trange
+from tqdm.auto import trange
 
 from pgmpy.estimators import (
     StructureScore,
