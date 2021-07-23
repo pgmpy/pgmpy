@@ -1262,6 +1262,11 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         samples = asia.simulate(n_samples=n_samples)
         self.assertEqual(samples.shape[0], n_samples)
 
+        # The probability values don't sum to 1 in this case.
+        barley = get_example_model("barley")
+        samples = barley.simulate(n_samples=n_samples)
+        self.assertEqual(samples.shape[0], n_samples)
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected

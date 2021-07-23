@@ -1,4 +1,5 @@
 from collections import namedtuple
+from warnings import warn
 
 import numpy as np
 from itertools import combinations, chain
@@ -57,6 +58,36 @@ def cartesian(arrays, out=None):
     return out
 
 
+def _adjusted_weights(weights):
+    """
+    Adjusts the weights such that it sums to 1. When the total weights is less
+    than or greater than 1 by 1e-3, add/substracts the difference from the last
+    element of weights. If the difference is greater than 1e-3, throws an error.
+
+    Parameters
+    ----------
+    weights: 1-D numpy array
+        The array for which to do the adjustment.
+
+    Example
+    -------
+    >>> a = np.array([0.1111111] * 9)
+    >>> _adjusted_weights(a)
+    array([0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111,
+           0.1111111, 0.1111111, 0.1111112])
+    """
+    error = 1 - np.sum(weights)
+    if abs(error) > 1e-3:
+        raise ValueError("The probability values do not sum to 1.")
+    elif error != 0:
+        warn(
+            f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
+        )
+        weights[-1] += error
+
+    return weights
+
+
 def sample_discrete(values, weights, size=1, seed=None):
     """
     Generate a sample of given size, given a probability mass function.
@@ -94,13 +125,13 @@ def sample_discrete(values, weights, size=1, seed=None):
 
     weights = np.array(weights)
     if weights.ndim == 1:
-        return np.random.choice(values, size=size, p=weights)
+        return np.random.choice(values, size=size, p=_adjusted_weights(weights))
     else:
         samples = np.zeros(size, dtype=int)
         unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
         for index, size in enumerate(counts):
             samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
-                values, size=size, p=unique_weights[index]
+                values, size=size, p=_adjusted_weights(unique_weights[index])
             )
         return samples
 
