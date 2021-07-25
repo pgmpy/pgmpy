@@ -48,6 +48,7 @@
    :maxdepth: 3
    :hidden:
    :caption: Base Structures
+
    base/base.rst
 
 .. toctree::
@@ -136,7 +137,7 @@ All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_not
    :caption: Example Notebooks
    :numbered:
 
-   examples/Alarm.ipynb
+   examples/Earthquake.ipynb
    examples/Monty Hall Problem.ipynb
    examples/Creating a Discrete Bayesian Network.ipynb
    examples/Inference in Discrete Bayesian Networks.ipynb
