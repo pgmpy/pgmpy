@@ -34,27 +34,6 @@
 
 |
 
-Basic Examples: For a complete list check: https://github.com/pgmpy/pgmpy/tree/dev/examples
-
-1. `Defining a Discrete Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb>`_
-2. `Statistical Inference in Discrete Bayesian Network <https://github.com/pgmpy/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb>`_
-3. `Causal Inference <https://github.com/pgmpy/pgmpy/blob/dev/examples/Causal%20Games.ipynb>`_
-4. `Learning Discrete Bayesian Networks from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb>`_
-5. `Learning Bayesian Networks structures from Data <https://github.com/pgmpy/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb>`_
-
-Detailed Notebooks:
-
-1. `Introduction to Probabilistic Graphical Models <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/1.%20Introduction%20to%20Probabilistic%20Graphical%20Models.ipynb>`_
-2. `Bayesian Networks <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/2.%20Bayesian%20Networks.ipynb>`_
-3. `Markov Models <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/3.%20Markov%20Models.ipynb>`_
-4. `Exact Inference in Graphical Models <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/4.%20Exact%20Inference%20in%20Graphical%20Models.ipynb>`_
-5. `Approximate Inference in Graphical Models <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/5.%20Approximate%20Inference%20in%20Graphical%20Models.ipynb>`_
-6. `Parameterizing with continuous variables <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/6.%20Parameterizing%20with%20Continuous%20Variables.ipynb>`_
-7. `Sampling Algorithms <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/7.%20Sampling%20Algorithms.ipynb>`_
-8. `Learning Bayesian Networks from data <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/9.%20Learning%20Bayesian%20Networks%20from%20Data.ipynb>`_
-9. `Reading and writing files using pgmpy <https://github.com/pgmpy/pgmpy_notebook/blob/master/notebooks/8.%20Reading%20and%20Writing%20from%20pgmpy%20file%20formats.ipynb>`_
-
-Documentation:
 
 .. toctree::
    :maxdepth: 3
@@ -69,7 +48,6 @@ Documentation:
    :maxdepth: 3
    :hidden:
    :caption: Base Structures
-   
    base/base.rst
 
 .. toctree::
@@ -134,7 +112,7 @@ Documentation:
 
    structure_estimator/pc.rst
    structure_estimator/hill.rst
-   structrue_estimator/tree.rst
+   structure_estimator/tree.rst
    structure_estimator/mmhc.rst
    structure_estimator/exhaustive.rst
 
@@ -148,6 +126,44 @@ Documentation:
    readwrite/xmlbif.rst
    readwrite/pomdpx.rst
    readwrite/xmlbelief.rst
+
+
+All example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
+All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Example Notebooks
+   :numbered:
+
+   examples/Alarm.ipynb
+   examples/Monty Hall Problem.ipynb
+   examples/Creating a Discrete Bayesian Network.ipynb
+   examples/Inference in Discrete Bayesian Networks.ipynb
+   examples/Causal Games.ipynb
+   examples/Causal Inference.ipynb
+   examples/Learning Parameters in Discrete Bayesian Networks.ipynb
+   examples/Structure Learning in Bayesian Networks.ipynb
+   examples/Structure Learning with Chow-Liu.ipynb
+   examples/Structure Learning with TAN.ipynb
+   examples/Extending pgmpy.ipynb
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorial Notebooks
+   :numbered:
+
+   detailed_notebooks/1. Introduction to Probabilistic Graphical Models.ipynb
+   detailed_notebooks/2. Bayesian Networks.ipynb
+   detailed_notebooks/3. Causal Bayesian Networks.ipynb
+   detailed_notebooks/4. Markov Models.ipynb
+   detailed_notebooks/5. Exact Inference in Graphical Models.ipynb
+   detailed_notebooks/6. Approximate Inference in Graphical Models.ipynb
+   detailed_notebooks/7. Parameterizing with Continuous Variables.ipynb
+   detailed_notebooks/8. Sampling Algorithms.ipynb
+   detailed_notebooks/9. Reading and Writing from pgmpy file formats.ipynb
+   detailed_notebooks/10. Learning Bayesian Networks from Data.ipynb
+   detailed_notebooks/11. A Bayesian Network to model the influence of energy consumption on greenhouse gases in Italy.ipynb
 
 Indices and tables
 ==================
