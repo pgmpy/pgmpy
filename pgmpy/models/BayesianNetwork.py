@@ -1035,3 +1035,87 @@ class BayesianNetwork(DAG):
         return BayesianModelSampling(self).forward_sample(
             size=n_samples, include_latents=include_latents, seed=seed
         )
+
+    def save(self, filename, filetype="bif"):
+        """
+        Writes the model to a file.
+
+        Parameters
+        ----------
+        filename: str
+            The path along with the filename where to write the file.
+
+        filetype: str (default: bif)
+            The format in which to write the model to file. Can be one of
+            the following: bif, uai, xmlbif.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> alarm = get_example_model('alarm')
+        >>> alarm.save('alarm.bif', filetype='bif')
+        """
+        supported_formats = {"bif", "uai", "xmlbif"}
+        if filename.split(".")[-1].lower() in supported_formats:
+            filetype = filename.split(".")[-1].lower()
+
+        if filetype == "bif":
+            from pgmpy.readwrite import BIFWriter
+
+            writer = BIFWriter(self)
+            writer.write_bif(filename=filename)
+
+        elif filetype == "uai":
+            from pgmpy.readwrite import UAIWriter
+
+            writer = UAIWriter(self)
+            writer.write_uai(filename=filename)
+
+        elif filetype == "xmlbif":
+            from pgmpy.readwrite import XMLBIFWriter
+
+            writer = XMLBIFWriter(self)
+            writer.write_xmlbif(filename=filename)
+
+    @staticmethod
+    def load(filename, filetype="bif"):
+        """
+        Writes the model to a file.
+
+        Parameters
+        ----------
+        filename: str
+            The path along with the filename where to write the file.
+
+        filetype: str (default: bif)
+            The format in which to write the model to file. Can be one of
+            the following: bif, uai, xmlbif.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> alarm = get_example_model('alarm')
+        >>> alarm.save('alarm.bif', filetype='bif')
+        >>> alarm_model = BayesianNetwork.load('alarm.bif', filetype='bif')
+        """
+        supported_formats = {"bif", "uai", "xmlbif"}
+        if filename.split(".")[-1].lower() in supported_formats:
+            filetype = filename.split(".")[-1].lower()
+
+        if filetype == "bif":
+            from pgmpy.readwrite import BIFReader
+
+            reader = BIFReader(path=filename)
+            return reader.get_model()
+
+        elif filetype == "uai":
+            from pgmpy.readwrite import UAIReader
+
+            reader = UAIReader(path=filename)
+            return reader.get_model()
+
+        elif filetype == "xmlbif":
+            from pgmpy.readwrite import XMLBIFReader
+
+            reader = XMLBIFReader(path=filename)
+            return reader.get_model()

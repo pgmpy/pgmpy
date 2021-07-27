@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import networkx as nx
@@ -369,6 +370,87 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertEqual(sorted(self.G1.nodes()), sorted(["intel"]))
         self.assertRaises(ValueError, self.G1.get_cpds, "diff")
         self.assertRaises(ValueError, self.G1.get_cpds, "grade")
+
+    def test_do(self):
+        # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
+        model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
+        cpd_s = TabularCPD(
+            variable="S",
+            variable_card=2,
+            values=[[0.5], [0.5]],
+            state_names={"S": ["m", "f"]},
+        )
+        cpd_t = TabularCPD(
+            variable="T",
+            variable_card=2,
+            values=[[0.25, 0.75], [0.75, 0.25]],
+            evidence=["S"],
+            evidence_card=[2],
+            state_names={"S": ["m", "f"], "T": [0, 1]},
+        )
+        cpd_c = TabularCPD(
+            variable="C",
+            variable_card=2,
+            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
+            evidence=["S", "T"],
+            evidence_card=[2, 2],
+            state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
+        )
+        model.add_cpds(cpd_s, cpd_t, cpd_c)
+
+        model_do_inplace = model.do(["T"], inplace=True)
+        model_do_new = model.do(["T"], inplace=False)
+
+        for m in [model_do_inplace, model_do_new]:
+            self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
+            self.assertEqual(len(m.cpds), 3)
+            np_test.assert_array_equal(
+                m.get_cpds(node="S").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="T").values, np.array([0.5, 0.5])
+            )
+            np_test.assert_array_equal(
+                m.get_cpds(node="C").values,
+                np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
+            )
+
+    def test_simulate(self):
+        asia = get_example_model("asia")
+        n_samples = int(1e3)
+        samples = asia.simulate(n_samples=n_samples)
+        self.assertEqual(samples.shape[0], n_samples)
+
+        # The probability values don't sum to 1 in this case.
+        barley = get_example_model("barley")
+        samples = barley.simulate(n_samples=n_samples)
+        self.assertEqual(samples.shape[0], n_samples)
+
+    def test_load_save(self):
+        test_model_small = get_example_model("alarm")
+        test_model_large = get_example_model("hailfinder")
+        for model in {test_model_small, test_model_large}:
+            for filetype in {"bif", "xmlbif"}:
+                model.save("model." + filetype)
+                model.save("model.model", filetype=filetype)
+
+                self.assertTrue(os.path.isfile("model." + filetype))
+                self.assertTrue(os.path.isfile("model.model"))
+
+                read_model1 = BayesianNetwork.load("model." + filetype)
+                read_model2 = BayesianNetwork.load("model.model", filetype=filetype)
+
+                self.assertEqual(set(read_model1.edges()), set(model.edges()))
+                self.assertEqual(set(read_model2.edges()), set(model.edges()))
+                self.assertEqual(set(read_model1.nodes()), set(model.nodes()))
+                self.assertEqual(set(read_model2.nodes()), set(model.nodes()))
+                for var in read_model1.nodes():
+                    read_cpd = read_model1.get_cpds(var)
+                    orig_cpd = model.get_cpds(var)
+                    self.assertEqual(read_cpd, orig_cpd)
+
+                os.remove("model." + filetype)
+                os.remove("model.model")
 
     def tearDown(self):
         del self.G
@@ -1211,61 +1293,6 @@ class TestBayesianModelFitPredict(unittest.TestCase):
         self.assertRaises(
             ValueError, self.model_connected.predict_probability, predict_data
         )
-
-    def test_do(self):
-        # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
-        model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
-        cpd_s = TabularCPD(
-            variable="S",
-            variable_card=2,
-            values=[[0.5], [0.5]],
-            state_names={"S": ["m", "f"]},
-        )
-        cpd_t = TabularCPD(
-            variable="T",
-            variable_card=2,
-            values=[[0.25, 0.75], [0.75, 0.25]],
-            evidence=["S"],
-            evidence_card=[2],
-            state_names={"S": ["m", "f"], "T": [0, 1]},
-        )
-        cpd_c = TabularCPD(
-            variable="C",
-            variable_card=2,
-            values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
-            evidence=["S", "T"],
-            evidence_card=[2, 2],
-            state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
-        )
-        model.add_cpds(cpd_s, cpd_t, cpd_c)
-
-        model_do_inplace = model.do(["T"], inplace=True)
-        model_do_new = model.do(["T"], inplace=False)
-
-        for m in [model_do_inplace, model_do_new]:
-            self.assertEqual(sorted(list(m.edges())), sorted([("S", "C"), ("T", "C")]))
-            self.assertEqual(len(m.cpds), 3)
-            np_test.assert_array_equal(
-                m.get_cpds(node="S").values, np.array([0.5, 0.5])
-            )
-            np_test.assert_array_equal(
-                m.get_cpds(node="T").values, np.array([0.5, 0.5])
-            )
-            np_test.assert_array_equal(
-                m.get_cpds(node="C").values,
-                np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
-            )
-
-    def test_simulate(self):
-        asia = get_example_model("asia")
-        n_samples = int(1e3)
-        samples = asia.simulate(n_samples=n_samples)
-        self.assertEqual(samples.shape[0], n_samples)
-
-        # The probability values don't sum to 1 in this case.
-        barley = get_example_model("barley")
-        samples = barley.simulate(n_samples=n_samples)
-        self.assertEqual(samples.shape[0], n_samples)
 
     def tearDown(self):
         del self.model_connected
