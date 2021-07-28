@@ -122,3 +122,11 @@ def log_probability_score(model, data):
 
     infer = BayesianModelProbability(model)
     return infer.score(data)
+
+
+def structure_score(model, data, score_method, **kwargs):
+    from pgmpy.estimators import K2Score, BDeuScore, BDsScore, BicScore
+
+    supported_methods = {'k2': K2Score, 'bdeu': BDeuScore, 'bds': BDsScore, 'bic': BicScore}
+
+    return supported_methods[score_method](data).score(model)
