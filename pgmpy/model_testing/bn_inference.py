@@ -62,7 +62,7 @@ class BayesianModelProbability(BayesianModelInference):
         evidence = cpd.variables[:0:-1]
         evidence_idx = [ordering.index(ev) for ev in evidence]
         evidence_val = data[:, evidence_idx]
-        evidence_no = np.empty_like(evidence_val)
+        evidence_no = np.empty_like(evidence_val, dtype=int)
         for i, ev in enumerate(evidence):
             evidence_no[:, i] = vec_translate(evidence_val[:, i], cpd.name_to_no[ev])
 

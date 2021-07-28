@@ -5,7 +5,6 @@ import numpy as np
 import networkx as nx
 
 from pgmpy.inference import Inference
-from pgmpy.models import BayesianNetwork
 from pgmpy import HAS_PANDAS
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
@@ -27,6 +26,8 @@ class BayesianModelInference(Inference):
         model: Bayesian Model
             model on which inference queries will be computed
         """
+        from pgmpy.models import BayesianNetwork
+
         if not isinstance(model, BayesianNetwork):
             raise TypeError(
                 "Model expected type: BayesianNetwork, got type: ", type(model)
