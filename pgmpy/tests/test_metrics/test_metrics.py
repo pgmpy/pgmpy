@@ -73,7 +73,7 @@ class TestStructureScore(unittest.TestCase):
         self.assertRaises(
             ValueError, structure_score, "I am wrong model type", self.data
         )
-        self.assertRaises(ValueError, correlation_score, self.alarm, self.data.values)
+        self.assertRaises(ValueError, structure_score, self.alarm, self.data.values)
 
         df_wrong_columns = self.data.copy()
         df_wrong_columns.columns = range(len(self.data.columns))
