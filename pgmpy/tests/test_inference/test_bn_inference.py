@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.models import BayesianNetwork
-from pgmpy.model_testing import BayesianModelProbability
+from pgmpy.metrics import BayesianModelProbability
 from pgmpy.factors.discrete import TabularCPD
 
 

@@ -67,7 +67,7 @@ def correlation_score(
     Examples
     --------
     >>> from pgmpy.utils import get_examples_model
-    >>> from pgmpy.model_testing import correlation_score
+    >>> from pgmpy.metrics import correlation_score
     >>> alarm = get_example_model("alarm")
     >>> data = alarm.simulate(int(1e4))
     >>> correlation_score(alarm, data, test="chi_square", significance_level=0.05)
@@ -147,7 +147,43 @@ def log_probability_score(model, data):
     return infer.score(data)
 
 
-def structure_score(model, data, score_method, **kwargs):
+def structure_score(model, data, scoring_method="bic", **kwargs):
+    """
+    Uses the standard model scoring methods to give a score for each structure.
+    The score doesn't have very straight forward interpretebility but can be
+    used to compare different models. A higher score represents a better fit.
+    This method only needs the model structure to compute the score and parameters
+    aren't required.
+
+    Parameters
+    ----------
+    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork instance
+        The model whose score needs to be computed.
+
+    data: pd.DataFrame instance
+        The dataset against which to score the model.
+
+    scoring_method: str ( k2 | bdeu | bds | bic )
+        The following four scoring methods are supported currently: 1) K2Score
+        2) BDeuScore 3) BDsScore 4) BicScore
+
+    kwargs: kwargs
+        Any additional parameters parameters that needs to be passed to the
+        scoring method. Check pgmpy.estimators.StructureScore for details.
+
+    Returns
+    -------
+    float: A score value for the model.
+
+    Examples
+    --------
+    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.metrics import structure_score
+    >>> model = get_example_model('alarm')
+    >>> data = model.simulate(int(1e4))
+    >>> structure_score(model, data, scoring_method="bic")
+    -106665.9383064447
+    """
     from pgmpy.estimators import K2Score, BDeuScore, BDsScore, BicScore
 
     supported_methods = {
@@ -157,4 +193,21 @@ def structure_score(model, data, score_method, **kwargs):
         "bic": BicScore,
     }
 
-    return supported_methods[score_method](data).score(model)
+    # Step 1: Test the inputs
+    if not isinstance(model, (DAG, BayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of pgmpy.base.DAG or pgmpy.models.BayesianNetwork. Got {type(model)}"
+        )
+    elif not isinstance(data, pd.DataFrame):
+        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+    elif set(model.nodes()) != set(data.columns):
+        raise ValueError(
+            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+        )
+    elif (scoring_method not in supported_methods.keys()) and (
+        not callable(scoring_method)
+    ):
+        raise ValueError(f"scoring method not supported and not a callable")
+
+    # Step 2: Comptue the score and return
+    return supported_methods[scoring_method](data).score(model, **kwargs)
