@@ -140,14 +140,53 @@ def correlation_score(
         return metric
 
 
-def log_probability_score(model, data):
+def log_likelihood_score(model, data):
+    """
+    Computes the log-likelihood of a given dataset i.e. P(data | model).
+
+    The log-likelihood measure can be used to check how well the specified
+    model describes the data. This method requires the parameters of the model to be
+    specified as well. Direct interpretation of this score is difficult but can
+    be used to compare the fit of two or more models. A higher score means ab
+    better fit.
+
+    Parameters
+    ----------
+    model: pgmpy.base.DAG or pgmpy.models.BayesianNetwork instance
+        The model whose score needs to be computed.
+
+    data: pd.DataFrame instance
+        The dataset against which to score the model.
+
+    Examples
+    --------
+    >>> from pgmpy.metrics import log_likelihood_score
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model("alarm")
+    >>> data = model.simulate(int(1e4))
+    >>> log_likelihood_score(model, data)
+    -103818.57516969478
+    """
+    # Step 1: Check the inputs
+    if not isinstance(model, BayesianNetwork):
+        raise ValueError(f"Only Bayesian Networks are supported. Got {type(model)}.")
+    elif not isinstance(data, pd.DataFrame):
+        raise ValueError(f"data must be a pandas.DataFrame instance. Got {type(data)}")
+    elif set(model.nodes()) != set(data.columns):
+        raise ValueError(
+            f"Missing columns in data. Can't find values for the following variables: { set(model.nodes()) - set(data.columns) }"
+        )
+
+    model.check_model()
+
+    # Step 2: Compute the log-likelihood
     from pgmpy.metrics import BayesianModelProbability
 
-    infer = BayesianModelProbability(model)
-    return infer.score(data)
+    return BayesianModelProbability(model).score(data)
 
 
 def structure_score(model, data, scoring_method="bic", **kwargs):
+
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretebility but can be
