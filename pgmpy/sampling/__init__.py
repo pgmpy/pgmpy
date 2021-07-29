@@ -4,6 +4,7 @@ from .base import (
     LeapFrog,
     ModifiedEuler,
     BaseSimulateHamiltonianDynamics,
+    BayesianModelInference,
     _return_samples,
 )
 from .HMC import HamiltonianMC, HamiltonianMCDA

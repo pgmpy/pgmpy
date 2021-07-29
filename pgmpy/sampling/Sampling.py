@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
-from pgmpy.inference import BayesianModelInference
+from pgmpy.sampling import BayesianModelInference
 from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
