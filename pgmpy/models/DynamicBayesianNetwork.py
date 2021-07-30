@@ -371,7 +371,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.get_interface_nodes()
         [('D', 0)]
         """
-        
+
         return [DynamicNode(edge[time_slice][0], edge[time_slice][1]) for edge in self.get_inter_edges()]
 
 
