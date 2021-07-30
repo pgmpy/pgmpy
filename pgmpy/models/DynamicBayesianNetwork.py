@@ -371,12 +371,9 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.get_interface_nodes()
         [('D', 0)]
         """
-        if not isinstance(time_slice, int) or time_slice < 0:
-            raise ValueError(
-                "The timeslice should be a positive value greater than or equal to zero"
-            )
+        
+        return [DynamicNode(edge[time_slice][0], edge[time_slice][1]) for edge in self.get_inter_edges()]
 
-        return [DynamicNode(edge[0][0], time_slice) for edge in self.get_inter_edges()]
 
     def get_slice_nodes(self, time_slice=0):
         """
