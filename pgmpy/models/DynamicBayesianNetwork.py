@@ -373,7 +373,7 @@ class DynamicBayesianNetwork(DAG):
         """
         if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError(
-                "The timeslice should be a positive value greater than or equal to zero"
+                f"The timeslice should be a positive integer greater than or equal to zero: ({type(time_slice)}, value: {time_slice})"
             )
 
         return [DynamicNode(edge[time_slice][0], edge[time_slice][1]) for edge in self.get_inter_edges()]
