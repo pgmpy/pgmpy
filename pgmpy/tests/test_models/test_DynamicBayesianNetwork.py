@@ -145,9 +145,8 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             sorted(self.network.get_interface_nodes()), [("D", 0), ("I", 0)]
         )
         
-        # TODO: add tests for the modified function
-        # self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
-        # self.assertRaises(ValueError, self.network.get_interface_nodes, "-")
+        self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
+        self.assertRaises(ValueError, self.network.get_interface_nodes, "-")
 
     def test_get_slice_nodes(self):
         self.network.add_edges_from(
