@@ -144,8 +144,35 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertListEqual(
             sorted(self.network.get_interface_nodes()), [("D", 0), ("I", 0)]
         )
+
         self.assertRaises(ValueError, self.network.get_interface_nodes, -1)
         self.assertRaises(ValueError, self.network.get_interface_nodes, "-")
+
+    def test_get_interface_nodes_1node2edges_divergent_edges(self):
+        # divergent interface edges from one node (a0->a1,b1). issue #1364
+        self.network.add_edges_from(
+            [
+                (("A", 0), ("A", 1)),
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("B", 1)),
+                (("A", 1), ("B", 1)),
+            ]
+        )
+        self.assertListEqual(self.network.get_interface_nodes(0), [("A", 0), ("A", 0)])
+        self.assertListEqual(self.network.get_interface_nodes(1), [("A", 1), ("B", 1)])
+
+    def test_get_interface_nodes_convergent_edges(self):
+        # convergent interface edges to one node(a0,b0->b1). issue #1364
+        self.network.add_edges_from(
+            [
+                (("A", 0), ("B", 1)),
+                (("B", 0), ("B", 1)),
+                (("A", 0), ("B", 0)),
+                (("A", 1), ("B", 1)),
+            ]
+        )
+        self.assertListEqual(self.network.get_interface_nodes(0), [("A", 0), ("B", 0)])
+        self.assertListEqual(self.network.get_interface_nodes(1), [("B", 1), ("B", 1)])
 
     def test_get_slice_nodes(self):
         self.network.add_edges_from(
