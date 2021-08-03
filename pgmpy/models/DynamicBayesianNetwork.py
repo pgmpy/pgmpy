@@ -29,9 +29,10 @@ class DynamicNode:
             raise IndexError(f"Index {idx} out of bounds.")
 
     def __str__(self) -> str:
-        return f"{self.node}_{self.time_slice}"
+        return f"({self.node}, {self.time_slice})"
 
-    __repr__ = __str__
+    def __repr__(self) -> str:
+        return f"<DiscreteNode({self.node}, {self.time_slice}) at {hex(id(self))}>"
 
     def __lt__(self, other) -> bool:
         if self.node < other.node:
