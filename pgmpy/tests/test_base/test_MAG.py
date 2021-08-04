@@ -338,4 +338,3 @@ class TestMixedGraphMethods(unittest.TestCase):
 class TestMAG(unittest.TestCase):
     def test_init(self):
         pass
-
