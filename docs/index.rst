@@ -9,7 +9,8 @@
 
 .. image:: logo.png
         :width: 250px
-
+        :align: center
+        :alt: logo
 |
 
 .. image:: https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev
@@ -21,16 +22,11 @@
 .. image:: https://api.codacy.com/project/badge/Grade/78a8256c90654c6892627f6d8bbcea14
    :target: https://www.codacy.com/gh/pgmpy/pgmpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pgmpy/pgmpy&amp;utm_campaign=Badge_Grade
 
-|br|
-
 .. image:: https://img.shields.io/pypi/dm/pgmpy.svg
    :target: https://pypistats.org/packages/pgmpy
 
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-
-.. image:: http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat
-   :target: http://pgmpy.org/pgmpy-benchmarks/
 
 |
 
@@ -51,8 +47,7 @@
 
    base/base.rst
 
-.. toctree::
-   :maxdepth: 3
+.. toctree:: :maxdepth: 3
    :hidden:
    :caption: Models
 
@@ -128,9 +123,49 @@
    readwrite/pomdpx.rst
    readwrite/xmlbelief.rst
 
+pgmpy is a pure python implementation for Bayesian Networks with a focus on
+modularity and extensibility. Implementations of various alogrithms for Structure
+Learning, Parameter Estimation, Approximate (Sampling Based) and Exact
+inference, and Causal Inference are available.
 
-All example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
-All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
+Supported Data Types
+====================
+
+.. list-table::
+   :header-rows: 1
+
+   * -
+     - Structure Learning
+     - Parameter Estimation
+     - Causal Inference
+     - Probabilistic Inference
+   * - Discrete
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+   * - Continuous
+     - Yes (only PC)
+     - No
+     - Yes (partial)
+     - No
+   * - Hybrid
+     - No
+     - No
+     - No
+     - No
+   * - Time Series
+     - No
+     - Yes
+     - No
+     - Yes
+
+Algorithms
+==========
+
+.. csv-table::
+   :file: algorithms.csv
+   :header-rows: 1
 
 .. toctree::
    :maxdepth: 1
@@ -165,6 +200,10 @@ All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_not
    detailed_notebooks/9. Reading and Writing from pgmpy file formats.ipynb
    detailed_notebooks/10. Learning Bayesian Networks from Data.ipynb
    detailed_notebooks/11. A Bayesian Network to model the influence of energy consumption on greenhouse gases in Italy.ipynb
+
+
+All example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
+All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
 
 Indices and tables
 ==================
