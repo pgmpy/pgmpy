@@ -17,6 +17,7 @@ class TestDynamicBayesianNetworkCreation(unittest.TestCase):
     def test_add_single_node(self):
         self.network.add_node("a")
         self.assertListEqual(self.network._nodes(), ["a"])
+        self.assertEqual(self.network.latents, set())
 
     def test_add_multiple_nodes(self):
         self.network.add_nodes_from(["a", "b", "c"])
@@ -368,6 +369,41 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         df.columns = wrong_colnames
         self.assertRaises(ValueError, model.fit, df)
 
+    def test_fit_latent(self):
+        model = DynamicBayesianNetwork(
+            [
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("C", 0)),
+                (("B", 0), ("D", 0)),
+                (("C", 0), ("D", 0)),
+                (("A", 0), ("A", 1)),
+                (("B", 0), ("B", 1)),
+                (("C", 0), ("C", 1)),
+                (("D", 0), ("D", 1)),
+            ],
+            latents=[("A", 0), ("A", 1)],
+        )
+
+        data = np.random.randint(low=0, high=2, size=(10000, 15))
+        colnames = []
+        for t in range(5):
+            colnames.extend([("B", t), ("C", t), ("D", t)])
+        df = pd.DataFrame(data, columns=colnames)
+        model.fit(df, estimator="em", max_iter=10)
+
+        self.assertTrue(model.check_model())
+        self.assertEqual(len(model.cpds), 8)
+        for cpd in model.cpds:
+            self.assertTrue(np.logical_or(cpd.values > 0.3, cpd.values < 0.7).all())
+
+        self.assertRaises(ValueError, model.fit, df, "bayesian")
+        self.assertRaises(ValueError, model.fit, df.values, "em")
+        wrong_colnames = []
+        for t in range(5):
+            wrong_colnames.extend([("B", t + 1), ("C", t + 1), ("D", t + 1)])
+        df.columns = wrong_colnames
+        self.assertRaises(ValueError, model.fit, df, "em")
+
     def test_get_markov_blanket(self):
         self.network.add_edges_from(
             [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
@@ -390,12 +426,14 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             [(("a", 0), ("a", 1)), (("a", 0), ("b", 1)), (("b", 0), ("b", 1))]
         )
 
-        active_trail = self.network.active_trail_nodes(("a", 0))
+        active_trail = self.network.active_trail_nodes(("a", 0), include_latents=True)
         self.assertListEqual(
             sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 1)]
         )
 
-        active_trail = self.network.active_trail_nodes(("a", 0), observed=[("b", 1)])
+        active_trail = self.network.active_trail_nodes(
+            ("a", 0), observed=[("b", 1)], include_latents=True
+        )
         self.assertListEqual(
             sorted(active_trail.get(("a", 0))), [("a", 0), ("a", 1), ("b", 0)]
         )

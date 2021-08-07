@@ -29,10 +29,9 @@ class DynamicNode:
             raise IndexError(f"Index {idx} out of bounds.")
 
     def __str__(self) -> str:
-        return f"({self.node}, {self.time_slice})"
+        return f"{self.node}_{self.time_slice}"
 
-    def __repr__(self) -> str:
-        return f"<DiscreteNode({self.node}, {self.time_slice}) at {hex(id(self))}>"
+    __repr__ = __str__
 
     def __lt__(self, other) -> bool:
         if self.node < other.node:
@@ -66,7 +65,7 @@ class DynamicNode:
 
 
 class DynamicBayesianNetwork(DAG):
-    def __init__(self, ebunch=None):
+    def __init__(self, ebunch=None, latents=set()):
         """
         Base class for Dynamic Bayesian Network
 
@@ -85,9 +84,7 @@ class DynamicBayesianNetwork(DAG):
         Examples
         --------
         Create an empty Dynamic Bayesian Network with no nodes and no edges:
-        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> dbn = DBN()
-
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN >>> dbn = DBN()
         Adding nodes and edges inside the dynamic bayesian network. A single
         node can be added using the method below. For adding edges we need to
         specify the time slice since edges can be across different time slices.
@@ -137,8 +134,9 @@ class DynamicBayesianNetwork(DAG):
             self.add_edges_from(ebunch)
         self.cpds = []
         self.cardinalities = defaultdict(int)
+        self.latents = latents
 
-    def add_node(self, node, **attr):
+    def add_node(self, node, latent=False, **attr):
         """
         Adds a single node to the Network
 
@@ -154,9 +152,11 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_node('A')
         ['A']
         """
-        super(DynamicBayesianNetwork, self).add_node(DynamicNode(node, 0), **attr)
+        super(DynamicBayesianNetwork, self).add_node(
+            DynamicNode(node, 0), latent=latent, **attr
+        )
 
-    def add_nodes_from(self, nodes, **attr):
+    def add_nodes_from(self, nodes, latent=False, **attr):
         """
         Add multiple nodes to the Network.
 
@@ -172,7 +172,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_nodes_from(['A', 'B', 'C'])
         """
         for node in nodes:
-            self.add_node(node)
+            self.add_node(node, latent=latent)
 
     def _nodes(self):
         """
@@ -758,10 +758,11 @@ class DynamicBayesianNetwork(DAG):
         from pgmpy.models import BayesianNetwork
 
         return BayesianNetwork(
-            ebunch=[(f"{u[0]}_{u[1]}", f"{v[0]}_{v[1]}") for (u, v) in self.edges()]
+            ebunch=[(f"{u[0]}_{u[1]}", f"{v[0]}_{v[1]}") for (u, v) in self.edges()],
+            latents=[f"{node[0]}_{node[1]}" for node in self.latents],
         )
 
-    def fit(self, data, estimator="MLE"):
+    def fit(self, data, estimator="MLE", **kwargs):
         """
         Learns the CPD of the model from data.
 
@@ -805,6 +806,32 @@ class DynamicBayesianNetwork(DAG):
         ...     colnames.extend([("A", t), ("B", t), ("C", t), ("D", t)])
         >>> df = pd.DataFrame(data, columns=colnames)
         >>> model.fit(df)
+
+        If the model has some latent variables, the Expecation Maximization estimator
+        can be used.
+
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> model = DBN(
+        >>>     [
+        >>>         (("A", 0), ("B", 0)),
+        >>>         (("A", 0), ("C", 0)),
+        >>>         (("B", 0), ("D", 0)),
+        >>>         (("C", 0), ("D", 0)),
+        >>>         (("A", 0), ("A", 1)),
+        >>>         (("B", 0), ("B", 1)),
+        >>>         (("C", 0), ("C", 1)),
+        >>>         (("D", 0), ("D", 1)),
+        >>>     ],
+        >>>     latents=[("A", 0), ("A", 1)]
+        >>> )
+        >>> data = np.random.randint(low=0, high=2, size=(1000, 20))
+        >>> colnames = []
+        >>> for t in range(5):
+        ...     colnames.extend([("B", t), ("C", t), ("D", t)])
+        >>> df = pd.DataFrame(data, columns=colnames)
+        >>> model.fit(df, estimator="em")
         """
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data must be a pandas dataframe. Got: {type(data)}")
@@ -812,24 +839,78 @@ class DynamicBayesianNetwork(DAG):
         if min(data.columns, key=lambda t: t[1])[1] != 0:
             raise ValueError("data column names must start from time slice 0.")
 
-        if estimator not in {"MLE", "mle"}:
-            raise ValueError("Only Maximum Likelihood Estimator is supported currently")
+        if estimator.lower() not in {"mle", "em"}:
+            raise ValueError(
+                "Only Maximum Likelihood and Expectation Maximization estimators are currently supported"
+            )
+        else:
+            estimator = estimator.lower()
 
         n_samples = data.shape[0]
         const_bn = self.get_constant_bn()
         n_time_slices = max(data.columns, key=lambda t: t[1])[1]
 
         for t_slice in range(n_time_slices):
-            colnames = [(node, t_slice) for node in self._nodes()]
-            colnames.extend([(node, t_slice + 1) for node in self._nodes()])
+            if estimator == "mle":
+                colnames = [(node, t_slice) for node in self._nodes()]
+                colnames.extend([(node, t_slice + 1) for node in self._nodes()])
 
-            df_slice = data.loc[:, colnames]
-            new_colnames = [f"{node}_{t - t_slice}" for (node, t) in df_slice.columns]
-            df_slice.columns = new_colnames
-            if t_slice == 0:
-                const_bn.fit(df_slice)
-            else:
-                const_bn.fit_update(df_slice, n_prev_samples=t_slice * n_samples)
+                df_slice = data.loc[:, colnames]
+                new_colnames = [
+                    f"{node}_{t - t_slice}" for (node, t) in df_slice.columns
+                ]
+                df_slice.columns = new_colnames
+
+                if t_slice == 0:
+                    const_bn.fit(df_slice, **kwargs)
+                else:
+                    const_bn.fit_update(
+                        df_slice, n_prev_samples=t_slice * n_samples, **kwargs
+                    )
+
+            elif estimator == "em":
+                from pgmpy.estimators import ExpectationMaximization as EM
+
+                latent_vars = set([var for var, time in self.latents])
+                colnames = [
+                    (node, t_slice) for node in self._nodes() if node not in latent_vars
+                ]
+                colnames.extend(
+                    [
+                        (node, t_slice + 1)
+                        for node in self._nodes()
+                        if node not in latent_vars
+                    ]
+                )
+
+                df_slice = data.loc[:, colnames]
+                new_colnames = [
+                    f"{node}_{t - t_slice}" for (node, t) in df_slice.columns
+                ]
+                df_slice.columns = new_colnames
+
+                if t_slice == 0:
+                    const_bn.fit(df_slice, estimator=EM, show_progress=False, **kwargs)
+                else:
+                    current_cpds = [cpd.copy() for cpd in const_bn.cpds]
+                    const_bn.fit(df_slice, estimator=EM, show_progress=False, **kwargs)
+                    final_cpds = []
+                    for curr_cpd in current_cpds:
+                        var = curr_cpd.variables[0]
+                        new_cpd = const_bn.get_cpds(var)
+                        weighted_cpd_values = curr_cpd.get_values() * (
+                            t_slice * n_samples
+                        ) + (new_cpd.get_values() * n_samples)
+                        final_cpds.append(
+                            TabularCPD(
+                                var,
+                                curr_cpd.cardinality[0],
+                                weighted_cpd_values,
+                                curr_cpd.variables[1:],
+                                curr_cpd.cardinality[1:],
+                            ).normalize(inplace=False)
+                        )
+                        const_bn.add_cpds(*final_cpds)
 
         cpds = []
         for cpd in const_bn.cpds:
