@@ -489,7 +489,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
-        # TODO: fix bugs in this
+        
         if node:
             if node not in super(DynamicBayesianNetwork, self).nodes():
                 raise ValueError("Node not present in the model.")
