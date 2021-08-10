@@ -226,6 +226,9 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
             {cpd.variable for cpd in self.network.get_cpds(time_slice=1)},
             {("D", 1), ("I", 1), ("G", 1)},
         )
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice=-1)
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice=[0, 1.1])
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice='abc')
 
     def test_add_multiple_cpds(self):
         self.network.add_edges_from(
