@@ -194,7 +194,7 @@ class DynamicBayesianNetwork(DAG):
                 ]
             )
         )
-
+    
     def _timeslices(self):
         return list(
             set(
@@ -499,7 +499,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
-
+        
         if time_slice is None:
             time_slices = self._timeslices()
         elif isinstance(time_slice, int) and time_slice >= 0:
@@ -508,13 +508,9 @@ class DynamicBayesianNetwork(DAG):
             if all(isinstance(n, int) for n in time_slice):
                 time_slices = time_slice
             else:
-                raise ValueError(
-                    "At least one element inside time_slice interable is not positive and/or integer"
-                )
+                raise ValueError("At least one element inside time_slice interable is not positive and/or integer")
         else:
-            raise ValueError(
-                "Time slice is not a positive integer neither a interable of integers"
-            )
+            raise ValueError("Time slice is not a positive integer neither a interable of integers")
 
         if node:
             if node not in super(DynamicBayesianNetwork, self).nodes():

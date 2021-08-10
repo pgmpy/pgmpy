@@ -113,7 +113,12 @@ class BayesianModelSampling(BayesianModelInference):
         return samples_df
 
     def rejection_sample(
-        self, evidence=[], size=1, include_latents=False, seed=None, show_progress=True,
+        self,
+        evidence=[],
+        size=1,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network,
