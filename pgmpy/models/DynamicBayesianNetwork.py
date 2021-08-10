@@ -194,6 +194,16 @@ class DynamicBayesianNetwork(DAG):
                 ]
             )
         )
+    
+    def _timeslices(self):
+        return list(
+            set(
+                [
+                    timeslice
+                    for node, timeslice in super(DynamicBayesianNetwork, self).nodes()
+                ]
+            )
+        )
 
     def add_edge(self, start, end, **kwargs):
         """
