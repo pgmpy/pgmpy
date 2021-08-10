@@ -32,7 +32,7 @@ class DynamicNode:
         return f"({self.node}, {self.time_slice})"
 
     def __repr__(self) -> str:
-        return f"<DiscreteNode({self.node}, {self.time_slice}) at {hex(id(self))}>"
+        return f"<DynamicNode({self.node}, {self.time_slice}) at {hex(id(self))}>"
 
     def __lt__(self, other) -> bool:
         if self.node < other.node:
