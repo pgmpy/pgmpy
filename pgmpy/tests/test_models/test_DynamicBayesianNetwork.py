@@ -211,7 +211,7 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         )
         self.network.initialize_initial_state()
         self.assertEqual(
-            set(self.network.get_cpds()),
+            set(self.network.get_cpds(time_slice=0)),
             set([self.diff_cpd, self.intel_cpd, self.grade_cpd]),
         )
         self.assertEqual(
