@@ -500,6 +500,15 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.get_cpds()
         """
         
+        if time_slice is None:
+            time_slices = self._timeslices()
+        elif isinstance(time_slice, int) and time_slice > 0:
+            time_slices = [time_slice]
+        elif all(isinstance(n, int) for n in time_slice):
+            time_slices = time_slice
+        else:
+            raise ValueError("Time slice is not a positive integer neither a list of integers")
+
         if node:
             if node not in super(DynamicBayesianNetwork, self).nodes():
                 raise ValueError("Node not present in the model.")
@@ -509,10 +518,11 @@ class DynamicBayesianNetwork(DAG):
                         return cpd
         else:
             return_cpds = []
-            for var in self.get_slice_nodes(time_slice=time_slice):
-                cpd = self.get_cpds(node=var)
-                if cpd:
-                    return_cpds.append(cpd)
+            for time_slice in time_slices:
+                for var in self.get_slice_nodes(time_slice=time_slice):
+                    cpd = self.get_cpds(node=var)
+                    if cpd:
+                        return_cpds.append(cpd)
             return return_cpds
 
     def remove_cpds(self, *cpds):
