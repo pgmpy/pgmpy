@@ -310,7 +310,7 @@ class DynamicBayesianNetwork(DAG):
         for edge in ebunch:
             self.add_edge(edge[0], edge[1])
 
-    def get_intra_edges(self, time_slice=None):
+    def get_intra_edges(self, time_slice=0):
         """
         Returns the intra slice edges present in the 2-TBN.
 
@@ -364,7 +364,7 @@ class DynamicBayesianNetwork(DAG):
         """
         return [edge for edge in self.edges() if edge[0][1] != edge[1][1]]
 
-    def get_interface_nodes(self, time_slice=None):
+    def get_interface_nodes(self, time_slice=0):
         """
         Returns the nodes in the first timeslice whose children are present in the first timeslice.
 
@@ -392,7 +392,7 @@ class DynamicBayesianNetwork(DAG):
             for edge in self.get_inter_edges()
         ]
 
-    def get_slice_nodes(self, time_slice=None):
+    def get_slice_nodes(self, time_slice=0):
         """
         Returns the nodes present in a particular timeslice
 
