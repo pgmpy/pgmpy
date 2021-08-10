@@ -757,9 +757,7 @@ class DynamicBayesianNetwork(DAG):
         """
         from pgmpy.models import BayesianNetwork
 
-        return BayesianNetwork(
-            ebunch=[(f"{u[0]}_{u[1]}", f"{v[0]}_{v[1]}") for (u, v) in self.edges()]
-        )
+        return BayesianNetwork(ebunch=self.edges())
 
     def fit(self, data, estimator="MLE"):
         """
@@ -824,7 +822,9 @@ class DynamicBayesianNetwork(DAG):
             colnames.extend([(node, t_slice + 1) for node in self._nodes()])
 
             df_slice = data.loc[:, colnames]
-            new_colnames = [f"{node}_{t - t_slice}" for (node, t) in df_slice.columns]
+            new_colnames = [
+                DynamicNode(node, t - t_slice) for (node, t) in df_slice.columns
+            ]
             df_slice.columns = new_colnames
             if t_slice == 0:
                 const_bn.fit(df_slice)
@@ -833,14 +833,12 @@ class DynamicBayesianNetwork(DAG):
 
         cpds = []
         for cpd in const_bn.cpds:
-            variables = [var.split("_") for var in cpd.variables]
-            variables = [(v, int(t)) for v, t in variables]
             cpds.append(
                 TabularCPD(
-                    variable=variables[0],
+                    variable=cpd.variables[0],
                     variable_card=cpd.variable_card,
                     values=cpd.get_values(),
-                    evidence=variables[1:],
+                    evidence=cpd.variables[1:],
                     evidence_card=cpd.cardinality[1:],
                 )
             )
