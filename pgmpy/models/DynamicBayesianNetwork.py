@@ -784,7 +784,11 @@ class DynamicBayesianNetwork(DAG):
         """
         from pgmpy.models import BayesianNetwork
 
-        return BayesianNetwork(ebunch=self.edges())
+        bn = BayesianNetwork(
+            ebunch=[(u.to_tuple(), v.to_tuple()) for u, v in self.edges()]
+        )
+        bn.add_cpds(*self.cpds)
+        return bn
 
     def fit(self, data, estimator="MLE"):
         """
@@ -893,3 +897,38 @@ class DynamicBayesianNetwork(DAG):
         return super(DynamicBayesianNetwork, self).active_trail_nodes(
             variables, observed, include_latents
         )
+
+    def simulate(
+        self,
+        n_samples=10,
+        n_time_slices=2,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+    ):
+        """
+        Simulates data from the model.
+        """
+        from pgmpy.sampling import BayesianModelSampling
+
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=n_time_slices * len(self._nodes()))
+
+        sampled = self.get_constant_bn().simulate(
+            n_samples=n_samples, include_latents=True, seed=seed, show_progress=False
+        )
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.update(len(self._nodes()) * 2)
+
+        topological_nodes = nx.algorithms.dag.topological_sort(
+            dbn.subgraph(dbn.get_slice_nodes(time_slice=1))
+        )
+        for t_slice in range(2, n_time_slice):
+            for node in topological_nodes:
+                cpd = self.get_cpds(node)
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack(
+                        [sampled[(var, t_slice - 1)] for var, _ in evidence]
+                    )
