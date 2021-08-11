@@ -3,11 +3,13 @@ import itertools
 
 import numpy as np
 import pandas as pd
+import networkx as nx
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.sampling import BayesianModelInference
 from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
+from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -558,3 +560,83 @@ class GibbsSampling(MarkovChain):
                 yield self.state[:]
             else:
                 yield [s for s in self.state if i not in self.latents]
+
+
+class DBNSampling(BayesianModelInference):
+    def __init__(self, model):
+        if not isinstance(model, DBN):
+            raise TypeError(
+                f"Model expected type: DynamicBayesianNetwork, got type: {type(model)}"
+            )
+        self.dbn = model
+        self.const_bn = model.get_constant_bn()
+        super(DBNSampling, self).__init__(self.const_bn)
+
+    def forward_sample(
+        self,
+        size=10,
+        n_time_slices=2,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+    ):
+
+        # Step 0: Argument checks
+        if n_time_slices <= 0:
+            raise ValueError("n_time_slices must be greater than 0.")
+
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=n_time_slices * len(self.dbn._nodes()))
+
+        # Step 1: Generate samples from the first two time slices.
+        sampled = self.const_bn.simulate(
+            n_samples=size, include_latents=True, seed=seed, show_progress=False
+        )
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.update(len(self.dbn._nodes()) * 2)
+
+        # Step 1.1: If n_time_slices <= 2, return teh values
+        if n_time_slices == 1:
+            return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+        elif n_time_slices == 2:
+            return sampled
+
+        # Step 2: Iterate over times slices > 2 and generate samples considering
+        #         values from previous time slice as evidence.
+        topological_nodes = nx.algorithms.dag.topological_sort(
+            self.dbn.subgraph(self.dbn.get_slice_nodes(time_slice=1))
+        )
+
+        for t_slice in range(2, n_time_slices):
+            for node in topological_nodes:
+                cpd = self.dbn.get_cpds(node)
+                states = range(cpd.cardinality[0])
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack(
+                        [
+                            sampled[(i, t_slice - 1)]
+                            if t == 0
+                            else sampled[(i, t_slice)]
+                            for i, t in evidence
+                        ]
+                    )
+                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                        variable=node
+                    )
+                    unique, inverse = np.unique(
+                        evidence_values.T, axis=0, return_inverse=True
+                    )
+                    weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                        inverse
+                    ]
+                    sampled[(node[0], t_slice)] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
+                else:
+                    weightes = cpd.values
+                    sampled[(node[0], t_slice)] = sample_discrete(states, weight, size)
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.close()
