@@ -1002,7 +1002,9 @@ class BayesianNetwork(DAG):
                 cpd.marginalize(cpd.variables[1:], inplace=True)
         return adj_model
 
-    def simulate(self, n_samples=10, include_latents=False, seed=None):
+    def simulate(
+        self, n_samples=10, include_latents=False, seed=None, show_progress=True
+    ):
         """
         Simulates data from the given model. Internally uses
         BayesianModelSampling.forward_sample to generate the data.
@@ -1033,7 +1035,10 @@ class BayesianNetwork(DAG):
 
         self.check_model()
         return BayesianModelSampling(self).forward_sample(
-            size=n_samples, include_latents=include_latents, seed=seed
+            size=n_samples,
+            include_latents=include_latents,
+            seed=seed,
+            show_progress=show_progress,
         )
 
     def save(self, filename, filetype="bif"):
