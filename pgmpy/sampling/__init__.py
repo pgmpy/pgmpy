@@ -9,7 +9,7 @@ from .base import (
 )
 from .HMC import HamiltonianMC, HamiltonianMCDA
 from .NUTS import NoUTurnSampler, NoUTurnSamplerDA
-from .Sampling import GibbsSampling, BayesianModelSampling
+from .Sampling import GibbsSampling, BayesianModelSampling, DBNSampling
 
 __all__ = [
     "LeapFrog",
@@ -24,4 +24,5 @@ __all__ = [
     "NoUTurnSamplerDA",
     "BayesianModelSampling",
     "GibbsSampling",
+    "DBNSampling",
 ]
