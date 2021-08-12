@@ -211,13 +211,24 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         )
         self.network.initialize_initial_state()
         self.assertEqual(
-            set(self.network.get_cpds()),
+            {cpd.variable for cpd in self.network.get_cpds()},
+            {("I", 1), ("D", 0), ("G", 1), ("I", 0), ("G", 0), ("D", 1)},
+        )
+        self.assertEqual(
+            {cpd.variable for cpd in self.network.get_cpds(time_slice=[0, 1])},
+            {("I", 1), ("D", 0), ("G", 1), ("I", 0), ("G", 0), ("D", 1)},
+        )
+        self.assertEqual(
+            set(self.network.get_cpds(time_slice=0)),
             set([self.diff_cpd, self.intel_cpd, self.grade_cpd]),
         )
         self.assertEqual(
             {cpd.variable for cpd in self.network.get_cpds(time_slice=1)},
             {("D", 1), ("I", 1), ("G", 1)},
         )
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice=-1)
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice=[0, 1.1])
+        self.assertRaises(ValueError, self.network.get_cpds, time_slice="abc")
 
     def test_add_multiple_cpds(self):
         self.network.add_edges_from(
