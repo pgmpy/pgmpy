@@ -1006,7 +1006,7 @@ class BayesianNetwork(DAG):
         self,
         n_samples=10,
         do=None,
-        evidence={},
+        evidence=None,
         virtual_evidence=None,
         include_latents=False,
         seed=None,
