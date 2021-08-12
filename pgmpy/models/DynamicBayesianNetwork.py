@@ -195,6 +195,16 @@ class DynamicBayesianNetwork(DAG):
             )
         )
 
+    def _timeslices(self):
+        return list(
+            set(
+                [
+                    timeslice
+                    for node, timeslice in super(DynamicBayesianNetwork, self).nodes()
+                ]
+            )
+        )
+
     def add_edge(self, start, end, **kwargs):
         """
         Add an edge between two nodes.
@@ -462,7 +472,7 @@ class DynamicBayesianNetwork(DAG):
 
         self.cpds.extend(cpds)
 
-    def get_cpds(self, node=None, time_slice=0):
+    def get_cpds(self, node=None, time_slice=None):
         """
         Returns the CPDs that have been associated with the network.
 
@@ -489,7 +499,23 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
         """
-        # TODO: fix bugs in this
+
+        if time_slice is None:
+            time_slices = self._timeslices()
+        elif isinstance(time_slice, int) and time_slice >= 0:
+            time_slices = [time_slice]
+        elif isinstance(time_slice, typing.Iterable):
+            if all(isinstance(n, int) for n in time_slice):
+                time_slices = time_slice
+            else:
+                raise ValueError(
+                    "At least one element inside time_slice interable is not positive and/or integer"
+                )
+        else:
+            raise ValueError(
+                "Time slice is not a positive integer neither a interable of integers"
+            )
+
         if node:
             if node not in super(DynamicBayesianNetwork, self).nodes():
                 raise ValueError("Node not present in the model.")
@@ -499,10 +525,11 @@ class DynamicBayesianNetwork(DAG):
                         return cpd
         else:
             return_cpds = []
-            for var in self.get_slice_nodes(time_slice=time_slice):
-                cpd = self.get_cpds(node=var)
-                if cpd:
-                    return_cpds.append(cpd)
+            for time_slice in time_slices:
+                for var in self.get_slice_nodes(time_slice=time_slice):
+                    cpd = self.get_cpds(node=var)
+                    if cpd:
+                        return_cpds.append(cpd)
             return return_cpds
 
     def remove_cpds(self, *cpds):
