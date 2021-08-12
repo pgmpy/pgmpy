@@ -30,7 +30,7 @@ class BayesianModelInference(Inference):
 
         if not isinstance(model, BayesianNetwork):
             raise TypeError(
-                "Model expected type: BayesianNetwork, got type: ", type(model)
+                f"Model expected type: BayesianNetwork, got type: {type(model)}"
             )
         super(BayesianModelInference, self).__init__(model)
         self._initialize_structures()
