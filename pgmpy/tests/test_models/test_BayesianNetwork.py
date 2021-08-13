@@ -1421,3 +1421,95 @@ class TestDAGCPDOperations(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestSimulation(unittest.TestCase):
+    def setUp(self):
+        from pgmpy.inference import VariableElimination
+        from pgmpy.inference import CausalInference
+
+        self.alarm = get_example_model("alarm")
+        self.infer_alarm = VariableElimination(self.alarm)
+        self.causal_infer_alarm = CausalInference(self.alarm)
+
+        self.con_model = BayesianNetwork(
+            [("Z", "X"), ("X", "Y"), ("U", "X"), ("U", "Y")]
+        )
+        cpd_z = TabularCPD("Z", 2, [[0.2], [0.8]])
+        cpd_u = TabularCPD("U", 2, [[0.3], [0.7]])
+        cpd_x = TabularCPD(
+            "X", 2, [[0.1, 0.2, 0.4, 0.7], [0.9, 0.8, 0.6, 0.3]], ["U", "Z"], [2, 2]
+        )
+        cpd_y = TabularCPD(
+            "Y", 2, [[0.2, 0.1, 0.6, 0.4], [0.8, 0.9, 0.4, 0.6]], ["U", "X"], [2, 2]
+        )
+        self.con_model.add_cpds(cpd_x, cpd_y, cpd_z, cpd_u)
+        self.infer_con_model = VariableElimination(self.con_model)
+        self.causal_infer_con_model = CausalInference(self.con_model)
+
+    def _test_con_marginals_equal(self, con_model_samples, inference_marginals):
+        sample_marginals = {
+            node: con_model_samples[node].value_counts() / con_model_samples.shape[0]
+            for node in inference_marginals.keys()
+        }
+        for node in inference_marginals.keys():
+            for state in [0, 1]:
+                self.assertEqual(
+                    round(inference_marginals[node].get_value(**{node: state}), 1),
+                    round(sample_marginals[node].loc[state], 1),
+                )
+
+    def _test_alarm_marginals_equal(self, alarm_samples, inference_marginals):
+        sample_marginals = {
+            node: alarm_samples[node].value_counts() / alarm_samples.shape[0]
+            for node in inference_marginals.keys()
+        }
+        for node in inference_marginals.keys():
+            cpd = self.alarm.get_cpds(node)
+            states = cpd.state_names[node]
+            for state in states:
+                self.assertEqual(
+                    round(inference_marginals[node].get_value(**{node: state}), 1),
+                    round(sample_marginals[node].loc[state], 1),
+                )
+
+    def test_simulate(self):
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4))
+        con_inference_marginals = self.infer_con_model.query(
+            self.con_model.nodes(), joint=False
+        )
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
+
+        nodes = list(self.alarm.nodes())[:5]
+        alarm_samples = self.alarm.simulate(n_samples=int(1e4))
+        alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
+        self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_simulate_evidence(self):
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), evidence={"U": 1}
+        )
+        con_inference_marginals = self.infer_con_model.query(
+            ["X", "Y", "Z"], joint=False, evidence={"U": 1}
+        )
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
+
+        nodes = list(self.alarm.nodes())[:5]
+        alarm_samples = self.alarm.simulate(
+            n_samples=int(1e4), evidence={"MINVOLSET": "HIGH"}
+        )
+        alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
+        self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_simulate_intervention(self):
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4), do={"X": 1})
+        con_inference_marginals = {
+            "Y": self.causal_infer_con_model.query(["Y"], do={"X": 1})
+        }
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
+
+        alarm_samples = self.alarm.simulate(n_samples=int(1e4), do={"CVP": "LOW"})
+        alarm_inference_marginals = {
+            "HISTORY": self.causal_infer_alarm.query(["HISTORY"], do={"CVP": "LOW"})
+        }
+        self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)

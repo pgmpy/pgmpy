@@ -1089,9 +1089,6 @@ class BayesianNetwork(DAG):
                 evidence[new_var] = 0
                 if var in do.keys():
                     del evidence[var]
-        import pdb
-
-        pdb.set_trace()
 
         # Step 3: If no evidence do a forward sampling
         if evidence is None:
