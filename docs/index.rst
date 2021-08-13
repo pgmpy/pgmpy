@@ -120,6 +120,13 @@
 .. toctree::
    :maxdepth: 3
    :hidden:
+   :caption: Model Testing
+
+   metrics/metrics.rst
+
+.. toctree::
+   :maxdepth: 3
+   :hidden:
    :caption: Input/Output
 
    readwrite/bif.rst
