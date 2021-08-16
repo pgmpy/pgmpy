@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as np_test
+from scipy.special import softmax
 
 from pgmpy.inference import DBNInference
 from pgmpy.models import DynamicBayesianNetwork
@@ -119,3 +120,72 @@ class TestDBNInference(unittest.TestCase):
         np_test.assert_array_almost_equal(
             query_result[("X", 1)].values, np.array([0.7621772, 0.2378228])
         )
+
+    def test_super_conncted_network(self):
+        edges = [
+            (("A", 0), ("A", 1)),
+            (("A", 0), ("B", 1)),
+            (("B", 0), ("A", 1)),
+            (("B", 0), ("B", 1)),
+            (("L", 0), ("A", 0)),
+            (("L", 0), ("B", 0)),
+            (("L", 0), ("L", 1)),
+            (("L", 1), ("A", 1)),
+            (("L", 1), ("B", 1)),
+        ]
+
+        bnet = DynamicBayesianNetwork(edges)  # , latents=set('L'))
+
+        bnet_cpds = []
+        bnet_cpds.append(
+            TabularCPD(
+                ("A", 0),
+                2,
+                softmax(np.ones((2, 2)), axis=0),
+                evidence=[("L", 0)],
+                evidence_card=[2],
+            )
+        )
+        bnet_cpds.append(
+            TabularCPD(
+                ("B", 0),
+                2,
+                softmax(np.ones((2, 2)), axis=0),
+                evidence=[("L", 0)],
+                evidence_card=[2],
+            )
+        )
+        bnet_cpds.append(TabularCPD(("L", 0), 2, softmax(np.ones((2, 1)), axis=0)))
+        bnet_cpds.append(
+            TabularCPD(
+                ("A", 1),
+                2,
+                softmax(np.ones((2, 8)), axis=0),
+                evidence=[("A", 0), ("B", 0), ("L", 1)],
+                evidence_card=[2, 2, 2],
+            )
+        )
+        bnet_cpds.append(
+            TabularCPD(
+                ("B", 1),
+                2,
+                softmax(np.ones((2, 8)), axis=0),
+                evidence=[("A", 0), ("B", 0), ("L", 1)],
+                evidence_card=[2, 2, 2],
+            )
+        )
+        bnet_cpds.append(
+            TabularCPD(
+                ("L", 1),
+                2,
+                softmax(np.ones((2, 2)), axis=0),
+                evidence=[("L", 0)],
+                evidence_card=[2],
+            )
+        )
+
+        bnet.add_cpds(*bnet_cpds)
+
+        ie = DBNInference(bnet)
+
+        # TODO: an assertion to test a complex network
