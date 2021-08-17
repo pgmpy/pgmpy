@@ -1143,6 +1143,12 @@ class BayesianNetwork(DAG):
         # Step 4: If evidence; do a rejection sampling
         else:
             samples = BayesianModelSampling(model).rejection_sample(
+                    size=n_samples,
+                    evidence=[(k, v) for k, v in evidence.items()],
+                    include_latents=include_latents,
+                    seed=seed,
+                    show_progress=show_progress,
+                    )
 
         # Step 5: Postprocess and return
         if include_latents:
@@ -1150,11 +1156,6 @@ class BayesianNetwork(DAG):
         else:
             return samples.loc[:, set(self.nodes()) - self.latents]
 
-        # Step 5: Postprocess and return
-        if include_latents:
-            return samples
-        else:
-            return samples.loc[:, set(self.nodes()) - self.latents]
 
     def save(self, filename, filetype="bif"):
         """
