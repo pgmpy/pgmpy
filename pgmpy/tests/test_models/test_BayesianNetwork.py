@@ -1647,8 +1647,15 @@ class TestSimulation(unittest.TestCase):
 
         # Simulates hard evidence MINVOLSET=HIGH
         nodes = list(self.alarm.nodes())[:5]
-        virtual_evidence = TabularCPD("MINVOLSET", 3, [[0.0], [0.0], [1.0]], state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})
-        alarm_samples = self.alarm.simulate(n_samples=int(1e4), virtual_evidence=[virtual_evidence])
+        virtual_evidence = TabularCPD(
+            "MINVOLSET",
+            3,
+            [[0.0], [0.0], [1.0]],
+            state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]},
+        )
+        alarm_samples = self.alarm.simulate(
+            n_samples=int(1e4), virtual_evidence=[virtual_evidence]
+        )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
