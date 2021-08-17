@@ -1150,6 +1150,12 @@ class BayesianNetwork(DAG):
         else:
             return samples.loc[:, set(self.nodes()) - self.latents]
 
+        # Step 5: Postprocess and return
+        if include_latents:
+            return samples
+        else:
+            return samples.loc[:, set(self.nodes()) - self.latents]
+
     def save(self, filename, filetype="bif"):
         """
         Writes the model to a file.

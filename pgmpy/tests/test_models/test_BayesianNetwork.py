@@ -1637,7 +1637,21 @@ class TestSimulation(unittest.TestCase):
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_virtual_evidence(self):
-        pass
+        # Use virtual evidence argument to simulate hard evidence and match values from inference.
+
+        # Simulates hard evidence U = 1
+        virtual_evidence = TabularCPD("U", 2, [[0.0], [1.0]])
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4), virtual_evidence=[virtual_evidence])
+        con_inference_marginals = self.infer_con_model.query(['X', 'Y', 'Z'], joint=False, evidence={'U': 1})
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
+
+        # Simulates hard evidence MINVOLSET=HIGH
+        nodes = list(self.alarm.nodes())[:5]
+        virtual_evidence = TabularCPD("MINVOLSET", 3, [[0.0], [0.0], [1.0]], state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})
+        alarm_samples = self.alarm.simulate(n_samples=int(1e4), virtual_evidence=[virtual_evidence])
+        alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
+        self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_virtual_intervention(self):
+        # Use virtual evidence argument to simulate hard evidence and match values from inference
         pass
