@@ -1641,8 +1641,12 @@ class TestSimulation(unittest.TestCase):
 
         # Simulates hard evidence U = 1
         virtual_evidence = TabularCPD("U", 2, [[0.0], [1.0]])
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4), virtual_evidence=[virtual_evidence])
-        con_inference_marginals = self.infer_con_model.query(['X', 'Y', 'Z'], joint=False, evidence={'U': 1})
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), virtual_evidence=[virtual_evidence]
+        )
+        con_inference_marginals = self.infer_con_model.query(
+            ["X", "Y", "Z"], joint=False, evidence={"U": 1}
+        )
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         # Simulates hard evidence MINVOLSET=HIGH
