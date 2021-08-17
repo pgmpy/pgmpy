@@ -1508,7 +1508,7 @@ class TestSimulation(unittest.TestCase):
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_intervention(self):
-        con_model_samples = self.con_model.simulate(n_samples=int(1e5), do={"X": 1})
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4), do={"X": 1})
         con_inference_marginals = {
             "Y": self.causal_infer_con_model.query(["Y"], do={"X": 1})
         }
@@ -1635,3 +1635,9 @@ class TestSimulation(unittest.TestCase):
             ),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+    def test_simulate_virtual_evidence(self):
+        pass
+
+    def test_simulate_virtual_intervention(self):
+        pass
