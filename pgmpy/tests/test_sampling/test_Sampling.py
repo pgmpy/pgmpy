@@ -1,6 +1,7 @@
 import unittest
 
 from mock import MagicMock, patch
+import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
 from pgmpy.models import BayesianNetwork, MarkovNetwork
@@ -454,16 +455,6 @@ class TestGibbsSampling(unittest.TestCase):
         del self.bayesian_model
         del self.markov_model
 
-    @patch(
-        "pgmpy.sampling.GibbsSampling._get_kernel_from_bayesian_model", autospec=True
-    )
-    @patch("pgmpy.models.MarkovChain.__init__", autospec=True)
-    def test_init_bayesian_model(self, init, get_kernel):
-        model = MagicMock(spec_set=BayesianNetwork)
-        gibbs = GibbsSampling(model)
-        init.assert_called_once_with(gibbs)
-        get_kernel.assert_called_once_with(gibbs, model)
-
     @patch("pgmpy.sampling.GibbsSampling._get_kernel_from_markov_model", autospec=True)
     def test_init_markov_model(self, get_kernel):
         model = MagicMock(spec_set=MarkovNetwork)
@@ -493,6 +484,24 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertTrue(set(sample["diff"]).issubset({0, 1}))
         self.assertTrue(set(sample["intel"]).issubset({0, 1}))
         self.assertTrue(set(sample["grade"]).issubset({0, 1, 2}))
+
+    def test_sample_limit(self):
+        samples = self.gibbs.sample(size=int(1e4))
+        marginal_prob = VariableElimination(self.bayesian_model).query(
+            list(self.bayesian_model.nodes()), joint=False
+        )
+        sample_prob = {
+            node: samples.loc[:, node].value_counts() / 1e4
+            for node in self.bayesian_model.nodes()
+        }
+        for node in self.bayesian_model.nodes():
+            self.assertTrue(
+                np.allclose(
+                    sorted(marginal_prob[node].values),
+                    sorted(sample_prob[node].values),
+                    atol=0.05,
+                )
+            )
 
     @patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
