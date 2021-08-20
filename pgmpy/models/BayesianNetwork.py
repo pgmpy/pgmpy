@@ -1008,6 +1008,7 @@ class BayesianNetwork(DAG):
         do=None,
         evidence=None,
         virtual_evidence=None,
+        virtual_intervention=None,
         include_latents=False,
         seed=None,
         show_progress=True,
