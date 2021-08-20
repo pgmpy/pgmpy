@@ -212,6 +212,9 @@ class TestDoQuery(unittest.TestCase):
         self.example_model = self.get_example_model()
         self.example_infer = CausalInference(self.example_model)
 
+        self.iv_model = self.get_iv_model()
+        self.iv_infer = CausalInference(self.iv_model)
+
     def get_simpson_model(self):
         simpson_model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
@@ -275,8 +278,35 @@ class TestDoQuery(unittest.TestCase):
 
         return example_model
 
+    def get_iv_model(self):
+        # Model structure: Z -> X -> Y; X <- U -> Y
+        example_model = BayesianNetwork(
+            [("Z", "X"), ("X", "Y"), ("U", "X"), ("U", "Y")]
+        )
+        cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
+        cpd_u = TabularCPD(variable="U", variable_card=2, values=[[0.7], [0.3]])
+        cpd_x = TabularCPD(
+            variable="X",
+            variable_card=2,
+            values=[[0.1, 0.3, 0.2, 0.9], [0.9, 0.7, 0.8, 0.1]],
+            evidence=["U", "Z"],
+            evidence_card=[2, 2],
+        )
+        cpd_y = TabularCPD(
+            variable="Y",
+            variable_card=2,
+            values=[[0.5, 0.8, 0.2, 0.7], [0.5, 0.2, 0.8, 0.3]],
+            evidence=["U", "X"],
+            evidence_card=[2, 2],
+        )
+
+        example_model.add_cpds(cpd_z, cpd_u, cpd_x, cpd_y)
+
+        return example_model
+
     def test_query(self):
         for algo in ["ve", "bp"]:
+            # Simpson model queries
             query_nodo1 = self.simp_infer.query(
                 variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo
             )
@@ -300,8 +330,25 @@ class TestDoQuery(unittest.TestCase):
             query3 = self.simp_infer.query(["C"], adjustment_set=["S"])
             np_test.assert_array_almost_equal(query3.values, np.array([0.55, 0.45]))
 
-    def test_adjustment_query(self):
+            # IV model queries
+            query_nodo1 = self.iv_infer.query(["Z"], do=None, inference_algo=algo)
+            np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.2, 0.8]))
 
+            query_nodo2 = self.iv_infer.query(["X"], do=None, evidence={"Z": 1})
+            np_test.assert_array_almost_equal(
+                query_nodo2.values, np.array([0.48, 0.52])
+            )
+
+            query1 = self.iv_infer.query(["X"], do={"Z": 1})
+            np_test.assert_array_almost_equal(query1.values, np.array([0.48, 0.52]))
+
+            query2 = self.iv_infer.query(["Y"], do={"X": 1})
+            np_test.assert_array_almost_equal(query2.values, np.array([0.77, 0.23]))
+
+            query3 = self.iv_infer.query(["Y"], do={"X": 1}, adjustment_set={"U"})
+            np_test.assert_array_almost_equal(query3.values, np.array([0.77, 0.23]))
+
+    def test_adjustment_query(self):
         for algo in ["ve", "bp"]:
             # Test adjustment with do operation.
             query1 = self.example_infer.query(

@@ -603,8 +603,13 @@ class CausalInference(object):
 
         infer = inference_algo(self.model)
 
-        # Step 3: If no do variable specified, do a normal probabilistic inference.
+        # Step 3.1: If no do variable specified, do a normal probabilistic inference.
         if do == {}:
+            return infer.query(variables, evidence, show_progress=False)
+        # Step 3.2: If no adjustment is required, do a normal probabilistic
+        #           inference with do variables as the evidence.
+        elif len(adjustment_set) == 0:
+            evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
         # Step 3: Compute \sum_{z} p(variables | do, z) p(z)

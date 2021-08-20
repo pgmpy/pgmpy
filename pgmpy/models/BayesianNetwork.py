@@ -1013,19 +1013,40 @@ class BayesianNetwork(DAG):
         show_progress=True,
     ):
         """
-        Simulates data from the given model. Internally uses
-        BayesianModelSampling.forward_sample to generate the data.
+        Simulates data from the given model. Internally uses methods from
+        pgmpy.sampling.BayesianModelSampling to generate the data.
 
         Parameters
         ----------
         n_samples: int
             The number of data samples to simulate from the model.
 
+        do: dict
+            The interventions to apply to the model. dict should be of the form
+            {variable_name: state}
+
+        evidence: dict
+            Observed evidence to apply to the model. dict should be of the form
+            {variable_name: state}
+
+        virtual_evidence: list
+            Probabilistically apply evidence to the model. `virtual_evidence` should
+            be a list of `pgmpy.factors.discrete.TabularCPD` objects specifying the
+            virtual probabilities.
+
+        virtual_intervention: list
+            Also known as soft intervention. `virtual_intervention` should be a list
+            of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
+            intervention probabilities.
+
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
         seed: int (default: None)
             If a value is provided, sets the seed for numpy.random.
+
+        show_progress: bool
+            If True, shows a progress bar when generating samples.
 
         Returns
         -------
@@ -1034,29 +1055,50 @@ class BayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
+
+        Simulation without and evidence or intervention
+        >>> model = get_example_model('alarm')
         >>> model.simulate(n_samples=10)
 
+        Simulation with the hard evidence: MINVOLSET = HIGH
+        >>> model.simulate(n_samples=10, evidence={"MINVOLSET": "HIGH"})
+
+        Simulation with hard intervention: CVP = LOW
+        >>> model.simulate(n_samples=10, do={"CVP": "LOW"})
+
+        Simulation with virtual/soft evidence: p(MINVOLSET=LOW) = 0.8, p(MINVOLSET=HIGH) = 0.2,
+        p(MINVOLSET=NORMAL) = 0
+        >>> virt_evidence = [TabularCPD("MINVOLSET", 3, [[0.8], [0.0], [0.2]], state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})]
+        >>> model.simulate(n_samples, virtual_evidence=virt_evidence)
+
+        Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3
+        >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]], state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
+        >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
         """
         from pgmpy.sampling import BayesianModelSampling
 
         self.check_model()
-
         model = self.copy()
 
         evidence = {} if evidence is None else evidence
         do = {} if do is None else do
+        virtual_intervention = (
+            [] if virtual_intervention is None else virtual_intervention
+        )
+        virtual_evidence = [] if virtual_evidence is None else virtual_evidence
 
         if set(do.keys()).intersection(set(evidence.keys())):
             raise ValueError("Variable can't be in both do and evidence")
 
-        # Step 1: If do; Modify the network structure.
-        if do != {}:
-            model = model.do(self, list(do.keys()))
+        # Step 1: If do or virtual_intervention is specified, modify the network structure.
+        if (do != {}) or (virtual_intervention != []):
+            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
+            model = model.do(list(do.keys()) + virt_nodes)
             evidence = {**evidence, **do}
+            virtual_evidence = [*virtual_evidence, *virtual_intervention]
 
         # Step 2: If virtual_evidence; modify the network structure
-        if virtual_evidence is not None:
+        if virtual_evidence != []:
             for cpd in virtual_evidence:
                 var = cpd.variables[0]
                 if var not in model.nodes():
@@ -1087,12 +1129,10 @@ class BayesianNetwork(DAG):
                 )
                 model.add_cpds(new_cpd)
                 evidence[new_var] = 0
-                if var in do.keys():
-                    del evidence[var]
 
         # Step 3: If no evidence do a forward sampling
         if evidence is None:
-            return BayesianModelSampling(model).forward_sample(
+            samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,
                 seed=seed,
@@ -1101,13 +1141,19 @@ class BayesianNetwork(DAG):
 
         # Step 4: If evidence; do a rejection sampling
         else:
-            return BayesianModelSampling(model).rejection_sample(
+            samples = BayesianModelSampling(model).rejection_sample(
                 size=n_samples,
                 evidence=[(k, v) for k, v in evidence.items()],
                 include_latents=include_latents,
                 seed=seed,
                 show_progress=show_progress,
             )
+
+        # Step 5: Postprocess and return
+        if include_latents:
+            return samples
+        else:
+            return samples.loc[:, set(self.nodes()) - self.latents]
 
     def save(self, filename, filetype="bif"):
         """
