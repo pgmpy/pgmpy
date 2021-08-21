@@ -929,3 +929,65 @@ class DynamicBayesianNetwork(DAG):
         return super(DynamicBayesianNetwork, self).active_trail_nodes(
             variables, observed, include_latents
         )
+
+    def simulate(
+        self,
+        n_samples=10,
+        n_time_slices=2,
+        do=None,
+        evidence=None,
+        virtual_evidence=None,
+        virtual_intervention=None,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+    ):
+        """
+        Simulates data from the model.
+        """
+        from pgmpy.sampling import BayesianModelSampling
+
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=n_time_slices * len(self._nodes()))
+
+        # Step 1: Sample from the first 2 time slices
+        evidence = {} if evidence is None else evidence
+        do = {} if do is None else do
+        virtual_evidence = [] if virtual_evidence is None else virtual_evidence
+
+        do_time = {}
+        evidence_time = {}
+        virtual_evidence_time = {}
+        for t in range(n_time_slices):
+            do_time[t] = {node: state for node, state in do.items() if node[1] == t}
+            evidence_time[t] = {
+                node: state for node, state in evidence.items() if node[1] == t
+            }
+            virtual_evidence_time[t] = [
+                cpd for cpd in virtual_evidence if cpd.variables[0][1] == t
+            ]
+
+        sampled = self.get_constant_bn().simulate(
+            n_samples=n_samples,
+            do={**do_time[0], **do_time[1]},
+            evidence={**evidence_time[0], **evidence_time[1]},
+            virtual_evidence=[*virtual_evidence_time[0], *virtual_evidence_time[1]],
+            include_latents=True,
+            seed=seed,
+            show_progress=False,
+        )
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.update(len(self._nodes()) * 2)
+
+        topological_nodes = nx.algorithms.dag.topological_sort(
+            dbn.subgraph(dbn.get_slice_nodes(time_slice=1))
+        )
+        for t_slice in range(2, n_time_slice):
+            for node in topological_nodes:
+                cpd = self.get_cpds(node)
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack(
+                        [sampled[(var, t_slice - 1)] for var, _ in evidence]
+                    )
