@@ -784,7 +784,22 @@ class DynamicBayesianNetwork(DAG):
         """
         from pgmpy.models import BayesianNetwork
 
-        return BayesianNetwork(ebunch=self.edges())
+        import pdb; pdb.set_trace()
+        edges = [(str(u[0]) + '_' + str(u[1]), str(v)) for u, v in self.edges()]
+        cpds = [
+            TabularCPD(
+                variable=str(cpd.variables[0][0]),
+                variable_card=cpd.cardinality[0],
+                values=cpd.get_values(),
+                evidence=list(map(str, cpd.variables[1:])),
+                evidence_card=cpd.cardinality[1:],
+            )
+            for cpd in self.cpds
+        ]
+
+        bn = BayesianNetwork(edges)
+        bn.add_cpds(*cpds)
+        return bn
 
     def fit(self, data, estimator="MLE"):
         """
