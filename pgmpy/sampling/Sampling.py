@@ -579,7 +579,7 @@ class DBNSampling(BayesianModelInference):
         tuple variable names with strings. This reverses the names to the orignals.
         """
         return_df = samples.copy()
-        new_colnames = [col.rsplit('_', 1) for col in samples.columns]
+        new_colnames = [col.rsplit("_", 1) for col in samples.columns]
         return_df.columns = [(var, int(time)) for var, time in new_colnames]
         return return_df
 
@@ -619,7 +619,9 @@ class DBNSampling(BayesianModelInference):
         topological_nodes = nx.algorithms.dag.topological_sort(
             self.dbn.subgraph(self.dbn.get_slice_nodes(time_slice=1))
         )
-        topological_nodes = [str(var) + '_' + str(time) for var, time in topological_nodes]
+        topological_nodes = [
+            str(var) + "_" + str(time) for var, time in topological_nodes
+        ]
 
         for t_slice in range(2, n_time_slices):
             for node in topological_nodes:
@@ -627,12 +629,12 @@ class DBNSampling(BayesianModelInference):
                 states = range(cpd.cardinality[0])
                 evidence = cpd.variables[:0:-1]
                 if evidence:
-                    evidence_tuples = [evi.rsplit('_', 1) for evi in evidence]
+                    evidence_tuples = [evi.rsplit("_", 1) for evi in evidence]
                     evidence_values = np.vstack(
                         [
-                            sampled[str(i) + '_' + str(t_slice - 1)]
+                            sampled[str(i) + "_" + str(t_slice - 1)]
                             if int(t) == 0
-                            else sampled[str(i) + '_' + str(t_slice)]
+                            else sampled[str(i) + "_" + str(t_slice)]
                             for i, t in evidence_tuples
                         ]
                     )
@@ -645,12 +647,14 @@ class DBNSampling(BayesianModelInference):
                     weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                         inverse
                     ]
-                    sampled[str(node[0]) + '_' + str(t_slice)] = sample_discrete_maps(
+                    sampled[str(node[0]) + "_" + str(t_slice)] = sample_discrete_maps(
                         states, weight_index, index_to_weight, size
                     )
                 else:
                     weightes = cpd.values
-                    sampled[str(node[0]) + '_' + str(t_slice)] = sample_discrete(states, weight, size)
+                    sampled[str(node[0]) + "_" + str(t_slice)] = sample_discrete(
+                        states, weight, size
+                    )
 
         if show_progress and SHOW_PROGRESS:
             pbar.close()

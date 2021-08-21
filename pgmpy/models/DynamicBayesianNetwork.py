@@ -786,16 +786,22 @@ class DynamicBayesianNetwork(DAG):
         """
         from pgmpy.models import BayesianNetwork
 
-        edges = [(str(u[0]) + '_' + str(u[1]), str(v[0]) + '_' + str(v[1])) for u, v in self.edges()]
+        edges = [
+            (str(u[0]) + "_" + str(u[1]), str(v[0]) + "_" + str(v[1]))
+            for u, v in self.edges()
+        ]
         new_cpds = []
         for cpd in self.cpds:
-            new_vars = [str(var) + '_' + str(time) for var, time in cpd.variables]
-            new_cpds.append(TabularCPD(
-                variable=new_vars[0],
-                variable_card=cpd.cardinality[0],
-                values=cpd.get_values(),
-                evidence=new_vars[1:],
-                evidence_card=cpd.cardinality[1:]))
+            new_vars = [str(var) + "_" + str(time) for var, time in cpd.variables]
+            new_cpds.append(
+                TabularCPD(
+                    variable=new_vars[0],
+                    variable_card=cpd.cardinality[0],
+                    values=cpd.get_values(),
+                    evidence=new_vars[1:],
+                    evidence_card=cpd.cardinality[1:],
+                )
+            )
 
         bn = BayesianNetwork(edges)
         bn.add_cpds(*new_cpds)
@@ -857,7 +863,7 @@ class DynamicBayesianNetwork(DAG):
 
         # Make a copy and replace tuple column names with str.
         data_copy = data.copy()
-        data_copy.columns = [str(var) + '_' + str(t) for (var, t) in data.columns]
+        data_copy.columns = [str(var) + "_" + str(t) for (var, t) in data.columns]
 
         n_samples = data.shape[0]
         const_bn = self.get_constant_bn()
@@ -865,15 +871,19 @@ class DynamicBayesianNetwork(DAG):
 
         for t_slice in range(n_time_slices):
             # Get the columns names for this time slice
-            colnames = [str(node) + '_' + str(t_slice) for node in self._nodes()]
-            colnames.extend([str(node) + '_' + str(t_slice + 1) for node in self._nodes()])
+            colnames = [str(node) + "_" + str(t_slice) for node in self._nodes()]
+            colnames.extend(
+                [str(node) + "_" + str(t_slice + 1) for node in self._nodes()]
+            )
 
             # Select the data frame for this time slice
             df_slice = data_copy.loc[:, colnames]
 
             # Change the column time slice to match the constant bayesian network.
-            tuple_colnames = [var.rsplit('_', 1) for var in df_slice.columns]
-            new_colnames = [str(node) + '_' + str(int(t) - t_slice) for (node, t) in tuple_colnames]
+            tuple_colnames = [var.rsplit("_", 1) for var in df_slice.columns]
+            new_colnames = [
+                str(node) + "_" + str(int(t) - t_slice) for (node, t) in tuple_colnames
+            ]
             df_slice.columns = new_colnames
 
             # Fit or fit_update with df_slice depending on the time slice
@@ -884,7 +894,7 @@ class DynamicBayesianNetwork(DAG):
 
         cpds = []
         for cpd in const_bn.cpds:
-            var_tuples = [var.rsplit('_', 1) for var in cpd.variables]
+            var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
             new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
             cpds.append(
                 TabularCPD(
