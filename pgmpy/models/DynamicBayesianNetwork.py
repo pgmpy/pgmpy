@@ -781,24 +781,24 @@ class DynamicBayesianNetwork(DAG):
         time slices and all the edges in the first time slice and edges going from
         first to second time slice. The returned bayesian network bascially represents
         the part of the DBN which remains constant.
+
+        The node names are changed to strings in the form `{var}_{time}`.
         """
         from pgmpy.models import BayesianNetwork
 
-        import pdb; pdb.set_trace()
-        edges = [(str(u[0]) + '_' + str(u[1]), str(v)) for u, v in self.edges()]
-        cpds = [
-            TabularCPD(
-                variable=str(cpd.variables[0][0]),
+        edges = [(str(u[0]) + '_' + str(u[1]), str(v[0]) + '_' + str(v[1])) for u, v in self.edges()]
+        new_cpds = []
+        for cpd in self.cpds:
+            new_vars = [str(var) + '_' + str(time) for var, time in cpd.variables]
+            new_cpds.append(TabularCPD(
+                variable=new_vars[0],
                 variable_card=cpd.cardinality[0],
                 values=cpd.get_values(),
-                evidence=list(map(str, cpd.variables[1:])),
-                evidence_card=cpd.cardinality[1:],
-            )
-            for cpd in self.cpds
-        ]
+                evidence=new_vars[1:],
+                evidence_card=cpd.cardinality[1:]))
 
         bn = BayesianNetwork(edges)
-        bn.add_cpds(*cpds)
+        bn.add_cpds(*new_cpds)
         return bn
 
     def fit(self, data, estimator="MLE"):
@@ -855,19 +855,28 @@ class DynamicBayesianNetwork(DAG):
         if estimator not in {"MLE", "mle"}:
             raise ValueError("Only Maximum Likelihood Estimator is supported currently")
 
+        # Make a copy and replace tuple column names with str.
+        data_copy = data.copy()
+        data_copy.columns = [str(var) + '_' + str(t) for (var, t) in data.columns]
+
         n_samples = data.shape[0]
         const_bn = self.get_constant_bn()
         n_time_slices = max(data.columns, key=lambda t: t[1])[1]
 
         for t_slice in range(n_time_slices):
-            colnames = [(node, t_slice) for node in self._nodes()]
-            colnames.extend([(node, t_slice + 1) for node in self._nodes()])
+            # Get the columns names for this time slice
+            colnames = [str(node) + '_' + str(t_slice) for node in self._nodes()]
+            colnames.extend([str(node) + '_' + str(t_slice + 1) for node in self._nodes()])
 
-            df_slice = data.loc[:, colnames]
-            new_colnames = [
-                DynamicNode(node, t - t_slice) for (node, t) in df_slice.columns
-            ]
+            # Select the data frame for this time slice
+            df_slice = data_copy.loc[:, colnames]
+
+            # Change the column time slice to match the constant bayesian network.
+            tuple_colnames = [var.rsplit('_', 1) for var in df_slice.columns]
+            new_colnames = [str(node) + '_' + str(int(t) - t_slice) for (node, t) in tuple_colnames]
             df_slice.columns = new_colnames
+
+            # Fit or fit_update with df_slice depending on the time slice
             if t_slice == 0:
                 const_bn.fit(df_slice)
             else:
@@ -875,12 +884,14 @@ class DynamicBayesianNetwork(DAG):
 
         cpds = []
         for cpd in const_bn.cpds:
+            var_tuples = [var.rsplit('_', 1) for var in cpd.variables]
+            new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
             cpds.append(
                 TabularCPD(
-                    variable=cpd.variables[0],
+                    variable=new_vars[0],
                     variable_card=cpd.variable_card,
                     values=cpd.get_values(),
-                    evidence=cpd.variables[1:],
+                    evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
                 )
             )

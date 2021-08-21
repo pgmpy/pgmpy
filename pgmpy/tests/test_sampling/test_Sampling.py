@@ -581,9 +581,6 @@ class TestDBNSampling(unittest.TestCase):
             evidence_card=[2, 2],
         )
         self.dbn.add_cpds(diff_cpd, grade_cpd, d_i_cpd, intel_cpd, i_i_cpd, g_i_cpd)
-        import pdb
-
-        pdb.set_trace()
 
         self.dbn_sampling = DBNSampling(self.dbn)
         self.dbn_infer = DBNInference(self.dbn)

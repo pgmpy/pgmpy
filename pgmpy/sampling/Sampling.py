@@ -572,6 +572,17 @@ class DBNSampling(BayesianModelInference):
         self.const_bn = model.get_constant_bn()
         super(DBNSampling, self).__init__(self.const_bn)
 
+    def _generate_col_names(self, samples):
+        """
+        Replaces the column names of generated samples with tuples of the form (var, time).
+        This is required since the DynamicBayesianNetwork.get_constant_bn method replaces the
+        tuple variable names with strings. This reverses the names to the orignals.
+        """
+        return_df = samples.copy()
+        new_colnames = [col.rsplit('_', 1) for col in samples.columns]
+        return_df.columns = [(var, int(time)) for var, time in new_colnames]
+        return return_df
+
     def forward_sample(
         self,
         size=10,
@@ -597,29 +608,32 @@ class DBNSampling(BayesianModelInference):
             pbar.update(len(self.dbn._nodes()) * 2)
 
         # Step 1.1: If n_time_slices <= 2, return teh values
+        return_df = self._generate_col_names(sampled)
         if n_time_slices == 1:
-            return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+            return return_df.loc[:, [col for col in return_df.columns if col[1] == 0]]
         elif n_time_slices == 2:
-            return sampled
+            return return_df
 
         # Step 2: Iterate over times slices > 2 and generate samples considering
         #         values from previous time slice as evidence.
         topological_nodes = nx.algorithms.dag.topological_sort(
             self.dbn.subgraph(self.dbn.get_slice_nodes(time_slice=1))
         )
+        topological_nodes = [str(var) + '_' + str(time) for var, time in topological_nodes]
 
         for t_slice in range(2, n_time_slices):
             for node in topological_nodes:
-                cpd = self.dbn.get_cpds(node)
+                cpd = self.const_bn.get_cpds(node)
                 states = range(cpd.cardinality[0])
                 evidence = cpd.variables[:0:-1]
                 if evidence:
+                    evidence_tuples = [evi.rsplit('_', 1) for evi in evidence]
                     evidence_values = np.vstack(
                         [
-                            sampled[(i, t_slice - 1)]
-                            if t == 0
-                            else sampled[(i, t_slice)]
-                            for i, t in evidence
+                            sampled[str(i) + '_' + str(t_slice - 1)]
+                            if int(t) == 0
+                            else sampled[str(i) + '_' + str(t_slice)]
+                            for i, t in evidence_tuples
                         ]
                     )
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
@@ -631,12 +645,14 @@ class DBNSampling(BayesianModelInference):
                     weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                         inverse
                     ]
-                    sampled[(node[0], t_slice)] = sample_discrete_maps(
+                    sampled[str(node[0]) + '_' + str(t_slice)] = sample_discrete_maps(
                         states, weight_index, index_to_weight, size
                     )
                 else:
                     weightes = cpd.values
-                    sampled[(node[0], t_slice)] = sample_discrete(states, weight, size)
+                    sampled[str(node[0]) + '_' + str(t_slice)] = sample_discrete(states, weight, size)
 
         if show_progress and SHOW_PROGRESS:
             pbar.close()
+
+        return self._generate_col_names(sampled)
