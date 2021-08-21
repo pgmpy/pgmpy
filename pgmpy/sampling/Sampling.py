@@ -660,3 +660,56 @@ class DBNSampling(BayesianModelInference):
             pbar.close()
 
         return self._generate_col_names(sampled)
+
+    def rejection_sample(
+        self,
+        evidence=[],
+        size=1,
+        n_time_slices=2,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+    ):
+        if seed is not None:
+            np.random.seed(seed)
+
+        # If no evidence is given, it is equivalent to forward sampling.
+        if len(evidence) == 0:
+            return self.forward_sample(
+                size=size, n_time_slices=n_time_slices, include_latents=include_latents
+            )
+
+        sampled = pd.DataFrame()
+        prob = 1
+        i = 0
+
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=size)
+
+        while i < size:
+            _size = int(((size - i) / prob) * 1.5)
+            _sampled = self.forward_sample(
+                size=_size,
+                n_time_slices=n_time_slices,
+                include_latents=True,
+                show_progress=False,
+            )
+
+            for var, state in evidence:
+                _sampled = _sampled[_sampled[var] == state]
+
+            prob = max(len(_sampled) / _size, 0.01)
+            sampled = sampled.append(_sampled).iloc[:size, :]
+            i += _sampled.shape[0]
+
+            if show_progress and SHOW_PROGRESS:
+                comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
+                pbar.update(comp)
+
+        if show_progress and SHOW_PROGRESS:
+            pbar.close()
+
+        sampled = sampled.reset_index(drop=True)
+        if not include_latents:
+            sampled.drop(self.model.latents, axis=1, inplace=True)
+        return sampled

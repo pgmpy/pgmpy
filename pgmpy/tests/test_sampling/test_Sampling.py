@@ -597,8 +597,8 @@ class TestDBNSampling(unittest.TestCase):
         self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
         self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
 
-        samples = self.dbn_sampling.forward_sample(size=int(1e5), n_time_slices=2)
-        self.assertEqual(len(samples), int(1e5))
+        samples = self.dbn_sampling.forward_sample(size=int(1e1), n_time_slices=2)
+        self.assertEqual(len(samples), int(1e1))
         self.assertEqual(len(samples.columns), 6)
         for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
             self.assertIn(node, samples.columns)
@@ -623,3 +623,60 @@ class TestDBNSampling(unittest.TestCase):
         #         )
 
         samples = self.dbn_sampling.forward_sample(size=int(1e5), n_time_slices=3)
+
+    def test_rejection_sample(self):
+        samples = self.dbn_sampling.rejection_sample(
+            size=10,
+            n_time_slices=1,
+            evidence=[
+                (("D", 0), 1),
+            ],
+        )
+        self.assertEqual(len(samples), 10)
+        self.assertEqual(len(samples.columns), 3)
+
+        for node in [("D", 0), ("I", 0), ("G", 0)]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+
+        samples = self.dbn_sampling.rejection_sample(
+            size=int(1e1),
+            n_time_slices=2,
+            evidence=[
+                (("D", 0), 1),
+            ],
+        )
+        self.assertEqual(len(samples), 10)
+        self.assertEqual(len(samples.columns), 6)
+        for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+
+        samples = self.dbn_sampling.rejection_sample(
+            size=int(1e1),
+            n_time_slices=2,
+            evidence=[
+                (("D", 0), 1),
+                (("D", 1), 0),
+            ],
+        )
+        self.assertEqual(len(samples), 10)
+        self.assertEqual(len(samples.columns), 6)
+        for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
