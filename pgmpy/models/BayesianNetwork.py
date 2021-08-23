@@ -1087,8 +1087,6 @@ class BayesianNetwork(DAG):
         self.check_model()
         model = self.copy()
 
-        import pdb; pdb.set_trace()
-
         evidence = {} if evidence is None else evidence
         do = {} if do is None else do
         virtual_intervention = (

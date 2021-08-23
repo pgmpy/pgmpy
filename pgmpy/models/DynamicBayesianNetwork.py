@@ -1005,7 +1005,6 @@ class DynamicBayesianNetwork(DAG):
         elif n_time_slices == 2:
             sampled = self._get_column_names(sampled)
             return sampled
-        import ipdb; ipdb.set_trace()
 
         # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
         for t_slice in range(1, n_time_slices - 1):

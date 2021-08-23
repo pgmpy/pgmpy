@@ -1043,23 +1043,20 @@ class TestDBNSampling(unittest.TestCase):
             dbn_infer_cpd = self.dbn_infer.query([node])[node]
             bn_infer_cpd = self.bn_infer.query([str(node[0]) + str(node[1])])
             for state in range(samples_cpd.shape[0]):
-                try:
-                    self.assertTrue(
-                        np.isclose(
-                            sample_marginals[node].loc[state].values[0],
-                            dbn_infer_cpd.values[state],
-                            atol=0.01,
-                        )
+                self.assertTrue(
+                    np.isclose(
+                        sample_marginals[node].loc[state].values[0],
+                        dbn_infer_cpd.values[state],
+                        atol=0.01,
                     )
-                    self.assertTrue(
-                        np.isclose(
-                            sample_marginals[node].loc[state].values[0],
-                            bn_infer_cpd.values[state],
-                            atol=0.01,
-                        )
+                )
+                self.assertTrue(
+                    np.isclose(
+                        sample_marginals[node].loc[state].values[0],
+                        bn_infer_cpd.values[state],
+                        atol=0.01,
                     )
-                except AssertionError:
-                    import ipdb; ipdb.set_trace()
+                )
 
     def test_rejection_sample(self):
         samples = self.dbn.simulate(
