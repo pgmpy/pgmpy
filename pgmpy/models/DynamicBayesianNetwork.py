@@ -6,9 +6,11 @@ import typing
 import numpy as np
 import pandas as pd
 import networkx as nx
+from tqdm.auto import tqdm
 
-from pgmpy.factors.discrete import TabularCPD
 from pgmpy.base import DAG
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 @dataclass(eq=True, frozen=True)
@@ -775,7 +777,7 @@ class DynamicBayesianNetwork(DAG):
 
         return sorted(markov_blanket)
 
-    def get_constant_bn(self):
+    def get_constant_bn(self, t_slice=0):
         """
         Returns a normal bayesian network object which has nodes from the first two
         time slices and all the edges in the first time slice and edges going from
@@ -787,12 +789,17 @@ class DynamicBayesianNetwork(DAG):
         from pgmpy.models import BayesianNetwork
 
         edges = [
-            (str(u[0]) + "_" + str(u[1]), str(v[0]) + "_" + str(v[1]))
+            (
+                str(u[0]) + "_" + str(u[1] + t_slice),
+                str(v[0]) + "_" + str(v[1] + t_slice),
+            )
             for u, v in self.edges()
         ]
         new_cpds = []
         for cpd in self.cpds:
-            new_vars = [str(var) + "_" + str(time) for var, time in cpd.variables]
+            new_vars = [
+                str(var) + "_" + str(time + t_slice) for var, time in cpd.variables
+            ]
             new_cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -930,6 +937,13 @@ class DynamicBayesianNetwork(DAG):
             variables, observed, include_latents
         )
 
+    @staticmethod
+    def _get_column_names(df):
+        tuple_cols = [col.rsplit("_", 1) for col in df.columns]
+        new_cols = [(var, int(t)) for var, t in tuple_cols]
+        df.columns = new_cols
+        return df
+
     def simulate(
         self,
         n_samples=10,
@@ -950,44 +964,73 @@ class DynamicBayesianNetwork(DAG):
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=n_time_slices * len(self._nodes()))
 
-        # Step 1: Sample from the first 2 time slices
-        evidence = {} if evidence is None else evidence
+        # Step 1: Create some data strucures for easily accessing values
         do = {} if do is None else do
+        evidence = {} if evidence is None else evidence
+        virtual_intervention = (
+            [] if virtual_intervention is None else virtual_intervention
+        )
         virtual_evidence = [] if virtual_evidence is None else virtual_evidence
 
-        do_time = {}
-        evidence_time = {}
-        virtual_evidence_time = {}
-        for t in range(n_time_slices):
-            do_time[t] = {node: state for node, state in do.items() if node[1] == t}
-            evidence_time[t] = {
-                node: state for node, state in evidence.items() if node[1] == t
-            }
-            virtual_evidence_time[t] = [
-                cpd for cpd in virtual_evidence if cpd.variables[0][1] == t
-            ]
+        do_dict = defaultdict(dict)
+        evidence_dict = defaultdict(dict)
+        virtual_inter_dict = defaultdict(list)
+        virtual_evi_dict = defaultdict(list)
 
-        sampled = self.get_constant_bn().simulate(
+        for var, state in do.items():
+            do_dict[var[1]][var] = state
+        for var, state in evidence.items():
+            evidence_dict[var[1]][var] = state
+        for cpd in virtual_intervention:
+            virtual_inter_dict[cpd.variables[0][1]].append(cpd)
+        for cpd in virtual_evidence:
+            virtual_evi_dict[cpd.variables[0][1]].append(cpd)
+
+        # Step 2: Generate first two time samples
+        const_bn = self.get_constant_bn(t_slice=0)
+        sampled = const_bn.simulate(
             n_samples=n_samples,
-            do={**do_time[0], **do_time[1]},
-            evidence={**evidence_time[0], **evidence_time[1]},
-            virtual_evidence=[*virtual_evidence_time[0], *virtual_evidence_time[1]],
+            do={**do_dict[0], **do_dict[1]},
+            evidence={**evidence_dict[0], **evidence_dict[1]},
+            virtual_evidence=[*virtual_evi_dict[0], *virtual_evi_dict[1]],
+            virtual_intervention=[*virtual_inter_dict[0], *virtual_inter_dict[1]],
             include_latents=True,
             seed=seed,
             show_progress=False,
         )
 
-        if show_progress and SHOW_PROGRESS:
-            pbar.update(len(self._nodes()) * 2)
+        if n_time_slices == 1:
+            sampled = self._get_column_names(sampled)
+            return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+        elif n_time_slices == 2:
+            sampled = self._get_column_names(sampled)
+            return sampled
+        import ipdb; ipdb.set_trace()
 
-        topological_nodes = nx.algorithms.dag.topological_sort(
-            dbn.subgraph(dbn.get_slice_nodes(time_slice=1))
-        )
-        for t_slice in range(2, n_time_slice):
-            for node in topological_nodes:
-                cpd = self.get_cpds(node)
-                evidence = cpd.variables[:0:-1]
-                if evidence:
-                    evidence_values = np.vstack(
-                        [sampled[(var, t_slice - 1)] for var, _ in evidence]
-                    )
+        # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
+        for t_slice in range(1, n_time_slices - 1):
+            const_bn = self.get_constant_bn(t_slice=t_slice)
+            partial_colnames = [
+                str(node) + "_" + str(t_slice) for node in self._nodes()
+            ]
+            partial_df = sampled.loc[:, partial_colnames]
+            remaining_df = sampled.loc[:, ~sampled.columns.isin(partial_colnames)]
+            new_samples = const_bn.simulate(
+                n_samples=n_samples,
+                do={**do_dict[t_slice], **do_dict[t_slice + 1]},
+                evidence={**evidence_dict[t_slice], **evidence_dict[t_slice + 1]},
+                virtual_evidence=[
+                    *virtual_evi_dict[t_slice],
+                    *virtual_evi_dict[t_slice + 1],
+                ],
+                virtual_intervention=[
+                    *virtual_inter_dict[t_slice],
+                    *virtual_inter_dict[t_slice + 1],
+                ],
+                include_latents=True,
+                partial_samples=sampled,
+                seed=seed,
+                show_progress=False,
+            )
+            sampled = pd.concat((remaining_df, new_samples), axis=1)
+        return self._get_column_names(sampled)

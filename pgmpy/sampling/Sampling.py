@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 import itertools
 
 import numpy as np
@@ -32,7 +32,12 @@ class BayesianModelSampling(BayesianModelInference):
         super(BayesianModelSampling, self).__init__(model)
 
     def forward_sample(
-        self, size=1, include_latents=False, seed=None, show_progress=True
+        self,
+        size=1,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+        partial_samples=None,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network.
@@ -50,6 +55,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        partial_samples: pandas.DataFrame
+            A pandas dataframe specifying samples on some of the variables in the model. If
+            specified, the sampling procedure uses these sample values, instead of generating them.
 
         Returns
         -------
@@ -87,27 +96,31 @@ class BayesianModelSampling(BayesianModelInference):
             if show_progress and SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
 
-            cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
-            evidence = cpd.variables[:0:-1]
-            if evidence:
-                evidence_values = np.vstack([sampled[i] for i in evidence])
-
-                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node
-                )
-                unique, inverse = np.unique(
-                    evidence_values.T, axis=0, return_inverse=True
-                )
-                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
-                    inverse
-                ]
-                sampled[node] = sample_discrete_maps(
-                    states, weight_index, index_to_weight, size
-                )
+            # If values specified in partial_samples, use them. Else generate the values.
+            if (partial_samples is not None) and (node in partial_samples.columns):
+                sampled[node] = partial_samples.loc[:, node]
             else:
-                weights = cpd.values
-                sampled[node] = sample_discrete(states, weights, size)
+                cpd = self.model.get_cpds(node)
+                states = range(self.cardinality[node])
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack([sampled[i] for i in evidence])
+
+                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                        variable=node
+                    )
+                    unique, inverse = np.unique(
+                        evidence_values.T, axis=0, return_inverse=True
+                    )
+                    weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                        inverse
+                    ]
+                    sampled[node] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
+                else:
+                    weights = cpd.values
+                    sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
@@ -121,6 +134,7 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents=False,
         seed=None,
         show_progress=True,
+        partial_samples=None,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network,
@@ -142,6 +156,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        partial_samples: pandas.DataFrame
+            A pandas dataframe specifying samples on some of the variables in the model. If
+            specified, the sampling procedure uses these sample values, instead of generating them.
 
         Returns
         -------
@@ -190,7 +208,10 @@ class BayesianModelSampling(BayesianModelInference):
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
             _sampled = self.forward_sample(
-                size=_size, include_latents=True, show_progress=False
+                size=_size,
+                include_latents=True,
+                show_progress=False,
+                partial_samples=partial_samples,
             )
 
             for var, state in evidence:
@@ -560,156 +581,3 @@ class GibbsSampling(MarkovChain):
                 yield self.state[:]
             else:
                 yield [s for s in self.state if i not in self.latents]
-
-
-class DBNSampling(BayesianModelInference):
-    def __init__(self, model):
-        if not isinstance(model, DBN):
-            raise TypeError(
-                f"Model expected type: DynamicBayesianNetwork, got type: {type(model)}"
-            )
-        self.dbn = model
-        self.const_bn = model.get_constant_bn()
-        super(DBNSampling, self).__init__(self.const_bn)
-
-    def _generate_col_names(self, samples):
-        """
-        Replaces the column names of generated samples with tuples of the form (var, time).
-        This is required since the DynamicBayesianNetwork.get_constant_bn method replaces the
-        tuple variable names with strings. This reverses the names to the orignals.
-        """
-        return_df = samples.copy()
-        new_colnames = [col.rsplit("_", 1) for col in samples.columns]
-        return_df.columns = [(var, int(time)) for var, time in new_colnames]
-        return return_df
-
-    def forward_sample(
-        self,
-        size=10,
-        n_time_slices=2,
-        include_latents=False,
-        seed=None,
-        show_progress=True,
-    ):
-
-        # Step 0: Argument checks
-        if n_time_slices <= 0:
-            raise ValueError("n_time_slices must be greater than 0.")
-
-        if show_progress and SHOW_PROGRESS:
-            pbar = tqdm(total=n_time_slices * len(self.dbn._nodes()))
-
-        # Step 1: Generate samples from the first two time slices.
-        sampled = self.const_bn.simulate(
-            n_samples=size, include_latents=True, seed=seed, show_progress=False
-        )
-
-        if show_progress and SHOW_PROGRESS:
-            pbar.update(len(self.dbn._nodes()) * 2)
-
-        # Step 1.1: If n_time_slices <= 2, return teh values
-        return_df = self._generate_col_names(sampled)
-        if n_time_slices == 1:
-            return return_df.loc[:, [col for col in return_df.columns if col[1] == 0]]
-        elif n_time_slices == 2:
-            return return_df
-
-        # Step 2: Iterate over times slices > 2 and generate samples considering
-        #         values from previous time slice as evidence.
-        topological_nodes = nx.algorithms.dag.topological_sort(
-            self.dbn.subgraph(self.dbn.get_slice_nodes(time_slice=1))
-        )
-        topological_nodes = [
-            str(var) + "_" + str(time) for var, time in topological_nodes
-        ]
-
-        for t_slice in range(2, n_time_slices):
-            for node in topological_nodes:
-                cpd = self.const_bn.get_cpds(node)
-                states = range(cpd.cardinality[0])
-                evidence = cpd.variables[:0:-1]
-                if evidence:
-                    evidence_tuples = [evi.rsplit("_", 1) for evi in evidence]
-                    evidence_values = np.vstack(
-                        [
-                            sampled[str(i) + "_" + str(t_slice - 1)]
-                            if int(t) == 0
-                            else sampled[str(i) + "_" + str(t_slice)]
-                            for i, t in evidence_tuples
-                        ]
-                    )
-                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                        variable=node
-                    )
-                    unique, inverse = np.unique(
-                        evidence_values.T, axis=0, return_inverse=True
-                    )
-                    weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
-                        inverse
-                    ]
-                    sampled[str(node[0]) + "_" + str(t_slice)] = sample_discrete_maps(
-                        states, weight_index, index_to_weight, size
-                    )
-                else:
-                    weightes = cpd.values
-                    sampled[str(node[0]) + "_" + str(t_slice)] = sample_discrete(
-                        states, weight, size
-                    )
-
-        if show_progress and SHOW_PROGRESS:
-            pbar.close()
-
-        return self._generate_col_names(sampled)
-
-    def rejection_sample(
-        self,
-        evidence=[],
-        size=1,
-        n_time_slices=2,
-        include_latents=False,
-        seed=None,
-        show_progress=True,
-    ):
-        if seed is not None:
-            np.random.seed(seed)
-
-        # If no evidence is given, it is equivalent to forward sampling.
-        if len(evidence) == 0:
-            return self.forward_sample(
-                size=size, n_time_slices=n_time_slices, include_latents=include_latents
-            )
-
-        sampled = pd.DataFrame()
-        prob = 1
-        i = 0
-
-        if show_progress and SHOW_PROGRESS:
-            pbar = tqdm(total=size)
-
-        while i < size:
-            _size = int(((size - i) / prob) * 1.5)
-            _sampled = self.forward_sample(
-                size=_size,
-                n_time_slices=n_time_slices,
-                include_latents=True,
-                show_progress=False,
-            )
-
-            for var, state in evidence:
-                _sampled = _sampled[_sampled[var] == state]
-
-            prob = max(len(_sampled) / _size, 0.01)
-            sampled = sampled.append(_sampled).iloc[:size, :]
-            i += _sampled.shape[0]
-
-            if show_progress and SHOW_PROGRESS:
-                comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
-                pbar.update(comp)
-
-        if show_progress and SHOW_PROGRESS:
-            pbar.close()
-
-        sampled = sampled.reset_index(drop=True)
-        if not include_latents:
-            sampled.drop(self.model.latents, axis=1, inplace=True)
-        return sampled
