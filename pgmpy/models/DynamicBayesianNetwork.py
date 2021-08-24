@@ -968,7 +968,111 @@ class DynamicBayesianNetwork(DAG):
         show_progress=True,
     ):
         """
-        Simulates data from the model.
+        Simulates time-series data from the specified model.
+
+        Parameters
+        ----------
+        n_samples: int
+            The number of data samples to simulate from the model.
+
+        n_time_slices: int
+            The number of time slices for which to simulate the data.
+
+        do: dict
+            The interventions to apply to the model. dict should be of the form
+            {(variable_name, time_slice): state}
+
+        evidence: dict
+            Observed evidence to apply to the model. dict should be of the form
+            {(variable_name, time_slice): state}
+
+        virtual_evidence: list
+            Probabilistically apply evidence to the model. `virtual_evidence` should
+            be a list of `pgmpy.factors.discrete.TabularCPD` objects specifying the
+            virtual probabilities.
+
+        virtual_intervention: list
+            Also known as soft intervention. `virtual_intervention` should be a list
+            of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
+            intervention probabilities.
+
+        include_latents: boolean (default: False)
+            Whether to include the latent variable values in the generated samples.
+
+        seed: int (default: None)
+            If a value is provided, sets the seed for numpy.random.
+
+        show_progress: bool
+            If True, shows a progress bar when generating samples.
+
+        Returns
+        -------
+        pandas.DataFrame: A dataframe with the simulated data.
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> dbn = DBN([(("D", 0), ("G", 0)), (("I", 0), ("G", 0)),
+        ...            (("D", 0), ("D", 1)), (("I", 0), ("I", 1)),])
+        >>> diff_cpd = TabularCPD(("D", 0), 2, [[0.6], [0.4]])
+        >>> grade_cpd = TabularCPD(variable=("G", 0), variable_card=3,
+        ...                        values=[[0.3, 0.05, 0.9, 0.5],
+        ...                                [0.4, 0.25, 0.08, 0.3],
+        ...                                [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[("I", 0), ("D", 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(variable=("D", 1), variable_card=2,
+        ...                      values=[[0.6, 0.3], [0.4, 0.7]],
+        ...                      evidence=[("D", 0)],
+        ...                      evidence_card=[2])
+        >>> intel_cpd = TabularCPD(("I", 0), 2, [[0.7], [0.3]])
+        >>> i_i_cpd = TabularCPD(variable=("I", 1), variable_card=2,
+        ...                      values=[[0.5, 0.4], [0.5, 0.6]],
+        ...                      evidence=[("I", 0)],
+        ...                      evidence_card=[2])
+        >>> g_i_cpd = TabularCPD(variable=("G", 1), variable_card=3,
+        ...                      values=[[0.3, 0.05, 0.9, 0.5],
+        ...                              [0.4, 0.25, 0.08, 0.3],
+        ...                              [0.3, 0.7, 0.02, 0.2]],
+        ...                      evidence=[("I", 1), ("D", 1)],
+        ...                      evidence_card=[2, 2])
+        >>> dbn.add_cpds(diff_cpd, grade_cpd, d_i_cpd, intel_cpd, i_i_cpd, g_i_cpd)
+
+        Normal simulation from the model.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2)
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       2       0       0       0       1       0       2       0       2       0       0
+        1       0       1       0       0       0       1       1       0       1       2       1       0
+
+        Simulation with evidence.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, evidence={('D', 0): 1, ('D', 2): 0})
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       1       1       1       1       2       0       0       2       1       1       0       1
+        1       1       2       1       1       2       0       0       1       1       0       0       1
+
+        Simulation with virtual/soft evidence.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_evidence=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       1       0       0       1       0       0       0       1       0       1       1
+        1       0       1       0       0       0       1       0       0       0       0       1       1
+
+        Simulation with intervention.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, do={('D', 0): 1, ('D', 2): 0})
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       1       0       1       1       0       1       0       2       0       0       0       1
+        1       1       1       0       1       2       1       0       0       1       1       1       1
+
+        Simulation with virtual/soft intervention.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_intervention=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       0       0       1       2       0       1       2       1       1       0       1
+        1       0       1       1       1       2       0       1       2       1       1       0       0
         """
         from pgmpy.sampling import BayesianModelSampling
 
