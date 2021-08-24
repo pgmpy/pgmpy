@@ -1138,7 +1138,7 @@ class BayesianNetwork(DAG):
                 evidence[new_var] = 0
 
         # Step 3: If no evidence do a forward sampling
-        if evidence is None:
+        if len(evidence) == 0:
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,

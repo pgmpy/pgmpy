@@ -8,7 +8,7 @@ import pgmpy.tests.help_functions as hf
 from pgmpy.models import BayesianNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.inference import DBNInference, VariableElimination
+from pgmpy.inference import DBNInference, VariableElimination, CausalInference
 
 
 class TestDynamicBayesianNetworkCreation(unittest.TestCase):
@@ -954,6 +954,7 @@ class TestDBNSampling(unittest.TestCase):
             d0_cpd, i0_cpd, g0_cpd, d1_cpd, i1_cpd, g1_cpd, d2_cpd, i2_cpd, g2_cpd
         )
         self.bn_infer = VariableElimination(self.equivalent_bn)
+        self.bn_causal_infer = CausalInference(self.equivalent_bn)
 
     def test_simulate_two_slices(self):
         samples = self.dbn.simulate(n_samples=10, n_time_slices=1)
@@ -1058,28 +1059,14 @@ class TestDBNSampling(unittest.TestCase):
                     )
                 )
 
-    def test_rejection_sample(self):
+    def test_simulate_evidence_two_slices(self):
+        # Single evidence
         samples = self.dbn.simulate(
-            n_samples=10,
-            n_time_slices=1,
-            evidence={("D", 0): 1},
-        )
-        self.assertEqual(len(samples), 10)
-        self.assertEqual(len(samples.columns), 3)
-
-        for node in [("D", 0), ("I", 0), ("G", 0)]:
-            self.assertIn(node, samples.columns)
-
-        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
-        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
-        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
-
-        samples = self.dbn.simulate(
-            n_samples=int(1e4),
+            n_samples=int(1e5),
             n_time_slices=2,
             evidence={("D", 0): 1},
         )
-        self.assertEqual(len(samples), int(1e4))
+        self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 6)
         for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
             self.assertIn(node, samples.columns)
@@ -1173,5 +1160,294 @@ class TestDBNSampling(unittest.TestCase):
                         )
                     )
 
-    def test_intervention_sampling(self):
-        samples = self.dbn.simulate(n_samples=int(1e5), do={("D", 0): 1})
+    def test_simulate_evidence_more_than_two_slices(self):
+        # Evidence in first two slices
+        samples = self.dbn.simulate(
+            n_samples=int(1e5),
+            n_time_slices=3,
+            evidence={
+                ("D", 0): 1,
+                ("D", 1): 0,
+            },
+        )
+        self.assertEqual(len(samples), int(1e5))
+        self.assertEqual(len(samples.columns), 9)
+        for node in [
+            ("D", 0),
+            ("I", 0),
+            ("G", 0),
+            ("D", 1),
+            ("I", 1),
+            ("G", 1),
+            ("D", 2),
+            ("I", 2),
+            ("G", 2),
+        ]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 2)]].values)), [0, 1, 2])
+
+        # Test the asymptotic distribution of samples
+        sample_marginals = {
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
+            for node in self.dbn.nodes()
+        }
+
+        for node in sample_marginals.keys():
+            samples_cpd = sample_marginals[node]
+            # Query can't have same node in variables and evidence
+            if node not in [("D", 0), ("D", 1)]:
+                bn_infer_cpd = self.bn_infer.query(
+                    [str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0}
+                )
+
+            for state in range(samples_cpd.shape[0]):
+                if node not in [("D", 0), ("D", 1)]:
+                    self.assertTrue(
+                        np.isclose(
+                            sample_marginals[node].loc[state].values[0],
+                            bn_infer_cpd.values[state],
+                            atol=0.01,
+                        )
+                    )
+
+        # Evidence in third slices
+        samples = self.dbn.simulate(
+            n_samples=int(1e5),
+            n_time_slices=3,
+            evidence={
+                ("D", 0): 1,
+                ("D", 1): 0,
+                ("D", 2): 1,
+            },
+        )
+        self.assertEqual(len(samples), int(1e5))
+        self.assertEqual(len(samples.columns), 9)
+        for node in [
+            ("D", 0),
+            ("I", 0),
+            ("G", 0),
+            ("D", 1),
+            ("I", 1),
+            ("G", 1),
+            ("D", 2),
+            ("I", 2),
+            ("G", 2),
+        ]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 2)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 2)]].values)), [0, 1, 2])
+
+        # Test the asymptotic distribution of samples
+        sample_marginals = {
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
+            for node in self.dbn.nodes()
+        }
+
+        for node in sample_marginals.keys():
+            samples_cpd = sample_marginals[node]
+            # Query can't have same node in variables and evidence
+            if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                bn_infer_cpd = self.bn_infer.query(
+                    [str(node[0]) + str(node[1])], evidence={"D0": 1, "D1": 0, "D2": 1}
+                )
+
+            for state in range(samples_cpd.shape[0]):
+                if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                    self.assertTrue(
+                        np.isclose(
+                            sample_marginals[node].loc[state].values[0],
+                            bn_infer_cpd.values[state],
+                            atol=0.01,
+                        )
+                    )
+
+    def test_simulate_virtual_evidence(self):
+        virtual_evidence = [
+            TabularCPD(("D", 0), 2, [[0.2], [0.8]]),
+            TabularCPD(("D", 2), 2, [[0.8], [0.2]]),
+        ]
+        bn_virtual_evidence = [
+            TabularCPD("D0", 2, [[0.2], [0.8]]),
+            TabularCPD("D2", 2, [[0.8], [0.2]]),
+        ]
+        samples = self.dbn.simulate(
+            n_samples=int(1e5), n_time_slices=3, virtual_evidence=virtual_evidence
+        )
+        self.assertEqual(len(samples), int(1e5))
+        self.assertEqual(len(samples.columns), 9)
+        for node in [
+            ("D", 0),
+            ("I", 0),
+            ("G", 0),
+            ("D", 1),
+            ("I", 1),
+            ("G", 1),
+            ("D", 2),
+            ("I", 2),
+            ("G", 2),
+        ]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 2)]].values)), [0, 1, 2])
+
+        # Test the asymptotic distribution of samples
+        sample_marginals = {
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
+            for node in self.dbn.nodes()
+        }
+
+        for node in sample_marginals.keys():
+            samples_cpd = sample_marginals[node]
+            bn_infer_cpd = self.bn_infer.query(
+                [str(node[0]) + str(node[1])], virtual_evidence=bn_virtual_evidence
+            )
+
+            for state in range(samples_cpd.shape[0]):
+                self.assertTrue(
+                    np.isclose(
+                        sample_marginals[node].loc[state].values[0],
+                        bn_infer_cpd.values[state],
+                        atol=0.05,
+                    )
+                )
+
+    def test_simulate_intervention(self):
+        samples = self.dbn.simulate(
+            n_samples=int(1e5), n_time_slices=3, do={("D", 0): 1, ("D", 2): 0}
+        )
+        self.assertEqual(len(samples), int(1e5))
+        self.assertEqual(len(samples.columns), 9)
+        for node in [
+            ("D", 0),
+            ("I", 0),
+            ("G", 0),
+            ("D", 1),
+            ("I", 1),
+            ("G", 1),
+            ("D", 2),
+            ("I", 2),
+            ("G", 2),
+        ]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 2)]].values)), [0])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 2)]].values)), [0, 1, 2])
+
+        # Test the asymptotic distribution of samples
+        sample_marginals = {
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
+            for node in self.dbn.nodes()
+        }
+
+        for node in sample_marginals.keys():
+            samples_cpd = sample_marginals[node]
+            if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                bn_infer_cpd = self.bn_causal_infer.query(
+                    [str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0}
+                )
+
+            for state in range(samples_cpd.shape[0]):
+                if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                    self.assertTrue(
+                        np.isclose(
+                            sample_marginals[node].loc[state].values[0],
+                            bn_infer_cpd.values[state],
+                            atol=0.08,
+                        )
+                    )
+
+    def test_simulate_virtual_intervention(self):
+        # Virtual intervention equivalent to hard intervention of (D, 0) = 1 and (D, 2) = 0
+        virtual_intervention = [
+            TabularCPD(("D", 0), 2, [[0], [1]]),
+            TabularCPD(("D", 2), 2, [[1], [0]]),
+        ]
+        bn_virtual_intervention = [
+            TabularCPD("D0", 2, [[0], [1]]),
+            TabularCPD("D2", 2, [[1], [0]]),
+        ]
+
+        samples = self.dbn.simulate(
+            n_samples=int(1e5),
+            n_time_slices=3,
+            virtual_intervention=virtual_intervention,
+        )
+        self.assertEqual(len(samples), int(1e5))
+        self.assertEqual(len(samples.columns), 9)
+        for node in [
+            ("D", 0),
+            ("I", 0),
+            ("G", 0),
+            ("D", 1),
+            ("I", 1),
+            ("G", 1),
+            ("D", 2),
+            ("I", 2),
+            ("G", 2),
+        ]:
+            self.assertIn(node, samples.columns)
+
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 0)]].values)), [1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 1)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 1)]].values)), [0, 1, 2])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("D", 2)]].values)), [0])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 2)]].values)), [0, 1])
+        self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 2)]].values)), [0, 1, 2])
+
+        # Test the asymptotic distribution of samples
+        sample_marginals = {
+            node: samples.loc[:, [node.to_tuple()]].value_counts() / samples.shape[0]
+            for node in self.dbn.nodes()
+        }
+
+        for node in sample_marginals.keys():
+            samples_cpd = sample_marginals[node]
+            if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                bn_infer_cpd = self.bn_causal_infer.query(
+                    [str(node[0]) + str(node[1])], do={"D0": 1, "D2": 0}
+                )
+
+            for state in range(samples_cpd.shape[0]):
+                if node not in [("D", 0), ("D", 1), ("D", 2)]:
+                    self.assertTrue(
+                        np.isclose(
+                            sample_marginals[node].loc[state].values[0],
+                            bn_infer_cpd.values[state],
+                            atol=0.08,
+                        )
+                    )

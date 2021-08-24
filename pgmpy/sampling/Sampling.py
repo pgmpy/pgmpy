@@ -98,7 +98,7 @@ class BayesianModelSampling(BayesianModelInference):
 
             # If values specified in partial_samples, use them. Else generate the values.
             if (partial_samples is not None) and (node in partial_samples.columns):
-                sampled[node] = partial_samples.loc[:, node]
+                sampled[node] = partial_samples.loc[:, node].values
             else:
                 cpd = self.model.get_cpds(node)
                 states = range(self.cardinality[node])
@@ -195,7 +195,7 @@ class BayesianModelSampling(BayesianModelInference):
             return self.forward_sample(size=size, include_latents=include_latents)
 
         # Setup array to be returned
-        sampled = pd.DataFrame(columns=list(self.model.nodes()))
+        sampled = pd.DataFrame()
         prob = 1
         i = 0
 
@@ -207,6 +207,12 @@ class BayesianModelSampling(BayesianModelInference):
 
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
+
+            # If partial_samples is specified, can only generate < partial_samples.shape[0] number of samples
+            # at a time. For simplicity, just generate the same size as partial_samples.shape[0].
+            if partial_samples is not None:
+                _size = partial_samples.shape[0]
+
             _sampled = self.forward_sample(
                 size=_size,
                 include_latents=True,

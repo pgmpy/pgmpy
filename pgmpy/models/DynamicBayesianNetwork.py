@@ -938,7 +938,18 @@ class DynamicBayesianNetwork(DAG):
         )
 
     @staticmethod
-    def _get_column_names(df):
+    def _postprocess(df):
+        """
+        Postprocess the generated samples before returning.
+        1. Remove any of the variables created because of the virtual evidence or intervention. Variables
+           starting with `__`
+        2. Change the column names from str to tuples.
+        """
+        # Step 1: Remove virtual evidence columns
+        non_virt_cols = [col for col in df.columns if not col.startswith("__")]
+        df = df.loc[:, non_virt_cols]
+
+        # Step 2: Change the column names
         tuple_cols = [col.rsplit("_", 1) for col in df.columns]
         new_cols = [(var, int(t)) for var, t in tuple_cols]
         df.columns = new_cols
@@ -1014,12 +1025,11 @@ class DynamicBayesianNetwork(DAG):
             seed=seed,
             show_progress=False,
         )
-
         if n_time_slices == 1:
-            sampled = self._get_column_names(sampled)
+            sampled = self._postprocess(sampled)
             return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
         elif n_time_slices == 2:
-            sampled = self._get_column_names(sampled)
+            sampled = self._postprocess(sampled)
             return sampled
 
         # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
@@ -1043,9 +1053,9 @@ class DynamicBayesianNetwork(DAG):
                     *virtual_inter_dict[t_slice + 1],
                 ],
                 include_latents=True,
-                partial_samples=sampled,
+                partial_samples=partial_df,
                 seed=seed,
                 show_progress=False,
             )
             sampled = pd.concat((remaining_df, new_samples), axis=1)
-        return self._get_column_names(sampled)
+        return self._postprocess(sampled)
