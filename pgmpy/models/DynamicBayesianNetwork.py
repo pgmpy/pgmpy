@@ -6,9 +6,11 @@ import typing
 import numpy as np
 import pandas as pd
 import networkx as nx
+from tqdm.auto import tqdm
 
-from pgmpy.factors.discrete import TabularCPD
 from pgmpy.base import DAG
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import SHOW_PROGRESS
 
 
 @dataclass(eq=True, frozen=True)
@@ -775,16 +777,42 @@ class DynamicBayesianNetwork(DAG):
 
         return sorted(markov_blanket)
 
-    def get_constant_bn(self):
+    def get_constant_bn(self, t_slice=0):
         """
         Returns a normal bayesian network object which has nodes from the first two
         time slices and all the edges in the first time slice and edges going from
         first to second time slice. The returned bayesian network bascially represents
         the part of the DBN which remains constant.
+
+        The node names are changed to strings in the form `{var}_{time}`.
         """
         from pgmpy.models import BayesianNetwork
 
-        return BayesianNetwork(ebunch=self.edges())
+        edges = [
+            (
+                str(u[0]) + "_" + str(u[1] + t_slice),
+                str(v[0]) + "_" + str(v[1] + t_slice),
+            )
+            for u, v in self.edges()
+        ]
+        new_cpds = []
+        for cpd in self.cpds:
+            new_vars = [
+                str(var) + "_" + str(time + t_slice) for var, time in cpd.variables
+            ]
+            new_cpds.append(
+                TabularCPD(
+                    variable=new_vars[0],
+                    variable_card=cpd.cardinality[0],
+                    values=cpd.get_values(),
+                    evidence=new_vars[1:],
+                    evidence_card=cpd.cardinality[1:],
+                )
+            )
+
+        bn = BayesianNetwork(edges)
+        bn.add_cpds(*new_cpds)
+        return bn
 
     def fit(self, data, estimator="MLE"):
         """
@@ -840,19 +868,32 @@ class DynamicBayesianNetwork(DAG):
         if estimator not in {"MLE", "mle"}:
             raise ValueError("Only Maximum Likelihood Estimator is supported currently")
 
+        # Make a copy and replace tuple column names with str.
+        data_copy = data.copy()
+        data_copy.columns = [str(var) + "_" + str(t) for (var, t) in data.columns]
+
         n_samples = data.shape[0]
         const_bn = self.get_constant_bn()
         n_time_slices = max(data.columns, key=lambda t: t[1])[1]
 
         for t_slice in range(n_time_slices):
-            colnames = [(node, t_slice) for node in self._nodes()]
-            colnames.extend([(node, t_slice + 1) for node in self._nodes()])
+            # Get the columns names for this time slice
+            colnames = [str(node) + "_" + str(t_slice) for node in self._nodes()]
+            colnames.extend(
+                [str(node) + "_" + str(t_slice + 1) for node in self._nodes()]
+            )
 
-            df_slice = data.loc[:, colnames]
+            # Select the data frame for this time slice
+            df_slice = data_copy.loc[:, colnames]
+
+            # Change the column time slice to match the constant bayesian network.
+            tuple_colnames = [var.rsplit("_", 1) for var in df_slice.columns]
             new_colnames = [
-                DynamicNode(node, t - t_slice) for (node, t) in df_slice.columns
+                str(node) + "_" + str(int(t) - t_slice) for (node, t) in tuple_colnames
             ]
             df_slice.columns = new_colnames
+
+            # Fit or fit_update with df_slice depending on the time slice
             if t_slice == 0:
                 const_bn.fit(df_slice)
             else:
@@ -860,12 +901,14 @@ class DynamicBayesianNetwork(DAG):
 
         cpds = []
         for cpd in const_bn.cpds:
+            var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
+            new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
             cpds.append(
                 TabularCPD(
-                    variable=cpd.variables[0],
+                    variable=new_vars[0],
                     variable_card=cpd.variable_card,
                     values=cpd.get_values(),
-                    evidence=cpd.variables[1:],
+                    evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
                 )
             )
@@ -893,3 +936,230 @@ class DynamicBayesianNetwork(DAG):
         return super(DynamicBayesianNetwork, self).active_trail_nodes(
             variables, observed, include_latents
         )
+
+    @staticmethod
+    def _postprocess(df):
+        """
+        Postprocess the generated samples before returning.
+        1. Remove any of the variables created because of the virtual evidence or intervention. Variables
+           starting with `__`
+        2. Change the column names from str to tuples.
+        """
+        # Step 1: Remove virtual evidence columns
+        non_virt_cols = [col for col in df.columns if not col.startswith("__")]
+        df = df.loc[:, non_virt_cols]
+
+        # Step 2: Change the column names
+        tuple_cols = [col.rsplit("_", 1) for col in df.columns]
+        new_cols = [(var, int(t)) for var, t in tuple_cols]
+        df.columns = new_cols
+        return df
+
+    def simulate(
+        self,
+        n_samples=10,
+        n_time_slices=2,
+        do=None,
+        evidence=None,
+        virtual_evidence=None,
+        virtual_intervention=None,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+    ):
+        """
+        Simulates time-series data from the specified model.
+
+        Parameters
+        ----------
+        n_samples: int
+            The number of data samples to simulate from the model.
+
+        n_time_slices: int
+            The number of time slices for which to simulate the data.
+
+        do: dict
+            The interventions to apply to the model. dict should be of the form
+            {(variable_name, time_slice): state}
+
+        evidence: dict
+            Observed evidence to apply to the model. dict should be of the form
+            {(variable_name, time_slice): state}
+
+        virtual_evidence: list
+            Probabilistically apply evidence to the model. `virtual_evidence` should
+            be a list of `pgmpy.factors.discrete.TabularCPD` objects specifying the
+            virtual probabilities.
+
+        virtual_intervention: list
+            Also known as soft intervention. `virtual_intervention` should be a list
+            of `pgmpy.factors.discrete.TabularCPD` objects specifying the virtual/soft
+            intervention probabilities.
+
+        include_latents: boolean (default: False)
+            Whether to include the latent variable values in the generated samples.
+
+        seed: int (default: None)
+            If a value is provided, sets the seed for numpy.random.
+
+        show_progress: bool
+            If True, shows a progress bar when generating samples.
+
+        Returns
+        -------
+        pandas.DataFrame: A dataframe with the simulated data.
+
+        Examples
+        --------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> dbn = DBN([(("D", 0), ("G", 0)), (("I", 0), ("G", 0)),
+        ...            (("D", 0), ("D", 1)), (("I", 0), ("I", 1)),])
+        >>> diff_cpd = TabularCPD(("D", 0), 2, [[0.6], [0.4]])
+        >>> grade_cpd = TabularCPD(variable=("G", 0), variable_card=3,
+        ...                        values=[[0.3, 0.05, 0.9, 0.5],
+        ...                                [0.4, 0.25, 0.08, 0.3],
+        ...                                [0.3, 0.7, 0.02, 0.2]],
+        ...                        evidence=[("I", 0), ("D", 0)],
+        ...                        evidence_card=[2, 2])
+        >>> d_i_cpd = TabularCPD(variable=("D", 1), variable_card=2,
+        ...                      values=[[0.6, 0.3], [0.4, 0.7]],
+        ...                      evidence=[("D", 0)],
+        ...                      evidence_card=[2])
+        >>> intel_cpd = TabularCPD(("I", 0), 2, [[0.7], [0.3]])
+        >>> i_i_cpd = TabularCPD(variable=("I", 1), variable_card=2,
+        ...                      values=[[0.5, 0.4], [0.5, 0.6]],
+        ...                      evidence=[("I", 0)],
+        ...                      evidence_card=[2])
+        >>> g_i_cpd = TabularCPD(variable=("G", 1), variable_card=3,
+        ...                      values=[[0.3, 0.05, 0.9, 0.5],
+        ...                              [0.4, 0.25, 0.08, 0.3],
+        ...                              [0.3, 0.7, 0.02, 0.2]],
+        ...                      evidence=[("I", 1), ("D", 1)],
+        ...                      evidence_card=[2, 2])
+        >>> dbn.add_cpds(diff_cpd, grade_cpd, d_i_cpd, intel_cpd, i_i_cpd, g_i_cpd)
+
+        Normal simulation from the model.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2)
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       2       0       0       0       1       0       2       0       2       0       0
+        1       0       1       0       0       0       1       1       0       1       2       1       0
+
+        Simulation with evidence.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, evidence={('D', 0): 1, ('D', 2): 0})
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       1       1       1       1       2       0       0       2       1       1       0       1
+        1       1       2       1       1       2       0       0       1       1       0       0       1
+
+        Simulation with virtual/soft evidence.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_evidence=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       1       0       0       1       0       0       0       1       0       1       1
+        1       0       1       0       0       0       1       0       0       0       0       1       1
+
+        Simulation with intervention.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, do={('D', 0): 1, ('D', 2): 0})
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       1       0       1       1       0       1       0       2       0       0       0       1
+        1       1       1       0       1       2       1       0       0       1       1       1       1
+
+        Simulation with virtual/soft intervention.
+
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, virtual_intervention=[TabularCPD(('D', 2), 2, [[0.7], [0.3]])])
+           (D, 0)  (G, 0)  (I, 0)  (D, 1)  (G, 1)  (I, 1)  (D, 2)  (G, 2)  (D, 3)  (G, 3)  (I, 2)  (I, 3)
+        0       0       0       0       1       2       0       1       2       1       1       0       1
+        1       0       1       1       1       2       0       1       2       1       1       0       0
+        """
+        from pgmpy.sampling import BayesianModelSampling
+
+        if show_progress and SHOW_PROGRESS:
+            pbar = tqdm(total=n_time_slices * len(self._nodes()))
+
+        # Step 1: Create some data strucures for easily accessing values
+        do = {} if do is None else do
+        evidence = {} if evidence is None else evidence
+        virtual_intervention = (
+            [] if virtual_intervention is None else virtual_intervention
+        )
+        virtual_evidence = [] if virtual_evidence is None else virtual_evidence
+
+        do_dict = defaultdict(dict)
+        evidence_dict = defaultdict(dict)
+        virtual_inter_dict = defaultdict(list)
+        virtual_evi_dict = defaultdict(list)
+
+        for var, state in do.items():
+            do_dict[var[1]][str(var[0]) + "_" + str(var[1])] = state
+        for var, state in evidence.items():
+            evidence_dict[var[1]][str(var[0]) + "_" + str(var[1])] = state
+        for cpd in virtual_intervention:
+            new_vars = [str(var[0]) + "_" + str(var[1]) for var in cpd.variables]
+            new_cpd = TabularCPD(
+                variable=new_vars[0],
+                variable_card=cpd.cardinality[0],
+                values=cpd.get_values(),
+                evidence=new_vars[1:],
+                evidence_card=cpd.cardinality[1:],
+            )
+            virtual_inter_dict[cpd.variables[0][1]].append(new_cpd)
+        for cpd in virtual_evidence:
+            new_vars = [str(var[0]) + "_" + str(var[1]) for var in cpd.variables]
+            new_cpd = TabularCPD(
+                variable=new_vars[0],
+                variable_card=cpd.cardinality[0],
+                values=cpd.get_values(),
+                evidence=new_vars[1:],
+                evidence_card=cpd.cardinality[1:],
+            )
+            virtual_evi_dict[cpd.variables[0][1]].append(new_cpd)
+
+        # Step 2: Generate first two time samples
+        const_bn = self.get_constant_bn(t_slice=0)
+        sampled = const_bn.simulate(
+            n_samples=n_samples,
+            do={**do_dict[0], **do_dict[1]},
+            evidence={**evidence_dict[0], **evidence_dict[1]},
+            virtual_evidence=[*virtual_evi_dict[0], *virtual_evi_dict[1]],
+            virtual_intervention=[*virtual_inter_dict[0], *virtual_inter_dict[1]],
+            include_latents=True,
+            seed=seed,
+            show_progress=False,
+        )
+        if n_time_slices == 1:
+            sampled = self._postprocess(sampled)
+            return sampled.loc[:, [col for col in sampled.columns if col[1] == 0]]
+        elif n_time_slices == 2:
+            sampled = self._postprocess(sampled)
+            return sampled
+
+        # Step 3: If n_time_slices > 2, iterate over the time slices and generate samples
+        for t_slice in range(1, n_time_slices - 1):
+            const_bn = self.get_constant_bn(t_slice=t_slice)
+            partial_colnames = [
+                str(node) + "_" + str(t_slice) for node in self._nodes()
+            ]
+            partial_df = sampled.loc[:, partial_colnames]
+            remaining_df = sampled.loc[:, ~sampled.columns.isin(partial_colnames)]
+            new_samples = const_bn.simulate(
+                n_samples=n_samples,
+                do={**do_dict[t_slice], **do_dict[t_slice + 1]},
+                evidence={**evidence_dict[t_slice], **evidence_dict[t_slice + 1]},
+                virtual_evidence=[
+                    *virtual_evi_dict[t_slice],
+                    *virtual_evi_dict[t_slice + 1],
+                ],
+                virtual_intervention=[
+                    *virtual_inter_dict[t_slice],
+                    *virtual_inter_dict[t_slice + 1],
+                ],
+                include_latents=True,
+                partial_samples=partial_df,
+                seed=seed,
+                show_progress=False,
+            )
+            sampled = pd.concat((remaining_df, new_samples), axis=1)
+        return self._postprocess(sampled)

@@ -1010,6 +1010,7 @@ class BayesianNetwork(DAG):
         virtual_evidence=None,
         virtual_intervention=None,
         include_latents=False,
+        partial_samples=None,
         seed=None,
         show_progress=True,
     ):
@@ -1042,6 +1043,11 @@ class BayesianNetwork(DAG):
 
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
+
+        partial_samples: pandas.DataFrame
+            A pandas dataframe specifying samples on some of the variables in the model. If
+            specified, the sampling procedure uses these sample values, instead of generating them.
+            partial_samples.shape[0] must be equal to `n_samples`.
 
         seed: int (default: None)
             If a value is provided, sets the seed for numpy.random.
@@ -1132,12 +1138,13 @@ class BayesianNetwork(DAG):
                 evidence[new_var] = 0
 
         # Step 3: If no evidence do a forward sampling
-        if evidence is None:
+        if len(evidence) == 0:
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,
                 seed=seed,
                 show_progress=show_progress,
+                partial_samples=partial_samples,
             )
 
         # Step 4: If evidence; do a rejection sampling
@@ -1148,6 +1155,7 @@ class BayesianNetwork(DAG):
                 include_latents=include_latents,
                 seed=seed,
                 show_progress=show_progress,
+                partial_samples=partial_samples,
             )
 
         # Step 5: Postprocess and return

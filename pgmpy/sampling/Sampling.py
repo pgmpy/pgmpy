@@ -1,13 +1,15 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 import itertools
 
 import numpy as np
 import pandas as pd
+import networkx as nx
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.sampling import BayesianModelInference
 from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
+from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -30,7 +32,12 @@ class BayesianModelSampling(BayesianModelInference):
         super(BayesianModelSampling, self).__init__(model)
 
     def forward_sample(
-        self, size=1, include_latents=False, seed=None, show_progress=True
+        self,
+        size=1,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+        partial_samples=None,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network.
@@ -48,6 +55,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        partial_samples: pandas.DataFrame
+            A pandas dataframe specifying samples on some of the variables in the model. If
+            specified, the sampling procedure uses these sample values, instead of generating them.
 
         Returns
         -------
@@ -85,27 +96,31 @@ class BayesianModelSampling(BayesianModelInference):
             if show_progress and SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
 
-            cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
-            evidence = cpd.variables[:0:-1]
-            if evidence:
-                evidence_values = np.vstack([sampled[i] for i in evidence])
-
-                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node
-                )
-                unique, inverse = np.unique(
-                    evidence_values.T, axis=0, return_inverse=True
-                )
-                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
-                    inverse
-                ]
-                sampled[node] = sample_discrete_maps(
-                    states, weight_index, index_to_weight, size
-                )
+            # If values specified in partial_samples, use them. Else generate the values.
+            if (partial_samples is not None) and (node in partial_samples.columns):
+                sampled[node] = partial_samples.loc[:, node].values
             else:
-                weights = cpd.values
-                sampled[node] = sample_discrete(states, weights, size)
+                cpd = self.model.get_cpds(node)
+                states = range(self.cardinality[node])
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack([sampled[i] for i in evidence])
+
+                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                        variable=node
+                    )
+                    unique, inverse = np.unique(
+                        evidence_values.T, axis=0, return_inverse=True
+                    )
+                    weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                        inverse
+                    ]
+                    sampled[node] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
+                else:
+                    weights = cpd.values
+                    sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
@@ -119,6 +134,7 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents=False,
         seed=None,
         show_progress=True,
+        partial_samples=None,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network,
@@ -140,6 +156,10 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        partial_samples: pandas.DataFrame
+            A pandas dataframe specifying samples on some of the variables in the model. If
+            specified, the sampling procedure uses these sample values, instead of generating them.
 
         Returns
         -------
@@ -175,7 +195,7 @@ class BayesianModelSampling(BayesianModelInference):
             return self.forward_sample(size=size, include_latents=include_latents)
 
         # Setup array to be returned
-        sampled = pd.DataFrame(columns=list(self.model.nodes()))
+        sampled = pd.DataFrame()
         prob = 1
         i = 0
 
@@ -187,8 +207,17 @@ class BayesianModelSampling(BayesianModelInference):
 
         while i < size:
             _size = int(((size - i) / prob) * 1.5)
+
+            # If partial_samples is specified, can only generate < partial_samples.shape[0] number of samples
+            # at a time. For simplicity, just generate the same size as partial_samples.shape[0].
+            if partial_samples is not None:
+                _size = partial_samples.shape[0]
+
             _sampled = self.forward_sample(
-                size=_size, include_latents=True, show_progress=False
+                size=_size,
+                include_latents=True,
+                show_progress=False,
+                partial_samples=partial_samples,
             )
 
             for var, state in evidence:
