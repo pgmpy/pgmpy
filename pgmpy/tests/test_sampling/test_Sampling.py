@@ -6,7 +6,7 @@ import numpy as np
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
 from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
-from pgmpy.sampling import BayesianModelSampling, GibbsSampling, DBNSampling
+from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 from pgmpy.inference import VariableElimination, DBNInference
 
 

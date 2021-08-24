@@ -978,9 +978,9 @@ class DynamicBayesianNetwork(DAG):
         virtual_evi_dict = defaultdict(list)
 
         for var, state in do.items():
-            do_dict[var[1]][var] = state
+            do_dict[var[1]][str(var[0]) + "_" + str(var[1])] = state
         for var, state in evidence.items():
-            evidence_dict[var[1]][var] = state
+            evidence_dict[var[1]][str(var[0]) + "_" + str(var[1])] = state
         for cpd in virtual_intervention:
             virtual_inter_dict[cpd.variables[0][1]].append(cpd)
         for cpd in virtual_evidence:
