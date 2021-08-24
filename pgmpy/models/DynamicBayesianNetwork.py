@@ -982,9 +982,25 @@ class DynamicBayesianNetwork(DAG):
         for var, state in evidence.items():
             evidence_dict[var[1]][str(var[0]) + "_" + str(var[1])] = state
         for cpd in virtual_intervention:
-            virtual_inter_dict[cpd.variables[0][1]].append(cpd)
+            new_vars = [str(var[0]) + "_" + str(var[1]) for var in cpd.variables]
+            new_cpd = TabularCPD(
+                variable=new_vars[0],
+                variable_card=cpd.cardinality[0],
+                values=cpd.get_values(),
+                evidence=new_vars[1:],
+                evidence_card=cpd.cardinality[1:],
+            )
+            virtual_inter_dict[cpd.variables[0][1]].append(new_cpd)
         for cpd in virtual_evidence:
-            virtual_evi_dict[cpd.variables[0][1]].append(cpd)
+            new_vars = [str(var[0]) + "_" + str(var[1]) for var in cpd.variables]
+            new_cpd = TabularCPD(
+                variable=new_vars[0],
+                variable_card=cpd.cardinality[0],
+                values=cpd.get_values(),
+                evidence=new_vars[1:],
+                evidence_card=cpd.cardinality[1:],
+            )
+            virtual_evi_dict[cpd.variables[0][1]].append(new_cpd)
 
         # Step 2: Generate first two time samples
         const_bn = self.get_constant_bn(t_slice=0)
