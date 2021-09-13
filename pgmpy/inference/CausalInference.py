@@ -6,6 +6,7 @@ import networkx as nx
 from tqdm.auto import tqdm
 
 from pgmpy.models import BayesianNetwork
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
@@ -614,10 +615,33 @@ class CausalInference(object):
 
         # Step 3: Compute \sum_{z} p(variables | do, z) p(z)
         values = []
-        p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
-        adj_states = [
-            self.model.get_cpds(var).state_names[var] for var in adjustment_set
-        ]
+
+        # If evidence variables also in adjustment set, manually do reduce else inference will
+        # throw error.
+        if len(adjustment_set.intersection(evidence.keys())) != 0:
+            p_z = infer.query(adjustment_set, show_progress=False).reduce(
+                [(key, value) for key, value in evidence.items()], inplace=False
+            )
+            # A hackish solution for the case when all the variables in adjustment set
+            # are also in evidence. reduce method in such cases returns a factor with no variables
+            # and single value. Recreate the factor in such cases.
+
+            if p_z.variables == []:
+                p_z = DiscreteFactor(
+                    list(evidence.keys()),
+                    [1] * len(evidence),
+                    p_z.values,
+                    state_names={var: [state] for var, state in evidence.items()},
+                )
+        else:
+            p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
+
+        adj_states = []
+        for var in adjustment_set:
+            if var in evidence.keys():
+                adj_states.append([evidence[var]])
+            else:
+                adj_states.append(self.model.get_cpds(var).state_names[var])
 
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
