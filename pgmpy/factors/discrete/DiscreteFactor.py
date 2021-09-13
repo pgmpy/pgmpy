@@ -156,7 +156,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
     def get_value(self, **kwargs):
         """
-        Returns the value of the given variable states.
+        Returns the value of the given variable states. Assumes that the arguments
+        specified are state names, and falls back to considering it as state no if
+        can't find the state name.
 
         Parameters
         ----------
@@ -184,11 +186,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         for var in self.variables:
             if var not in kwargs.keys():
                 raise ValueError(f"Variable: {var} not found in arguments")
-            elif isinstance(kwargs[var], str):
-                index.append(self.name_to_no[var][kwargs[var]])
             else:
-                logging.info(f"Using {var} state as number instead of name.")
-                index.append(kwargs[var])
+                try:
+                    index.append(self.name_to_no[var][kwargs[var]])
+                except KeyError:
+                    logging.info(f"Using {var} state as number instead of name.")
+                    index.append(kwargs[var])
         return self.values[tuple(index)]
 
     def set_value(self, value, **kwargs):
