@@ -591,7 +591,7 @@ class CausalInference(object):
                 f"inference_algo must be one of: 've', 'bp', or an instance of pgmpy.inference.Inference. Got: {inference_algo}"
             )
 
-        # Step 2: Check if adjustment set is provided, otherwise calcualte it.
+        # Step 2: Check if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
             adjustment_set = set(
@@ -613,36 +613,47 @@ class CausalInference(object):
             evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
-        # Step 3: Compute \sum_{z} p(variables | do, z) p(z)
+        # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
         values = []
 
-        # If evidence variables also in adjustment set, manually do reduce else inference will
-        # throw error.
-        if len(adjustment_set.intersection(evidence.keys())) != 0:
+        # Step 4.1: Compute p_z and states of z to iterate over.
+        # For computing p_z, if evidence variables also in adjustment set,
+        # manually do reduce else inference will throw error.
+        evidence_adj_inter = {
+            var: state
+            for var, state in evidence.items()
+            if var in adjustment_set.intersection(evidence.keys())
+        }
+        if len(evidence_adj_inter) != 0:
             p_z = infer.query(adjustment_set, show_progress=False).reduce(
-                [(key, value) for key, value in evidence.items()], inplace=False
+                [(key, value) for key, value in evidence_adj_inter.items()],
+                inplace=False,
             )
-            # A hackish solution for the case when all the variables in adjustment set
-            # are also in evidence. reduce method in such cases returns a factor with no variables
-            # and single value. Recreate the factor in such cases.
+            # Since we are doing reduce over some of the variables, they are
+            # going to be removed from the factor but would be required to get
+            # values later. A hackish solution to reintroduce those variables in p_z
 
-            if p_z.variables == []:
+            if set(p_z.variables) != adjustment_set:
                 p_z = DiscreteFactor(
-                    list(evidence.keys()),
-                    [1] * len(evidence),
+                    p_z.variables + list(evidence_adj_inter.keys()),
+                    list(p_z.cardinality) + [1] * len(evidence_adj_inter),
                     p_z.values,
-                    state_names={var: [state] for var, state in evidence.items()},
+                    state_names={
+                        **p_z.state_names,
+                        **{var: [state] for var, state in evidence_adj_inter.items()},
+                    },
                 )
         else:
             p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
 
         adj_states = []
         for var in adjustment_set:
-            if var in evidence.keys():
-                adj_states.append([evidence[var]])
+            if var in evidence_adj_inter.keys():
+                adj_states.append([evidence_adj_inter[var]])
             else:
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
+        # Step 4.2: Iterate over states of adjustment set and compute values.
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 

@@ -394,6 +394,35 @@ class TestDoQuery(unittest.TestCase):
         query = causal_infer.query(["Y"], do={"X": 1}, evidence={"W": 1})
         np_test.assert_array_almost_equal(query.values, np.array([0.1, 0.9]))
 
+        # A slight modified version of the above model where only some of the adjustment
+        # set variables are in evidence.
+        bn = BayesianNetwork(
+            [("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")]
+        )
+        cpd_w1 = TabularCPD(variable="W1", variable_card=2, values=[[0.7], [0.3]])
+        cpd_w2 = TabularCPD(variable="W2", variable_card=2, values=[[0.3], [0.7]])
+        cpd_x = TabularCPD(
+            variable="X",
+            variable_card=2,
+            values=[[0.7, 0.4, 0.3, 0.8], [0.3, 0.6, 0.7, 0.2]],
+            evidence=["W1", "W2"],
+            evidence_card=[2, 2],
+        )
+        cpd_y = TabularCPD(
+            variable="Y",
+            variable_card=2,
+            values=[
+                [0.7, 0.7, 0.5, 0.1, 0.9, 0.2, 0.4, 0.6],
+                [0.3, 0.3, 0.5, 0.9, 0.1, 0.8, 0.6, 0.4],
+            ],
+            evidence=["W1", "W2", "X"],
+            evidence_card=[2, 2, 2],
+        )
+        bn.add_cpds(cpd_w1, cpd_w2, cpd_x, cpd_y)
+        causal_infer = CausalInference(bn)
+        query = causal_infer.query(["Y"], do={"X": 1}, evidence={"W1": 1})
+        np_test.assert_array_almost_equal(query.values, np.array([0.48, 0.52]))
+
     def test_query_error(self):
         self.assertRaises(ValueError, self.simp_infer.query, variables="C", do={"T": 1})
         self.assertRaises(
