@@ -88,6 +88,7 @@
    :hidden:
    :caption: Approximate Inference
 
+   approx_infer/approx_infer.rst
    approx_infer/bn_sampling.rst
    approx_infer/gibbs.rst
 
@@ -189,6 +190,7 @@ Algorithms
    examples/Structure Learning in Bayesian Networks.ipynb
    examples/Structure Learning with Chow-Liu.ipynb
    examples/Structure Learning with TAN.ipynb
+   examples/Simulating Data.ipynb
    examples/Extending pgmpy.ipynb
 
 .. toctree::
