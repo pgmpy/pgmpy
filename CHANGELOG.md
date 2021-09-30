@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.16] - 2021-09-30
+### Added
+1. Adds a `fit_update` method to `BayesianNetwork` for updating model using new data.
+2. Adds `simulate` method to `BayesianNetwork` and `DynamicBayesianNetwork` to simulated data under different conditions.
+3. Adds `DynamicBayesianNetwork.fit` method to learn model paramters from data.
+4. `ApproxInference` class to do approximate inference on models using sampling.
+5. Robust tests for all sampling methods.
+6. Adds `BayesianNetwork.load` and `BayesianNetwork.save` to quickly read and write files.
+
+### Changed
+1. `BayesianModel` and `MarkovModel` renamed to `BayesianNetwork` and `MarkovNetwork` respectively.
+2. The default value of node position in `DAG.to_daft` method.
+3. Documentation updated on the website.
+
+### Fixed
+1. Fixes bug in `DAG.is_iequivalent` method.
+2. Automatically truncate table when CPD is too large.
+3. Auto-adjustment of probability values when they don't exactly sum to 1.
+4. tqdm works both in notebooks and terminal.
+5. Fixes bug in `CausalInference.query` method.
+
 ## [0.1.15] - 2021-06-30
 ### Added
 1. Adds network pruning for inference algrithms to reduce the size of network before
