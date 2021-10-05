@@ -371,6 +371,22 @@ class BayesianNetwork(DAG):
                 cardinalities[cpd.variable] = cpd.cardinality[0]
             return cardinalities
 
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [cpd.state_names for cpd in self.cpds]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following

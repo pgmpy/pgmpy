@@ -193,6 +193,11 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.G1.get_cardinality(), {"diff": 2, "intel": 3, "grade": 3}
         )
 
+    def test_states(self):
+        self.assertDictEqual(
+            self.G1.states, {"diff": [0, 1], "intel": [0, 1, 2], "grade": [0, 1, 2]}
+        )
+
     def test_get_cardinality_with_node(self):
         self.assertEqual(self.G1.get_cardinality("diff"), 2)
         self.assertEqual(self.G1.get_cardinality("intel"), 3)
