@@ -326,7 +326,7 @@ class TestSnowNetwork(unittest.TestCase):
             self.assertEqual(set(computed_order), set({"Risk", "Late", "Snow"}))
 
     def test_virt_evidence(self):
-        virt_evidence = TabularCPD("Traffic", 2, [[0.3], [0.7]])
+        virt_evidence = TabularCPD("Traffic", 2, [[0.3], [0.7]], state_names={'Traffic': ['normal', 'slow']})
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
             query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence])
@@ -354,7 +354,7 @@ class TestSnowNetwork(unittest.TestCase):
             map4 = infer.map_query(["Traffic"], virtual_evidence=[virt_evidence])
             self.assertTrue(map4 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
-        virt_evidence1 = TabularCPD("Risk", 2, [[0.7], [0.3]])
+        virt_evidence1 = TabularCPD("Risk", 2, [[0.7], [0.3]], state_names={'Risk': ['yes', 'no']})
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
             query1 = infer.query(
