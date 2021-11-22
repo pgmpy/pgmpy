@@ -424,6 +424,9 @@ class BayesianNetwork(DAG):
                         f"Sum or integral of conditional probabilites for node {node} is not equal to 1."
                     )
 
+                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0 :
+                    raise ValueError("Some of the variables don't have state names defined")
+
                 # Check if the evidence cardinality specified is same as parent's cardinality
                 for index, node in enumerate(cpd.variables[1:]):
                     parent_cpd = self.get_cpds(node)
