@@ -426,20 +426,23 @@ class BayesianNetwork(DAG):
 
                 if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
                     raise ValueError(
-                        "Some of the variables don't have state names defined"
+                        "CPD for {node} doesn't have state names defined for all the variables."
                     )
 
+        for node in self.nodes():
+            cpd = self.get_cpds(node=node)
+            for index, node in enumerate(cpd.variables[1:]):
+                parent_cpd = self.get_cpds(node)
                 # Check if the evidence cardinality specified is same as parent's cardinality
-                for index, node in enumerate(cpd.variables[1:]):
-                    parent_cpd = self.get_cpds(node)
-                    if parent_cpd.cardinality[0] != cpd.cardinality[1 + index]:
-                        raise ValueError(
-                            f"The cardinality of {node} doesn't match in it's child nodes."
-                        )
-                    if parent_cpd.state_names[node] != cpd.state_names[node]:
-                        raise ValueError(
-                            f"The state names of {node} doesn't match in it's child nodes."
-                        )
+                if parent_cpd.cardinality[0] != cpd.cardinality[1 + index]:
+                    raise ValueError(
+                        f"The cardinality of {node} doesn't match in it's child nodes."
+                    )
+                # Check if the state_names are the same in parent and child CPDs.
+                if parent_cpd.state_names[node] != cpd.state_names[node]:
+                    raise ValueError(
+                        f"The state names of {node} doesn't match in it's child nodes."
+                    )
 
         return True
 

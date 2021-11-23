@@ -752,6 +752,33 @@ class TestBayesianModelCPD(unittest.TestCase):
         self.assertRaises(ValueError, self.G.check_model)
         self.G.remove_cpds(cpd_l)
 
+    def test_check_model3(self):
+        cpd_d = TabularCPD.get_random("d")
+        cpd_g = TabularCPD.get_random("g", evidence=["d", "i"])
+        cpd_i = TabularCPD.get_random("i")
+        cpd_l = TabularCPD.get_random("l", evidence=["g"])
+        cpd_s = TabularCPD.get_random("s", evidence=["i"])
+        self.G.add_cpds(cpd_d, cpd_g, cpd_i, cpd_l, cpd_s)
+
+        # Check for missing state names for some variables.
+        cpd_i.state_names = {}
+        self.G.add_cpds(cpd_i)
+        self.assertRaises(ValueError, self.G.check_model)
+
+        # Check if the cardinality doesn't match between parent and child nodes.
+        cpd_i = TabularCPD.get_random("i", cardinality={"i": 3})
+        cpd_s = TabularCPD.get_random("s", evidence=["i"], cardinality={"s": 2, "i": 2})
+        self.G.add_cpds(cpd_i, cpd_s)
+        self.assertRaises(ValueError, self.G.check_model)
+
+        # Check if the state names doesn't match between parent and child nodes.
+        cpd_i = TabularCPD.get_random("i", state_names={"i": ["i_1", "i_2"]})
+        cpd_s = TabularCPD.get_random(
+            "s", evidence=["i"], state_names={"i": ["i_3", "i_4"], "s": ["s_1", "s_2"]}
+        )
+        self.G.add_cpds(cpd_i, cpd_s)
+        self.assertRaises(ValueError, self.G.check_model)
+
     def tearDown(self):
         del self.G
 
