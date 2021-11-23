@@ -403,19 +403,47 @@ class BayesianNetwork(DAG):
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
 
+            # Check if a CPD is associated with every node.
             if cpd is None:
                 raise ValueError(f"No CPD associated with {node}")
+
+            # Check if the CPD is an instance of either TabularCPD or ContinuousFactor.
             elif isinstance(cpd, (TabularCPD, ContinuousFactor)):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
-                if set(evidence if evidence else []) != set(parents if parents else []):
+
+                # Check if the evidence set of the CPD is same as it's parents.
+                if set(evidence) != set(parents):
                     raise ValueError(
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
+
+                # Check if the values of the CPD sum to 1.
                 if not cpd.is_valid_cpd():
                     raise ValueError(
                         f"Sum or integral of conditional probabilites for node {node} is not equal to 1."
                     )
+
+                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
+                    raise ValueError(
+                        "CPD for {node} doesn't have state names defined for all the variables."
+                    )
+
+        for node in self.nodes():
+            cpd = self.get_cpds(node=node)
+            for index, node in enumerate(cpd.variables[1:]):
+                parent_cpd = self.get_cpds(node)
+                # Check if the evidence cardinality specified is same as parent's cardinality
+                if parent_cpd.cardinality[0] != cpd.cardinality[1 + index]:
+                    raise ValueError(
+                        f"The cardinality of {node} doesn't match in it's child nodes."
+                    )
+                # Check if the state_names are the same in parent and child CPDs.
+                if parent_cpd.state_names[node] != cpd.state_names[node]:
+                    raise ValueError(
+                        f"The state names of {node} doesn't match in it's child nodes."
+                    )
+
         return True
 
     def to_markov_model(self):
