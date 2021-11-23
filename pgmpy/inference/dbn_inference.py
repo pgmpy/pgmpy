@@ -231,7 +231,7 @@ class DBNInference(Inference):
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
 
-        Examples:
+        Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> from pgmpy.models import DynamicBayesianNetwork as DBN
