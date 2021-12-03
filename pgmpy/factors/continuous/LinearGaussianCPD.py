@@ -232,7 +232,7 @@ class LinearGaussianCPD(BaseFactor):
                 mu=" + ".join(
                     [
                         f"{coeff}*{parent}"
-                        for coeff, parent in zip(self.mean, self.evidence)
+                        for coeff, parent in zip(self.mean[1:], self.evidence)
                     ]
                 ),
                 b_0=str(self.mean[0]),
