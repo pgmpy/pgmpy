@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.17] - 2021-12-30
+### Added
+1. Adds BayesianNetwork.states property to store states of all the variables.
+2. Adds extra checks in check model for state names
+
+### Fixed
+1. Fixes typos in BayesianModel deprecation warning
+2. Bug fix in printing Linear Gaussian CPD
+3. Update example notebooks to work on latest dev.
+
 ## [0.1.16] - 2021-09-30
 ### Added
 1. Adds a `fit_update` method to `BayesianNetwork` for updating model using new data.
