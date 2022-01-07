@@ -541,7 +541,6 @@ $values
                     values = []
                     for var_state in var_states:
                         curr_state[var] = var_state
-                        print(curr_state)
                         values.append(phi.get_value(**curr_state))
                     curr_values_str = ", ".join(map(str, values))
                     all_cpd += conditional_probability_template.substitute(
