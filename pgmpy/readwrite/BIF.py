@@ -2,7 +2,7 @@ import re
 import collections
 from string import Template
 from itertools import product
-
+from copy import copy
 import numpy as np
 from joblib import Parallel, delayed
 from pyparsing import (
@@ -463,11 +463,24 @@ $properties}\n"""
     table $values ;
 }\n"""
         )
+
+        conditional_probability_template_total = Template(
+            """probability ( $variable_$seprator_$parents ) {
+$values
+}\n"""
+        )
+
+        conditional_probability_template = Template(
+            """    ($state ) $values;\n"""
+        )
+
         return (
             network_template,
             variable_template,
             property_template,
             probability_template,
+            conditional_probability_template_total,
+            conditional_probability_template
         )
 
     def __str__(self):
@@ -479,6 +492,8 @@ $properties}\n"""
             variable_template,
             property_template,
             probability_template,
+            conditional_probability_template_total,
+            conditional_probability_template
         ) = self.BIF_templates()
         network = ""
         network += network_template.substitute(name=self.network_name)
@@ -504,14 +519,37 @@ $properties}\n"""
             if not self.variable_parents[var]:
                 parents = ""
                 seprator = ""
+                cpd = ", ".join(map(str, self.tables[var]))
+                network += probability_template.substitute(
+                    variable_=var, seprator_=seprator, parents=parents, values=cpd
+                )
             else:
-                parents = ", ".join(self.variable_parents[var])
+                parents_str = ", ".join(self.variable_parents[var])
                 seprator = " | "
-            cpd = ", ".join(map(str, self.tables[var]))
-            network += probability_template.substitute(
-                variable_=var, seprator_=seprator, parents=parents, values=cpd
-            )
-
+                cpd: TabularCPD
+                cpd = self.model.get_cpds(var)
+                phi = cpd.to_factor()
+                state_names = copy(cpd.state_names)
+                var_states = state_names[var]
+                state_names.pop(var)
+                parents = [i for i in state_names]
+                parent_state = product(*[state_names[i] for i in state_names])
+                all_cpd = ""
+                for state in parent_state:
+                    curr_state_str = ", ".join(map(str, state))
+                    curr_state = {parent:state[idx] for idx, parent in enumerate(parents)}
+                    values = []
+                    for var_state in var_states:
+                        curr_state[var] = var_state
+                        print(curr_state)
+                        values.append(phi.get_value(**curr_state))
+                    curr_values_str = ", ".join(map(str, values))
+                    all_cpd += conditional_probability_template.substitute(
+                        state = curr_state_str, values= curr_values_str
+                    )
+                network += conditional_probability_template_total.substitute(
+                    variable_=var, seprator_=seprator, parents=parents_str, values=all_cpd
+                )
         return network
 
     def get_variables(self):
