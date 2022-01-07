@@ -31,8 +31,8 @@ class MmhcEstimator(StructureEstimator):
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
 
-        Reference
-        ---------
+        References
+        ----------
         Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005)
         http://www.dsl-lab.org/supplements/mmhc_paper/paper_online.pdf
         """
@@ -60,10 +60,11 @@ class MmhcEstimator(StructureEstimator):
 
         Returns
         -------
-        model: BayesianNetwork()-instance, not yet parametrized.
+        Estimated model: pgmpy.base.DAG
+            The estimated model without the parameterization.
 
-        Reference
-        ---------
+        References
+        ----------
         Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005),
         Algorithm 3
         http://www.dsl-lab.org/supplements/mmhc_paper/paper_online.pdf
@@ -72,7 +73,7 @@ class MmhcEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
+        >>> from pgmpy.estimators import MmhcEstimator
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(2500, 4)), columns=list('XYZW'))
         >>> data['sum'] = data.sum(axis=1)
         >>> est = MmhcEstimator(data)
@@ -111,8 +112,9 @@ class MmhcEstimator(StructureEstimator):
 
         Returns
         -------
-        skeleton: UndirectedGraph
+        skeleton: pgmpy.base.UndirectedGraph
             An estimate for the undirected graph skeleton of the BN underlying the data.
+
         seperating_sets: dict
             A dict containing for each pair of not directly connected nodes a
             seperating set ("witnessing set") of variables that makes then
@@ -128,7 +130,7 @@ class MmhcEstimator(StructureEstimator):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
+        >>> from pgmpy.estimators import MmhcEstimator
         >>> data = pd.DataFrame(np.random.randint(0, 2, size=(5000, 5)), columns=list('ABCDE'))
         >>> data['F'] = data['A'] + data['B'] + data ['C']
         >>> est = PC(data)

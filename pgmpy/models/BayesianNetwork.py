@@ -278,7 +278,7 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        A list of TabularCPDs.
+        A list of TabularCPDs: list
 
         Examples
         --------
@@ -341,9 +341,9 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        int or dict : If node is specified returns the cardinality of the node.
-                      If node is not specified returns a dictionary with the given
-                      variable as keys and their respective cardinality as values.
+        variable cardinalities: dict or int
+            If node is specified returns the cardinality of the node else returns a dictionary
+            with the cardinality of each variable in the network
 
         Examples
         --------
@@ -398,7 +398,7 @@ class BayesianNetwork(DAG):
         Returns
         -------
         check: boolean
-            True if all the checks are passed
+            True if all the checks pass otherwise should throw an error.
         """
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
@@ -553,7 +553,8 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        None: Modifies the network inplace and adds the `cpds` property.
+        Fitted Model: None
+            Modifies the network inplace and adds the `cpds` property.
 
         Examples
         --------
@@ -608,7 +609,8 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        None: Modifies the network inplace
+        Updated model: None
+            Modifies the network inplace.
 
         Examples
         --------
@@ -654,7 +656,8 @@ class BayesianNetwork(DAG):
         stochastic: boolean
             If True, does prediction by sampling from the distribution of predicted variable(s).
             If False, returns the states with the highest probability value (i.e MAP) for the
-                    predicted variable(s).
+                predicted variable(s).
+
         n_jobs: int (default: -1)
             The number of CPU cores to use. If -1, uses all available cores.
 
@@ -828,13 +831,12 @@ class BayesianNetwork(DAG):
 
         Parameters
         ----------
-        JPD : An instance of JointProbabilityDistribution Class, for which you want to
-            check the Imap
+        JPD: An instance of JointProbabilityDistribution Class, for which you want to check the Imap
 
         Returns
         -------
-        boolean : True if bayesian model is Imap for given Joint Probability Distribution
-                False otherwise
+        is IMAP: True or False
+            True if bayesian model is Imap for given Joint Probability Distribution False otherwise
 
         Examples
         --------
@@ -873,7 +875,8 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        BayesianNetwork: Copy of the model on which the method was called.
+        Model's copy: pgmpy.models.BayesianNetwork
+            Copy of the model on which the method was called.
 
         Examples
         --------
@@ -912,7 +915,8 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        list(blanket_nodes): List of nodes contained in Markov Blanket
+        Markov Blanket: list
+            List of nodes contained in Markov Blanket of `node`
 
         Parameters
         ----------
@@ -961,7 +965,8 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        pgmpy.base.DAG instance: The randomly generated DAG.
+        Random DAG: pgmpy.base.DAG
+            The randomly generated DAG.
 
         Examples
         --------
@@ -1020,12 +1025,20 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        pgmpy.models.BayesianNetwork: Instance of BayesianNetwork modified by the
-            do operation
+        Modified network: pgmpy.models.BayesianNetwork or None
+            If inplace=True, modifies the object itself else returns an instance of
+            BayesianNetwork modified by the do operation.
 
         Examples
         --------
-
+        >>> from pgmpy.utils import get_example_model
+        >>> asia = get_example_model('asia')
+        >>> asia.edges()
+        OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
+                     ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
+        >>> do_bronc = asia.do(['bronc'])
+        OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
+                     ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         """
         if isinstance(nodes, (str, int)):
             nodes = [nodes]
@@ -1101,28 +1114,33 @@ class BayesianNetwork(DAG):
 
         Returns
         -------
-        pandas.DataFrame: A dataframe with the simulated data.
+        A dataframe with the simulated data: pd.DataFrame
 
         Examples
         --------
         >>> from pgmpy.utils import get_example_model
 
-        Simulation without and evidence or intervention
+        Simulation without any evidence or intervention:
+
         >>> model = get_example_model('alarm')
         >>> model.simulate(n_samples=10)
 
-        Simulation with the hard evidence: MINVOLSET = HIGH
+        Simulation with the hard evidence: MINVOLSET = HIGH:
+
         >>> model.simulate(n_samples=10, evidence={"MINVOLSET": "HIGH"})
 
-        Simulation with hard intervention: CVP = LOW
+        Simulation with hard intervention: CVP = LOW:
+
         >>> model.simulate(n_samples=10, do={"CVP": "LOW"})
 
         Simulation with virtual/soft evidence: p(MINVOLSET=LOW) = 0.8, p(MINVOLSET=HIGH) = 0.2,
-        p(MINVOLSET=NORMAL) = 0
+        p(MINVOLSET=NORMAL) = 0:
+
         >>> virt_evidence = [TabularCPD("MINVOLSET", 3, [[0.8], [0.0], [0.2]], state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_evidence=virt_evidence)
 
-        Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3
+        Simulation with virtual/soft intervention: p(CVP=LOW) = 0.2, p(CVP=NORMAL)=0.5, p(CVP=HIGH)=0.3:
+
         >>> virt_intervention = [TabularCPD("CVP", 3, [[0.2], [0.5], [0.3]], state_names={"CVP": ["LOW", "NORMAL", "HIGH"]})]
         >>> model.simulate(n_samples, virtual_intervention=virt_intervention)
         """

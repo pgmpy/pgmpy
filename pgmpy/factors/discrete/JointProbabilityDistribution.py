@@ -349,8 +349,8 @@ class JointProbabilityDistribution(DiscreteFactor):
 
         Returns
         -------
-        boolean : True if given bayesian model is Imap for Joint Probability Distribution
-                False otherwise
+        Is IMAP: bool
+            True if given bayesian model is Imap for Joint Probability Distribution False otherwise
 
         Examples
         --------

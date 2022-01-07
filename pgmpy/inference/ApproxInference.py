@@ -102,7 +102,8 @@ class ApproxInference(object):
 
         Returns
         -------
-        Probability distribution: An instance of pgmpy.factors.discrete.TabularCPD
+        Probability distribution: pgmpy.factors.discrete.TabularCPD
+            The queried probability distribution.
 
         Examples
         --------

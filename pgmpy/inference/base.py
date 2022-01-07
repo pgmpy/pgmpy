@@ -130,7 +130,8 @@ class Inference(object):
 
         Returns
         -------
-        instance of pgmpy.models.BayesianNetwork: The pruned model.
+        Pruned model: pgmpy.models.BayesianNetwork
+            The pruned model.
 
         Examples
         --------

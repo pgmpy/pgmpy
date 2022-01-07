@@ -62,7 +62,8 @@ def correlation_score(
 
     Returns
     -------
-    float: The metric specified by the `score` argument. By defults returns the f1-score.
+    The specified metric: float
+        The metric specified by the `score` argument. By defults returns the f1-score.
 
     Examples
     --------
@@ -212,7 +213,8 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
 
     Returns
     -------
-    float: A score value for the model.
+    Model score: float
+        A score value for the model.
 
     Examples
     --------

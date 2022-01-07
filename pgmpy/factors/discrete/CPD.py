@@ -581,8 +581,8 @@ class TabularCPD(DiscreteFactor):
 
         Returns
         -------
-        pgmpy.factors.discrete.TabularCPD: A TabularCPD object on `variable` with
-            evidence as `evidence` with random values.
+        Random CPD: pgmpy.factors.discrete.TabularCPD
+            A TabularCPD object on `variable` with `evidence` as evidence with random values.
 
         Examples
         --------

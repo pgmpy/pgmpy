@@ -203,7 +203,7 @@ class HillClimbSearch(StructureEstimator):
 
         Returns
         -------
-        model: `DAG` instance
+        Estimated model: pgmpy.base.DAG
             A `DAG` at a (local) score maximum.
 
         Examples

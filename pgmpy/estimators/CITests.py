@@ -61,29 +61,19 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
     boolean: bool
         If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
+        be specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -130,30 +120,20 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
-        If boolean=False, returns the chi2 and p_value of the test.
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False. If
+        boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -200,30 +180,20 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
-        If boolean=False, returns the chi2 and p_value of the test.
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.  If
+        boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -269,30 +239,20 @@ def freeman_tuckey(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -338,30 +298,20 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     Examples
     --------
@@ -409,30 +359,20 @@ def neyman(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -478,30 +418,20 @@ def cressie_read(X, Y, Z, data, boolean=True, **kwargs):
         The dataset on which to test the independence condition.
 
     boolean: bool
-        If boolean=True, an additional argument `significance_level` must
-            be specified. If p_value of the test is greater than equal to
-            `significance_level`, returns True. Otherwise returns False.
-
+        If boolean=True, an additional argument `significance_level` must be
+        specified. If p_value of the test is greater than equal to
+        `significance_level`, returns True. Otherwise returns False.
         If boolean=False, returns the chi2 and p_value of the test.
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -567,22 +497,13 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     Returns
     -------
-    If boolean = False, Returns 3 values:
-        chi: float
-            The chi-squre test statistic.
-
-        p_value: float
-            The p_value, i.e. the probability of observing the computed chi-square
-            statistic (or an even higher value), given the null hypothesis
-            that X \u27C2 Y | Zs.
-
-        dof: int
-            The degrees of freedom of the test.
-
-    If boolean = True, returns:
-        independent: boolean
-            If the p_value of the test is greater than significance_level, returns True.
-            Else returns False.
+    CI Test Results: tuple or bool
+        If boolean = False, Returns a tuple (chi, p_value, dof). `chi` is the
+        chi-squared test statistic. The `p_value` for the test, i.e. the
+        probability of observing the computed chi-square statistic (or an even
+        higher value), given the null hypothesis that X \u27C2 Y | Zs is True.
+        If boolean = True, returns True if the p_value of the test is greater
+        than `significance_level` else returns False.
 
     References
     ----------
@@ -683,8 +604,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
     Returns
     -------
-    Pearson's correlation coefficient: float
-    p-value: float
+    CI Test results: tuple or bool
+        If boolean=True, returns True if p-value >= significance_level, else False. If
+        boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
 
     References
     ----------

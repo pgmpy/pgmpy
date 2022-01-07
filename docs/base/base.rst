@@ -1,11 +1,11 @@
 Directed Acyclic Graph (DAG)
 ============================
 
-.. automodule:: pgmpy.base.DAG
+.. autoclass:: pgmpy.base.DAG
    :members:
 
 Partial Directed Acyclic Graph (PDAG)
 =====================================
 
-.. automodule:: pgmpy.base.PDAG
+.. autoclass:: pgmpy.base.PDAG
    :members:

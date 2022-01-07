@@ -153,7 +153,8 @@ class ExpectationMaximization(ParameterEstimator):
 
         Returns
         -------
-        list: A list of estimated CPDs for the model.
+        Estimated paramters (CPDs): list
+            A list of estimated CPDs for the model.
 
         Examples
         --------

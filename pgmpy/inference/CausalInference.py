@@ -85,7 +85,8 @@ class CausalInference(object):
 
         Returns
         -------
-        boolean: True if Z is a valid backdoor adjustment set.
+        Is a valid backdoor adjustment set: bool
+            True if Z is a valid backdoor adjustment set else False
 
         Examples
         --------
@@ -191,7 +192,8 @@ class CausalInference(object):
 
         Returns
         -------
-        boolean: True if Z is a valid frontdoor adjustment set.
+        Is valid frontdoor adjusment: bool
+            True if Z is a valid frontdoor adjustment set.
         """
         Z = _variable_or_iterable_to_set(Z)
 
@@ -343,7 +345,7 @@ class CausalInference(object):
 
         Returns
         -------
-        float: The average treatment effect
+        The average treatment effect: float
 
         Examples
         --------
@@ -444,8 +446,9 @@ class CausalInference(object):
 
         Returns
         -------
-        boolean: Returns True if `adjustment_set` is a valid adjustment set for
-                identifying the effect of `X` on `Y`. Else returns False.
+        Is valid adjustment set: bool
+            Returns True if `adjustment_set` is a valid adjustment set for
+            identifying the effect of `X` on `Y`. Else returns False.
 
         Examples
         --------
@@ -482,8 +485,9 @@ class CausalInference(object):
 
         Returns
         -------
-        set or None: A set of variables which are the minimal possible adjustment set.
-                If None, no adjutment set is possible.
+        Minimal adjustment set: set or None
+            A set of variables which are the minimal possible adjustment set. If
+            None, no adjutment set is possible.
 
         Examples
         --------
@@ -540,8 +544,8 @@ class CausalInference(object):
 
         Returns
         -------
-        pgmpy.factor.DiscreteFactor: A factor object representing the joint distribution
-            over the variables in `variables`.
+        Queried distribution: pgmpy.factor.discrete.DiscreteFactor
+            A factor object representing the joint distribution over the variables in `variables`.
 
         Examples
         --------
