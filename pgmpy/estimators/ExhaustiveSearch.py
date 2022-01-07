@@ -115,7 +115,7 @@ class ExhaustiveSearch(StructureEstimator):
 
         Returns
         -------
-        list: a list of (score, dag) pairs
+        A list of (score, dag) pairs: list
             A list of (score, dag)-tuples, where score is a float and model a acyclic nx.DiGraph.
             The list is ordered by score values.
 
@@ -171,7 +171,7 @@ class ExhaustiveSearch(StructureEstimator):
 
         Returns
         -------
-        model: `DAG` instance
+        Estimated Model: pgmpy.base.DAG
             A `DAG` with maximal score.
 
         Examples

@@ -129,6 +129,7 @@ class BayesianEstimator(ParameterEstimator):
         Returns
         -------
         CPD: TabularCPD
+            The estimated CPD for `node`.
 
         Examples
         --------

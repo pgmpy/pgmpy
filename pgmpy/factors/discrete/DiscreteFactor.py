@@ -113,7 +113,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        list: List of variable names in the scope of the factor.
+        Scope of the factor: list
+            List of variables on which the factor is defined.
 
         Examples
         --------
@@ -135,7 +136,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        dict: Dictionary of the form {variable: variable_cardinality}
+        Cardinality of variables: dict
+            Dictionary of the form {variable: variable_cardinality}
 
         Examples
         --------
@@ -168,7 +170,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        float: The value of states.
+        value of kwargs: float
+            The value of specified states.
 
         Examples
         --------
@@ -250,7 +253,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        list: Returns a list of full assignments of all the variables of the factor.
+        Full assignments: list
+            Returns a list of full assignments of all the variables of the factor.
 
         Examples
         --------
@@ -292,7 +296,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor: The identity factor.
+        Identity factor: pgmpy.factors.discrete.DiscreteFactor.
+            Returns an factor with all values set to 1.
 
         Examples
         --------
@@ -331,8 +336,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Marginalized factor: pgmpy.factors.discrete.DiscreteFactor or None
+        If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -381,8 +386,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Maximized factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else inplace=False returns a
+            new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -434,8 +440,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Normalized factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -487,8 +493,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Reduced factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -567,8 +573,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Summed factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -655,8 +661,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Multiplied factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -742,8 +748,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor or None: if inplace=True (default) returns None
-                        if inplace=False returns a new `DiscreteFactor` instance.
+        Divided factor: pgmpy.factors.discrete.DiscreteFactor or None
+            If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
 
         Examples
         --------
@@ -838,7 +844,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Returns
         -------
-        DiscreteFactor: copy of the factor
+        Copy of self: pgmpy.factors.discrete.DiscreteFactor
+            A copy of the original discrete factor.
 
         Examples
         --------

@@ -73,11 +73,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         Returns
         -------
-        parameters: list
-            List of TabularCPDs, one for each variable of the model
-
-        n_jobs: int
-            Number of processes to spawn
+        Estimated parameters: list
+            List of pgmpy.factors.discrete.TabularCPDs, one for each variable of the model
 
         Examples
         --------
@@ -118,7 +115,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         Returns
         -------
-        CPD: TabularCPD
+        Estimated CPD: pgmpy.factors.discrete.TabularCPD
+            Estimated CPD for `node`.
 
         Examples
         --------

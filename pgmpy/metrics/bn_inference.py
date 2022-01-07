@@ -41,7 +41,7 @@ class BayesianModelProbability(BayesianModelInference):
 
         Returns
         -------
-        ndarray: having shape (n_samples,)
+        Log probability of node: np.array (n_samples,)
             The array of log(density) evaluations. These are normalized to be
             probability densities, so values will be low for high-dimensional
             data.
@@ -106,7 +106,7 @@ class BayesianModelProbability(BayesianModelInference):
 
         Returns
         -------
-        ndarray: having shape (n_samples,)
+        Log probability of each datapoint: np.array (n_samples,)
             The array of log(density) evaluations. These are normalized to be
             probability densities, so values will be low for high-dimensional
             data.
@@ -140,7 +140,7 @@ class BayesianModelProbability(BayesianModelInference):
 
         Returns
         -------
-        float: total log-likelihood of the data in data.
+        Log-likelihood of data: float
             This is normalized to be a probability density, so the value
             will be low for high-dimensional data.
         """

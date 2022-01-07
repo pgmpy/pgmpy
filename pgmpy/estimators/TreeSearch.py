@@ -89,7 +89,7 @@ class TreeSearch(StructureEstimator):
 
         Returns
         -------
-        model: `pgmpy.base.DAG` instance
+        Estimated Model: pgmpy.base.DAG
             The estimated model structure.
 
         Examples
@@ -263,7 +263,7 @@ class TreeSearch(StructureEstimator):
 
         Returns
         -------
-        model: `pgmpy.base.DAG` instance
+        model: pgmpy.base.DAG
             The estimated model structure.
 
         Examples
@@ -319,7 +319,7 @@ class TreeSearch(StructureEstimator):
 
         Returns
         -------
-        model: `pgmpy.base.DAG` instance
+        Estimated Model: pgmpy.base.DAG
             The estimated model structure.
 
         Examples

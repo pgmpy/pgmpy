@@ -103,7 +103,7 @@ class PC(StructureEstimator):
 
         Returns
         -------
-        model: DAG-instance, PDAG-instance, or (networkx.UndirectedGraph, dict)
+        Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
                 The estimated model structure, can be a partially directed graph (PDAG)
                 or a fully directed graph (DAG), or (Undirected Graph, separating sets)
                 depending on the value of `return_type` argument.
@@ -400,7 +400,7 @@ class PC(StructureEstimator):
 
         Returns
         -------
-        pdag: DAG
+        Model after edge orientation: pgmpy.base.DAG
             An estimate for the DAG pattern of the BN underlying the data. The
             graph might contain some nodes with both-way edges (X->Y and Y->X).
             Any completion by (removing one of the both-way edges for each such
