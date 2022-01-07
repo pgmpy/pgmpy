@@ -605,7 +605,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     Returns
     -------
     CI Test results: tuple or bool
-        If boolean=True, returns True if p-value >= significance_level, else False. If 
+        If boolean=True, returns True if p-value >= significance_level, else False. If
         boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
 
     References

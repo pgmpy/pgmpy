@@ -1034,7 +1034,7 @@ class BayesianNetwork(DAG):
         >>> from pgmpy.utils import get_example_model
         >>> asia = get_example_model('asia')
         >>> asia.edges()
-        OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'), 
+        OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
         >>> do_bronc = asia.do(['bronc'])
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('lung', 'either'),
