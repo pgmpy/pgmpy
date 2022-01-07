@@ -498,7 +498,8 @@ class DAG(nx.DiGraph):
 
         Returns
         --------
-        boolean : True if both are I-equivalent, False otherwise
+        I-equivalence: boolean
+            True if both are I-equivalent, False otherwise
 
         Examples
         --------
@@ -531,7 +532,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        set: A set of all the immoralities in the model
+        Immoralities: set
+            A set of all the immoralities in the model
 
         Examples
         ---------
@@ -645,7 +647,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        list(blanket_nodes): List of nodes contained in Markov Blanket
+        Markov Blanket: list
+            List of nodes in the markov blanket of `node`.
 
         Parameters
         ----------
@@ -792,7 +795,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        PDAG: An instance of pgmpy.base.PDAG.
+        Partially oriented DAG: pgmpy.base.PDAG
+            An instance of pgmpy.base.PDAG.
 
         Examples
         --------
@@ -819,7 +823,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        pgmpy.base.DAG: A new instance of DAG modified by the do-operator
+        Modified DAG: pgmpy.base.DAG
+            A new instance of DAG modified by the do-operator
 
         Examples
         --------
@@ -869,7 +874,7 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        pgmpy.base.DAG instance: The ancestral graph.
+        Ancestral Graph: pgmpy.base.DAG
 
         Examples
         --------
@@ -921,7 +926,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        daft.PGM object: A plot of the DAG.
+        Daft object: daft.PGM object
+            Daft object for plotting the DAG.
 
         Examples
         --------
@@ -1026,7 +1032,8 @@ class DAG(nx.DiGraph):
 
         Returns
         -------
-        pgmpy.base.DAG instance: The randomly generated DAG.
+        Random DAG: pgmpy.base.DAG
+            The randomly generated DAG.
 
         Examples
         --------
@@ -1064,7 +1071,7 @@ class PDAG(nx.DiGraph):
     Class for representing PDAGs (also known as CPDAG). PDAGs are the equivance classes of
     DAGs and contain both directed and undirected edges.
 
-    **Note: In this class, undirected edges are represented using two edges in both direction i.e.
+    Note: In this class, undirected edges are represented using two edges in both direction i.e.
     an undirected edge between X - Y is represented using X -> Y and X <- Y.
     """
 
@@ -1118,7 +1125,8 @@ class PDAG(nx.DiGraph):
 
         Returns
         -------
-        PDAG instance: Returns a copy of self.
+        Copy of PDAG: pgmpy.dag.PDAG
+            Returns a copy of self.
         """
         return PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
