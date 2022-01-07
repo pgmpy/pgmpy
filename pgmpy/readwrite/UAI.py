@@ -253,11 +253,9 @@ class UAIReader(object):
             model.add_edges_from(self.edges)
 
             tabular_cpds = []
-            for cpd in self.tables:
-                child_var = cpd[0]
+            for child_var, values in self.tables:
                 states = int(self.domain[child_var])
-                arr = list(map(float, cpd[1]))
-                values = np.array(arr)
+                values = np.fromiter(values, dtype=float)
                 values = values.reshape(states, values.size // states)
                 tabular_cpds.append(TabularCPD(child_var, states, values))
 
