@@ -1,26 +1,27 @@
-import re
 import collections
-from string import Template
-from itertools import product
+import re
 from copy import copy
+from itertools import product
+from string import Template
+
 import numpy as np
 from joblib import Parallel, delayed
 from pyparsing import (
-    Word,
-    alphanums,
-    Suppress,
-    Optional,
     CharsNotIn,
     Group,
-    nums,
-    ZeroOrMore,
     OneOrMore,
+    Optional,
+    Suppress,
+    Word,
+    ZeroOrMore,
+    alphanums,
     cppStyleComment,
+    nums,
     printables,
 )
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import BayesianNetwork
 
 
 class BIFReader(object):
@@ -459,20 +460,18 @@ $properties}\n"""
         property_template = Template("    property $prop ;\n")
         # $variable_ here is name of variable, used underscore for clarity
         probability_template = Template(
-            """probability ( $variable_$seprator_$parents ) {
+            """probability ( $variable_$separator_$parents ) {
     table $values ;
 }\n"""
         )
 
         conditional_probability_template_total = Template(
-            """probability ( $variable_$seprator_$parents ) {
+            """probability ( $variable_$separator_$parents ) {
 $values
 }\n"""
         )
 
-        conditional_probability_template = Template(
-            """    ($state ) $values;\n"""
-        )
+        conditional_probability_template = Template("""    ( $state ) $values;\n""")
 
         return (
             network_template,
@@ -480,7 +479,7 @@ $values
             property_template,
             probability_template,
             conditional_probability_template_total,
-            conditional_probability_template
+            conditional_probability_template,
         )
 
     def __str__(self):
@@ -493,7 +492,7 @@ $values
             property_template,
             probability_template,
             conditional_probability_template_total,
-            conditional_probability_template
+            conditional_probability_template,
         ) = self.BIF_templates()
         network = ""
         network += network_template.substitute(name=self.network_name)
@@ -518,36 +517,31 @@ $values
         for var in sorted(variables):
             if not self.variable_parents[var]:
                 parents = ""
-                seprator = ""
+                separator = ""
                 cpd = ", ".join(map(str, self.tables[var]))
                 network += probability_template.substitute(
-                    variable_=var, seprator_=seprator, parents=parents, values=cpd
+                    variable_=var, separator_=separator, parents=parents, values=cpd
                 )
             else:
                 parents_str = ", ".join(self.variable_parents[var])
-                seprator = " | "
-                cpd: TabularCPD
+                separator = " | "
                 cpd = self.model.get_cpds(var)
-                phi = cpd.to_factor()
-                state_names = copy(cpd.state_names)
-                var_states = state_names[var]
-                state_names.pop(var)
-                parents = [i for i in state_names]
-                parent_state = product(*[state_names[i] for i in state_names])
+                cpd_values_transpose = cpd.get_values().T
+
+                parent_states = product(
+                    *[cpd.state_names[var] for var in cpd.variables[1:]]
+                )
                 all_cpd = ""
-                for state in parent_state:
-                    curr_state_str = ", ".join(map(str, state))
-                    curr_state = {parent:state[idx] for idx, parent in enumerate(parents)}
-                    values = []
-                    for var_state in var_states:
-                        curr_state[var] = var_state
-                        values.append(phi.get_value(**curr_state))
-                    curr_values_str = ", ".join(map(str, values))
+                for index, state in enumerate(parent_states):
                     all_cpd += conditional_probability_template.substitute(
-                        state = curr_state_str, values= curr_values_str
+                        state=", ".join(map(str, state)),
+                        values=", ".join(map(str, cpd_values_transpose[index, :])),
                     )
                 network += conditional_probability_template_total.substitute(
-                    variable_=var, seprator_=seprator, parents=parents_str, values=all_cpd
+                    variable_=var,
+                    separator_=separator,
+                    parents=parents_str,
+                    values=all_cpd,
                 )
         return network
 

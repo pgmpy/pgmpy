@@ -1,13 +1,13 @@
 import os
 import unittest
 
+import networkx as nx
 import numpy as np
 import numpy.testing as np_test
-import networkx as nx
 
-from pgmpy.readwrite import BIFReader, BIFWriter
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import BayesianNetwork
+from pgmpy.readwrite import BIFReader, BIFWriter
 
 
 class TestBIFReader(unittest.TestCase):
@@ -308,10 +308,10 @@ class TestBIFWriter(unittest.TestCase):
         cpds = {
             "kid": np.array([[0.3], [0.7]]),
             "bowel-problem": np.array([[0.01], [0.99]]),
-            "dog-out": np.array([[0.99, 0.01, 0.97, 0.03], [0.9, 0.1, 0.3, 0.7]]),
+            "dog-out": np.array([[0.99, 0.9, 0.97, 0.3], [0.01, 0.1, 0.03, 0.7]]),
             "family-out": np.array([[0.15], [0.85]]),
-            "hear-bark": np.array([[0.7, 0.3], [0.01, 0.99]]),
-            "light-on": np.array([[0.6, 0.4], [0.05, 0.95]]),
+            "hear-bark": np.array([[0.7, 0.01], [0.3, 0.99]]),
+            "light-on": np.array([[0.6, 0.95], [0.4, 0.05]]),
         }
 
         states = {
@@ -404,19 +404,27 @@ probability ( bowel-problem ) {
     table 0.01, 0.99 ;
 }
 probability ( dog-out | bowel-problem, family-out ) {
-    table 0.99, 0.01, 0.97, 0.03, 0.9, 0.1, 0.3, 0.7 ;
+    ( 0, 0 ) 0.99, 0.01;
+    ( 0, 1 ) 0.9, 0.1;
+    ( 1, 0 ) 0.97, 0.03;
+    ( 1, 1 ) 0.3, 0.7;
+
 }
 probability ( family-out ) {
     table 0.15, 0.85 ;
 }
 probability ( hear-bark | dog-out ) {
-    table 0.7, 0.3, 0.01, 0.99 ;
+    ( 0 ) 0.7, 0.3;
+    ( 1 ) 0.01, 0.99;
+
 }
 probability ( kid ) {
     table 0.3, 0.7 ;
 }
 probability ( light-on | family-out ) {
-    table 0.6, 0.4, 0.05, 0.95 ;
+    ( 0 ) 0.6, 0.4;
+    ( 1 ) 0.95, 0.05;
+
 }
 """
         self.maxDiff = None
