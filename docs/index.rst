@@ -28,7 +28,10 @@
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
+|
+
 .. image:: https://img.shields.io/badge/consultation-book%20now-blue.svg
+   :align: center
    :target: https://www.taggedweb.com/solution/one-hour-consultation-on-bayesian-networks-with-author-of-pgmpy?r=106&utm_source=badge&utm_medium=badge&utm_content=badge
 
 |
@@ -78,7 +81,7 @@
    :maxdepth: 3
    :hidden:
    :caption: Exact Inference
-       
+
    exact_infer/ve.rst
    exact_infer/bp.rst
    exact_infer/causal.rst
@@ -223,4 +226,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
