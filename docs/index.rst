@@ -30,6 +30,12 @@
 
 |
 
+.. image:: https://img.shields.io/badge/consultation-book%20now-blue.svg
+   :align: center
+   :target: https://www.taggedweb.com/solution/one-hour-consultation-on-bayesian-networks-with-author-of-pgmpy?r=106&utm_source=badge&utm_medium=badge&utm_content=badge
+
+|
+
 
 .. toctree::
    :maxdepth: 3
@@ -75,7 +81,7 @@
    :maxdepth: 3
    :hidden:
    :caption: Exact Inference
-       
+
    exact_infer/ve.rst
    exact_infer/bp.rst
    exact_infer/causal.rst
@@ -220,4 +226,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
