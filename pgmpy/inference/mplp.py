@@ -90,8 +90,6 @@ class Mplp(Inference):
 
         # Assignment of the nodes that results in the "maximum" integral value of the primal objective
         self.best_assignment = {}
-        # Results of the "maximum" integral value of the primal objective.
-        self.best_decoded_result = {}
         # This sets the minimum width between the dual objective decrements. Default value = 0.0002. This can be
         # changed in the map_query() method.
         self.dual_threshold = 0.0002
@@ -582,12 +580,4 @@ class Mplp(Inference):
         # If triplets are to be used for the tightening, we proceed as follows
         if tighten_triplet:
             self._tighten_triplet(max_iterations, later_iter, max_triplets, prolong)
-        # Get the best result from the best assignment
-        self.best_decoded_result = {
-            factor.scope()[0]: factor.values[
-                self.best_assignment[frozenset(factor.scope())]
-            ]
-            for factor in self.model.factors
-            if len(factor.scope()) == 1
-        }
-        return self.best_decoded_result
+        return {list(key)[0]: val for key, val in self.best_assignment.items()}
