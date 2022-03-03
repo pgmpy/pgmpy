@@ -7,13 +7,13 @@ from math import sqrt
 import numpy as np
 from tqdm.auto import tqdm
 
-from pgmpy.utils import _check_1d_array_object, _check_length_equal
 from pgmpy.sampling import (
-    LeapFrog,
-    BaseSimulateHamiltonianDynamics,
     BaseGradLogPDF,
+    BaseSimulateHamiltonianDynamics,
+    LeapFrog,
     _return_samples,
 )
+from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 
 class HamiltonianMC(object):
@@ -112,9 +112,9 @@ class HamiltonianMC(object):
         Temporary method to fix issue in numpy 0.12 #852
         """
         if a == 1:
-            return (acceptance_prob ** a) > (1 / (2 ** a))
+            return (acceptance_prob**a) > (1 / (2**a))
         else:
-            return (1 / (acceptance_prob ** a)) > (2 ** (-a))
+            return (1 / (acceptance_prob**a)) > (2 ** (-a))
 
     def _find_reasonable_stepsize(self, position, stepsize_app=1):
         """
@@ -145,7 +145,7 @@ class HamiltonianMC(object):
         condition = self._get_condition(acceptance_prob, a)
 
         while condition:
-            stepsize_app = (2 ** a) * stepsize_app
+            stepsize_app = (2**a) * stepsize_app
 
             position_bar, momentum_bar, _ = self.simulate_dynamics(
                 self.model, position, momentum, stepsize_app, self.grad_log_pdf

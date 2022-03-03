@@ -1,10 +1,10 @@
 import unittest
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from pgmpy.models import SEMGraph, SEM
-from pgmpy.estimators import SEMEstimator, IVEstimator
+from pgmpy.estimators import IVEstimator, SEMEstimator
+from pgmpy.models import SEM, SEMGraph
 
 
 class TestSEMEstimator(unittest.TestCase):
@@ -12,9 +12,9 @@ class TestSEMEstimator(unittest.TestCase):
         self.custom = SEMGraph(
             ebunch=[("a", "b"), ("b", "c")], latents=[], err_corr=[], err_var={}
         )
-        a = np.random.randn(10 ** 3)
-        b = a + np.random.normal(loc=0, scale=0.1, size=10 ** 3)
-        c = b + np.random.normal(loc=0, scale=0.2, size=10 ** 3)
+        a = np.random.randn(10**3)
+        b = a + np.random.normal(loc=0, scale=0.1, size=10**3)
+        c = b + np.random.normal(loc=0, scale=0.2, size=10**3)
         self.custom_data = pd.DataFrame({"a": a, "b": b, "c": c})
         self.custom_data -= self.custom_data.mean(axis=0)
         self.custom_lisrel = self.custom.to_lisrel()
@@ -104,22 +104,22 @@ class TestSEMEstimator(unittest.TestCase):
     def test_union_estimator_random_init(self):
         estimator = SEMEstimator(self.union_lisrel)
         summary = estimator.fit(
-            self.union_data, method="ml", opt="adam", max_iter=10 ** 6, exit_delta=1e-1
+            self.union_data, method="ml", opt="adam", max_iter=10**6, exit_delta=1e-1
         )
 
     @unittest.skip
     def test_custom_estimator_random_init(self):
         estimator = SEMEstimator(self.custom_lisrel)
         summary = estimator.fit(
-            self.custom_data, method="ml", max_iter=10 ** 6, opt="adam"
+            self.custom_data, method="ml", max_iter=10**6, opt="adam"
         )
         summary = estimator.fit(
-            self.custom_data, method="uls", max_iter=10 ** 6, opt="adam"
+            self.custom_data, method="uls", max_iter=10**6, opt="adam"
         )
         summary = estimator.fit(
             self.custom_data,
             method="gls",
-            max_iter=10 ** 6,
+            max_iter=10**6,
             opt="adam",
             W=np.ones((3, 3)),
         )
@@ -132,7 +132,7 @@ class TestSEMEstimator(unittest.TestCase):
             method="ml",
             opt="adam",
             init_values="std",
-            max_iter=10 ** 6,
+            max_iter=10**6,
             exit_delta=1e-1,
         )
 
@@ -143,7 +143,7 @@ class TestSEMEstimator(unittest.TestCase):
             self.custom_data,
             method="ml",
             init_values="std",
-            max_iter=10 ** 6,
+            max_iter=10**6,
             opt="adam",
         )
 

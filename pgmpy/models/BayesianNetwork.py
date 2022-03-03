@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 
 import itertools
-from collections import defaultdict
 import logging
-from operator import mul
+from collections import defaultdict
 from functools import reduce
+from operator import mul
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
 from pgmpy.base import DAG
-from pgmpy.factors.discrete import (
-    TabularCPD,
-    JointProbabilityDistribution,
-    DiscreteFactor,
-)
 from pgmpy.factors.continuous import ContinuousFactor
+from pgmpy.factors.discrete import (
+    DiscreteFactor,
+    JointProbabilityDistribution,
+    TabularCPD,
+)
 from pgmpy.models.MarkovNetwork import MarkovNetwork
 
 
@@ -323,7 +323,7 @@ class BayesianNetwork(DAG):
         >>> student.remove_cpds(cpd)
         """
         for cpd in cpds:
-            if isinstance(cpd, str):
+            if isinstance(cpd, (str, int)):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
@@ -569,7 +569,7 @@ class BayesianNetwork(DAG):
         <TabularCPD representing P(B:2) at 0x7fb98a7d5588>,
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x7fb98a7b1f98>]
         """
-        from pgmpy.estimators import MaximumLikelihoodEstimator, BaseEstimator
+        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator
