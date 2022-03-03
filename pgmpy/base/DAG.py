@@ -987,7 +987,7 @@ class DAG(nx.DiGraph):
             if latex:
                 daft_pgm.add_node(
                     node,
-                    fr"${node}$",
+                    rf"${node}$",
                     node_pos[node][0],
                     node_pos[node][1],
                     observed=True,
