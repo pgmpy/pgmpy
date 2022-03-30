@@ -97,9 +97,9 @@ class CausalInference(object):
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
-        Z_ = [Z] if isinstance(Z, str) else list(Z)
+        Z_ = _variable_or_iterable_to_set(Z)
 
-        observed = [X] + Z_
+        observed = [X] + list(Z_)
         parents_d_sep = []
         for p in self.model.predecessors(X):
             parents_d_sep.append(not self.model.is_dconnected(p, Y, observed=observed))
