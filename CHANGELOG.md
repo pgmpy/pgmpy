@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] - 2021-03-30
+### Fixed
+1. Fixes `CausalInference.is_valid_backdoor_adjustment_set` to accept str arguments for `Z`.
+2. Fixes `BayesianNetwork.remove_cpd` to work with integral node names.
+3. Fixes `MPLP.map_query` to return the variable states instead of probability values.
+4. Fixes BIFWriter to generate output in standard BIF format.
+
 ## [0.1.17] - 2021-12-30
 ### Added
 1. Adds BayesianNetwork.states property to store states of all the variables.
