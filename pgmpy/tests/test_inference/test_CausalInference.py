@@ -16,6 +16,14 @@ class TestCausalGraphMethods(unittest.TestCase):
         )
         self.inference = CausalInference(self.game)
 
+        self.dag_bd1 = BayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Y")])
+        self.inference_bd = CausalInference(self.dag_bd1)
+
+        self.dag_bd2 = BayesianNetwork(
+            [("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")]
+        )
+        self.inference_bd2 = CausalInference(self.dag_bd2)
+
     def test_is_d_separated(self):
         self.assertTrue(self.inference.model.is_dconnected("X", "Y", observed=None))
         self.assertFalse(
@@ -23,7 +31,19 @@ class TestCausalGraphMethods(unittest.TestCase):
         )
 
     def test_backdoor_validation(self):
-        self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")
+        self.assertTrue(
+            self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")
+        )
+
+        # Z accepts str or set[str]
+        self.assertTrue(
+            self.inference_bd.is_valid_backdoor_adjustment_set("X", "Y", Z="Z1")
+        )
+        self.assertTrue(
+            self.inference_bd2.is_valid_backdoor_adjustment_set(
+                "X", "Y", Z={"Z1", "Z2"}
+            )
+        )
 
 
 class TestAdjustmentSet(unittest.TestCase):
