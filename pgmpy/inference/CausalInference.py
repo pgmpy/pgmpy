@@ -98,7 +98,7 @@ class CausalInference(object):
         True
         """
         Z_ = [Z] if isinstance(Z, str) else list(Z)
-        
+
         observed = [X] + Z_
         parents_d_sep = []
         for p in self.model.predecessors(X):
