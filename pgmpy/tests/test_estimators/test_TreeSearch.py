@@ -1,12 +1,12 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import TreeSearch
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 
 
@@ -226,7 +226,7 @@ class TestTreeSearch(unittest.TestCase):
         root_node = self.data22.columns[maxw_idx[0]]
         class_node = self.data22.columns[maxw_idx[1]]
 
-        dag = est.estimate(estimator_type="tan")
+        dag = est.estimate(estimator_type="tan", class_node=class_node)
         nodes = list(dag.nodes())
         self.assertEqual(nodes[0], root_node)
         self.assertEqual(nodes[-1], class_node)
