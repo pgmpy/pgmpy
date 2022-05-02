@@ -130,11 +130,11 @@ class TreeSearch(StructureEstimator):
             )
 
         # Step 1.2: If estimator_type=tan, class_node must be specified
-        if estimator_type is "tan" and class_node is None:
+        if estimator_type == "tan" and class_node is None:
             raise ValueError(
                 f"class_node argument must be specified for estimator_type='tan'"
             )
-        if estimator_type is "tan" and class_node not in self.data.columns:
+        if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")
 
         # Step 1.3: If root_node isn't specified, get the node with highest score.
@@ -158,14 +158,6 @@ class TreeSearch(StructureEstimator):
             weights = TreeSearch._get_conditional_weights(
                 self.data, class_node, edge_weights_fn, self.n_jobs, show_progress
             )
-
-        #         # compute edge weights sum if one of the arguments is None
-        #         if self.root_node is None or (estimator_type == "tan" and class_node is None):
-        #             sum_weights = weights.sum(axis=0)
-        #             maxw_idx = np.argsort(sum_weights)[::-1]
-        #
-        #         if self.root_node is None:
-        #             self.root_node = self.data.columns[maxw_idx[0]]
 
         # Step 3: If estimator_type = "chow-liu", estimate the DAG and return.
         if estimator_type == "chow-liu":
@@ -334,17 +326,17 @@ class TreeSearch(StructureEstimator):
             """
             Computes the conditional edge weight of variable index u and v conditioned on class_node
             """
-            cond_marginal = df.loc[:, class_node].value_counts() / data.shape[0]
+            cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0
             for index, marg_prob in cond_marginal.iteritems():
-                df_cond_subset = df[df.loc[:, class_node] == index]
+                df_cond_subset = data[data.loc[:, class_node] == index]
                 cond_edge_weight += marg_prob * edge_weights_fn(
-                    df_cond_subset.iloc[:, u], df_cond_subset.iloc[:, v]
+                    df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
                 )
             return cond_edge_weight
 
-        vals = Parallel(n_jobs=n_jobs, prefer="threads")(
-            delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
+        vals = Parallel(n_jobs=1, prefer="threads")(
+            delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
