@@ -8,6 +8,7 @@ from pgmpy.estimators import TreeSearch
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.utils import get_example_model
 
 
 class TestTreeSearch(unittest.TestCase):
@@ -235,3 +236,75 @@ class TestTreeSearch(unittest.TestCase):
     def tearDown(self):
         del self.data12
         del self.data22
+
+
+class TestTreeSearchRealDataSet(unittest.TestCase):
+    def setUp(self):
+        self.alarm_df = get_example_model("alarm").simulate(int(1e4), seed=42)
+
+    def test_tan(self):
+        # Expected values taken from bnlearn.
+        expected_edges = [
+            ("CVP", "LVFAILURE"),
+            ("CVP", "INTUBATION"),
+            ("CVP", "TPR"),
+            ("CVP", "DISCONNECT"),
+            ("CVP", "VENTMACH"),
+            ("CVP", "HR"),
+            ("CVP", "FIO2"),
+            ("CVP", "HRBP"),
+            ("CVP", "VENTLUNG"),
+            ("CVP", "PAP"),
+            ("CVP", "HISTORY"),
+            ("CVP", "PCWP"),
+            ("CVP", "INSUFFANESTH"),
+            ("CVP", "SAO2"),
+            ("CVP", "EXPCO2"),
+            ("CVP", "PRESS"),
+            ("CVP", "PULMEMBOLUS"),
+            ("CVP", "ARTCO2"),
+            ("CVP", "MINVOLSET"),
+            ("LVFAILURE", "HISTORY"),
+            ("LVFAILURE", "PCWP"),
+            ("INTUBATION", "INSUFFANESTH"),
+            ("EXPCO2", "INTUBATION"),
+            ("HR", "TPR"),
+            ("PRESS", "DISCONNECT"),
+            ("VENTLUNG", "VENTMACH"),
+            ("VENTMACH", "PRESS"),
+            ("VENTMACH", "MINVOLSET"),
+            ("HR", "HRBP"),
+            ("ARTCO2", "HR"),
+            ("SAO2", "FIO2"),
+            ("VENTLUNG", "PAP"),
+            ("PCWP", "VENTLUNG"),
+            ("VENTLUNG", "EXPCO2"),
+            ("VENTLUNG", "ARTCO2"),
+            ("PAP", "PULMEMBOLUS"),
+            ("ARTCO2", "SAO2"),
+        ]
+        features = [
+            "LVFAILURE",
+            "INTUBATION",
+            "TPR",
+            "DISCONNECT",
+            "VENTMACH",
+            "HR",
+            "FIO2",
+            "HRBP",
+            "VENTLUNG",
+            "PAP",
+            "HISTORY",
+            "PCWP",
+            "INSUFFANESTH",
+            "SAO2",
+            "EXPCO2",
+            "PRESS",
+            "PULMEMBOLUS",
+            "ARTCO2",
+            "MINVOLSET",
+        ]
+        target = "CVP"
+        est = TreeSearch(self.alarm_df[features + [target]], root_node=features[0])
+        edges = est.estimate(estimator_type="tan", class_node=target).edges()
+        self.assertEqual(set(expected_edges), set(edges))
