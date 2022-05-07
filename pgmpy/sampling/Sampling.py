@@ -1,19 +1,18 @@
-from collections import namedtuple, defaultdict
 import itertools
+from collections import defaultdict, namedtuple
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
-from pgmpy.sampling import BayesianModelInference
-from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
-from pgmpy.models import DynamicBayesianNetwork as DBN
-from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
-from pgmpy.sampling import _return_samples
 from pgmpy.global_vars import SHOW_PROGRESS
-
+from pgmpy.models import BayesianNetwork
+from pgmpy.models import DynamicBayesianNetwork as DBN
+from pgmpy.models import MarkovChain, MarkovNetwork
+from pgmpy.sampling import BayesianModelInference, _return_samples
+from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 
 State = namedtuple("State", ["var", "state"])
 
@@ -224,7 +223,9 @@ class BayesianModelSampling(BayesianModelInference):
                 _sampled = _sampled[_sampled[var] == state]
 
             prob = max(len(_sampled) / _size, 0.01)
-            sampled = sampled.append(_sampled).iloc[:size, :]
+            sampled = pd.concat([sampled, _sampled], axis=0, join="outer").iloc[
+                :size, :
+            ]
             i += _sampled.shape[0]
 
             if show_progress and SHOW_PROGRESS:

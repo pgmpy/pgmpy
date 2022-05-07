@@ -1224,7 +1224,7 @@ class BayesianNetwork(DAG):
         if include_latents:
             return samples
         else:
-            return samples.loc[:, set(self.nodes()) - self.latents]
+            return samples.loc[:, list(set(self.nodes()) - self.latents)]
 
     def save(self, filename, filetype="bif"):
         """
