@@ -4,6 +4,7 @@ from itertools import product, chain
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
+from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator, MaximumLikelihoodEstimator
 from pgmpy.models import BayesianNetwork
@@ -78,17 +79,46 @@ class ExpectationMaximization(ParameterEstimator):
                 )
         return likelihood
 
+    def _parallel_compute_weights(self, data_unique, latent_card, n_counts, offset, batch_size):
+        cache = []
+
+        for i in range(offset, offset+batch_size):
+            v = list(product(*[range(card) for card in latent_card.values()]))
+            latent_combinations = np.array(v, dtype=int)
+            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
+                drop=True
+            )
+            for index, latent_var in enumerate(latent_card.keys()):
+                df[latent_var] = latent_combinations[:, index]
+            weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
+            df["_weight"] = (weights / weights.sum()) * n_counts[
+                tuple(data_unique.iloc[i])
+            ]
+            cache.append(df)
+
+        return pd.concat(cache, copy=False)
+
     def _compute_weights(self, latent_card):
         """
         For each data point, creates extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
         """
-        cache = []
 
         data_unique = self.data.drop_duplicates()
         n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
 
-        for i in range(data_unique.shape[0]):
+        batch_size = 1000
+
+        batch_count = data_unique.shape[0] // batch_size
+
+        cache = Parallel(n_jobs=-1)(
+            delayed(self._parallel_compute_weights)(
+                data_unique, latent_card, n_counts,
+                i, batch_size
+            ) for i in range(batch_count)
+        )
+
+        for i in range(batch_count * batch_size, data_unique.shape[0]):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
             df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
