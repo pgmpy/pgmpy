@@ -79,10 +79,12 @@ class ExpectationMaximization(ParameterEstimator):
                 )
         return likelihood
 
-    def _parallel_compute_weights(self, data_unique, latent_card, n_counts, offset, batch_size):
+    def _parallel_compute_weights(
+        self, data_unique, latent_card, n_counts, offset, batch_size
+    ):
         cache = []
 
-        for i in range(offset, offset+batch_size):
+        for i in range(offset, offset + batch_size):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
             df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
@@ -113,9 +115,9 @@ class ExpectationMaximization(ParameterEstimator):
 
         cache = Parallel(n_jobs=-1)(
             delayed(self._parallel_compute_weights)(
-                data_unique, latent_card, n_counts,
-                i, batch_size
-            ) for i in range(batch_count)
+                data_unique, latent_card, n_counts, i, batch_size
+            )
+            for i in range(batch_count)
         )
 
         for i in range(batch_count * batch_size, data_unique.shape[0]):
