@@ -4,6 +4,7 @@ from itertools import product, chain
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
+from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator, MaximumLikelihoodEstimator
 from pgmpy.models import BayesianNetwork
@@ -78,17 +79,12 @@ class ExpectationMaximization(ParameterEstimator):
                 )
         return likelihood
 
-    def _compute_weights(self, latent_card):
-        """
-        For each data point, creates extra data points for each possible combination
-        of states of latent variables and assigns weights to each of them.
-        """
+    def _parallel_compute_weights(
+        self, data_unique, latent_card, n_counts, offset, batch_size
+    ):
         cache = []
 
-        data_unique = self.data.drop_duplicates()
-        n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
-
-        for i in range(data_unique.shape[0]):
+        for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
             df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
@@ -96,12 +92,29 @@ class ExpectationMaximization(ParameterEstimator):
             )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-
             weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
             df["_weight"] = (weights / weights.sum()) * n_counts[
                 tuple(data_unique.iloc[i])
             ]
             cache.append(df)
+
+        return pd.concat(cache, copy=False)
+
+    def _compute_weights(self, n_jobs, latent_card, batch_size):
+        """
+        For each data point, creates extra data points for each possible combination
+        of states of latent variables and assigns weights to each of them.
+        """
+
+        data_unique = self.data.drop_duplicates()
+        n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
+
+        cache = Parallel(n_jobs=n_jobs)(
+            delayed(self._parallel_compute_weights)(
+                data_unique, latent_card, n_counts, i, batch_size
+            )
+            for i in range(0, data_unique.shape[0], batch_size)
+        )
 
         return pd.concat(cache, copy=False)
 
@@ -121,6 +134,7 @@ class ExpectationMaximization(ParameterEstimator):
         max_iter=100,
         atol=1e-08,
         n_jobs=-1,
+        batch_size=1000,
         seed=None,
         show_progress=True,
     ):
@@ -144,6 +158,10 @@ class ExpectationMaximization(ParameterEstimator):
 
         n_jobs: int (default: -1)
             Number of jobs to run in parallel. Default: -1 uses all the processors.
+            Suggest to use n_jobs=1 when dataset size is less than 1000.
+
+        batch_size: int (default: 1000)
+            Number of data used to compute weights in a batch.
 
         seed: int
             The random seed to use for generating the intial values.
@@ -211,7 +229,7 @@ class ExpectationMaximization(ParameterEstimator):
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
             #           possible state of latent variables.
-            weighted_data = self._compute_weights(latent_card)
+            weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = MaximumLikelihoodEstimator(
                 self.model_copy, weighted_data
