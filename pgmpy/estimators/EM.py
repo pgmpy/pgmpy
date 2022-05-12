@@ -84,7 +84,7 @@ class ExpectationMaximization(ParameterEstimator):
     ):
         cache = []
 
-        for i in range(offset, offset + batch_size):
+        for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
             v = list(product(*[range(card) for card in latent_card.values()]))
             latent_combinations = np.array(v, dtype=int)
             df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
@@ -111,29 +111,12 @@ class ExpectationMaximization(ParameterEstimator):
 
         batch_size = 1000
 
-        batch_count = data_unique.shape[0] // batch_size
-
         cache = Parallel(n_jobs=-1)(
             delayed(self._parallel_compute_weights)(
                 data_unique, latent_card, n_counts, i, batch_size
             )
-            for i in range(batch_count)
+            for i in range(0, data_unique.shape[0], batch_size)
         )
-
-        for i in range(batch_count * batch_size, data_unique.shape[0]):
-            v = list(product(*[range(card) for card in latent_card.values()]))
-            latent_combinations = np.array(v, dtype=int)
-            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(
-                drop=True
-            )
-            for index, latent_var in enumerate(latent_card.keys()):
-                df[latent_var] = latent_combinations[:, index]
-
-            weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
-            df["_weight"] = (weights / weights.sum()) * n_counts[
-                tuple(data_unique.iloc[i])
-            ]
-            cache.append(df)
 
         return pd.concat(cache, copy=False)
 
