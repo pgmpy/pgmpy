@@ -100,7 +100,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         return pd.concat(cache, copy=False)
 
-    def _compute_weights(self, latent_card):
+    def _compute_weights(self, n_jobs, latent_card):
         """
         For each data point, creates extra data points for each possible combination
         of states of latent variables and assigns weights to each of them.
@@ -111,7 +111,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         batch_size = 1000
 
-        cache = Parallel(n_jobs=-1)(
+        cache = Parallel(n_jobs=n_jobs)(
             delayed(self._parallel_compute_weights)(
                 data_unique, latent_card, n_counts, i, batch_size
             )
@@ -159,6 +159,7 @@ class ExpectationMaximization(ParameterEstimator):
 
         n_jobs: int (default: -1)
             Number of jobs to run in parallel. Default: -1 uses all the processors.
+            Suggest to use n_jobs=1 when dataset size is less than 1000.
 
         seed: int
             The random seed to use for generating the intial values.
@@ -226,7 +227,7 @@ class ExpectationMaximization(ParameterEstimator):
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
             #           possible state of latent variables.
-            weighted_data = self._compute_weights(latent_card)
+            weighted_data = self._compute_weights(n_jobs, latent_card)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = MaximumLikelihoodEstimator(
                 self.model_copy, weighted_data
