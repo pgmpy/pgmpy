@@ -1026,7 +1026,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(
             str(sorted_var_hashes)
-            + str(phi.values)
-            + str(phi.cardinality)
+            + str(hash(phi.values.tobytes()))
+            + str(hash(phi.cardinality.tobytes()))
             + str(state_names_hash)
         )
