@@ -177,11 +177,11 @@ class MarkovChain(object):
         ----------
         variable: any hashable python object
             must be an existing variable of the model.
+
         transition_model: dict or 2d array
             dict representing valid transition probabilities defined for every possible state of the variable.
             array represent a square matrix where every row sums to 1,
             array[i,j] indicates the transition probalities from State i to State j
-
 
         Examples
         --------
@@ -194,7 +194,7 @@ class MarkovChain(object):
         >>> model.add_transition_model('grade', grade_tm_matrix)
         """
         if isinstance(transition_model, list):
-            transition_model = np.array(transition_model)
+            transition_model = np.array(transition_model, dtype=float)
 
         # check if the transition model is valid
         if not isinstance(transition_model, dict):
