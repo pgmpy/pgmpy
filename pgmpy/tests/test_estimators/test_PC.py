@@ -1,14 +1,15 @@
 import unittest
 
-import pandas as pd
-import numpy as np
 import networkx as nx
+import numpy as np
+import pandas as pd
 
 from pgmpy.estimators import PC
-from pgmpy.models import BayesianNetwork
 from pgmpy.independencies import Independencies
-from pgmpy.utils import get_example_model
+from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.utils import get_example_model
+
 
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
 # high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
@@ -92,7 +93,10 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             ind = ind.closure()
             estimator = PC(independencies=ind)
             skel, sep_sets = estimator.estimate(
-                variant=variant, ci_test="independence_match", return_type="skeleton"
+                variant=variant,
+                ci_test="independence_match",
+                return_type="skeleton",
+                show_progress=False,
             )
 
             expected_edges = {("A", "D"), ("B", "D"), ("C", "D")}
@@ -111,7 +115,10 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
             estimator = PC(independencies=model.get_independencies())
             skel, sep_sets = estimator.estimate(
-                variant=variant, ci_test="independence_match", return_type="skeleton"
+                variant=variant,
+                ci_test="independence_match",
+                return_type="skeleton",
+                show_progress=False,
             )
 
             expected_edges = model.edges()
@@ -208,7 +215,10 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             ind = ind.closure()
             estimator = PC(independencies=ind)
             model = estimator.estimate(
-                variant="orig", ci_test="independence_match", return_type="dag"
+                variant="orig",
+                ci_test="independence_match",
+                return_type="dag",
+                show_progress=False,
             )
             expected_edges = {("B", "D"), ("A", "D"), ("C", "D")}
             self.assertEqual(model.edges(), expected_edges)
@@ -216,7 +226,10 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
             model = BayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
             estimator = PC(independencies=model.get_independencies())
             estimated_model = estimator.estimate(
-                variant="orig", ci_test="independence_match", return_type="dag"
+                variant="orig",
+                ci_test="independence_match",
+                return_type="dag",
+                show_progress=False,
             )
             expected_edges_1 = set(model.edges())
             expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
@@ -241,6 +254,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 ci_test="chi_square",
                 return_type="skeleton",
                 significance_level=0.005,
+                show_progress=False,
             )
             expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
             expected_sepsets = {
@@ -279,7 +293,10 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             )
             est = PC(data=fake_data)
             skel, sep_sets = est.estimate(
-                variant=variant, ci_test=fake_ci, return_type="skeleton"
+                variant=variant,
+                ci_test=fake_ci,
+                return_type="skeleton",
+                show_progress=False,
             )
             expected_edges = {("X", "Z"), ("Y", "Z")}
             expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
@@ -302,6 +319,7 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                 ci_test="chi_square",
                 return_type="dag",
                 significance_level=0.001,
+                show_progress=False,
             )
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
@@ -316,7 +334,10 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             data["F"] = data["A"] + data["B"] + data["C"]
             est = PC(data=data)
             skel, sep_sets = est.estimate(
-                variant=variant, ci_test="pearsonr", return_type="skeleton"
+                variant=variant,
+                ci_test="pearsonr",
+                return_type="skeleton",
+                show_progress=False,
             )
             expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
             expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
@@ -358,7 +379,10 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
             est = PC(data=data)
             skel, sep_sets = est.estimate(
-                variant=variant, ci_test=fake_ci, return_type="skeleton"
+                variant=variant,
+                ci_test=fake_ci,
+                return_type="skeleton",
+                show_progress=False,
             )
             expected_edges = {("X", "Z"), ("Y", "Z")}
             expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
@@ -375,7 +399,12 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
             data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
             data["sum"] = data.sum(axis=1)
             est = PC(data=data)
-            dag = est.estimate(variant=variant, ci_test="pearsonr", return_type="dag")
+            dag = est.estimate(
+                variant=variant,
+                ci_test="pearsonr",
+                return_type="dag",
+                show_progress=False,
+            )
 
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
@@ -386,10 +415,10 @@ class TestPCRealModels(unittest.TestCase):
         alarm_model = get_example_model("alarm")
         data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e3), seed=42)
         est = PC(data)
-        dag = est.estimate(variant="stable", max_cond_vars=1)
+        dag = est.estimate(variant="stable", max_cond_vars=1, show_progress=False)
 
     def test_pc_asia(self):
         asia_model = get_example_model("asia")
         data = BayesianModelSampling(asia_model).forward_sample(size=int(1e3), seed=42)
         est = PC(data)
-        dag = est.estimate(variant="stable", max_cond_vars=1)
+        dag = est.estimate(variant="stable", max_cond_vars=1, show_progress=False)

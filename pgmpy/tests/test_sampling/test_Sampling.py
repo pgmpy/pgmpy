@@ -1,13 +1,14 @@
 import unittest
 
-from mock import MagicMock, patch
 import numpy as np
+from mock import MagicMock, patch
 
-from pgmpy.factors.discrete import DiscreteFactor, TabularCPD, State
-from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
+from pgmpy.inference import DBNInference, VariableElimination
+from pgmpy.models import BayesianNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
+from pgmpy.models import MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
-from pgmpy.inference import VariableElimination, DBNInference
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -29,7 +30,7 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.bayesian_model.add_cpds(cpd_a, cpd_g, cpd_j, cpd_l, cpd_q, cpd_r)
         self.sampling_inference = BayesianModelSampling(self.bayesian_model)
         self.forward_marginals = VariableElimination(self.bayesian_model).query(
-            self.bayesian_model.nodes(), joint=False
+            self.bayesian_model.nodes(), joint=False, show_progress=False
         )
 
         # Bayesian Model without state names and with latent variables
@@ -251,7 +252,10 @@ class TestBayesianModelSampling(unittest.TestCase):
 
         # Test that the marginal distributions is the same in model and samples
         self.rejection_marginals = VariableElimination(self.bayesian_model).query(
-            ["Q", "G", "L"], evidence={"A": 1, "J": 1, "R": 1}, joint=False
+            ["Q", "G", "L"],
+            evidence={"A": 1, "J": 1, "R": 1},
+            joint=False,
+            show_progress=False,
         )
 
         sample_marginals = {
@@ -489,7 +493,7 @@ class TestGibbsSampling(unittest.TestCase):
     def test_sample_limit(self):
         samples = self.gibbs.sample(size=int(1e4))
         marginal_prob = VariableElimination(self.bayesian_model).query(
-            list(self.bayesian_model.nodes()), joint=False
+            list(self.bayesian_model.nodes()), joint=False, show_progress=False
         )
         sample_prob = {
             node: samples.loc[:, node].value_counts() / 1e4

@@ -1,27 +1,26 @@
 import unittest
 
 import networkx as nx
-import pandas as pd
 import numpy as np
 import numpy.testing as np_test
+import pandas as pd
 
-from pgmpy.models import BayesianModel, MarkovModel
-from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
-from pgmpy.factors.discrete import (
-    TabularCPD,
-    JointProbabilityDistribution,
-    DiscreteFactor,
-)
-from pgmpy.independencies import Independencies
+from pgmpy.base import DAG
 from pgmpy.estimators import (
-    BayesianEstimator,
     BaseEstimator,
+    BayesianEstimator,
     MaximumLikelihoodEstimator,
 )
-from pgmpy.base import DAG
-from pgmpy.utils import get_example_model
+from pgmpy.factors.discrete import (
+    DiscreteFactor,
+    JointProbabilityDistribution,
+    TabularCPD,
+)
+from pgmpy.independencies import Independencies
+from pgmpy.models import BayesianModel, MarkovModel
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.utils import get_example_model
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -1238,7 +1237,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
     def test_simulate(self):
         asia = get_example_model("asia")
         n_samples = int(1e3)
-        samples = asia.simulate(n_samples=n_samples)
+        samples = asia.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
     def tearDown(self):

@@ -2,27 +2,26 @@ import os
 import unittest
 
 import networkx as nx
-import pandas as pd
 import numpy as np
 import numpy.testing as np_test
+import pandas as pd
 
-from pgmpy.models import BayesianNetwork, MarkovNetwork
-from pgmpy.base import DAG
 import pgmpy.tests.help_functions as hf
-from pgmpy.factors.discrete import (
-    TabularCPD,
-    JointProbabilityDistribution,
-    DiscreteFactor,
-)
-from pgmpy.independencies import Independencies
+from pgmpy.base import DAG
 from pgmpy.estimators import (
-    BayesianEstimator,
     BaseEstimator,
+    BayesianEstimator,
     MaximumLikelihoodEstimator,
 )
-from pgmpy.base import DAG
-from pgmpy.utils import get_example_model
+from pgmpy.factors.discrete import (
+    DiscreteFactor,
+    JointProbabilityDistribution,
+    TabularCPD,
+)
+from pgmpy.independencies import Independencies
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.utils import get_example_model
 
 
 class TestBaseModelCreation(unittest.TestCase):
@@ -423,12 +422,12 @@ class TestBayesianModelMethods(unittest.TestCase):
     def test_simulate(self):
         asia = get_example_model("asia")
         n_samples = int(1e3)
-        samples = asia.simulate(n_samples=n_samples)
+        samples = asia.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
         # The probability values don't sum to 1 in this case.
         barley = get_example_model("barley")
-        samples = barley.simulate(n_samples=n_samples)
+        samples = barley.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
     def test_load_save(self):
@@ -1457,8 +1456,7 @@ class TestDAGCPDOperations(unittest.TestCase):
 
 class TestSimulation(unittest.TestCase):
     def setUp(self):
-        from pgmpy.inference import VariableElimination
-        from pgmpy.inference import CausalInference
+        from pgmpy.inference import CausalInference, VariableElimination
 
         self.alarm = get_example_model("alarm")
         self.infer_alarm = VariableElimination(self.alarm)
@@ -1512,20 +1510,24 @@ class TestSimulation(unittest.TestCase):
                 )
 
     def test_simulate(self):
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4))
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), show_progress=False
+        )
         con_inference_marginals = self.infer_con_model.query(
             self.con_model.nodes(), joint=False
         )
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         nodes = list(self.alarm.nodes())[:5]
-        alarm_samples = self.alarm.simulate(n_samples=int(1e4))
+        alarm_samples = self.alarm.simulate(n_samples=int(1e4), show_progress=False)
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_evidence(self):
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), evidence={"U": 1}
+            n_samples=int(1e4),
+            evidence={"U": 1},
+            show_progress=False,
         )
         con_inference_marginals = self.infer_con_model.query(
             ["X", "Y", "Z"], joint=False, evidence={"U": 1}
@@ -1534,25 +1536,31 @@ class TestSimulation(unittest.TestCase):
 
         nodes = list(self.alarm.nodes())[:5]
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), evidence={"MINVOLSET": "HIGH"}
+            n_samples=int(1e4), evidence={"MINVOLSET": "HIGH"}, show_progress=False
         )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_intervention(self):
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4), do={"X": 1})
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), do={"X": 1}, show_progress=False
+        )
         con_inference_marginals = {
             "Y": self.causal_infer_con_model.query(["Y"], do={"X": 1})
         }
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4), do={"Z": 1})
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), do={"Z": 1}, show_progress=False
+        )
         con_inference_marginals = {
             "X": self.causal_infer_con_model.query(["X"], do={"Z": 1})
         }
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
-        alarm_samples = self.alarm.simulate(n_samples=int(1e4), do={"CVP": "LOW"})
+        alarm_samples = self.alarm.simulate(
+            n_samples=int(1e4), do={"CVP": "LOW"}, show_progress=False
+        )
         alarm_inference_marginals = {
             "HISTORY": self.causal_infer_alarm.query(["HISTORY"], do={"CVP": "LOW"}),
             "HR": self.causal_infer_alarm.query(["HR"], do={"CVP": "LOW"}),
@@ -1563,7 +1571,7 @@ class TestSimulation(unittest.TestCase):
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), do={"MINVOLSET": "NORMAL"}
+            n_samples=int(1e4), do={"MINVOLSET": "NORMAL"}, show_progress=False
         )
         alarm_inference_marginals = {
             "CVP": self.causal_infer_alarm.query(["CVP"], do={"MINVOLSET": "NORMAL"}),
@@ -1583,7 +1591,7 @@ class TestSimulation(unittest.TestCase):
         # Simulates hard evidence U = 1
         virtual_evidence = TabularCPD("U", 2, [[0.0], [1.0]])
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), virtual_evidence=[virtual_evidence]
+            n_samples=int(1e4), virtual_evidence=[virtual_evidence], show_progress=False
         )
         con_inference_marginals = self.infer_con_model.query(
             ["X", "Y", "Z"], joint=False, evidence={"U": 1}
@@ -1599,7 +1607,7 @@ class TestSimulation(unittest.TestCase):
             state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]},
         )
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), virtual_evidence=[virtual_evidence]
+            n_samples=int(1e4), virtual_evidence=[virtual_evidence], show_progress=False
         )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
@@ -1610,7 +1618,7 @@ class TestSimulation(unittest.TestCase):
         # Simulate hard intervention X=1
         virt_inter = TabularCPD("X", 2, [[0.0], [1.0]])
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), virtual_intervention=[virt_inter]
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False
         )
         con_inference_marginals = {
             "Y": self.causal_infer_con_model.query(["Y"], do={"X": 1}),
@@ -1620,7 +1628,7 @@ class TestSimulation(unittest.TestCase):
         # Simulate hard intervention Z=1
         virt_inter = TabularCPD("Z", 2, [[0.0], [1.0]])
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), virtual_intervention=[virt_inter]
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False
         )
         con_inference_marginals = {
             "X": self.causal_infer_con_model.query(["X"], do={"Z": 1})
@@ -1635,7 +1643,7 @@ class TestSimulation(unittest.TestCase):
             state_names={"CVP": ["LOW", "NORMAL", "HIGH"]},
         )
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), virtual_intervention=[virt_inter]
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False
         )
         alarm_inference_marginals = {
             "HISTORY": self.causal_infer_alarm.query(["HISTORY"], do={"CVP": "LOW"}),
@@ -1654,7 +1662,7 @@ class TestSimulation(unittest.TestCase):
             state_names={"MINVOLSET": ["LOW", "NORMAL", "HIGH"]},
         )
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), virtual_intervention=[virt_inter]
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False
         )
         alarm_inference_marginals = {
             "CVP": self.causal_infer_alarm.query(["CVP"], do={"MINVOLSET": "NORMAL"}),
