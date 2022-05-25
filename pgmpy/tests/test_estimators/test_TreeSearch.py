@@ -135,7 +135,11 @@ class TestTreeSearch(unittest.TestCase):
             for n_jobs in [-1, 1]:
                 # learn graph structure
                 est = TreeSearch(self.data12, root_node="A", n_jobs=n_jobs)
-                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
+                dag = est.estimate(
+                    estimator_type="chow-liu",
+                    edge_weights_fn=weight_fn,
+                    show_progress=False,
+                )
 
                 # check number of nodes and edges are as expected
                 self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E"])
@@ -143,7 +147,11 @@ class TestTreeSearch(unittest.TestCase):
 
                 # learn tree structure using A as root node
                 est = TreeSearch(self.data13, root_node="A", n_jobs=n_jobs)
-                dag = est.estimate(estimator_type="chow-liu", edge_weights_fn=weight_fn)
+                dag = est.estimate(
+                    estimator_type="chow-liu",
+                    edge_weights_fn=weight_fn,
+                    show_progress=False,
+                )
 
                 # check number of nodes and edges are as expected
                 self.assertCountEqual(dag.nodes(), ["A", "B", "C", "D", "E", "F"])
@@ -169,7 +177,10 @@ class TestTreeSearch(unittest.TestCase):
                 # learn graph structure
                 est = TreeSearch(self.data22, root_node="R", n_jobs=n_jobs)
                 dag = est.estimate(
-                    estimator_type="tan", class_node="A", edge_weights_fn=weight_fn
+                    estimator_type="tan",
+                    class_node="A",
+                    edge_weights_fn=weight_fn,
+                    show_progress=False,
                 )
 
                 # check number of nodes and edges are as expected
@@ -211,7 +222,7 @@ class TestTreeSearch(unittest.TestCase):
         maxw_idx = np.argsort(sum_weights)[::-1]
         root_node = self.data12.columns[maxw_idx[0]]
 
-        dag = est.estimate(estimator_type="chow-liu")
+        dag = est.estimate(estimator_type="chow-liu", show_progress=False)
         nodes = list(dag.nodes())
         np.testing.assert_equal(nodes[0], root_node)
         np.testing.assert_array_equal(nodes, ["D", "A", "C", "B", "E"])
@@ -227,7 +238,9 @@ class TestTreeSearch(unittest.TestCase):
         root_node = self.data22.columns[maxw_idx[0]]
         class_node = self.data22.columns[maxw_idx[1]]
 
-        dag = est.estimate(estimator_type="tan", class_node=class_node)
+        dag = est.estimate(
+            estimator_type="tan", class_node=class_node, show_progress=False
+        )
         nodes = list(dag.nodes())
         self.assertEqual(nodes[0], root_node)
         self.assertEqual(nodes[-1], class_node)
@@ -306,5 +319,7 @@ class TestTreeSearchRealDataSet(unittest.TestCase):
         ]
         target = "CVP"
         est = TreeSearch(self.alarm_df[features + [target]], root_node=features[0])
-        edges = est.estimate(estimator_type="tan", class_node=target).edges()
+        edges = est.estimate(
+            estimator_type="tan", class_node=target, show_progress=False
+        ).edges()
         self.assertEqual(set(expected_edges), set(edges))

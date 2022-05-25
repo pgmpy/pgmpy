@@ -1,16 +1,16 @@
 import unittest
 
 import pandas as pd
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 
+from pgmpy.metrics import correlation_score, log_likelihood_score, structure_score
 from pgmpy.utils import get_example_model
-from pgmpy.metrics import correlation_score, structure_score, log_likelihood_score
 
 
 class TestCorrelationScore(unittest.TestCase):
     def setUp(self):
         self.alarm = get_example_model("alarm")
-        self.data = self.alarm.simulate(int(1e4))
+        self.data = self.alarm.simulate(int(1e4), show_progress=False)
 
     def test_discrete_network(self):
         for test in {
@@ -54,7 +54,7 @@ class TestCorrelationScore(unittest.TestCase):
 class TestStructureScore(unittest.TestCase):
     def setUp(self):
         self.alarm = get_example_model("alarm")
-        self.data = self.alarm.simulate(int(1e4))
+        self.data = self.alarm.simulate(int(1e4), show_progress=False)
 
         # Remove all CPDs
         self.alarm_no_cpd = self.alarm.copy()
@@ -83,7 +83,7 @@ class TestStructureScore(unittest.TestCase):
 class TestLogLikelihoodScore(unittest.TestCase):
     def setUp(self):
         self.model = get_example_model("alarm")
-        self.data = self.model.simulate(int(1e4))
+        self.data = self.model.simulate(int(1e4), show_progress=False)
 
     def test_discrete_network(self):
         metric = log_likelihood_score(self.model, self.data)

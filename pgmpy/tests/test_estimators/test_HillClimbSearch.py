@@ -1,7 +1,7 @@
 import unittest
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from pgmpy.estimators import HillClimbSearch, K2Score
 from pgmpy.models import BayesianNetwork
@@ -190,31 +190,33 @@ class TestHillClimbEstimator(unittest.TestCase):
             self.assertAlmostEqual(score, legal_ops_both_ref[op])
 
     def test_estimate_rand(self):
-        est1 = self.est_rand.estimate()
+        est1 = self.est_rand.estimate(show_progress=False)
         self.assertSetEqual(set(est1.nodes()), set(["A", "B", "C"]))
         self.assertTrue(
             list(est1.edges()) == [("B", "C")] or list(est1.edges()) == [("C", "B")]
         )
 
         est2 = self.est_rand.estimate(
-            start_dag=BayesianNetwork([("A", "B"), ("A", "C")])
+            start_dag=BayesianNetwork([("A", "B"), ("A", "C")]), show_progress=False
         )
         self.assertTrue(
             list(est2.edges()) == [("B", "C")] or list(est2.edges()) == [("C", "B")]
         )
 
-        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")])
+        est3 = self.est_rand.estimate(fixed_edges=[("B", "C")], show_progress=False)
         self.assertTrue([("B", "C")] == list(est3.edges()))
 
     def test_estimate_titanic(self):
         self.assertSetEqual(
-            set(self.est_titanic2.estimate().edges()),
+            set(self.est_titanic2.estimate(show_progress=False).edges()),
             set([("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")]),
         )
 
         self.assertTrue(
             ("Pclass", "Survived")
-            in self.est_titanic2.estimate(fixed_edges=[("Pclass", "Survived")]).edges()
+            in self.est_titanic2.estimate(
+                fixed_edges=[("Pclass", "Survived")], show_progress=False
+            ).edges()
         )
 
     def test_no_legal_operation(self):
@@ -230,7 +232,9 @@ class TestHillClimbEstimator(unittest.TestCase):
         )
         est = HillClimbSearch(data)
         best_model = est.estimate(
-            fixed_edges=[("A", "B"), ("B", "C")], white_list=[("F", "C")]
+            fixed_edges=[("A", "B"), ("B", "C")],
+            white_list=[("F", "C")],
+            show_progress=False,
         )
         self.assertEqual(
             set(best_model.edges()), set([("A", "B"), ("B", "C"), ("F", "C")])
@@ -238,8 +242,8 @@ class TestHillClimbEstimator(unittest.TestCase):
 
     def test_estimate(self):
         for score in ["k2score", "bdeuscore", "bdsscore", "bicscore"]:
-            dag = self.est_rand.estimate(scoring_method=score)
-            dag = self.est_titanic1.estimate(scoring_method=score)
+            dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
+            dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
 
     def tearDown(self):
         del self.rand_data

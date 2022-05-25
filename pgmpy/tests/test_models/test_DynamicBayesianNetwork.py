@@ -1,14 +1,14 @@
 import unittest
 
 import numpy as np
-import pandas as pd
 import numpy.testing as np_test
+import pandas as pd
 
 import pgmpy.tests.help_functions as hf
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import CausalInference, DBNInference, VariableElimination
 from pgmpy.models import BayesianNetwork
 from pgmpy.models import DynamicBayesianNetwork as DBN
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.inference import DBNInference, VariableElimination, CausalInference
 
 
 class TestDynamicBayesianNetworkCreation(unittest.TestCase):
@@ -957,7 +957,7 @@ class TestDBNSampling(unittest.TestCase):
         self.bn_causal_infer = CausalInference(self.equivalent_bn)
 
     def test_simulate_two_slices(self):
-        samples = self.dbn.simulate(n_samples=10, n_time_slices=1)
+        samples = self.dbn.simulate(n_samples=10, n_time_slices=1, show_progress=False)
         self.assertEqual(len(samples), 10)
         self.assertEqual(len(samples.columns), 3)
         for node in [("D", 0), ("I", 0), ("G", 0)]:
@@ -967,7 +967,9 @@ class TestDBNSampling(unittest.TestCase):
         self.assertTrue(sorted(np.unique(samples.loc[:, [("I", 0)]].values)), [0, 1])
         self.assertTrue(sorted(np.unique(samples.loc[:, [("G", 0)]].values)), [0, 1, 2])
 
-        samples = self.dbn.simulate(n_samples=int(1e5), n_time_slices=2)
+        samples = self.dbn.simulate(
+            n_samples=int(1e5), n_time_slices=2, show_progress=False
+        )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 6)
         for node in [("D", 0), ("I", 0), ("G", 0), ("D", 1), ("I", 1), ("G", 1)]:
@@ -1007,7 +1009,9 @@ class TestDBNSampling(unittest.TestCase):
                 )
 
     def test_simulate_more_than_two_slices(self):
-        samples = self.dbn.simulate(n_samples=int(1e5), n_time_slices=3)
+        samples = self.dbn.simulate(
+            n_samples=int(1e5), n_time_slices=3, show_progress=False
+        )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
         for node in [
@@ -1065,6 +1069,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=int(1e5),
             n_time_slices=2,
             evidence={("D", 0): 1},
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 6)
@@ -1123,6 +1128,7 @@ class TestDBNSampling(unittest.TestCase):
                 ("D", 0): 1,
                 ("D", 1): 0,
             },
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 6)
@@ -1169,6 +1175,7 @@ class TestDBNSampling(unittest.TestCase):
                 ("D", 0): 1,
                 ("D", 1): 0,
             },
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
@@ -1228,6 +1235,7 @@ class TestDBNSampling(unittest.TestCase):
                 ("D", 1): 0,
                 ("D", 2): 1,
             },
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
@@ -1288,7 +1296,10 @@ class TestDBNSampling(unittest.TestCase):
             TabularCPD("D2", 2, [[0.8], [0.2]]),
         ]
         samples = self.dbn.simulate(
-            n_samples=int(1e5), n_time_slices=3, virtual_evidence=virtual_evidence
+            n_samples=int(1e5),
+            n_time_slices=3,
+            virtual_evidence=virtual_evidence,
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
@@ -1338,7 +1349,10 @@ class TestDBNSampling(unittest.TestCase):
 
     def test_simulate_intervention(self):
         samples = self.dbn.simulate(
-            n_samples=int(1e5), n_time_slices=3, do={("D", 0): 1, ("D", 2): 0}
+            n_samples=int(1e5),
+            n_time_slices=3,
+            do={("D", 0): 1, ("D", 2): 0},
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)
@@ -1403,6 +1417,7 @@ class TestDBNSampling(unittest.TestCase):
             n_samples=int(1e5),
             n_time_slices=3,
             virtual_intervention=virtual_intervention,
+            show_progress=False,
         )
         self.assertEqual(len(samples), int(1e5))
         self.assertEqual(len(samples.columns), 9)

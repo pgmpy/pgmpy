@@ -1,14 +1,12 @@
-import unittest
-import numpy as np
 import itertools
+import unittest
+
+import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.inference import VariableElimination
-from pgmpy.inference import BeliefPropagation
-from pgmpy.models import BayesianNetwork, MarkovNetwork
-from pgmpy.models import JunctionTree
-from pgmpy.factors.discrete import TabularCPD
-from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+from pgmpy.inference import BeliefPropagation, VariableElimination
+from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -44,14 +42,14 @@ class TestVariableElimination(unittest.TestCase):
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):
-        query_result = self.bayesian_inference.query(["J"])
+        query_result = self.bayesian_inference.query(["J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
         )
 
     def test_query_multiple_variable(self):
-        query_result = self.bayesian_inference.query(["Q", "J"])
+        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -63,7 +61,7 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_query_single_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -72,7 +70,9 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_query_multiple_variable_with_evidence(self):
         query_result = self.bayesian_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         self.assertEqual(
             query_result,
@@ -85,16 +85,16 @@ class TestVariableElimination(unittest.TestCase):
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
-        query_result = self.bayesian_inference.query(["J"])
-        query_result = self.bayesian_inference.query(["J"])
+        query_result = self.bayesian_inference.query(["J"], show_progress=False)
+        query_result = self.bayesian_inference.query(["J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
                 variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
             ),
         )
-        query_result = self.bayesian_inference.query(["Q", "J"])
-        query_result = self.bayesian_inference.query(["Q", "J"])
+        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
+        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -105,10 +105,10 @@ class TestVariableElimination(unittest.TestCase):
         )
 
         query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -116,10 +116,14 @@ class TestVariableElimination(unittest.TestCase):
         )
 
         query_result = self.bayesian_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         query_result = self.bayesian_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         self.assertEqual(
             query_result,
@@ -164,14 +168,14 @@ class TestVariableElimination(unittest.TestCase):
         )
 
     def test_map_query(self):
-        map_query = self.bayesian_inference.map_query()
+        map_query = self.bayesian_inference.map_query(show_progress=False)
         self.assertDictEqual(
             map_query, {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
         )
 
     def test_map_query_with_evidence(self):
         map_query = self.bayesian_inference.map_query(
-            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}
+            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
 
@@ -192,7 +196,7 @@ class TestVariableElimination(unittest.TestCase):
             "MinFill",
         ]:
             query_result = self.bayesian_inference.query(
-                ["J"], elimination_order=elimination_order
+                ["J"], elimination_order=elimination_order, show_progress=False
             )
             self.assertEqual(
                 query_result,
@@ -200,7 +204,7 @@ class TestVariableElimination(unittest.TestCase):
             )
 
             query_result = self.bayesian_inference.query(
-                variables=["J"], evidence={"A": 0, "R": 1}
+                variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
             )
             self.assertEqual(
                 query_result,
@@ -209,7 +213,7 @@ class TestVariableElimination(unittest.TestCase):
 
         # Check when elimination order has extra variables. Because of pruning.
         query_result = self.bayesian_inference.query(
-            ["J"], elimination_order=["A", "R", "L", "Q", "G"]
+            ["J"], elimination_order=["A", "R", "L", "Q", "G"], show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -301,13 +305,19 @@ class TestSnowNetwork(unittest.TestCase):
     def test_queries(self):
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
-            query1 = infer.query(["Snow"], evidence={"Traffic": "slow"})
+            query1 = infer.query(
+                ["Snow"], evidence={"Traffic": "slow"}, show_progress=False
+            )
             np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
 
-            query2 = infer.query(["Risk"], evidence={"Traffic": "slow"})
+            query2 = infer.query(
+                ["Risk"], evidence={"Traffic": "slow"}, show_progress=False
+            )
             np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
 
-            query3 = infer.query(["Late"], evidence={"Traffic": "slow"})
+            query3 = infer.query(
+                ["Late"], evidence={"Traffic": "slow"}, show_progress=False
+            )
             np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
 
             self.assertRaises(
@@ -331,29 +341,45 @@ class TestSnowNetwork(unittest.TestCase):
         )
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
-            query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence])
+            query1 = infer.query(
+                ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
 
-            map1 = infer.map_query(["Snow"], virtual_evidence=[virt_evidence])
+            map1 = infer.map_query(
+                ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             self.assertEqual(map1, {"Snow": "no"})
 
-            query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence])
+            query2 = infer.query(
+                ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
 
-            map2 = infer.map_query(["Risk"], virtual_evidence=[virt_evidence])
+            map2 = infer.map_query(
+                ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             self.assertEqual(map2, {"Risk": "yes"})
 
-            query3 = infer.query(["Late"], virtual_evidence=[virt_evidence])
+            query3 = infer.query(
+                ["Late"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
 
-            map3 = infer.map_query(["Late"], virtual_evidence=[virt_evidence])
+            map3 = infer.map_query(
+                ["Late"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             self.assertEqual(map3, {"Late": "yes"})
 
-            query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence])
+            query4 = infer.query(
+                ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
 
             # TODO: State name should be returned here.
-            map4 = infer.map_query(["Traffic"], virtual_evidence=[virt_evidence])
+            map4 = infer.map_query(
+                ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
+            )
             self.assertTrue(map4 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
         virt_evidence1 = TabularCPD(
@@ -362,39 +388,55 @@ class TestSnowNetwork(unittest.TestCase):
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(self.model)
             query1 = infer.query(
-                ["Snow"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Snow"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
 
             map1 = infer.map_query(
-                ["Snow"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Snow"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             self.assertEqual(map1, {"Snow": "yes"})
 
             query2 = infer.query(
-                ["Risk"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Risk"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
             map2 = infer.map_query(
-                ["Risk"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Risk"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             self.assertTrue(map2 in [{"Risk": 0}, {"Risk": "yes"}])
 
             query3 = infer.query(
-                ["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Traffic"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
             map3 = infer.map_query(
-                ["Traffic"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Traffic"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             self.assertTrue(map3 in [{"Traffic": "slow"}, {"Traffic": 1}])
 
             query4 = infer.query(
-                ["Late"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Late"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
             map4 = infer.map_query(
-                ["Late"], virtual_evidence=[virt_evidence, virt_evidence1]
+                ["Late"],
+                virtual_evidence=[virt_evidence, virt_evidence1],
+                show_progress=False,
             )
             self.assertEqual(map4, {"Late": "yes"})
 
@@ -412,7 +454,7 @@ class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
         self.markov_inference = VariableElimination(self.markov_model)
 
     def test_duplicated_factors(self):
-        query_result = self.markov_inference.query(["A"])
+        query_result = self.markov_inference.query(["A"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(variables=["A"], cardinality=[2], values=np.array([4, 4])),
@@ -465,7 +507,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):
-        query_result = self.markov_inference.query(["J"])
+        query_result = self.markov_inference.query(["J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -474,7 +516,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
 
     def test_query_multiple_variable(self):
-        query_result = self.markov_inference.query(["Q", "J"])
+        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -486,7 +528,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_query_single_variable_with_evidence(self):
         query_result = self.markov_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -495,7 +537,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_query_multiple_variable_with_evidence(self):
         query_result = self.markov_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         self.assertEqual(
             query_result,
@@ -508,8 +552,8 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
-        query_result = self.markov_inference.query(["J"])
-        query_result = self.markov_inference.query(["J"])
+        query_result = self.markov_inference.query(["J"], show_progress=False)
+        query_result = self.markov_inference.query(["J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -517,8 +561,8 @@ class TestVariableEliminationMarkov(unittest.TestCase):
             ),
         )
 
-        query_result = self.markov_inference.query(["Q", "J"])
-        query_result = self.markov_inference.query(["Q", "J"])
+        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
+        query_result = self.markov_inference.query(["Q", "J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -529,10 +573,10 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
 
         query_result = self.markov_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         query_result = self.markov_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -540,10 +584,14 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
 
         query_result = self.markov_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         query_result = self.markov_inference.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         self.assertEqual(
             query_result,
@@ -575,14 +623,14 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
 
     def test_map_query(self):
-        map_query = self.markov_inference.map_query()
+        map_query = self.markov_inference.map_query(show_progress=False)
         self.assertDictEqual(
             map_query, {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
         )
 
     def test_map_query_with_evidence(self):
         map_query = self.markov_inference.map_query(
-            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}
+            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
 
@@ -636,7 +684,8 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
         infer = VariableElimination(model)
         np_test.assert_array_almost_equal(
-            infer.query(["Y"], evidence={"X": 0}).values, [0.35, 0.65]
+            infer.query(["Y"], evidence={"X": 0}, show_progress=False).values,
+            [0.35, 0.65],
         )
 
     def tearDown(self):
@@ -805,7 +854,7 @@ class TestBeliefPropagation(unittest.TestCase):
 
     def test_query_single_variable(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
-        query_result = belief_propagation.query(["J"])
+        query_result = belief_propagation.query(["J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
@@ -813,7 +862,7 @@ class TestBeliefPropagation(unittest.TestCase):
 
     def test_query_multiple_variable(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
-        query_result = belief_propagation.query(["Q", "J"])
+        query_result = belief_propagation.query(["Q", "J"], show_progress=False)
         self.assertEqual(
             query_result,
             DiscreteFactor(
@@ -826,7 +875,7 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_query_single_variable_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(
-            variables=["J"], evidence={"A": 0, "R": 1}
+            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
         self.assertEqual(
             query_result,
@@ -838,7 +887,9 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_query_multiple_variable_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         query_result = belief_propagation.query(
-            variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
+            variables=["J", "Q"],
+            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+            show_progress=False,
         )
         self.assertEqual(
             query_result,
@@ -857,7 +908,7 @@ class TestBeliefPropagation(unittest.TestCase):
 
     def test_map_query(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
-        map_query = belief_propagation.map_query()
+        map_query = belief_propagation.map_query(show_progress=False)
         self.assertDictEqual(
             map_query, {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
         )
@@ -865,7 +916,7 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_map_query_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         map_query = belief_propagation.map_query(
-            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}
+            ["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False
         )
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
 
@@ -915,7 +966,9 @@ class TestBeliefPropagation(unittest.TestCase):
         for i, c in enumerate(children[:4]):
             self.assertEqual(evidence, expected_evidences[i])
             np_test.assert_almost_equal(
-                inf.query(["parent"], evidence).normalize(inplace=False).values,
+                inf.query(["parent"], evidence, show_progress=False)
+                .normalize(inplace=False)
+                .values,
                 expected_values[i],
                 decimal=2,
             )
