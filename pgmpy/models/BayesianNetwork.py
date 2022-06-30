@@ -1150,9 +1150,18 @@ class BayesianNetwork(DAG):
 
         self.check_model()
         model = self.copy()
+        state_names = self.states
 
         evidence = {} if evidence is None else evidence
+        for var, state in evidence.items():
+            if state not in state_names[var]:
+                raise ValueError(f"Evidence state: {state} for {var} doesn't exist")
+
         do = {} if do is None else do
+        for var, state in do.items():
+            if state not in state_names[var]:
+                raise ValueError(f"Do state: {state} for {var} doesn't exist")
+
         virtual_intervention = (
             [] if virtual_intervention is None else virtual_intervention
         )

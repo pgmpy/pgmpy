@@ -1,14 +1,14 @@
 import logging
 import warnings
-from itertools import product
 from collections import namedtuple
+from itertools import product
 
 import numpy as np
 import pandas as pd
 
+from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin
-from pgmpy.extern import tabulate
 
 State = namedtuple("State", ["var", "state"])
 
@@ -97,6 +97,11 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
+
+        if not isinstance(state_names, dict):
+            raise ValueError(
+                f"state_names must be of type dict. Got {type(state_names)}."
+            )
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)

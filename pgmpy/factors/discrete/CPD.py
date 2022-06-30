@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
-from itertools import product, chain
-from warnings import warn
 import numbers
+from itertools import chain, product
+from shutil import get_terminal_size
+from warnings import warn
 
 import numpy as np
 
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.extern import tabulate
-
-from shutil import get_terminal_size
+from pgmpy.factors.discrete import DiscreteFactor
 
 
 class TabularCPD(DiscreteFactor):
@@ -133,6 +132,11 @@ class TabularCPD(DiscreteFactor):
         if values.shape != expected_cpd_shape:
             raise ValueError(
                 f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}"
+            )
+
+        if not isinstance(state_names, dict):
+            raise ValueError(
+                f"state_names must be of type dict. Got {type(state_names)}"
             )
 
         super(TabularCPD, self).__init__(
@@ -555,7 +559,7 @@ class TabularCPD(DiscreteFactor):
         return self.variables[:0:-1]
 
     @staticmethod
-    def get_random(variable, evidence=None, cardinality=None, state_names=None):
+    def get_random(variable, evidence=None, cardinality=None, state_names={}):
         """
         Generates a TabularCPD instance with random values on `variable` with
         parents/evidence `evidence` with cardinality/number of states as given
@@ -574,7 +578,7 @@ class TabularCPD(DiscreteFactor):
             cardinality of each of the variables. If None, assigns each variable
             2 states.
 
-        state_names: dict (default: None)
+        state_names: dict (default: {})
             A dict of the form {var_name: list of states} to specify the state names
             for the variables in the CPD. If state_names=None, integral state names
             starting from 0 is assigned.
