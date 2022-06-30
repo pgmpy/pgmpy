@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
 import logging
-from itertools import combinations, permutations, chain
+from itertools import chain, combinations, permutations
 
 import networkx as nx
-from tqdm.auto import tqdm
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.estimators.CITests import chi_square, pearsonr, independence_match
+from pgmpy.estimators.CITests import chi_square, independence_match, pearsonr
 from pgmpy.global_vars import SHOW_PROGRESS
 
 
@@ -312,8 +312,8 @@ class PC(StructureEstimator):
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
                 for (u, v) in graph.edges():
                     for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                        combinations(set(neighbors[u]) - set([v]), lim_neighbors),
+                        combinations(set(neighbors[v]) - set([u]), lim_neighbors),
                     ):
                         # If a conditioning set exists remove the edge, store the
                         # separating set and move on to finding conditioning set for next edge.
