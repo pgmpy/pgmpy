@@ -1,11 +1,10 @@
 from itertools import combinations
 
 import numpy as np
+from pyparsing import Combine, Literal, Optional, Word, alphas, nums
 
-from pyparsing import alphas, Combine, Literal, Optional, nums, Word
-
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork
-from pgmpy.factors.discrete import TabularCPD, DiscreteFactor
 
 
 class UAIReader(object):
@@ -184,7 +183,7 @@ class UAIReader(object):
                 child_var = "var_" + str(function_variables[-1])
                 function_variables = function_variables[:-1]
                 for var in function_variables:
-                    edges.append((child_var, "var_" + str(var)))
+                    edges.append(("var_" + str(var), child_var))
             elif self.network_type == "MARKOV":
                 function_variables = ["var_" + str(var) for var in function_variables]
                 edges.extend(list(combinations(function_variables, 2)))
@@ -257,7 +256,19 @@ class UAIReader(object):
                 states = int(self.domain[child_var])
                 values = np.fromiter(values, dtype=float)
                 values = values.reshape(states, values.size // states)
-                tabular_cpds.append(TabularCPD(child_var, states, values))
+                parents = list(model.predecessors(child_var))
+                if len(parents) == 0:
+                    tabular_cpds.append(TabularCPD(child_var, states, values))
+                else:
+                    tabular_cpds.append(
+                        TabularCPD(
+                            child_var,
+                            states,
+                            values,
+                            evidence=parents,
+                            evidence_card=[int(self.domain[var]) for var in parents],
+                        )
+                    )
 
             model.add_cpds(*tabular_cpds)
             return model
