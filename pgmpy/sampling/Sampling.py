@@ -525,7 +525,7 @@ class GibbsSampling(MarkovChain):
         if seed is not None:
             np.random.seed(seed)
 
-        types = [(var_name, "int") for var_name in self.variables]
+        types = [(str(var_name), "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
         sampled[0] = tuple(st for var, st in self.state)
         for i in tqdm(range(size - 1)):
