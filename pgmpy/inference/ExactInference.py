@@ -300,11 +300,11 @@ class VariableElimination(Inference):
         # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
+            reduced_bn, evidence = self._prune_bayesian_model(variables, evidence)
 
         evidence_vars = set(evidence)
         reduce_indexes = {}
-        for cpd in self.model.cpds:
+        for cpd in reduced_bn.cpds:
             indexes_to_reduce = [
                 cpd.variables.index(var)
                 for var in set(cpd.variables).intersection(evidence_vars)
@@ -318,14 +318,12 @@ class VariableElimination(Inference):
                 ]
             reduce_indexes[cpd.variables[0]] = tuple(indexer)
 
-        var_int_map = {var: i for i, var in enumerate(self.model.nodes())}
+        var_int_map = {var: i for i, var in enumerate(reduced_bn.nodes())}
         einsum_expr = []
-        for cpd in self.model.cpds:
+        for cpd in reduced_bn.cpds:
             einsum_expr.append(cpd.values[reduce_indexes[cpd.variables[0]]])
             einsum_expr.append([var_int_map[var] for var in cpd.variables])
-        result_values = contract(
-            *einsum_expr, [var_int_map[var] for var in variables], optimize="auto"
-        )
+        result_values = np.einsum(*einsum_expr, [var_int_map[var] for var in variables])
         result = DiscreteFactor(
             variables, result_values.shape, result_values
         ).normalize(inplace=False)

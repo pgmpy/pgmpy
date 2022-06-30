@@ -5,12 +5,14 @@ from itertools import chain
 
 import numpy as np
 
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovNetwork
-from pgmpy.models import FactorGraph
-from pgmpy.models import JunctionTree
-from pgmpy.models import DynamicBayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import (
+    BayesianNetwork,
+    DynamicBayesianNetwork,
+    FactorGraph,
+    JunctionTree,
+    MarkovNetwork,
+)
 
 
 class Inference(object):
@@ -142,17 +144,16 @@ class Inference(object):
         ----------
         [1] Baker, M., & Boult, T. E. (2013). Pruning Bayesian networks for efficient computation. arXiv preprint arXiv:1304.1112.
         """
-        bn = self.model.copy()
         evidence = {} if evidence is None else evidence
         variables = list(self.model.nodes()) if len(variables) == 0 else list(variables)
 
         # Step 1: Remove all the variables that are d-separated from `variables` when conditioned
         #         on `evidence`
-        d_connected = bn.active_trail_nodes(
+        d_connected = self.model.active_trail_nodes(
             variables=variables, observed=list(evidence.keys()), include_latents=True
         )
         d_connected = set.union(*d_connected.values()).union(evidence.keys())
-        bn = bn.subgraph(d_connected)
+        bn = self.model.subgraph(d_connected)
         evidence = {var: state for var, state in evidence.items() if var in d_connected}
 
         # Step 2: Reduce the model to ancestral graph of [`variables` + `evidence`]
