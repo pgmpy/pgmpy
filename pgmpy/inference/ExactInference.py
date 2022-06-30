@@ -302,10 +302,26 @@ class VariableElimination(Inference):
         if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
 
+        evidence_vars = set(evidence)
+        reduce_indexes = {}
+        for cpd in self.model.cpds:
+            indexes_to_reduce = [
+                cpd.variables.index(var)
+                for var in set(cpd.variables).intersection(evidence_vars)
+            ]
+            indexer = [slice(None)] * len(cpd.variables)
+            for index in indexes_to_reduce:
+                indexer[index] = [
+                    cpd.get_state_no(
+                        cpd.variables[index], evidence[cpd.variables[index]]
+                    )
+                ]
+            reduce_indexes[cpd.variables[0]] = tuple(indexer)
+
         var_int_map = {var: i for i, var in enumerate(self.model.nodes())}
         einsum_expr = []
         for cpd in self.model.cpds:
-            einsum_expr.append(cpd.values)
+            einsum_expr.append(cpd.values[reduce_indexes[cpd.variables[0]]])
             einsum_expr.append([var_int_map[var] for var in cpd.variables])
         result_values = contract(
             *einsum_expr, [var_int_map[var] for var in variables], optimize="auto"
