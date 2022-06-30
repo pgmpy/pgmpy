@@ -323,7 +323,9 @@ class VariableElimination(Inference):
         for cpd in reduced_bn.cpds:
             einsum_expr.append(cpd.values[reduce_indexes[cpd.variables[0]]])
             einsum_expr.append([var_int_map[var] for var in cpd.variables])
-        result_values = np.einsum(*einsum_expr, [var_int_map[var] for var in variables])
+        result_values = contract(
+            *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
+        )
         result = DiscreteFactor(
             variables, result_values.shape, result_values
         ).normalize(inplace=False)
