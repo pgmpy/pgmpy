@@ -1541,6 +1541,13 @@ class TestSimulation(unittest.TestCase):
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
+        self.assertRaises(
+            ValueError,
+            self.alarm.simulate,
+            n_samples=int(1e4),
+            evidence={"MINVOLSET": "UNKNOWN"},
+        )
+
     def test_simulate_intervention(self):
         con_model_samples = self.con_model.simulate(
             n_samples=int(1e4), do={"X": 1}, show_progress=False
@@ -1584,6 +1591,13 @@ class TestSimulation(unittest.TestCase):
             ),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+        self.assertRaises(
+            ValueError,
+            self.alarm.simulate,
+            n_samples=int(1e4),
+            do={"MINVOLSET": "UNKNOWN"},
+        )
 
     def test_simulate_virtual_evidence(self):
         # Use virtual evidence argument to simulate hard evidence and match values from inference.
