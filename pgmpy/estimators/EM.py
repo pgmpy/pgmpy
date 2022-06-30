@@ -1,15 +1,16 @@
 import warnings
-from itertools import product, chain
+from itertools import chain, product
+from math import log
 
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
-from pgmpy.estimators import ParameterEstimator, MaximumLikelihoodEstimator
-from pgmpy.models import BayesianNetwork
+from pgmpy.estimators import MaximumLikelihoodEstimator, ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import SHOW_PROGRESS
+from pgmpy.models import BayesianNetwork
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -63,19 +64,25 @@ class ExpectationMaximization(ParameterEstimator):
         super(ExpectationMaximization, self).__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
 
-    def _get_likelihood(self, datapoint):
+    def _get_log_likelihood(self, datapoint):
         """
         Computes the likelihood of a given datapoint. Goes through each
         CPD matching the combination of states to get the value and multiplies
         them together.
         """
-        likelihood = 1
+        likelihood = 0
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for cpd in self.model_copy.cpds:
                 scope = set(cpd.scope())
-                likelihood *= cpd.get_value(
-                    **{key: value for key, value in datapoint.items() if key in scope}
+                likelihood += log(
+                    cpd.get_value(
+                        **{
+                            key: value
+                            for key, value in datapoint.items()
+                            if key in scope
+                        }
+                    )
                 )
         return likelihood
 
@@ -92,7 +99,7 @@ class ExpectationMaximization(ParameterEstimator):
             )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-            weights = df.apply(lambda t: self._get_likelihood(dict(t)), axis=1)
+            weights = df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
             df["_weight"] = (weights / weights.sum()) * n_counts[
                 tuple(data_unique.iloc[i])
             ]
