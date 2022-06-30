@@ -4,18 +4,20 @@ import itertools
 
 import networkx as nx
 import numpy as np
+from opt_einsum import contract
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.inference import Inference
 from pgmpy.inference.EliminationOrder import (
-    WeightedMinFill,
-    MinNeighbors,
     MinFill,
+    MinNeighbors,
     MinWeight,
+    WeightedMinFill,
 )
-from pgmpy.models import JunctionTree, BayesianNetwork
-from pgmpy.global_vars import SHOW_PROGRESS
+from pgmpy.models import BayesianNetwork, JunctionTree
 
 
 class VariableElimination(Inference):
@@ -271,7 +273,7 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
-        orig_model = self.model.copy()
+        # orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -299,18 +301,29 @@ class VariableElimination(Inference):
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
             self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
 
-        # Step 4: Do the actual variable elimination
-        result = self._variable_elimination(
-            variables=variables,
-            operation="marginalize",
-            evidence=evidence,
-            elimination_order=elimination_order,
-            joint=joint,
-            show_progress=show_progress,
+        var_int_map = {var: i for i, var in enumerate(self.model.nodes())}
+        einsum_expr = []
+        for cpd in self.model.cpds:
+            einsum_expr.append(cpd.values)
+            einsum_expr.append([var_int_map[var] for var in cpd.variables])
+        result_values = contract(
+            *einsum_expr, [var_int_map[var] for var in variables], optimize="auto"
         )
-        self.__init__(orig_model)
+        result = DiscreteFactor(variables, result_values.shape, result_values)
+
+        # self._initialize_structures()
+
+        # # Step 4: Do the actual variable elimination
+        # result = self._variable_elimination(
+        #     variables=variables,
+        #     operation="marginalize",
+        #     evidence=evidence,
+        #     elimination_order=elimination_order,
+        #     joint=joint,
+        #     show_progress=show_progress,
+        # )
+        # self.__init__(orig_model)
 
         return result
 
