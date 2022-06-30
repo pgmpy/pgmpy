@@ -723,7 +723,7 @@ class DAG(nx.DiGraph):
         # down -> from child to parent
 
         active_trails = {}
-        for start in variables if isinstance(variables, (list, tuple)) else [variables]:
+        for start in variables if isinstance(variables, list) else [variables]:
             visit_list = set()
             visit_list.add((start, "up"))
             traversed_list = set()
