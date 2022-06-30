@@ -326,7 +326,9 @@ class VariableElimination(Inference):
         result_values = contract(
             *einsum_expr, [var_int_map[var] for var in variables], optimize="auto"
         )
-        result = DiscreteFactor(variables, result_values.shape, result_values)
+        result = DiscreteFactor(
+            variables, result_values.shape, result_values
+        ).normalize(inplace=False)
 
         # self._initialize_structures()
 
