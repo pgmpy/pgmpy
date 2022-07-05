@@ -17,7 +17,7 @@ from pgmpy.inference.EliminationOrder import (
     MinWeight,
     WeightedMinFill,
 )
-from pgmpy.models import BayesianNetwork, JunctionTree
+from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
 
 
 class VariableElimination(Inference):
@@ -284,7 +284,7 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Step 2: If virtual_evidence is provided, modify the network and query.
+        # Step 2: If virtual_evidence is provided, modify the network.
         if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -302,8 +302,10 @@ class VariableElimination(Inference):
         if isinstance(self.model, BayesianNetwork):
             reduced_bn, evidence = self._prune_bayesian_model(variables, evidence)
 
+        # Reduce the CPDs values according to the provided evidence.
         evidence_vars = set(evidence)
         reduce_indexes = {}
+        reshape_indexes = {}
         for cpd in reduced_bn.cpds:
             indexes_to_reduce = [
                 cpd.variables.index(var)
@@ -311,17 +313,23 @@ class VariableElimination(Inference):
             ]
             indexer = [slice(None)] * len(cpd.variables)
             for index in indexes_to_reduce:
-                indexer[index] = [
-                    cpd.get_state_no(
-                        cpd.variables[index], evidence[cpd.variables[index]]
-                    )
-                ]
+                indexer[index] = cpd.get_state_no(
+                    cpd.variables[index], evidence[cpd.variables[index]]
+                )
             reduce_indexes[cpd.variables[0]] = tuple(indexer)
+            reshape_indexes[cpd.variables[0]] = [
+                1 if indexer != slice(None) else cpd.cardinality[i]
+                for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
+            ]
 
         var_int_map = {var: i for i, var in enumerate(reduced_bn.nodes())}
         einsum_expr = []
         for cpd in reduced_bn.cpds:
-            einsum_expr.append(cpd.values[reduce_indexes[cpd.variables[0]]])
+            einsum_expr.append(
+                (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
+                    reshape_indexes[cpd.variables[0]]
+                )
+            )
             einsum_expr.append([var_int_map[var] for var in cpd.variables])
         result_values = contract(
             *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
