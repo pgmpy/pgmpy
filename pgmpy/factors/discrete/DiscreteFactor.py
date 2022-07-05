@@ -697,42 +697,27 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if isinstance(phi1, (int, float)):
             phi.values *= phi1
         else:
-            phi1 = phi1.copy()
+            # Compute the new values
+            new_variables = list(set(phi.variables).union(phi1.variables))
+            var_to_int = {var: index for index, var in enumerate(new_variables)}
+            phi.values = np.einsum(
+                phi.values,
+                [var_to_int[var] for var in phi.variables],
+                phi1.values,
+                [var_to_int[var] for var in phi1.variables],
+                range(len(new_variables)),
+            )
 
-            # modifying phi to add new variables
-            extra_vars = set(phi1.variables) - set(phi.variables)
-            if extra_vars:
-                slice_ = [slice(None)] * len(phi.variables)
-                slice_.extend([np.newaxis] * len(extra_vars))
-                phi.values = phi.values[tuple(slice_)]
+            # Compute the new cardinality array
+            phi_card = {var: card for var, card in zip(phi.variables, phi.cardinality)}
+            phi1_card = {
+                var: card for var, card in zip(phi1.variables, phi1.cardinality)
+            }
+            phi_card.update(phi1_card)
+            phi.cardinality = np.array([phi_card[var] for var in new_variables])
 
-                phi.variables.extend(extra_vars)
-
-                new_var_card = phi1.get_cardinality(extra_vars)
-                phi.cardinality = np.append(
-                    phi.cardinality, [new_var_card[var] for var in extra_vars]
-                )
-
-            # modifying phi1 to add new variables
-            extra_vars = set(phi.variables) - set(phi1.variables)
-            if extra_vars:
-                slice_ = [slice(None)] * len(phi1.variables)
-                slice_.extend([np.newaxis] * len(extra_vars))
-                phi1.values = phi1.values[tuple(slice_)]
-
-                phi1.variables.extend(extra_vars)
-                # No need to modify cardinality as we don't need it.
-
-            # rearranging the axes of phi1 to match phi
-            for axis in range(phi.values.ndim):
-                exchange_index = phi1.variables.index(phi.variables[axis])
-                phi1.variables[axis], phi1.variables[exchange_index] = (
-                    phi1.variables[exchange_index],
-                    phi1.variables[axis],
-                )
-                phi1.values = phi1.values.swapaxes(axis, exchange_index)
-
-            phi.values = phi.values * phi1.values
+            # Set the new variables and state names
+            phi.variables = new_variables
             phi.add_state_names(phi1)
 
         if not inplace:

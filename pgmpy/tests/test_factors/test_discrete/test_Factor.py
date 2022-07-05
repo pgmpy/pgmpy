@@ -1,21 +1,18 @@
 import unittest
 import warnings
 from collections import OrderedDict
+from shutil import get_terminal_size
 
 import numpy as np
 import numpy.testing as np_test
 
+from pgmpy.factors import factor_divide, factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
-from pgmpy.factors import factor_divide
-from pgmpy.factors import factor_product
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovNetwork
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.utils import get_example_model
-
-from shutil import get_terminal_size
 
 
 class TestFactorInit(unittest.TestCase):
@@ -544,7 +541,7 @@ class TestFactorMethods(unittest.TestCase):
             ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
         )
         self.assertEqual(prod, expected_factor)
-        self.assertEqual(prod.variables, expected_factor.variables)
+        self.assertEqual(set(prod.variables), set(expected_factor.variables))
 
         prod = factor_product(self.phi7, self.phi8)
         expected_factor = DiscreteFactor(
@@ -553,7 +550,7 @@ class TestFactorMethods(unittest.TestCase):
             [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48],
         )
         self.assertEqual(prod, expected_factor)
-        self.assertEqual(prod.variables, expected_factor.variables)
+        self.assertEqual(set(prod.variables), set(expected_factor.variables))
 
     def test_product(self):
         phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
@@ -584,7 +581,9 @@ class TestFactorMethods(unittest.TestCase):
             [6, 3, 10, 12, 8, 4, 25, 30, 18, 9, 40, 48],
         )
         self.assertEqual(expected_factor, phi7_copy)
-        self.assertEqual(phi7_copy.variables, [self.var1, self.var2, self.var3])
+        self.assertEqual(
+            set(phi7_copy.variables), set([self.var1, self.var2, self.var3])
+        )
 
     def test_factor_product_non_factor_arg(self):
         self.assertRaises(TypeError, factor_product, 1, 2)
