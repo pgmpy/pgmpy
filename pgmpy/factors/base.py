@@ -1,5 +1,8 @@
 from abc import abstractmethod
 from functools import reduce
+from itertools import chain
+
+from opt_einsum import contract
 
 
 class BaseFactor(object):
@@ -68,6 +71,51 @@ def factor_product(*args):
         )
 
     return reduce(lambda phi1, phi2: phi1 * phi2, args)
+
+
+def factor_sum_product(output_vars, factors):
+    """
+    For a given set of factors: `args` returns the result of $ \sum_{var \not \in output_vars} \prod \textit{args} $.
+
+    Parameters
+    ----------
+    output_vars: list, iterable
+        List of variable names on which the output factor is to be defined. Variable which are present in any of the factors
+        but not in output_vars will be marginalized out.
+
+    factors: list, iterable
+        List of DiscreteFactor objects on which to perform the sum product operation.
+
+    Returns
+    -------
+    pgmpy.factor.discrete.DiscreteFactor: A DiscreteFactor object on `output_vars`.
+
+    Examples
+    --------
+    >>> from pgmpy.factors import factor_sum_product
+    >>> from pgmpy.utils import get_example_model
+    >>> factors = [cpd.to_factor() for cpd in model.cpds]
+    >>> factor_sum_product(output_vars=['HISTORY'], factors=factors)
+    <DiscreteFactor representing phi(HISTORY:2) at 0x7f240556b970>
+    """
+    state_names = {}
+    for phi in factors:
+        state_names.update(phi.state_names)
+
+    einsum_expr = []
+    for phi in factors:
+        einsum_expr.append(phi.values)
+        einsum_expr.append(phi.variables)
+    values = contract(*einsum_expr, output_vars, optimize="greedy")
+
+    from pgmpy.factors.discrete import DiscreteFactor
+
+    return DiscreteFactor(
+        variables=output_vars,
+        cardinality=values.shape,
+        values=values,
+        state_names={var: state_names[var] for var in output_vars},
+    )
 
 
 def factor_divide(phi1, phi2):

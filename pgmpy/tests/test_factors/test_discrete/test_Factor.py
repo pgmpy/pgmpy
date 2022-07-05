@@ -6,11 +6,12 @@ from shutil import get_terminal_size
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.factors import factor_divide, factor_product
+from pgmpy.factors import factor_divide, factor_product, factor_sum_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors.discrete import JointProbabilityDistribution as JPD
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
+from pgmpy.inference import VariableElimination
 from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.utils import get_example_model
 
@@ -659,6 +660,13 @@ class TestFactorMethods(unittest.TestCase):
 
     def test_factor_divide_non_factor_arg(self):
         self.assertRaises(TypeError, factor_divide, 1, 1)
+
+    def test_factor_sum_product(self):
+        model = get_example_model("alarm")
+        infer = VariableElimination(model)
+        phi = [cpd.to_factor() for cpd in model.cpds]
+        phi_history = factor_sum_product(output_vars=["HISTORY"], factors=phi)
+        self.assertEqual(infer.query(["HISTORY"]), phi_history)
 
     def test_factor_sum(self):
         phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
