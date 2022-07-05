@@ -748,15 +748,9 @@ class TestBeliefPropagation(unittest.TestCase):
             ["B"], inplace=False
         )
 
-        np_test.assert_array_almost_equal(
-            clique_belief[("A", "B")].values, b_A_B.values
-        )
-        np_test.assert_array_almost_equal(
-            clique_belief[("B", "C")].values, b_B_C.values
-        )
-        np_test.assert_array_almost_equal(
-            clique_belief[("C", "D")].values, b_C_D.values
-        )
+        self.assertEqual(clique_belief[("A", "B")], b_A_B)
+        self.assertEqual(clique_belief[("B", "C")], b_B_C)
+        self.assertEqual(clique_belief[("C", "D")], b_C_D)
 
     def test_calibrate_sepset_belief(self):
         belief_propagation = BeliefPropagation(self.junction_tree)
@@ -808,15 +802,9 @@ class TestBeliefPropagation(unittest.TestCase):
             ["B"], inplace=False
         )
 
-        np_test.assert_array_almost_equal(
-            clique_belief[("A", "B")].values, b_A_B.values
-        )
-        np_test.assert_array_almost_equal(
-            clique_belief[("B", "C")].values, b_B_C.values
-        )
-        np_test.assert_array_almost_equal(
-            clique_belief[("C", "D")].values, b_C_D.values
-        )
+        self.assertEqual(clique_belief[("A", "B")], b_A_B)
+        self.assertEqual(clique_belief[("B", "C")], b_B_C)
+        self.assertEqual(clique_belief[("C", "D")], b_C_D)
 
     def test_max_calibrate_sepset_belief(self):
         belief_propagation = BeliefPropagation(self.junction_tree)
