@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.19] - 2021-06-30
+## [0.1.19] - 2022-06-30
 ### Added
 1. Adds checks for arguments to `BayesianNetwork.simulate` method.
 
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 5. `DAG.active_trail_nodes` allows tuples as variable names.
 6. Fixes CPD and edge creation in `UAIReader`.
 
-## [0.1.18] - 2021-03-30
+## [0.1.18] - 2022-03-30
 ### Fixed
 1. Fixes `CausalInference.is_valid_backdoor_adjustment_set` to accept str arguments for `Z`.
 2. Fixes `BayesianNetwork.remove_cpd` to work with integral node names.
