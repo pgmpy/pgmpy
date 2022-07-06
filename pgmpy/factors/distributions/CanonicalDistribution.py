@@ -294,7 +294,7 @@ class CanonicalDistribution(BaseDistribution):
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
         phi.g = (
-            self.g + (np.dot(h_j.T, y) - (0.5 * np.dot(np.dot(y.T, K_j_j), y)))[0][0]
+            self.g + (np.dot(h_j.T, y) - (0.5 * np.linalg.multi_dot([y.T, K_j_j, y])))[0][0]
         )
 
         if not inplace:
@@ -392,15 +392,15 @@ class CanonicalDistribution(BaseDistribution):
 
         phi.variables = [self.variables[index] for index in index_to_keep]
 
-        phi.K = K_i_i - np.dot(np.dot(K_i_j, K_j_j_inv), K_j_i)
-        phi.h = h_i - np.dot(np.dot(K_i_j, K_j_j_inv), h_j)
+        phi.K = K_i_i - np.linalg.multi_dot([K_i_j, K_j_j_inv, K_j_i])
+        phi.h = h_i - np.linalg.multi_dott([K_i_j, K_j_j_inv, h_j])
         phi.g = (
             self.g
             + 0.5
             * (
                 len(variables) * np.log(2 * np.pi)
                 - np.log(abs(np.linalg.det(K_j_j)))
-                + np.dot(np.dot(h_j.T, K_j_j), h_j)
+                + np.linalg.multi_dot([h_j.T, K_j_j, h_j])
             )[0][0]
         )
 
