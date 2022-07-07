@@ -394,7 +394,7 @@ class CanonicalDistribution(BaseDistribution):
         phi.variables = [self.variables[index] for index in index_to_keep]
 
         phi.K = K_i_i - np.linalg.multi_dot([K_i_j, K_j_j_inv, K_j_i])
-        phi.h = h_i - np.linalg.multi_dott([K_i_j, K_j_j_inv, h_j])
+        phi.h = h_i - np.linalg.multi_dot([K_i_j, K_j_j_inv, h_j])
         phi.g = (
             self.g
             + 0.5
