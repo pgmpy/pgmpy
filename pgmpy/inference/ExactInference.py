@@ -336,9 +336,23 @@ class VariableElimination(Inference):
             result_values = contract(
                 *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
+
             result = DiscreteFactor(
-                variables, result_values.shape, result_values
+                variables,
+                result_values.shape,
+                result_values,
+                state_names={var: bn_reduced.states[var] for var in variables},
             ).normalize(inplace=False)
+            if joint:
+                return result
+            else:
+                result_dict = {}
+                all_vars = set(variables)
+                for var in variables:
+                    result_dict[var] = result.marginalize(
+                        all_vars - {var}, inplace=False
+                    )
+                return result_dict
 
         else:
             reduced_ve = VariableElimination(bn_reduced)
