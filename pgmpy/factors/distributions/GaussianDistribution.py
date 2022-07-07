@@ -305,8 +305,8 @@ class GaussianDistribution(BaseDistribution):
         sig_j_j = self.covariance[np.ix_(index_to_keep, index_to_keep)]
 
         phi.variables = [self.variables[index] for index in index_to_keep]
-        phi.mean = mu_j + np.dot(np.dot(sig_j_i, sig_i_i_inv), x_i - mu_i)
-        phi.covariance = sig_j_j - np.dot(np.dot(sig_j_i, sig_i_i_inv), sig_i_j)
+        phi.mean = mu_j + np.linalg.multi_dot([sig_j_i, sig_i_i_inv, x_i - mu_i])
+        phi.covariance = sig_j_j - np.linalg.multi_dot([sig_j_i, sig_i_i_inv, sig_i_j])
         phi._precision_matrix = None
 
         if not inplace:
