@@ -7,15 +7,15 @@ import numpy as np
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
+from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.inference import Inference
 from pgmpy.inference.EliminationOrder import (
-    WeightedMinFill,
-    MinNeighbors,
     MinFill,
+    MinNeighbors,
     MinWeight,
+    WeightedMinFill,
 )
-from pgmpy.models import JunctionTree, BayesianNetwork
-from pgmpy.global_vars import SHOW_PROGRESS
+from pgmpy.models import BayesianNetwork, JunctionTree
 
 
 class VariableElimination(Inference):
@@ -271,7 +271,6 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
-        orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -298,11 +297,15 @@ class VariableElimination(Inference):
         # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
+
+        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve._initialize_structures()
 
         # Step 4: Do the actual variable elimination
-        result = self._variable_elimination(
+        result = reduced_ve._variable_elimination(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
@@ -310,7 +313,6 @@ class VariableElimination(Inference):
             joint=joint,
             show_progress=show_progress,
         )
-        self.__init__(orig_model)
 
         return result
 
