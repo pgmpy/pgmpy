@@ -363,13 +363,15 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Make a copy of the original model and replace self.model with it later.
-        orig_model = self.model.copy()
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
 
-        final_distribution = self._variable_elimination(
+        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve._initialize_structures()
+
+        final_distribution = reduced_ve._variable_elimination(
             variables=variables,
             operation="maximize",
             evidence=evidence,
@@ -377,7 +379,6 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
-        self.__init__(orig_model)
         return np.max(final_distribution.values)
 
     def map_query(
@@ -437,9 +438,6 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Make a copy of the original model and replace self.model with it later
-        orig_model = self.model.copy()
-
         if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -452,11 +450,15 @@ class VariableElimination(Inference):
             )
 
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
+
+        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve._initialize_structures()
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
-        final_distribution = self._variable_elimination(
+        final_distribution = reduced_ve._variable_elimination(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
@@ -464,7 +466,6 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
-        self.__init__(orig_model)
 
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
