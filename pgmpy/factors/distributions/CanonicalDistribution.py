@@ -294,7 +294,7 @@ class CanonicalDistribution(BaseDistribution):
         phi.K = K_i_i
         phi.h = h_i - np.dot(K_i_j, y)
         phi.g = (
-            self.g 
+            self.g
             + (np.dot(h_j.T, y) - (0.5 * np.linalg.multi_dot([y.T, K_j_j, y])))[0][0]
         )
 
