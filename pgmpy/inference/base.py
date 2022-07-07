@@ -153,7 +153,7 @@ class Inference(object):
             variables=variables, observed=list(evidence.keys()), include_latents=True
         )
         d_connected = set.union(*d_connected.values()).union(evidence.keys())
-        bn = self.model.subgraph(d_connected)
+        bn = self.model.subgraph(d_connected).copy()
         evidence = {var: state for var, state in evidence.items() if var in d_connected}
 
         # Step 2: Reduce the model to ancestral graph of [`variables` + `evidence`]

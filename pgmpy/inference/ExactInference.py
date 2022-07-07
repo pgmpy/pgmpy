@@ -273,7 +273,6 @@ class VariableElimination(Inference):
         >>> phi_query = inference.query(['A', 'B'])
         """
         evidence = evidence if evidence is not None else dict()
-        # orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -300,56 +299,60 @@ class VariableElimination(Inference):
         # Step 3: Prune the network based on variables and evidence.
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
-            reduced_bn, evidence = self._prune_bayesian_model(variables, evidence)
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
 
-        # Reduce the CPDs values according to the provided evidence.
-        evidence_vars = set(evidence)
-        reduce_indexes = {}
-        reshape_indexes = {}
-        for cpd in reduced_bn.cpds:
-            indexes_to_reduce = [
-                cpd.variables.index(var)
-                for var in set(cpd.variables).intersection(evidence_vars)
-            ]
-            indexer = [slice(None)] * len(cpd.variables)
-            for index in indexes_to_reduce:
-                indexer[index] = cpd.get_state_no(
-                    cpd.variables[index], evidence[cpd.variables[index]]
-                )
-            reduce_indexes[cpd.variables[0]] = tuple(indexer)
-            reshape_indexes[cpd.variables[0]] = [
-                1 if indexer != slice(None) else cpd.cardinality[i]
-                for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
-            ]
+        if elimination_order.startwith("einsum"):
+            # Reduce the CPDs values according to the provided evidence.
+            evidence_vars = set(evidence)
+            reduce_indexes = {}
+            reshape_indexes = {}
+            for cpd in bn_reduced.cpds:
+                indexes_to_reduce = [
+                    cpd.variables.index(var)
+                    for var in set(cpd.variables).intersection(evidence_vars)
+                ]
+                indexer = [slice(None)] * len(cpd.variables)
+                for index in indexes_to_reduce:
+                    indexer[index] = cpd.get_state_no(
+                        cpd.variables[index], evidence[cpd.variables[index]]
+                    )
+                reduce_indexes[cpd.variables[0]] = tuple(indexer)
+                reshape_indexes[cpd.variables[0]] = [
+                    1 if indexer != slice(None) else cpd.cardinality[i]
+                    for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
+                ]
 
-        var_int_map = {var: i for i, var in enumerate(reduced_bn.nodes())}
-        einsum_expr = []
-        for cpd in reduced_bn.cpds:
-            einsum_expr.append(
-                (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
-                    reshape_indexes[cpd.variables[0]]
+            var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
+            einsum_expr = []
+            for cpd in bn_reduced.cpds:
+                einsum_expr.append(
+                    (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
+                        reshape_indexes[cpd.variables[0]]
+                    )
                 )
+                einsum_expr.append([var_int_map[var] for var in cpd.variables])
+            result_values = contract(
+                *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
-            einsum_expr.append([var_int_map[var] for var in cpd.variables])
-        result_values = contract(
-            *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
-        )
-        result = DiscreteFactor(
-            variables, result_values.shape, result_values
-        ).normalize(inplace=False)
+            result = DiscreteFactor(
+                variables, result_values.shape, result_values
+            ).normalize(inplace=False)
 
-        # self._initialize_structures()
+        else:
+            reduced_ve = VariableElimination(bn_reduced)
+            reduced_ve._initialize_structures()
 
-        # # Step 4: Do the actual variable elimination
-        # result = self._variable_elimination(
-        #     variables=variables,
-        #     operation="marginalize",
-        #     evidence=evidence,
-        #     elimination_order=elimination_order,
-        #     joint=joint,
-        #     show_progress=show_progress,
-        # )
-        # self.__init__(orig_model)
+            # Step 4: Do the actual variable elimination
+            result = reduced_ve._variable_elimination(
+                variables=variables,
+                operation="marginalize",
+                evidence=evidence,
+                elimination_order=elimination_order,
+                joint=joint,
+                show_progress=show_progress,
+            )
 
         return result
 
@@ -400,13 +403,15 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Make a copy of the original model and replace self.model with it later.
-        orig_model = self.model.copy()
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
 
-        final_distribution = self._variable_elimination(
+        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve._initialize_structures()
+
+        final_distribution = reduced_ve._variable_elimination(
             variables=variables,
             operation="maximize",
             evidence=evidence,
@@ -414,7 +419,6 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
-        self.__init__(orig_model)
         return np.max(final_distribution.values)
 
     def map_query(
@@ -474,9 +478,6 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Make a copy of the original model and replace self.model with it later
-        orig_model = self.model.copy()
-
         if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -489,11 +490,15 @@ class VariableElimination(Inference):
             )
 
         if isinstance(self.model, BayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
+            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+        else:
+            bn_reduced = self.model
+
+        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve._initialize_structures()
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP
-        final_distribution = self._variable_elimination(
+        final_distribution = reduced_ve._variable_elimination(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
@@ -501,7 +506,6 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
-        self.__init__(orig_model)
 
         argmax = np.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
