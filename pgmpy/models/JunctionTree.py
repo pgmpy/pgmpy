@@ -77,6 +77,22 @@ class JunctionTree(ClusterGraph):
 
         super(JunctionTree, self).add_edge(u, v, **kwargs)
 
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [phi.state_names for phi in self.factors]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following

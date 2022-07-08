@@ -17,7 +17,12 @@ from pgmpy.inference.EliminationOrder import (
     MinWeight,
     WeightedMinFill,
 )
-from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.models import (
+    BayesianNetwork,
+    DynamicBayesianNetwork,
+    JunctionTree,
+    MarkovNetwork,
+)
 
 
 class VariableElimination(Inference):
@@ -337,7 +342,13 @@ class VariableElimination(Inference):
                     ]
                 )
 
-            var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
+            if isinstance(self.model, JunctionTree):
+                var_int_map = {
+                    var: i
+                    for i, var in enumerate(set(itertools.chain(*bn_reduced.nodes())))
+                }
+            else:
+                var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
             einsum_expr = []
             for index, phi in enumerate(factors):
                 einsum_expr.append(
@@ -383,16 +394,19 @@ class VariableElimination(Inference):
                 result_values,
                 state_names={var: bn_reduced.states[var] for var in variables},
             )
-
             if joint:
-                if isinstance(self.model, BayesianNetwork):
+                if isinstance(
+                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                ):
                     return result.normalize(inplace=False)
                 else:
                     return result
             else:
                 result_dict = {}
                 all_vars = set(variables)
-                if isinstance(self.model, BayesianNetwork):
+                if isinstance(
+                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                ):
                     for var in variables:
                         result_dict[var] = result.marginalize(
                             all_vars - {var}, inplace=False
