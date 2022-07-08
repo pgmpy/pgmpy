@@ -359,35 +359,6 @@ class VariableElimination(Inference):
                 *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
 
-            # for cpd in bn_reduced.cpds:
-            #     indexes_to_reduce = [
-            #         cpd.variables.index(var)
-            #         for var in set(cpd.variables).intersection(evidence_vars)
-            #     ]
-            #     indexer = [slice(None)] * len(cpd.variables)
-            #     for index in indexes_to_reduce:
-            #         indexer[index] = cpd.get_state_no(
-            #             cpd.variables[index], evidence[cpd.variables[index]]
-            #         )
-            #     reduce_indexes[cpd.variables[0]] = tuple(indexer)
-            #     reshape_indexes[cpd.variables[0]] = [
-            #         1 if indexer != slice(None) else cpd.cardinality[i]
-            #         for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
-            #     ]
-
-            # var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
-            # einsum_expr = []
-            # for cpd in bn_reduced.cpds:
-            #     einsum_expr.append(
-            #         (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
-            #             reshape_indexes[cpd.variables[0]]
-            #         )
-            #     )
-            #     einsum_expr.append([var_int_map[var] for var in cpd.variables])
-            # result_values = contract(
-            #     *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
-            # )
-
             result = DiscreteFactor(
                 variables,
                 result_values.shape,
