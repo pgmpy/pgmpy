@@ -532,7 +532,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.assertEqual(
             query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.072, 0.048]),
         )
 
     def test_query_multiple_variable_with_evidence(self):
@@ -580,7 +580,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.assertEqual(
             query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.072, 0.048]),
         )
 
         query_result = self.markov_inference.query(

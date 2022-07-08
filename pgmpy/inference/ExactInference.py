@@ -218,11 +218,18 @@ class VariableElimination(Inference):
                 return factor_product(*final_distribution)
         else:
             query_var_factor = {}
-            for query_var in variables:
-                phi = factor_product(*final_distribution)
-                query_var_factor[query_var] = phi.marginalize(
-                    list(set(variables) - set([query_var])), inplace=False
-                ).normalize(inplace=False)
+            if isinstance(self.model, BayesianNetwork):
+                for query_var in variables:
+                    phi = factor_product(*final_distribution)
+                    query_var_factor[query_var] = phi.marginalize(
+                        list(set(variables) - set([query_var])), inplace=False
+                    ).normalize(inplace=False)
+            else:
+                for query_var in variables:
+                    phi = factor_product(*final_distribution)
+                    query_var_factor[query_var] = phi.marginalize(
+                        list(set(variables) - set([query_var])), inplace=False
+                    )
             return query_var_factor
 
     def query(
@@ -230,7 +237,7 @@ class VariableElimination(Inference):
         variables,
         evidence=None,
         virtual_evidence=None,
-        elimination_order="MinFill",
+        elimination_order="einsum",
         joint=True,
         show_progress=True,
     ):
@@ -300,58 +307,102 @@ class VariableElimination(Inference):
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
             bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+            factors = [cpd.to_factor() for cpd in bn_reduced.cpds]
         else:
             bn_reduced = self.model
+            factors = self.model.factors
 
-        if elimination_order.startwith("einsum"):
+        if isinstance(elimination_order, str) and (
+            elimination_order.startswith("einsum")
+        ):
             # Reduce the CPDs values according to the provided evidence.
             evidence_vars = set(evidence)
-            reduce_indexes = {}
-            reshape_indexes = {}
-            for cpd in bn_reduced.cpds:
+            reduce_indexes = []
+            reshape_indexes = []
+            for phi in factors:
                 indexes_to_reduce = [
-                    cpd.variables.index(var)
-                    for var in set(cpd.variables).intersection(evidence_vars)
+                    phi.variables.index(var)
+                    for var in set(phi.variables).intersection(evidence_vars)
                 ]
-                indexer = [slice(None)] * len(cpd.variables)
+                indexer = [slice(None)] * len(phi.variables)
                 for index in indexes_to_reduce:
-                    indexer[index] = cpd.get_state_no(
-                        cpd.variables[index], evidence[cpd.variables[index]]
+                    indexer[index] = phi.get_state_no(
+                        phi.variables[index], evidence[phi.variables[index]]
                     )
-                reduce_indexes[cpd.variables[0]] = tuple(indexer)
-                reshape_indexes[cpd.variables[0]] = [
-                    1 if indexer != slice(None) else cpd.cardinality[i]
-                    for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
-                ]
+                reduce_indexes.append(tuple(indexer))
+                reshape_indexes.append(
+                    [
+                        1 if indexer != slice(None) else phi.cardinality[i]
+                        for i, indexer in enumerate(reduce_indexes[-1])
+                    ]
+                )
 
             var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
             einsum_expr = []
-            for cpd in bn_reduced.cpds:
+            for index, phi in enumerate(factors):
                 einsum_expr.append(
-                    (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
-                        reshape_indexes[cpd.variables[0]]
-                    )
+                    (phi.values[reduce_indexes[index]]).reshape(reshape_indexes[index])
                 )
-                einsum_expr.append([var_int_map[var] for var in cpd.variables])
+                einsum_expr.append([var_int_map[var] for var in phi.variables])
             result_values = contract(
                 *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
+
+            # for cpd in bn_reduced.cpds:
+            #     indexes_to_reduce = [
+            #         cpd.variables.index(var)
+            #         for var in set(cpd.variables).intersection(evidence_vars)
+            #     ]
+            #     indexer = [slice(None)] * len(cpd.variables)
+            #     for index in indexes_to_reduce:
+            #         indexer[index] = cpd.get_state_no(
+            #             cpd.variables[index], evidence[cpd.variables[index]]
+            #         )
+            #     reduce_indexes[cpd.variables[0]] = tuple(indexer)
+            #     reshape_indexes[cpd.variables[0]] = [
+            #         1 if indexer != slice(None) else cpd.cardinality[i]
+            #         for i, indexer in enumerate(reduce_indexes[cpd.variables[0]])
+            #     ]
+
+            # var_int_map = {var: i for i, var in enumerate(bn_reduced.nodes())}
+            # einsum_expr = []
+            # for cpd in bn_reduced.cpds:
+            #     einsum_expr.append(
+            #         (cpd.values[reduce_indexes[cpd.variables[0]]]).reshape(
+            #             reshape_indexes[cpd.variables[0]]
+            #         )
+            #     )
+            #     einsum_expr.append([var_int_map[var] for var in cpd.variables])
+            # result_values = contract(
+            #     *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
+            # )
 
             result = DiscreteFactor(
                 variables,
                 result_values.shape,
                 result_values,
                 state_names={var: bn_reduced.states[var] for var in variables},
-            ).normalize(inplace=False)
+            )
+
             if joint:
-                return result
+                if isinstance(self.model, BayesianNetwork):
+                    return result.normalize(inplace=False)
+                else:
+                    return result
             else:
                 result_dict = {}
                 all_vars = set(variables)
-                for var in variables:
-                    result_dict[var] = result.marginalize(
-                        all_vars - {var}, inplace=False
-                    )
+                if isinstance(self.model, BayesianNetwork):
+                    for var in variables:
+                        result_dict[var] = result.marginalize(
+                            all_vars - {var}, inplace=False
+                        ).normalize(inplace=False)
+                else:
+                    for var in variables:
+                        result_dict[var] = result.marginalize(
+                            all_vars - {var}, inplace=False
+                        )
+
                 return result_dict
 
         else:

@@ -7,8 +7,8 @@ import numpy as np
 from networkx.algorithms.components import connected_components
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
 
 
@@ -229,6 +229,22 @@ class MarkovNetwork(UndirectedGraph):
                 for variable, cardinality in zip(factor.scope(), factor.cardinality):
                     cardinalities[variable] = cardinality
             return cardinalities
+
+    @property
+    def states(self):
+        """
+        Returns a dictionary mapping each node to its list of possible states.
+
+        Returns
+        -------
+        state_dict: dict
+            Dictionary of nodes to possible states
+        """
+        state_names_list = [phi.state_names for phi in self.factors]
+        state_dict = {
+            node: states for d in state_names_list for node, states in d.items()
+        }
+        return state_dict
 
     def check_model(self):
         """
