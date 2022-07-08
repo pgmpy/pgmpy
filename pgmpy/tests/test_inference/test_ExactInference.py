@@ -544,9 +544,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(
             query_result,
             DiscreteFactor(
-                variables=["Q", "J"],
+                variables=["J", "Q"],
                 cardinality=[2, 2],
-                values=np.array([[0.081, 0.004], [0.009, 0.016]]),
+                values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
             ),
         )
 
@@ -596,9 +596,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(
             query_result,
             DiscreteFactor(
-                variables=["Q", "J"],
+                variables=["J", "Q"],
                 cardinality=[2, 2],
-                values=np.array([[0.081, 0.004], [0.009, 0.016]]),
+                values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
             ),
         )
 
