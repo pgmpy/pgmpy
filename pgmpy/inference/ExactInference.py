@@ -307,7 +307,7 @@ class VariableElimination(Inference):
         # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
             bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
-            factors = [cpd.to_factor() for cpd in bn_reduced.cpds]
+            factors = bn_reduced.cpds
         else:
             bn_reduced = self.model
             factors = self.model.factors
