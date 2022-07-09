@@ -4,9 +4,11 @@ import itertools
 
 import networkx as nx
 import numpy as np
+from opt_einsum import contract
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.inference import Inference
 from pgmpy.inference.EliminationOrder import (
@@ -15,7 +17,12 @@ from pgmpy.inference.EliminationOrder import (
     MinWeight,
     WeightedMinFill,
 )
-from pgmpy.models import BayesianNetwork, JunctionTree
+from pgmpy.models import (
+    BayesianNetwork,
+    DynamicBayesianNetwork,
+    JunctionTree,
+    MarkovNetwork,
+)
 
 
 class VariableElimination(Inference):
@@ -216,11 +223,18 @@ class VariableElimination(Inference):
                 return factor_product(*final_distribution)
         else:
             query_var_factor = {}
-            for query_var in variables:
-                phi = factor_product(*final_distribution)
-                query_var_factor[query_var] = phi.marginalize(
-                    list(set(variables) - set([query_var])), inplace=False
-                ).normalize(inplace=False)
+            if isinstance(self.model, BayesianNetwork):
+                for query_var in variables:
+                    phi = factor_product(*final_distribution)
+                    query_var_factor[query_var] = phi.marginalize(
+                        list(set(variables) - set([query_var])), inplace=False
+                    ).normalize(inplace=False)
+            else:
+                for query_var in variables:
+                    phi = factor_product(*final_distribution)
+                    query_var_factor[query_var] = phi.marginalize(
+                        list(set(variables) - set([query_var])), inplace=False
+                    )
             return query_var_factor
 
     def query(
@@ -228,7 +242,7 @@ class VariableElimination(Inference):
         variables,
         evidence=None,
         virtual_evidence=None,
-        elimination_order="MinFill",
+        elimination_order="greedy",
         joint=True,
         show_progress=True,
     ):
@@ -246,9 +260,12 @@ class VariableElimination(Inference):
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
             evidences.
 
-        elimination_order: str or list
-            order of variable eliminations (if nothing is provided) order is
-            computed automatically.
+        elimination_order: str or list (default='greedy')
+            Order in which to eliminate the variables in the algorithm. If list is provided,
+            should contain all variables in the model except the ones in `variables`. str options
+            are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
+            refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
+            for details.
 
         joint: boolean (default: True)
             If True, returns a Joint Distribution over `variables`.
@@ -281,7 +298,7 @@ class VariableElimination(Inference):
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
 
-        # Step 2: If virtual_evidence is provided, modify the network and query.
+        # Step 2: If virtual_evidence is provided, modify the network.
         if isinstance(self.model, BayesianNetwork) and (virtual_evidence is not None):
             self._virtual_evidence(virtual_evidence)
             virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
@@ -295,24 +312,105 @@ class VariableElimination(Inference):
             )
 
         # Step 3: Prune the network based on variables and evidence.
-        # Make a copy of the original model as it will be replaced during pruning.
         if isinstance(self.model, BayesianNetwork):
-            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+            model_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+            factors = model_reduced.cpds
         else:
-            bn_reduced = self.model
+            model_reduced = self.model
+            factors = self.model.factors
 
-        reduced_ve = VariableElimination(bn_reduced)
-        reduced_ve._initialize_structures()
+        # Step 4: If elimination_order is greedy, do a tensor contraction approach
+        #         else do the classic Variable Elimination.
+        if elimination_order == "greedy":
+            # Step 5.1: Compute the values array for factors after reducing them to provided
+            #           evidence.
+            evidence_vars = set(evidence)
+            reduce_indexes = []
+            reshape_indexes = []
+            for phi in factors:
+                indexes_to_reduce = [
+                    phi.variables.index(var)
+                    for var in set(phi.variables).intersection(evidence_vars)
+                ]
+                indexer = [slice(None)] * len(phi.variables)
+                for index in indexes_to_reduce:
+                    indexer[index] = phi.get_state_no(
+                        phi.variables[index], evidence[phi.variables[index]]
+                    )
+                reduce_indexes.append(tuple(indexer))
+                reshape_indexes.append(
+                    [
+                        1 if indexer != slice(None) else phi.cardinality[i]
+                        for i, indexer in enumerate(reduce_indexes[-1])
+                    ]
+                )
 
-        # Step 4: Do the actual variable elimination
-        result = reduced_ve._variable_elimination(
-            variables=variables,
-            operation="marginalize",
-            evidence=evidence,
-            elimination_order=elimination_order,
-            joint=joint,
-            show_progress=show_progress,
-        )
+            # Step 5.2: Prepare values and index arrays to do use in einsum
+            if isinstance(self.model, JunctionTree):
+                var_int_map = {
+                    var: i
+                    for i, var in enumerate(
+                        set(itertools.chain(*model_reduced.nodes()))
+                    )
+                }
+            else:
+                var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
+            einsum_expr = []
+            for index, phi in enumerate(factors):
+                einsum_expr.append(
+                    (phi.values[reduce_indexes[index]]).reshape(reshape_indexes[index])
+                )
+                einsum_expr.append([var_int_map[var] for var in phi.variables])
+            result_values = contract(
+                *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
+            )
+
+            # Step 5.3: Prepare return values.
+            result = DiscreteFactor(
+                variables,
+                result_values.shape,
+                result_values,
+                state_names={var: model_reduced.states[var] for var in variables},
+            )
+            if joint:
+                if isinstance(
+                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                ):
+                    return result.normalize(inplace=False)
+                else:
+                    return result
+            else:
+                result_dict = {}
+                all_vars = set(variables)
+                if isinstance(
+                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                ):
+                    for var in variables:
+                        result_dict[var] = result.marginalize(
+                            all_vars - {var}, inplace=False
+                        ).normalize(inplace=False)
+                else:
+                    for var in variables:
+                        result_dict[var] = result.marginalize(
+                            all_vars - {var}, inplace=False
+                        )
+
+                return result_dict
+
+        else:
+            # Step 5.1: Initialize data structures for the reduced bn.
+            reduced_ve = VariableElimination(model_reduced)
+            reduced_ve._initialize_structures()
+
+            # Step 5.2: Do the actual variable elimination
+            result = reduced_ve._variable_elimination(
+                variables=variables,
+                operation="marginalize",
+                evidence=evidence,
+                elimination_order=elimination_order,
+                joint=joint,
+                show_progress=show_progress,
+            )
 
         return result
 
@@ -364,11 +462,11 @@ class VariableElimination(Inference):
             )
 
         if isinstance(self.model, BayesianNetwork):
-            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+            model_reduced, evidence = self._prune_bayesian_model(variables, evidence)
         else:
-            bn_reduced = self.model
+            model_reduced = self.model
 
-        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve = VariableElimination(model_reduced)
         reduced_ve._initialize_structures()
 
         final_distribution = reduced_ve._variable_elimination(
@@ -450,11 +548,11 @@ class VariableElimination(Inference):
             )
 
         if isinstance(self.model, BayesianNetwork):
-            bn_reduced, evidence = self._prune_bayesian_model(variables, evidence)
+            model_reduced, evidence = self._prune_bayesian_model(variables, evidence)
         else:
-            bn_reduced = self.model
+            model_reduced = self.model
 
-        reduced_ve = VariableElimination(bn_reduced)
+        reduced_ve = VariableElimination(model_reduced)
         reduced_ve._initialize_structures()
 
         # TODO:Check the note in docstring. Change that behavior to return the joint MAP

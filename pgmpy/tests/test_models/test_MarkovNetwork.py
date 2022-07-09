@@ -3,10 +3,10 @@ import unittest
 import networkx as nx
 import numpy as np
 
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork, MarkovNetwork, FactorGraph
+from pgmpy.models import BayesianNetwork, FactorGraph, MarkovNetwork
 from pgmpy.tests import help_functions as hf
 
 
@@ -204,6 +204,19 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
         self.assertRaises(ValueError, self.graph.check_model)
         self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
+
+    def test_states(self):
+        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
+        phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
+        phi2 = DiscreteFactor(["b", "c"], [2, 3], np.random.rand(6))
+        phi3 = DiscreteFactor(["c", "d"], [3, 4], np.random.rand(12))
+        phi4 = DiscreteFactor(["d", "a"], [4, 1], np.random.rand(4))
+        phi5 = DiscreteFactor(["d", "b"], [4, 2], np.random.rand(8))
+        self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
+        self.assertDictEqual(
+            self.graph.states,
+            {"a": [0], "b": [0, 1], "c": [0, 1, 2], "d": [0, 1, 2, 3]},
+        )
 
     def test_factor_graph(self):
         phi1 = DiscreteFactor(["Alice", "Bob"], [3, 2], np.random.rand(6))

@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 
 from pgmpy.factors.discrete import DiscreteFactor
@@ -81,6 +82,19 @@ class TestJunctionTreeMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.graph3.check_model)
         self.assertTrue(self.graph1.check_model())
         self.assertTrue(self.graph4.check_model())
+
+    def test_states(self):
+        self.assertDictEqual(
+            self.graph4.states,
+            {
+                "a": [0, 1],
+                "b": [0, 1],
+                "e": [0, 1],
+                "c": [0, 1],
+                "d": [0, 1],
+                "f": [0, 1],
+            },
+        )
 
     def tearDown(self):
         del self.factor1

@@ -327,13 +327,67 @@ class TestSnowNetwork(unittest.TestCase):
                 evidence={"Traffic": "slow"},
             )
 
-    def test_get_elimination_order(self):
+    def test_elimination_order(self):
         infer = VariableElimination(self.model)
         for order in ["MinFill", "MinNeighbors", "MinWeight", "WeightedMinFill"]:
             computed_order = infer._get_elimination_order(
                 variables=["Traffic"], evidence={}, elimination_order=order
             )
             self.assertEqual(set(computed_order), set({"Risk", "Late", "Snow"}))
+
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query1 = infer.query(
+                ["Snow"],
+                evidence={"Traffic": "slow"},
+                elimination_order=order,
+                show_progress=False,
+            )
+            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+
+            query2 = infer.query(
+                ["Risk"],
+                evidence={"Traffic": "slow"},
+                elimination_order=order,
+                show_progress=False,
+            )
+            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+
+            query3 = infer.query(
+                ["Late"],
+                evidence={"Traffic": "slow"},
+                elimination_order=order,
+                show_progress=False,
+            )
+            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+
+    def test_joint_distribution(self):
+        infer = VariableElimination(self.model)
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_expected = {}
+            query_expected["Snow"] = infer.query(
+                ["Snow"], elimination_order=order, show_progress=False
+            )
+            query_expected["Risk"] = infer.query(
+                ["Risk"], elimination_order=order, show_progress=False
+            )
+
+            query_joint = infer.query(
+                ["Snow", "Risk"], elimination_order=order, joint=False
+            )
+            for var in ["Snow", "Risk"]:
+                self.assertEqual(query_joint[var], query_expected[var])
 
     def test_virt_evidence(self):
         virt_evidence = TabularCPD(
@@ -532,7 +586,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.assertEqual(
             query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.072, 0.048]),
         )
 
     def test_query_multiple_variable_with_evidence(self):
@@ -544,9 +598,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(
             query_result,
             DiscreteFactor(
-                variables=["Q", "J"],
+                variables=["J", "Q"],
                 cardinality=[2, 2],
-                values=np.array([[0.081, 0.004], [0.009, 0.016]]),
+                values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
             ),
         )
 
@@ -580,7 +634,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.assertEqual(
             query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.072, 0.048]),
         )
 
         query_result = self.markov_inference.query(
@@ -596,9 +650,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         self.assertEqual(
             query_result,
             DiscreteFactor(
-                variables=["Q", "J"],
+                variables=["J", "Q"],
                 cardinality=[2, 2],
-                values=np.array([[0.081, 0.004], [0.009, 0.016]]),
+                values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
             ),
         )
 
