@@ -42,102 +42,176 @@ class TestVariableElimination(unittest.TestCase):
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):
-        query_result = self.bayesian_inference.query(["J"], show_progress=False)
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                ["J"], elimination_order=order, show_progress=False
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584]),
+            )
 
     def test_query_multiple_variable(self):
-        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
-                variables=["J", "Q"],
-                cardinality=[2, 2],
-                values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
-            ),
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                ["Q", "J"], elimination_order=order, show_progress=False
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(
+                    variables=["J", "Q"],
+                    cardinality=[2, 2],
+                    values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
+                ),
+            )
 
     def test_query_single_variable_with_evidence(self):
-        query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
-        )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                variables=["J"],
+                evidence={"A": 0, "R": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            )
 
     def test_query_multiple_variable_with_evidence(self):
-        query_result = self.bayesian_inference.query(
-            variables=["J", "Q"],
-            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
-            show_progress=False,
-        )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
                 variables=["J", "Q"],
-                cardinality=[2, 2],
-                values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
-            ),
-        )
+                evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(
+                    variables=["J", "Q"],
+                    cardinality=[2, 2],
+                    values=np.array(
+                        [[0.73636364, 0.08181818], [0.03636364, 0.14545455]]
+                    ),
+                ),
+            )
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
-        query_result = self.bayesian_inference.query(["J"], show_progress=False)
-        query_result = self.bayesian_inference.query(["J"], show_progress=False)
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
-                variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
-            ),
-        )
-        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
-        query_result = self.bayesian_inference.query(["Q", "J"], show_progress=False)
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
-                variables=["J", "Q"],
-                cardinality=[2, 2],
-                values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
-            ),
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            query_result = self.bayesian_inference.query(
+                ["J"], elimination_order=order, show_progress=False
+            )
+            query_result = self.bayesian_inference.query(
+                ["J"], elimination_order=order, show_progress=False
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(
+                    variables=["J"], cardinality=[2], values=np.array([0.416, 0.584])
+                ),
+            )
+            query_result = self.bayesian_inference.query(
+                ["Q", "J"], elimination_order=order, show_progress=False
+            )
+            query_result = self.bayesian_inference.query(
+                ["Q", "J"], elimination_order=order, show_progress=False
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(
+                    variables=["J", "Q"],
+                    cardinality=[2, 2],
+                    values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
+                ),
+            )
 
-        query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
-        )
-        query_result = self.bayesian_inference.query(
-            variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
-        )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
-        )
+            query_result = self.bayesian_inference.query(
+                variables=["J"],
+                evidence={"A": 0, "R": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            query_result = self.bayesian_inference.query(
+                variables=["J"],
+                evidence={"A": 0, "R": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+            )
 
-        query_result = self.bayesian_inference.query(
-            variables=["J", "Q"],
-            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
-            show_progress=False,
-        )
-        query_result = self.bayesian_inference.query(
-            variables=["J", "Q"],
-            evidence={"A": 0, "R": 0, "G": 0, "L": 1},
-            show_progress=False,
-        )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
+            query_result = self.bayesian_inference.query(
                 variables=["J", "Q"],
-                cardinality=[2, 2],
-                values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
-            ),
-        )
+                evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            query_result = self.bayesian_inference.query(
+                variables=["J", "Q"],
+                evidence={"A": 0, "R": 0, "G": 0, "L": 1},
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(
+                query_result,
+                DiscreteFactor(
+                    variables=["J", "Q"],
+                    cardinality=[2, 2],
+                    values=np.array(
+                        [[0.73636364, 0.08181818], [0.03636364, 0.14545455]]
+                    ),
+                ),
+            )
 
     def test_query_common_var(self):
-        self.assertRaises(
-            ValueError, self.bayesian_inference.query, variables=["J"], evidence=["J"]
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            self.assertRaises(
+                ValueError,
+                self.bayesian_inference.query,
+                variables=["J"],
+                evidence=["J"],
+                elimination_order=order,
+            )
 
     def test_max_marginal(self):
         np_test.assert_almost_equal(
@@ -168,10 +242,19 @@ class TestVariableElimination(unittest.TestCase):
         )
 
     def test_map_query(self):
-        map_query = self.bayesian_inference.map_query(show_progress=False)
-        self.assertDictEqual(
-            map_query, {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            map_query = self.bayesian_inference.map_query(
+                elimination_order=order, show_progress=False
+            )
+            self.assertDictEqual(
+                map_query, {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
+            )
 
     def test_map_query_with_evidence(self):
         map_query = self.bayesian_inference.map_query(
@@ -180,12 +263,20 @@ class TestVariableElimination(unittest.TestCase):
         self.assertDictEqual(map_query, {"A": 1, "R": 0, "L": 0})
 
     def test_map_query_common_var(self):
-        self.assertRaises(
-            ValueError,
-            self.bayesian_inference.map_query,
-            variables=["J"],
-            evidence=["J"],
-        )
+        for order in [
+            "greedy",
+            "MinFill",
+            "MinNeighbors",
+            "MinWeight",
+            "WeightedMinFill",
+        ]:
+            self.assertRaises(
+                ValueError,
+                self.bayesian_inference.map_query,
+                variables=["J"],
+                evidence=["J"],
+                elimination_order=order,
+            )
 
     def test_elimination_order(self):
         # Check all the heuristics give the same results.
