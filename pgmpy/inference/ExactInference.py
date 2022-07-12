@@ -247,14 +247,18 @@ class VariableElimination(Inference):
         show_progress=True,
     ):
         """
+        Computes the distribution P(variables|evidence, virtual_evidence). The `evidence`
+        specifies the observed state for doing prediciton. `virtual_evidence` specifies
+        the probability of a variable to be observed in different states.
+
         Parameters
         ----------
         variables: list
             list of variables for which you want to compute the probability
 
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-            None if no evidence
+        evidence: dict or pandas.DataFrame (default: None)
+            a dict key, value pair as {var: state_of_var_observed} or pandas.DataFrame with
+            each row representing a set of evidence.
 
         virtual_evidence: list (default:None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
@@ -265,7 +269,8 @@ class VariableElimination(Inference):
             should contain all variables in the model except the ones in `variables`. str options
             are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
             refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
-            for details.
+            for details. `greedy` uses optimized tensor contraction to automatically find the
+            best order based on matrix sizes.
 
         joint: boolean (default: True)
             If True, returns a Joint Distribution over `variables`.
@@ -286,6 +291,18 @@ class VariableElimination(Inference):
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
+
+        Returns
+        -------
+        If joint=True:
+            pgmpy.factors.discrete.DiscreteFactor or list: If evidence is a
+            pandas DataFrame, return a list of DiscreteFactor object
+            representing the P(variables|evidence, virtual_evidence)
+            corresponding to each row of the evidence dataframe.
+        If joint=False
+            dict or list of dicts: If evidence is a pandas DataFrame, returns a
+            list of dicts of the form {var: P(var | evidence,
+            virtual_evidence)} for each var in `variables`.
         """
         evidence = evidence if evidence is not None else dict()
 
