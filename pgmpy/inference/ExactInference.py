@@ -306,7 +306,11 @@ class VariableElimination(Inference):
             virtual_evidence)} for each var in `variables`.
         """
         evidence = evidence if evidence is not None else dict()
-        evidence_li = evidence.to_dict('records') if isinstance(evidence, pd.DataFrame) else [evidence]
+        evidence_li = (
+            evidence.to_dict("records")
+            if isinstance(evidence, pd.DataFrame)
+            else [evidence]
+        )
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -375,15 +379,21 @@ class VariableElimination(Inference):
                         )
                     }
                 else:
-                    var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
+                    var_int_map = {
+                        var: i for i, var in enumerate(model_reduced.nodes())
+                    }
                 einsum_expr = []
                 for index, phi in enumerate(factors):
                     einsum_expr.append(
-                        (phi.values[reduce_indexes[index]]).reshape(reshape_indexes[index])
+                        (phi.values[reduce_indexes[index]]).reshape(
+                            reshape_indexes[index]
+                        )
                     )
                     einsum_expr.append([var_int_map[var] for var in phi.variables])
                 result_values = contract(
-                    *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
+                    *einsum_expr,
+                    [var_int_map[var] for var in variables],
+                    optimize="greedy",
                 )
 
                 # Step 5.3: Prepare return values.
@@ -395,7 +405,8 @@ class VariableElimination(Inference):
                 )
                 if joint:
                     if isinstance(
-                        self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                        self.model,
+                        (BayesianNetwork, JunctionTree, DynamicBayesianNetwork),
                     ):
                         results.append(result.normalize(inplace=False))
                     else:
@@ -404,7 +415,8 @@ class VariableElimination(Inference):
                     result_dict = {}
                     all_vars = set(variables)
                     if isinstance(
-                        self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
+                        self.model,
+                        (BayesianNetwork, JunctionTree, DynamicBayesianNetwork),
                     ):
                         for var in variables:
                             result_dict[var] = result.marginalize(
@@ -1114,7 +1126,11 @@ class BeliefPropagation(Inference):
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         evidence = evidence if evidence is not None else dict()
-        evidence_li = evidence.to_dict('records') if isinstance(evidence, pd.DataFrame) else [evidence]
+        evidence_li = (
+            evidence.to_dict("records")
+            if isinstance(evidence, pd.DataFrame)
+            else [evidence]
+        )
         orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
@@ -1160,7 +1176,6 @@ class BeliefPropagation(Inference):
             return results[0]
         else:
             return results
-
 
     def map_query(
         self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
