@@ -1114,6 +1114,7 @@ class BeliefPropagation(Inference):
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         evidence = evidence if evidence is not None else dict()
+        evidence_li = evidence.to_dict('records') if isinstance(evidence, pd.DataFrame) else [evidence]
         orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
@@ -1143,19 +1144,23 @@ class BeliefPropagation(Inference):
         self._initialize_structures()
 
         # Step 4: Run inference.
-        result = self._query(
-            variables=variables,
-            operation="marginalize",
-            evidence=evidence,
-            joint=joint,
-            show_progress=show_progress,
-        )
+        results = []
+        for evidence in evidence_li:
+            result = self._query(
+                variables=variables,
+                operation="marginalize",
+                evidence=evidence,
+                joint=joint,
+                show_progress=show_progress,
+            )
+            results.append(result)
         self.__init__(orig_model)
 
-        if joint:
-            return result.normalize(inplace=False)
+        if len(results) == 1:
+            return results[0]
         else:
-            return result
+            return results
+
 
     def map_query(
         self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
