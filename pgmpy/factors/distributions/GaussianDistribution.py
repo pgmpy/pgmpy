@@ -321,7 +321,7 @@ class GaussianDistribution(BaseDistribution):
         """
         phi = self if inplace else self.copy()
 
-        # The pdf of a Joint Gaussian distrinution is always
+        # The pdf of a Joint Gaussian distribution is always
         # normalized. Hence, no changes.
         if not inplace:
             return phi

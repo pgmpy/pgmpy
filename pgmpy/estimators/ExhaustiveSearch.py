@@ -22,7 +22,7 @@ class ExhaustiveSearch(StructureEstimator):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
 
         scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
             An instance of `K2Score`, `BDeuScore`, or `BicScore`.
@@ -35,7 +35,7 @@ class ExhaustiveSearch(StructureEstimator):
 
         use_caching: boolean
             If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposible. Can
+            Note: Caching only works for scoring methods which are decomposable. Can
             give wrong results in case of custom scoring methods.
 
         complete_samples_only: bool (optional, default `True`)

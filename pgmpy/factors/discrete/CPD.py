@@ -265,7 +265,7 @@ class TabularCPD(DiscreteFactor):
 
             cdf_str = "\n".join(new_cdf_str)
 
-        # TODO: vertical limitator
+        # TODO: vertical limiter
         # if table_height > terminal_height:
         #     half_height = terminal_height // 2
 

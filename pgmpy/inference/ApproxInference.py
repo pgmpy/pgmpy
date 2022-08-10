@@ -27,7 +27,7 @@ class ApproxInference(object):
     @staticmethod
     def _get_factor_from_df(df):
         """
-        Takes a grouby dataframe and converts it into a pgmpy.factors.discrete.DiscreteFactor object.
+        Takes a groupby dataframe and converts it into a pgmpy.factors.discrete.DiscreteFactor object.
         """
         variables = list(df.index.names)
         state_names = {var: list(df.index.unique(var)) for var in variables}

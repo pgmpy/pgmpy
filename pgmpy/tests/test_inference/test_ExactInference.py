@@ -38,7 +38,7 @@ class TestVariableElimination(unittest.TestCase):
 
         self.bayesian_inference = VariableElimination(self.bayesian_model)
 
-    # All the values that are used for comparision in the all the tests are
+    # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):
@@ -648,7 +648,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
         )
         self.markov_inference = VariableElimination(self.markov_model)
 
-    # All the values that are used for comparision in the all the tests are
+    # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):
@@ -982,7 +982,7 @@ class TestBeliefPropagation(unittest.TestCase):
             sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values
         )
 
-    # All the values that are used for comparision in the all the tests are
+    # All the values that are used for comparison in the all the tests are
     # found using SAMIAM (assuming that it is correct ;))
 
     def test_query_single_variable(self):

@@ -31,7 +31,7 @@ class StateNameMixin:
                 elif not len(set(value)) == len(value):
                     raise ValueError(f"Repeated statenames for variable: {key}")
 
-            # Make a copy, so that the original object does't get modified after operations.
+            # Make a copy, so that the original object doesn't get modified after operations.
             self.state_names = state_names.copy()
             # Create maps for easy access to specific state names of state numbers.
             if state_names:

@@ -66,7 +66,7 @@ def optimize(
         The maximum number of iterations to run the optimization for.
 
     exit_delta: float
-        The optmization exit criteria. When change in loss in an iteration is less than
+        The optimization exit criteria. When change in loss in an iteration is less than
         `exit_delta` the optimizer returns the values.
 
     Returns

@@ -177,12 +177,12 @@ class TestBayesianModelMethods(unittest.TestCase):
             )
 
     def test_get_ancestors_of_success(self):
-        ancenstors1 = self.G2._get_ancestors_of("g")
-        ancenstors2 = self.G2._get_ancestors_of("d")
-        ancenstors3 = self.G2._get_ancestors_of(["i", "l"])
-        self.assertEqual(ancenstors1, {"d", "i", "g"})
-        self.assertEqual(ancenstors2, {"d"})
-        self.assertEqual(ancenstors3, {"g", "i", "l", "d"})
+        ancestors1 = self.G2._get_ancestors_of("g")
+        ancestors2 = self.G2._get_ancestors_of("d")
+        ancestors3 = self.G2._get_ancestors_of(["i", "l"])
+        self.assertEqual(ancestors1, {"d", "i", "g"})
+        self.assertEqual(ancestors2, {"d"})
+        self.assertEqual(ancestors3, {"g", "i", "l", "d"})
 
     def test_get_ancestors_of_failure(self):
         self.assertRaises(ValueError, self.G2._get_ancestors_of, "h")
@@ -270,7 +270,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertTrue(self.G1.is_imap(JPD))
         self.assertRaises(TypeError, self.G1.is_imap, fac)
 
-    def test_markov_blanet(self):
+    def test_markov_blanket(self):
         G = DAG(
             [
                 ("x", "y"),
@@ -376,7 +376,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.G1.get_cpds, "grade")
 
     def test_do(self):
-        # One confounder var with treatement T and outcome C: S -> T -> C ; S -> C
+        # One confounder var with treatment T and outcome C: S -> T -> C ; S -> C
         model = BayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
         cpd_s = TabularCPD(
             variable="S",

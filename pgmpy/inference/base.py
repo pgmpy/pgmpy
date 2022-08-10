@@ -20,7 +20,7 @@ class Inference(object):
     Base class for all inference algorithms.
 
     Converts BayesianNetwork and MarkovNetwork to a uniform representation so that inference
-    algorithms can be applied. Also it checks if all the associated CPDs / Factors are
+    algorithms can be applied. Also, it checks if all the associated CPDs / Factors are
     consistent with the model.
 
     Initialize inference for a model.
@@ -184,7 +184,7 @@ class Inference(object):
         Parameters
         ----------
         virtual_evidence: dict
-            A dict of TabularCPD instances specirfying the virtual evidence for each
+            A dict of TabularCPD instances specifying the virtual evidence for each
             of the evidence variables.
 
         Returns

@@ -511,11 +511,11 @@ class DynamicBayesianNetwork(DAG):
                 time_slices = time_slice
             else:
                 raise ValueError(
-                    "At least one element inside time_slice interable is not positive and/or integer"
+                    "At least one element inside time_slice iterable is not positive and/or integer"
                 )
         else:
             raise ValueError(
-                "Time slice is not a positive integer neither a interable of integers"
+                "Time slice is not a positive integer neither a iterable of integers"
             )
 
         if node:
@@ -781,7 +781,7 @@ class DynamicBayesianNetwork(DAG):
         """
         Returns a normal bayesian network object which has nodes from the first two
         time slices and all the edges in the first time slice and edges going from
-        first to second time slice. The returned bayesian network bascially represents
+        first to second time slice. The returned bayesian network basically represents
         the part of the DBN which remains constant.
 
         The node names are changed to strings in the form `{var}_{time}`.
@@ -1079,7 +1079,7 @@ class DynamicBayesianNetwork(DAG):
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=n_time_slices * len(self._nodes()))
 
-        # Step 1: Create some data strucures for easily accessing values
+        # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do
         evidence = {} if evidence is None else evidence
         virtual_intervention = (

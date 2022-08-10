@@ -9,7 +9,7 @@ from pgmpy.independencies import IndependenceAssertion
 
 def independence_match(X, Y, Z, independencies, **kwargs):
     """
-    Checks if `X \u27C2 Y | Z` is in `independencies`. This method is implemneted to
+    Checks if `X \u27C2 Y | Z` is in `independencies`. This method is implemented to
     have an uniform API when the independencies are provided instead of data.
 
     Parameters

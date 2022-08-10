@@ -2742,7 +2742,7 @@ class TestTabularCPDInit(unittest.TestCase):
         list_rows_str = cdf_str.split("\n")
         table_width, table_length = len(list_rows_str[0]), len(list_rows_str)
 
-        # TODO: test table hight
+        # TODO: test table height
 
         self.assertGreater(terminal_width, table_width)
 

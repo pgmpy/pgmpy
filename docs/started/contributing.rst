@@ -51,7 +51,7 @@ Tips
 - Anything in the `dev` branch should be deployable (no failing tests).
 - Never use `git add .`: it can add unwanted files;
 - Avoid using `git commit -a` unless you know what you're doing;
-- Check every change with `git diff` before adding then to the index (stage area) and with `git diff --cached` before commiting;
+- Check every change with `git diff` before adding then to the index (stage area) and with `git diff --cached` before committing;
 - If you have push access to the main repository, please do not commit directly to `dev`: your access should be used only to accept pull requests; if you want to make a new feature, you should use the same process as other developers so that your code can be reviewed.
 
 
@@ -73,7 +73,7 @@ Code Guidelines
 Tests
 -----
 
-We use [Travis CI](https://travis-ci.org/) for continous integration
+We use [Travis CI](https://travis-ci.org/) for continuous integration
 and python [unittest module](https://docs.python.org/2/library/unittest.html) for writing tests.
 You should write tests for every feature you add or bug you solve in the code.
 Having automated tests for every line of our code let us make big changes

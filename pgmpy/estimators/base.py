@@ -14,7 +14,8 @@ class BaseEstimator(object):
 
         Parameters
         ----------
-        data: pandas DataFrame object datafame object where each column represents one variable.
+        data: pandas DataFrame object
+            object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -31,7 +32,7 @@ class BaseEstimator(object):
         """
 
         self.data = data
-        # data can be None in the case when learning structre from
+        # data can be None in the case when learning structure from
         # independence conditions. Look into PC.py.
         if self.data is not None:
             self.complete_samples_only = complete_samples_only
@@ -135,7 +136,7 @@ class BaseEstimator(object):
             raise ValueError("data must contain a `_weight` column if weighted=True")
 
         if not parents:
-            # count how often each state of 'variable' occured
+            # count how often each state of 'variable' occurred
             if weighted:
                 state_count_data = data.groupby([variable]).sum()["_weight"]
             else:
@@ -149,7 +150,7 @@ class BaseEstimator(object):
 
         else:
             parents_states = [self.state_names[parent] for parent in parents]
-            # count how often each state of 'variable' occured, conditional on parents' states
+            # count how often each state of 'variable' occurred, conditional on parents' states
             if weighted:
                 state_count_data = (
                     data.groupby([variable] + parents).sum()["_weight"].unstack(parents)
@@ -189,9 +190,9 @@ class ParameterEstimator(BaseEstimator):
             for which parameter estimation is to be done.
 
         data: pandas DataFrame object
-            datafame object with column names identical to the variable names of the model.
+            dataframe object with column names identical to the variable names of the model.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -271,9 +272,9 @@ class StructureEstimator(BaseEstimator):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)

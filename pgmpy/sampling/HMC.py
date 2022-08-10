@@ -166,7 +166,7 @@ class HamiltonianMC(object):
         # Resampling momentum
         momentum = np.reshape(np.random.normal(0, 1, len(position)), position.shape)
 
-        # position_m here will be the previous sampled value of position
+        # position_m here will be the previously sampled value of position
         position_bar, momentum_bar = position.copy(), momentum
 
         # Number of steps L to simulate dynamics
@@ -192,7 +192,7 @@ class HamiltonianMC(object):
         # Metropolis acceptance probability
         alpha = min(1, acceptance_prob)
 
-        # Accept or reject the new proposed value of position, i.e position_bar
+        # Accept or reject the new proposed value of position, i.e. position_bar
         if np.random.rand() < alpha:
             position = position_bar.copy()
             self.accepted_proposals += 1.0
@@ -286,7 +286,7 @@ class HamiltonianMC(object):
         lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
         for i in tqdm(range(1, num_samples)):
 
-            # Genrating sample
+            # Generating sample
             position_m, _ = self._sample(
                 position_m, trajectory_length, stepsize, lsteps
             )
@@ -527,7 +527,7 @@ class HamiltonianMCDA(HamiltonianMC):
         if stepsize is None:
             stepsize = self._find_reasonable_stepsize(initial_pos)
 
-        if num_adapt <= 1:  # Return samples genrated using Simple HMC algorithm
+        if num_adapt <= 1:  # Return samples generated using Simple HMC algorithm
             return HamiltonianMC.sample(
                 self, initial_pos, num_samples, trajectory_length, stepsize
             )
@@ -548,7 +548,7 @@ class HamiltonianMCDA(HamiltonianMC):
 
         for i in tqdm(range(1, num_samples)):
 
-            # Genrating sample
+            # Generating sample
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
             samples[i] = tuple(position_m)
 

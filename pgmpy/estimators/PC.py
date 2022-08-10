@@ -25,10 +25,10 @@ class PC(StructureEstimator):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.  (If some
+            dataframe object where each column represents one variable.  (If some
             values in the data are missing the data cells should be set to
             `numpy.NaN`.  Note that pandas converts each column containing
-            `numpy.NaN`s to dtype `float`.)
+            `numpy.NaN`s to datatype `float`.)
 
         References
         ----------
@@ -115,7 +115,7 @@ class PC(StructureEstimator):
         [2] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm
                     yielding order-independent skeletons,” ArXiv e-prints, Nov. 2012.
         [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
-                    discovery with multi-core PCs." IEEE/ACM transactions on computational
+                    discovery with multicore PCs." IEEE/ACM transactions on computational
                     biology and bioinformatics (2016).
 
         Examples
@@ -162,7 +162,7 @@ class PC(StructureEstimator):
             )
         elif (ci_test in ("chi_square", "pearsonr")) and (self.data is None):
             raise ValueError(
-                "For using Chi Square or Pearsonr, data arguement must be specified"
+                "For using Chi Square or Pearsonr, data argument must be specified"
             )
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
@@ -213,7 +213,7 @@ class PC(StructureEstimator):
         have to admit a faithful BN representation. This is the case if
         they are obtained as a set of d-seperations of some Bayesian network or
         if the independence assertions are closed under the semi-graphoid axioms.
-        Otherwise the procedure may fail to identify the correct structure.
+        Otherwise, the procedure may fail to identify the correct structure.
 
         Parameters
         ----------
@@ -248,7 +248,7 @@ class PC(StructureEstimator):
         >>> skel, sep_sets = PC(independencies=ind).build_skeleton("ABCD", ind)
         >>> print(skel.edges())
         [('A', 'D'), ('B', 'D'), ('C', 'D')]
-        >>> # build skeleton from d-seperations of DAG:
+        >>> # build skeleton from d-separations of DAG:
         ... model = DAG([('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'E')])
         >>> skel, sep_sets = PC.build_skeleton(model.nodes(), model.get_independencies())
         >>> print(skel.edges())

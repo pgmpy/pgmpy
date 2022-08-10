@@ -108,7 +108,7 @@ class TestMarkovChain(unittest.TestCase):
 
     def test_check_state_bad_var_value(self):
         model = MC(["a"], [2])
-        # value of variable >= cardinaliity
+        # value of variable >= cardinality
         self.assertRaises(ValueError, model._check_state, [State("a", 3)])
 
     def test_check_state_success(self):
@@ -256,8 +256,8 @@ class TestMarkovChain(unittest.TestCase):
     def test_prob_from_sample(self, sample):
         model = MC(["a", "b"], [2, 2])
         sample.return_value = self.sample
-        probabilites = model.prob_from_sample([State("a", 1), State("b", 0)])
-        self.assertEqual(list(probabilites), [1] * 50 + [0] * 50)
+        probabilities = model.prob_from_sample([State("a", 1), State("b", 0)])
+        self.assertEqual(list(probabilities), [1] * 50 + [0] * 50)
 
     def test_is_stationarity_success(self):
         model = MC(["intel", "diff"], [2, 3])

@@ -53,7 +53,7 @@ class TestHMCInference(unittest.TestCase):
         )
         np.testing.assert_almost_equal(acceptance_probability, 0.0347363)
 
-    def test_find_resonable_stepsize(self):
+    def test_find_reasonable_stepsize(self):
         np.random.seed(987654321)
         stepsize = self.hmc_sampler._find_reasonable_stepsize(np.array([-1, 1, -1]))
         np.testing.assert_almost_equal(stepsize, 2.0)

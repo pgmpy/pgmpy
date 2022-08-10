@@ -211,7 +211,7 @@ class FactorGraph(UndirectedGraph):
           or not.
         * Check whether factors are associated for all the random variables or not.
         * Check if factors are defined for each factor node or not.
-        * Check if cardinality information for all the variables is availble or not.
+        * Check if cardinality information for all the variables is available or not.
         * Check if cardinality of random variable remains same across all the
           factors.
         """

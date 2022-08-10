@@ -523,7 +523,7 @@ class TestPDAG(unittest.TestCase):
         self.assertTrue((("A", "D") in dag.edges()) or (("D", "A") in dag.edges()))
         self.assertEqual(dag.latents, set(["A"]))
 
-        # PDAG no: 3  Already existing v-structure, possiblity to add another
+        # PDAG no: 3  Already existing v-structure, possibility to add another
         pdag = PDAG(
             directed_ebunch=[("B", "C"), ("A", "C")], undirected_ebunch=[("C", "D")]
         )

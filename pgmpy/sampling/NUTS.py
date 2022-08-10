@@ -62,9 +62,9 @@ class NoUTurnSampler(HamiltonianMCDA):
             model=model, grad_log_pdf=grad_log_pdf, simulate_dynamics=simulate_dynamics
         )
 
-    def _initalize_tree(self, position, momentum, slice_var, stepsize):
+    def _initialize_tree(self, position, momentum, slice_var, stepsize):
         """
-        Initalizes root node of the tree, i.e depth = 0
+        Initializes root node of the tree, i.e. depth = 0
         """
 
         position_bar, momentum_bar, _ = self.simulate_dynamics(
@@ -121,7 +121,7 @@ class NoUTurnSampler(HamiltonianMCDA):
                 momentum_bar,
                 candidate_set_size,
                 accept_set_bool,
-            ) = self._initalize_tree(
+            ) = self._initialize_tree(
                 position, momentum, slice_var, direction * stepsize
             )
 
@@ -351,7 +351,7 @@ class NoUTurnSampler(HamiltonianMCDA):
         position_m = initial_pos
 
         for i in tqdm(range(1, num_samples)):
-            # Genrating sample
+            # Generating sample
             position_m = self._sample(position_m, stepsize)
             samples[i] = tuple(position_m)
 
@@ -503,7 +503,7 @@ class NoUTurnSamplerDA(NoUTurnSampler):
                 momentum_bar,
                 candidate_set_size,
                 accept_set_bool,
-            ) = self._initalize_tree(
+            ) = self._initialize_tree(
                 position, momentum, slice_var, direction * stepsize
             )
 

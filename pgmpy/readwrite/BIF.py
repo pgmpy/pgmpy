@@ -100,7 +100,7 @@ class BIFReader(object):
         """
         A method that returns variable grammar
         """
-        # Defining a expression for valid word
+        # Defining an expression for valid word
         word_expr = Word(alphanums + "_" + "-")
         word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
         name_expr = Suppress("variable") + word_expr + Suppress("{")
@@ -121,7 +121,7 @@ class BIFReader(object):
 
         property_expr = (
             Suppress("property") + CharsNotIn(";") + Suppress(";")
-        )  # Creating a expr to find property
+        )  # Creating an expr to find property
 
         return name_expr, variable_state_expr, property_expr
 
@@ -451,7 +451,7 @@ class BIFWriter(object):
         """
         network_template = Template("network $name {\n}\n")
         # property tag may or may not be present in model,and since no of properties
-        # can be more than one , will replace them accoriding to format otherwise null
+        # can be more than one, will replace them according to format otherwise null
         variable_template = Template(
             """variable $name {
     type discrete [ $no_of_states ] { $states };

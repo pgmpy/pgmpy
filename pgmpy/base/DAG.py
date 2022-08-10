@@ -1068,7 +1068,7 @@ class DAG(nx.DiGraph):
 
 class PDAG(nx.DiGraph):
     """
-    Class for representing PDAGs (also known as CPDAG). PDAGs are the equivance classes of
+    Class for representing PDAGs (also known as CPDAG). PDAGs are the equivalence classes of
     DAGs and contain both directed and undirected edges.
 
     Note: In this class, undirected edges are represented using two edges in both direction i.e.
@@ -1162,7 +1162,7 @@ class PDAG(nx.DiGraph):
         pdag = self.copy()
         while pdag.number_of_nodes() > 0:
             # find node with (1) no directed outgoing edges and
-            #                (2) the set of undirecte neighbors is either empty or
+            #                (2) the set of undirected neighbors is either empty or
             #                    undirected neighbors + parents of X are a clique
             found = False
             for X in pdag.nodes():
