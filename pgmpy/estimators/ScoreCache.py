@@ -16,7 +16,7 @@ class ScoreCache(StructureScore):
         data: pandas DataFrame instance
             DataFrame instance where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
         max_size: int (optional, default 10_000)
             The maximum number of elements allowed in the cache. When the limit is reached, the least recently used
             entries will be discarded.
@@ -55,7 +55,7 @@ class LRUCache:
     def __init__(self, original_function, max_size=10000):
         """
         Least-Recently-Used cache.
-        Acts as a wrapper around a arbitrary function and caches the return values.
+        Acts as a wrapper around an arbitrary function and caches the return values.
 
         Based on the implementation of Raymond Hettinger
         (https://stackoverflow.com/questions/2437617/limiting-the-size-of-a-python-dictionary)

@@ -27,9 +27,9 @@ class HillClimbSearch(StructureEstimator):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -44,7 +44,7 @@ class HillClimbSearch(StructureEstimator):
 
         use_caching: boolean
             If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposible. Can
+            Note: Caching only works for scoring methods which are decomposable. Can
             give wrong results in case of custom scoring methods.
 
         References
@@ -166,10 +166,10 @@ class HillClimbSearch(StructureEstimator):
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
             structure scores: k2score, bdeuscore, bdsscore, bicscore. Also accepts a
-            custom score but it should be an instance of `StructureScore`.
+            custom score, but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
-            The starting point for the local search. By default a completely
+            The starting point for the local search. By default, a completely
             disconnected network is used.
 
         fixed_edges: iterable

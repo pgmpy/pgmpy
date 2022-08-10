@@ -82,7 +82,7 @@ class TestChiSquare(unittest.TestCase):
         self.df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
 
     def test_chisquare_adult_dataset(self):
-        # Comparision values taken from dagitty (DAGitty)
+        # Comparison values taken from dagitty (DAGitty)
         coef, p_value, dof = chi_square(
             X="Age", Y="Immigrant", Z=[], data=self.df_adult, boolean=False
         )

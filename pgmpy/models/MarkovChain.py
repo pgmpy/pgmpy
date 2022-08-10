@@ -83,7 +83,7 @@ class MarkovChain(object):
 
     def set_start_state(self, start_state):
         """
-        Set the start state of the Markov Chain. If the start_state is given as a array-like iterable, its contents
+        Set the start state of the Markov Chain. If the start_state is given as an array-like iterable, its contents
         are reordered in the internal representation.
 
         Parameters
@@ -431,14 +431,14 @@ class MarkovChain(object):
             stationary = np.array(U[:, np.where(np.abs(S - 1.0) < 1e-8)[0][0]].flat)
             stationary = (stationary / np.sum(stationary)).real
 
-            probabilites = []
+            probabilities = []
             window_size = 10000 if sample is None else len(sample)
             for i in range(0, transition_mat.shape[0]):
-                probabilites.extend(
+                probabilities.extend(
                     self.prob_from_sample([State(k, i)], window_size=window_size)
                 )
             if any(
-                np.abs(i) > tolerance for i in np.subtract(probabilites, stationary)
+                np.abs(i) > tolerance for i in np.subtract(probabilities, stationary)
             ):
                 return_val = return_val and False
             else:

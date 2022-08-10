@@ -287,7 +287,7 @@ class BaseSimulateHamiltonianDynamics(object):
     >>> from pgmpy.factors.continuous import GaussianDistribution
     >>> from pgmpy.sampling import GradLogPDFGaussian
     >>> import numpy as np
-    >>> # Class should initalize self.new_position, self.new_momentum and self.new_grad_logp
+    >>> # Class should initialize self.new_position, self.new_momentum and self.new_grad_logp
     >>> # self.new_grad_logp represents gradient log at new proposed value of position
     >>> class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     ...     def __init__(self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None):
@@ -335,7 +335,7 @@ class BaseSimulateHamiltonianDynamics(object):
             grad_log_position, _ = grad_log_pdf(position, model).get_gradient_log_pdf()
 
         else:
-            grad_log_positon = _check_1d_array_object(
+            grad_log_position = _check_1d_array_object(
                 grad_log_position, "grad_log_position"
             )
             _check_length_equal(
@@ -456,7 +456,7 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
         # Take half step in time for updating momentum
         momentum_bar = self.momentum + 0.5 * self.stepsize * self.grad_log_position
 
-        # Take full step in time for updating position position
+        # Take full step in time for updating position
         position_bar = self.position + self.stepsize * momentum_bar
 
         grad_log, _ = self.grad_log_pdf(position_bar, self.model).get_gradient_log_pdf()

@@ -193,7 +193,7 @@ class CausalInference(object):
 
         Returns
         -------
-        Is valid frontdoor adjusment: bool
+        Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
         Z = _variable_or_iterable_to_set(Z)
@@ -231,9 +231,9 @@ class CausalInference(object):
 
     def get_all_frontdoor_adjustment_sets(self, X, Y):
         """
-        Identify possible sets of variables, Z, which satisify the front-door criterion relative to given X and Y.
+        Identify possible sets of variables, Z, which satisfy the front-door criterion relative to given X and Y.
 
-        Z satisifies the front-door critierion if:
+        Z satisfies the front-door criterion if:
           (i)    Z intercepts all directed paths from X to Y
           (ii)   there is no backdoor path from X to Z
           (iii)  all back-door paths from Z to Y are blocked by X
@@ -488,7 +488,7 @@ class CausalInference(object):
         -------
         Minimal adjustment set: set or None
             A set of variables which are the minimal possible adjustment set. If
-            None, no adjutment set is possible.
+            None, no adjustment set is possible.
 
         Examples
         --------

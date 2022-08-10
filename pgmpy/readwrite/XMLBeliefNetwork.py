@@ -404,7 +404,7 @@ class XBNWriter(object):
         Parameters
         ----------
         edge_list: array_like
-            list, tuple, dict or set whose each elements has two values (parent, child).
+            list, tuple, dict or set whose each element has two values (parent, child).
 
         Examples
         --------

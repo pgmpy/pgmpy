@@ -907,7 +907,7 @@ class TestPomdpXReaderString(unittest.TestCase):
 class TestPomdpXWriter(unittest.TestCase):
     def setUp(self):
         self.model_data = {
-            "discription": "",
+            "description": "",
             "discount": "0.95",
             "variables": {
                 "StateVar": [

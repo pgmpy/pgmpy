@@ -306,7 +306,7 @@ def factorset_product(*factorsets_list):
     r"""
     Base method used for product of factor sets.
 
-    Suppose :math:`\vec\phi_1` and :math:`\vec\phi_2` are two factor sets then their product is a another factors set
+    Suppose :math:`\vec\phi_1` and :math:`\vec\phi_2` are two factor sets then their product is another factors set
     :math:`\vec\phi_3 = \vec\phi_1 \cup \vec\phi_2`.
 
     Parameters

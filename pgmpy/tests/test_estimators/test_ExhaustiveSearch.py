@@ -143,7 +143,7 @@ class TestBaseEstimator(unittest.TestCase):
             [sorted(model.edges()) for score, model in scores],
             [edges for score, edges in scores_ref],
         )
-        # use assertAlmostEqual pointwise to avoid rounding issues
+        # use assertAlmostEqual point wise to avoid rounding issues
         map(
             lambda x, y: self.assertAlmostEqual(x, y),
             [score for score, model in scores],

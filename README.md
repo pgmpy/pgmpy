@@ -19,7 +19,7 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 
 Dependencies
 =============
-pgmpy has following non optional dependencies:
+pgmpy has the following non-optional dependencies:
 - python 3.6 or higher
 - networkX
 - scipy 

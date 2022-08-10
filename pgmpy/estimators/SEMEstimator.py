@@ -235,7 +235,7 @@ class SEMEstimator(object):
         ----------
         .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
         """
-        # Check if given arguements are valid
+        # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"data must be a pandas DataFrame. Got type: {type(data)}")
 

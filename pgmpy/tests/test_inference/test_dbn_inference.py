@@ -121,7 +121,7 @@ class TestDBNInference(unittest.TestCase):
             query_result[("X", 1)].values, np.array([0.7621772, 0.2378228])
         )
 
-    def test_super_conncted_network(self):
+    def test_super_connected_network(self):
         edges = [
             (("A", 0), ("A", 1)),
             (("A", 0), ("B", 1)),

@@ -245,7 +245,7 @@ if [[ "$TAG_AND_UPLOAD" == "yes" ]]; then
 else
     ls wheelhouse
     echo """
-        DRY RUN ... Skiping tag and upload
+        DRY RUN ... Skipping tag and upload
 
         DEPLOY_REMOTE = '$DEPLOY_REMOTE'
         TAG_AND_UPLOAD = '$TAG_AND_UPLOAD'

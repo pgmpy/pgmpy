@@ -26,7 +26,7 @@ def correlation_score(
     in the dataset, a correlation test (specified by `test` argument) is done.
     We say that any two variables are correlated if the test's p-value <
     significance_level. The same pair of variables are then tested whether they
-    are d-connected in the network structure or not. Finally a metric specified
+    are d-connected in the network structure or not. Finally, a metric specified
     by `score` is computed by using the correlation test as the true value and
     d-connections as predicted values.
 
@@ -208,7 +208,7 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
         2) BDeuScore 3) BDsScore 4) BicScore
 
     kwargs: kwargs
-        Any additional parameters parameters that needs to be passed to the
+        Any additional parameters that needs to be passed to the
         scoring method. Check pgmpy.estimators.StructureScore for details.
 
     Returns
@@ -250,5 +250,5 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     ):
         raise ValueError(f"scoring method not supported and not a callable")
 
-    # Step 2: Comptue the score and return
+    # Step 2: Compute the score and return
     return supported_methods[scoring_method](data).score(model, **kwargs)

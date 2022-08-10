@@ -81,7 +81,7 @@ class TreeSearch(StructureEstimator):
             edges from class_node to each of the feature variables.
 
         edge_weights_fn: str or function (default: mutual info)
-            Method to use for computing edge weights. By default Mutual Info Score is
+            Method to use for computing edge weights. By default, Mutual Info Score is
             used.
 
         show_progress: boolean
@@ -137,7 +137,7 @@ class TreeSearch(StructureEstimator):
         if estimator_type == "tan" and class_node not in self.data.columns:
             raise ValueError(f"Class node: {class_node} not found in data columns")
 
-        # Step 1.3: If root_node isn't specified, get the node with highest score.
+        # Step 1.3: If root_node isn't specified, get the node with the highest score.
         weights_computed = False
         if self.root_node is None:
             weights = TreeSearch._get_weights(

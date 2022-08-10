@@ -177,7 +177,7 @@ class JointProbabilityDistribution(DiscreteFactor):
 
             elif condition_random_variable:
                 if not all(isinstance(var, str) for var in event3):
-                    raise TypeError("Event3 should be a 1d list of strings")
+                    raise TypeError("Event 3 should be a 1d list of strings")
                 event3 = list(event3)
                 # Using the definition of conditional independence
                 # If P(X,Y|Z) = P(X|Z)*P(Y|Z)

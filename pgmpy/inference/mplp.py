@@ -111,7 +111,7 @@ class Mplp(Inference):
             collection of intersection of all pairs of cluster variables. For eg: \{\{C_1 \cap C_2\}, \{C_2 \cap C_3\}, \{C_3 \cap C_1\} \} for clusters C_1, C_2 & C_3.
 
         cluster_potential: DiscreteFactor
-            Each cluster has a initial probability distribution provided beforehand.
+            Each cluster has an initial probability distribution provided beforehand.
         """
 
         def __init__(self, intersection_set_variables, cluster_potential):
@@ -401,7 +401,7 @@ class Mplp(Inference):
 
     def _run_mplp(self, no_iterations):
         """
-        Updates messages until either Mplp converges or if doesn't converges; halts after no_iterations.
+        Updates messages until either Mplp converges or if it doesn't converge; halts after no_iterations.
 
         Parameters
         --------
@@ -456,7 +456,7 @@ class Mplp(Inference):
             # add triplets that are yet not added.
             add_triplets = []
             for triplet_number in range(len(sorted_scores)):
-                # At once, we can add atmost 5 triplets
+                # At once, we can add at most 5 triplets
                 if triplet_number >= max_triplets:
                     break
                 add_triplets.append(sorted_scores.pop())
