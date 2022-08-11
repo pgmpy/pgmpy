@@ -426,7 +426,7 @@ class BayesianNetwork(DAG):
 
                 if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
                     raise ValueError(
-                        "CPD for {node} doesn't have state names defined for all the variables."
+                        f"CPD for {node} doesn't have state names defined for all the variables."
                     )
 
         for node in self.nodes():
