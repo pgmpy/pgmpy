@@ -70,7 +70,10 @@ def factor_product(*args):
             "All the args are expected to be instances of the same factor class."
         )
 
-    return reduce(lambda phi1, phi2: phi1 * phi2, args)
+    if len(args) == 1:
+        return args[0].copy()
+    else:
+        return reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
 def factor_sum_product(output_vars, factors):
