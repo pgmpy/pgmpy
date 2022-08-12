@@ -553,6 +553,11 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod, expected_factor)
         self.assertEqual(set(prod.variables), set(expected_factor.variables))
 
+        # Test for Issue 1565
+        prod = factor_product(phi)
+        self.assertEqual(phi, prod)
+        self.assertNotEqual(id(phi), id(prod))
+
     def test_product(self):
         phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
         phi1 = DiscreteFactor(["x3", "x4"], [2, 2], range(4))
