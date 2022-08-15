@@ -640,7 +640,7 @@ class DynamicBayesianNetwork(DAG):
             if not any(x.variable == temp_var for x in self.cpds):
                 if all(x[1] == parents[0][1] for x in parents):
                     if parents:
-                        evidence_card = cpd.cardinality[:0:-1]
+                        evidence_card = cpd.cardinality[1:]
                         new_cpd = TabularCPD(
                             temp_var,
                             cpd.variable_card,
