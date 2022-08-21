@@ -12,7 +12,7 @@ from pgmpy.utils import get_example_model
 
 
 # This class tests examples from: Le, Thuc, et al. "A fast PC algorithm for
-# high dimensional causal discovery with multicore PCs." IEEE/ACM transactions
+# high dimensional causal discovery with multi-core PCs." IEEE/ACM transactions
 # on computational biology and bioinformatics (2016).
 class TestPCFakeCITest(unittest.TestCase):
     def setUp(self):

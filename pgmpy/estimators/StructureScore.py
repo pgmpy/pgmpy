@@ -18,7 +18,7 @@ class StructureScore(BaseEstimator):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -98,7 +98,7 @@ class K2Score(StructureScore):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -161,7 +161,7 @@ class BDeuScore(StructureScore):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         equivalent_sample_size: int (default: 10)
             The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet hyperparameters.
@@ -237,7 +237,7 @@ class BDsScore(BDeuScore):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         equivalent_sample_size: int (default: 10)
             The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet
@@ -303,7 +303,7 @@ class BicScore(StructureScore):
         data: pandas DataFrame object
             dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to datatype `float`.)
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)

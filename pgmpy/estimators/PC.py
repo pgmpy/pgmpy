@@ -28,7 +28,7 @@ class PC(StructureEstimator):
             dataframe object where each column represents one variable.  (If some
             values in the data are missing the data cells should be set to
             `numpy.NaN`.  Note that pandas converts each column containing
-            `numpy.NaN`s to datatype `float`.)
+            `numpy.NaN`s to dtype `float`.)
 
         References
         ----------
@@ -115,7 +115,7 @@ class PC(StructureEstimator):
         [2] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm
                     yielding order-independent skeletons,” ArXiv e-prints, Nov. 2012.
         [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
-                    discovery with multicore PCs." IEEE/ACM transactions on computational
+                    discovery with multi-core PCs." IEEE/ACM transactions on computational
                     biology and bioinformatics (2016).
 
         Examples
