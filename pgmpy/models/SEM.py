@@ -31,16 +31,16 @@ class SEMGraph(DAG):
 
     graph: nx.DirectedGraph
         The graphical structure of the latent and observed variables except the error terms.
-        The parameteers are stored in the `weight` attribute of each edge.
+        The parameters are stored in the `weight` attribute of each edge.
 
     err_graph: nx.Graph
         An undirected graph representing the relations between the error terms of the model.
         The node of the graph has the same name as the variable but represents the error terms.
-        The variance is stored in the `weight` attribute of the node and the covariance is stored
+        The variance is stored in the `weight` attribute of the node and the covariance are stored
         in the `weight` attribute of the edge.
 
     full_graph_struct: nx.DiGraph
-        Represents the full graph structure. The names of error terms starts with `.` and
+        Represents the full graph structure. The names of error terms start with `.` and
         new nodes are added for each correlation which starts with `..`.
 
     """
@@ -443,7 +443,7 @@ class SEMGraph(DAG):
 
     def _nearest_separator(self, G, Y, Z):
         """
-        Finds the set of nearest separators for `Y` and `Z` in `G`.
+        Finds the set of the nearest separators for `Y` and `Z` in `G`.
 
         Parameters
         ----------
@@ -643,7 +643,7 @@ class SEMGraph(DAG):
 
         Returns
         -------
-        np.ndarray: Adjecency matrix of model's graph structure.
+        np.ndarray: Adjacency matrix of model's graph structure.
 
         Notes
         -----
@@ -659,7 +659,7 @@ class SEMGraph(DAG):
         Examples
         --------
         """
-        # Arrage the adjacency matrix in order y, x, eta, xi and then slice masks from it.
+        # Arrange the adjacency matrix in order y, x, eta, xi and then slice masks from it.
         #       y(p)   x(q)   eta(m)  xi(n)
         # y
         # x
@@ -960,7 +960,7 @@ class SEMAlg:
 
         Returns
         -------
-        pd.DataFrame: The genrated samples.
+        pd.DataFrame: The generated samples.
         """
         if (self.B_fixed_mask is None) or (self.zeta_fixed_mask is None):
             raise ValueError("Parameters for the model has not been specified.")
@@ -1003,12 +1003,12 @@ class SEM(SEMGraph):
 
     def __init__(self, syntax, **kwargs):
         """
-        Initialize a `SEM` object. Prefered way to initialize the object is to use one of
+        Initialize a `SEM` object. Preferred way to initialize the object is to use one of
         the `from_lavaan`, `from_graph`, `from_lisrel`, or `from_RAM` methods.
 
         There are three possible ways to initialize the model:
             1. Lavaan syntax: `lavaan_str` needs to be specified.
-            2. Graph structure: `ebunch`, `latents`, `err_corr`, and `err_var` need to specified.
+            2. Graph structure: `ebunch`, `latents`, `err_corr`, and `err_var` need to be specified.
             3. LISREL syntax: `var_names`, `params`, and `fixed_masks` need to be specified.
             4. Reticular Action Model (RAM/all-y) syntax: `var_names`, `B`, `zeta`, and `wedge_y`
                                                             need to be specified.

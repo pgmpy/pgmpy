@@ -1,7 +1,7 @@
 Installation
 ============
 
-pgmpy requires Python 3.7+. pgmpy is hosted on both pypi and anconda. For installation through pypi, use the command:
+pgmpy requires Python 3.7+. pgmpy is hosted on both pypi and anaconda. For installation through pypi, use the command:
 
 .. code-block:: bash
 

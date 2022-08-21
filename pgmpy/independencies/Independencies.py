@@ -151,7 +151,7 @@ class Independencies(object):
     def closure(self):
         """
         Returns a new `Independencies()`-object that additionally contains those `IndependenceAssertions`
-        that are implied by the the current independencies (using with the `semi-graphoid axioms
+        that are implied by the current independencies (using with the `semi-graphoid axioms
         <https://en.wikipedia.org/w/index.php?title=Conditional_independence&oldid=708760689#Rules_of_conditional_independence>`_;
         see (Pearl, 1989, `Conditional Independence and its representations
         <http://www.cs.technion.ac.il/~dang/journal_papers/pearl1989conditional.pdf>`_)).

@@ -62,7 +62,7 @@ Line = namedtuple("Line", ["begin", "hline", "sep", "end"])
 DataRow = namedtuple("DataRow", ["begin", "sep", "end"])
 
 
-# A table structure is suppposed to be:
+# A table structure is supposed to be:
 #
 #     --- lineabove ---------
 #         headerrow
@@ -678,7 +678,7 @@ def tabulate(
       - if `headers="firstrow"`, then the first row of data is used
       - if `headers="keys"`, then dictionary keys or column indices are used
 
-    Otherwise a headerless table is produced.
+    Otherwise, a headerless table is produced.
 
     If the number of headers is less than the number of columns, they
     are supposed to be names of the last columns. This is consistent
@@ -696,7 +696,7 @@ def tabulate(
     ----------------
 
     `tabulate` tries to detect column types automatically, and aligns
-    the values properly. By default it aligns decimal points of the
+    the values properly. By default, it aligns decimal points of the
     numbers (or flushes integer numbers to the right), and flushes
     everything else to the left. Possible column alignments
     (`numalign`, `stralign`) are: "right", "center", "left", "decimal"

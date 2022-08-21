@@ -133,7 +133,7 @@ class BayesianNetwork(DAG):
         Remove node from the model.
 
         Removing a node also removes all the associated edges, removes the CPD
-        of the node and marginalizes the CPDs of it's children.
+        of the node and marginalizes the CPDs of its children.
 
         Parameters
         ----------
@@ -184,7 +184,7 @@ class BayesianNetwork(DAG):
         Remove multiple nodes from the model.
 
         Removing a node also removes all the associated edges, removes the CPD
-        of the node and marginalizes the CPDs of it's children.
+        of the node and marginalizes the CPDs of its children.
 
         Parameters
         ----------
@@ -412,7 +412,7 @@ class BayesianNetwork(DAG):
                 evidence = cpd.get_evidence()
                 parents = self.get_parents(node)
 
-                # Check if the evidence set of the CPD is same as it's parents.
+                # Check if the evidence set of the CPD is same as its parents.
                 if set(evidence) != set(parents):
                     raise ValueError(
                         f"CPD associated with {node} doesn't have proper parents associated with it."
@@ -421,7 +421,7 @@ class BayesianNetwork(DAG):
                 # Check if the values of the CPD sum to 1.
                 if not cpd.is_valid_cpd():
                     raise ValueError(
-                        f"Sum or integral of conditional probabilites for node {node} is not equal to 1."
+                        f"Sum or integral of conditional probabilities for node {node} is not equal to 1."
                     )
 
                 if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
@@ -655,7 +655,7 @@ class BayesianNetwork(DAG):
 
         stochastic: boolean
             If True, does prediction by sampling from the distribution of predicted variable(s).
-            If False, returns the states with the highest probability value (i.e MAP) for the
+            If False, returns the states with the highest probability value (i.e. MAP) for the
                 predicted variable(s).
 
         n_jobs: int (default: -1)
@@ -1187,11 +1187,11 @@ class BayesianNetwork(DAG):
                     )
                 elif len(cpd.variables) > 1:
                     raise (
-                        "Virtual evidecne should be defined on individual variables. Maybe your are looking for soft evidence."
+                        "Virtual evidence should be defined on individual variables. Maybe you are looking for soft evidence."
                     )
                 elif self.get_cardinality(var) != cpd.get_cardinality([var])[var]:
                     raise ValueError(
-                        "The number of states/cardinality for the evideence should be same as the nubmer fo states/cardinalit yof teh variable in the model"
+                        "The number of states/cardinality for the evidence should be same as the number of states/cardinality of the variable in the model"
                     )
 
             for cpd in virtual_evidence:

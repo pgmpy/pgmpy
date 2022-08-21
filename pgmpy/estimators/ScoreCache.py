@@ -55,7 +55,7 @@ class LRUCache:
     def __init__(self, original_function, max_size=10000):
         """
         Least-Recently-Used cache.
-        Acts as a wrapper around a arbitrary function and caches the return values.
+        Acts as a wrapper around an arbitrary function and caches the return values.
 
         Based on the implementation of Raymond Hettinger
         (https://stackoverflow.com/questions/2437617/limiting-the-size-of-a-python-dictionary)

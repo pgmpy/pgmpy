@@ -35,7 +35,7 @@ class ExhaustiveSearch(StructureEstimator):
 
         use_caching: boolean
             If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposible. Can
+            Note: Caching only works for scoring methods which are decomposable. Can
             give wrong results in case of custom scoring methods.
 
         complete_samples_only: bool (optional, default `True`)

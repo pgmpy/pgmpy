@@ -137,7 +137,7 @@ class WeightedMinFill(BaseEliminationOrder):
 class MinNeighbors(BaseEliminationOrder):
     def cost(self, node):
         """
-        The cost of a eliminating a node is the number of neighbors it has in the
+        The cost of eliminating a node is the number of neighbors it has in the
         current graph.
         """
         return len(list(self.moralized_model.neighbors(node)))
@@ -146,7 +146,7 @@ class MinNeighbors(BaseEliminationOrder):
 class MinWeight(BaseEliminationOrder):
     def cost(self, node):
         """
-        The cost of a eliminating a node is the product of weights, domain cardinality,
+        The cost of eliminating a node is the product of weights, domain cardinality,
         of its neighbors.
         """
         return np.prod(
@@ -160,7 +160,7 @@ class MinWeight(BaseEliminationOrder):
 class MinFill(BaseEliminationOrder):
     def cost(self, node):
         """
-        The cost of a eliminating a node is the number of edges that need to be added
+        The cost of eliminating a node is the number of edges that need to be added
         (fill in edges) to the graph due to its elimination
         """
         return len(list(self.fill_in_edges(node)))

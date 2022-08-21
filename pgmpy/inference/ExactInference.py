@@ -167,7 +167,7 @@ class VariableElimination(Inference):
         if isinstance(evidence, str):
             raise TypeError("evidence must be a list of strings")
 
-        # Dealing with the case when variables is not provided.
+        # Dealing with the case when variables are not provided.
         if not variables:
             all_factors = []
             for factor_li in self.factors.values():
@@ -720,7 +720,7 @@ class BeliefPropagation(Inference):
         """
         return self.sepset_beliefs
 
-    def _update_beliefs(self, sending_clique, recieving_clique, operation):
+    def _update_beliefs(self, sending_clique, receiving_clique, operation):
         """
         This is belief-update method.
 
@@ -728,7 +728,7 @@ class BeliefPropagation(Inference):
         ----------
         sending_clique: node (as the operation is on junction tree, node should be a tuple)
             Node sending the message
-        recieving_clique: node (as the operation is on junction tree, node should be a tuple)
+        receiving_clique: node (as the operation is on junction tree, node should be a tuple)
             Node receiving the message
         operation: str ('marginalize' | 'maximize')
             The operation to do for passing messages between nodes.
@@ -736,8 +736,8 @@ class BeliefPropagation(Inference):
         Takes belief of one clique and uses it to update the belief of the
         neighboring ones.
         """
-        sepset = frozenset(sending_clique).intersection(frozenset(recieving_clique))
-        sepset_key = frozenset((sending_clique, recieving_clique))
+        sepset = frozenset(sending_clique).intersection(frozenset(receiving_clique))
+        sepset_key = frozenset((sending_clique, receiving_clique))
 
         # \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
         # marginalize the clique over the sepset
@@ -746,7 +746,7 @@ class BeliefPropagation(Inference):
         )
 
         # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
-        self.clique_beliefs[recieving_clique] *= (
+        self.clique_beliefs[receiving_clique] *= (
             sigma / self.sepset_beliefs[sepset_key]
             if self.sepset_beliefs[sepset_key]
             else sigma
@@ -831,7 +831,7 @@ class BeliefPropagation(Inference):
         for clique in self.junction_tree.nodes():
             if not self._is_converged(operation=operation):
                 neighbors = self.junction_tree.neighbors(clique)
-                # update root's belief using nieighbor clique's beliefs
+                # update root's belief using neighbor clique's beliefs
                 # upward pass
                 for neighbor_clique in neighbors:
                     self._update_beliefs(neighbor_clique, clique, operation=operation)
@@ -995,7 +995,7 @@ class BeliefPropagation(Inference):
         clique_potential_list = [self.clique_beliefs[root_node]]
 
         # For other nodes in the subtree compute the clique potentials as follows
-        # As all the nodes are nothing but tuples so simple set(root_node) won't work at it would update the set with'
+        # As all the nodes are nothing but tuples so simple set(root_node) won't work at it would update the set with
         # all the elements of the tuple; instead use set([root_node]) as it would include only the tuple not the
         # internal elements within it.
         parent_nodes = set([root_node])

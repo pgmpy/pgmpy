@@ -302,7 +302,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Returns
         -------
         Identity factor: pgmpy.factors.discrete.DiscreteFactor.
-            Returns an factor with all values set to 1.
+            Returns a factor with all values set to 1.
 
         Examples
         --------
@@ -570,7 +570,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         Parameters
         ----------
         phi1: float or `DiscreteFactor` instance.
-            If float: the value is added to each value in the factor.
+            If float, the value is added to each value in the factor.
             DiscreteFactor to be added.
 
         inplace: boolean

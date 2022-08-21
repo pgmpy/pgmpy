@@ -16,7 +16,7 @@ class StructureScore(BaseEstimator):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -96,7 +96,7 @@ class K2Score(StructureScore):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -159,7 +159,7 @@ class BDeuScore(StructureScore):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -235,7 +235,7 @@ class BDsScore(BDeuScore):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
@@ -301,7 +301,7 @@ class BicScore(StructureScore):
         Parameters
         ----------
         data: pandas DataFrame object
-            datafame object where each column represents one variable.
+            dataframe object where each column represents one variable.
             (If some values in the data are missing the data cells should be set to `numpy.NaN`.
             Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
