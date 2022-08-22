@@ -53,7 +53,6 @@ Contributors
 * abhi95 <abhi.r.j95@gmail.com>
 * mailman_anchit <mailman@anchitja.in>
 * Alaa ElNouby <alaaelnouby@gmail.com>
-* Aleksandar Dimitriev <dimitriev_a@yahoo.com>
 * Max Baak <maxbaak@gmail.com>
 * Melissa Turcotte <meturcot@microsoft.com>
 * elkbrsathuji <elkana.baris@mail.huji.ac.il>
