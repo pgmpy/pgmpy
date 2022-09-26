@@ -364,6 +364,31 @@ class TestBayesianModelMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+    def test_get_random_cpds(self):
+        model = BayesianNetwork(DAG.get_random(n_nodes=5, edge_prob=0.5).edges())
+
+        param_model = model.get_random_cpds()
+        self.assertEqual(len(param_model.cpds), 5)
+        self.assertTrue(param_model.check_model())
+
+        param_model = model.get_random_cpds(n_states=4)
+        self.assertEqual(len(param_model.cpds), 5)
+        self.assertTrue(param_model.check_model())
+        self.assertTrue(
+            all([card == 4 for var, card in param_model.get_cardinality().items()])
+        )
+
+        n_states_dict = {0: 3, 1: 5, 2: 4, 3: 9, 4: 3}
+        param_model = model.get_random_cpds(n_states=n_states_dict)
+        self.assertEqual(len(param_model.cpds), 5)
+        self.assertTrue(param_model.check_model())
+        for var in range(5):
+            self.assertEqual(param_model.get_cardinality(var), n_states_dict[var])
+
+        model.get_random_cpds(inplace=True)
+        self.assertEqual(len(model.cpds), 5)
+        self.assertTrue(model.check_model())
+
     def test_remove_node(self):
         self.G1.remove_node("diff")
         self.assertEqual(sorted(self.G1.nodes()), sorted(["grade", "intel"]))
