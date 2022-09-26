@@ -363,7 +363,7 @@ class BayesianNetwork(DAG):
         2
         """
 
-        if node:
+        if node is not None:
             return self.get_cpds(node).cardinality[0]
         else:
             cardinalities = defaultdict(int)
@@ -1009,6 +1009,44 @@ class BayesianNetwork(DAG):
 
         bn_model.add_cpds(*cpds)
         return bn_model
+
+    def get_random_cpds(self, n_states=None, inplace=False):
+        """
+        Given a `model`, generates and adds random `TabularCPD` for each node resulting in a fully parameterized network.
+
+        Parameters
+        ----------
+        n_states: int or dict (default: None)
+            The number of states of each variable in the `model`. If None, randomly
+            generates the number of states.
+
+        inplace: bool (default: False)
+            If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
+            a copy of the model.
+        """
+        if isinstance(n_states, int):
+            n_states = {var: n_states for var in self.nodes()}
+        elif isinstance(n_states, dict):
+            if set(n_states.keys()) != set(self.nodes()):
+                raise ValueError("Number of states not specified for each variable")
+        elif n_states is None:
+            n_states = {
+                var: np.random.randint(low=1, high=5, size=1)[0] for var in self.nodes()
+            }
+
+        model = self if inplace else self.copy()
+        cpds = []
+        for node in model.nodes():
+            parents = list(model.predecessors(node))
+            cpds.append(
+                TabularCPD.get_random(
+                    variable=node, evidence=parents, cardinality=n_states
+                )
+            )
+
+        model.add_cpds(*cpds)
+        if not inplace:
+            return model
 
     def do(self, nodes, inplace=False):
         """
