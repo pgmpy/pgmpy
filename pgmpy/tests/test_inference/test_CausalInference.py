@@ -502,3 +502,21 @@ class TestEstimator(unittest.TestCase):
 
         infer = CausalInference(model=model)
         self.assertRaises(ValueError, infer.estimate_ate, "X", "Y", data)
+
+    def test_estimate_multiple_paths(self):
+        model = BayesianNetwork(
+            [("X", "Z"), ("U", "X"), ("U", "Y"), ("Z", "Y"), ("X", "P1"), ("P1", "Y")],
+            latents=["U"],
+        )
+
+        U = np.random.randn(10000)
+        X = 0.3 * U + np.random.randn(10000)
+        P1 = 0.9 * X + np.random.randn(10000)
+        Z = 0.8 * X + 0.3 * np.random.randn(10000)
+        Y = 0.5 * U + 0.9 * Z + 0.1 * P1 + 0.4 * np.random.randn(10000)
+        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z, "P1": P1})
+
+        infer = CausalInference(model=model)
+        self.assertAlmostEqual(
+            infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1
+        )
