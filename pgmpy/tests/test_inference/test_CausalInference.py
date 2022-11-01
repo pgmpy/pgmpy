@@ -4,9 +4,11 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
+from pgmpy.models import BayesianNetwork
+
+np.random.seed(42)
 
 
 class TestCausalGraphMethods(unittest.TestCase):
@@ -473,4 +475,48 @@ class TestEstimator(unittest.TestCase):
         )
         inference = CausalInference(model=game1)
         ate = inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
-        self.assertAlmostEqual(ate, 0, places=0)
+        self.assertAlmostEqual(ate, 0, places=1)
+
+    def test_estimate_frontdoor(self):
+        model = BayesianNetwork(
+            [("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"]
+        )
+        U = np.random.randn(10000)
+        X = 0.3 * U + np.random.randn(10000)
+        Z = 0.8 * X + 0.3 * np.random.randn(10000)
+        Y = 0.5 * U + 0.9 * Z + 0.4 * np.random.randn(10000)
+        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+        infer = CausalInference(model=model)
+        ate = infer.estimate_ate("X", "Y", data=data, estimator_type="linear")
+        self.assertAlmostEqual(ate, 0.8 * 0.9, places=1)
+
+    def test_estimate_fail_no_adjustment(self):
+        model = BayesianNetwork([("X", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
+
+        U = np.random.randn(10000)
+        X = 0.3 * U + np.random.randn(10000)
+        Z = 0.8 * X + 0.3 * np.random.randn(10000)
+        Y = 0.5 * U + 0.9 * Z + 0.4 * np.random.randn(10000)
+        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+        infer = CausalInference(model=model)
+        self.assertRaises(ValueError, infer.estimate_ate, "X", "Y", data)
+
+    def test_estimate_multiple_paths(self):
+        model = BayesianNetwork(
+            [("X", "Z"), ("U", "X"), ("U", "Y"), ("Z", "Y"), ("X", "P1"), ("P1", "Y")],
+            latents=["U"],
+        )
+
+        U = np.random.randn(10000)
+        X = 0.3 * U + np.random.randn(10000)
+        P1 = 0.9 * X + np.random.randn(10000)
+        Z = 0.8 * X + 0.3 * np.random.randn(10000)
+        Y = 0.5 * U + 0.9 * Z + 0.1 * P1 + 0.4 * np.random.randn(10000)
+        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z, "P1": P1})
+
+        infer = CausalInference(model=model)
+        self.assertAlmostEqual(
+            infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1
+        )
