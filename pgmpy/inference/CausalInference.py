@@ -1,14 +1,14 @@
 from collections.abc import Iterable
 from itertools import chain, product
 
-import numpy as np
 import networkx as nx
+import numpy as np
 from tqdm.auto import tqdm
 
-from pgmpy.models import BayesianNetwork
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.estimators.LinearModel import LinearEstimator
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.global_vars import SHOW_PROGRESS
+from pgmpy.models import BayesianNetwork
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -172,6 +172,9 @@ class CausalInference(object):
                 continue
             if self.is_valid_backdoor_adjustment_set(X, Y, s):
                 valid_adjustment_sets.append(frozenset(s))
+
+        if len(valid_adjustment_sets) == 0:
+            raise ValueError(f"No valid adjustment set found for {X} -> {Y}")
 
         return frozenset(valid_adjustment_sets)
 
@@ -365,23 +368,33 @@ class CausalInference(object):
             print(
                 f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}"
             )
+        all_simple_paths = nx.all_simple_paths(self.model, X, Y)
+        all_path_effects = []
+        for path in all_simple_paths:
+            causal_effect = []
+            for (x1, x2) in zip(path, path[1:]):
+                if isinstance(estimand_strategy, frozenset):
+                    adjustment_set = frozenset({estimand_strategy})
+                    assert self.is_valid_backdoor_adjustment_set(
+                        x1, x2, Z=adjustment_set
+                    )
+                elif estimand_strategy in ["smallest", "all"]:
+                    adjustment_sets = self.get_all_backdoor_adjustment_sets(x1, x2)
+                    if estimand_strategy == "smallest":
+                        adjustment_sets = frozenset(
+                            {self.simple_decision(adjustment_sets)}
+                        )
 
-        if isinstance(estimand_strategy, frozenset):
-            adjustment_set = frozenset({estimand_strategy})
-            assert self.is_valid_backdoor_adjustment_set(X, Y, Z=adjustment_set)
-        elif estimand_strategy in ["smallest", "all"]:
-            adjustment_sets = self.get_all_backdoor_adjustment_sets(X, Y)
-            if estimand_strategy == "smallest":
-                adjustment_sets = frozenset({self.simple_decision(adjustment_sets)})
+                if estimator_type == "linear":
+                    self.estimator = LinearEstimator(self.model)
 
-        if estimator_type == "linear":
-            self.estimator = LinearEstimator(self.model)
-
-        ate = [
-            self.estimator.fit(X=X, Y=Y, Z=s, data=data, **kwargs)._get_ate()
-            for s in adjustment_sets
-        ]
-        return np.mean(ate)
+                ate = [
+                    self.estimator.fit(X=x1, Y=x2, Z=s, data=data, **kwargs)._get_ate()
+                    for s in adjustment_sets
+                ]
+                causal_effect.append(np.mean(ate))
+            all_path_effects.append(np.prod(causal_effect))
+        return np.sum(all_path_effects)
 
     def get_proper_backdoor_graph(self, X, Y, inplace=False):
         """
