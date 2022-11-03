@@ -6,7 +6,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ["3.8", "3.9", "3.10"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
       - name: Print python info
-        run: | 
+        run: |
           which python
           python --version
       - name: Install dependencies
@@ -27,8 +27,8 @@ jobs:
         run: |
           black --diff .
           black --check .
-      - name: Print package versions 
-        run: | 
+      - name: Print package versions
+        run: |
           pip freeze
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
