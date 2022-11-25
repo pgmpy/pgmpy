@@ -30,7 +30,7 @@ class BayesianEstimator(ParameterEstimator):
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(
-        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None, n_jobs=-1
+        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None, n_jobs=-1, weighted=False
     ):
         """
         Method to estimate the model parameters (CPDs).
@@ -52,6 +52,11 @@ class BayesianEstimator(ParameterEstimator):
                 the size for each variable separately.
             - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to 1,
                 regardless of the cardinality of the variable.
+
+        weighted: bool
+            If weighted=True, the data must contain a `_weight` column specifying the
+            weight of each datapoint (row). If False, assigns an equal weight to each
+            datapoint.
 
         Returns
         -------
@@ -91,6 +96,7 @@ class BayesianEstimator(ParameterEstimator):
                 prior_type=prior_type,
                 equivalent_sample_size=_equivalent_sample_size,
                 pseudo_counts=_pseudo_counts,
+                weighted=weighted,
             )
             return cpd
 
@@ -101,7 +107,7 @@ class BayesianEstimator(ParameterEstimator):
         return parameters
 
     def estimate_cpd(
-        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5
+        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5, weighted=False
     ):
         """
         Method to estimate the CPD for a given variable.
@@ -125,6 +131,11 @@ class BayesianEstimator(ParameterEstimator):
                  `equivalent_sample_size/(node_cardinality*np.prod(parents_cardinalities))`.
             - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every
               pseudo_count to 1, regardless of the cardinality of the variable.
+
+        weighted: bool
+            If weighted=True, the data must contain a `_weight` column specifying the
+            weight of each datapoint (row). If False, assigns an equal weight to each
+            datapoint.
 
         Returns
         -------
@@ -193,7 +204,7 @@ class BayesianEstimator(ParameterEstimator):
         else:
             raise ValueError("'prior_type' not specified")
 
-        state_counts = self.state_counts(node)
+        state_counts = self.state_counts(node, weighted=weighted)
         bayesian_counts = state_counts + pseudo_counts
 
         cpd = TabularCPD(
