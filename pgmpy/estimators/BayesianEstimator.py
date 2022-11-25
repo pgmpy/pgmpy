@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import numbers
 from itertools import chain
 from warnings import warn
 
-import numbers
 import numpy as np
 from joblib import Parallel, delayed
 
@@ -30,7 +30,12 @@ class BayesianEstimator(ParameterEstimator):
         super(BayesianEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(
-        self, prior_type="BDeu", equivalent_sample_size=5, pseudo_counts=None, n_jobs=-1, weighted=False
+        self,
+        prior_type="BDeu",
+        equivalent_sample_size=5,
+        pseudo_counts=None,
+        n_jobs=-1,
+        weighted=False,
     ):
         """
         Method to estimate the model parameters (CPDs).
@@ -107,7 +112,12 @@ class BayesianEstimator(ParameterEstimator):
         return parameters
 
     def estimate_cpd(
-        self, node, prior_type="BDeu", pseudo_counts=[], equivalent_sample_size=5, weighted=False
+        self,
+        node,
+        prior_type="BDeu",
+        pseudo_counts=[],
+        equivalent_sample_size=5,
+        weighted=False,
     ):
         """
         Method to estimate the CPD for a given variable.
