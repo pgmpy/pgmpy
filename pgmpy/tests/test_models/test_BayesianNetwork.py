@@ -807,6 +807,65 @@ class TestBayesianModelCPD(unittest.TestCase):
         del self.G
 
 
+class TestBayesianModelSampleProb(unittest.TestCase):
+    def setUp(self):
+        self.model = get_example_model("asia")
+        self.samples = self.model.simulate(int(1e5))
+        self.evidence1 = self.samples.iloc[0, :].to_dict()
+
+        self.evidence2 = self.evidence1.copy()
+        del self.evidence2["tub"]
+
+        self.evidence3 = self.evidence2.copy()
+        del self.evidence3["xray"]
+
+    def test_prob_values(self):
+        sample_prob1 = np.round(
+            self.samples.loc[
+                np.all(
+                    self.samples[list(self.evidence1)] == pd.Series(self.evidence1),
+                    axis=1,
+                )
+            ].shape[0]
+            / 1e5,
+            decimals=2,
+        )
+        self.assertEqual(
+            sample_prob1,
+            np.round(self.model.get_state_probability(self.evidence1), decimals=2),
+        )
+
+        sample_prob2 = np.round(
+            self.samples.loc[
+                np.all(
+                    self.samples[list(self.evidence2)] == pd.Series(self.evidence2),
+                    axis=1,
+                )
+            ].shape[0]
+            / 1e5,
+            decimals=2,
+        )
+        self.assertEqual(
+            sample_prob2,
+            np.round(self.model.get_state_probability(self.evidence2), decimals=2),
+        )
+
+        sample_prob3 = np.round(
+            self.samples.loc[
+                np.all(
+                    self.samples[list(self.evidence3)] == pd.Series(self.evidence3),
+                    axis=1,
+                )
+            ].shape[0]
+            / 1e5,
+            decimals=2,
+        )
+        self.assertEqual(
+            sample_prob3,
+            np.round(self.model.get_state_probability(self.evidence3), decimals=2),
+        )
+
+
 class TestBayesianModelFitPredict(unittest.TestCase):
     def setUp(self):
         self.model_disconnected = BayesianNetwork()

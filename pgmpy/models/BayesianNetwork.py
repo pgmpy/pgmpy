@@ -823,6 +823,56 @@ class BayesianNetwork(DAG):
                     pred_values[k + "_" + str(state)].append(v.values[l])
         return pd.DataFrame(pred_values, index=data.index)
 
+    def get_state_probability(self, states):
+        """
+        Given a fully specified Bayesian Network, returns the probability of the given set
+        of states.
+
+        Parameters
+        ----------
+        state: dict
+            dict of the form {variable: state}
+
+        Returns
+        -------
+        float: The probability value
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('asia')
+        >>> model.get_state_probability({'either': 'no', 'tub': 'no', 'xray': 'yes', 'bronc': 'no'})
+        0.02605122
+        """
+        # Step 1: Check that all variables and states are in the model.
+        self.check_model()
+        for var, state in states.items():
+            if var not in self.nodes():
+                raise ValueError(f"{var} not in the model.")
+            if state not in self.states[var]:
+                raise ValueError(f"State: {state} not define for {var}")
+
+        # Step 2: Missing variables in states.
+        missing_vars = list(set(self.nodes()) - set(states.keys()))
+        missing_var_states = {var: self.states[var] for var in missing_vars}
+
+        # Step 2: Compute the probability
+        final_prob = 0
+        for state_comb in itertools.product(*missing_var_states.values()):
+            temp_states = {
+                **{var: state_comb[i] for i, var in enumerate(missing_vars)},
+                **states,
+            }
+            prob = 1
+            for cpd in self.cpds:
+                index = []
+                for var in cpd.variables:
+                    index.append(cpd.name_to_no[var][temp_states[var]])
+                prob *= cpd.values[tuple(index)]
+            final_prob += prob
+
+        return final_prob
+
     def get_factorized_product(self, latex=False):
         # TODO: refer to IMap class for explanation why this is not implemented.
         pass
