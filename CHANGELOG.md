@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.21] - 2022-12-31
+### Added
+1. `BayesianNetwork.get_state_probability` method to compute the probability of a given evidence.
+2. `BayesianEstimator.estimate_cpd` accepts weighted datasets.
+
+### Fixed
+1. Fixes bug in `CausalInference.estimate_ate` with front-door criterion.
+2. Fixes inference bugs when variable has a single state.
+
 ## [0.1.20] - 2022-09-30
 ### Added
 1. `BayesianNetwork.get_random_cpds` method to randomly parameterize a network structure.
