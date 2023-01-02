@@ -354,6 +354,7 @@ class BicScore(StructureScore):
 
         return score
 
+
 class AICScore(StructureScore):
     def __init__(self, data, **kwargs):
         """
