@@ -241,7 +241,7 @@ class TestHillClimbEstimator(unittest.TestCase):
         )
 
     def test_estimate(self):
-        for score in ["k2score", "bdeuscore", "bdsscore", "bicscore"]:
+        for score in ["k2score", "bdeuscore", "bdsscore", "bicscore", "AICScore"]:
             dag = self.est_rand.estimate(scoring_method=score, show_progress=False)
             dag = self.est_titanic1.estimate(scoring_method=score, show_progress=False)
 
