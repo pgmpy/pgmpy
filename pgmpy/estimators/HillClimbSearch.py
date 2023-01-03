@@ -13,6 +13,7 @@ from pgmpy.estimators import (
     BDeuScore,
     BDsScore,
     BicScore,
+    AICScore,
 )
 from pgmpy.base import DAG
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -165,7 +166,7 @@ class HillClimbSearch(StructureEstimator):
         ----------
         scoring_method: str or StructureScore instance
             The score to be optimized during structure estimation.  Supported
-            structure scores: k2score, bdeuscore, bdsscore, bicscore. Also accepts a
+            structure scores: k2score, bdeuscore, bdsscore, bicscore, aicscore. Also accepts a
             custom score, but it should be an instance of `StructureScore`.
 
         start_dag: DAG instance
@@ -233,6 +234,7 @@ class HillClimbSearch(StructureEstimator):
             "bdeuscore": BDeuScore,
             "bdsscore": BDsScore,
             "bicscore": BicScore,
+            "aicscore": AICScore,
         }
         if (
             (
@@ -241,7 +243,7 @@ class HillClimbSearch(StructureEstimator):
             )
         ) and (not isinstance(scoring_method, StructureScore)):
             raise ValueError(
-                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, or an instance of StructureScore"
+                "scoring_method should either be one of k2score, bdeuscore, bicscore, bdsscore, aicscore, or an instance of StructureScore"
             )
 
         if isinstance(scoring_method, str):

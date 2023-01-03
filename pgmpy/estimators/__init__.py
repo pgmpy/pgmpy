@@ -7,6 +7,7 @@ from pgmpy.estimators.StructureScore import (
     BDeuScore,
     BDsScore,
     BicScore,
+    AICScore,
 )
 from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
 from pgmpy.estimators.HillClimbSearch import HillClimbSearch
@@ -31,6 +32,7 @@ __all__ = [
     "BDeuScore",
     "BDsScore",
     "BicScore",
+    "AICScore",
     "ScoreCache",
     "SEMEstimator",
     "IVEstimator",
