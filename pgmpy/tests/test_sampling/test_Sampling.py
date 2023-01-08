@@ -4,9 +4,8 @@ import numpy as np
 from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
-from pgmpy.inference import DBNInference, VariableElimination
+from pgmpy.inference import VariableElimination
 from pgmpy.models import BayesianNetwork
-from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.models import MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
 
@@ -445,6 +444,39 @@ class TestGibbsSampling(unittest.TestCase):
         self.bayesian_model.add_edges_from([("diff", "grade"), ("intel", "grade")])
         self.bayesian_model.add_cpds(diff_cpd, intel_cpd, grade_cpd)
 
+        # Another test Bayesian model
+        cpt_cloudy = TabularCPD("Cloudy", 2, [[0.5], [0.5]])
+        cpt_sprinkler = TabularCPD(
+            "Sprinkler",
+            2,
+            [[0.5, 0.9], [0.5, 0.1]],
+            evidence=["Cloudy"],
+            evidence_card=[2],
+        )
+        cpt_rain = TabularCPD(
+            "Rain", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["Cloudy"], evidence_card=[2]
+        )
+        cpt_wet_grass = TabularCPD(
+            "Wet_Grass",
+            2,
+            [[1, 0.1, 0.1, 0.01], [0, 0.9, 0.9, 0.99]],
+            evidence=["Sprinkler", "Rain"],
+            evidence_card=[2, 2],
+        )
+
+        self.bayesian_model_sprinkler = BayesianNetwork()
+        self.bayesian_model_sprinkler.add_edges_from(
+            [
+                ("Cloudy", "Sprinkler"),
+                ("Cloudy", "Rain"),
+                ("Sprinkler", "Wet_Grass"),
+                ("Rain", "Wet_Grass"),
+            ]
+        )
+        self.bayesian_model_sprinkler.add_cpds(
+            cpt_cloudy, cpt_sprinkler, cpt_rain, cpt_wet_grass
+        )
+
         # A test Markov model
         self.markov_model = MarkovNetwork([("A", "B"), ("C", "B"), ("B", "D")])
         factor_ab = DiscreteFactor(["A", "B"], [2, 3], [1, 2, 3, 4, 5, 6])
@@ -458,6 +490,7 @@ class TestGibbsSampling(unittest.TestCase):
 
     def tearDown(self):
         del self.bayesian_model
+        del self.bayesian_model_sprinkler
         del self.markov_model
 
     @patch("pgmpy.sampling.GibbsSampling._get_kernel_from_markov_model", autospec=True)
@@ -471,6 +504,17 @@ class TestGibbsSampling(unittest.TestCase):
         gibbs._get_kernel_from_bayesian_model(self.bayesian_model)
         self.assertListEqual(list(gibbs.variables), list(self.bayesian_model.nodes()))
         self.assertDictEqual(gibbs.cardinalities, {"diff": 2, "intel": 2, "grade": 3})
+
+    def test_get_kernel_from_bayesian_model_sprinkler(self):
+        gibbs = GibbsSampling()
+        gibbs._get_kernel_from_bayesian_model(self.bayesian_model_sprinkler)
+        self.assertListEqual(
+            list(gibbs.variables), list(self.bayesian_model_sprinkler.nodes())
+        )
+        self.assertDictEqual(
+            gibbs.cardinalities,
+            {"Cloudy": 2, "Rain": 2, "Sprinkler": 2, "Wet_Grass": 2},
+        )
 
     def test_get_kernel_from_markov_model(self):
         gibbs = GibbsSampling()
@@ -489,6 +533,16 @@ class TestGibbsSampling(unittest.TestCase):
         self.assertTrue(set(sample["diff"]).issubset({0, 1}))
         self.assertTrue(set(sample["intel"]).issubset({0, 1}))
         self.assertTrue(set(sample["grade"]).issubset({0, 1, 2}))
+
+    def test_sample_sprinkler(self):
+        gibbs = GibbsSampling(self.bayesian_model_sprinkler)
+        nodes = set(self.bayesian_model_sprinkler.nodes)
+        sample = gibbs.sample(size=2)
+        self.assertEqual(len(sample), 2)
+        self.assertEqual(len(sample.columns), 4)
+        self.assertEqual(nodes, set(sample.columns))
+        for node in nodes:
+            self.assertTrue(set(sample[node]).issubset({0, 1}))
 
     def test_sample_limit(self):
         samples = self.gibbs.sample(size=int(1e4))
