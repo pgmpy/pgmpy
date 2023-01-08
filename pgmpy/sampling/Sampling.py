@@ -1,7 +1,6 @@
 import itertools
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
@@ -9,7 +8,6 @@ from tqdm.auto import tqdm
 from pgmpy.factors import factor_product
 from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.models import BayesianNetwork
-from pgmpy.models import DynamicBayesianNetwork as DBN
 from pgmpy.models import MarkovChain, MarkovNetwork
 from pgmpy.sampling import BayesianModelInference, _return_samples
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
@@ -424,14 +422,14 @@ class GibbsSampling(MarkovChain):
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
             other_cards = [self.cardinalities[v] for v in other_vars]
-            cpds = [cpd for cpd in model.cpds if var in cpd.scope()]
-            prod_cpd = factor_product(*cpds)
             kernel = {}
-            scope = set(prod_cpd.scope())
+            factors = [cpd.to_factor() for cpd in model.cpds if var in cpd.scope()]
+            factor = factor_product(*factors)
+            scope = set(factor.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
                 states = [State(v, s) for v, s in zip(other_vars, tup) if v in scope]
-                prod_cpd_reduced = prod_cpd.to_factor().reduce(states, inplace=False)
-                kernel[tup] = prod_cpd_reduced.values / sum(prod_cpd_reduced.values)
+                reduced_factor = factor.reduce(states, inplace=False)
+                kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
 
     def _get_kernel_from_markov_model(self, model):
