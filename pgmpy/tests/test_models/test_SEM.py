@@ -1,11 +1,11 @@
 import os
 import unittest
 
-import numpy as np
 import networkx as nx
+import numpy as np
 import numpy.testing as npt
 
-from pgmpy.models import SEM, SEMGraph, SEMAlg
+from pgmpy.models import SEM, SEMAlg, SEMGraph
 
 
 class TestSEM(unittest.TestCase):
@@ -102,7 +102,7 @@ class TestSEM(unittest.TestCase):
         self.assertDictEqual(self.demo.graph.edges[("eta2", "y8")], {"weight": np.NaN})
 
         npt.assert_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.demo.err_graph,
                 nodelist=sorted(self.demo.err_graph.nodes()),
                 weight=None,
@@ -588,7 +588,7 @@ class TestSEMGraph(unittest.TestCase):
         self.assertDictEqual(self.demo.graph.edges[("eta2", "y8")], {"weight": np.NaN})
 
         npt.assert_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.demo.err_graph,
                 nodelist=sorted(self.demo.err_graph.nodes()),
                 weight=None,
@@ -872,7 +872,7 @@ class TestSEMGraph(unittest.TestCase):
         )
 
         npt.assert_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.union.err_graph,
                 nodelist=sorted(self.union.err_graph.nodes()),
                 weight=None,
@@ -1250,10 +1250,10 @@ class TestSEMGraph(unittest.TestCase):
             set(self.demo.err_graph.nodes()), set(demo_graph.err_graph.nodes())
         )
         npt.assert_array_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.demo.err_graph, nodelist=sorted(self.demo.err_graph.nodes())
             ),
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 demo_graph.err_graph, nodelist=sorted(demo_graph.err_graph.nodes())
             ),
         )
@@ -1282,10 +1282,10 @@ class TestSEMGraph(unittest.TestCase):
             set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes())
         )
         npt.assert_array_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.union.err_graph, nodelist=sorted(self.union.err_graph.nodes())
             ),
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 union_graph.err_graph, nodelist=sorted(union_graph.err_graph.nodes())
             ),
         )
@@ -1315,12 +1315,12 @@ class TestSEMGraph(unittest.TestCase):
             set(demo_params_graph.err_graph.nodes()),
         )
         npt.assert_array_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.demo_params.err_graph,
                 nodelist=sorted(self.demo_params.err_graph.nodes()),
                 weight=None,
             ),
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 demo_graph.err_graph,
                 nodelist=sorted(demo_params_graph.err_graph.nodes()),
                 weight=None,
@@ -1351,10 +1351,10 @@ class TestSEMGraph(unittest.TestCase):
             set(self.custom.err_graph.nodes()), set(custom_graph.err_graph.nodes())
         )
         npt.assert_array_equal(
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 self.custom.err_graph, nodelist=sorted(self.custom.err_graph.nodes())
             ),
-            nx.to_numpy_matrix(
+            nx.to_numpy_array(
                 custom_graph.err_graph, nodelist=sorted(custom_graph.err_graph.nodes())
             ),
         )

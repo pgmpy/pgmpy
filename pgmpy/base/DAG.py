@@ -1051,7 +1051,7 @@ class DAG(nx.DiGraph):
 
         # Step 2: Use the upper triangular part of the matrix as adjacency.
         nodes = list(range(n_nodes))
-        edges = nx.convert_matrix.from_numpy_matrix(
+        edges = nx.convert_matrix.from_numpy_array(
             np.triu(adj_mat, k=1), create_using=nx.DiGraph
         ).edges()
 
