@@ -1,14 +1,13 @@
+import itertools
+import warnings
+
 import networkx as nx
 import numpy as np
-import warnings
-import itertools
-
 from networkx.algorithms.dag import descendants
-from pyparsing import OneOrMore, Word, Optional, Suppress, alphanums, nums
+from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
 
 from pgmpy.base import DAG
 from pgmpy.global_vars import HAS_PANDAS
-
 
 if HAS_PANDAS:
     import pandas as pd
@@ -596,12 +595,12 @@ class SEMGraph(DAG):
         to_standard_lisrel: Converts to the standard lisrel format and returns the parameters.
         """
         nodelist = list(self.observed) + list(self.latents)
-        graph_adj = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight=None)
-        graph_fixed = nx.to_numpy_matrix(self.graph, nodelist=nodelist, weight="weight")
+        graph_adj = nx.to_numpy_array(self.graph, nodelist=nodelist, weight=None)
+        graph_fixed = nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight")
 
-        err_adj = nx.to_numpy_matrix(self.err_graph, nodelist=nodelist, weight=None)
+        err_adj = nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight=None)
         np.fill_diagonal(err_adj, 1.0)  # Variance exists for each error term.
-        err_fixed = nx.to_numpy_matrix(
+        err_fixed = nx.to_numpy_array(
             self.err_graph, nodelist=nodelist, weight="weight"
         )
 
@@ -679,7 +678,7 @@ class SEMGraph(DAG):
         p, q, m, n = (len(y_vars), len(x_vars), len(eta_vars), len(xi_vars))
 
         nodelist = y_vars + x_vars + eta_vars + xi_vars
-        adj_matrix = nx.to_numpy_matrix(graph, nodelist=nodelist, weight=weight).T
+        adj_matrix = nx.to_numpy_array(graph, nodelist=nodelist, weight=weight).T
 
         B_mask = adj_matrix[p + q : p + q + m, p + q : p + q + m]
         gamma_mask = adj_matrix[p + q : p + q + m, p + q + m :]
@@ -687,7 +686,7 @@ class SEMGraph(DAG):
         wedge_x_mask = adj_matrix[p : p + q, p + q + m :]
 
         err_nodelist = y_vars + x_vars + eta_vars + xi_vars
-        err_adj_matrix = nx.to_numpy_matrix(
+        err_adj_matrix = nx.to_numpy_array(
             err_graph, nodelist=err_nodelist, weight=weight
         )
 
@@ -910,14 +909,14 @@ class SEMAlg:
 
         err_var = {var: np.diag(self.zeta)[i] for i, var in enumerate(self.eta)}
         graph = nx.relabel_nodes(
-            nx.from_numpy_matrix(self.B.T, create_using=nx.DiGraph),
+            nx.from_numpy_array(self.B.T, create_using=nx.DiGraph),
             mapping={i: self.eta[i] for i in range(self.B.shape[0])},
         )
         # Fill zeta diagonal with 0's as they represent variance and would add self loops in the graph.
         zeta = self.zeta.copy()
         np.fill_diagonal(zeta, 0)
         err_graph = nx.relabel_nodes(
-            nx.from_numpy_matrix(zeta.T, create_using=nx.Graph),
+            nx.from_numpy_array(zeta.T, create_using=nx.Graph),
             mapping={i: self.eta[i] for i in range(self.zeta.shape[0])},
         )
 
