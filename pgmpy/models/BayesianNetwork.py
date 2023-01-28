@@ -1327,7 +1327,8 @@ class BayesianNetwork(DAG):
 
     def save(self, filename, filetype="bif"):
         """
-        Writes the model to a file.
+        Writes the model to a file. Plese avoid using any special characters or
+        spaces in variable or state names.
 
         Parameters
         ----------
@@ -1369,15 +1370,15 @@ class BayesianNetwork(DAG):
     @staticmethod
     def load(filename, filetype="bif"):
         """
-        Writes the model to a file.
+        Read the model from a file.
 
         Parameters
         ----------
         filename: str
-            The path along with the filename where to write the file.
+            The path along with the filename where to read the file.
 
         filetype: str (default: bif)
-            The format in which to write the model to file. Can be one of
+            The format of the model file. Can be one of
             the following: bif, uai, xmlbif.
 
         Examples
