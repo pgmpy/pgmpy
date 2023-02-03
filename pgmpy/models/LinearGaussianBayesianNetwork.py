@@ -169,11 +169,13 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
         for node_idx in range(len(variables)):
             cpd = self.get_cpds(variables[node_idx])
+            coefficients = cpd.mean.copy()
+            coefficients.pop(0)
             mean[node_idx] = (
                 sum(
                     [
                         coeff * mean[variables.index(parent)]
-                        for coeff, parent in zip(cpd.mean, cpd.evidence)
+                        for coeff, parent in zip(coefficients, cpd.evidence)
                     ]
                 )
                 + cpd.mean[0]
@@ -184,7 +186,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                         coeff
                         * coeff
                         * covariance[variables.index(parent), variables.index(parent)]
-                        for coeff, parent in zip(cpd.mean, cpd.evidence)
+                        for coeff, parent in zip(coefficients, cpd.evidence)
                     ]
                 )
                 + cpd.variance
@@ -198,10 +200,12 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                     ]
                 else:
                     cpd_j = self.get_cpds(variables[node_j_idx])
+                    coefficients = cpd_j.mean.copy()
+                    coefficients.pop(0)
                     covariance[node_i_idx, node_j_idx] = sum(
                         [
                             coeff * covariance[node_i_idx, variables.index(parent)]
-                            for coeff, parent in zip(cpd_j.mean, cpd_j.evidence)
+                            for coeff, parent in zip(coefficients, cpd_j.evidence)
                         ]
                     )
 
