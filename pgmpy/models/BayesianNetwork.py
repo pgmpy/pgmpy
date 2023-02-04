@@ -1368,7 +1368,7 @@ class BayesianNetwork(DAG):
             writer.write_xmlbif(filename=filename)
 
     @staticmethod
-    def load(filename, filetype="bif"):
+    def load(filename, filetype="bif", **kwargs):
         """
         Read the model from a file.
 
@@ -1380,6 +1380,10 @@ class BayesianNetwork(DAG):
         filetype: str (default: bif)
             The format of the model file. Can be one of
             the following: bif, uai, xmlbif.
+
+        kwargs: kwargs
+            Any additional arguments for the reader class or get_model method.
+            Please refer the file format class for details.
 
         Examples
         --------
@@ -1395,8 +1399,18 @@ class BayesianNetwork(DAG):
         if filetype == "bif":
             from pgmpy.readwrite import BIFReader
 
-            reader = BIFReader(path=filename)
-            return reader.get_model()
+            if "n_jobs" in kwargs:
+                n_jobs = kwargs["n_jobs"]
+            else:
+                n_jobs = -1
+
+            if "state_name_type" in kwargs:
+                state_name_type = kwargs["state_name_type"]
+            else:
+                state_name_type = str
+
+            reader = BIFReader(path=filename, n_jobs=n_jobs)
+            return reader.get_model(state_name_type=state_name_type)
 
         elif filetype == "uai":
             from pgmpy.readwrite import UAIReader
