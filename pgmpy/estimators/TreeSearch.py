@@ -167,7 +167,6 @@ class TreeSearch(StructureEstimator):
 
         # Step 4: If estimator_type = "tan":
         elif estimator_type == "tan":
-
             # Step 4.1: Checks root_node != class_node
             if self.root_node == class_node:
                 raise ValueError(

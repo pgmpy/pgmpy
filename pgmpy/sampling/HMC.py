@@ -70,7 +70,6 @@ class HamiltonianMC(object):
     """
 
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
-
         if not issubclass(grad_log_pdf, BaseGradLogPDF):
             raise TypeError(
                 "grad_log_pdf must be an instance of "
@@ -285,7 +284,6 @@ class HamiltonianMC(object):
 
         lsteps = int(max(1, round(trajectory_length / stepsize, 0)))
         for i in tqdm(range(1, num_samples)):
-
             # Generating sample
             position_m, _ = self._sample(
                 position_m, trajectory_length, stepsize, lsteps
@@ -365,7 +363,6 @@ class HamiltonianMC(object):
         position_m = initial_pos.copy()
 
         for i in range(0, num_samples):
-
             position_m, _ = self._sample(
                 position_m, trajectory_length, stepsize, lsteps
             )
@@ -426,7 +423,6 @@ class HamiltonianMCDA(HamiltonianMC):
     def __init__(
         self, model, grad_log_pdf=None, simulate_dynamics=LeapFrog, delta=0.65
     ):
-
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
             raise ValueError("delta should be a floating value in between 0 and 1")
 
@@ -547,7 +543,6 @@ class HamiltonianMCDA(HamiltonianMC):
         position_m = initial_pos
 
         for i in tqdm(range(1, num_samples)):
-
             # Generating sample
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
             samples[i] = tuple(position_m)
@@ -636,7 +631,6 @@ class HamiltonianMCDA(HamiltonianMC):
         num_adapt += 1
 
         for i in range(1, num_samples + 1):
-
             position_m, alpha = self._sample(position_m, trajectory_length, stepsize)
 
             if i <= num_adapt:

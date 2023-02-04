@@ -1,9 +1,10 @@
 import unittest
+
 import numpy as np
 
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import ClusterGraph
 from pgmpy.tests import help_functions as hf
-from pgmpy.factors.discrete import DiscreteFactor
 
 
 class TestClusterGraphCreation(unittest.TestCase):
@@ -96,7 +97,6 @@ class TestClusterGraphMethods(unittest.TestCase):
         self.graph = ClusterGraph()
 
     def test_get_cardinality(self):
-
         self.graph.add_edges_from(
             [(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))]
         )

@@ -283,11 +283,10 @@ class PC(StructureEstimator):
         while not all(
             [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
         ):
-
             # Step 2: Iterate over the edges and find a conditioning set of
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
-                for (u, v) in graph.edges():
+                for u, v in graph.edges():
                     for separating_set in chain(
                         combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
                         combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
@@ -310,7 +309,7 @@ class PC(StructureEstimator):
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 neighbors = {node: set(graph[node]) for node in graph.nodes()}
-                for (u, v) in graph.edges():
+                for u, v in graph.edges():
                     for separating_set in chain(
                         combinations(set(neighbors[u]) - set([v]), lim_neighbors),
                         combinations(set(neighbors[v]) - set([u]), lim_neighbors),

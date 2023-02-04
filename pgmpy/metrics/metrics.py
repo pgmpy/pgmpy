@@ -76,12 +76,12 @@ def correlation_score(
     """
     from pgmpy.estimators.CITests import (
         chi_square,
+        cressie_read,
+        freeman_tuckey,
         g_sq,
         log_likelihood,
-        freeman_tuckey,
         modified_log_likelihood,
         neyman,
-        cressie_read,
         pearsonr,
     )
 
@@ -187,7 +187,6 @@ def log_likelihood_score(model, data):
 
 
 def structure_score(model, data, scoring_method="bic", **kwargs):
-
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretebility but can be
@@ -225,7 +224,7 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     >>> structure_score(model, data, scoring_method="bic")
     -106665.9383064447
     """
-    from pgmpy.estimators import K2Score, BDeuScore, BDsScore, BicScore
+    from pgmpy.estimators import BDeuScore, BDsScore, BicScore, K2Score
 
     supported_methods = {
         "k2": K2Score,

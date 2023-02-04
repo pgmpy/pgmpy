@@ -1,11 +1,11 @@
 import itertools
 from warnings import warn
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
-from pgmpy.inference import Inference
 from pgmpy import HAS_PANDAS
+from pgmpy.inference import Inference
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
 
 if HAS_PANDAS:
@@ -159,7 +159,6 @@ class BaseGradLogPDF(object):
     """
 
     def __init__(self, variable_assignments, model):
-
         self.variable_assignments = _check_1d_array_object(
             variable_assignments, "variable_assignments"
         )
@@ -317,7 +316,6 @@ class BaseSimulateHamiltonianDynamics(object):
     def __init__(
         self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
     ):
-
         position = _check_1d_array_object(position, "position")
 
         momentum = _check_1d_array_object(momentum, "momentum")
@@ -438,7 +436,6 @@ class LeapFrog(BaseSimulateHamiltonianDynamics):
     def __init__(
         self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
     ):
-
         BaseSimulateHamiltonianDynamics.__init__(
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )
@@ -517,7 +514,6 @@ class ModifiedEuler(BaseSimulateHamiltonianDynamics):
     def __init__(
         self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position=None
     ):
-
         BaseSimulateHamiltonianDynamics.__init__(
             self, model, position, momentum, stepsize, grad_log_pdf, grad_log_position
         )
