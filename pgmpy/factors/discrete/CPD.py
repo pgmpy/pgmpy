@@ -96,7 +96,6 @@ class TabularCPD(DiscreteFactor):
         evidence_card=None,
         state_names={},
     ):
-
         self.variable = variable
         self.variable_card = None
 

@@ -372,7 +372,7 @@ class CausalInference(object):
         all_path_effects = []
         for path in all_simple_paths:
             causal_effect = []
-            for (x1, x2) in zip(path, path[1:]):
+            for x1, x2 in zip(path, path[1:]):
                 if isinstance(estimand_strategy, frozenset):
                     adjustment_set = frozenset({estimand_strategy})
                     assert self.is_valid_backdoor_adjustment_set(
@@ -479,7 +479,7 @@ class CausalInference(object):
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
         backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
-        for (x, y) in zip(X, Y):
+        for x, y in zip(X, Y):
             if backdoor_graph.is_dconnected(start=x, end=y, observed=adjustment_set):
                 return False
         return True

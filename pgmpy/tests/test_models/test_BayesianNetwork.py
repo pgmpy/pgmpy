@@ -481,6 +481,15 @@ class TestBayesianModelMethods(unittest.TestCase):
                 os.remove("model." + filetype)
                 os.remove("model.model")
 
+        # Test for kwarg parameters
+        test_model_int_states = BayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
+        test_model_int_states.get_random_cpds(inplace=True)
+        test_model_int_states.save("model.bif")
+        read_model1 = BayesianNetwork.load("model.bif", state_name_type=int)
+        read_model2 = BayesianNetwork.load("model.bif", n_jobs=1, state_name_type=int)
+        self.assertTrue(test_model_int_states.states == read_model1.states)
+        self.assertTrue(test_model_int_states.states == read_model2.states)
+
     def tearDown(self):
         del self.G
         del self.G1
@@ -810,7 +819,7 @@ class TestBayesianModelCPD(unittest.TestCase):
 class TestBayesianModelSampleProb(unittest.TestCase):
     def setUp(self):
         self.model = get_example_model("asia")
-        self.samples = self.model.simulate(int(1e5))
+        self.samples = self.model.simulate(int(1e5), seed=42)
         self.evidence1 = self.samples.iloc[0, :].to_dict()
 
         self.evidence2 = self.evidence1.copy()
@@ -1595,7 +1604,7 @@ class TestSimulation(unittest.TestCase):
 
     def test_simulate(self):
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), show_progress=False
+            n_samples=int(1e4), show_progress=False, seed=42
         )
         con_inference_marginals = self.infer_con_model.query(
             self.con_model.nodes(), joint=False
@@ -1603,15 +1612,15 @@ class TestSimulation(unittest.TestCase):
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         nodes = list(self.alarm.nodes())[:5]
-        alarm_samples = self.alarm.simulate(n_samples=int(1e4), show_progress=False)
+        alarm_samples = self.alarm.simulate(
+            n_samples=int(1e4), show_progress=False, seed=42
+        )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_evidence(self):
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4),
-            evidence={"U": 1},
-            show_progress=False,
+            n_samples=int(1e4), evidence={"U": 1}, show_progress=False, seed=42
         )
         con_inference_marginals = self.infer_con_model.query(
             ["X", "Y", "Z"], joint=False, evidence={"U": 1}
@@ -1620,7 +1629,10 @@ class TestSimulation(unittest.TestCase):
 
         nodes = list(self.alarm.nodes())[:5]
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), evidence={"MINVOLSET": "HIGH"}, show_progress=False
+            n_samples=int(1e4),
+            evidence={"MINVOLSET": "HIGH"},
+            show_progress=False,
+            seed=42,
         )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
@@ -1630,11 +1642,15 @@ class TestSimulation(unittest.TestCase):
             self.alarm.simulate,
             n_samples=int(1e4),
             evidence={"MINVOLSET": "UNKNOWN"},
+            seed=42,
         )
 
     def test_simulate_intervention(self):
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), do={"X": 1}, show_progress=False
+            n_samples=int(1e4),
+            do={"X": 1},
+            show_progress=False,
+            seed=42,
         )
         con_inference_marginals = {
             "Y": self.causal_infer_con_model.query(["Y"], do={"X": 1})
@@ -1642,7 +1658,10 @@ class TestSimulation(unittest.TestCase):
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), do={"Z": 1}, show_progress=False
+            n_samples=int(1e4),
+            do={"Z": 1},
+            show_progress=False,
+            seed=42,
         )
         con_inference_marginals = {
             "X": self.causal_infer_con_model.query(["X"], do={"Z": 1})
@@ -1650,7 +1669,10 @@ class TestSimulation(unittest.TestCase):
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), do={"CVP": "LOW"}, show_progress=False
+            n_samples=int(1e4),
+            do={"CVP": "LOW"},
+            show_progress=False,
+            seed=42,
         )
         alarm_inference_marginals = {
             "HISTORY": self.causal_infer_alarm.query(["HISTORY"], do={"CVP": "LOW"}),
@@ -1662,7 +1684,10 @@ class TestSimulation(unittest.TestCase):
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
         alarm_samples = self.alarm.simulate(
-            n_samples=int(1e4), do={"MINVOLSET": "NORMAL"}, show_progress=False
+            n_samples=int(1e4),
+            do={"MINVOLSET": "NORMAL"},
+            show_progress=False,
+            seed=42,
         )
         alarm_inference_marginals = {
             "CVP": self.causal_infer_alarm.query(["CVP"], do={"MINVOLSET": "NORMAL"}),

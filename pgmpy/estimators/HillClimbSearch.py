@@ -1,21 +1,21 @@
 #!/usr/bin/env python
-from itertools import permutations
 from collections import deque
+from itertools import permutations
 
 import networkx as nx
 from tqdm.auto import trange
 
+from pgmpy.base import DAG
 from pgmpy.estimators import (
-    StructureScore,
-    StructureEstimator,
-    K2Score,
-    ScoreCache,
+    AICScore,
     BDeuScore,
     BDsScore,
     BicScore,
-    AICScore,
+    K2Score,
+    ScoreCache,
+    StructureEstimator,
+    StructureScore,
 )
-from pgmpy.base import DAG
 from pgmpy.global_vars import SHOW_PROGRESS
 
 
@@ -87,7 +87,7 @@ class HillClimbSearch(StructureEstimator):
             - set([(Y, X) for (X, Y) in model.edges()])
         )
 
-        for (X, Y) in potential_new_edges:
+        for X, Y in potential_new_edges:
             # Check if adding (X, Y) will create a cycle.
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
@@ -104,7 +104,7 @@ class HillClimbSearch(StructureEstimator):
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
-        for (X, Y) in model.edges():
+        for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in fixed_edges):
                 old_parents = model.get_parents(Y)
@@ -115,7 +115,7 @@ class HillClimbSearch(StructureEstimator):
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
-        for (X, Y) in model.edges():
+        for X, Y in model.edges():
             # Check if flipping creates any cycles
             if not any(
                 map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))

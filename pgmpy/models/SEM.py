@@ -1108,7 +1108,6 @@ class SEM(SEMGraph):
             )
 
         elif syntax.lower() == "lisrel":
-
             model = SEMAlg(
                 var_names=var_names, params=params, fixed_masks=fixed_masks
             ).to_SEMGraph()

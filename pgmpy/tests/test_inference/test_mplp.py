@@ -8,7 +8,6 @@ from pgmpy.readwrite import UAIReader
 
 class TestMplp(unittest.TestCase):
     def setUp(self):
-
         reader_file = UAIReader(
             "pgmpy/tests/test_readwrite/testdata/grid4x4_with_triplets.uai"
         )
@@ -20,7 +19,6 @@ class TestMplp(unittest.TestCase):
 
 
 class TightenTripletOff(TestMplp):
-
     # Query when tighten triplet is OFF
     def test_query_tighten_triplet_off(self):
         query_result = self.mplp.map_query(tighten_triplet=False)
@@ -52,7 +50,6 @@ class TightenTripletOff(TestMplp):
 
 
 class TightenTripletOn(TestMplp):
-
     # Query when tighten triplet is ON
     def test_query_tighten_triplet_on(self):
         query_result = self.mplp.map_query(tighten_triplet=True)

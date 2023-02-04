@@ -315,7 +315,6 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(("I", 1)).variable, ("I", 1))
 
     def test_initialize_initial_state(self):
-
         self.network.add_nodes_from(["D", "G", "I", "S", "L"])
         self.network.add_edges_from(
             [
@@ -501,7 +500,6 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
         """
 
     def test_check_model(self):
-
         grade_cpd = TabularCPD(
             ("G", 0),
             3,
@@ -546,7 +544,6 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
         self.assertTrue(self.G.check_model())
 
     def test_check_model1(self):
-
         diff_cpd = TabularCPD(
             ("D", 0),
             3,
@@ -614,7 +611,6 @@ class TestDynamicBayesianNetworkMethods2(unittest.TestCase):
         self.G.remove_cpds(grade_cpd)
 
     def test_check_model2(self):
-
         grade_cpd = TabularCPD(
             ("G", 0),
             3,
