@@ -95,7 +95,7 @@ class NaiveBayes(BayesianNetwork):
         >>> G.edges()
         OutEdgeView([('a', 'b'), ('a', 'c')])
         """
-        for (u, v) in ebunch:
+        for u, v in ebunch:
             self.add_edge(u, v)
 
     def _get_ancestors_of(self, obs_nodes_list):

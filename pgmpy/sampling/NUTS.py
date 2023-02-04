@@ -57,7 +57,6 @@ class NoUTurnSampler(HamiltonianMCDA):
     """
 
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog):
-
         super(NoUTurnSampler, self).__init__(
             model=model, grad_log_pdf=grad_log_pdf, simulate_dynamics=simulate_dynamics
         )
@@ -90,7 +89,6 @@ class NoUTurnSampler(HamiltonianMCDA):
         candidate_set_size,
         candidate_set_size2,
     ):
-
         # criteria1 = I[(θ+ − θ−)·r− ≥ 0]
         criteria1 = (
             np.dot((position_forward - position_backward), momentum_backward) >= 0
@@ -412,7 +410,6 @@ class NoUTurnSampler(HamiltonianMCDA):
         position_m = initial_pos
 
         for _ in range(0, num_samples):
-
             position_m = self._sample(position_m, stepsize)
 
             yield position_m
@@ -472,7 +469,6 @@ class NoUTurnSamplerDA(NoUTurnSampler):
     """
 
     def __init__(self, model, grad_log_pdf, simulate_dynamics=LeapFrog, delta=0.65):
-
         if not isinstance(delta, float) or delta > 1.0 or delta < 0.0:
             raise ValueError("delta should be a floating value in between 0 and 1")
 
@@ -497,7 +493,6 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         Recursively builds a tree for proposing new position and momentum
         """
         if depth == 0:
-
             (
                 position_bar,
                 momentum_bar,
@@ -789,7 +784,6 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         position_m = initial_pos
 
         for i in tqdm(range(1, num_samples)):
-
             position_m, alpha, n_alpha = self._sample(position_m, stepsize)
             samples[i] = tuple(position_m)
 
@@ -875,7 +869,6 @@ class NoUTurnSamplerDA(NoUTurnSampler):
         num_adapt += 1
 
         for i in range(1, num_samples + 1):
-
             position_m, alpha, n_alpha = self._sample(position_m, stepsize)
 
             if i <= num_adapt:

@@ -3,10 +3,10 @@ import unittest
 import networkx as nx
 import numpy as np
 
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
-from pgmpy.models import BayesianNetwork, MarkovModel, FactorGraph
+from pgmpy.models import BayesianNetwork, FactorGraph, MarkovModel
 from pgmpy.tests import help_functions as hf
 
 
@@ -90,7 +90,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.graph = MarkovModel()
 
     def test_get_cardinality(self):
-
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
 
         self.assertDictEqual(self.graph.get_cardinality(), {})
@@ -118,7 +117,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertDictEqual(self.graph.get_cardinality(), {})
 
     def test_get_cardinality_with_node(self):
-
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
 
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
@@ -248,7 +246,6 @@ class TestMarkovModelMethods(unittest.TestCase):
         self.assertEqual(len(junction_tree.edges()), 1)
 
     def test_junction_tree_single_clique(self):
-
         self.graph.add_edges_from([("x1", "x2"), ("x2", "x3"), ("x1", "x3")])
         phi = [
             DiscreteFactor(edge, [2, 2], np.random.rand(4))

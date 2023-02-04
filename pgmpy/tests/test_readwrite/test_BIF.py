@@ -66,12 +66,10 @@ class TestBIFReader(unittest.TestCase):
         )
 
     def test_network_name(self):
-
         name_expected = "Dog-Problem"
         self.assertEqual(self.reader.network_name, name_expected)
 
     def test_get_variables(self):
-
         var_expected = [
             "light-on",
             "bowel-problem",
@@ -82,7 +80,6 @@ class TestBIFReader(unittest.TestCase):
         self.assertListEqual(self.reader.get_variables(), var_expected)
 
     def test_states(self):
-
         states_expected = {
             "bowel-problem": ["true", "false"],
             "dog-out": ["true", "false"],
@@ -95,7 +92,6 @@ class TestBIFReader(unittest.TestCase):
             self.assertListEqual(states_expected[variable], states[variable])
 
     def test_get_property(self):
-
         property_expected = {
             "bowel-problem": ["position = (335, 99)"],
             "dog-out": ["position = (300, 195)"],
@@ -108,7 +104,6 @@ class TestBIFReader(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_get_values(self):
-
         cpd_expected = {
             "bowel-problem": np.array([[0.01], [0.99]]),
             "dog-out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
@@ -121,7 +116,6 @@ class TestBIFReader(unittest.TestCase):
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_get_values_reordered(self):
-
         cancer_values1 = BIFReader(
             string="""
                 network unknown {
@@ -168,7 +162,6 @@ class TestBIFReader(unittest.TestCase):
             np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
 
     def test_get_parents(self):
-
         parents_expected = {
             "bowel-problem": [],
             "dog-out": ["bowel-problem", "family-out"],
@@ -181,7 +174,6 @@ class TestBIFReader(unittest.TestCase):
             self.assertListEqual(parents_expected[variable], parents[variable])
 
     def test_get_edges(self):
-
         edges_expected = [
             ["family-out", "dog-out"],
             ["bowel-problem", "dog-out"],

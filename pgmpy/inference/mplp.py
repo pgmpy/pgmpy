@@ -1,12 +1,12 @@
 import copy
 import itertools as it
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
+from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference import Inference
 from pgmpy.models import MarkovNetwork
-from pgmpy.factors.discrete import DiscreteFactor
 
 
 class Mplp(Inference):
@@ -155,7 +155,6 @@ class Mplp(Inference):
                 )
 
     def _update_message(self, sending_cluster):
-
         """
         This is the message-update method.
 
@@ -374,7 +373,6 @@ class Mplp(Inference):
         """
         triplet_scores = {}
         for triplet in triangles_list:
-
             # Find the intersection sets of the current triplet
             triplet_intersections = [
                 intersect for intersect in it.combinations(triplet, 2)
