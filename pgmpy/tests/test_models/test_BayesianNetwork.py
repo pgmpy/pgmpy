@@ -481,6 +481,15 @@ class TestBayesianModelMethods(unittest.TestCase):
                 os.remove("model." + filetype)
                 os.remove("model.model")
 
+        # Test for kwarg parameters
+        test_model_int_states = BayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
+        test_model_int_states.get_random_cpds(inplace=True)
+        test_model_int_states.save("model.bif")
+        read_model1 = BayesianNetwork.load("model.bif", state_name_type=int)
+        read_model2 = BayesianNetwork.load("model.bif", n_jobs=1, state_name_type=int)
+        self.assertTrue(test_model_int_states.states == read_model1.states)
+        self.assertTrue(test_model_int_states.states == read_model2.states)
+
     def tearDown(self):
         del self.G
         del self.G1
