@@ -29,6 +29,7 @@ requirements:
     - statsmodels
     - tqdm
     - joblib
+    - opt_einsum
 
 test:
   imports:
