@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-from functools import lru_cache
 
 import pandas as pd
 
-from pgmpy.utils.decorators import convert_args_tuple
+from pgmpy.utils.decorators import convert_args_tuple, weak_lru
 
 
 class BaseEstimator(object):
@@ -63,7 +62,7 @@ class BaseEstimator(object):
         return states
 
     @convert_args_tuple
-    @lru_cache(maxsize=2048)
+    @weak_lru(maxsize=1024)
     def state_counts(
         self, variable, parents=[], complete_samples_only=None, weighted=False
     ):
