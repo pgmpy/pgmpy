@@ -62,7 +62,7 @@ class BaseEstimator(object):
         return states
 
     @convert_args_tuple
-    @weak_lru(maxsize=1024)
+    @weak_lru(maxsize=128)
     def state_counts(
         self, variable, parents=[], complete_samples_only=None, weighted=False
     ):
