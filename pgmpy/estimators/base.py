@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+from collections import OrderedDict
+
 import pandas as pd
 
-from pgmpy.utils.decorators import convert_args_tuple, weak_lru
+from pgmpy.utils.decorators import convert_args_tuple
 
 
 class BaseEstimator(object):
@@ -62,7 +64,6 @@ class BaseEstimator(object):
         return states
 
     @convert_args_tuple
-    @weak_lru(maxsize=128)
     def state_counts(
         self, variable, parents=[], complete_samples_only=None, weighted=False
     ):
