@@ -1,5 +1,7 @@
 import unittest
+
 import numpy as np
+
 from pgmpy.readwrite import NETReader, NETWriter
 from pgmpy.utils import get_example_model
 
@@ -139,40 +141,40 @@ node xray{
     weight = None;
 }
 potential (asia |){
- data = (0.01 0.99); 
+ data = (0.01 0.99);
 }
 potential (bronc | smoke){
  data = ((0.6 0.4)
- (0.3 0.7)); 
+ (0.3 0.7));
 }
 potential (dysp | bronc either){
  data = (((0.9 0.1)
   (0.8 0.2))
 
  ((0.7 0.3)
-  (0.1 0.9))); 
+  (0.1 0.9)));
 }
 potential (either | lung tub){
  data = (((1.0 0.0)
   (1.0 0.0))
 
  ((1.0 0.0)
-  (0.0 1.0))); 
+  (0.0 1.0)));
 }
 potential (lung | smoke){
  data = ((0.1  0.9 )
- (0.01 0.99)); 
+ (0.01 0.99));
 }
 potential (smoke |){
- data = (0.5 0.5); 
+ data = (0.5 0.5);
 }
 potential (tub | asia){
  data = ((0.05 0.95)
- (0.01 0.99)); 
+ (0.01 0.99));
 }
 potential (xray | either){
  data = ((0.98 0.02)
- (0.05 0.95)); 
+ (0.05 0.95));
 }
 """
         self.assertEqual(str(self.writer), net)
@@ -184,7 +186,7 @@ class TestNETReader(unittest.TestCase):
         /// Bayesian Network in the Hugin (.net) Format
         /// Produced by Genie Software
         /// Output Created Oct 26 15:50:51 2022
-            net 
+            net
             {
                 node_size = (76 36);
             }
@@ -298,7 +300,6 @@ class TestNETReader(unittest.TestCase):
         self.reader = NETReader(string=net)
 
     def test_get_variables(self):
-
         var_expected = [
             "VisitToAsia",
             "Tuberculosis",
