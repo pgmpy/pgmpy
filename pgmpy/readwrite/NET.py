@@ -4,7 +4,21 @@ from string import Template
 import numpy as np
 import collections
 from math import prod
-from pyparsing import Word, Suppress, ZeroOrMore, CharsNotIn, Optional, Group, alphanums, cppStyleComment, printables, OneOrMore, nums, alphas
+from pyparsing import (
+    Word,
+    Suppress,
+    ZeroOrMore,
+    CharsNotIn,
+    Optional,
+    Group,
+    alphanums,
+    cppStyleComment,
+    printables,
+    OneOrMore,
+    nums,
+    alphas,
+)
+
 
 class NETWriter(object):
 
@@ -33,7 +47,7 @@ class NETWriter(object):
 
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must be an instance of BayesianNetwork")
-        
+
         self.model = model
 
         if not self.model.name:
@@ -52,34 +66,32 @@ class NETWriter(object):
         Create template for writing in NET format
         """
 
-        network_template = Template('net {\n}\n')
-        node_template = Template('node $name{\n    states = ($states);\n$properties}\n')
-        potential_template = Template('potential ($variable_$separator_$parents){\n data = $values; \n}\n')
-        property_template = Template('    $prop;\n')
-
-        return (
-            network_template,
-            node_template,
-            potential_template,
-            property_template
+        network_template = Template("net {\n}\n")
+        node_template = Template("node $name{\n    states = ($states);\n$properties}\n")
+        potential_template = Template(
+            "potential ($variable_$separator_$parents){\n data = $values; \n}\n"
         )
+        property_template = Template("    $prop;\n")
+
+        return (network_template, node_template, potential_template, property_template)
 
     def __str__(self):
         """Return the NET"""
-        (     
+        (
             network_template,
             node_template,
             potential_template,
-            property_template) = self.NET_templates()
+            property_template,
+        ) = self.NET_templates()
 
         network = ""
         network += network_template.substitute()
         variables = self.variables
 
         for var in sorted(variables):
-            quoted_states = ['"'+state+'"' for state in self.variable_states[var]]
+            quoted_states = ['"' + state + '"' for state in self.variable_states[var]]
             states = "  ".join(quoted_states)
-            
+
             if not self.property_tag[var]:
                 properties = ""
             else:
@@ -88,9 +100,7 @@ class NETWriter(object):
                     properties += property_template.substitute(prop=prop_val)
 
             network += node_template.substitute(
-                name = var,
-                states = states,
-                properties = properties
+                name=var, states=states, properties=properties
             )
 
         for var in sorted(variables):
@@ -99,13 +109,13 @@ class NETWriter(object):
                 separator = " |"
             else:
                 parents = " ".join(self.variable_parents[var])
-                separator = " | "   
+                separator = " | "
             potentials = self.net_cpd(var)
             network += potential_template.substitute(
-                variable_ = var,
-                separator_ = separator,
-                parents = parents,
-                values = potentials,
+                variable_=var,
+                separator_=separator,
+                parents=parents,
+                values=potentials,
             )
 
         return network
@@ -122,13 +132,16 @@ class NETWriter(object):
         string: CPT format of .net files
         """
         cpt = self.tables[var_name]
-        cpt_array = np.moveaxis(cpt,0,-1)
+        cpt_array = np.moveaxis(cpt, 0, -1)
         cpt_string = str(cpt_array)
-        net_cpt_string = cpt_string.replace("[","(").replace("]",")").replace(". ", ".0 ").replace(".)", ".0)")
+        net_cpt_string = (
+            cpt_string.replace("[", "(")
+            .replace("]", ")")
+            .replace(". ", ".0 ")
+            .replace(".)", ".0)")
+        )
         # Genie does not read potentials such as 1. therefore last line adds .0 to those
         return net_cpt_string
-
-
 
     def get_variables(self):
         """
@@ -170,12 +183,12 @@ class NETWriter(object):
                 [0.4, 0.7]]),
         'dysp': array([[[0.9, 0.8],
                 [0.7, 0.1]],
-        
+
                 [[0.1, 0.2],
                 [0.3, 0.9]]]),
         'either': array([[[1., 1.],
                 [1., 0.]],
-        
+
                 [[0., 0.],
                 [0., 1.]]]),
         'lung': array([[0.1 , 0.01],
@@ -191,7 +204,6 @@ class NETWriter(object):
         for cpd in cpds:
             tables[cpd.variable] = cpd.values
         return tables
-
 
     def get_properties(self):
         """
@@ -222,7 +234,7 @@ class NETWriter(object):
     def get_states(self):
         """
         Add states to variable of NET
-        
+
         Returns
         -------
         dict: dict of type {variable: a list of states}
@@ -242,8 +254,8 @@ class NETWriter(object):
         'lung': ['yes', 'no'],
         'smoke': ['yes', 'no'],
         'tub': ['yes', 'no'],
-        'xray': ['yes', 'no']}         
-         """
+        'xray': ['yes', 'no']}
+        """
 
         variable_states = {}
         cpds = self.model.get_cpds()
@@ -253,7 +265,6 @@ class NETWriter(object):
             for state in cpd.state_names[variable]:
                 variable_states[variable].append(str(state))
         return variable_states
-
 
     def get_parents(self):
         """
@@ -285,7 +296,6 @@ class NETWriter(object):
             variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
-
     def write_net(self, filename):
         """
         Writes the NET data into a file
@@ -307,13 +317,15 @@ class NETWriter(object):
             fout.write(writer)
 
 
-    
 class NETReader:
 
     """
     Base class for reading network file in net format
     """
-    def __init__(self, path=None, string=None, include_properties=False, defaultName = "bn_model"):
+
+    def __init__(
+        self, path=None, string=None, include_properties=False, defaultName="bn_model"
+    ):
         """
         Initializes a NETReader object.
 
@@ -338,40 +350,39 @@ class NETReader:
         >>> from pgmpy.readwrite import NETReader
         >>> reader = NETReader("asia.net")
         >>> reader
-        <pgmpy.readwrite.NET.NETReader at 0x7feac645c640>    
+        <pgmpy.readwrite.NET.NETReader at 0x7feac645c640>
         >>> model = reader.get_model()
         """
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
-        
+
         elif string:
             self.network = string
-            
+
         else:
             raise ValueError("Must specify either path or string")
-    
+
         self.include_properties = include_properties
-        
+
         if "/*" in self.network or "//" in self.network:
             self.network = cppStyleComment.suppress().transformString(
                 self.network
             )  # removing comments from the file
-        
+
         (
             self.name_expr,
             self.state_expr,
             self.property_expr,
         ) = self.get_variable_grammar()
-        
-        self.potential_expr, self.cpd_expr = self.get_probability_grammar()   
-        
-        
+
+        self.potential_expr, self.cpd_expr = self.get_probability_grammar()
+
         if not self.get_network_name():
             self.network_name = defaultName
         else:
             self.network_name = self.get_network_name()
-                    
+
         self.variable_names = self.get_variables()
         self.variable_states = self.get_states()
         if self.include_properties:
@@ -379,60 +390,61 @@ class NETReader:
         self.variable_parents = self.get_parents()
         self.variable_cpds = self.get_values()
         self.edges = self.get_edges()
- 
-        
 
     def get_variable_grammar(self):
         """
         A method that returns variable grammar
         """
         # Defining an expression for valid word
-        word_expr = Word(alphanums + "_" + "-")('nodename')
+        word_expr = Word(alphanums + "_" + "-")("nodename")
         name_expr = Suppress("node ") + word_expr + Optional(Suppress("{"))
-        
+
         word_expr2 = Word(initChars=printables, excludeChars=["(", ")", ",", " "])
-        state_expr = ZeroOrMore(word_expr2  + Optional(Suppress(",")))
+        state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
         # Defining a variable state expression
         variable_state_expr = (
             Suppress("states")
             + Suppress("=")
             + Suppress("(")
-            + Group(state_expr)('statenames')
+            + Group(state_expr)("statenames")
             + Suppress(")")
             + Suppress(";")
         )
         # variable states is of the form type description [args] { val1, val2 }; (comma may or may not be present)
         pexpr = Word(alphas.lower()) + Suppress("=") + CharsNotIn(";") + Suppress(";")
-        property_expr = ZeroOrMore(pexpr) # Creating an expr to find property
+        property_expr = ZeroOrMore(pexpr)  # Creating an expr to find property
 
-        
         variable_property_expr = (
             Suppress("node ")
-            + Word(alphanums + "_" + "-")('varname')
+            + Word(alphanums + "_" + "-")("varname")
             + Suppress("{")
-            + Group(property_expr)('properties')
+            + Group(property_expr)("properties")
             + Suppress("}")
-
         )
 
-
         return name_expr, variable_state_expr, variable_property_expr
-    
+
     def get_probability_grammar(self):
         """
         A method that returns probability grammar
         """
-        
+
         word_expr = Word(alphanums + "-" + "_") + Suppress(Optional("|"))
-        
-        potential_expr = Suppress("potential") + Suppress("(") + OneOrMore(word_expr) + Suppress(")") 
-        
-        num_expr = Suppress(ZeroOrMore("(")) + Word(nums + "-" + "+" + "e" + "E" + ".") + Suppress(ZeroOrMore(")")) 
+
+        potential_expr = (
+            Suppress("potential") + Suppress("(") + OneOrMore(word_expr) + Suppress(")")
+        )
+
+        num_expr = (
+            Suppress(ZeroOrMore("("))
+            + Word(nums + "-" + "+" + "e" + "E" + ".")
+            + Suppress(ZeroOrMore(")"))
+        )
 
         cpd_expr = Suppress("data") + Suppress("=") + OneOrMore(num_expr)
-        
+
         return potential_expr, cpd_expr
-    
+
     def get_network_name(self):
         """
         Returns the name of the network. Returns false if no network name is available
@@ -446,17 +458,22 @@ class NETReader:
         >>> reader.get_network_name()
         False
         """
-        
+
         start = self.network.find("net")
         end = self.network.find("}\n", start)
         # Creating a network attribute
-        network_attribute = Suppress("name") + Suppress("=") + Suppress('"') + Word(alphanums + "_" + "-" ) + Suppress('"') + Suppress(";")
+        network_attribute = (
+            Suppress("name")
+            + Suppress("=")
+            + Suppress('"')
+            + Word(alphanums + "_" + "-")
+            + Suppress('"')
+            + Suppress(";")
+        )
         network_name = network_attribute.searchString(self.network[start:end])
         if not network_name:
             return False
         return network_name[0][0]
-        
-
 
     def get_variables(self):
         """
@@ -472,14 +489,14 @@ class NETReader:
         ['asia', 'tub', 'smoke', 'lung', 'bronc', 'either', 'xray', 'dysp']
         """
         variable_names = []
-        
+
         for match in self.name_expr.scanString(self.network):
             result = match[0]
             name = result.nodename
             variable_names.append(name)
-            
+
         return variable_names
-    
+
     def get_states(self):
         """
         Returns the states of each variable in the network
@@ -500,17 +517,19 @@ class NETReader:
         'xray': ['yes', 'no'],
         'dysp': ['yes', 'no']}
         """
-        
+
         variable_states = {}
         for index, match in enumerate(self.name_expr.scanString(self.network)):
             result = match[0]
             name = result.nodename
             allstates = list(self.state_expr.scanString(self.network))
-            states_unedited = list(allstates[index][0].statenames) # includes double quotation like ['"state1"', '"state2"']
-            states_edited = [state.replace('"', '') for state in states_unedited]
+            states_unedited = list(
+                allstates[index][0].statenames
+            )  # includes double quotation like ['"state1"', '"state2"']
+            states_edited = [state.replace('"', "") for state in states_unedited]
             variable_states[name] = states_edited
         return variable_states
-    
+
     def get_property(self):
         """
         Returns the property of the variable
@@ -531,7 +550,7 @@ class NETReader:
         'xray': {},
         'dysp': {}}
         """
-        
+
         variable_properties = {}
         for match in self.property_expr.scanString(self.network):
             var_name = match[0].varname
@@ -540,13 +559,12 @@ class NETReader:
             props = {}
             for index in range(0, num_props, 2):
                 props[prop_list[index].strip()] = prop_list[index + 1].strip()
-            
+
             # Remove states from props
-            props.pop('states', None)
+            props.pop("states", None)
             variable_properties[var_name] = props
         return variable_properties
-            
-    
+
     def get_parents(self):
         """
         Returns the parents of the variables present in the network
@@ -567,14 +585,14 @@ class NETReader:
         'xray': ['either'],
         'dysp': ['bronc', 'either']}
         """
-        
+
         variable_parents = {}
-        
+
         for match in self.potential_expr.scanString(self.network):
             vars_in_potential = match[0]
             variable_parents[vars_in_potential[0]] = vars_in_potential[1:]
         return variable_parents
-    
+
     def get_values(self):
         """
         Returns the CPD of the variables present in the network
@@ -604,25 +622,25 @@ class NETReader:
                         [0.1, 0.2, 0.3, 0.9]])}
         """
         variable_cpds = {}
-        
+
         parents = self.variable_parents
         variables = list(parents.keys())
         states = self.variable_states
-        
+
         cpds = self.cpd_expr.scanString(self.network)
-        
+
         for index, match in enumerate(cpds):
             var = variables[index]
             pars = parents[var]
             var_state_num = len(states[var])
             par_states_prod = prod([len(states[par]) for par in pars])
-            cpd_flat = np.array(match[0], dtype = 'float64')
+            cpd_flat = np.array(match[0], dtype="float64")
             cpd_2d = cpd_flat.reshape(par_states_prod, var_state_num).T
-            
+
             variable_cpds[var] = cpd_2d
-             
+
         return variable_cpds
-    
+
     def get_edges(self):
         """
         Returns the edges of the network
@@ -652,7 +670,7 @@ class NETReader:
             for value in self.variable_parents[key]
         ]
         return edges
-    
+
     def get_model(self, state_name_type=str):
         """
         Returns the Bayesian Model read from the file/str.
@@ -676,7 +694,7 @@ class NETReader:
             model.add_nodes_from(self.variable_names)
             model.add_edges_from(self.edges)
             model.name = self.network_name
-            
+
             tabular_cpds = []
             for var in sorted(self.variable_cpds.keys()):
                 values = self.variable_cpds[var]
@@ -684,30 +702,33 @@ class NETReader:
                 states_num = len(states)
                 parents = self.variable_parents[var]
                 parent_states_num = [len(self.variable_states[par]) for par in parents]
-                
-                state_names = { par_var: list(map(state_name_type, self.variable_states[par_var]))
-                               for par_var in parents}
+
+                state_names = {
+                    par_var: list(map(state_name_type, self.variable_states[par_var]))
+                    for par_var in parents
+                }
                 state_names[var] = list(map(state_name_type, states))
-                
-                cpd = TabularCPD(var, states_num, values, 
-                                 evidence = parents, evidence_card = parent_states_num,
-                                 state_names= state_names)
+
+                cpd = TabularCPD(
+                    var,
+                    states_num,
+                    values,
+                    evidence=parents,
+                    evidence_card=parent_states_num,
+                    state_names=state_names,
+                )
                 tabular_cpds.append(cpd)
-                
+
             model.add_cpds(*tabular_cpds)
-            
+
             if self.include_properties:
                 for node, properties in self.variable_properties.items():
                     for prop_name, prop_value in properties.items():
                         model.nodes[node][prop_name] = prop_value
-            
+
             return model
-        
+
         except AttributeError:
             raise AttributeError(
                 "First get states of variables, edges, parents and network name"
             )
-        
-        
-
-        
