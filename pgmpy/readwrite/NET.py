@@ -1,23 +1,25 @@
-from pgmpy.models import BayesianNetwork
-from pgmpy.factors.discrete.CPD import TabularCPD
-from string import Template
-import numpy as np
 import collections
 from math import prod
+from string import Template
+
+import numpy as np
 from pyparsing import (
-    Word,
-    Suppress,
-    ZeroOrMore,
     CharsNotIn,
-    Optional,
     Group,
-    alphanums,
-    cppStyleComment,
-    printables,
     OneOrMore,
-    nums,
+    Optional,
+    Suppress,
+    Word,
+    ZeroOrMore,
+    alphanums,
     alphas,
+    cppStyleComment,
+    nums,
+    printables,
 )
+
+from pgmpy.factors.discrete.CPD import TabularCPD
+from pgmpy.models import BayesianNetwork
 
 
 class NETWriter(object):
@@ -69,7 +71,7 @@ class NETWriter(object):
         network_template = Template("net {\n}\n")
         node_template = Template("node $name{\n    states = ($states);\n$properties}\n")
         potential_template = Template(
-            "potential ($variable_$separator_$parents){\n data = $values; \n}\n"
+            "potential ($variable_$separator_$parents){\n data = $values;\n}\n"
         )
         property_template = Template("    $prop;\n")
 
