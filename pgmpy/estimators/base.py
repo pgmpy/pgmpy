@@ -63,9 +63,13 @@ class BaseEstimator(object):
         states = sorted(list(self.data.loc[:, variable].dropna().unique()))
         return states
 
-    @convert_args_tuple
     def state_counts(
-        self, variable, parents=[], complete_samples_only=None, weighted=False
+        self,
+        variable,
+        parents=[],
+        complete_samples_only=None,
+        weighted=False,
+        reindex=True,
     ):
         """
         Return counts how often each state of 'variable' occurred in the data.
@@ -90,6 +94,11 @@ class BaseEstimator(object):
         weighted: bool
             If True, data must have a `_weight` column specifying the weight of the
             datapoint (row). If False, each datapoint has a weight of `1`.
+
+        reindex: bool
+            If True, returns a data frame with all possible parents state combinations
+            as the columns. If False, drops the state combinations which are not
+            present in the data.
 
         Returns
         -------
@@ -166,15 +175,18 @@ class BaseEstimator(object):
                     [state_count_data.columns]
                 )
 
-            # reindex rows & columns to sort them and to add missing ones
-            # missing row    = some state of 'variable' did not occur in data
-            # missing column = some state configuration of current 'variable's parents
-            #                  did not occur in data
-            row_index = self.state_names[variable]
-            column_index = pd.MultiIndex.from_product(parents_states, names=parents)
-            state_counts = state_count_data.reindex(
-                index=row_index, columns=column_index
-            ).fillna(0)
+            if reindex:
+                # reindex rows & columns to sort them and to add missing ones
+                # missing row    = some state of 'variable' did not occur in data
+                # missing column = some state configuration of current 'variable's parents
+                #                  did not occur in data
+                row_index = self.state_names[variable]
+                column_index = pd.MultiIndex.from_product(parents_states, names=parents)
+                state_counts = state_count_data.reindex(
+                    index=row_index, columns=column_index
+                ).fillna(0)
+            else:
+                state_counts = state_count_data.fillna(0)
 
         return state_counts
 
