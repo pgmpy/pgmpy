@@ -68,7 +68,7 @@ class BayesianModelInference(Inference):
 
         return cached_values
 
-    def pre_compute_reduce_maps(self, variable):
+    def pre_compute_reduce_maps(self, variable, state_combinations=None):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
@@ -80,6 +80,9 @@ class BayesianModelInference(Inference):
         variable: Bayesian Model Node
             node of the Bayesian network
 
+        state_combinations: list (default=None)
+            List of tuple of state combinations for which to compute the reductions maps.
+
         Returns
         -------
         dict: dictionary with probability array-index for node as function of conditional dependency values,
@@ -88,12 +91,13 @@ class BayesianModelInference(Inference):
         variable_cpd = self.model.get_cpds(variable)
         variable_evid = variable_cpd.variables[:0:-1]
 
-        state_combinations = [
-            tuple(sc)
-            for sc in itertools.product(
-                *[range(self.cardinality[var]) for var in variable_evid]
-            )
-        ]
+        if state_combinations is None:
+            state_combinations = [
+                tuple(sc)
+                for sc in itertools.product(
+                    *[range(self.cardinality[var]) for var in variable_evid]
+                )
+            ]
         weights_list = np.array(
             [
                 variable_cpd.reduce(
