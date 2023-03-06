@@ -3,6 +3,7 @@ from warnings import warn
 
 import networkx as nx
 import numpy as np
+from joblib import Parallel, delayed
 
 from pgmpy import HAS_PANDAS
 from pgmpy.inference import Inference
@@ -68,7 +69,13 @@ class BayesianModelInference(Inference):
 
         return cached_values
 
-    def pre_compute_reduce_maps(self, variable, state_combinations=None):
+    @staticmethod
+    def _reduce(variable_cpd, variable_evid, sc):
+        return variable_cpd.reduce(
+            list(zip(variable_evid, sc)), inplace=False, show_warnings=False
+        ).values
+
+    def pre_compute_reduce_maps(self, variable, state_combinations=None, n_jobs=-1):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
@@ -99,13 +106,19 @@ class BayesianModelInference(Inference):
                 )
             ]
         weights_list = np.array(
-            [
-                variable_cpd.reduce(
-                    list(zip(variable_evid, sc)), inplace=False, show_warnings=False
-                ).values
+            Parallel(n_jobs=n_jobs, prefer="threads")(
+                delayed(BayesianModelInference._reduce)(variable_cpd, variable_evid, sc)
                 for sc in state_combinations
-            ]
+            )
         )
+        # weights_list = np.array(
+        #     [
+        #         variable_cpd.reduce(
+        #             list(zip(variable_evid, sc)), inplace=False, show_warnings=False
+        #         ).values
+        #         for sc in state_combinations
+        #     ]
+        # )
 
         unique_weights, weights_indices = np.unique(
             weights_list, axis=0, return_inverse=True
