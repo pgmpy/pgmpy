@@ -7,8 +7,7 @@ from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.global_vars import SHOW_PROGRESS
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovChain, MarkovNetwork
+from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.sampling import BayesianModelInference, _return_samples
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 
@@ -321,11 +320,12 @@ class BayesianModelSampling(BayesianModelInference):
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
 
-                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node
-                )
                 unique, inverse = np.unique(
                     evidence_values.T, axis=0, return_inverse=True
+                )
+                unique = [tuple(u) for u in unique]
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node, state_combinations=unique
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse
