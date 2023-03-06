@@ -1,11 +1,11 @@
 import itertools
 from collections import namedtuple
 
-import numpy as np
 import networkx as nx
+import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.global_vars import SHOW_PROGRESS
@@ -32,7 +32,7 @@ class BayesianModelSampling(BayesianModelInference):
     def _forward_sample(self, node, sampled, partial_samples, size):
         # If values specified in partial_samples, use them. Else generate the values.
         if (partial_samples is not None) and (node in partial_samples.columns):
-            return(partial_samples.loc[:, node].values)
+            return partial_samples.loc[:, node].values
         else:
             cpd = self.model.get_cpds(node)
             states = range(self.cardinality[node])
@@ -47,15 +47,11 @@ class BayesianModelSampling(BayesianModelInference):
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                     variable=node, state_combinations=unique
                 )
-                weight_index = np.array([state_to_index[u] for u in unique])[
-                    inverse
-                ]
-                return(sample_discrete_maps(
-                    states, weight_index, index_to_weight, size
-                ))
+                weight_index = np.array([state_to_index[u] for u in unique])[inverse]
+                return sample_discrete_maps(states, weight_index, index_to_weight, size)
             else:
                 weights = cpd.values
-                return(sample_discrete(states, weights, size))
+                return sample_discrete(states, weights, size)
 
     def forward_sample(
         self,
@@ -121,9 +117,16 @@ class BayesianModelSampling(BayesianModelInference):
 
         for node_set in pbar:
             if show_progress and SHOW_PROGRESS:
-                pbar.set_description(f"Generating for topological generation: {node_set}")
-            samples = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(self._forward_sample)(node, sampled, partial_samples, size) for node in node_set)
-            sampled = sampled.assign(**dict(zip(node_set, samples)))
+                pbar.set_description(
+                    f"Generating for topological generation: {node_set}"
+                )
+            samples = Parallel(n_jobs=n_jobs, prefer="threads")(
+                delayed(self._forward_sample)(node, sampled, partial_samples, size)
+                for node in node_set
+            )
+            for i, node in enumerate(node_set):
+                sampled[node] = samples[i]
+            # sampled = sampled.assign(**dict(zip(node_set, samples)))
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
