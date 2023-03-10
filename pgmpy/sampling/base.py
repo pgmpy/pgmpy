@@ -74,10 +74,13 @@ class BayesianModelInference(Inference):
         return_values = []
         for sc in sc_values:
             sc = list(zip(variable_evid, sc))
-            values = [
-                (var, variable_cpd.get_state_no(var, state_name))
-                for var, state_name in sc
-            ]
+            try:
+                values = [
+                    (var, variable_cpd.get_state_no(var, state_name))
+                    for var, state_name in sc
+                ]
+            except KeyError:
+                values = sc
             slice_ = [slice(None)] * len(variable_cpd.variables)
             for var, state in values:
                 var_index = variable_cpd.variables.index(var)
