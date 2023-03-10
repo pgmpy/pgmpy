@@ -70,10 +70,20 @@ class BayesianModelInference(Inference):
         return cached_values
 
     @staticmethod
-    def _reduce(variable_cpd, variable_evid, sc):
-        return variable_cpd.reduce(
-            list(zip(variable_evid, sc)), inplace=False, show_warnings=False
-        ).values
+    def _reduce(variable_cpd, variable_evid, sc_values):
+        return_values = []
+        for sc in sc_values:
+            sc = list(zip(variable_evid, sc))
+            values = [
+                (var, variable_cpd.get_state_no(var, state_name))
+                for var, state_name in sc
+            ]
+            slice_ = [slice(None)] * len(variable_cpd.variables)
+            for var, state in values:
+                var_index = variable_cpd.variables.index(var)
+                slice_[var_index] = state
+            return_values.append(variable_cpd.values[tuple(slice_)])
+        return return_values
 
     def pre_compute_reduce_maps(self, variable, state_combinations=None, n_jobs=-1):
         """
@@ -105,12 +115,31 @@ class BayesianModelInference(Inference):
                     *[range(self.cardinality[var]) for var in variable_evid]
                 )
             ]
-        weights_list = np.array(
-            Parallel(n_jobs=n_jobs, prefer="threads")(
-                delayed(BayesianModelInference._reduce)(variable_cpd, variable_evid, sc)
-                for sc in state_combinations
+        if n_jobs == -1:
+            import os
+
+            n_jobs = os.cpu_count()
+        import math
+
+        batch_size = math.ceil(len(state_combinations) / n_jobs)
+
+        weights_list = Parallel(n_jobs=n_jobs, prefer="threads")(
+            delayed(BayesianModelInference._reduce)(
+                variable_cpd,
+                variable_evid,
+                state_combinations[
+                    (batch_size * i) : min(
+                        batch_size * (i + 1), len(state_combinations)
+                    )
+                ],
             )
+            for i in range((len(state_combinations) // batch_size) + 1)
         )
+        import itertools
+
+        weights_list = np.array(list(itertools.chain(*weights_list)))
+
+        # weights_list = np.array([BayesianModelInference._reduce(variable_cpd, variable_evid, list(zip(variable_evid, sc))) for sc in state_combinations])
         # weights_list = np.array(
         #     [
         #         variable_cpd.reduce(
@@ -119,7 +148,6 @@ class BayesianModelInference(Inference):
         #         for sc in state_combinations
         #     ]
         # )
-
         unique_weights, weights_indices = np.unique(
             weights_list, axis=0, return_inverse=True
         )

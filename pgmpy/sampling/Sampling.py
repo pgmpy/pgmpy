@@ -120,10 +120,14 @@ class BayesianModelSampling(BayesianModelInference):
                 pbar.set_description(
                     f"Generating for topological generation: {node_set}"
                 )
-            samples = Parallel(n_jobs=n_jobs, prefer="threads")(
-                delayed(self._forward_sample)(node, sampled, partial_samples, size)
+            samples = [
+                self._forward_sample(node, sampled, partial_samples, size)
                 for node in node_set
-            )
+            ]
+            # samples = Parallel(n_jobs=n_jobs, prefer="threads")(
+            #     delayed(self._forward_sample)(node, sampled, partial_samples, size)
+            #     for node in node_set
+            # )
             for i, node in enumerate(node_set):
                 sampled[node] = samples[i]
             # sampled = sampled.assign(**dict(zip(node_set, samples)))
