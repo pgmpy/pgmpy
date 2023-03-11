@@ -71,10 +71,11 @@ class BayesianModelProbability(BayesianModelInference):
             # Here we retrieve the array: p(x[n]|E). We do this for each x in data.
             # We pick the specific node value from the arrays below.
 
-            state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                variable=node
-            )
             unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
+            unique = [tuple(u) for u in unique]
+            state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                variable=node, state_combinations=unique
+            )
             weights = np.array(
                 [index_to_weight[state_to_index[tuple(u)]] for u in unique]
             )[inverse]
