@@ -138,7 +138,6 @@ class BayesianModelInference(Inference):
             )
             for i in range((len(state_combinations) // batch_size) + 1)
         )
-        import itertools
 
         weights_list = np.array(list(itertools.chain(*weights_list)))
 
