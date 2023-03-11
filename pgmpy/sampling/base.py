@@ -80,7 +80,7 @@ class BayesianModelInference(Inference):
         runtime.
 
         Parameters
-        ==========
+        ----------
         variable_cpd: Instance of pgmpy.factors.discrete.TabularCPD
             The CPD that will be reduced.
 
@@ -92,7 +92,7 @@ class BayesianModelInference(Inference):
             reduce the CPD.
 
         Returns
-        =======
+        -------
         list: List of np.array with each element representing the reduced
                 values correponding to the states in sc_values.
         """
