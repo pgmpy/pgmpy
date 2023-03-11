@@ -112,7 +112,7 @@ class BayesianModelSampling(BayesianModelInference):
                     )
                     unique = [tuple(u) for u in unique]
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                        variable=node, state_combinations=unique
+                        variable=node, state_combinations=unique, n_jobs=n_jobs
                     )
                     weight_index = np.array([state_to_index[u] for u in unique])[
                         inverse
@@ -245,7 +245,13 @@ class BayesianModelSampling(BayesianModelInference):
         return sampled
 
     def likelihood_weighted_sample(
-        self, evidence=[], size=1, include_latents=False, seed=None, show_progress=True
+        self,
+        evidence=[],
+        size=1,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+        n_jobs=-1,
     ):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
@@ -269,6 +275,9 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. Default uses all cores.
 
         Returns
         -------
@@ -330,7 +339,7 @@ class BayesianModelSampling(BayesianModelInference):
                 )
                 unique = [tuple(u) for u in unique]
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node, state_combinations=unique
+                    variable=node, state_combinations=unique, n_jobs=n_jobs
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse
