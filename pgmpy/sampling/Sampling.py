@@ -59,8 +59,8 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents=False,
         seed=None,
         show_progress=True,
-        n_jobs=-1,
         partial_samples=None,
+        n_jobs=-1,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network.
@@ -82,6 +82,9 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples: pandas.DataFrame
             A pandas dataframe specifying samples on some of the variables in the model. If
             specified, the sampling procedure uses these sample values, instead of generating them.
+
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. Default uses all cores.
 
         Returns
         -------
