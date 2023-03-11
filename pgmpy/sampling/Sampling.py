@@ -29,30 +29,6 @@ class BayesianModelSampling(BayesianModelInference):
     def __init__(self, model):
         super(BayesianModelSampling, self).__init__(model)
 
-    def _forward_sample(self, node, sampled, partial_samples, size):
-        # If values specified in partial_samples, use them. Else generate the values.
-        if (partial_samples is not None) and (node in partial_samples.columns):
-            return partial_samples.loc[:, node].values
-        else:
-            cpd = self.model.get_cpds(node)
-            states = range(self.cardinality[node])
-            evidence = cpd.variables[:0:-1]
-            if evidence:
-                evidence_values = np.vstack([sampled[i] for i in evidence])
-
-                unique, inverse = np.unique(
-                    evidence_values.T, axis=0, return_inverse=True
-                )
-                unique = [tuple(u) for u in unique]
-                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node, state_combinations=unique
-                )
-                weight_index = np.array([state_to_index[u] for u in unique])[inverse]
-                return sample_discrete_maps(states, weight_index, index_to_weight, size)
-            else:
-                weights = cpd.values
-                return sample_discrete(states, weights, size)
-
     def forward_sample(
         self,
         size=1,
@@ -111,29 +87,42 @@ class BayesianModelSampling(BayesianModelInference):
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
         if show_progress and SHOW_PROGRESS:
-            pbar = tqdm(list(nx.topological_generations(self.model)))
+            pbar = tqdm(self.topological_order)
         else:
-            pbar = list(nx.topological_generations(self.model))
+            pbar = self.topological_order
 
         if seed is not None:
             np.random.seed(seed)
 
-        for node_set in pbar:
+        for node in pbar:
             if show_progress and SHOW_PROGRESS:
-                pbar.set_description(
-                    f"Generating for topological generation: {node_set}"
-                )
-            samples = [
-                self._forward_sample(node, sampled, partial_samples, size)
-                for node in node_set
-            ]
-            # samples = Parallel(n_jobs=n_jobs, prefer="threads")(
-            #     delayed(self._forward_sample)(node, sampled, partial_samples, size)
-            #     for node in node_set
-            # )
-            for i, node in enumerate(node_set):
-                sampled[node] = samples[i]
-            # sampled = sampled.assign(**dict(zip(node_set, samples)))
+                pbar.set_description(f"Generating for node: {node}")
+            # If values specified in partial_samples, use them. Else generate the values.
+            if (partial_samples is not None) and (node in partial_samples.columns):
+                sampled[node] = partial_samples.loc[:, node].values
+            else:
+                cpd = self.model.get_cpds(node)
+                states = range(self.cardinality[node])
+                evidence = cpd.variables[:0:-1]
+                if evidence:
+                    evidence_values = np.vstack([sampled[i] for i in evidence])
+
+                    unique, inverse = np.unique(
+                        evidence_values.T, axis=0, return_inverse=True
+                    )
+                    unique = [tuple(u) for u in unique]
+                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                        variable=node, state_combinations=unique
+                    )
+                    weight_index = np.array([state_to_index[u] for u in unique])[
+                        inverse
+                    ]
+                    sampled[node] = sample_discrete_maps(
+                        states, weight_index, index_to_weight, size
+                    )
+                else:
+                    weights = cpd.values
+                    sampled[node] = sample_discrete(states, weights, size)
 
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
