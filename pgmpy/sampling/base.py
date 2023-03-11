@@ -1,4 +1,6 @@
 import itertools
+import math
+import os
 from warnings import warn
 
 import networkx as nx
@@ -71,6 +73,29 @@ class BayesianModelInference(Inference):
 
     @staticmethod
     def _reduce(variable_cpd, variable_evid, sc_values):
+        """
+        Method to compute values of the `variable_cpd` when it it reduced on
+        `variable_evid` with states `sc_values`. This is a stripped down
+        version DiscreteFactor.reduce to only compute the values for faster
+        runtime.
+
+        Parameters
+        ==========
+        variable_cpd: Instance of pgmpy.factors.discrete.TabularCPD
+            The CPD that will be reduced.
+
+        variable_evid: list
+            List of variable name that need to be reduced.
+
+        sc_values: list
+            list of list of states (corresponding to variable_evid) to which to
+            reduce the CPD.
+
+        Returns
+        =======
+        list: List of np.array with each element representing the reduced
+                values correponding to the states in sc_values.
+        """
         return_values = []
         for sc in sc_values:
             sc = list(zip(variable_evid, sc))
@@ -103,6 +128,9 @@ class BayesianModelInference(Inference):
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
 
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. By default uses all.
+
         Returns
         -------
         dict: dictionary with probability array-index for node as function of conditional dependency values,
@@ -118,12 +146,10 @@ class BayesianModelInference(Inference):
                     *[range(self.cardinality[var]) for var in variable_evid]
                 )
             ]
+
+        # Comptue batch sizes and call _reduce in parallel.
         if n_jobs == -1:
-            import os
-
             n_jobs = os.cpu_count()
-        import math
-
         batch_size = math.ceil(len(state_combinations) / n_jobs)
 
         weights_list = Parallel(n_jobs=n_jobs, prefer="threads")(
@@ -140,16 +166,6 @@ class BayesianModelInference(Inference):
         )
 
         weights_list = np.array(list(itertools.chain(*weights_list)))
-
-        # weights_list = np.array([BayesianModelInference._reduce(variable_cpd, variable_evid, list(zip(variable_evid, sc))) for sc in state_combinations])
-        # weights_list = np.array(
-        #     [
-        #         variable_cpd.reduce(
-        #             list(zip(variable_evid, sc)), inplace=False, show_warnings=False
-        #         ).values
-        #         for sc in state_combinations
-        #     ]
-        # )
         unique_weights, weights_indices = np.unique(
             weights_list, axis=0, return_inverse=True
         )
