@@ -1,9 +1,8 @@
 from collections import namedtuple
+from itertools import chain, combinations
 from warnings import warn
 
 import numpy as np
-from itertools import combinations, chain
-
 
 State = namedtuple("State", ["var", "state"])
 
@@ -179,7 +178,7 @@ def sample_discrete_maps(states, weight_indices, index_to_weight, size=1, seed=N
 
     for weight_size, weight_index in zip(counts, unique_weight_indices):
         samples[weight_indices == weight_index] = np.random.choice(
-            states, size=weight_size, p=index_to_weight[weight_index]
+            states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
         )
     return samples
 

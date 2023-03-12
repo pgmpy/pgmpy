@@ -1,14 +1,15 @@
 import itertools
 from collections import namedtuple
 
+import networkx as nx
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy.factors import factor_product
 from pgmpy.global_vars import SHOW_PROGRESS
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovChain, MarkovNetwork
+from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.sampling import BayesianModelInference, _return_samples
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 
@@ -35,6 +36,7 @@ class BayesianModelSampling(BayesianModelInference):
         seed=None,
         show_progress=True,
         partial_samples=None,
+        n_jobs=-1,
     ):
         """
         Generates sample(s) from joint distribution of the bayesian network.
@@ -56,6 +58,9 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples: pandas.DataFrame
             A pandas dataframe specifying samples on some of the variables in the model. If
             specified, the sampling procedure uses these sample values, instead of generating them.
+
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. Default uses all cores.
 
         Returns
         -------
@@ -92,7 +97,6 @@ class BayesianModelSampling(BayesianModelInference):
         for node in pbar:
             if show_progress and SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
-
             # If values specified in partial_samples, use them. Else generate the values.
             if (partial_samples is not None) and (node in partial_samples.columns):
                 sampled[node] = partial_samples.loc[:, node].values
@@ -103,13 +107,14 @@ class BayesianModelSampling(BayesianModelInference):
                 if evidence:
                     evidence_values = np.vstack([sampled[i] for i in evidence])
 
-                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                        variable=node
-                    )
                     unique, inverse = np.unique(
                         evidence_values.T, axis=0, return_inverse=True
                     )
-                    weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
+                    unique = [tuple(u) for u in unique]
+                    state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                        variable=node, state_combinations=unique, n_jobs=n_jobs
+                    )
+                    weight_index = np.array([state_to_index[u] for u in unique])[
                         inverse
                     ]
                     sampled[node] = sample_discrete_maps(
@@ -240,7 +245,13 @@ class BayesianModelSampling(BayesianModelInference):
         return sampled
 
     def likelihood_weighted_sample(
-        self, evidence=[], size=1, include_latents=False, seed=None, show_progress=True
+        self,
+        evidence=[],
+        size=1,
+        include_latents=False,
+        seed=None,
+        show_progress=True,
+        n_jobs=-1,
     ):
         """
         Generates weighted sample(s) from joint distribution of the bayesian
@@ -264,6 +275,9 @@ class BayesianModelSampling(BayesianModelInference):
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
+
+        n_jobs: int (default: -1)
+            The number of CPU cores to use. Default uses all cores.
 
         Returns
         -------
@@ -320,11 +334,12 @@ class BayesianModelSampling(BayesianModelInference):
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
 
-                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                    variable=node
-                )
                 unique, inverse = np.unique(
                     evidence_values.T, axis=0, return_inverse=True
+                )
+                unique = [tuple(u) for u in unique]
+                state_to_index, index_to_weight = self.pre_compute_reduce_maps(
+                    variable=node, state_combinations=unique, n_jobs=n_jobs
                 )
                 weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
                     inverse

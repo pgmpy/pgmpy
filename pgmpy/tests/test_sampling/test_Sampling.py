@@ -5,9 +5,9 @@ from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination
-from pgmpy.models import BayesianNetwork
-from pgmpy.models import MarkovNetwork
+from pgmpy.models import BayesianNetwork, MarkovNetwork
 from pgmpy.sampling import BayesianModelSampling, GibbsSampling
+from pgmpy.sampling.base import BayesianModelInference
 
 
 class TestBayesianModelSampling(unittest.TestCase):
@@ -144,6 +144,16 @@ class TestBayesianModelSampling(unittest.TestCase):
     def test_init(self):
         with self.assertRaises(TypeError):
             BayesianModelSampling(self.markov_model)
+
+    def test_pre_compute_reduce_maps(self):
+        base_infer = BayesianModelInference(self.bayesian_model)
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", [(1, 1), (1, 0)]
+        )
+        self.assertEqual(state_to_index[(1, 1)], 0)
+        self.assertEqual(state_to_index[(1, 0)], 1)
+        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
+        self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
 
     def test_forward_sample(self):
         # Test without state names
