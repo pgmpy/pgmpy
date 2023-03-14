@@ -905,6 +905,8 @@ class DynamicBayesianNetwork(DAG):
 
             # Fit or fit_update with df_slice depending on the time slice
             if t_slice == 0:
+                if state_names != {}:
+                    state_names = {**{str(var) + '_' + str(0): s for var, s in state_names.items()}, **{str(var) + '_' + str(1): s for var, s in state_names.items()}}
                 const_bn.fit(df_slice, state_names=state_names, n_jobs=n_jobs)
             else:
                 const_bn.fit_update(
@@ -915,6 +917,7 @@ class DynamicBayesianNetwork(DAG):
         for cpd in const_bn.cpds:
             var_tuples = [var.rsplit("_", 1) for var in cpd.variables]
             new_vars = [DynamicNode(var, int(t)) for var, t in var_tuples]
+            state_names = {var: cpd.state_names[str(var.node) + '_' + str(var.time_slice)] for var in new_vars}
             cpds.append(
                 TabularCPD(
                     variable=new_vars[0],
@@ -922,6 +925,7 @@ class DynamicBayesianNetwork(DAG):
                     values=cpd.get_values(),
                     evidence=new_vars[1:],
                     evidence_card=cpd.cardinality[1:],
+                    state_names=state_names,
                 )
             )
 
