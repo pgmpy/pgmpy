@@ -446,8 +446,9 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
                 (("D", 0), ("D", 1)),
             ]
         )
-        model.fit(df, state_names={'A': [0, 1, 2], 'B': [0, 1, 2], 'C': [0, 1],
-            'D': [0, 1]})
+        model.fit(
+            df, state_names={"A": [0, 1, 2], "B": [0, 1, 2], "C": [0, 1], "D": [0, 1]}
+        )
         self.assertTrue(model.check_model())
         self.assertEqual(len(model.cpds), 8)
         for cpd in model.cpds:
