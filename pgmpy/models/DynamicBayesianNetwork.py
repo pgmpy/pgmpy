@@ -905,7 +905,7 @@ class DynamicBayesianNetwork(DAG):
 
             # Fit or fit_update with df_slice depending on the time slice
             if t_slice == 0:
-                const_bn.fit(df_slice, state_names={}, n_jobs=n_jobs)
+                const_bn.fit(df_slice, state_names=state_names, n_jobs=n_jobs)
             else:
                 const_bn.fit_update(
                     df_slice, n_prev_samples=t_slice * n_samples, n_jobs=n_jobs
