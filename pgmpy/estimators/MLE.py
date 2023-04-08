@@ -93,7 +93,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
 
-        parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
+        parameters = Parallel(n_jobs=1, prefer="threads")(
             delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
         )
 
@@ -149,7 +149,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         # if a column contains only `0`s (no states observed for some configuration
         # of parents' states) fill that column uniformly instead
-        state_counts.values[:, (state_counts.values == 0).all(axis=0)] = 1
+        state_counts.iloc[:, (state_counts.values == 0).all(axis=0)] = 1.0
 
         parents = sorted(self.model.get_parents(node))
         parents_cardinalities = [len(self.state_names[parent]) for parent in parents]

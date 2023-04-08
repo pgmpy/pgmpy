@@ -327,7 +327,7 @@ class TreeSearch(StructureEstimator):
             """
             cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0
-            for index, marg_prob in cond_marginal.iteritems():
+            for index, marg_prob in cond_marginal.items():
                 df_cond_subset = data[data.loc[:, class_node] == index]
                 cond_edge_weight += marg_prob * edge_weights_fn(
                     df_cond_subset.loc[:, u], df_cond_subset.loc[:, v]
