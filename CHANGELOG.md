@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.22] - 2022-04-08
+### Added
+1. AIC score metric from score based structure learning.
+2. Adds support for NET (HUGIN) file format.
+3. Adds argument reindex to `state_counts` method.
+
+### Fixed
+1. Bug in GibbsSampling when sampling from Bayesian Networks.
+2. Fix seed for all simulation methods.
+3. Memory leaks when using `lru_cache`.
+
+### Changed
+1. Caching disabled for computing state name counts during structure learning.
+2. Pre-computation for sampling methods are optimized.
+
 ## [0.1.21] - 2022-12-31
 ### Added
 1. `BayesianNetwork.get_state_probability` method to compute the probability of a given evidence.
