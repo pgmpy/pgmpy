@@ -32,5 +32,3 @@ jobs:
           pip freeze
       - name: Run tests
         run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
-      - name: After success
-        run: codecov
