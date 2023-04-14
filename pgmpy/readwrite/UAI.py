@@ -32,7 +32,8 @@ class UAIReader(object):
 
         Reference
         ---------
-        http://graphmod.ics.uci.edu/uai08/FileFormat
+        [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
+        [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
         """
         if path:
             with open(path, "r") as f:

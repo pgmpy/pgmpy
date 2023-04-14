@@ -1,7 +1,7 @@
 import itertools
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
 try:
     from lxml import etree
@@ -15,8 +15,8 @@ except ImportError:
         # commented out as causing problem with dictionary attributes
         print("Failed to import ElementTree from any known place")
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import BayesianNetwork
 
 
 class XBNReader(object):
@@ -38,11 +38,12 @@ class XBNReader(object):
 
         Examples
         --------
-        reader = XBNReader('test_XBN.xml')
+        >>> reader = XBNReader('test_XBN.xml')
 
         Reference
         ---------
-        http://xml.coverpages.org/xbn-MSdefault19990414.html
+        [1] Microsoft Research. XML belief network file format.
+            http://xml.coverpages.org/xbn-MSdefault19990414.html, 1999.
         """
         if path:
             self.network = etree.parse(path).getroot()

@@ -28,6 +28,11 @@ class BIFReader(object):
 
     """
     Base class for reading network file in bif format
+
+    Reference
+    ---------
+    [1] Geoff Hulten and Pedro Domingos. The interchange format for bayesian networks.
+        http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
     """
 
     def __init__(self, path=None, string=None, include_properties=False, n_jobs=-1):

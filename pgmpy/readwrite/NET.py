@@ -26,6 +26,10 @@ class NETWriter(object):
 
     """
     Base class for writing network file in net format
+
+    Reference
+    ---------
+    [1] HUGIN EXPERT A/S . The HUGIN file format. http://www.hugin.com, 2011.
     """
 
     def __init__(self, model):

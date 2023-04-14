@@ -29,6 +29,10 @@ from pgmpy.factors.discrete import TabularCPD, State
 class XMLBIFReader(object):
     """
     Base class for reading network file in XMLBIF format.
+
+    Reference
+    ---------
+    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
     """
 
     def __init__(self, path=None, string=None):
@@ -261,6 +265,10 @@ class XMLBIFReader(object):
 class XMLBIFWriter(object):
     """
     Base class for writing XMLBIF network file format.
+
+    Reference
+    ---------
+    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
