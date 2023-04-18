@@ -789,20 +789,21 @@ class DAG(nx.DiGraph):
             ancestors_list.add(node)
         return ancestors_list
 
-    def to_pdag(self):
-        """
-        Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
-
-        Returns
-        -------
-        Partially oriented DAG: pgmpy.base.PDAG
-            An instance of pgmpy.base.PDAG.
-
-        Examples
-        --------
-
-        """
-        pass
+    # TODO: Commented out till the method is implemented.
+    #     def to_pdag(self):
+    #         """
+    #         Returns the PDAG (the equivalence class of DAG; also known as CPDAG) of the DAG.
+    #
+    #         Returns
+    #         -------
+    #         Partially oriented DAG: pgmpy.base.PDAG
+    #             An instance of pgmpy.base.PDAG.
+    #
+    #         Examples
+    #         --------
+    #
+    #         """
+    #         pass
 
     def do(self, nodes, inplace=False):
         """
