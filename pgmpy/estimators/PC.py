@@ -9,8 +9,21 @@ from tqdm.auto import tqdm
 
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.estimators.CITests import chi_square, independence_match, pearsonr
+from pgmpy.estimators.CITests import *
 from pgmpy.global_vars import SHOW_PROGRESS
+
+CI_TESTS = {
+    "chi_square": chi_square,
+    "independence_match": independence_match,
+    "pearsonr": pearsonr,
+    "g_sq": g_sq,
+    "log_likelihood": log_likelihood,
+    "freeman_tuckey": freeman_tuckey,
+    "modified_log_likelihood": modified_log_likelihood,
+    "neyman": neyman,
+    "cressie_read": cressie_read,
+    "power_divergence": power_divergence,
+}
 
 
 class PC(StructureEstimator):
@@ -78,6 +91,12 @@ class PC(StructureEstimator):
                 "pearsonr": Uses the pertial correlation based on pearson
                         correlation coefficient to test independence. This works
                         only for continuous datasets.
+                "g_sq": G-test. Works only for discrete datasets.
+                "log_likelihood": Log-likelihood test. Works only for discrete dataset.
+                "freeman_tuckey": Freeman Tuckey test. Works only for discrete dataset.
+                "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
+                "neyman": Neyman test. Works only for discrete variables.
+                "cressie_read": Cressie Read test. Works only for discrete variables.
 
         max_cond_vars: int
             The maximum number of conditional variables allowed to do the statistical
@@ -86,7 +105,8 @@ class PC(StructureEstimator):
         return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
             The type of structure to return.
 
-            If `return_type=pdag` or `return_type=cpdag`: a partially directed structure                is returned.
+            If `return_type=pdag` or `return_type=cpdag`: a partially directed structure
+                is returned.
             If `return_type=dag`, a fully directed structure is returned if it
                 is possible to orient all the edges.
             If `return_type="skeleton", returns an undirected graph along
@@ -150,17 +170,19 @@ class PC(StructureEstimator):
                 f"variant must be one of: orig, stable, or parallel. Got: {variant}"
             )
         elif (not callable(ci_test)) and (
-            ci_test not in ("chi_square", "independence_match", "pearsonr")
+            ci_test.lower() not in (list(CI_TESTS.keys()) + ["independence_match"])
         ):
             raise ValueError(
-                "ci_test must be a callable or one of: chi_square, pearsonr, independence_match"
+                "ci_test must be a callable or one of the tests defined in CITests.py"
             )
 
         if (ci_test == "independence_match") and (self.independencies is None):
             raise ValueError(
                 "For using independence_match, independencies argument must be specified"
             )
-        elif (ci_test in ("chi_square", "pearsonr")) and (self.data is None):
+        elif (ci_test in set(CI_TESTS.keys()) - set(["independence_match"])) and (
+            self.data is None
+        ):
             raise ValueError(
                 "For using Chi Square or Pearsonr, data argument must be specified"
             )
@@ -258,18 +280,13 @@ class PC(StructureEstimator):
         # Initialize initial values and structures.
         lim_neighbors = 0
         separating_sets = dict()
-        if ci_test == "chi_square":
-            ci_test = chi_square
-        elif ci_test == "pearsonr":
-            ci_test = pearsonr
-        elif ci_test == "independence_match":
-            ci_test = independence_match
-        elif callable(ci_test):
-            ci_test = ci_test
-        else:
-            raise ValueError(
-                f"ci_test must either be chi_square, pearsonr, independence_match, or a function. Got: {ci_test}"
-            )
+        if not callable(ci_test):
+            try:
+                ci_test = CI_TESTS[ci_test]
+            except KeyError:
+                raise ValueError(
+                    f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
+                )
 
         if show_progress and SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)

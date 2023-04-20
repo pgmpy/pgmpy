@@ -240,7 +240,7 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
 
 
 class TestPCEstimatorFromDiscreteData(unittest.TestCase):
-    def test_build_skeleton(self):
+    def test_build_skeleton_chi_square(self):
         for variant in ["orig", "stable", "parallel"]:
             # Fake dataset no: 1
             np.random.seed(42)
@@ -305,6 +305,31 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
                     ((u, v) in expected_edges) or ((v, u) in expected_edges)
                 )
             self.assertEqual(sep_sets, expected_sepsets)
+
+    def test_build_skeleton(self):
+        np.random.seed(42)
+        data = pd.DataFrame(
+            np.random.randint(0, 2, size=(10000, 5)), columns=list("ABCDE")
+        )
+        data["F"] = data["A"] + data["B"] + data["C"]
+        est = PC(data=data)
+        for variant in ["orig", "stable", "parallel"]:
+            for test in [
+                "g_sq",
+                "log_likelihood",
+                "freeman_tuckey",
+                "modified_log_likelihood",
+                "neyman",
+                "cressie_read",
+                "power_divergence",
+            ]:
+                skel, sep_sets = est.estimate(
+                    variant=variant,
+                    ci_test=test,
+                    return_type="skeleton",
+                    significance_level=0.005,
+                    show_progress=False,
+                )
 
     def test_build_dag(self):
         for variant in ["orig", "stable", "parallel"]:
