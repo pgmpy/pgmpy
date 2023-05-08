@@ -31,9 +31,9 @@ class PC(StructureEstimator):
         """
         Class for constraint-based estimation of DAGs using the PC algorithm
         from a given data set.  Identifies (conditional) dependencies in data
-        set using chi_square dependency test and uses the PC algorithm to
-        estimate a DAG pattern that satisfies the identified dependencies. The
-        DAG pattern can then be completed to a faithful DAG, if possible.
+        set using statistical independence tests and estimates a DAG pattern
+        that satisfies the identified dependencies. The DAG pattern can then be
+        completed to a faithful DAG, if possible.
 
         Parameters
         ----------
@@ -67,7 +67,7 @@ class PC(StructureEstimator):
         is a constraint-based structure learning algorithm[1]. The independencies
         in the dataset are identified by doing statistical independece test. This
         method returns a DAG/PDAG structure which is faithful to the independencies
-        implied by the dataset
+        implied by the dataset.
 
         Parameters
         ----------
