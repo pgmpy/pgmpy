@@ -1,5 +1,5 @@
-from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork
 
 
 class ApproxInference(object):
@@ -76,6 +76,7 @@ class ApproxInference(object):
         virtual_evidence=None,
         joint=True,
         show_progress=True,
+        seed=None,
     ):
         """
         Method for doing approximate inference based on sampling in Bayesian
@@ -100,6 +101,9 @@ class ApproxInference(object):
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
 
+        seed: int (default: None)
+            Sets the seed for the random generators.
+
         Returns
         -------
         Probability distribution: pgmpy.factors.discrete.TabularCPD
@@ -120,12 +124,38 @@ class ApproxInference(object):
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
         # Step 1: Generate samples for the query
-        samples = self.model.simulate(
-            n_samples=n_samples,
-            evidence=evidence,
-            virtual_evidence=virtual_evidence,
-            show_progress=show_progress,
-        )
+        if isinstance(self.model, BayesianNetwork):
+            samples = self.model.simulate(
+                n_samples=n_samples,
+                evidence=evidence,
+                virtual_evidence=virtual_evidence,
+                seed=seed,
+                show_progress=show_progress,
+            )
+        elif isinstance(self.model, DynamicBayesianNetwork):
+            if evidence is None:
+                evidence = dict()
+            if virtual_evidence is None:
+                virtual_evidence = dict()
+
+            max_time_slices = 0
+            for var in variables:
+                if var[1] > max_time_slices:
+                    max_time_slices = var[1]
+            for var, state in evidence.items():
+                if var[1] > max_time_slices:
+                    max_time_slices = var[1]
+            for cpd in virtual_evidence:
+                if cpd.variable[1] > max_time_slices:
+                    max_time_slices = cpd.variable[2]
+            samples = self.model.simulate(
+                n_samples=n_samples,
+                n_time_slices=max_time_slices + 1,
+                evidence=evidence,
+                virtual_evidence=virtual_evidence,
+                show_progress=show_progress,
+                seed=seed,
+            )
 
         # Step 2: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, joint=joint)

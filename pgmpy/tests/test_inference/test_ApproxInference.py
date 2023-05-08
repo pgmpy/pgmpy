@@ -1,11 +1,12 @@
 import unittest
 
-from pgmpy.utils import get_example_model
-from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import ApproxInference, VariableElimination
+from pgmpy.models import DynamicBayesianNetwork as DBN
+from pgmpy.utils import get_example_model
 
 
-class TestApproxInference(unittest.TestCase):
+class TestApproxInferenceBN(unittest.TestCase):
     def setUp(self):
         self.alarm_model = get_example_model("alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
@@ -81,3 +82,63 @@ class TestApproxInference(unittest.TestCase):
             joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+
+
+class TestApproxInferenceDBN(unittest.TestCase):
+    def setUp(self):
+        self.model = DBN()
+        self.model.add_edges_from(
+            [(("Z", 0), ("X", 0)), (("X", 0), ("Y", 0)), (("Z", 0), ("Z", 1))]
+        )
+        z_start_cpd = TabularCPD(("Z", 0), 2, [[0.5], [0.5]])
+        x_i_cpd = TabularCPD(
+            ("X", 0),
+            2,
+            [[0.6, 0.9], [0.4, 0.1]],
+            evidence=[("Z", 0)],
+            evidence_card=[2],
+        )
+        y_i_cpd = TabularCPD(
+            ("Y", 0),
+            2,
+            [[0.2, 0.3], [0.8, 0.7]],
+            evidence=[("X", 0)],
+            evidence_card=[2],
+        )
+        z_trans_cpd = TabularCPD(
+            ("Z", 1),
+            2,
+            [[0.4, 0.7], [0.6, 0.3]],
+            evidence=[("Z", 0)],
+            evidence_card=[2],
+        )
+        self.model.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
+        self.model.initialize_initial_state()
+        self.infer = ApproxInference(self.model)
+
+    def test_inference(self):
+        res1 = self.infer.query([("Y", 1)], seed=42)
+        expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
+        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+        res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
+        expected2 = DiscreteFactor(
+            [("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029]
+        )
+        self.assertTrue(res2.__eq__(expected2, atol=0.01))
+        res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
+        expected3 = DiscreteFactor(
+            [("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030]
+        )
+        self.assertTrue(res3.__eq__(expected3, atol=0.01))
+
+    def test_evidence(self):
+        res1 = self.infer.query([("Y", 4)], evidence={("Y", 2): 0})
+        expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
+        self.assertTrue(res1.__eq__(expected1, atol=0.01))
+
+    def test_virutal_evidence(self):
+        res1 = self.infer.query(
+            [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
+        )
+        expected1 = DiscreteFactor([("Y", 4)], [2], [0.2205, 0.7795])
+        self.assertTrue(res1.__eq__(expected1, atol=0.01))
