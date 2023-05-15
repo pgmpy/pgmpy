@@ -1,26 +1,16 @@
-import unittest
-import warnings
 import io
 import sys
+import unittest
+import warnings
+import xml.etree.ElementTree as etree
 
+import networkx as nx
 import numpy as np
 import numpy.testing as np_test
-import networkx as nx
 
-from pgmpy.readwrite import XMLBeliefNetwork
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        try:
-            import xml.etree.ElementTree as etree
-        except ImportError:
-            warnings.warn("Failed to import ElementTree from any known place")
+from pgmpy.models import BayesianNetwork
+from pgmpy.readwrite import XMLBeliefNetwork
 
 
 class TestXBNReader(unittest.TestCase):

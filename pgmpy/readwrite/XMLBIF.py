@@ -1,29 +1,14 @@
 #!/usr/bin/env python
 
+import xml.etree.ElementTree as etree
+from io import BytesIO
 from itertools import chain
 
-from io import BytesIO
+import numpy as np
 import pyparsing as pp
 
-
-# TODO input and output state
-
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.ElementTree as etree
-    except ImportError:
-        # try:
-        #    import xml.etree.cElementTree as etree
-        #    commented out because xml.etree.cElementTree is giving errors with dictionary attributes
-        print("Failed to import ElementTree from any known place")
-
-import numpy as np
-
+from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import BayesianNetwork
-from pgmpy.factors.discrete import TabularCPD, State
 
 
 class XMLBIFReader(object):
