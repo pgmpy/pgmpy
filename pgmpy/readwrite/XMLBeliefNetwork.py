@@ -1,19 +1,8 @@
 import itertools
+import xml.etree.ElementTree as etree
 
 import networkx as nx
 import numpy as np
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.ElementTree as etree
-    except ImportError:
-        # try:
-        #    import xml.etree.cElementTree as etree
-        # except ImportError:
-        # commented out as causing problem with dictionary attributes
-        print("Failed to import ElementTree from any known place")
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork

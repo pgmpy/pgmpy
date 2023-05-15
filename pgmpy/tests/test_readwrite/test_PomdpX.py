@@ -1,28 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-import warnings
 import io
 import sys
+import unittest
+import warnings
+import xml.etree.ElementTree as etree
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        # Python 2.5
-        import xml.etree.cElementTree as etree
-
-        print("running with cElementTree on Python 2.5+")
-    except ImportError:
-        try:
-            import xml.etree.ElementTree as etree
-
-            print("running with ElementTree on Python 2.5+")
-        except ImportError:
-            warnings.warn("Failed to import ElementTree from any known place")
 
 
 class TestPomdpXReaderString(unittest.TestCase):
@@ -1291,7 +1276,10 @@ class TestPomdpXWriter(unittest.TestCase):
 </InitialStateBelief>"""
         )
         self.maxDiff = None
-        self.assertEqual(self.writer.add_initial_belief(), etree.tostring(expected_xml))
+        self.assertEqual(
+            self.writer.add_initial_belief().decode("utf-8").replace(" ", ""),
+            etree.tostring(expected_xml).decode("utf-8").replace(" ", ""),
+        )
 
     @unittest.skipIf(sys.version_info[1] >= 8, "xml ordering different in python 3.8")
     def test_state_transition_function_dd(self):

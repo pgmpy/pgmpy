@@ -1,24 +1,14 @@
 import os
 import unittest
 import warnings
+import xml.etree.ElementTree as etree
+
 import numpy as np
 import numpy.testing as np_test
 
-from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
-
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        try:
-            import xml.etree.ElementTree as etree
-        except ImportError:
-            warnings.warn("Failed to import ElementTree from any known place")
+from pgmpy.models import BayesianNetwork
+from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 
 TEST_FILE = """<?xml version="1.0"?>
 
