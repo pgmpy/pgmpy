@@ -52,10 +52,10 @@ class TestBIFReader(unittest.TestCase):
                         table 0.99 0.97 0.9 0.3 0.01 0.03 0.1 0.7 ;
                 }
                 probability (  "hear-bark"  "dog-out" ) { //2 variable(s) and 4 values
-                        table 0.7 0.01 0.3 0.99 ;
+                        default 0.7 0.01 0.3 0.99 ;
                 }
                 probability (  "family-out" ) { //1 variable(s) and 2 values
-                        table 0.15 0.85 ;
+                        default 0.15 0.85 ;
                 }
                 """,
             include_properties=True,
