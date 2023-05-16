@@ -277,7 +277,7 @@ class TestBIFReader(unittest.TestCase):
 
     def tearDown(self):
         del self.reader
-    
+
     def test_default_attribut_equal_table(self):
         default_reader = BIFReader(
             string="""
@@ -328,8 +328,6 @@ class TestBIFReader(unittest.TestCase):
         self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
         for var in table_model.nodes():
             self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
-
-        
 
 
 class TestBIFWriter(unittest.TestCase):
@@ -484,5 +482,3 @@ probability ( light-on | family-out ) {
         for var in self.model.nodes():
             self.assertEqual(self.model.get_cpds(var), read_model.get_cpds(var))
         os.remove("test_bif.bif")
-
-    
