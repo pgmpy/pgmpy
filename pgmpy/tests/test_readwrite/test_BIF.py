@@ -278,6 +278,57 @@ class TestBIFReader(unittest.TestCase):
     def tearDown(self):
         del self.reader
 
+    def test_default_attribut_equal_table(self):
+        default_reader = BIFReader(
+            string="""
+                network "Dog-Problem" { 
+                }
+                variable  "light-on" { 
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (218, 195)" ;
+                }
+                variable  "bowel-problem" { 
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (335, 99)" ;
+                }
+                variable  "dog-out" { 
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (300, 195)" ;
+                }
+                variable  "hear-bark" { 
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (296, 268)" ;
+                }
+                variable  "family-out" { 
+                        type discrete[2] {  "true"  "false" };
+                        property "position = (257, 99)" ;
+                }
+                probability (  "light-on"  "family-out" ) { 
+                        (true) 0.6 0.4 ;
+                        (false) 0.05 0.95 ;
+                }
+                probability (  "bowel-problem" ) { 
+                        default 0.01 0.99 ;
+                }
+                probability (  "dog-out"  "bowel-problem"  "family-out" ) { 
+                        default 0.99 0.97 0.9 0.3 0.01 0.03 0.1 0.7 ;
+                }
+                probability (  "hear-bark"  "dog-out" ) { 
+                        default 0.7 0.01 0.3 0.99 ;
+                }
+                probability (  "family-out" ) { 
+                        default 0.15 0.85 ;
+                }
+                """,
+            include_properties=True,
+        )
+        table_model = self.reader.get_model()
+        default_model = default_reader.get_model()
+        self.assertEqual(sorted(table_model.nodes()), sorted(default_model.nodes()))
+        self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
+        for var in table_model.nodes():
+            self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
+
 
 class TestBIFWriter(unittest.TestCase):
     def setUp(self):

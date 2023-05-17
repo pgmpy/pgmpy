@@ -154,7 +154,7 @@ class BIFReader(object):
             + Suppress(")")
         )
         optional_expr = Suppress("(") + OneOrMore(word_expr2) + Suppress(")")
-        probab_attributes = optional_expr | Suppress("table")
+        probab_attributes = optional_expr | Suppress("table") | Suppress("default")
         cpd_expr = probab_attributes + OneOrMore(num_expr)
 
         return probability_expr, cpd_expr
@@ -279,7 +279,7 @@ class BIFReader(object):
         cpds = self.cpd_expr.searchString(block)
 
         # Check if the block is a table.
-        if bool(re.search(".*\\n[ ]*table .*\n.*", block)):
+        if bool(re.search(".*\n[ ]*(table|default) .*\n.*", block)):
             arr = np.array([float(j) for i in cpds for j in i])
             arr = arr.reshape(
                 (
