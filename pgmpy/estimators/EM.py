@@ -87,7 +87,7 @@ class ExpectationMaximization(ParameterEstimator):
             )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-            weights = df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
+            weights = np.e**(df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1))
             df["_weight"] = (weights / weights.sum()) * n_counts[
                 tuple(data_unique.iloc[i])
             ]
@@ -104,7 +104,7 @@ class ExpectationMaximization(ParameterEstimator):
         data_unique = self.data.drop_duplicates()
         n_counts = self.data.groupby(list(self.data.columns)).size().to_dict()
 
-        cache = Parallel(n_jobs=n_jobs)(
+        cache = Parallel(n_jobs=1)(
             delayed(self._parallel_compute_weights)(
                 data_unique, latent_card, n_counts, i, batch_size
             )
