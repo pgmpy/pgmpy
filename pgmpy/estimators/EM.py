@@ -195,14 +195,27 @@ class ExpectationMaximization(ParameterEstimator):
         for var in self.model_copy.latents:
             self.state_names[var] = list(range(n_states_dict[var]))
 
-        # Step 3: Initialize random CPDs if starting values aren't provided.
+        # Step 3: Initialize CPDs.
+        # Step 3.1: Set a random seed.
         if seed is not None:
             np.random.seed(seed)
 
-        cpds = []
-        for node in self.model_copy.nodes():
+        fixed_cpds = []
+        # Step 3.2: Learn the CPDs of variables which don't involve
+        #           latent variables using MLE.
+        fixed_cpd_vars = set(self.model.nodes()) - self.model.latents - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+        model_all_obs = self.model.copy()
+        model_all_obs.latents = set()
+        mle = MaximumLikelihoodEstimator(model_all_obs, self.data)
+        for var in fixed_cpd_vars:
+            fixed_cpds.append(mle.estimate_cpd(var))
+
+        # Step 3.3: Randomly initialize the CPDs involving latent variables.
+        latent_cpds = []
+        vars_with_latents = set(self.model_copy.nodes()) - fixed_cpd_vars
+        for node in vars_with_latents:
             parents = list(self.model_copy.predecessors(node))
-            cpds.append(
+            latent_cpds.append(
                 TabularCPD.get_random(
                     variable=node,
                     evidence=parents,
@@ -215,7 +228,7 @@ class ExpectationMaximization(ParameterEstimator):
                 )
             )
 
-        self.model_copy.add_cpds(*cpds)
+        self.model_copy.add_cpds(*list(chain(fixed_cpds, latent_cpds)))
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
@@ -226,9 +239,10 @@ class ExpectationMaximization(ParameterEstimator):
             #           possible state of latent variables.
             weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
-            new_cpds = MaximumLikelihoodEstimator(
-                self.model_copy, weighted_data
-            ).get_parameters(n_jobs=n_jobs, weighted=True)
+            new_cpds = fixed_cpds.copy()
+            mle = MaximumLikelihoodEstimator(self.model_copy, weighted_data)
+            for var in vars_with_latents:
+                new_cpds.append(mle.estimate_cpd(var, weighted=True))
 
             # Step 4.3: Check of convergence and max_iter
             if self._is_converged(new_cpds, atol=atol):
