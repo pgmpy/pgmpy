@@ -39,7 +39,7 @@ class TestEMObserved(unittest.TestCase):
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [0, 1]
 
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.3))
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
     def tearDown(self):
         del self.model1
@@ -80,7 +80,7 @@ class TestEMObservedTorch(unittest.TestCase):
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [0, 1]
 
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.3))
+            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
     def tearDown(self):
         del self.model1

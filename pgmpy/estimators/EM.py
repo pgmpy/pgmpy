@@ -87,7 +87,9 @@ class ExpectationMaximization(ParameterEstimator):
             )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-            weights = np.e**(df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1))
+            weights = np.e ** (
+                df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
+            )
             df["_weight"] = (weights / weights.sum()) * n_counts[
                 tuple(data_unique.iloc[i])
             ]
@@ -203,7 +205,11 @@ class ExpectationMaximization(ParameterEstimator):
         fixed_cpds = []
         # Step 3.2: Learn the CPDs of variables which don't involve
         #           latent variables using MLE.
-        fixed_cpd_vars = set(self.model.nodes()) - self.model.latents - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+        fixed_cpd_vars = (
+            set(self.model.nodes())
+            - self.model.latents
+            - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+        )
         model_all_obs = self.model.copy()
         model_all_obs.latents = set()
         mle = MaximumLikelihoodEstimator(model_all_obs, self.data)
@@ -255,4 +261,4 @@ class ExpectationMaximization(ParameterEstimator):
                 if show_progress and config.SHOW_PROGRESS:
                     pbar.update(1)
 
-        return cpds
+        return new_cpds
