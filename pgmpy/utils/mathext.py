@@ -82,7 +82,7 @@ def _adjusted_weights(weights):
         warn(
             f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
         )
-        weights[-1] += error
+        weights[np.argmax(weights)] += error
 
     return weights
 
