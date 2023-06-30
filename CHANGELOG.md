@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.23] - 2022-06-30
+### Added
+1. BIFReader made compatible with the output of PyAgrum
+2. Support for all available CI tests in PC algorithm.
+3. References for read/write file formats.
+
+### Removed
+1. Removes `DAG.to_pdag` method.
+
+### Changed
+1. Fixes for ApproxInference for DBNs.
+2. Make `xml.etree` the default parser instead of using lxml.
+
 ## [0.1.22] - 2022-04-08
 ### Added
 1. AIC score metric from score based structure learning.
