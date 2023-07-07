@@ -72,6 +72,7 @@ class ApproxInference(object):
         self,
         variables,
         n_samples=int(1e4),
+        samples=None,
         evidence=None,
         virtual_evidence=None,
         joint=True,
@@ -90,6 +91,10 @@ class ApproxInference(object):
         n_samples: int
             The number of samples to generate for computing the distributions. Higher `n_samples`
             results in more accurate results at the cost of more computation time.
+
+        samples: pd.DataFrame (default: None)
+            If provided, uses these samples to compute the distribution instead
+            of generating samples.
 
         evidence: dict (default: None)
             The observed values. A dict key, value pair of the form {var: state_name}.
@@ -124,38 +129,39 @@ class ApproxInference(object):
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x7f92d915ec40>}
         """
         # Step 1: Generate samples for the query
-        if isinstance(self.model, BayesianNetwork):
-            samples = self.model.simulate(
-                n_samples=n_samples,
-                evidence=evidence,
-                virtual_evidence=virtual_evidence,
-                seed=seed,
-                show_progress=show_progress,
-            )
-        elif isinstance(self.model, DynamicBayesianNetwork):
-            if evidence is None:
-                evidence = dict()
-            if virtual_evidence is None:
-                virtual_evidence = dict()
+        if samples is None:
+            if isinstance(self.model, BayesianNetwork):
+                samples = self.model.simulate(
+                    n_samples=n_samples,
+                    evidence=evidence,
+                    virtual_evidence=virtual_evidence,
+                    seed=seed,
+                    show_progress=show_progress,
+                )
+            elif isinstance(self.model, DynamicBayesianNetwork):
+                if evidence is None:
+                    evidence = dict()
+                if virtual_evidence is None:
+                    virtual_evidence = dict()
 
-            max_time_slices = 0
-            for var in variables:
-                if var[1] > max_time_slices:
-                    max_time_slices = var[1]
-            for var, state in evidence.items():
-                if var[1] > max_time_slices:
-                    max_time_slices = var[1]
-            for cpd in virtual_evidence:
-                if cpd.variable[1] > max_time_slices:
-                    max_time_slices = cpd.variable[2]
-            samples = self.model.simulate(
-                n_samples=n_samples,
-                n_time_slices=max_time_slices + 1,
-                evidence=evidence,
-                virtual_evidence=virtual_evidence,
-                show_progress=show_progress,
-                seed=seed,
-            )
+                max_time_slices = 0
+                for var in variables:
+                    if var[1] > max_time_slices:
+                        max_time_slices = var[1]
+                for var, state in evidence.items():
+                    if var[1] > max_time_slices:
+                        max_time_slices = var[1]
+                for cpd in virtual_evidence:
+                    if cpd.variable[1] > max_time_slices:
+                        max_time_slices = cpd.variable[2]
+                samples = self.model.simulate(
+                    n_samples=n_samples,
+                    n_time_slices=max_time_slices + 1,
+                    evidence=evidence,
+                    virtual_evidence=virtual_evidence,
+                    show_progress=show_progress,
+                    seed=seed,
+                )
 
         # Step 2: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, joint=joint)
