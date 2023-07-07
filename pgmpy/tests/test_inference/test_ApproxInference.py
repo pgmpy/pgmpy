@@ -11,10 +11,16 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.alarm_model = get_example_model("alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
+        self.samples = self.alarm_model.simulate(int(1e4))
 
     def test_query_marg(self):
         query_results = self.infer_alarm.query(variables=["HISTORY"])
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY"], samples=self.samples
+        )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
@@ -22,9 +28,20 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], samples=self.samples, joint=True
+        )
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+
+        query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], joint=False
         )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
+        for var in ["HISTORY", "CVP"]:
+            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], samples=self.samples, joint=False
+        )
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
@@ -38,6 +55,14 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(
+            variables=["HISTORY"],
+            evidence={"PVSAT": "LOW"},
+            samples=self.samples,
+            joint=True,
+        )
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+
+        query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True
         )
         ve_results = self.alarm_ve.query(
@@ -46,10 +71,27 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"],
+            evidence={"PVSAT": "LOW"},
+            samples=self.samples,
+            joint=True,
+        )
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+
+        query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
         )
         ve_results = self.alarm_ve.query(
             variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False
+        )
+        for var in ["HISTORY", "CVP"]:
+            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"],
+            evidence={"PVSAT": "LOW"},
+            samples=self.samples,
+            joint=False,
         )
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
