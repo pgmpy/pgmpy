@@ -107,7 +107,7 @@ def get_example_model(model):
         raise NotImplementedError("The specified dataset isn't available.")
 
     path = filenames[model]
-    ref = importlib.resources.files("pgmpy") / path
+    ref = files("pgmpy") / path
     with gzip.open(ref) as f:
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
