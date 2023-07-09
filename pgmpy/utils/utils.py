@@ -1,6 +1,5 @@
 import gzip
-from urllib.request import urlretrieve
-from pkg_resources import resource_filename
+import importlib
 
 
 def get_example_model(model):
@@ -100,10 +99,11 @@ def get_example_model(model):
     if model not in filenames.keys():
         raise ValueError("dataset should be one of the options")
     if filenames[model] == "":
-        raise NotImplementedError("The specified dataset isn't supported")
+        raise NotImplementedError("The specified dataset isn't available.")
 
     path = filenames[model]
-    with gzip.open(resource_filename("pgmpy", path), "rb") as f:
+    ref = importlib.resources.files("pgmpy") / path
+    with gzip.open(ref) as f:
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
