@@ -1,5 +1,10 @@
 import gzip
-import importlib
+
+try:
+    from importlib.resources import files
+except:
+    # For python 3.8 and lower
+    from importlib_resources import files
 
 
 def get_example_model(model):
