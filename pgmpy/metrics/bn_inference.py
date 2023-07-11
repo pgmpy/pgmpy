@@ -59,7 +59,7 @@ class BayesianModelProbability(BayesianModelInference):
         current_no = vec_translate(current_val, cpd.name_to_no[current])
 
         # conditional dependencies E of the probed variable
-        evidence = cpd.variables[1:]
+        evidence = [var for var in cpd.variables[1:] if var not in self.model.latents]
         evidence_idx = [ordering.index(ev) for ev in evidence]
         evidence_val = data[:, evidence_idx]
         evidence_no = np.empty_like(evidence_val, dtype=int)
@@ -74,7 +74,7 @@ class BayesianModelProbability(BayesianModelInference):
             unique, inverse = np.unique(evidence_no, axis=0, return_inverse=True)
             unique = [tuple(u) for u in unique]
             state_to_index, index_to_weight = self.pre_compute_reduce_maps(
-                variable=node, state_combinations=unique
+                variable=node, evidence=evidence, state_combinations=unique
             )
             weights = np.array(
                 [index_to_weight[state_to_index[tuple(u)]] for u in unique]

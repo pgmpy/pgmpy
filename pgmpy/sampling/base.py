@@ -99,7 +99,7 @@ class BayesianModelInference(Inference):
         slice_ = [slice(None), *values]
         return variable_cpd.values[tuple(slice_)]
 
-    def pre_compute_reduce_maps(self, variable, state_combinations=None):
+    def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
@@ -120,19 +120,24 @@ class BayesianModelInference(Inference):
             dictionary with mapping of probability array-index to probability array.
         """
         variable_cpd = self.model.get_cpds(variable)
-        variable_evid = variable_cpd.variables[1:]
+        if evidence is None:
+            evidence = [
+                var
+                for var in variable_cpd.variables[:0:-1]
+                if var not in self.model.latents
+            ]
 
         if state_combinations is None:
             state_combinations = [
                 tuple(sc)
                 for sc in itertools.product(
-                    *[range(self.cardinality[var]) for var in variable_evid]
+                    *[range(self.cardinality[var]) for var in evidence]
                 )
             ]
 
         weights_list = compat_fns.stack(
             [
-                BayesianModelInference._reduce(variable_cpd, variable_evid, sc)
+                BayesianModelInference._reduce(variable_cpd, evidence, sc)
                 for sc in state_combinations
             ]
         )
