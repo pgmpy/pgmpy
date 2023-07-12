@@ -2,6 +2,7 @@ import itertools
 import unittest
 
 import numpy as np
+import pandas as pd
 import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -91,10 +92,22 @@ class TestVariableElimination(unittest.TestCase):
                 elimination_order=order,
                 show_progress=False,
             )
+            expected_result = DiscreteFactor(
+                variables=["J"], cardinality=[2], values=[0.6, 0.4]
+            )
             self.assertEqual(
                 query_result,
-                DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4]),
+                expected_result,
             )
+
+            evidence_df = pd.DataFrame([{"A": 0, "R": 1}, {"A": 0, "R": 1}])
+            query_result = self.bayesian_inference.query(
+                variables=["J"],
+                evidence=evidence_df,
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(query_result, [expected_result, expected_result])
 
     def test_query_multiple_variable_with_evidence(self):
         for order in [
@@ -110,16 +123,24 @@ class TestVariableElimination(unittest.TestCase):
                 elimination_order=order,
                 show_progress=False,
             )
-            self.assertEqual(
-                query_result,
-                DiscreteFactor(
-                    variables=["J", "Q"],
-                    cardinality=[2, 2],
-                    values=np.array(
-                        [[0.73636364, 0.08181818], [0.03636364, 0.14545455]]
-                    ),
-                ),
+            expected_result = DiscreteFactor(
+                variables=["J", "Q"],
+                cardinality=[2, 2],
+                values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             )
+
+            self.assertEqual(query_result, expected_result)
+
+            evidence_df = pd.DataFrame(
+                [{"A": 0, "R": 0, "G": 0, "L": 1}, {"A": 0, "R": 0, "G": 0, "L": 1}]
+            )
+            query_result = self.bayesian_inference.query(
+                variables=["J", "Q"],
+                evidence=evidence_df,
+                elimination_order=order,
+                show_progress=False,
+            )
+            self.assertEqual(query_result, [expected_result, expected_result])
 
     def test_query_multiple_times(self):
         # This just tests that the models are not getting modified while querying them
@@ -1010,12 +1031,16 @@ class TestBeliefPropagation(unittest.TestCase):
         query_result = belief_propagation.query(
             variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False
         )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
-                variables=["J"], cardinality=[2], values=np.array([0.6, 0.4])
-            ),
+        expected_result = DiscreteFactor(
+            variables=["J"], cardinality=[2], values=np.array([0.6, 0.4])
         )
+        self.assertEqual(query_result, expected_result)
+
+        evidence_df = pd.DataFrame([{"A": 0, "R": 1}, {"A": 0, "R": 1}])
+        query_result = belief_propagation.query(
+            variables=["J"], evidence=evidence_df, show_progress=False
+        )
+        self.assertEqual(query_result, [expected_result, expected_result])
 
     def test_query_multiple_variable_with_evidence(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
@@ -1024,14 +1049,24 @@ class TestBeliefPropagation(unittest.TestCase):
             evidence={"A": 0, "R": 0, "G": 0, "L": 1},
             show_progress=False,
         )
-        self.assertEqual(
-            query_result,
-            DiscreteFactor(
-                variables=["J", "Q"],
-                cardinality=[2, 2],
-                values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
-            ),
+
+        expected_result = DiscreteFactor(
+            variables=["J", "Q"],
+            cardinality=[2, 2],
+            values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
         )
+
+        self.assertEqual(query_result, expected_result)
+
+        evidence_df = pd.DataFrame(
+            [{"A": 0, "R": 0, "G": 0, "L": 1}, {"A": 0, "R": 0, "G": 0, "L": 1}]
+        )
+        query_result = belief_propagation.query(
+            variables=["J", "Q"],
+            evidence=evidence_df,
+            show_progress=False,
+        )
+        self.assertEqual(query_result, [expected_result, expected_result])
 
     def test_query_common_var(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)

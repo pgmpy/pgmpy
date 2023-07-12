@@ -4,6 +4,7 @@ import itertools
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 from opt_einsum import contract
 from tqdm.auto import tqdm
 
@@ -247,14 +248,18 @@ class VariableElimination(Inference):
         show_progress=True,
     ):
         """
+        Computes the distribution P(variables|evidence, virtual_evidence). The `evidence`
+        specifies the observed state for doing prediciton. `virtual_evidence` specifies
+        the probability of a variable to be observed in different states.
+
         Parameters
         ----------
         variables: list
             list of variables for which you want to compute the probability
 
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-            None if no evidence
+        evidence: dict or pandas.DataFrame (default: None)
+            a dict key, value pair as {var: state_of_var_observed} or pandas.DataFrame with
+            each row representing a set of evidence.
 
         virtual_evidence: list (default:None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
@@ -265,7 +270,8 @@ class VariableElimination(Inference):
             should contain all variables in the model except the ones in `variables`. str options
             are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
             refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
-            for details.
+            for details. `greedy` uses optimized tensor contraction to automatically find the
+            best order based on matrix sizes.
 
         joint: boolean (default: True)
             If True, returns a Joint Distribution over `variables`.
@@ -286,8 +292,25 @@ class VariableElimination(Inference):
         >>> model.fit(values)
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.query(['A', 'B'])
+
+        Returns
+        -------
+        If joint=True:
+            pgmpy.factors.discrete.DiscreteFactor or list: If evidence is a
+            pandas DataFrame, return a list of DiscreteFactor object
+            representing the P(variables|evidence, virtual_evidence)
+            corresponding to each row of the evidence dataframe.
+        If joint=False
+            dict or list of dicts: If evidence is a pandas DataFrame, returns a
+            list of dicts of the form {var: P(var | evidence,
+            virtual_evidence)} for each var in `variables`.
         """
         evidence = evidence if evidence is not None else dict()
+        evidence_li = (
+            evidence.to_dict("records")
+            if isinstance(evidence, pd.DataFrame)
+            else [evidence]
+        )
 
         # Step 1: Parameter Checks
         common_vars = set(evidence if evidence is not None else []).intersection(
@@ -324,95 +347,115 @@ class VariableElimination(Inference):
         if elimination_order == "greedy":
             # Step 5.1: Compute the values array for factors after reducing them to provided
             #           evidence.
-            evidence_vars = set(evidence)
-            reduce_indexes = []
-            reshape_indexes = []
-            for phi in factors:
-                indexes_to_reduce = [
-                    phi.variables.index(var)
-                    for var in set(phi.variables).intersection(evidence_vars)
-                ]
-                indexer = [slice(None)] * len(phi.variables)
-                for index in indexes_to_reduce:
-                    indexer[index] = phi.get_state_no(
-                        phi.variables[index], evidence[phi.variables[index]]
-                    )
-                reduce_indexes.append(tuple(indexer))
-                reshape_indexes.append(
-                    [
-                        1 if indexer != slice(None) else phi.cardinality[i]
-                        for i, indexer in enumerate(reduce_indexes[-1])
+            results = []
+            evidence_vars = set(evidence_li[0])
+            for evidence in evidence_li:
+                reduce_indexes = []
+                reshape_indexes = []
+                for phi in factors:
+                    indexes_to_reduce = [
+                        phi.variables.index(var)
+                        for var in set(phi.variables).intersection(evidence_vars)
                     ]
-                )
-
-            # Step 5.2: Prepare values and index arrays to do use in einsum
-            if isinstance(self.model, JunctionTree):
-                var_int_map = {
-                    var: i
-                    for i, var in enumerate(
-                        set(itertools.chain(*model_reduced.nodes()))
-                    )
-                }
-            else:
-                var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
-            einsum_expr = []
-            for index, phi in enumerate(factors):
-                einsum_expr.append(
-                    (phi.values[reduce_indexes[index]]).reshape(reshape_indexes[index])
-                )
-                einsum_expr.append([var_int_map[var] for var in phi.variables])
-            result_values = contract(
-                *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
-            )
-
-            # Step 5.3: Prepare return values.
-            result = DiscreteFactor(
-                variables,
-                result_values.shape,
-                result_values,
-                state_names={var: model_reduced.states[var] for var in variables},
-            )
-            if joint:
-                if isinstance(
-                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
-                ):
-                    return result.normalize(inplace=False)
-                else:
-                    return result
-            else:
-                result_dict = {}
-                all_vars = set(variables)
-                if isinstance(
-                    self.model, (BayesianNetwork, JunctionTree, DynamicBayesianNetwork)
-                ):
-                    for var in variables:
-                        result_dict[var] = result.marginalize(
-                            all_vars - {var}, inplace=False
-                        ).normalize(inplace=False)
-                else:
-                    for var in variables:
-                        result_dict[var] = result.marginalize(
-                            all_vars - {var}, inplace=False
+                    indexer = [slice(None)] * len(phi.variables)
+                    for index in indexes_to_reduce:
+                        indexer[index] = phi.get_state_no(
+                            phi.variables[index], evidence[phi.variables[index]]
                         )
+                    reduce_indexes.append(tuple(indexer))
+                    reshape_indexes.append(
+                        [
+                            1 if indexer != slice(None) else phi.cardinality[i]
+                            for i, indexer in enumerate(reduce_indexes[-1])
+                        ]
+                    )
 
-                return result_dict
+                # Step 5.2: Prepare values and index arrays to do use in einsum
+                if isinstance(self.model, JunctionTree):
+                    var_int_map = {
+                        var: i
+                        for i, var in enumerate(
+                            set(itertools.chain(*model_reduced.nodes()))
+                        )
+                    }
+                else:
+                    var_int_map = {
+                        var: i for i, var in enumerate(model_reduced.nodes())
+                    }
+                einsum_expr = []
+                for index, phi in enumerate(factors):
+                    einsum_expr.append(
+                        (phi.values[reduce_indexes[index]]).reshape(
+                            reshape_indexes[index]
+                        )
+                    )
+                    einsum_expr.append([var_int_map[var] for var in phi.variables])
+                result_values = contract(
+                    *einsum_expr,
+                    [var_int_map[var] for var in variables],
+                    optimize="greedy",
+                )
 
+                # Step 5.3: Prepare return values.
+                result = DiscreteFactor(
+                    variables,
+                    result_values.shape,
+                    result_values,
+                    state_names={var: model_reduced.states[var] for var in variables},
+                )
+                if joint:
+                    if isinstance(
+                        self.model,
+                        (BayesianNetwork, JunctionTree, DynamicBayesianNetwork),
+                    ):
+                        results.append(result.normalize(inplace=False))
+                    else:
+                        results.append(result)
+                else:
+                    result_dict = {}
+                    all_vars = set(variables)
+                    if isinstance(
+                        self.model,
+                        (BayesianNetwork, JunctionTree, DynamicBayesianNetwork),
+                    ):
+                        for var in variables:
+                            result_dict[var] = result.marginalize(
+                                all_vars - {var}, inplace=False
+                            ).normalize(inplace=False)
+                    else:
+                        for var in variables:
+                            result_dict[var] = result.marginalize(
+                                all_vars - {var}, inplace=False
+                            )
+
+                    results.append(result_dict)
+
+            if len(results) == 1:
+                return results[0]
+            else:
+                return results
         else:
             # Step 5.1: Initialize data structures for the reduced bn.
             reduced_ve = VariableElimination(model_reduced)
-            reduced_ve._initialize_structures()
 
-            # Step 5.2: Do the actual variable elimination
-            result = reduced_ve._variable_elimination(
-                variables=variables,
-                operation="marginalize",
-                evidence=evidence,
-                elimination_order=elimination_order,
-                joint=joint,
-                show_progress=show_progress,
-            )
+            results = []
+            for evidence in evidence_li:
+                reduced_ve._initialize_structures()
 
-        return result
+                # Step 5.2: Do the actual variable elimination
+                result = reduced_ve._variable_elimination(
+                    variables=variables,
+                    operation="marginalize",
+                    evidence=evidence,
+                    elimination_order=elimination_order,
+                    joint=joint,
+                    show_progress=show_progress,
+                )
+                results.append(result)
+        if len(results) == 1:
+            return results[0]
+        else:
+            return results
 
     def max_marginal(
         self,
@@ -1083,6 +1126,11 @@ class BeliefPropagation(Inference):
         ...                          evidence={'A': 0, 'R': 0, 'G': 0, 'L': 1})
         """
         evidence = evidence if evidence is not None else dict()
+        evidence_li = (
+            evidence.to_dict("records")
+            if isinstance(evidence, pd.DataFrame)
+            else [evidence]
+        )
         orig_model = self.model.copy()
 
         # Step 1: Parameter Checks
@@ -1112,19 +1160,22 @@ class BeliefPropagation(Inference):
         self._initialize_structures()
 
         # Step 4: Run inference.
-        result = self._query(
-            variables=variables,
-            operation="marginalize",
-            evidence=evidence,
-            joint=joint,
-            show_progress=show_progress,
-        )
+        results = []
+        for evidence in evidence_li:
+            result = self._query(
+                variables=variables,
+                operation="marginalize",
+                evidence=evidence,
+                joint=joint,
+                show_progress=show_progress,
+            )
+            results.append(result)
         self.__init__(orig_model)
 
-        if joint:
-            return result.normalize(inplace=False)
+        if len(results) == 1:
+            return results[0]
         else:
-            return result
+            return results
 
     def map_query(
         self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
