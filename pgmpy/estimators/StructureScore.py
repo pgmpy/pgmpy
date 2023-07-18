@@ -302,6 +302,45 @@ class BDsScore(BDeuScore):
         score = -(nedges + possible_edges) * log(2.0)
         return score
 
+    def local_score(self, variable, parents):
+        'Computes a score that measures how much a \
+        given variable is "influenced" by a given list of potential parents.'
+
+        var_states = self.state_names[variable]
+        var_cardinality = len(var_states)
+        parents = list(parents)
+        state_counts = self.state_counts(variable, parents, reindex=False)
+        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
+
+        counts = np.asarray(state_counts)
+        # counts size is different because reindex=False is dropping columns.
+        counts_size = num_parents_states * len(self.state_names[variable])
+        log_gamma_counts = np.zeros_like(counts, dtype=float)
+        alpha = self.equivalent_sample_size / state_counts.shape[1]
+        beta = self.equivalent_sample_size / counts_size
+        # Compute log(gamma(counts + beta))
+        gammaln(counts + beta, out=log_gamma_counts)
+
+        # Compute the log-gamma conditional sample size
+        log_gamma_conds = np.sum(counts, axis=0, dtype=float)
+        gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
+
+        # Adjustment because of missing 0 columns when using reindex=False for computing state_counts to save memory.
+        gamma_counts_adj = (
+            (num_parents_states - counts.shape[1])
+            * len(self.state_names[variable])
+            * gammaln(beta)
+        )
+        gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
+
+        score = (
+            (np.sum(log_gamma_counts) + gamma_counts_adj)
+            - (np.sum(log_gamma_conds) + gamma_conds_adj)
+            + state_counts.shape[1] * lgamma(alpha)
+            - counts_size * lgamma(beta)
+        )
+        return score
+
 
 class BicScore(StructureScore):
     def __init__(self, data, **kwargs):
