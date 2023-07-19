@@ -488,10 +488,8 @@ class VariableElimination(Inference):
         show_progress=True,
     ):
         """
-        Computes the MAP Query over the variables given the evidence.
-
-        Note: When multiple variables are passed, it returns the map_query for each
-        of them individually.
+        Computes the MAP Query over the variables given the evidence. Returns the
+        highest probable state in the joint distribution of `variables`.
 
         Parameters
         ----------
@@ -555,7 +553,6 @@ class VariableElimination(Inference):
         reduced_ve = VariableElimination(model_reduced)
         reduced_ve._initialize_structures()
 
-        # TODO:Check the note in docstring. Change that behavior to return the joint MAP
         final_distribution = reduced_ve._variable_elimination(
             variables=variables,
             operation="marginalize",
@@ -573,13 +570,7 @@ class VariableElimination(Inference):
             var, value = var_assignment
             map_query_results[var] = value
 
-        if not variables:
-            return map_query_results
-        else:
-            return_dict = {}
-            for var in variables:
-                return_dict[var] = map_query_results[var]
-            return return_dict
+        return map_query_results
 
     def induced_graph(self, elimination_order):
         """
@@ -1130,10 +1121,8 @@ class BeliefPropagation(Inference):
         self, variables=None, evidence=None, virtual_evidence=None, show_progress=True
     ):
         """
-        MAP Query method using belief propagation.
-
-        Note: When multiple variables are passed, it returns the map_query for each
-        of them individually.
+        MAP Query method using belief propagation. Returns the highest probable
+        state in the joint distributon of `variables`.
 
         Parameters
         ----------
@@ -1214,6 +1203,7 @@ class BeliefPropagation(Inference):
             variables=variables,
             operation="marginalize",
             evidence=evidence,
+            joint=True,
             show_progress=show_progress,
         )
 
@@ -1229,10 +1219,4 @@ class BeliefPropagation(Inference):
             var, value = var_assignment
             map_query_results[var] = value
 
-        if not variables:
-            return map_query_results
-        else:
-            return_dict = {}
-            for var in variables:
-                return_dict[var] = map_query_results[var]
-            return return_dict
+        return map_query_results
