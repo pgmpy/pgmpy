@@ -65,6 +65,11 @@ class TestStructureScore(unittest.TestCase):
             for scoring_method in {"k2", "bdeu", "bds", "bic"}:
                 metric = structure_score(self.alarm, self.data, scoring_method)
                 self.assertTrue(isinstance(metric, float))
+            for scoring_method in {"bdeu", "bds"}:
+                metric = structure_score(
+                    self.alarm, self.data, scoring_method, equivalent_sample_size=10
+                )
+                self.assertTrue(isinstance(metric, float))
 
     def test_input(self):
         self.assertRaises(
