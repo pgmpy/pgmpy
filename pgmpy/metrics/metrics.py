@@ -250,4 +250,4 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
         raise ValueError(f"scoring method not supported and not a callable")
 
     # Step 2: Compute the score and return
-    return supported_methods[scoring_method](data).score(model, **kwargs)
+    return supported_methods[scoring_method](data, **kwargs).score(model)
