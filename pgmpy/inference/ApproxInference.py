@@ -94,7 +94,8 @@ class ApproxInference(object):
 
         samples: pd.DataFrame (default: None)
             If provided, uses these samples to compute the distribution instead
-            of generating samples.
+            of generating samples. `samples` **must** conform with the provided
+            `evidence` and `virtual_evidence`.
 
         evidence: dict (default: None)
             The observed values. A dict key, value pair of the form {var: state_name}.
