@@ -57,7 +57,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         query_results = self.infer_alarm.query(
             variables=["HISTORY"],
             evidence={"PVSAT": "LOW"},
-            samples=self.samples,
+            samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
@@ -73,7 +73,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
             evidence={"PVSAT": "LOW"},
-            samples=self.samples,
+            samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
@@ -90,7 +90,7 @@ class TestApproxInferenceBN(unittest.TestCase):
         query_results = self.infer_alarm.query(
             variables=["HISTORY", "CVP"],
             evidence={"PVSAT": "LOW"},
-            samples=self.samples,
+            samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=False,
         )
         for var in ["HISTORY", "CVP"]:
