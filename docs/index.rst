@@ -163,7 +163,7 @@ Supported Data Types
    * - Time Series
      - No
      - Yes
-     - No
+     - Yes (ApproximateInference)
      - Yes
 
 Algorithms
