@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Contains the different formats of CPDs used in PGM"""
+import csv
 import numbers
 from itertools import chain, product
 from shutil import get_terminal_size
@@ -186,7 +187,9 @@ class TabularCPD(DiscreteFactor):
     def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
         return super(self, TabularCPD)._str(phi_or_p, tablefmt)
 
-    def _make_table_str(self, tablefmt="fancy_grid", print_state_names=True):
+    def _make_table_str(
+        self, tablefmt="fancy_grid", print_state_names=True, return_list=False
+    ):
         headers_list = []
 
         # Build column headers
@@ -228,6 +231,10 @@ class TabularCPD(DiscreteFactor):
         labeled_rows = np.hstack(
             (np.array(variable_array).T, self.get_values())
         ).tolist()
+
+        if return_list:
+            return headers_list + labeled_rows
+
         # No support for multi-headers in tabulate
         cdf_str = tabulate(headers_list + labeled_rows, tablefmt=tablefmt)
 
@@ -269,6 +276,21 @@ class TabularCPD(DiscreteFactor):
         #     half_height = terminal_height // 2
 
         return cdf_str
+
+    def to_csv(self, filename):
+        """
+        Exports the CPD to a CSV file.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model("alarm")
+        >>> cpd = model.get_cpds("SAO2")
+        >>> cpd.to_csv(filename="sao2.cs")
+        """
+        with open(filename, "w") as f:
+            writer = csv.writer(f)
+            writer.writerows(self._make_table_str(tablefmt="grid", return_list=True))
 
     def copy(self):
         """
