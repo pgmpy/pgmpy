@@ -418,15 +418,15 @@ class BayesianNetwork(DAG):
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
 
+                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
+                    raise ValueError(
+                        f"CPD for {node} doesn't have state names defined for all the variables."
+                    )
+
                 # Check if the values of the CPD sum to 1.
                 if not cpd.is_valid_cpd():
                     raise ValueError(
                         f"Sum or integral of conditional probabilities for node {node} is not equal to 1."
-                    )
-
-                if len(set(cpd.variables) - set(cpd.state_names.keys())) > 0:
-                    raise ValueError(
-                        f"CPD for {node} doesn't have state names defined for all the variables."
                     )
 
         for node in self.nodes():
