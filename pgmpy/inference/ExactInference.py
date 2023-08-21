@@ -338,12 +338,6 @@ class VariableElimination(Inference):
                         phi.variables[index], evidence[phi.variables[index]]
                     )
                 reduce_indexes.append(tuple(indexer))
-                reshape_indexes.append(
-                    [
-                        1 if indexer != slice(None) else phi.cardinality[i]
-                        for i, indexer in enumerate(reduce_indexes[-1])
-                    ]
-                )
 
             # Step 5.2: Prepare values and index arrays to do use in einsum
             if isinstance(self.model, JunctionTree):
@@ -357,10 +351,14 @@ class VariableElimination(Inference):
                 var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
             einsum_expr = []
             for index, phi in enumerate(factors):
+                einsum_expr.append((phi.values[reduce_indexes[index]]))
                 einsum_expr.append(
-                    (phi.values[reduce_indexes[index]]).reshape(reshape_indexes[index])
+                    [
+                        var_int_map[var]
+                        for var in phi.variables
+                        if var not in evidence.keys()
+                    ]
                 )
-                einsum_expr.append([var_int_map[var] for var in phi.variables])
             result_values = contract(
                 *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
