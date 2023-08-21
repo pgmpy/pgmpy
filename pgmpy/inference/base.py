@@ -164,14 +164,13 @@ class Inference(object):
         cpds = []
         for var in bn.nodes():
             cpd = self.model.get_cpds(var)
-            if set(cpd.scope()) < set(bn.nodes()):
+            scope_diff = set(cpd.scope()) - set(bn.nodes())
+            if len(scope_diff) == 0:
                 cpds.append(cpd)
             else:
-                cpds.append(
-                    cpd.marginalize(set(cpd.scope()) - set(bn.nodes()), inplace=False)
-                )
+                cpds.append(cpd.marginalize(scope_diff, inplace=False))
 
-        bn.add_cpds(*cpds)
+        bn.cpds = cpds
 
         return bn, evidence
 
