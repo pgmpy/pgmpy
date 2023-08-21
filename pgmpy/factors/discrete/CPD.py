@@ -449,12 +449,14 @@ class TabularCPD(DiscreteFactor):
         >>> factor
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x7f847a4f2d68>
         """
-        return DiscreteFactor(
-            variables=self.variables,
-            cardinality=self.cardinality,
-            values=self.values,
-            state_names=self.state_names,
-        )
+        factor = DiscreteFactor.__new__(DiscreteFactor)
+        factor.variables = self.variables.copy()
+        factor.cardinality = self.cardinality.copy()
+        factor.values = self.values.copy()
+        factor.state_names = self.state_names.copy()
+        factor.name_to_no = self.name_to_no.copy()
+        factor.no_to_name = self.no_to_name.copy()
+        return factor
 
     def reorder_parents(self, new_order, inplace=True):
         """
