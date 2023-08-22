@@ -7,8 +7,8 @@ try:
 except ImportError:
     torch = None
 
-from pgmpy.models import SEMGraph, SEMAlg, SEM
-from pgmpy.global_vars import device, dtype
+from pgmpy.global_vars import DEVICE, DTYPE
+from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import optimize, pinverse
 
 
@@ -29,24 +29,24 @@ class SEMEstimator(object):
 
         # Initialize trainable and fixed mask tensors
         self.B_mask = torch.tensor(
-            self.model.B_mask, device=device, dtype=dtype, requires_grad=False
+            self.model.B_mask, device=DEVICE, dtype=DTYPE, requires_grad=False
         )
         self.zeta_mask = torch.tensor(
-            self.model.zeta_mask, device=device, dtype=dtype, requires_grad=False
+            self.model.zeta_mask, device=DEVICE, dtype=DTYPE, requires_grad=False
         )
 
         self.B_fixed_mask = torch.tensor(
-            self.model.B_fixed_mask, device=device, dtype=dtype, requires_grad=False
+            self.model.B_fixed_mask, device=DEVICE, dtype=DTYPE, requires_grad=False
         )
         self.zeta_fixed_mask = torch.tensor(
-            self.model.zeta_fixed_mask, device=device, dtype=dtype, requires_grad=False
+            self.model.zeta_fixed_mask, device=DEVICE, dtype=DTYPE, requires_grad=False
         )
 
         self.wedge_y = torch.tensor(
-            self.model.wedge_y, device=device, dtype=dtype, requires_grad=False
+            self.model.wedge_y, device=DEVICE, dtype=DTYPE, requires_grad=False
         )
         self.B_eye = torch.eye(
-            self.B_mask.shape[0], device=device, dtype=dtype, requires_grad=False
+            self.B_mask.shape[0], device=DEVICE, dtype=DTYPE, requires_grad=False
         )
 
     def _get_implied_cov(self, B, zeta):
@@ -249,13 +249,13 @@ class SEMEstimator(object):
             B_init, zeta_init = init_values["B"], init_values["zeta"]
         else:
             B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
-        B = torch.tensor(B_init, device=device, dtype=dtype, requires_grad=True)
-        zeta = torch.tensor(zeta_init, device=device, dtype=dtype, requires_grad=True)
+        B = torch.tensor(B_init, device=DEVICE, dtype=DTYPE, requires_grad=True)
+        zeta = torch.tensor(zeta_init, device=DEVICE, dtype=DTYPE, requires_grad=True)
 
         # Compute the covariance of the data
         variable_order = self.model.y
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
-        S = torch.tensor(S.values, device=device, dtype=dtype, requires_grad=False)
+        S = torch.tensor(S.values, device=DEVICE, dtype=DTYPE, requires_grad=False)
 
         # Optimize the parameters
         if method.lower() == "ml":
@@ -280,7 +280,7 @@ class SEMEstimator(object):
 
         elif method.lower() == "gls":
             W = torch.tensor(
-                kwargs["W"], device=device, dtype=dtype, requires_grad=False
+                kwargs["W"], device=DEVICE, dtype=DTYPE, requires_grad=False
             )
             params = optimize(
                 self.gls_loss,

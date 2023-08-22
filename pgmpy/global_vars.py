@@ -1,34 +1,21 @@
 # TODO: This variables being set in this file should move to setup.py
+import torch
 
+CUDA = torch.cuda.is_available()
 
-try:
-    import torch
-
-    # Check if GPU is available
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-
-    dtype = torch.float
-except ImportError:  # pragma: no cover
-    torch = None
-    device = None
-    dtype = None
-
-
-# This module initializes flags for optional dependencies
-try:
-    import pandas
-
-    HAS_PANDAS = True
-except ImportError:  # pragma: no cover
-    HAS_PANDAS = False
-    pandas = None
+# Check if GPU is available
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+else:
+    DEVICE = torch.device("cpu")
 
 
 # Set a global variable whether to show progress bar or not.
 SHOW_PROGRESS = True
+if CUDA:
+    DTYPE = torch.float64
+else:
+    DTYPE = "float64"
 
 
 def no_progress():
@@ -38,3 +25,11 @@ def no_progress():
     """
     global SHOW_PROGRESS
     SHOW_PROGRESS = False
+
+
+def set_dtype(dtype):
+    """
+    Sets the dtype globally.
+    """
+    global DTYPE
+    DTYPE = dtype

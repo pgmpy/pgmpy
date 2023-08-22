@@ -1,10 +1,9 @@
-import numpy as np
 import unittest
 
+import numpy as np
+
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import FactorGraph
-from pgmpy.models import MarkovNetwork
-from pgmpy.models import JunctionTree
+from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
 from pgmpy.tests import help_functions as hf
 
 
@@ -97,8 +96,8 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.assertEqual(set(self.graph.nodes()), set(["a", "b", "c", phi2]))
 
     def test_get_partition_function(self):
-        phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
-        phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["a", "b"], [2, 2], list(range(4)))
+        phi2 = DiscreteFactor(["b", "c"], [2, 2], list(range(4)))
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_partition_function(), 22.0)

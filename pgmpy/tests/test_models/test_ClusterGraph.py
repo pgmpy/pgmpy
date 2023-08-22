@@ -83,8 +83,8 @@ class TestClusterGraphFactorOperations(unittest.TestCase):
 
     def test_get_partition_function(self):
         self.graph.add_edges_from([[("a", "b"), ("b", "c")]])
-        phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
-        phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["a", "b"], [2, 2], list(range(4)))
+        phi2 = DiscreteFactor(["b", "c"], [2, 2], list(range(4)))
         self.graph.add_factors(phi1, phi2)
         self.assertEqual(self.graph.get_partition_function(), 22.0)
 

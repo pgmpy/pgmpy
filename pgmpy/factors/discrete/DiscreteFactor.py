@@ -5,9 +5,11 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+import torch
 
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
+from pgmpy.global_vars import DEVICE, DTYPE
 from pgmpy.utils import StateNameMixin
 
 State = namedtuple("State", ["var", "state"])
@@ -85,15 +87,29 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if isinstance(variables, str):
             raise TypeError("Variables: Expected type list or array like, got string")
 
-        values = np.array(values, dtype=float)
+        if isinstance(values, (list, float, int)):
+            values = np.array(values, dtype="float64")
+        elif not isinstance(values, (np.ndarray, torch.Tensor)):
+            raise ValueError(
+                f"values must of one of: list, np.ndarray, torch.Tensor. Got type: {type(values)}"
+            )
 
         if len(cardinality) != len(variables):
             raise ValueError(
                 "Number of elements in cardinality must be equal to number of variables"
             )
 
-        if values.size != np.product(cardinality):
-            raise ValueError(f"Values array must be of size: {np.product(cardinality)}")
+        if isinstance(values, np.ndarray):
+            if values.size != np.product(cardinality):
+                raise ValueError(
+                    f"Values array must be of size: {np.product(cardinality)}"
+                )
+        else:
+            # torch.Tensor case
+            if values.size()[0] != np.product(cardinality):
+                raise ValueError(
+                    f"Values array must be of size: {np.product(cardinality)}"
+                )
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
@@ -105,7 +121,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
-        self.values = values.reshape(self.cardinality)
+        self.values = values.reshape(list(self.cardinality))
 
         # Set the state names
         super(DiscreteFactor, self).store_state_names(

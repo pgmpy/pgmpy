@@ -6,14 +6,26 @@ from pgmpy.factors.discrete import DiscreteFactor
 
 class TestFactorSet(unittest.TestCase):
     def setUp(self):
-        self.phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
-        self.phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(8))
-        self.phi3 = DiscreteFactor(["x5", "x6", "x7"], [2, 2, 2], range(8))
-        self.phi4 = DiscreteFactor(["x5", "x7", "x8"], [2, 2, 2], range(8))
+        self.phi1 = DiscreteFactor(
+            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=list(range(12))
+        )
+        self.phi2 = DiscreteFactor(
+            variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=list(range(8))
+        )
+        self.phi3 = DiscreteFactor(
+            variables=["x5", "x6", "x7"], cardinality=[2, 2, 2], values=list(range(8))
+        )
+        self.phi4 = DiscreteFactor(
+            variables=["x5", "x7", "x8"], cardinality=[2, 2, 2], values=list(range(8))
+        )
 
     def test_class_init(self):
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
-        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(8))
+        phi1 = DiscreteFactor(
+            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=list(range(12))
+        )
+        phi2 = DiscreteFactor(
+            variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=list(range(8))
+        )
         factor_set1 = FactorSet(phi1, phi2)
         self.assertEqual({phi1, phi2}, factor_set1.get_factors())
 
@@ -33,11 +45,27 @@ class TestFactorSet(unittest.TestCase):
         )
 
     def test_factorset_divide(self):
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(1, 13))
-        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(1, 9))
+        phi1 = DiscreteFactor(
+            variables=["x1", "x2", "x3"],
+            cardinality=[2, 3, 2],
+            values=list(range(1, 13)),
+        )
+        phi2 = DiscreteFactor(
+            variables=["x3", "x4", "x1"],
+            cardinality=[2, 2, 2],
+            values=list(range(1, 9)),
+        )
         factor_set1 = FactorSet(phi1, phi2)
-        phi3 = DiscreteFactor(["x5", "x6", "x7"], [2, 2, 2], range(1, 9))
-        phi4 = DiscreteFactor(["x5", "x7", "x8"], [2, 2, 2], range(1, 9))
+        phi3 = DiscreteFactor(
+            variables=["x5", "x6", "x7"],
+            cardinality=[2, 2, 2],
+            values=list(range(1, 9)),
+        )
+        phi4 = DiscreteFactor(
+            variables=["x5", "x7", "x8"],
+            cardinality=[2, 2, 2],
+            values=list(range(1, 9)),
+        )
         factor_set2 = FactorSet(phi3, phi4)
         factor_set3 = factor_set2.divide(factor_set1, inplace=False)
         self.assertEqual(

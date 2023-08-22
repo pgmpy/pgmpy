@@ -76,7 +76,7 @@ class TestFactorInit(unittest.TestCase):
     def test_class_init_typeerror(self):
         self.assertRaises(TypeError, DiscreteFactor, "x1", [3], [1, 2, 3])
         self.assertRaises(
-            ValueError, DiscreteFactor, ["x1", "x1", "x3"], [2, 3, 2], range(12)
+            ValueError, DiscreteFactor, ["x1", "x1", "x3"], [2, 3, 2], list(range(12))
         )
 
     def test_init_size_var_card_not_equal(self):
@@ -102,12 +102,12 @@ class TestFactorMethods(unittest.TestCase):
         )
 
         self.phi1 = DiscreteFactor(
-            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=range(12)
+            variables=["x1", "x2", "x3"], cardinality=[2, 3, 2], values=list(range(12))
         )
         self.phi1_sn = DiscreteFactor(
             variables=["x1", "x2", "x3"],
             cardinality=[2, 3, 2],
-            values=range(12),
+            values=list(range(12)),
             state_names={
                 "x1": ("sn0", "sn1"),
                 "x2": ("sn0", "sn1", "sn2"),
@@ -118,13 +118,13 @@ class TestFactorMethods(unittest.TestCase):
         self.phi2 = DiscreteFactor(
             variables=[("x1", 0), ("x2", 0), ("x3", 0)],
             cardinality=[2, 3, 2],
-            values=range(12),
+            values=list(range(12)),
         )
 
         self.phi2_sn = DiscreteFactor(
             variables=[("x1", 0), ("x2", 0), ("x3", 0)],
             cardinality=[2, 3, 2],
-            values=range(12),
+            values=list(range(12)),
             state_names={
                 "x1": ("sn0", "sn1"),
                 "x2": ("sn0", "sn1", "sn2"),
@@ -149,7 +149,7 @@ class TestFactorMethods(unittest.TestCase):
             np.random.uniform(3, 10, size=24),
         )
         self.phi5 = DiscreteFactor(
-            [self.tup1, self.tup2, self.tup3], [2, 3, 4], range(24)
+            [self.tup1, self.tup2, self.tup3], [2, 3, 4], list(range(24))
         )
 
         self.card6 = [4, 2, 1, 3, 5, 6]
@@ -524,8 +524,8 @@ class TestFactorMethods(unittest.TestCase):
         )
 
     def test_factor_product(self):
-        phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
-        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], range(4))
+        phi = DiscreteFactor(["x1", "x2"], [2, 2], list(range(4)))
+        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], list(range(4)))
         prod = factor_product(phi, phi1)
         expected_factor = DiscreteFactor(
             ["x1", "x2", "x3", "x4"],
@@ -535,8 +535,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ["x1", "x2", "x3", "x4"])
 
-        phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
-        phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
+        phi = DiscreteFactor(["x1", "x2"], [3, 2], list(range(6)))
+        phi1 = DiscreteFactor(["x2", "x3"], [2, 2], list(range(4)))
         prod = factor_product(phi, phi1)
         expected_factor = DiscreteFactor(
             ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
@@ -559,8 +559,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertNotEqual(id(phi), id(prod))
 
     def test_product(self):
-        phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
-        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], range(4))
+        phi = DiscreteFactor(["x1", "x2"], [2, 2], list(range(4)))
+        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], list(range(4)))
         prod = phi.product(phi1, inplace=False)
         expected_factor = DiscreteFactor(
             ["x1", "x2", "x3", "x4"],
@@ -570,8 +570,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(prod, expected_factor)
         self.assertEqual(sorted(prod.variables), ["x1", "x2", "x3", "x4"])
 
-        phi = DiscreteFactor(["x1", "x2"], [3, 2], range(6))
-        phi1 = DiscreteFactor(["x2", "x3"], [2, 2], range(4))
+        phi = DiscreteFactor(["x1", "x2"], [3, 2], list(range(6)))
+        phi1 = DiscreteFactor(["x2", "x3"], [2, 2], list(range(4)))
         prod = phi.product(phi1, inplace=False)
         expected_factor = DiscreteFactor(
             ["x1", "x2", "x3"], [3, 2, 2], [0, 0, 2, 3, 0, 2, 6, 9, 0, 4, 10, 15]
@@ -595,8 +595,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertRaises(TypeError, factor_product, 1, 2)
 
     def test_factor_mul(self):
-        phi = DiscreteFactor(["x1", "x2"], [2, 2], range(4))
-        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], range(4))
+        phi = DiscreteFactor(["x1", "x2"], [2, 2], list(range(4)))
+        phi1 = DiscreteFactor(["x3", "x4"], [2, 2], list(range(4)))
         prod = phi * phi1
 
         sorted_vars = ["x1", "x2", "x3", "x4"]
@@ -674,8 +674,8 @@ class TestFactorMethods(unittest.TestCase):
         self.assertEqual(infer.query(["HISTORY"]), phi_history)
 
     def test_factor_sum(self):
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
-        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], range(8))
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], list(range(12)))
+        phi2 = DiscreteFactor(["x3", "x4", "x1"], [2, 2, 2], list(range(8)))
         phi1.sum(phi2, inplace=True)
 
         self.assertEqual(sorted(phi1.variables), ["x1", "x2", "x3", "x4"])
@@ -700,7 +700,7 @@ class TestFactorMethods(unittest.TestCase):
             ),
         )
 
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], range(12))
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 3, 2], list(range(12)))
         phi1.sum(2, inplace=True)
         self.assertEqual(phi1.variables, ["x1", "x2", "x3"])
         self.assertEqual(
@@ -734,7 +734,7 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(phi == phi2)
 
     def test_eq1(self):
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 4, 3], range(24))
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 4, 3], list(range(24)))
         phi2 = DiscreteFactor(
             ["x2", "x1", "x3"],
             [4, 2, 3],
@@ -768,7 +768,9 @@ class TestFactorMethods(unittest.TestCase):
         self.assertTrue(phi1 == phi2)
         self.assertEqual(phi2.variables, ["x2", "x1", "x3"])
 
-        phi3 = DiscreteFactor([self.tup1, self.tup2, self.tup3], [2, 4, 3], range(24))
+        phi3 = DiscreteFactor(
+            [self.tup1, self.tup2, self.tup3], [2, 4, 3], list(range(24))
+        )
         phi4 = DiscreteFactor(
             [self.tup2, self.tup1, self.tup3],
             [4, 2, 3],
@@ -830,12 +832,12 @@ class TestFactorMethods(unittest.TestCase):
         phi2 = DiscreteFactor(["x2", "x1"], [2, 2], [1, 3, 2, 4])
         self.assertEqual(hash(phi1), hash(phi2))
 
-        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 2, 2], range(8))
+        phi1 = DiscreteFactor(["x1", "x2", "x3"], [2, 2, 2], list(range(8)))
         phi2 = DiscreteFactor(["x3", "x1", "x2"], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7])
         self.assertEqual(hash(phi1), hash(phi2))
 
         var1 = TestHash(1, 2)
-        phi3 = DiscreteFactor([var1, self.var2, self.var3], [2, 4, 3], range(24))
+        phi3 = DiscreteFactor([var1, self.var2, self.var3], [2, 4, 3], list(range(24)))
         phi4 = DiscreteFactor(
             [self.var2, var1, self.var3],
             [4, 2, 3],
@@ -870,7 +872,7 @@ class TestFactorMethods(unittest.TestCase):
 
         var1 = TestHash(2, 3)
         var2 = TestHash("x2", 1)
-        phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], range(8))
+        phi3 = DiscreteFactor([var1, var2, self.var3], [2, 2, 2], list(range(8)))
         phi4 = DiscreteFactor(
             [self.var3, var1, var2], [2, 2, 2], [0, 2, 4, 6, 1, 3, 5, 7]
         )

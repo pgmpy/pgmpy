@@ -1,4 +1,4 @@
-from .global_vars import HAS_PANDAS, device, no_progress
+from .global_vars import DEVICE, no_progress
 
-__all__ = ["HAS_PANDAS", "device"]
+__all__ = ["DEVICE", "no_progress"]
 __version__ = "0.1.23"

@@ -843,9 +843,9 @@ class TestBeliefPropagation(unittest.TestCase):
         self.junction_tree = JunctionTree(
             [(("A", "B"), ("B", "C")), (("B", "C"), ("C", "D"))]
         )
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["A", "B"], [2, 3], list(range(6)))
+        phi2 = DiscreteFactor(["B", "C"], [3, 2], list(range(6)))
+        phi3 = DiscreteFactor(["C", "D"], [2, 2], list(range(4)))
         self.junction_tree.add_factors(phi1, phi2, phi3)
 
         self.bayesian_model = BayesianNetwork(
@@ -878,9 +878,9 @@ class TestBeliefPropagation(unittest.TestCase):
         belief_propagation.calibrate()
         clique_belief = belief_propagation.get_clique_beliefs()
 
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["A", "B"], [2, 3], list(range(6)))
+        phi2 = DiscreteFactor(["B", "C"], [3, 2], list(range(6)))
+        phi3 = DiscreteFactor(["C", "D"], [2, 2], list(range(4)))
 
         b_A_B = phi1 * (phi3.marginalize(["D"], inplace=False) * phi2).marginalize(
             ["C"], inplace=False
@@ -902,9 +902,9 @@ class TestBeliefPropagation(unittest.TestCase):
         belief_propagation.calibrate()
         sepset_belief = belief_propagation.get_sepset_beliefs()
 
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["A", "B"], [2, 3], list(range(6)))
+        phi2 = DiscreteFactor(["B", "C"], [3, 2], list(range(6)))
+        phi3 = DiscreteFactor(["C", "D"], [2, 2], list(range(4)))
 
         b_B = (
             phi1
@@ -933,9 +933,9 @@ class TestBeliefPropagation(unittest.TestCase):
         belief_propagation.max_calibrate()
         clique_belief = belief_propagation.get_clique_beliefs()
 
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["A", "B"], [2, 3], list(range(6)))
+        phi2 = DiscreteFactor(["B", "C"], [3, 2], list(range(6)))
+        phi3 = DiscreteFactor(["C", "D"], [2, 2], list(range(4)))
 
         b_A_B = phi1 * (phi3.maximize(["D"], inplace=False) * phi2).maximize(
             ["C"], inplace=False
@@ -956,9 +956,9 @@ class TestBeliefPropagation(unittest.TestCase):
         belief_propagation.max_calibrate()
         sepset_belief = belief_propagation.get_sepset_beliefs()
 
-        phi1 = DiscreteFactor(["A", "B"], [2, 3], range(6))
-        phi2 = DiscreteFactor(["B", "C"], [3, 2], range(6))
-        phi3 = DiscreteFactor(["C", "D"], [2, 2], range(4))
+        phi1 = DiscreteFactor(["A", "B"], [2, 3], list(range(6)))
+        phi2 = DiscreteFactor(["B", "C"], [3, 2], list(range(6)))
+        phi3 = DiscreteFactor(["C", "D"], [2, 2], list(range(4)))
 
         b_B = (
             phi1
