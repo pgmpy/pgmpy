@@ -335,10 +335,15 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 [ 1.,  1.],
                 [ 1.,  1.]]])
         """
+        if isinstance(self.values, torch.Tensor):
+            size = self.values.size()
+        else:
+            size = self.values.size
+
         return DiscreteFactor(
             variables=self.variables,
             cardinality=self.cardinality,
-            values=np.ones(self.values.size),
+            values=np.ones(size),
             state_names=self.state_names,
         )
 
@@ -445,7 +450,17 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.cardinality = phi.cardinality[index_to_keep]
         phi.del_state_names(variables)
 
-        phi.values = np.max(phi.values, axis=tuple(var_indexes))
+        if isinstance(phi.values, torch.Tensor):
+            phi.values = torch.from_numpy(
+                np.max(phi.values.numpy(), axis=tuple(var_indexes))
+            ).to(
+                "cpu"
+                if phi.values.get_device() == -1
+                else torch.cuda.device(phi.values.get_device())
+            )
+            # phi.values = torch.from_numpy(np.max(phi.values.numpy(), axis=tuple(var_indexes))).to(DEVICE)
+        else:
+            phi.values = np.max(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi

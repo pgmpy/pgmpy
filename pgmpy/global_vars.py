@@ -18,6 +18,14 @@ else:
     DTYPE = "float64"
 
 
+def set_device(device):
+    """
+    Sets the device for pytorch
+    """
+    global DEVICE
+    torch.device(device)
+
+
 def no_progress():
     """
     If called sets the global variable `SHOW_PROGRESS` to False resulting in no
