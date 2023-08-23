@@ -91,7 +91,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             values = np.array(values, dtype="float64")
         elif not isinstance(values, (np.ndarray, torch.Tensor)):
             raise ValueError(
-                f"values must of one of: list, np.ndarray, torch.Tensor. Got type: {type(values)}"
+                f"values must be one of: list, np.ndarray, torch.Tensor. Got type: {type(values)}"
             )
 
         if len(cardinality) != len(variables):
@@ -393,7 +393,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.cardinality = phi.cardinality[index_to_keep]
         phi.del_state_names(variables)
 
-        phi.values = np.einsum(phi.values, range(n_variables), index_to_keep)
+        if isinstance(phi.values, torch.Tensor):
+            phi.values = torch.einsum(phi.values, range(n_variables), index_to_keep)
+        else:
+            phi.values = np.einsum(phi.values, range(n_variables), index_to_keep)
 
         if not inplace:
             return phi

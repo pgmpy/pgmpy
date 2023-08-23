@@ -7,6 +7,7 @@ from shutil import get_terminal_size
 from warnings import warn
 
 import numpy as np
+import torch
 
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
@@ -121,7 +122,13 @@ class TabularCPD(DiscreteFactor):
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
-        values = np.array(values)
+        if isinstance(values, list):
+            values = np.array(values)
+        elif not isinstance(values, (np.ndarray, torch.Tensor)):
+            raise ValueError(
+                f"values must be one of: list, np.ndarray, torch.Tensor. Got type: {type(values)}"
+            )
+
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
@@ -140,7 +147,7 @@ class TabularCPD(DiscreteFactor):
             )
 
         super(TabularCPD, self).__init__(
-            variables, cardinality, values.flatten("C"), state_names=state_names
+            variables, cardinality, values.flatten(), state_names=state_names
         )
 
     def __repr__(self):
@@ -350,7 +357,9 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tabular_cpd.cardinality)
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(
+            list(tabular_cpd.cardinality)
+        )
         if not inplace:
             return tabular_cpd
 
@@ -563,7 +572,7 @@ class TabularCPD(DiscreteFactor):
                         card_map[var] for var in new_order
                     ]
                     super(TabularCPD, self).__init__(
-                        variables, cardinality, new_values.flatten("C")
+                        variables, cardinality, new_values.flatten()
                     )
                     return self.get_values()
                 else:
