@@ -42,10 +42,10 @@ class UAIReader(object):
             self.network = string
         else:
             raise ValueError("Must specify either path or string.")
-        
+
         if "#" in self.network:
-            self.network = Regex("#.*").suppress().transformString(
-                self.network
+            self.network = (
+                Regex("#.*").suppress().transformString(self.network)
             )  # removing comments from the file
 
         self.grammar = self.get_grammar()

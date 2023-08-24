@@ -46,17 +46,20 @@ class TestUAIReader(unittest.TestCase):
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
-        
+
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
         self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
+        self.assertEqual(
+            self.reader_string_with_comment.network_type, network_type_expected
+        )
 
     def test_get_variables(self):
         variables_expected = ["var_0", "var_1", "var_2"]
         self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
-
+        self.assertListEqual(
+            self.reader_string_with_comment.variables, variables_expected
+        )
 
     def test_get_domain(self):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
@@ -91,7 +94,7 @@ class TestUAIReader(unittest.TestCase):
         ]
         self.assertListEqual(self.reader_string.tables, tables_expected)
         self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
-        
+
     def test_get_model(self):
         model = self.reader_string.get_model()
         edge_expected = {
