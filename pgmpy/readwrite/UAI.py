@@ -1,7 +1,7 @@
 from itertools import combinations
 
 import numpy as np
-from pyparsing import Combine, Literal, Optional, Word, alphas, nums
+from pyparsing import Combine, Literal, Optional, Word, alphas, nums, Regex
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork
@@ -42,6 +42,12 @@ class UAIReader(object):
             self.network = string
         else:
             raise ValueError("Must specify either path or string.")
+
+        if "#" in self.network:
+            self.network = (
+                Regex("#.*").suppress().transformString(self.network)
+            )  # removing comments from the file
+
         self.grammar = self.get_grammar()
         self.network_type = self.get_network_type()
         self.variables = self.get_variables()
