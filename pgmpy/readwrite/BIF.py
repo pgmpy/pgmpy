@@ -5,6 +5,7 @@ from itertools import product
 from string import Template
 
 import numpy as np
+import pyparsing as pp
 from joblib import Parallel, delayed
 from pyparsing import (
     CharsNotIn,
@@ -106,7 +107,7 @@ class BIFReader(object):
         A method that returns variable grammar
         """
         # Defining an expression for valid word
-        word_expr = Word(alphanums + "_" + "-")
+        word_expr = Word(pp.unicode.alphanums + "_" + "-")
         word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
         name_expr = Suppress("variable") + word_expr + Suppress("{")
         state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))
@@ -137,7 +138,7 @@ class BIFReader(object):
         # Creating valid word expression for probability, it is of the format
         # wor1 | var2 , var3 or var1 var2 var3 or simply var
         word_expr = (
-            Word(alphanums + "-" + "_")
+            Word(pp.unicode.alphanums + "-" + "_")
             + Suppress(Optional("|"))
             + Suppress(Optional(","))
         )
@@ -185,7 +186,9 @@ class BIFReader(object):
         start = self.network.find("network")
         end = self.network.find("}\n", start)
         # Creating a network attribute
-        network_attribute = Suppress("network") + Word(alphanums + "_" + "-") + "{"
+        network_attribute = (
+            Suppress("network") + Word(pp.unicode.alphanums + "_" + "-") + "{"
+        )
         network_name = network_attribute.searchString(self.network[start:end])[0][0]
 
         return network_name
