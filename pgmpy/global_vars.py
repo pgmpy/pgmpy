@@ -32,6 +32,15 @@ if CUDA:
 else:
     DTYPE = "float64"
 
+BACKEND = 'numpy'
+
+def get_backend():
+    global BACKEND
+    return(BACKEND)
+
+def set_backend(backend):
+    global BACKEND
+    BACKEND = backend
 
 def set_device(device):
     """
@@ -40,7 +49,7 @@ def set_device(device):
     global DEVICE
     torch.device(device)
 
-def get_device(device):
+def get_device():
     """
     Returns the current device.
     """
@@ -56,7 +65,7 @@ def set_dtype(dtype):
     DTYPE = dtype
 
 
-def get_dtype(dtype):
+def get_dtype():
     """
     Returns the current global dtype.
     """
