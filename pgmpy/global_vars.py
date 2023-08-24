@@ -1,30 +1,5 @@
-# TODO: This variables being set in this file should move to setup.py
-import torch
-
-CUDA = torch.cuda.is_available()
-
-# Check if GPU is available
-if torch.cuda.is_available():
-    DEVICE = torch.device("cuda")
-else:
-    DEVICE = torch.device("cpu")
-
-
-# Set a global variable whether to show progress bar or not.
+# Global variable for setting whether to show progress bars or not
 SHOW_PROGRESS = True
-if CUDA:
-    DTYPE = torch.float64
-else:
-    DTYPE = "float64"
-
-
-def set_device(device):
-    """
-    Sets the device for pytorch
-    """
-    global DEVICE
-    torch.device(device)
-
 
 def no_progress():
     """
@@ -34,6 +9,44 @@ def no_progress():
     global SHOW_PROGRESS
     SHOW_PROGRESS = False
 
+def get_progress():
+    """
+    Returns the current state of the SHOW_PROGRESS variable.
+    """
+    global SHOW_PROGRESS
+    return(SHOW_PROGRESS)
+
+# Check if GPU is available.
+import torch
+
+CUDA = torch.cuda.is_available()
+
+# Check if GPU is available.
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+else:
+    DEVICE = torch.device("cpu")
+
+if CUDA:
+    DTYPE = torch.float64
+else:
+    DTYPE = "float64"
+
+
+def set_device(device):
+    """
+    Sets the device for pytorch.
+    """
+    global DEVICE
+    torch.device(device)
+
+def get_device(device):
+    """
+    Returns the current device.
+    """
+    global DEVICE
+    return(DEVICE)
+
 
 def set_dtype(dtype):
     """
@@ -41,3 +54,11 @@ def set_dtype(dtype):
     """
     global DTYPE
     DTYPE = dtype
+
+
+def get_dtype(dtype):
+    """
+    Returns the current global dtype.
+    """
+    global DTYPE
+    return(DTYPE)
