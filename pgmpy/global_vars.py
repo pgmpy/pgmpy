@@ -46,7 +46,7 @@ class Config:
     def get_device(self):
         return self.DEVICE
 
-    def set_backend(self, backend, device=None):
+    def set_backend(self, backend, device=None, dtype=None):
         if backend not in ["numpy", "torch"]:
             raise ValueError(
                 f"backend can either be `numpy` or `torch`. Got: {backend}"
@@ -58,6 +58,7 @@ class Config:
         else:
             self.BACKEND = "torch"
             self.set_device(device)
+        self.set_dtype(dtype=dtype)
 
     def get_backend(self):
         return self.BACKEND
@@ -71,22 +72,26 @@ class Config:
     def get_show_progress(self):
         return self.SHOW_PROGRESS
 
-    def set_dtype(self, dtype):
+    def set_dtype(self, dtype=None):
         if self.BACKEND == "numpy":
-            if not isinstance(dtype, np.dtype):
+            if dtype is None:
+                self.DTYPE = "float64"
+            elif not isinstance(dtype, np.dtype):
                 raise ValueError(
                     f"Backend is set to numpy, dtype must be an instance of np.dtype. Got: {type(dtype)}"
                 )
-
-            self.DTYPE = dtype
+            else:
+                self.DTYPE = dtype
 
         elif self.BACKEND == "torch":
-            if not isinstance(dtype, torch.dtype):
+            if dtype is None:
+                self.DTYPE = torch.float64
+            elif not isinstance(dtype, torch.dtype):
                 raise ValueError(
                     f"Backend is set to torch, dtype must be an instance of torch.dtype. Got: {type(dtype)}"
                 )
-
-            self.DTYPE = dtype
+            else:
+                self.DTYPE = dtype
 
     def get_dtype(self):
         return self.DTYPE
