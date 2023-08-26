@@ -349,16 +349,33 @@ class VariableElimination(Inference):
                 }
             else:
                 var_int_map = {var: i for i, var in enumerate(model_reduced.nodes())}
+
+            evidence_var_set = set(evidence.keys())
             einsum_expr = []
-            for index, phi in enumerate(factors):
-                einsum_expr.append((phi.values[reduce_indexes[index]]))
-                einsum_expr.append(
-                    [
-                        var_int_map[var]
-                        for var in phi.variables
-                        if var not in evidence.keys()
-                    ]
-                )
+
+            if isinstance(self.model, BayesianNetwork):
+                for index, phi in enumerate(factors):
+                    if len(set(phi.variables) - evidence_var_set) > 0:
+                        # if phi.variable not in evidence_var_set:
+                        einsum_expr.append((phi.values[reduce_indexes[index]]))
+                        einsum_expr.append(
+                            [
+                                var_int_map[var]
+                                for var in phi.variables
+                                if var not in evidence.keys()
+                            ]
+                        )
+            else:
+                for index, phi in enumerate(factors):
+                    einsum_expr.append((phi.values[reduce_indexes[index]]))
+                    einsum_expr.append(
+                        [
+                            var_int_map[var]
+                            for var in phi.variables
+                            if var not in evidence.keys()
+                        ]
+                    )
+
             result_values = contract(
                 *einsum_expr, [var_int_map[var] for var in variables], optimize="greedy"
             )
