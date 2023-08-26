@@ -5,10 +5,12 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+import torch
 
+from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
-from pgmpy.utils import StateNameMixin
+from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])
 
@@ -85,14 +87,19 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if isinstance(variables, str):
             raise TypeError("Variables: Expected type list or array like, got string")
 
-        values = np.array(values, dtype=float)
+        if config.BACKEND == "numpy":
+            values = np.array(values, dtype=config.get_dtype())
+        else:
+            values = (
+                torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
+            )
 
         if len(cardinality) != len(variables):
             raise ValueError(
                 "Number of elements in cardinality must be equal to number of variables"
             )
 
-        if values.size != np.product(cardinality):
+        if compat_fns.size(values) != np.product(cardinality):
             raise ValueError(f"Values array must be of size: {np.product(cardinality)}")
 
         if len(set(variables)) != len(variables):
@@ -105,7 +112,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         self.variables = list(variables)
         self.cardinality = np.array(cardinality, dtype=int)
-        self.values = values.reshape(self.cardinality)
+        self.values = values.reshape(tuple(self.cardinality))
 
         # Set the state names
         super(DiscreteFactor, self).store_state_names(
@@ -322,7 +329,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         return DiscreteFactor(
             variables=self.variables,
             cardinality=self.cardinality,
-            values=np.ones(self.values.size),
+            values=np.ones(compat_fns.size(self.values)),
             state_names=self.state_names,
         )
 
@@ -428,8 +435,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.variables = [phi.variables[index] for index in index_to_keep]
         phi.cardinality = phi.cardinality[index_to_keep]
         phi.del_state_names(variables)
-
-        phi.values = np.max(phi.values, axis=tuple(var_indexes))
+        phi.values = compat_fns.max(phi.values, axis=tuple(var_indexes))
 
         if not inplace:
             return phi
@@ -859,7 +865,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         copy = DiscreteFactor.__new__(self.__class__)
         copy.variables = [*self.variables]
         copy.cardinality = np.array(self.cardinality)
-        copy.values = np.array(self.values)
+        copy.values = compat_fns.copy(self.values)
         copy.state_names = self.state_names.copy()
         copy.no_to_name = self.no_to_name.copy()
         copy.name_to_no = self.name_to_no.copy()
@@ -872,7 +878,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         return np.allclose(
             self.to_factor()
             .marginalize(self.scope()[:1], inplace=False)
-            .values.flatten("C"),
+            .values.flatten(),
             np.ones(np.product(self.cardinality[:0:-1])),
             atol=0.01,
         )
@@ -1017,7 +1023,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             phi.values = phi.values.swapaxes(axis, exchange_index)
         return hash(
             str(sorted_var_hashes)
-            + str(hash(phi.values.tobytes()))
-            + str(hash(phi.cardinality.tobytes()))
+            + str(hash(compat_fns.tobytes(phi.values)))
+            + str(hash(compat_fns.tobytes(phi.cardinality)))
             + str(state_names_hash)
         )

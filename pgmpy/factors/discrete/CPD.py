@@ -10,6 +10,7 @@ import numpy as np
 
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.utils import compat_fns
 
 
 class TabularCPD(DiscreteFactor):
@@ -140,7 +141,7 @@ class TabularCPD(DiscreteFactor):
             )
 
         super(TabularCPD, self).__init__(
-            variables, cardinality, values.flatten("C"), state_names=state_names
+            variables, cardinality, values.flatten(), state_names=state_names
         )
 
     def __repr__(self):
@@ -176,10 +177,10 @@ class TabularCPD(DiscreteFactor):
         """
         if self.variable in self.variables:
             return self.values.reshape(
-                self.cardinality[0], np.prod(self.cardinality[1:])
+                tuple([self.cardinality[0], np.prod(self.cardinality[1:])])
             )
         else:
-            return self.values.reshape(np.prod(self.cardinality), 1)
+            return self.values.reshape(tuple([np.prod(self.cardinality), 1]))
 
     def __str__(self):
         return self._make_table_str(tablefmt="grid")
@@ -350,7 +351,9 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tabular_cpd.cardinality)
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(
+            tuple(tabular_cpd.cardinality)
+        )
         if not inplace:
             return tabular_cpd
 
@@ -452,7 +455,7 @@ class TabularCPD(DiscreteFactor):
         factor = DiscreteFactor.__new__(DiscreteFactor)
         factor.variables = self.variables.copy()
         factor.cardinality = self.cardinality.copy()
-        factor.values = self.values.copy()
+        factor.values = compat_fns.copy(self.values)
         factor.state_names = self.state_names.copy()
         factor.name_to_no = self.name_to_no.copy()
         factor.no_to_name = self.no_to_name.copy()
@@ -563,13 +566,17 @@ class TabularCPD(DiscreteFactor):
                         card_map[var] for var in new_order
                     ]
                     super(TabularCPD, self).__init__(
-                        variables, cardinality, new_values.flatten("C")
+                        variables, cardinality, new_values.flatten()
                     )
                     return self.get_values()
                 else:
                     return new_values.reshape(
-                        self.cardinality[0],
-                        np.prod([card_map[var] for var in new_order]),
+                        tuple(
+                            [
+                                self.cardinality[0],
+                                np.prod([card_map[var] for var in new_order]),
+                            ]
+                        )
                     )
             else:
                 warn("Same ordering provided as current")
