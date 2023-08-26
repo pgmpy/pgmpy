@@ -5,14 +5,11 @@ from warnings import warn
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 from joblib import Parallel, delayed
 
-from pgmpy import HAS_PANDAS
 from pgmpy.inference import Inference
 from pgmpy.utils import _check_1d_array_object, _check_length_equal
-
-if HAS_PANDAS:
-    import pandas
 
 
 class BayesianModelInference(Inference):
@@ -606,7 +603,7 @@ def _return_samples(samples, state_names_map=None):
     """
     A utility function to return samples according to type
     """
-    df = pandas.DataFrame.from_records(samples)
+    df = pd.DataFrame.from_records(samples)
     if state_names_map is not None:
         for var in df.columns:
             if var != "_weight":

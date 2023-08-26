@@ -7,8 +7,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.factors import factor_product
-from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.models import BayesianNetwork, MarkovChain, MarkovNetwork
 from pgmpy.sampling import BayesianModelInference, _return_samples
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
@@ -86,7 +86,7 @@ class BayesianModelSampling(BayesianModelInference):
         """
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
         else:
             pbar = self.topological_order
@@ -95,7 +95,7 @@ class BayesianModelSampling(BayesianModelInference):
             np.random.seed(seed)
 
         for node in pbar:
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
             # If values specified in partial_samples, use them. Else generate the values.
             if (partial_samples is not None) and (node in partial_samples.columns):
@@ -204,7 +204,7 @@ class BayesianModelSampling(BayesianModelInference):
         # Do the sampling by generating samples from forward sampling and rejecting the
         # samples which do not match our evidence. Keep doing until we have enough
         # samples.
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=size)
 
         while i < size:
@@ -231,12 +231,12 @@ class BayesianModelSampling(BayesianModelInference):
             ]
             i += _sampled.shape[0]
 
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 # Update at maximum to `size`
                 comp = _sampled.shape[0] if i < size else size - (i - _sampled.shape[0])
                 pbar.update(comp)
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar.close()
 
         sampled = sampled.reset_index(drop=True)
@@ -317,14 +317,14 @@ class BayesianModelSampling(BayesianModelInference):
         sampled["_weight"] = np.ones(size)
         evidence_dict = dict(evidence)
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(self.topological_order)
         else:
             pbar = self.topological_order
 
         # Do the sampling
         for node in pbar:
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Generating for node: {node}")
 
             cpd = self.model.get_cpds(node)

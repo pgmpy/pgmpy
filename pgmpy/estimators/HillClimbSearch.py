@@ -5,6 +5,7 @@ from itertools import permutations
 import networkx as nx
 from tqdm.auto import trange
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import (
     AICScore,
@@ -16,7 +17,6 @@ from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
 )
-from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class HillClimbSearch(StructureEstimator):
@@ -293,7 +293,7 @@ class HillClimbSearch(StructureEstimator):
         tabu_list = deque(maxlen=tabu_length)
         current_model = start_dag
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             iteration = trange(int(max_iter))
         else:
             iteration = range(int(max_iter))

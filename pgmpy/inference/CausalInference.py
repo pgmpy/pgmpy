@@ -5,9 +5,9 @@ import networkx as nx
 import numpy as np
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.models import BayesianNetwork
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
@@ -672,7 +672,7 @@ class CausalInference(object):
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
         # Step 4.2: Iterate over states of adjustment set and compute values.
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
         for state_comb in product(*adj_states):
@@ -685,7 +685,7 @@ class CausalInference(object):
                 * p_z.get_value(**adj_evidence)
             )
 
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
 
         return sum(values).normalize(inplace=False)
