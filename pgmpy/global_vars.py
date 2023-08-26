@@ -5,7 +5,7 @@ import torch
 class Config:
     def __init__(self):
         """
-        Default configuration initilization
+        Default configuration initilization.
         """
         self.BACKEND = "numpy"
         self.DTYPE = "float64"
@@ -44,9 +44,28 @@ class Config:
                 self.DEVICE = torch.device(device)
 
     def get_device(self):
+        """
+        Returns the current backend device.
+        """
         return self.DEVICE
 
     def set_backend(self, backend, device=None, dtype=None):
+        """
+        Setup the compute backend.
+
+        Parameters
+        ----------
+        backend: str (numpy or torch)
+            Sets the compute backend to `backend`.
+
+        device: str (default: None)
+            Sets the device for torch backend. For numpy backend, sets device=None.
+            If None, sets device to the first gpu if available else cpu.
+
+        dtype: Instance of numpy.dtype or torch.dtype (default: None)
+            Sets the dtype for arrays. If None, sets to either numpy.float64 or
+            torch.float64 depending on the backend.
+        """
         if backend not in ["numpy", "torch"]:
             raise ValueError(
                 f"backend can either be `numpy` or `torch`. Got: {backend}"
@@ -61,18 +80,40 @@ class Config:
         self.set_dtype(dtype=dtype)
 
     def get_backend(self):
+        """
+        Returns the current backend.
+        """
         return self.BACKEND
 
     def set_show_progress(self, show_progress):
+        """
+        Sets a global variable to (not) show progress bars.
+
+        Parameters
+        ----------
+        show_progress: boolean
+            If True, shows progress bars, else doesn't.
+        """
         if show_progress not in [True, False]:
             raise ValueError(f"show_progress must be a boolean. Got: {show_progress}")
 
         self.SHOW_PROGRESS = show_progress
 
     def get_show_progress(self):
+        """
+        Returns boolean whether to show progress bar or not.
+        """
         return self.SHOW_PROGRESS
 
     def set_dtype(self, dtype=None):
+        """
+        Sets the dtype for value matrices.
+
+        Parameters
+        ----------
+        dtype: Instance of numpy.dtype of torch.dtype. (default: None)
+            Sets the dtype to `dtype`. If None set to either numpy.float64 or torch.float64 depending on the backend.
+        """
         if self.BACKEND == "numpy":
             if dtype is None:
                 self.DTYPE = "float64"
@@ -94,6 +135,9 @@ class Config:
                 self.DTYPE = dtype
 
     def get_dtype(self):
+        """
+        Returns the dtype.
+        """
         return self.DTYPE
 
 
