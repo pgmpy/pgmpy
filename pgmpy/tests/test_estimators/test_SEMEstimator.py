@@ -2,7 +2,9 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import torch
 
+from pgmpy import config
 from pgmpy.estimators import IVEstimator, SEMEstimator
 from pgmpy.models import SEM, SEMGraph
 
@@ -74,6 +76,7 @@ class TestSEMEstimator(unittest.TestCase):
             "pgmpy/tests/test_estimators/testdata/union1989b.csv", index_col=0, header=0
         )
 
+    @unittest.skipIf(config.BACKEND == "numpy", "backend is numpy")
     def test_get_init_values(self):
         demo_estimator = SEMEstimator(self.demo)
         for method in ["random", "std"]:

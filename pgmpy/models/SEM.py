@@ -3,14 +3,11 @@ import warnings
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 from networkx.algorithms.dag import descendants
 from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
 
 from pgmpy.base import DAG
-from pgmpy.global_vars import HAS_PANDAS
-
-if HAS_PANDAS:
-    import pandas as pd
 
 
 class SEMGraph(DAG):

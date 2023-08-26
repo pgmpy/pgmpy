@@ -7,9 +7,9 @@ import numpy as np
 from opt_einsum import contract
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import SHOW_PROGRESS
 from pgmpy.inference import Inference
 from pgmpy.inference.EliminationOrder import (
     MinFill,
@@ -186,13 +186,13 @@ class VariableElimination(Inference):
         )
 
         # Step 3: Run variable elimination
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(elimination_order)
         else:
             pbar = elimination_order
 
         for var in pbar:
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.set_description(f"Eliminating: {var}")
             # Removing all the factors containing the variables which are
             # eliminated (as all the factors should be considered only once)

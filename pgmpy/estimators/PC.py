@@ -7,10 +7,10 @@ import networkx as nx
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import *
-from pgmpy.global_vars import SHOW_PROGRESS
 
 CI_TESTS = {
     "chi_square": chi_square,
@@ -256,7 +256,7 @@ class PC(StructureEstimator):
                     f"ci_test must either be one of {list(CI_TESTS.keys())}, or a function. Got: {ci_test}"
                 )
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
@@ -356,13 +356,13 @@ class PC(StructureEstimator):
                 break
             lim_neighbors += 1
 
-            if show_progress and SHOW_PROGRESS:
+            if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
                 pbar.set_description(
                     f"Working for n conditional variables: {lim_neighbors}"
                 )
 
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar.close()
         return graph, separating_sets
 

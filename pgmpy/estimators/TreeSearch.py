@@ -13,9 +13,9 @@ from sklearn.metrics import (
 )
 from tqdm.auto import tqdm
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.global_vars import SHOW_PROGRESS
 
 
 class TreeSearch(StructureEstimator):
@@ -243,7 +243,7 @@ class TreeSearch(StructureEstimator):
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
         vals = Parallel(n_jobs=n_jobs, prefer="threads")(
@@ -318,7 +318,7 @@ class TreeSearch(StructureEstimator):
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
         pbar = combinations(data.columns, 2)
-        if show_progress and SHOW_PROGRESS:
+        if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
         def _conditional_edge_weights_fn(u, v):
