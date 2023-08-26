@@ -379,7 +379,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         phi.cardinality = phi.cardinality[index_to_keep]
         phi.del_state_names(variables)
 
-        phi.values = np.einsum(phi.values, range(n_variables), index_to_keep)
+        phi.values = compat_fns.einsum(phi.values, range(n_variables), index_to_keep)
 
         if not inplace:
             return phi
@@ -707,7 +707,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             # Compute the new values
             new_variables = list(set(phi.variables).union(phi1.variables))
             var_to_int = {var: index for index, var in enumerate(new_variables)}
-            phi.values = np.einsum(
+            phi.values = compat_fns.einsum(
                 phi.values,
                 [var_to_int[var] for var in phi.variables],
                 phi1.values,
