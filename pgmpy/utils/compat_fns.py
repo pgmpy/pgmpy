@@ -5,39 +5,31 @@ import torch
 
 
 def size(arr):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         return arr.size
     else:
         return arr.nelement()
 
 
 def copy(arr):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         return np.array(arr)
     else:
         return torch.clone(arr)
 
 
 def tobytes(arr):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         return arr.tobytes()
     else:
         return arr.numpy(force=True).tobytes()
 
 
 def max(arr, axis=None):
-    from pgmpy import config
-
     if axis is not None:
         axis = tuple(axis)
 
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         return np.max(arr, axis=axis)
     else:
         return torch.amax(arr, dim=axis)
@@ -53,9 +45,7 @@ def einsum(*args):
 
 
 def argmax(arr):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         return np.argmax(arr)
     else:
         return torch.argmax(arr)
@@ -71,9 +61,7 @@ def stack(arr_iter):
 
 
 def to_numpy(arr, decimals=None):
-    from pgmpy import config
-
-    if config.BACKEND == "numpy":
+    if isinstance(arr, np.ndarray):
         if decimals is None:
             return arr
         else:
