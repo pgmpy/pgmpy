@@ -424,7 +424,7 @@ class BIFWriter(object):
     Base class for writing BIF network file format
     """
 
-    def __init__(self, model, round_values=6):
+    def __init__(self, model, round_values=None):
         """
         Initialise a BIFWriter Object
 
@@ -432,8 +432,8 @@ class BIFWriter(object):
         ----------
         model: BayesianNetwork Instance
 
-        round_values: int (default: 6)
-            Round the probability values to `round_values` decimals
+        round_values: int (default: None)
+            Round the probability values to `round_values` decimals. If None, keeps all decimal points.
 
         Examples
         ---------
