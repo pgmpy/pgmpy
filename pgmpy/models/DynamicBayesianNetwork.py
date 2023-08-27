@@ -590,9 +590,7 @@ class DynamicBayesianNetwork(DAG):
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
                 if not np.allclose(
-                    cpd.to_factor()
-                    .marginalize([node], inplace=False)
-                    .values.flatten("C"),
+                    cpd.to_factor().marginalize([node], inplace=False).values.flatten(),
                     np.ones(np.product(evidence_card)),
                     atol=0.01,
                 ):
