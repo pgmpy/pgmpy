@@ -13,7 +13,6 @@ from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])
-compute_backend = compat_fns.get_compute_backend()
 
 
 class DiscreteFactor(BaseFactor, StateNameMixin):
@@ -277,7 +276,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.assignment([1, 2])
         [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
-        index = np.array(index)
+        index = compat_fns.array(index)
 
         max_possible_index = np.prod(self.cardinality) - 1
         if not all(i <= max_possible_index for i in index):
@@ -795,7 +794,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         # If factor division 0/0 = 0 but is undefined for x/0. In pgmpy we are using
         # np.inf to represent x/0 cases.
-        phi.values[compute_backend.isnan(phi.values)] = 0
+        phi.values[config.get_compute_backend().isnan(phi.values)] = 0
 
         if not inplace:
             return phi
@@ -876,7 +875,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         Checks if the factor's values can be used for a valid CPD.
         """
-        return compute_backend.allclose(
+        return config.get_compute_backend().allclose(
             self.to_factor()
             .marginalize(self.scope()[:1], inplace=False)
             .values.flatten(),
@@ -996,7 +995,9 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
             if phi.values.shape != self.values.shape:
                 return False
-            elif not compute_backend.allclose(phi.values, self.values, atol=atol):
+            elif not config.get_compute_backend().allclose(
+                phi.values, self.values, atol=atol
+            ):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False

@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.utils import compat_fns
 
 
 @dataclass(eq=True, frozen=True)
@@ -589,9 +590,9 @@ class DynamicBayesianNetwork(DAG):
                     raise ValueError(
                         f"CPD associated with {node} doesn't have proper parents associated with it."
                     )
-                if not np.allclose(
+                if not config.get_compute_backend().allclose(
                     cpd.to_factor().marginalize([node], inplace=False).values.flatten(),
-                    np.ones(np.prod(evidence_card)),
+                    compat_fns.ones(np.prod(evidence_card)),
                     atol=0.01,
                 ):
                     raise ValueError(

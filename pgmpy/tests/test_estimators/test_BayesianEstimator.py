@@ -275,7 +275,8 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         self.assertTrue(
             (
                 (cpd_C.values == cpd_C_correct.values)
-                | np.isnan(cpd_C.values) & np.isnan(cpd_C_correct.values)
+                | config.get_compute_backend().isnan(cpd_C.values)
+                & config.get_compute_backend().isnan(cpd_C_correct.values)
             ).all()
         )
 

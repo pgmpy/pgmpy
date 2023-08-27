@@ -140,5 +140,12 @@ class Config:
         """
         return self.DTYPE
 
+    def get_compute_backend(self):
+        if self.BACKEND == "numpy":
+            return np
+
+        else:
+            return torch
+
 
 config = Config()

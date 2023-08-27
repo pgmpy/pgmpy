@@ -4,6 +4,8 @@ from warnings import warn
 
 import numpy as np
 
+from pgmpy.utils import compat_fns
+
 State = namedtuple("State", ["var", "state"])
 
 
@@ -75,14 +77,14 @@ def _adjusted_weights(weights):
     array([0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111,
            0.1111111, 0.1111111, 0.1111112])
     """
-    error = 1 - np.sum(weights)
+    error = 1 - weights.sum()
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
         warn(
             f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
         )
-        weights[np.argmax(weights)] += error
+        weights[compat_fns.argmax(weights)] += error
 
     return weights
 
@@ -121,8 +123,7 @@ def sample_discrete(values, weights, size=1, seed=None):
     """
     if seed is not None:
         np.random.seed(seed)
-
-    weights = np.array(weights)
+    weights = weights
     if weights.ndim == 1:
         return np.random.choice(values, size=size, p=_adjusted_weights(weights))
     else:
