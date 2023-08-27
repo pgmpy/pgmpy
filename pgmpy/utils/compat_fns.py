@@ -68,3 +68,18 @@ def stack(arr_iter):
         return np.stack(arr_iter)
     else:
         return torch.stack(tuple(arr_iter))
+
+
+def to_numpy(arr, decimals=None):
+    from pgmpy import config
+
+    if config.BACKEND == "numpy":
+        if decimals is None:
+            return arr
+        else:
+            return arr.round(decimals)
+    else:
+        if decimals is None:
+            return arr.numpy(force=True)
+        else:
+            return arr.numpy(force=True).round(decimals)
