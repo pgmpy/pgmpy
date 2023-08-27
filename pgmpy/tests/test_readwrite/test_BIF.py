@@ -487,7 +487,7 @@ probability ( light-on | family-out ) {
 
 class TestBIFReaderTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.reader = BIFReader(
             string="""
@@ -810,7 +810,7 @@ class TestBIFReaderTorch(unittest.TestCase):
 
 class TestBIFWriterTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         variables = [
             "kid",

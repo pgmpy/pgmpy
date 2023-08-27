@@ -7,7 +7,9 @@ from shutil import get_terminal_size
 from warnings import warn
 
 import numpy as np
+import torch
 
+from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.utils import compat_fns
@@ -122,14 +124,20 @@ class TabularCPD(DiscreteFactor):
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
-        values = np.array(values)
+        if config.BACKEND == "numpy":
+            values = np.array(values, dtype=config.get_dtype())
+        else:
+            values = (
+                torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
+            )
+
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
         if evidence is None:
             expected_cpd_shape = (variable_card, 1)
         else:
-            expected_cpd_shape = (variable_card, np.product(evidence_card))
+            expected_cpd_shape = (variable_card, np.prod(evidence_card))
         if values.shape != expected_cpd_shape:
             raise ValueError(
                 f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}"
@@ -651,7 +659,7 @@ class TabularCPD(DiscreteFactor):
             )
         else:
             parent_card = [cardinality[var] for var in evidence]
-            values = np.random.rand(cardinality[variable], np.product(parent_card))
+            values = np.random.rand(cardinality[variable], np.prod(parent_card))
             values = values / np.sum(values, axis=0)
             node_cpd = TabularCPD(
                 variable=variable,

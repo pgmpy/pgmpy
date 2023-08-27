@@ -196,7 +196,7 @@ class TestBayesianEstimator(unittest.TestCase):
 
 class TestBayesianEstimatorTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.model_latent = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])

@@ -19,7 +19,7 @@ from pgmpy.utils import get_example_model
 
 class TestFactorInitTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
     def test_class_init(self):
         phi = DiscreteFactor(
@@ -92,7 +92,7 @@ class TestFactorInitTorch(unittest.TestCase):
 
 class TestFactorMethodsTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.phi = DiscreteFactor(
             variables=["x1", "x2", "x3"],
@@ -982,7 +982,7 @@ class TestHash:
 
 class TestTabularCPDInitTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
     def test_cpd_init(self):
         cpd = TabularCPD("grade", 3, [[0.1], [0.1], [0.1]])
@@ -2771,7 +2771,7 @@ class TestTabularCPDInitTorch(unittest.TestCase):
 
 class TestTabularCPDMethodsTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         sn = {
             "intel": ["low", "medium", "high"],

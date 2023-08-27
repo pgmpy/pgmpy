@@ -168,7 +168,7 @@ class TestMLE(unittest.TestCase):
 
 class TestMLETorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.m1 = BayesianNetwork([("A", "C"), ("B", "C")])
         self.model_latents = BayesianNetwork([("A", "C"), ("B", "C")], latents=["C"])

@@ -55,19 +55,45 @@ def stack(arr_iter):
     from pgmpy import config
 
     if config.BACKEND == "numpy":
-        return np.stack(arr_iter)
+        return np.stack(tuple(arr_iter))
     else:
         return torch.stack(tuple(arr_iter))
 
 
 def to_numpy(arr, decimals=None):
-    if isinstance(arr, np.ndarray):
-        if decimals is None:
-            return arr
+    if isinstance(arr, torch.Tensor):
+        if arr.device.type.startswith("cuda"):
+            arr = arr.cpu().detach().numpy()
         else:
-            return arr.round(decimals)
+            arr = arr.numpy(force=True)
+
+    if decimals is None:
+        return arr
     else:
-        if decimals is None:
-            return arr.numpy(force=True)
-        else:
-            return arr.numpy(force=True).round(decimals)
+        return arr.round(decimals)
+
+
+def ravel_f(arr):
+    if isinstance(arr, np.ndarray):
+        return arr.ravel("F")
+    else:
+        return to_numpy(arr).ravel("F")
+
+
+def ones(n):
+    from pgmpy import config
+
+    if config.BACKEND == "numpy":
+        return np.ones(n, dtype=config.DTYPE)
+
+    else:
+        return torch.ones(n, dtype=config.DTYPE, device=config.DEVICE)
+
+
+def get_compute_backend():
+    from pgmpy import config
+
+    if config.BACKEND == "numpy":
+        return np
+    else:
+        return torch

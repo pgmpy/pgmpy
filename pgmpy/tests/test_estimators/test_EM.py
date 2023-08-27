@@ -43,7 +43,7 @@ class TestEMObserved(unittest.TestCase):
 
 class TestEMObservedTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.model1 = get_example_model("cancer")
         s = BayesianModelSampling(self.model1)

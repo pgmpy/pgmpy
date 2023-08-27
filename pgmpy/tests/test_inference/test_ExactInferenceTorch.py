@@ -12,7 +12,7 @@ from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
 
 class TestVariableEliminationTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.bayesian_model = BayesianNetwork(
             [("A", "J"), ("R", "J"), ("J", "Q"), ("J", "L"), ("G", "L")]
@@ -356,7 +356,7 @@ class TestVariableEliminationTorch(unittest.TestCase):
 
 class TestSnowNetworkTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.model = BayesianNetwork(
             [
@@ -598,7 +598,7 @@ class TestSnowNetworkTorch(unittest.TestCase):
 
 class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.markov_model = MarkovNetwork([("A", "B"), ("A", "C")])
         f1 = DiscreteFactor(
@@ -623,7 +623,7 @@ class TestVariableEliminationDuplicatedFactors(unittest.TestCase):
 
 class TestVariableEliminationMarkov(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
         # are under consideration for inference so this should be fine.
@@ -859,7 +859,7 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
 class TestBeliefPropagation(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.junction_tree = JunctionTree(
             [(("A", "B"), ("B", "C")), (("B", "C"), ("C", "D"))]

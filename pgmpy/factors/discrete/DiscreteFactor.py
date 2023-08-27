@@ -13,6 +13,7 @@ from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])
+compute_backend = compat_fns.get_compute_backend()
 
 
 class DiscreteFactor(BaseFactor, StateNameMixin):
@@ -99,8 +100,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 "Number of elements in cardinality must be equal to number of variables"
             )
 
-        if compat_fns.size(values) != np.product(cardinality):
-            raise ValueError(f"Values array must be of size: {np.product(cardinality)}")
+        if compat_fns.size(values) != np.prod(cardinality):
+            raise ValueError(f"Values array must be of size: {np.prod(cardinality)}")
 
         if len(set(variables)) != len(variables):
             raise ValueError("Variable names cannot be same")
@@ -875,11 +876,11 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         Checks if the factor's values can be used for a valid CPD.
         """
-        return np.allclose(
+        return compute_backend.allclose(
             self.to_factor()
             .marginalize(self.scope()[:1], inplace=False)
             .values.flatten(),
-            np.ones(np.product(self.cardinality[:0:-1])),
+            compat_fns.ones(np.prod(self.cardinality[:0:-1])),
             atol=0.01,
         )
 

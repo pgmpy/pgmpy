@@ -561,7 +561,7 @@ class MarkovNetwork(UndirectedGraph):
             # To compute clique potential, initially set it as unity factor
             var_card = [self.get_cardinality()[x] for x in node]
             clique_potential = DiscreteFactor(
-                node, var_card, np.ones(np.product(var_card))
+                node, var_card, np.ones(np.prod(var_card))
             )
             # multiply it with the factors associated with the variables present
             # in the clique (or node)

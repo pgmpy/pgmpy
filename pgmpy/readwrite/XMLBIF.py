@@ -9,6 +9,7 @@ import pyparsing as pp
 
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.utils import compat_fns
 
 
 class XMLBIFReader(object):
@@ -487,7 +488,7 @@ class XMLBIFWriter(object):
                 definition_tag[cpd.variable], "TABLE"
             )
             table_tag[cpd.variable].text = ""
-            for val in cpd.get_values().ravel(order="F"):
+            for val in compat_fns.ravel_f(cpd.get_values()):
                 table_tag[cpd.variable].text += str(val) + " "
 
         return table_tag

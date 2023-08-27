@@ -273,7 +273,7 @@ class TestUAIWriter(unittest.TestCase):
 
 class TestUAIReaderTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         string = """MARKOV
 3
@@ -403,7 +403,7 @@ class TestUAIReaderTorch(unittest.TestCase):
 
 class TestUAIWriterTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.maxDiff = None
         variables = [

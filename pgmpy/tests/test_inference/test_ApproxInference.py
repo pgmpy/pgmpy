@@ -189,7 +189,7 @@ class TestApproxInferenceDBN(unittest.TestCase):
 
 class TestApproxInferenceBNTorch(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.alarm_model = get_example_model("alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
@@ -314,7 +314,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
 
 class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
-        config.set_backend("torch", device="cpu")
+        config.set_backend("torch")
 
         self.model = DBN()
         self.model.add_edges_from(
