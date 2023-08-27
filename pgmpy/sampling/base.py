@@ -9,7 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from pgmpy.inference import Inference
-from pgmpy.utils import _check_1d_array_object, _check_length_equal
+from pgmpy.utils import _check_1d_array_object, _check_length_equal, compat_fns
 
 
 class BayesianModelInference(Inference):
@@ -162,7 +162,7 @@ class BayesianModelInference(Inference):
             for i in range((len(state_combinations) // batch_size) + 1)
         )
 
-        weights_list = np.array(list(itertools.chain(*weights_list)))
+        weights_list = compat_fns.stack(itertools.chain(*weights_list))
         unique_weights, weights_indices = np.unique(
             weights_list, axis=0, return_inverse=True
         )
