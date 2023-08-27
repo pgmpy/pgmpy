@@ -329,7 +329,7 @@ class TabularCPD(DiscreteFactor):
         return TabularCPD(
             self.variable,
             self.variable_card,
-            self.get_values(),
+            compat_fns.copy(self.get_values()),
             evidence,
             evidence_card,
             state_names=self.state_names.copy(),

@@ -330,7 +330,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         return DiscreteFactor(
             variables=self.variables,
             cardinality=self.cardinality,
-            values=np.ones(compat_fns.size(self.values)),
+            values=compat_fns.ones(compat_fns.size(self.values)),
             state_names=self.state_names,
         )
 
@@ -795,7 +795,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         # If factor division 0/0 = 0 but is undefined for x/0. In pgmpy we are using
         # np.inf to represent x/0 cases.
-        phi.values[np.isnan(phi.values)] = 0
+        phi.values[compute_backend.isnan(phi.values)] = 0
 
         if not inplace:
             return phi
@@ -996,7 +996,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
             if phi.values.shape != self.values.shape:
                 return False
-            elif not np.allclose(phi.values, self.values, atol=atol):
+            elif not compute_backend.allclose(phi.values, self.values, atol=atol):
                 return False
             elif not all(self.cardinality == phi.cardinality):
                 return False

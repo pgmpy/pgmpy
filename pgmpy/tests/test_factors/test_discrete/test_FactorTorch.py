@@ -14,7 +14,7 @@ from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.independencies import Independencies
 from pgmpy.inference import VariableElimination
 from pgmpy.models import BayesianNetwork, MarkovNetwork
-from pgmpy.utils import get_example_model
+from pgmpy.utils import compat_fns, get_example_model
 
 
 class TestFactorInitTorch(unittest.TestCase):
@@ -27,7 +27,9 @@ class TestFactorInitTorch(unittest.TestCase):
         )
         self.assertEqual(phi.variables, ["x1", "x2", "x3"])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
-        np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi.values), np.ones(8).reshape(2, 2, 2)
+        )
 
     def test_class_init_int_var(self):
         phi = DiscreteFactor(
@@ -35,7 +37,9 @@ class TestFactorInitTorch(unittest.TestCase):
         )
         self.assertEqual(phi.variables, [1, 2, 3])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 3, 2]))
-        np_test.assert_array_equal(phi.values, np.arange(12).reshape(2, 3, 2))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi.values), np.arange(12).reshape(2, 3, 2)
+        )
 
     def test_class_init_statenames(self):
         phi = DiscreteFactor(
@@ -50,7 +54,9 @@ class TestFactorInitTorch(unittest.TestCase):
         )
         self.assertEqual(phi.variables, ["x1", "x2", "x3"])
         np_test.assert_array_equal(phi.cardinality, np.array([2, 2, 2]))
-        np_test.assert_array_equal(phi.values, np.ones(8).reshape(2, 2, 2))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi.values), np.ones(8).reshape(2, 2, 2)
+        )
 
     def test_class_init_repeated_statename(self):
         self.assertRaises(
@@ -344,39 +350,50 @@ class TestFactorMethodsTorch(unittest.TestCase):
                 tub="no",
                 either="yes",
             )
-
             self.assertNotEqual(phi, phi_copy)
 
     def test_marginalize(self):
         self.phi1.marginalize(["x1"])
         np_test.assert_array_equal(
-            self.phi1.values, np.array([[6, 8], [10, 12], [14, 16]])
+            compat_fns.to_numpy(self.phi1.values),
+            np.array([[6, 8], [10, 12], [14, 16]]),
         )
         self.phi1_sn.marginalize(["x1"])
         np_test.assert_array_equal(
-            self.phi1_sn.values, np.array([[6, 8], [10, 12], [14, 16]])
+            compat_fns.to_numpy(self.phi1_sn.values),
+            np.array([[6, 8], [10, 12], [14, 16]]),
         )
 
         self.phi1.marginalize(["x2"])
-        np_test.assert_array_equal(self.phi1.values, np.array([30, 36]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1.values), np.array([30, 36])
+        )
         self.phi1_sn.marginalize(["x2"])
-        np_test.assert_array_equal(self.phi1_sn.values, np.array([30, 36]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1_sn.values), np.array([30, 36])
+        )
 
         self.phi1.marginalize(["x3"])
-        np_test.assert_array_equal(self.phi1.values, np.array(66))
+        np_test.assert_array_equal(compat_fns.to_numpy(self.phi1.values), np.array(66))
         self.phi1_sn.marginalize(["x3"])
-        np_test.assert_array_equal(self.phi1_sn.values, np.array(66))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1_sn.values), np.array(66)
+        )
 
         self.phi5.marginalize([self.tup1])
         np_test.assert_array_equal(
-            self.phi5.values,
+            compat_fns.to_numpy(self.phi5.values),
             np.array([[12, 14, 16, 18], [20, 22, 24, 26], [28, 30, 32, 34]]),
         )
         self.phi5.marginalize([self.tup2])
-        np_test.assert_array_equal(self.phi5.values, np.array([60, 66, 72, 78]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi5.values), np.array([60, 66, 72, 78])
+        )
 
         self.phi5.marginalize([self.tup3])
-        np_test.assert_array_equal(self.phi5.values, np.array([276]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi5.values), np.array([276])
+        )
 
     def test_marginalize_scopeerror(self):
         self.assertRaises(ValueError, self.phi.marginalize, ["x4"])
@@ -394,18 +411,24 @@ class TestFactorMethodsTorch(unittest.TestCase):
         values = ["A", "D", "F", "H"]
         phi3_mar = self.phi3.marginalize(values, inplace=False)
         # Previously a sorting error caused these to be different
-        np_test.assert_array_equal(phi3_mar.values.shape, phi3_mar.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi3_mar.values.shape), phi3_mar.cardinality
+        )
 
         phi6_mar = self.phi6.marginalize([self.tup1, self.tup2], inplace=False)
-        np_test.assert_array_equal(phi6_mar.values.shape, phi6_mar.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi6_mar.values.shape), phi6_mar.cardinality
+        )
 
         self.phi6.marginalize([self.tup1, self.tup3 + self.tup1], inplace=True)
-        np_test.assert_array_equal(self.phi6.values.shape, self.phi6.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi6.values.shape), self.phi6.cardinality
+        )
 
     def test_normalize(self):
         self.phi1.normalize()
         np_test.assert_almost_equal(
-            self.phi1.values,
+            compat_fns.to_numpy(self.phi1.values),
             np.array(
                 [
                     [
@@ -424,7 +447,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
         self.phi1_sn.normalize()
         np_test.assert_almost_equal(
-            self.phi1_sn.values,
+            compat_fns.to_numpy(self.phi1_sn.values),
             np.array(
                 [
                     [
@@ -443,7 +466,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
         self.phi5.normalize()
         np_test.assert_almost_equal(
-            self.phi5.values,
+            compat_fns.to_numpy(self.phi5.values),
             [
                 [
                     [0.0, 0.00362319, 0.00724638, 0.01086957],
@@ -460,48 +483,70 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
     def test_reduce(self):
         self.phi1.reduce([("x1", 0), ("x2", 0)])
-        np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1.values), np.array([0, 1])
+        )
         self.phi1_sn.reduce([("x1", "sn0"), ("x2", "sn0")])
-        np_test.assert_array_equal(self.phi1_sn.values, np.array([0, 1]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1_sn.values), np.array([0, 1])
+        )
 
         self.phi5.reduce([(self.tup1, 0), (self.tup3, 1)])
-        np_test.assert_array_equal(self.phi5.values, np.array([1, 5, 9]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi5.values), np.array([1, 5, 9])
+        )
 
     def test_reduce1(self):
         self.phi1.reduce([("x2", 0), ("x1", 0)])
-        np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1.values), np.array([0, 1])
+        )
         self.phi1_sn.reduce([("x2", "sn0"), ("x1", "sn0")])
-        np_test.assert_array_equal(self.phi1_sn.values, np.array([0, 1]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1_sn.values), np.array([0, 1])
+        )
 
         self.phi5.reduce([(self.tup3, 1), (self.tup1, 0)])
-        np_test.assert_array_equal(self.phi5.values, np.array([1, 5, 9]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi5.values), np.array([1, 5, 9])
+        )
 
     def test_reduce_shape(self):
         values = [("A", 0), ("D", 0), ("F", 0), ("H", 1)]
         phi3_reduced = self.phi3.reduce(values, inplace=False)
         # Previously a sorting error caused these to be different
-        np_test.assert_array_equal(phi3_reduced.values.shape, phi3_reduced.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi3_reduced.values.shape), phi3_reduced.cardinality
+        )
 
         values = [(self.tup1, 2), (self.tup3, 0)]
         phi6_reduced = self.phi6.reduce(values, inplace=False)
-        np_test.assert_array_equal(phi6_reduced.values.shape, phi6_reduced.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(phi6_reduced.values.shape), phi6_reduced.cardinality
+        )
 
         self.phi6.reduce(values, inplace=True)
-        np_test.assert_array_equal(self.phi6.values.shape, self.phi6.cardinality)
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi6.values.shape), self.phi6.cardinality
+        )
 
     def test_complete_reduce(self):
         self.phi1.reduce([("x1", 0), ("x2", 0), ("x3", 1)])
-        np_test.assert_array_equal(self.phi1.values, np.array([1]))
+        np_test.assert_array_equal(compat_fns.to_numpy(self.phi1.values), np.array([1]))
         np_test.assert_array_equal(self.phi1.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1.variables, OrderedDict())
 
         self.phi1_sn.reduce([("x1", "sn0"), ("x2", "sn0"), ("x3", "sn1")])
-        np_test.assert_array_equal(self.phi1_sn.values, np.array([1]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi1_sn.values), np.array([1])
+        )
         np_test.assert_array_equal(self.phi1_sn.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi1_sn.variables, OrderedDict())
 
         self.phi5.reduce([(("x1", "x2"), 1), (("x2", "x3"), 0), (("x3", (1, "x4")), 3)])
-        np_test.assert_array_equal(self.phi5.values, np.array([15]))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(self.phi5.values), np.array([15])
+        )
         np_test.assert_array_equal(self.phi5.cardinality, np.array([]))
         np_test.assert_array_equal(self.phi5.variables, OrderedDict())
 
@@ -521,7 +566,9 @@ class TestFactorMethodsTorch(unittest.TestCase):
         identity_factor = self.phi.identity_factor()
         self.assertEqual(list(identity_factor.variables), ["x1", "x2", "x3"])
         np_test.assert_array_equal(identity_factor.cardinality, [2, 2, 2])
-        np_test.assert_array_equal(identity_factor.values, np.ones(8).reshape(2, 2, 2))
+        np_test.assert_array_equal(
+            compat_fns.to_numpy(identity_factor.values), np.ones(8).reshape(2, 2, 2)
+        )
 
         identity_factor1 = self.phi5.identity_factor()
         self.assertEqual(
@@ -529,7 +576,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         )
         np_test.assert_array_equal(identity_factor1.cardinality, [2, 3, 4])
         np_test.assert_array_equal(
-            identity_factor1.values, np.ones(24).reshape(2, 3, 4)
+            compat_fns.to_numpy(identity_factor1.values), np.ones(24).reshape(2, 3, 4)
         )
 
     def test_factor_product(self):
@@ -3032,7 +3079,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
             self.cpd2.reorder_parents(["A", "B", "C"], inplace=False)
             assert "Same ordering provided as current" in str(w[-1].message)
             np_test.assert_almost_equal(
-                self.cpd2.get_values(),
+                compat_fns.to_numpy(self.cpd2.get_values()),
                 np.array(
                     [
                         [0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],
