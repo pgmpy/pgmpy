@@ -238,7 +238,7 @@ class TabularCPD(DiscreteFactor):
             ]
         # Stack with data
         labeled_rows = np.hstack(
-            (np.array(variable_array).T, self.get_values())
+            (np.array(variable_array).T, compat_fns.to_numpy(self.get_values()))
         ).tolist()
 
         if return_list:
@@ -566,7 +566,7 @@ class TabularCPD(DiscreteFactor):
                 card_map = dict(zip(evidence, evidence_card))
                 old_pos_map = dict(zip(evidence, range(len(evidence))))
                 trans_ord = [0] + [(old_pos_map[letter] + 1) for letter in new_order]
-                new_values = np.transpose(self.values, trans_ord)
+                new_values = compat_fns.transpose(self.values, tuple(trans_ord))
 
                 if inplace:
                     variables = [self.variables[0]] + new_order

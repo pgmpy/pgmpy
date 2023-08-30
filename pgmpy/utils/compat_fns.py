@@ -115,3 +115,10 @@ def flip(arr, axis=0):
         return np.flip(arr, axis=axis)
     else:
         return torch.flip(arr, dims=axis)
+
+
+def transpose(arr, axis):
+    if isinstance(arr, np.ndarray):
+        return np.transpose(arr, axes=axis)
+    else:
+        return torch.permute(arr, dims=axis)

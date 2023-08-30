@@ -665,7 +665,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
             prod.values = prod.values.swapaxes(axis, exchange_index)
 
         np_test.assert_almost_equal(
-            prod.values.ravel(),
+            compat_fns.to_numpy(prod.values.ravel()),
             np.array([0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9]),
         )
 
@@ -680,7 +680,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
         self.phi9.divide(self.phi10, inplace=True)
         np_test.assert_array_almost_equal(
-            self.phi9.values,
+            compat_fns.to_numpy(self.phi9.values),
             np.array(
                 [1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]
             ).reshape(3, 2),
@@ -696,7 +696,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
 
         self.phi9 = self.phi9 / self.phi10
         np_test.assert_array_almost_equal(
-            self.phi9.values,
+            compat_fns.to_numpy(self.phi9.values),
             np.array(
                 [1.000000, 0.333333, 1.333333, 0.833333, 3.000000, 1.333333]
             ).reshape(3, 2),
@@ -708,7 +708,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
         phi2 = DiscreteFactor(["x1"], [2], [0, 2])
         div = phi1.divide(phi2, inplace=False)
         np_test.assert_array_equal(
-            div.values.ravel(), np.array([np.inf, np.inf, 1.5, 2])
+            compat_fns.to_numpy(div.values.ravel()), np.array([np.inf, np.inf, 1.5, 2])
         )
 
     def test_factor_divide_no_common_scope(self):
@@ -739,7 +739,7 @@ class TestFactorMethodsTorch(unittest.TestCase):
             phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2, "x4": 2}
         )
         np_test.assert_almost_equal(
-            phi1.values,
+            compat_fns.to_numpy(phi1.values),
             np.array(
                 [
                     [
@@ -762,7 +762,9 @@ class TestFactorMethodsTorch(unittest.TestCase):
         self.assertEqual(
             phi1.get_cardinality(phi1.variables), {"x1": 2, "x2": 3, "x3": 2}
         )
-        np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
+        np_test.assert_almost_equal(
+            compat_fns.to_numpy(phi1.values), np.arange(2, 14).reshape(2, 3, 2)
+        )
 
     def test_eq(self):
         self.assertFalse(self.phi == self.phi1)
@@ -1037,7 +1039,9 @@ class TestTabularCPDInitTorch(unittest.TestCase):
         self.assertEqual(cpd.variable_card, 3)
         self.assertEqual(list(cpd.variables), ["grade"])
         np_test.assert_array_equal(cpd.cardinality, np.array([3]))
-        np_test.assert_array_almost_equal(cpd.values, np.array([0.1, 0.1, 0.1]))
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(cpd.values), np.array([0.1, 0.1, 0.1])
+        )
 
         values = [
             [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -1069,7 +1073,7 @@ class TestTabularCPDInitTorch(unittest.TestCase):
                         list(cpd.variables), ["grade", "intel", "diff"]
                     )
                     np_test.assert_almost_equal(
-                        cpd.values,
+                        compat_fns.to_numpy(cpd.values),
                         np.array(
                             [
                                 0.1,
@@ -1106,7 +1110,8 @@ class TestTabularCPDInitTorch(unittest.TestCase):
         np_test.assert_array_equal(cpd.cardinality, np.array([3, 2]))
         self.assertListEqual(list(cpd.variables), ["grade", "evi1"])
         np_test.assert_almost_equal(
-            cpd.values, np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2)
+            compat_fns.to_numpy(cpd.values),
+            np.array([0.1, 0.1, 0.1, 0.1, 0.8, 0.8]).reshape(3, 2),
         )
 
     def test_cpd_init_event_card_not_int(self):
@@ -1183,7 +1188,7 @@ class TestTabularCPDInitTorch(unittest.TestCase):
             [5, 6],
         )
 
-    def test_too_wide_cdp_table(self):
+    def test_too_wide_cpd_table(self):
         terminal_width, terminal_height = get_terminal_size()
 
         grasp_cpd = TabularCPD(
@@ -2863,7 +2868,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         self.assertListEqual(list(self.cpd.variables), ["grade", "intel"])
         np_test.assert_array_equal(self.cpd.cardinality, np.array([3, 3]))
         np_test.assert_array_equal(
-            self.cpd.values.ravel(),
+            compat_fns.to_numpy(self.cpd.values.ravel()),
             np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.8, 0.8, 0.8]),
         )
 
@@ -2875,7 +2880,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         copy_cpd.marginalize(["intel", "diff"])
         self.cpd.marginalize(["intel"])
         self.cpd.marginalize(["diff"])
-        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
+        self.assertTrue(all((self.cpd.values == copy_cpd.values).ravel()))
 
     def test_normalize(self):
         cpd_un_normalized = TabularCPD(
@@ -2887,7 +2892,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         )
         cpd_un_normalized.normalize()
         np_test.assert_array_almost_equal(
-            cpd_un_normalized.values,
+            compat_fns.to_numpy(cpd_un_normalized.values),
             np.array(
                 [
                     [[0.63636364, 0.33333333], [0.6, 0.2]],
@@ -2905,7 +2910,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
             [2, 2],
         )
         np_test.assert_array_almost_equal(
-            cpd_un_normalized.normalize(inplace=False).values,
+            compat_fns.to_numpy(cpd_un_normalized.normalize(inplace=False).values),
             np.array(
                 [
                     [[0.63636364, 0.33333333], [0.6, 0.2]],
@@ -2924,7 +2929,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         )
         cpd_un_normalized.normalize(inplace=False)
         np_test.assert_array_almost_equal(
-            cpd_un_normalized.values,
+            compat_fns.to_numpy(cpd_un_normalized.values),
             np.array([[[0.7, 0.2], [0.6, 0.2]], [[0.4, 0.4], [0.4, 0.8]]]),
         )
 
@@ -2963,13 +2968,13 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
 
     def test_copy(self):
         copy_cpd = self.cpd.copy()
-        np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
+        self.assertTrue(all((self.cpd.get_values() == copy_cpd.get_values()).ravel()))
 
     def test_copy_original_safe(self):
         copy_cpd = self.cpd.copy()
         copy_cpd.reorder_parents(["diff", "intel"])
         np_test.assert_almost_equal(
-            self.cpd.get_values(),
+            compat_fns.to_numpy(self.cpd.get_values()),
             np.array(
                 [
                     [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -2990,20 +2995,21 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
     def test_reduce_1(self):
         self.cpd.reduce([("diff", "low")])
         np_test.assert_array_equal(
-            self.cpd.get_values(),
+            compat_fns.to_numpy(self.cpd.get_values()),
             np.array([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.8, 0.8, 0.8]]),
         )
 
     def test_reduce_2(self):
         self.cpd.reduce([("intel", "low")])
         np_test.assert_array_equal(
-            self.cpd.get_values(), np.array([[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]])
+            compat_fns.to_numpy(self.cpd.get_values()),
+            np.array([[0.1, 0.1], [0.1, 0.1], [0.8, 0.8]]),
         )
 
     def test_reduce_3(self):
         self.cpd.reduce([("intel", "low"), ("diff", "low")])
         np_test.assert_array_equal(
-            self.cpd.get_values(), np.array([[0.1], [0.1], [0.8]])
+            compat_fns.to_numpy(self.cpd.get_values()), np.array([[0.1], [0.1], [0.8]])
         )
 
     def test_reduce_4(self):
@@ -3014,11 +3020,11 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
         copy_cpd.reduce([("intel", "high"), ("diff", "low")])
         self.cpd.reduce([("intel", "high")])
         self.cpd.reduce([("diff", "high")])
-        np_test.assert_array_almost_equal(self.cpd.values, copy_cpd.values)
+        self.assertTrue(all((self.cpd.values == copy_cpd.values).ravel()))
 
     def test_get_values(self):
         np_test.assert_almost_equal(
-            self.cpd.get_values(),
+            compat_fns.to_numpy(self.cpd.get_values()),
             np.array(
                 [
                     [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
@@ -3031,7 +3037,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
     def test_reorder_parents_inplace(self):
         new_vals = self.cpd2.reorder_parents(["B", "A", "C"])
         np_test.assert_almost_equal(
-            new_vals,
+            compat_fns.to_numpy(new_vals),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3040,7 +3046,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
             ),
         )
         np_test.assert_almost_equal(
-            self.cpd2.get_values(),
+            compat_fns.to_numpy(self.cpd2.get_values()),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3052,7 +3058,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
     def test_reorder_parents(self):
         new_vals = self.cpd2.reorder_parents(["B", "A", "C"])
         np_test.assert_almost_equal(
-            new_vals,
+            compat_fns.to_numpy(new_vals),
             np.array(
                 [
                     [0.9, 0.3, 0.8, 0.8, 0.9, 0.3, 0.4, 0.4],
@@ -3064,7 +3070,7 @@ class TestTabularCPDMethodsTorch(unittest.TestCase):
     def test_reorder_parents_no_effect(self):
         self.cpd2.reorder_parents(["C", "A", "B"], inplace=False)
         np_test.assert_almost_equal(
-            self.cpd2.get_values(),
+            compat_fns.to_numpy(self.cpd2.get_values()),
             np.array(
                 [
                     [0.9, 0.3, 0.9, 0.3, 0.8, 0.8, 0.4, 0.4],

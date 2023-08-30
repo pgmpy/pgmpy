@@ -282,7 +282,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             if (len(index) == 1) and (isinstance(index[0], torch.Tensor)):
                 index = index[0][None]
             else:
-                index = torch.Tensor(index, dtype=torch.int, device=config.get_device())
+                index = torch.tensor(index, dtype=torch.int, device=config.get_device())
 
         max_possible_index = np.prod(self.cardinality) - 1
         if not all(i <= max_possible_index for i in index):
@@ -830,6 +830,10 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self.normalize(inplace=False)
         p = phi.values.ravel()
+
+        # TODO: Fix this to make it work natively in torch.
+        p = compat_fns.to_numpy(p)
+
         indexes = np.random.choice(range(len(p)), size=n, p=p)
         samples = []
         index_to_state = {}
