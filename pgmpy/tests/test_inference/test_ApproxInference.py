@@ -179,7 +179,7 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
-    def test_virutal_evidence(self):
+    def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )
@@ -366,7 +366,7 @@ class TestApproxInferenceDBN(unittest.TestCase):
         expected1 = DiscreteFactor([("Y", 4)], [2], [0.2232, 0.7768])
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
 
-    def test_virutal_evidence(self):
+    def test_virtual_evidence(self):
         res1 = self.infer.query(
             [("Y", 4)], virtual_evidence=[TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]
         )

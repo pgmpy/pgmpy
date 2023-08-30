@@ -276,23 +276,31 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         >>> phi.assignment([1, 2])
         [[('diff', 0), ('intel', 1)], [('diff', 1), ('intel', 0)]]
         """
-        index = compat_fns.array(index)
+        if config.get_backend() == "numpy":
+            index = np.array(index)
+        else:
+            if (len(index) == 1) and (isinstance(index[0], torch.Tensor)):
+                index = index[0][None]
+            else:
+                index = torch.Tensor(index, dtype=torch.int, device=config.get_device())
 
         max_possible_index = np.prod(self.cardinality) - 1
         if not all(i <= max_possible_index for i in index):
             raise IndexError("Index greater than max possible index")
 
-        assignments = np.zeros((len(index), len(self.scope())), dtype=int)
+        assignments = compat_fns.get_compute_backend().zeros(
+            (len(index), len(self.scope())), dtype=int
+        )
         rev_card = self.cardinality[::-1]
         for i, card in enumerate(rev_card):
             assignments[:, i] = index % card
             index = index // card
 
-        assignments = assignments[:, ::-1]
+        assignments = compat_fns.flip(assignments, axis=(1,))
 
         return [
             [
-                (key, self.get_state_names(key, val))
+                (key, self.get_state_names(key, int(val)))
                 for key, val in zip(self.variables, values)
             ]
             for values in assignments

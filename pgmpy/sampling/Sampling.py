@@ -4,6 +4,7 @@ from collections import namedtuple
 import networkx as nx
 import numpy as np
 import pandas as pd
+import torch
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
@@ -114,9 +115,14 @@ class BayesianModelSampling(BayesianModelInference):
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                         variable=node, state_combinations=unique, n_jobs=n_jobs
                     )
-                    weight_index = np.array([state_to_index[u] for u in unique])[
-                        inverse
-                    ]
+                    if config.get_backend() == "numpy":
+                        weight_index = np.array([state_to_index[u] for u in unique])[
+                            inverse
+                        ]
+                    else:
+                        weight_index = torch.Tensor(
+                            [state_to_index[u] for u in unique]
+                        )[inverse]
                     sampled[node] = sample_discrete_maps(
                         states, weight_index, index_to_weight, size
                     )

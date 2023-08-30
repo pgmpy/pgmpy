@@ -163,7 +163,7 @@ class BayesianModelInference(Inference):
         )
 
         weights_list = compat_fns.stack(itertools.chain(*weights_list))
-        unique_weights, weights_indices = np.unique(
+        unique_weights, weights_indices = compat_fns.unique(
             weights_list, axis=0, return_inverse=True
         )
 

@@ -8,6 +8,7 @@ from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class TestVariableEliminationTorch(unittest.TestCase):
@@ -218,22 +219,24 @@ class TestVariableEliminationTorch(unittest.TestCase):
 
     def test_max_marginal(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(), 0.1659, decimal=4
+            float(self.bayesian_inference.max_marginal()), 0.1659, decimal=4
         )
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G"]), 0.6, decimal=4
+            float(self.bayesian_inference.max_marginal(["G"])), 0.6, decimal=4
         )
 
     def test_max_marginal_var1(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R"]), 0.36, decimal=4
+            float(self.bayesian_inference.max_marginal(["G", "R"])), 0.36, decimal=4
         )
 
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(
-            self.bayesian_inference.max_marginal(["G", "R", "A"]), 0.288, decimal=4
+            float(self.bayesian_inference.max_marginal(["G", "R", "A"])),
+            0.288,
+            decimal=4,
         )
 
     def test_max_marginal_common_var(self):
@@ -406,17 +409,23 @@ class TestSnowNetworkTorch(unittest.TestCase):
             query1 = infer.query(
                 ["Snow"], evidence={"Traffic": "slow"}, show_progress=False
             )
-            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query1.values), [0.533333, 0.466667]
+            )
 
             query2 = infer.query(
                 ["Risk"], evidence={"Traffic": "slow"}, show_progress=False
             )
-            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query2.values), [0.613333, 0.386667]
+            )
 
             query3 = infer.query(
                 ["Late"], evidence={"Traffic": "slow"}, show_progress=False
             )
-            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query3.values), [0.7920, 0.2080]
+            )
 
             self.assertRaises(
                 ValueError,
@@ -446,7 +455,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query1.values), [0.533333, 0.466667]
+            )
 
             query2 = infer.query(
                 ["Risk"],
@@ -454,7 +465,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query2.values), [0.613333, 0.386667]
+            )
 
             query3 = infer.query(
                 ["Late"],
@@ -462,7 +475,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query3.values), [0.7920, 0.2080]
+            )
 
     def test_joint_distribution(self):
         infer = VariableElimination(self.model)
@@ -496,7 +511,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
             query1 = infer.query(
                 ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
             )
-            np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query1.values), [0.45, 0.55]
+            )
 
             map1 = infer.map_query(
                 ["Snow"], virtual_evidence=[virt_evidence], show_progress=False
@@ -506,7 +523,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
             query2 = infer.query(
                 ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
             )
-            np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query2.values), [0.58, 0.42]
+            )
 
             map2 = infer.map_query(
                 ["Risk"], virtual_evidence=[virt_evidence], show_progress=False
@@ -516,7 +535,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
             query3 = infer.query(
                 ["Late"], virtual_evidence=[virt_evidence], show_progress=False
             )
-            np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query3.values), [0.61625, 0.38375]
+            )
 
             map3 = infer.map_query(
                 ["Late"], virtual_evidence=[virt_evidence], show_progress=False
@@ -526,7 +547,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
             query4 = infer.query(
                 ["Traffic"], virtual_evidence=[virt_evidence], show_progress=False
             )
-            np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query4.values), [0.34375, 0.65625]
+            )
 
             # TODO: State name should be returned here.
             map4 = infer.map_query(
@@ -544,7 +567,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 virtual_evidence=[virt_evidence, virt_evidence1],
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query1.values), [0.52443609, 0.47556391]
+            )
 
             map1 = infer.map_query(
                 ["Snow"],
@@ -558,7 +583,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 virtual_evidence=[virt_evidence, virt_evidence1],
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query2.values), [0.76315789, 0.23684211]
+            )
             map2 = infer.map_query(
                 ["Risk"],
                 virtual_evidence=[virt_evidence, virt_evidence1],
@@ -571,7 +598,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 virtual_evidence=[virt_evidence, virt_evidence1],
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query3.values), [0.32730263, 0.67269737]
+            )
             map3 = infer.map_query(
                 ["Traffic"],
                 virtual_evidence=[virt_evidence, virt_evidence1],
@@ -584,7 +613,9 @@ class TestSnowNetworkTorch(unittest.TestCase):
                 virtual_evidence=[virt_evidence, virt_evidence1],
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
+            np_test.assert_array_almost_equal(
+                compat_fns.to_numpy(query4.values), [0.66480263, 0.33519737]
+            )
             map4 = infer.map_query(
                 ["Late"],
                 virtual_evidence=[virt_evidence, virt_evidence1],
@@ -766,22 +797,24 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
     def test_max_marginal(self):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(), 0.1659, decimal=4
+            float(self.markov_inference.max_marginal()), 0.1659, decimal=4
         )
 
     def test_max_marginal_var(self):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G"]), 0.1659, decimal=4
+            float(self.markov_inference.max_marginal(["G"])), 0.1659, decimal=4
         )
 
     def test_max_marginal_var1(self):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G", "R"]), 0.1659, decimal=4
+            float(self.markov_inference.max_marginal(["G", "R"])), 0.1659, decimal=4
         )
 
     def test_max_marginal_var2(self):
         np_test.assert_almost_equal(
-            self.markov_inference.max_marginal(["G", "R", "A"]), 0.1659, decimal=4
+            float(self.markov_inference.max_marginal(["G", "R", "A"])),
+            0.1659,
+            decimal=4,
         )
 
     def test_map_query(self):
@@ -846,7 +879,9 @@ class TestVariableEliminationMarkov(unittest.TestCase):
 
         infer = VariableElimination(model)
         np_test.assert_array_almost_equal(
-            infer.query(["Y"], evidence={"X": 0}, show_progress=False).values,
+            compat_fns.to_numpy(
+                infer.query(["Y"], evidence={"X": 0}, show_progress=False).values
+            ),
             [0.35, 0.65],
         )
 
@@ -942,11 +977,11 @@ class TestBeliefPropagation(unittest.TestCase):
             )
         ).marginalize(["B"], inplace=False)
 
-        np_test.assert_array_almost_equal(
-            sepset_belief[frozenset((("A", "B"), ("B", "C")))].values, b_B.values
+        self.assertTrue(
+            all(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values == b_B.values)
         )
-        np_test.assert_array_almost_equal(
-            sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values
+        self.assertTrue(
+            all(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values == b_C.values)
         )
 
     def test_max_calibrate_clique_belief(self):
@@ -996,11 +1031,11 @@ class TestBeliefPropagation(unittest.TestCase):
             )
         ).maximize(["B"], inplace=False)
 
-        np_test.assert_array_almost_equal(
-            sepset_belief[frozenset((("A", "B"), ("B", "C")))].values, b_B.values
+        self.assertTrue(
+            all(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values == b_B.values)
         )
-        np_test.assert_array_almost_equal(
-            sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values
+        self.assertTrue(
+            all(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values == b_C.values)
         )
 
     # All the values that are used for comparison in the all the tests are
@@ -1120,9 +1155,11 @@ class TestBeliefPropagation(unittest.TestCase):
         for i, c in enumerate(children[:4]):
             self.assertEqual(evidence, expected_evidences[i])
             np_test.assert_almost_equal(
-                inf.query(["parent"], evidence, show_progress=False)
-                .normalize(inplace=False)
-                .values,
+                compat_fns.to_numpy(
+                    inf.query(["parent"], evidence, show_progress=False)
+                    .normalize(inplace=False)
+                    .values
+                ),
                 expected_values[i],
                 decimal=2,
             )

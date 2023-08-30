@@ -68,9 +68,9 @@ def to_numpy(arr, decimals=None):
             arr = arr.numpy(force=True)
 
     if decimals is None:
-        return arr
+        return np.array(arr)
     else:
-        return arr.round(decimals)
+        return np.array(arr).round(decimals)
 
 
 def ravel_f(arr):
@@ -97,3 +97,21 @@ def get_compute_backend():
         return np
     else:
         return torch
+
+
+def unique(arr, axis=0, return_counts=False, return_inverse=False):
+    if isinstance(arr, np.ndarray):
+        return np.unique(
+            arr, axis=axis, return_counts=return_counts, return_inverse=return_inverse
+        )
+    else:
+        return torch.unique(
+            arr, return_inverse=return_inverse, return_counts=return_counts, dim=axis
+        )
+
+
+def flip(arr, axis=0):
+    if isinstance(arr, np.ndarray):
+        return np.flip(arr, axis=axis)
+    else:
+        return torch.flip(arr, dims=axis)
