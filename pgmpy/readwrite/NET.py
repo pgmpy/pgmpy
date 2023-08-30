@@ -20,6 +20,7 @@ from pyparsing import (
 
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.utils import compat_fns
 
 
 class NETWriter(object):
@@ -138,7 +139,7 @@ class NETWriter(object):
         string: CPT format of .net files
         """
         cpt = self.tables[var_name]
-        cpt_array = np.moveaxis(cpt, 0, -1)
+        cpt_array = np.moveaxis(compat_fns.to_numpy(cpt, decimals=4), 0, -1)
         cpt_string = str(cpt_array)
         net_cpt_string = (
             cpt_string.replace("[", "(")

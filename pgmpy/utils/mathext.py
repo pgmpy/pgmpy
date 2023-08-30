@@ -4,6 +4,9 @@ from warnings import warn
 
 import numpy as np
 
+from pgmpy import config
+from pgmpy.utils import compat_fns
+
 State = namedtuple("State", ["var", "state"])
 
 
@@ -75,14 +78,14 @@ def _adjusted_weights(weights):
     array([0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111, 0.1111111,
            0.1111111, 0.1111111, 0.1111112])
     """
-    error = 1 - np.sum(weights)
+    error = 1 - weights.sum()
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
         warn(
             f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
         )
-        weights[np.argmax(weights)] += error
+        weights[compat_fns.argmax(weights)] += error
 
     return weights
 
@@ -121,16 +124,19 @@ def sample_discrete(values, weights, size=1, seed=None):
     """
     if seed is not None:
         np.random.seed(seed)
-
-    weights = np.array(weights)
+    weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
-        return np.random.choice(values, size=size, p=_adjusted_weights(weights))
+        return np.random.choice(
+            compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights)
+        )
     else:
         samples = np.zeros(size, dtype=int)
         unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
         for index, size in enumerate(counts):
             samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
-                values, size=size, p=_adjusted_weights(unique_weights[index])
+                compat_fns.to_numpy(values),
+                size=size,
+                p=_adjusted_weights(unique_weights[index]),
             )
         return samples
 
@@ -173,11 +179,19 @@ def sample_discrete_maps(states, weight_indices, index_to_weight, size=1, seed=N
     if seed is not None:
         np.random.seed(seed)
 
+    # TODO: Remove this conversion and find a way to do this natively in torch.
+    states = np.array(states)
+    weight_indices = compat_fns.to_numpy(weight_indices)
+    index_to_weight = {
+        key: compat_fns.to_numpy(value) for key, value in index_to_weight.items()
+    }
+    size = int(size)
+
     samples = np.zeros(size, dtype=int)
     unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
 
     for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[weight_indices == weight_index] = np.random.choice(
+        samples[(weight_indices == weight_index)] = np.random.choice(
             states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
         )
     return samples

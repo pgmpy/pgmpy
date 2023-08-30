@@ -20,6 +20,7 @@ from pgmpy.factors.discrete import (
     TabularCPD,
 )
 from pgmpy.models.MarkovNetwork import MarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class BayesianNetwork(DAG):
@@ -1286,7 +1287,9 @@ class BayesianNetwork(DAG):
                 var = cpd.variables[0]
                 new_var = "__" + var
                 model.add_edge(var, new_var)
-                values = np.vstack((cpd.values, 1 - cpd.values))
+                values = compat_fns.get_compute_backend().vstack(
+                    (cpd.values, 1 - cpd.values)
+                )
                 new_cpd = TabularCPD(
                     variable=new_var,
                     variable_card=2,

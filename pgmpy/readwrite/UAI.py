@@ -1,10 +1,11 @@
 from itertools import combinations
 
 import numpy as np
-from pyparsing import Combine, Literal, Optional, Word, alphas, nums, Regex
+from pyparsing import Combine, Literal, Optional, Regex, Word, alphas, nums
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import BayesianNetwork, MarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class UAIReader(object):
@@ -302,7 +303,7 @@ class UAIWriter(object):
     Class for writing models in UAI.
     """
 
-    def __init__(self, model):
+    def __init__(self, model, round_values=None):
         """
         Initialize an instance of UAI writer class
 
@@ -310,6 +311,9 @@ class UAIWriter(object):
         ----------
         model: A Bayesian or Markov model
             The model to write
+
+        round_values: int (default: None)
+            The number to decimals to which to round the probability values. If None, keeps all decimals points.
 
         Examples
         --------
@@ -327,6 +331,7 @@ class UAIWriter(object):
             raise TypeError("Model must be an instance of Bayesian or Markov model.")
 
         self.model = model
+        self.round_values = round_values
         self.no_nodes = self.get_nodes()
         self.domain = self.get_domain()
         self.functions = self.get_functions()
@@ -446,14 +451,28 @@ class UAIWriter(object):
             cpds.sort(key=lambda x: x.variable)
             tables = []
             for cpd in cpds:
-                values = list(map(str, cpd.values.ravel()))
+                values = list(
+                    map(
+                        str,
+                        compat_fns.to_numpy(
+                            cpd.values.ravel(), decimals=self.round_values
+                        ),
+                    )
+                )
                 tables.append(values)
             return tables
         elif isinstance(self.model, MarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:
-                values = list(map(str, factor.values.ravel()))
+                values = list(
+                    map(
+                        str,
+                        compat_fns.to_numpy(
+                            factor.values.ravel(), decimals=self.round_values
+                        ),
+                    )
+                )
                 tables.append(values)
             return tables
         else:

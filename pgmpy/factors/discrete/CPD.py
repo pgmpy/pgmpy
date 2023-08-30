@@ -7,9 +7,12 @@ from shutil import get_terminal_size
 from warnings import warn
 
 import numpy as np
+import torch
 
+from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.utils import compat_fns
 
 
 class TabularCPD(DiscreteFactor):
@@ -121,14 +124,20 @@ class TabularCPD(DiscreteFactor):
                     "Length of evidence_card doesn't match length of evidence"
                 )
 
-        values = np.array(values)
+        if config.BACKEND == "numpy":
+            values = np.array(values, dtype=config.get_dtype())
+        else:
+            values = (
+                torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
+            )
+
         if values.ndim != 2:
             raise TypeError("Values must be a 2D list/array")
 
         if evidence is None:
             expected_cpd_shape = (variable_card, 1)
         else:
-            expected_cpd_shape = (variable_card, np.product(evidence_card))
+            expected_cpd_shape = (variable_card, np.prod(evidence_card))
         if values.shape != expected_cpd_shape:
             raise ValueError(
                 f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}"
@@ -140,7 +149,7 @@ class TabularCPD(DiscreteFactor):
             )
 
         super(TabularCPD, self).__init__(
-            variables, cardinality, values.flatten("C"), state_names=state_names
+            variables, cardinality, values.flatten(), state_names=state_names
         )
 
     def __repr__(self):
@@ -176,10 +185,10 @@ class TabularCPD(DiscreteFactor):
         """
         if self.variable in self.variables:
             return self.values.reshape(
-                self.cardinality[0], np.prod(self.cardinality[1:])
+                tuple([self.cardinality[0], np.prod(self.cardinality[1:])])
             )
         else:
-            return self.values.reshape(np.prod(self.cardinality), 1)
+            return self.values.reshape(tuple([np.prod(self.cardinality), 1]))
 
     def __str__(self):
         return self._make_table_str(tablefmt="grid")
@@ -229,7 +238,7 @@ class TabularCPD(DiscreteFactor):
             ]
         # Stack with data
         labeled_rows = np.hstack(
-            (np.array(variable_array).T, self.get_values())
+            (np.array(variable_array).T, compat_fns.to_numpy(self.get_values()))
         ).tolist()
 
         if return_list:
@@ -320,7 +329,7 @@ class TabularCPD(DiscreteFactor):
         return TabularCPD(
             self.variable,
             self.variable_card,
-            self.get_values(),
+            compat_fns.copy(self.get_values()),
             evidence,
             evidence_card,
             state_names=self.state_names.copy(),
@@ -350,7 +359,9 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tabular_cpd.cardinality)
+        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(
+            tuple(tabular_cpd.cardinality)
+        )
         if not inplace:
             return tabular_cpd
 
@@ -452,7 +463,7 @@ class TabularCPD(DiscreteFactor):
         factor = DiscreteFactor.__new__(DiscreteFactor)
         factor.variables = self.variables.copy()
         factor.cardinality = self.cardinality.copy()
-        factor.values = self.values.copy()
+        factor.values = compat_fns.copy(self.values)
         factor.state_names = self.state_names.copy()
         factor.name_to_no = self.name_to_no.copy()
         factor.no_to_name = self.no_to_name.copy()
@@ -555,7 +566,7 @@ class TabularCPD(DiscreteFactor):
                 card_map = dict(zip(evidence, evidence_card))
                 old_pos_map = dict(zip(evidence, range(len(evidence))))
                 trans_ord = [0] + [(old_pos_map[letter] + 1) for letter in new_order]
-                new_values = np.transpose(self.values, trans_ord)
+                new_values = compat_fns.transpose(self.values, tuple(trans_ord))
 
                 if inplace:
                     variables = [self.variables[0]] + new_order
@@ -563,13 +574,17 @@ class TabularCPD(DiscreteFactor):
                         card_map[var] for var in new_order
                     ]
                     super(TabularCPD, self).__init__(
-                        variables, cardinality, new_values.flatten("C")
+                        variables, cardinality, new_values.flatten()
                     )
                     return self.get_values()
                 else:
                     return new_values.reshape(
-                        self.cardinality[0],
-                        np.prod([card_map[var] for var in new_order]),
+                        tuple(
+                            [
+                                self.cardinality[0],
+                                np.prod([card_map[var] for var in new_order]),
+                            ]
+                        )
                     )
             else:
                 warn("Same ordering provided as current")
@@ -644,7 +659,7 @@ class TabularCPD(DiscreteFactor):
             )
         else:
             parent_card = [cardinality[var] for var in evidence]
-            values = np.random.rand(cardinality[variable], np.product(parent_card))
+            values = np.random.rand(cardinality[variable], np.prod(parent_card))
             values = values / np.sum(values, axis=0)
             node_cpd = TabularCPD(
                 variable=variable,

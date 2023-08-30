@@ -23,6 +23,7 @@ from pgmpy.models import (
     JunctionTree,
     MarkovNetwork,
 )
+from pgmpy.utils import compat_fns
 
 
 class VariableElimination(Inference):
@@ -492,7 +493,7 @@ class VariableElimination(Inference):
             show_progress=show_progress,
         )
 
-        return np.max(final_distribution.values)
+        return compat_fns.max(final_distribution.values)
 
     def map_query(
         self,
@@ -576,8 +577,7 @@ class VariableElimination(Inference):
             joint=True,
             show_progress=show_progress,
         )
-
-        argmax = np.argmax(final_distribution.values)
+        argmax = compat_fns.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
 
         map_query_results = {}
@@ -1226,7 +1226,7 @@ class BeliefPropagation(Inference):
 
         # To handle the case when no argument is passed then
         # _variable_elimination returns a dict.
-        argmax = np.argmax(final_distribution.values)
+        argmax = compat_fns.argmax(final_distribution.values)
         assignment = final_distribution.assignment([argmax])[0]
 
         map_query_results = {}
