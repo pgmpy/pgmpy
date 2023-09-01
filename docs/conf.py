@@ -64,7 +64,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "pgmpy"
-copyright = "2022, Ankur Ankan"
+copyright = "2023, Ankur Ankan"
 author = "Ankur Ankan, Abinash Panda"
 
 # The version info for the project you're documenting, acts as replacement for
