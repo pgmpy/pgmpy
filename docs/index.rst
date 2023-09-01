@@ -86,8 +86,9 @@ Algorithms
    :header-rows: 1
 
 
-All example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
-All tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
+Example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
+
+Tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
 
 Indices and tables
 ==================
