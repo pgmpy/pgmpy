@@ -57,22 +57,22 @@ Supported Data Types
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference
-   * - Discrete
+   * - **Discrete**
      - Yes
      - Yes
      - Yes
      - Yes
-   * - Continuous
+   * - **Continuous**
      - Yes (only PC)
      - No
      - Yes (partial)
      - No
-   * - Hybrid
+   * - **Hybrid**
      - No
      - No
      - No
      - No
-   * - Time Series
+   * - **Time Series**
      - No
      - Yes
      - Yes (ApproximateInference)
