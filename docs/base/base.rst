@@ -1,5 +1,5 @@
-Base Model Structure
-====================
+Base Model Structures
+=====================
 
 Directed Acyclic Graph (DAG)
 ----------------------------
