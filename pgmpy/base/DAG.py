@@ -1066,6 +1066,20 @@ class DAG(nx.DiGraph):
             )
         return dag
 
+    def to_graphviz(self):
+        """
+        Retuns a pygraphviz object for the DAG. pygraphviz is useful for
+        visualizing the network structure.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> model.to_graphviz()
+        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        """
+        return nx.nx_agraph.to_agraph(self)
+
 
 class PDAG(nx.DiGraph):
     """
@@ -1206,3 +1220,17 @@ class PDAG(nx.DiGraph):
                             pass
                 break
         return dag
+
+    def to_graphviz(self):
+        """
+        Retuns a pygraphviz object for the DAG. pygraphviz is useful for
+        visualizing the network structure.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> model = get_example_model('alarm')
+        >>> model.to_graphviz()
+        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        """
+        return nx.nx_agraph.to_agraph(self)
