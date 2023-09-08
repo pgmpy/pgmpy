@@ -44,7 +44,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
-    "sphinx_rtd_theme",
     "alabaster",
 ]
 
@@ -180,11 +179,11 @@ html_static_path = ["logo.png"]
 html_sidebars = {
     "**": [
         "about.html",
-        "searchbox.html",
         "navigation.html",
         "relations.html",
         "donate.html",
         "ethicalads.html",
+        "searchbox.html",
     ]
 }
 
