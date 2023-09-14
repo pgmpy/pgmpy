@@ -1,7 +1,6 @@
 import itertools
 import math
 import os
-from warnings import warn
 
 import networkx as nx
 import numpy as np

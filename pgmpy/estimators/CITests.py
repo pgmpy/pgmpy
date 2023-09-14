@@ -1,10 +1,9 @@
-import logging
-
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from pgmpy.independencies import IndependenceAssertion
+from pgmpy.global_vars import logger
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):
@@ -555,14 +554,14 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             except ValueError:
                 # If one of the values is 0 in the 2x2 table.
                 if isinstance(z_state, str):
-                    logging.info(
+                    logger.info(
                         f"Skipping the test {X} \u27C2 {Y} | {Z[0]}={z_state}. Not enough samples"
                     )
                 else:
                     z_str = ", ".join(
                         [f"{var}={state}" for var, state in zip(Z, z_state)]
                     )
-                    logging.info(
+                    logger.info(
                         f"Skipping the test {X} \u27C2 {Y} | {z_str}. Not enough samples"
                     )
         p_value = 1 - stats.chi2.cdf(chi, df=dof)

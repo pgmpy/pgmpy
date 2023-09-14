@@ -1,4 +1,3 @@
-import warnings
 from itertools import chain, product
 from math import log
 
@@ -71,19 +70,13 @@ class ExpectationMaximization(ParameterEstimator):
         them together.
         """
         likelihood = 0
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            for cpd in self.model_copy.cpds:
-                scope = set(cpd.scope())
-                likelihood += log(
-                    cpd.get_value(
-                        **{
-                            key: value
-                            for key, value in datapoint.items()
-                            if key in scope
-                        }
-                    )
+        for cpd in self.model_copy.cpds:
+            scope = set(cpd.scope())
+            likelihood += log(
+                cpd.get_value(
+                    **{key: value for key, value in datapoint.items() if key in scope}
                 )
+            )
         return likelihood
 
     def _parallel_compute_weights(

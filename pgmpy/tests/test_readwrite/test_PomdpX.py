@@ -4,7 +4,6 @@
 import io
 import sys
 import unittest
-import warnings
 import xml.etree.ElementTree as etree
 
 from pgmpy.readwrite import PomdpXReader, PomdpXWriter

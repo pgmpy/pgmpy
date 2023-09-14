@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-import warnings
 import xml.etree.ElementTree as etree
 from collections import defaultdict
 

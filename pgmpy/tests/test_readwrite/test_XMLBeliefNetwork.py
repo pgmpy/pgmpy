@@ -1,7 +1,6 @@
 import io
 import sys
 import unittest
-import warnings
 import xml.etree.ElementTree as etree
 
 import networkx as nx
