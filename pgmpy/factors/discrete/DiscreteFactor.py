@@ -8,8 +8,8 @@ import torch
 from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
-from pgmpy.utils import StateNameMixin, compat_fns
 from pgmpy.global_vars import logger
+from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])
 
@@ -551,9 +551,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             ]
         except KeyError:
             if show_warnings:
-                logger.warn(
-                    "Found unknown state name. Trying to switch to using all state names as state numbers",
-                    UserWarning,
+                logger.warning(
+                    "Found unknown state name. Trying to switch to using all state names as state numbers"
                 )
 
         var_index_to_del = []

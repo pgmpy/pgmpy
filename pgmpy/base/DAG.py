@@ -6,8 +6,8 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.independencies import Independencies
 from pgmpy.global_vars import logger
+from pgmpy.independencies import Independencies
 
 
 class DAG(nx.DiGraph):
@@ -1207,7 +1207,7 @@ class PDAG(nx.DiGraph):
                     break
 
             if not found:
-                logger.warn(
+                logger.warning(
                     "PDAG has no faithful extension (= no oriented DAG with the "
                     + "same v-structures as PDAG). Remaining undirected PDAG edges "
                     + "oriented arbitrarily."

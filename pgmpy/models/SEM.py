@@ -381,7 +381,7 @@ class SEMGraph(DAG):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warn(
+            logger.warning(
                 f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 
@@ -539,7 +539,7 @@ class SEMGraph(DAG):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warn(
+            logger.warning(
                 f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 

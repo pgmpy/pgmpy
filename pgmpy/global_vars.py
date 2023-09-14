@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
 
 

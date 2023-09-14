@@ -6,8 +6,8 @@ from pandas import DataFrame
 from scipy.linalg import eig
 
 from pgmpy.factors.discrete import State
-from pgmpy.utils import sample_discrete
 from pgmpy.global_vars import logger
+from pgmpy.utils import sample_discrete
 
 
 class MarkovChain(object):
@@ -144,7 +144,7 @@ class MarkovChain(object):
         if variable not in self.variables:
             self.variables.append(variable)
         else:
-            logger.warn(f"Variable {variable} already exists.")
+            logger.warning(f"Variable {variable} already exists.")
         self.cardinalities[variable] = card
         self.transition_models[variable] = {}
 
