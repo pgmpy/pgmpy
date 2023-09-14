@@ -74,11 +74,7 @@ class ExpectationMaximization(ParameterEstimator):
             scope = set(cpd.scope())
             likelihood += log(
                 cpd.get_value(
-                    **{
-                        key: value
-                        for key, value in datapoint.items()
-                        if key in scope
-                    }
+                    **{key: value for key, value in datapoint.items() if key in scope}
                 )
             )
         return likelihood

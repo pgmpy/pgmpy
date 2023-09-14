@@ -1,9 +1,10 @@
 import logging
+
 import numpy as np
 import torch
 
 logging.basicConfig()
-logger = logging.getLogger('pgmpy')
+logger = logging.getLogger("pgmpy")
 
 
 class Config:
