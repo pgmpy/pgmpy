@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import logging
 from itertools import chain, combinations, permutations
 
 import networkx as nx
@@ -11,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import PDAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import *
+from pgmpy.global_vars import logger
 
 CI_TESTS = {
     "chi_square": chi_square,
@@ -350,7 +350,7 @@ class PC(StructureEstimator):
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logging.info(
+                logger.info(
                     "Reached maximum number of allowed conditional variables. Exiting"
                 )
                 break

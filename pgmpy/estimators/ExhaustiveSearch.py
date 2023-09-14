@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import logging
 from itertools import combinations
 
 import networkx as nx
@@ -9,6 +8,7 @@ from pgmpy.estimators import StructureEstimator, ScoreCache
 from pgmpy.estimators import K2Score
 from pgmpy.utils.mathext import powerset
 from pgmpy.base import DAG
+from pgmpy.global_vars import logger
 
 
 class ExhaustiveSearch(StructureEstimator):
@@ -92,8 +92,8 @@ class ExhaustiveSearch(StructureEstimator):
         if nodes is None:
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
-            logging.info("Generating all DAGs of n nodes likely not feasible for n>6!")
-            logging.info(
+            logger.info("Generating all DAGs of n nodes likely not feasible for n>6!")
+            logger.info(
                 "Attempting to search through {n} graphs".format(
                     n=2 ** (len(nodes) * (len(nodes) - 1))
                 )

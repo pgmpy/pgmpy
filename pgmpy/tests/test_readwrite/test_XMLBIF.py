@@ -1,6 +1,5 @@
 import os
 import unittest
-import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np

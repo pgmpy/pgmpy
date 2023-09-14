@@ -1,5 +1,4 @@
 import itertools
-import warnings
 
 import networkx as nx
 import numpy as np
@@ -8,6 +7,7 @@ from networkx.algorithms.dag import descendants
 from pyparsing import OneOrMore, Optional, Suppress, Word, alphanums, nums
 
 from pgmpy.base import DAG
+from pgmpy.global_vars import logger
 
 
 class SEMGraph(DAG):
@@ -381,7 +381,7 @@ class SEMGraph(DAG):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            warnings.warn(
+            logger.warn(
                 f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 
@@ -539,7 +539,7 @@ class SEMGraph(DAG):
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            warnings.warn(
+            logger.warn(
                 f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`"
             )
 

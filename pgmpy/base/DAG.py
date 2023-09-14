@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import itertools
-from warnings import warn
 
 import networkx as nx
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.independencies import Independencies
+from pgmpy.global_vars import logger
 
 
 class DAG(nx.DiGraph):
@@ -1207,7 +1207,7 @@ class PDAG(nx.DiGraph):
                     break
 
             if not found:
-                warn(
+                logger.warn(
                     "PDAG has no faithful extension (= no oriented DAG with the "
                     + "same v-structures as PDAG). Remaining undirected PDAG edges "
                     + "oriented arbitrarily."

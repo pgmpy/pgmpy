@@ -1,11 +1,11 @@
 from collections import namedtuple
 from itertools import chain, combinations
-from warnings import warn
 
 import numpy as np
 
 from pgmpy import config
 from pgmpy.utils import compat_fns
+from pgmpy.global_vars import logger
 
 State = namedtuple("State", ["var", "state"])
 
@@ -82,7 +82,7 @@ def _adjusted_weights(weights):
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
-        warn(
+        logger.warn(
             f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values."
         )
         weights[compat_fns.argmax(weights)] += error

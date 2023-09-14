@@ -1,5 +1,3 @@
-import logging
-import warnings
 from collections import namedtuple
 from itertools import product
 
@@ -11,6 +9,7 @@ from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
+from pgmpy.global_vars import logger
 
 State = namedtuple("State", ["var", "state"])
 
@@ -205,7 +204,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 try:
                     index.append(self.name_to_no[var][kwargs[var]])
                 except KeyError:
-                    logging.info(f"Using {var} state as number instead of name.")
+                    logger.info(f"Using {var} state as number instead of name.")
                     index.append(kwargs[var])
         return self.values[tuple(index)]
 
@@ -249,7 +248,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             elif isinstance(kwargs[var], str):
                 index.append(self.name_to_no[var][kwargs[var]])
             else:
-                logging.info(f"Using {var} state as number instead of name.")
+                logger.info(f"Using {var} state as number instead of name.")
                 index.append(kwargs[var])
 
         self.values[tuple(index)] = value
@@ -552,7 +551,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             ]
         except KeyError:
             if show_warnings:
-                warnings.warn(
+                logger.warn(
                     "Found unknown state name. Trying to switch to using all state names as state numbers",
                     UserWarning,
                 )

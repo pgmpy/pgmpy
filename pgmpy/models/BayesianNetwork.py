@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import itertools
-import logging
 from collections import defaultdict
 from functools import reduce
 from operator import mul
@@ -21,6 +20,7 @@ from pgmpy.factors.discrete import (
 )
 from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.global_vars import logger
 
 
 class BayesianNetwork(DAG):
@@ -260,7 +260,7 @@ class BayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.info(f"Replacing existing CPD for {cpd.variable}")
+                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:

@@ -1,11 +1,10 @@
-import warnings
-
 from pgmpy.models import MarkovNetwork
+from pgmpy.global_vars import logger
 
 
 class MarkovModel(MarkovNetwork):
     def __init__(self, ebunch=None, latents=set()):
-        warnings.warn(
+        logger.warn(
             "MarkovModel has been renamed to MarkovNetwork. Please use MarkovNetwork class, MarkovModel will be removed in future.",
             FutureWarning,
         )

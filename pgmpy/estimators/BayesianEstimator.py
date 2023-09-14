@@ -2,7 +2,6 @@
 
 import numbers
 from itertools import chain
-from warnings import warn
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -10,6 +9,7 @@ from joblib import Parallel, delayed
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
+from pgmpy.global_vars import logger
 
 
 class BayesianEstimator(ParameterEstimator):
@@ -190,7 +190,7 @@ class BayesianEstimator(ParameterEstimator):
             and np.array(pseudo_counts).size > 0
             and (prior_type != "dirichlet")
         ):
-            warn(
+            logger.warn(
                 f"pseudo count specified with {prior_type} prior. It will be ignored, use dirichlet prior for specifying pseudo_counts"
             )
 

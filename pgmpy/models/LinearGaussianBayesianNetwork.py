@@ -1,11 +1,10 @@
-import logging
-
 import numpy as np
 import networkx as nx
 
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
+from pgmpy.global_vars import logger
 
 
 class LinearGaussianBayesianNetwork(BayesianNetwork):
@@ -56,7 +55,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logging.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
