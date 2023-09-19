@@ -68,7 +68,7 @@ class BayesianModelInference(Inference):
         return cached_values
 
     @staticmethod
-    def _reduce(variable_cpd, variable_evid, sc_values):
+    def _reduce(variable_cpd, variable_evid, sc):
         """
         Method to compute values of the `variable_cpd` when it it reduced on
         `variable_evid` with states `sc_values`. This is a stripped down
@@ -92,24 +92,17 @@ class BayesianModelInference(Inference):
         list: List of np.array with each element representing the reduced
                 values correponding to the states in sc_values.
         """
-        return_values = []
-        for sc in sc_values:
-            sc = list(zip(variable_evid, sc))
-            try:
-                values = [
-                    (var, variable_cpd.get_state_no(var, state_name))
-                    for var, state_name in sc
-                ]
-            except KeyError:
-                values = sc
-            slice_ = [slice(None)] * len(variable_cpd.variables)
-            for var, state in values:
-                var_index = variable_cpd.variables.index(var)
-                slice_[var_index] = state
-            return_values.append(variable_cpd.values[tuple(slice_)])
-        return return_values
+        try:
+            values = [
+                variable_cpd.get_state_no(variable_evid[i], sc[i])
+                for i in range(len(sc))
+            ]
+        except KeyError:
+            values = sc
+        slice_ = [slice(None), *values]
+        return variable_cpd.values[tuple(slice_)]
 
-    def pre_compute_reduce_maps(self, variable, state_combinations=None, n_jobs=-1):
+    def pre_compute_reduce_maps(self, variable, state_combinations=None):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
@@ -124,16 +117,13 @@ class BayesianModelInference(Inference):
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
 
-        n_jobs: int (default: -1)
-            The number of CPU cores to use. By default uses all.
-
         Returns
         -------
         dict: dictionary with probability array-index for node as function of conditional dependency values,
             dictionary with mapping of probability array-index to probability array.
         """
         variable_cpd = self.model.get_cpds(variable)
-        variable_evid = variable_cpd.variables[:0:-1]
+        variable_evid = variable_cpd.variables[1:]
 
         if state_combinations is None:
             state_combinations = [
@@ -143,25 +133,12 @@ class BayesianModelInference(Inference):
                 )
             ]
 
-        # Comptue batch sizes and call _reduce in parallel.
-        if n_jobs == -1:
-            n_jobs = os.cpu_count()
-        batch_size = math.ceil(len(state_combinations) / n_jobs)
-
-        weights_list = Parallel(n_jobs=n_jobs, prefer="threads")(
-            delayed(BayesianModelInference._reduce)(
-                variable_cpd,
-                variable_evid,
-                state_combinations[
-                    (batch_size * i) : min(
-                        batch_size * (i + 1), len(state_combinations)
-                    )
-                ],
-            )
-            for i in range((len(state_combinations) // batch_size) + 1)
+        weights_list = compat_fns.stack(
+            [
+                BayesianModelInference._reduce(variable_cpd, variable_evid, sc)
+                for sc in state_combinations
+            ]
         )
-
-        weights_list = compat_fns.stack(itertools.chain(*weights_list))
         unique_weights, weights_indices = compat_fns.unique(
             weights_list, axis=0, return_inverse=True
         )
