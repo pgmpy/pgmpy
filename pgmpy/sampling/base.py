@@ -102,7 +102,7 @@ class BayesianModelInference(Inference):
         slice_ = [slice(None), *values]
         return variable_cpd.values[tuple(slice_)]
 
-    def pre_compute_reduce_maps(self, variable, state_combinations=None, n_jobs=-1):
+    def pre_compute_reduce_maps(self, variable, state_combinations=None):
         """
         Get probability array-maps for a node as function of conditional dependencies
 
@@ -116,9 +116,6 @@ class BayesianModelInference(Inference):
 
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
-
-        n_jobs: int (default: -1)
-            The number of CPU cores to use. By default uses all.
 
         Returns
         -------
@@ -136,12 +133,12 @@ class BayesianModelInference(Inference):
                 )
             ]
 
-        weights_list = Parallel(n_jobs=1, pre_dispatch="all", prefer="threads")(
-            delayed(BayesianModelInference._reduce)(variable_cpd, variable_evid, sc)
-            for sc in state_combinations
+        weights_list = compat_fns.stack(
+            [
+                BayesianModelInference._reduce(variable_cpd, variable_evid, sc)
+                for sc in state_combinations
+            ]
         )
-
-        weights_list = compat_fns.stack(weights_list)
         unique_weights, weights_indices = compat_fns.unique(
             weights_list, axis=0, return_inverse=True
         )
