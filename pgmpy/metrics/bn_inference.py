@@ -59,7 +59,7 @@ class BayesianModelProbability(BayesianModelInference):
         current_no = vec_translate(current_val, cpd.name_to_no[current])
 
         # conditional dependencies E of the probed variable
-        evidence = cpd.variables[:0:-1]
+        evidence = cpd.variables[1:]
         evidence_idx = [ordering.index(ev) for ev in evidence]
         evidence_val = data[:, evidence_idx]
         evidence_no = np.empty_like(evidence_val, dtype=int)

@@ -104,10 +104,9 @@ class BayesianModelSampling(BayesianModelInference):
             else:
                 cpd = self.model.get_cpds(node)
                 states = range(self.cardinality[node])
-                evidence = cpd.variables[:0:-1]
+                evidence = cpd.variables[1:]
                 if evidence:
                     evidence_values = np.vstack([sampled[i] for i in evidence])
-
                     unique, inverse = np.unique(
                         evidence_values.T, axis=0, return_inverse=True
                     )

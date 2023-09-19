@@ -148,10 +148,10 @@ class TestBayesianModelSampling(unittest.TestCase):
     def test_pre_compute_reduce_maps(self):
         base_infer = BayesianModelInference(self.bayesian_model)
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-            "J", [(1, 1), (1, 0)]
+            "J", [(1, 1), (0, 1)]
         )
         self.assertEqual(state_to_index[(1, 1)], 0)
-        self.assertEqual(state_to_index[(1, 0)], 1)
+        self.assertEqual(state_to_index[(0, 1)], 1)
         self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
         self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
 
