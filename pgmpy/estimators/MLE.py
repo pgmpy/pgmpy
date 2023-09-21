@@ -96,6 +96,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         parameters = Parallel(n_jobs=n_jobs)(
             delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
         )
+        # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
+        parameters = [p.copy() for p in parameters]
 
         return parameters
 

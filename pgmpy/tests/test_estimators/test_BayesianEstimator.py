@@ -313,14 +313,13 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         self.assertEqual(cpd_C2, cpd_C2_correct)
 
     def test_get_parameters(self):
-        cpds = set(
-            [
+        cpds = [
                 self.est3.estimate_cpd("A"),
                 self.est3.estimate_cpd("B"),
                 self.est3.estimate_cpd("C"),
             ]
-        )
-        self.assertSetEqual(set(self.est3.get_parameters()), cpds)
+        all_cpds = self.est3.get_parameters()
+        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
 
     def test_get_parameters2(self):
         pseudo_counts = {
@@ -341,14 +340,10 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
                 ),
             ]
         )
-        self.assertSetEqual(
-            set(
-                self.est3.get_parameters(
+        all_cpds = self.est3.get_parameters(
                     prior_type="dirichlet", pseudo_counts=pseudo_counts
                 )
-            ),
-            cpds,
-        )
+        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
 
     def test_get_parameters3(self):
         pseudo_counts = 0.1
@@ -365,14 +360,10 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
                 ),
             ]
         )
-        self.assertSetEqual(
-            set(
-                self.est3.get_parameters(
+        all_cpds = self.est3.get_parameters(
                     prior_type="dirichlet", pseudo_counts=pseudo_counts
                 )
-            ),
-            cpds,
-        )
+        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
 
     def tearDown(self):
         del self.m1
