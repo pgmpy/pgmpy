@@ -246,7 +246,7 @@ class TreeSearch(StructureEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs, prefer="threads")(
+        vals = Parallel(n_jobs=n_jobs)(
             delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))
@@ -334,7 +334,7 @@ class TreeSearch(StructureEstimator):
                 )
             return cond_edge_weight
 
-        vals = Parallel(n_jobs=1, prefer="threads")(
+        vals = Parallel(n_jobs=n_jobs)(
             delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar
         )
         weights = np.zeros((n_vars, n_vars))
