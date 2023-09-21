@@ -314,12 +314,15 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
 
     def test_get_parameters(self):
         cpds = [
-                self.est3.estimate_cpd("A"),
-                self.est3.estimate_cpd("B"),
-                self.est3.estimate_cpd("C"),
-            ]
+            self.est3.estimate_cpd("A"),
+            self.est3.estimate_cpd("B"),
+            self.est3.estimate_cpd("C"),
+        ]
         all_cpds = self.est3.get_parameters()
-        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
+        self.assertListEqual(
+            sorted(cpds, key=lambda t: t.variables[0]),
+            sorted(all_cpds, key=lambda t: t.variables[0]),
+        )
 
     def test_get_parameters2(self):
         pseudo_counts = {
@@ -341,9 +344,12 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             ]
         )
         all_cpds = self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts
-                )
-        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
+            prior_type="dirichlet", pseudo_counts=pseudo_counts
+        )
+        self.assertListEqual(
+            sorted(cpds, key=lambda t: t.variables[0]),
+            sorted(all_cpds, key=lambda t: t.variables[0]),
+        )
 
     def test_get_parameters3(self):
         pseudo_counts = 0.1
@@ -361,9 +367,12 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             ]
         )
         all_cpds = self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts
-                )
-        self.assertListEqual(sorted(cpds, key=lambda t: t.variables[0]), sorted(all_cpds, key=lambda t: t.variables[0]))
+            prior_type="dirichlet", pseudo_counts=pseudo_counts
+        )
+        self.assertListEqual(
+            sorted(cpds, key=lambda t: t.variables[0]),
+            sorted(all_cpds, key=lambda t: t.variables[0]),
+        )
 
     def tearDown(self):
         del self.m1
