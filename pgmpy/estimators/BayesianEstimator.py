@@ -105,9 +105,11 @@ class BayesianEstimator(ParameterEstimator):
             )
             return cpd
 
-        parameters = Parallel(n_jobs=n_jobs, prefer="threads")(
+        parameters = Parallel(n_jobs=n_jobs)(
             delayed(_get_node_param)(node) for node in self.model.nodes()
         )
+        # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
+        parameters = [p.copy() for p in parameters]
 
         return parameters
 

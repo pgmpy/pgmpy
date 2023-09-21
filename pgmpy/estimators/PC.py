@@ -333,7 +333,7 @@ class PC(StructureEstimator):
                         ):
                             return (u, v), separating_set
 
-                results = Parallel(n_jobs=n_jobs, prefer="threads")(
+                results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v) for (u, v) in graph.edges()
                 )
                 for result in results:

@@ -93,9 +93,11 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
 
-        parameters = Parallel(n_jobs=1, prefer="threads")(
+        parameters = Parallel(n_jobs=n_jobs)(
             delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
         )
+        # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
+        parameters = [p.copy() for p in parameters]
 
         return parameters
 
