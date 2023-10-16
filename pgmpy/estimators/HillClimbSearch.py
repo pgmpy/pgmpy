@@ -186,9 +186,11 @@ class HillClimbSearch(StructureEstimator):
         max_indegree: int or None
             If provided and unequal None, the procedure only searches among models
             where all nodes have at most `max_indegree` parents. Defaults to None.
+
         black_list: list or None
             If a list of edges is provided as `black_list`, they are excluded from the search
             and the resulting model will not contain any of those edges. Default: None
+
         white_list: list or None
             If a list of edges is provided as `white_list`, the search is limited to those
             edges. The resulting model will then only contain edges that are in `white_list`.
