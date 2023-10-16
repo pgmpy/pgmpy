@@ -4,7 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.23] - 2022-06-30
+## [0.1.24] - 2023-06-30
+### Added
+1. Added support for python 3.11.
+2. Adds `DAG.to_graphviz` and `PDAG.to_graphviz` methods to convert model to graphviz objects.
+3. Adds pytorch as an alternative backend.
+4. Adds unicode support for BIFReader.
+
+### Fixed
+1. Warnings use a logger instance.
+2. Fixes documentation.
+
+### Changed
+1. Adds argument to specify samples for ApproxInference.
+2. Memory optimizations for computing structure scores.
+3. Switches joblib backed to loky.
+4. Runtime optimizations for sampling.
+5. Runtime optimizations for Variable Elimination.
+6. All config variables moved to `pgmpy.global_vars`.
+
+## [0.1.23] - 2023-06-30
 ### Added
 1. BIFReader made compatible with the output of PyAgrum
 2. Support for all available CI tests in PC algorithm.
@@ -17,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1. Fixes for ApproxInference for DBNs.
 2. Make `xml.etree` the default parser instead of using lxml.
 
-## [0.1.22] - 2022-04-08
+## [0.1.22] - 2023-04-08
 ### Added
 1. AIC score metric from score based structure learning.
 2. Adds support for NET (HUGIN) file format.
