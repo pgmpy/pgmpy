@@ -1,6 +1,11 @@
 Parameter Estimation
 ====================
 
+- :doc:`mle`
+- :doc:`bayesian_est`
+- :doc:`em`
+- :doc:`sem_estimator`
+
 .. toctree::
    :maxdepth: 2
    :hidden:

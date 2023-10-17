@@ -1,6 +1,16 @@
 Models
 ======
 
+- :doc:`bayesiannetwork`
+- :doc:`dbn`
+- :doc:`sem`
+- :doc:`markovnetwork`
+- :doc:`junctiontree`
+- :doc:`clustergraph`
+- :doc:`factorgraph`
+- :doc:`markovchain`
+
+
 .. toctree::
    :maxdepth: 1
    :hidden:

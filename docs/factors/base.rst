@@ -1,6 +1,9 @@
 Parameterization
 ================
 
+- :doc:`discrete`
+- :doc:`discretize`
+
 .. toctree::
    :maxdepth: 1
    :hidden:

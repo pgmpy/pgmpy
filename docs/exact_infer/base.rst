@@ -1,6 +1,12 @@
 Exact Inference
 ===============
 
+- :doc:`ve`
+- :doc:`bp`
+- :doc:`causal`
+- :doc:`mplp`
+- :doc:`dbn_infer`
+
 .. toctree::
    :maxdepth: 1
    :hidden:
