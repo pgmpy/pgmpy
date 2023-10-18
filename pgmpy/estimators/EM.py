@@ -13,48 +13,49 @@ from pgmpy.models import BayesianNetwork
 
 
 class ExpectationMaximization(ParameterEstimator):
+    """
+    Class used to compute parameters for a model using Expectation
+    Maximization (EM).
+
+    EM is an iterative algorithm commonly used for
+    estimation in the case when there are latent variables in the model.
+    The algorithm iteratively improves the parameter estimates maximizing
+    the likelihood of the given data.
+
+    Parameters
+    ----------
+    model: A pgmpy.models.BayesianNetwork instance
+
+    data: pandas DataFrame object
+        DataFrame object with column names identical to the variable names
+        of the network.  (If some values in the data are missing the data
+        cells should be set to `numpy.NaN`.  Note that pandas converts each
+        column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states
+        that the variable can take. If unspecified, the observed values in
+        the data set are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to
+        `True` all rows that contain `np.NaN` somewhere are ignored. If
+        `False` then, for each variable, every row where neither the
+        variable nor its parents are `np.NaN` is used.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from pgmpy.models import BayesianNetwork
+    >>> from pgmpy.estimators import ExpectationMaximization
+    >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
+    ...                       columns=['A', 'B', 'C', 'D', 'E'])
+    >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
+    >>> estimator = ExpectationMaximization(model, data)
+    """
+
     def __init__(self, model, data, **kwargs):
-        """
-        Class used to compute parameters for a model using Expectation
-        Maximization (EM).
-
-        EM is an iterative algorithm commonly used for
-        estimation in the case when there are latent variables in the model.
-        The algorithm iteratively improves the parameter estimates maximizing
-        the likelihood of the given data.
-
-        Parameters
-        ----------
-        model: A pgmpy.models.BayesianNetwork instance
-
-        data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names
-            of the network.  (If some values in the data are missing the data
-            cells should be set to `numpy.NaN`.  Note that pandas converts each
-            column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values in
-            the data set are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to
-            `True` all rows that contain `np.NaN` somewhere are ignored. If
-            `False` then, for each variable, every row where neither the
-            variable nor its parents are `np.NaN` is used.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.models import BayesianNetwork
-        >>> from pgmpy.estimators import ExpectationMaximization
-        >>> data = pd.DataFrame(np.random.randint(low=0, high=2, size=(1000, 5)),
-        ...                       columns=['A', 'B', 'C', 'D', 'E'])
-        >>> model = BayesianNetwork([('A', 'B'), ('C', 'B'), ('C', 'D'), ('B', 'E')])
-        >>> estimator = ExpectationMaximization(model, data)
-        """
         if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
                 "Expectation Maximization is only implemented for BayesianNetwork"

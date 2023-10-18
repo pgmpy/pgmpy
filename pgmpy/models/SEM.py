@@ -17,6 +17,56 @@ class SEMGraph(DAG):
     All variables are by default assumed to have an associated error latent variable, therefore
     doesn't need to be specified.
 
+    Parameters
+    ----------
+    ebunch: list/array-like
+        List of edges in form of tuples. Each tuple can be of two possible shape:
+            1. (u, v): This would add an edge from u to v without setting any parameter
+                       for the edge.
+            2. (u, v, parameter): This would add an edge from u to v and set the edge's
+                        parameter to `parameter`.
+
+    latents: list/array-like
+        List of nodes which are latent. All other variables are considered observed.
+
+    err_corr: list/array-like
+        List of tuples representing edges between error terms. It can be of the following forms:
+            1. (u, v): Add correlation between error terms of `u` and `v`. Doesn't set any variance or
+                       covariance values.
+            2. (u, v, covar): Adds correlation between the error terms of `u` and `v` and sets the
+                              parameter to `covar`.
+
+    err_var: dict (variable: variance)
+        Sets variance for the error terms in the model.
+
+    Examples
+    --------
+    Defining a model (Union sentiment model[1]) without setting any paramaters.
+    >>> from pgmpy.models import SEMGraph
+    >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
+    ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
+    ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
+    ...                latents=[],
+    ...                err_corr=[('yrsmill', 'age')],
+    ...                err_var={})
+
+    Defining a model (Education [2]) with all the parameters set. For not setting any
+    parameter `np.NaN` can be explicitly passed.
+    >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
+    ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
+    ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
+    ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
+    ...                    latents=['intelligence', 'academic'],
+    ...                    err_corr=[],
+    ...                    err_var={'intelligence': 1})
+
+    References
+    ----------
+    [1] McDonald, A, J., & Clelland, D. A. (1984). Textile Workers and Union Sentiment.
+        Social Forces, 63(2), 502–521
+    [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
+        media/File:Example_Structural_equation_model.svg
+
     Attributes
     ----------
     latents: list
@@ -42,59 +92,6 @@ class SEMGraph(DAG):
     """
 
     def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
-        """
-        Initializes a `SEMGraph` object.
-
-        Parameters
-        ----------
-        ebunch: list/array-like
-            List of edges in form of tuples. Each tuple can be of two possible shape:
-                1. (u, v): This would add an edge from u to v without setting any parameter
-                           for the edge.
-                2. (u, v, parameter): This would add an edge from u to v and set the edge's
-                            parameter to `parameter`.
-
-        latents: list/array-like
-            List of nodes which are latent. All other variables are considered observed.
-
-        err_corr: list/array-like
-            List of tuples representing edges between error terms. It can be of the following forms:
-                1. (u, v): Add correlation between error terms of `u` and `v`. Doesn't set any variance or
-                           covariance values.
-                2. (u, v, covar): Adds correlation between the error terms of `u` and `v` and sets the
-                                  parameter to `covar`.
-
-        err_var: dict (variable: variance)
-            Sets variance for the error terms in the model.
-
-        Examples
-        --------
-        Defining a model (Union sentiment model[1]) without setting any paramaters.
-        >>> from pgmpy.models import SEMGraph
-        >>> sem = SEMGraph(ebunch=[('deferenc', 'unionsen'), ('laboract', 'unionsen'),
-        ...                        ('yrsmill', 'unionsen'), ('age', 'deferenc'),
-        ...                        ('age', 'laboract'), ('deferenc', 'laboract')],
-        ...                latents=[],
-        ...                err_corr=[('yrsmill', 'age')],
-        ...                err_var={})
-
-        Defining a model (Education [2]) with all the parameters set. For not setting any
-        parameter `np.NaN` can be explicitly passed.
-        >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
-        ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
-        ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
-        ...                            ('academic', 'High_school_gpa', 0.75), ('academic', 'ACT_score', 0.87)],
-        ...                    latents=['intelligence', 'academic'],
-        ...                    err_corr=[],
-        ...                    err_var={'intelligence': 1})
-
-        References
-        ----------
-        [1] McDonald, A, J., & Clelland, D. A. (1984). Textile Workers and Union Sentiment.
-            Social Forces, 63(2), 502–521
-        [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
-            media/File:Example_Structural_equation_model.svg
-        """
         super(SEMGraph, self).__init__()
 
         # Construct the graph and set the parameters.

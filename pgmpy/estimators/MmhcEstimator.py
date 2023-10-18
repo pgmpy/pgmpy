@@ -1,41 +1,42 @@
 #!/usr/bin/env python
-from pgmpy.utils.mathext import powerset
 from pgmpy.base import UndirectedGraph
-from pgmpy.models import BayesianNetwork
-from pgmpy.estimators import StructureEstimator, HillClimbSearch, BDeuScore
-from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.estimators import BDeuScore, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square
+from pgmpy.independencies import IndependenceAssertion, Independencies
+from pgmpy.models import BayesianNetwork
+from pgmpy.utils.mathext import powerset
 
 
 class MmhcEstimator(StructureEstimator):
+    """
+    Implements the MMHC hybrid structure estimation procedure for
+    learning BayesianNetworks from discrete data.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ----------
+    Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005)
+    http://www.dsl-lab.org/supplements/mmhc_paper/paper_online.pdf
+    """
+
     def __init__(self, data, **kwargs):
-        """
-        Implements the MMHC hybrid structure estimation procedure for
-        learning BayesianNetworks from discrete data.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ----------
-        Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005)
-        http://www.dsl-lab.org/supplements/mmhc_paper/paper_online.pdf
-        """
         super(MmhcEstimator, self).__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):

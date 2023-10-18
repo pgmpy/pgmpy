@@ -40,7 +40,7 @@ class BayesianModelSampling(BayesianModelInference):
         n_jobs=-1,
     ):
         """
-        Generates sample(s) from joint distribution of the bayesian network.
+        Generates sample(s) from joint distribution of the Bayesian Network.
 
         Parameters
         ----------
@@ -144,7 +144,7 @@ class BayesianModelSampling(BayesianModelInference):
         partial_samples=None,
     ):
         """
-        Generates sample(s) from joint distribution of the bayesian network,
+        Generates sample(s) from joint distribution of the Bayesian Network,
         given the evidence.
 
         Parameters
@@ -259,8 +259,8 @@ class BayesianModelSampling(BayesianModelInference):
         n_jobs=-1,
     ):
         """
-        Generates weighted sample(s) from joint distribution of the bayesian
-        network, that comply with the given evidence.
+        Generates weighted sample(s) from joint distribution of the Bayesian
+        Network, that comply with the given evidence.
         'Probabilistic Graphical Model Principles and Techniques', Koller and
         Friedman, Algorithm 12.2 pp 493.
 

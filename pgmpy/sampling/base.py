@@ -13,18 +13,15 @@ from pgmpy.utils import _check_1d_array_object, _check_length_equal, compat_fns
 
 class BayesianModelInference(Inference):
     """
-    Inference class specific to Bayesian Models
+    Class to calculate probability (pmf) values specific to Bayesian Models
+
+    Parameters
+    ----------
+    model: Bayesian Model
+        model on which inference queries will be computed
     """
 
     def __init__(self, model):
-        """
-        Class to calculate probability (pmf) values specific to Bayesian Models
-
-        Parameters
-        ----------
-        model: Bayesian Model
-            model on which inference queries will be computed
-        """
         from pgmpy.models import BayesianNetwork
 
         if not isinstance(model, BayesianNetwork):

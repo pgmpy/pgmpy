@@ -20,39 +20,40 @@ from pgmpy.estimators import (
 
 
 class HillClimbSearch(StructureEstimator):
+    """
+    Class for heuristic hill climb searches for DAGs, to learn
+    network structure from data. `estimate` attempts to find a model with optimal score.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    use_caching: boolean
+        If True, uses caching of score for faster computation.
+        Note: Caching only works for scoring methods which are decomposable. Can
+        give wrong results in case of custom scoring methods.
+
+    References
+    ----------
+    Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.4.3 (page 811ff)
+    """
+
     def __init__(self, data, use_cache=True, **kwargs):
-        """
-        Class for heuristic hill climb searches for DAGs, to learn
-        network structure from data. `estimate` attempts to find a model with optimal score.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        use_caching: boolean
-            If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposable. Can
-            give wrong results in case of custom scoring methods.
-
-        References
-        ----------
-        Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.4.3 (page 811ff)
-        """
         self.use_cache = use_cache
 
         super(HillClimbSearch, self).__init__(data, **kwargs)

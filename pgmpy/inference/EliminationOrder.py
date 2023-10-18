@@ -10,18 +10,15 @@ from pgmpy.models import BayesianNetwork
 
 class BaseEliminationOrder:
     """
-    Base class for finding elimination orders.
+    Init method for the base class of Elimination Orders.
+
+    Parameters
+    ----------
+    model: BayesianNetwork instance
+        The model on which we want to compute the elimination orders.
     """
 
     def __init__(self, model):
-        """
-        Init method for the base class of Elimination Orders.
-
-        Parameters
-        ----------
-        model: BayesianNetwork instance
-            The model on which we want to compute the elimination orders.
-        """
         if not isinstance(model, BayesianNetwork):
             raise ValueError("Model should be a BayesianNetwork instance")
         self.bayesian_model = model.copy()

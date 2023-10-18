@@ -10,30 +10,27 @@ from pgmpy.models import BayesianNetwork
 
 class XBNReader(object):
     """
-    Base class for reading XML Belief Network File Format.
+    Initializer for XBNReader class.
+
+    Parameters
+    ----------
+    path: str or file
+        Path of the file containing XBN data.
+
+    string: str
+        String of XBN data
+
+    Examples
+    --------
+    >>> reader = XBNReader('test_XBN.xml')
+
+    Reference
+    ---------
+    [1] Microsoft Research. XML belief network file format.
+        http://xml.coverpages.org/xbn-MSdefault19990414.html, 1999.
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initializer for XBNReader class.
-
-        Parameters
-        ----------
-        path: str or file
-            Path of the file containing XBN data.
-
-        string: str
-            String of XBN data
-
-        Examples
-        --------
-        >>> reader = XBNReader('test_XBN.xml')
-
-        Reference
-        ---------
-        [1] Microsoft Research. XML belief network file format.
-            http://xml.coverpages.org/xbn-MSdefault19990414.html, 1999.
-        """
         if path:
             self.network = etree.parse(path).getroot()
         elif string:
@@ -226,30 +223,27 @@ class XBNReader(object):
 
 class XBNWriter(object):
     """
-    Base class for writing XML Belief Network file format.
+    Initializer for XBNWriter class
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+        Model to write
+    encoding: str(optional)
+        Encoding for test data
+    prettyprint: Bool(optional)
+        Indentation in output XML if true
+
+    Reference
+    ---------
+    http://xml.coverpages.org/xbn-MSdefault19990414.html
+
+    Examples
+    --------
+    >>> writer = XBNWriter(model)
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        """
-        Initializer for XBNWriter class
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-            Model to write
-        encoding: str(optional)
-            Encoding for test data
-        prettyprint: Bool(optional)
-            Indentation in output XML if true
-
-        Reference
-        ---------
-        http://xml.coverpages.org/xbn-MSdefault19990414.html
-
-        Examples
-        --------
-        >>> writer = XBNWriter(model)
-        """
         if not isinstance(model, BayesianNetwork):
             raise TypeError("Model must be an instance of Bayesian Model.")
         self.model = model

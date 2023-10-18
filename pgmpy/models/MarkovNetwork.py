@@ -14,7 +14,7 @@ from pgmpy.independencies import Independencies
 
 class MarkovNetwork(UndirectedGraph):
     """
-    Base class for markov model.
+    Base class for Markov Model.
 
     A MarkovNetwork stores nodes and edges with potentials
 
@@ -275,9 +275,9 @@ class MarkovNetwork(UndirectedGraph):
 
     def to_factor_graph(self):
         """
-        Converts the markov model into factor graph.
+        Converts the Markov Model into Factor Graph.
 
-        A factor graph contains two types of nodes. One type corresponds to
+        A Factor Graph contains two types of nodes. One type corresponds to
         random variables whereas the second type corresponds to factors over
         these variables. The graph only contains edges between variables and
         factor nodes. Each factor node is associated with one factor whose
@@ -643,7 +643,7 @@ class MarkovNetwork(UndirectedGraph):
 
     def to_bayesian_model(self):
         """
-        Creates a Bayesian Model which is a minimum I-Map for this markov model.
+        Creates a Bayesian Model which is a minimum I-Map for this Markov Model.
 
         The ordering of parents may not remain constant. It would depend on the
         ordering of variable in the junction tree (which is not constant) all the
@@ -674,8 +674,8 @@ class MarkovNetwork(UndirectedGraph):
 
             subgraph = self.subgraph(node_set)
 
-            # Create a junction tree from the markov model.
-            # Creation of clique tree involves triangulation, finding maximal cliques
+            # Create a Junction Tree from the Markov Model.
+            # Creation of Clique Tree involves triangulation, finding maximal cliques
             # and creating a tree from these cliques
             junction_tree = MarkovNetwork(subgraph.edges()).to_junction_tree()
 
@@ -693,7 +693,7 @@ class MarkovNetwork(UndirectedGraph):
                         var_clique_dict[node] = clique_node
                         var_order.append(node)
 
-            # create a bayesian model by adding edges from parent of node to node as
+            # create a Bayesian Network by adding edges from parent of node to node as
             # par(x_i) = (var(c_k) - x_i) \cap {x_1, ..., x_{i-1}}
             for node_index in range(len(var_order)):
                 node = var_order[node_index]

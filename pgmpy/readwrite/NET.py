@@ -28,30 +28,26 @@ class NETWriter(object):
     """
     Base class for writing network file in net format
 
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+
+    Examples
+    ----------
+    >>> from pgmpy.readwrite import NETWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> asia = get_example_model('asia')
+    >>> writer = NETWriter(asia)
+    >>> writer
+    <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
+    >>> writer.write_net('asia.net')
+
     Reference
     ---------
     [1] HUGIN EXPERT A/S . The HUGIN file format. http://www.hugin.com, 2011.
     """
 
     def __init__(self, model):
-        """
-        Initialise a NETWriter Object
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-
-        Examples
-        ----------
-        >>> from pgmpy.readwrite import NETWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> asia = get_example_model('asia')
-        >>> writer = NETWriter(asia)
-        >>> writer
-        <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
-        >>> writer.write_net('asia.net')
-        """
-
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must be an instance of BayesianNetwork")
 
@@ -325,41 +321,37 @@ class NETWriter(object):
 
 
 class NETReader:
-
     """
-    Base class for reading network file in net format
+    Initializes a NETReader object.
+
+    Parameters
+    ----------
+    path : file or str
+        File of net data
+
+    string : str
+        String of net data
+
+    include_properties: boolean
+        If True, gets the properties tag from the file and stores in graph properties.
+
+    defaultname: int (default: "bn_model")
+        Default name for the network if a network name is not available in the net file.
+
+    Examples
+    --------
+    # asia.net file is present at
+    # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
+    >>> from pgmpy.readwrite import NETReader
+    >>> reader = NETReader("asia.net")
+    >>> reader
+    <pgmpy.readwrite.NET.NETReader at 0x7feac645c640>
+    >>> model = reader.get_model()
     """
 
     def __init__(
         self, path=None, string=None, include_properties=False, defaultName="bn_model"
     ):
-        """
-        Initializes a NETReader object.
-
-        Parameters
-        ----------
-        path : file or str
-            File of net data
-
-        string : str
-            String of net data
-
-        include_properties: boolean
-            If True, gets the properties tag from the file and stores in graph properties.
-
-        defaultname: int (default: "bn_model")
-            Default name for the network if a network name is not available in the net file.
-
-        Examples
-        --------
-        # asia.net file is present at
-        # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
-        >>> from pgmpy.readwrite import NETReader
-        >>> reader = NETReader("asia.net")
-        >>> reader
-        <pgmpy.readwrite.NET.NETReader at 0x7feac645c640>
-        >>> model = reader.get_model()
-        """
         if path:
             with open(path, "r") as network:
                 self.network = network.read()

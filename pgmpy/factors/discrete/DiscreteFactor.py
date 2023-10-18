@@ -16,73 +16,70 @@ State = namedtuple("State", ["var", "state"])
 
 class DiscreteFactor(BaseFactor, StateNameMixin):
     """
-    Base class for DiscreteFactor.
+    Initialize a `DiscreteFactor` class.
+
+    Defined above, we have the following mapping from variable
+    assignments to the index of the row vector in the value field:
+    +-----+-----+-----+-------------------+
+    |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
+    +-----+-----+-----+-------------------+
+    | x1_0| x2_0| x3_0|     phi.value(0)  |
+    +-----+-----+-----+-------------------+
+    | x1_0| x2_0| x3_1|     phi.value(1)  |
+    +-----+-----+-----+-------------------+
+    | x1_0| x2_1| x3_0|     phi.value(2)  |
+    +-----+-----+-----+-------------------+
+    | x1_0| x2_1| x3_1|     phi.value(3)  |
+    +-----+-----+-----+-------------------+
+    | x1_1| x2_0| x3_0|     phi.value(4)  |
+    +-----+-----+-----+-------------------+
+    | x1_1| x2_0| x3_1|     phi.value(5)  |
+    +-----+-----+-----+-------------------+
+    | x1_1| x2_1| x3_0|     phi.value(6)  |
+    +-----+-----+-----+-------------------+
+    | x1_1| x2_1| x3_1|     phi.value(7)  |
+    +-----+-----+-----+-------------------+
+
+    Parameters
+    ----------
+    variables: list, array-like
+        List of variables on which the factor is to be defined i.e. scope of the factor.
+
+    cardinality: list, array_like
+        List of cardinalities/no.of states of each variable. `cardinality`
+        array must have a value corresponding to each variable in
+        `variables`.
+
+    values: list, array_like
+        List of values of factor.
+        A DiscreteFactor's values are stored in a row vector in the value
+        using an ordering such that the left-most variables as defined in
+        `variables` cycle through their values the fastest. Please refer
+        to examples for usage examples.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.factors.discrete import DiscreteFactor
+    >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
+    >>> phi
+    <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
+    >>> print(phi)
+    +------+------+------+-----------------+
+    | x1   | x2   | x3   |   phi(x1,x2,x3) |
+    |------+------+------+-----------------|
+    | x1_0 | x2_0 | x3_0 |          1.0000 |
+    | x1_0 | x2_0 | x3_1 |          1.0000 |
+    | x1_0 | x2_1 | x3_0 |          1.0000 |
+    | x1_0 | x2_1 | x3_1 |          1.0000 |
+    | x1_1 | x2_0 | x3_0 |          1.0000 |
+    | x1_1 | x2_0 | x3_1 |          1.0000 |
+    | x1_1 | x2_1 | x3_0 |          1.0000 |
+    | x1_1 | x2_1 | x3_1 |          1.0000 |
+    +------+------+------+-----------------+
     """
 
     def __init__(self, variables, cardinality, values, state_names={}):
-        """
-        Initialize a `DiscreteFactor` class.
-
-        Defined above, we have the following mapping from variable
-        assignments to the index of the row vector in the value field:
-        +-----+-----+-----+-------------------+
-        |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_0| x3_0|     phi.value(0)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_0| x3_1|     phi.value(1)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_1| x3_0|     phi.value(2)  |
-        +-----+-----+-----+-------------------+
-        | x1_0| x2_1| x3_1|     phi.value(3)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_0| x3_0|     phi.value(4)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_0| x3_1|     phi.value(5)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_1| x3_0|     phi.value(6)  |
-        +-----+-----+-----+-------------------+
-        | x1_1| x2_1| x3_1|     phi.value(7)  |
-        +-----+-----+-----+-------------------+
-
-        Parameters
-        ----------
-        variables: list, array-like
-            List of variables on which the factor is to be defined i.e. scope of the factor.
-
-        cardinality: list, array_like
-            List of cardinalities/no.of states of each variable. `cardinality`
-            array must have a value corresponding to each variable in
-            `variables`.
-
-        values: list, array_like
-            List of values of factor.
-            A DiscreteFactor's values are stored in a row vector in the value
-            using an ordering such that the left-most variables as defined in
-            `variables` cycle through their values the fastest. Please refer
-            to examples for usage examples.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> from pgmpy.factors.discrete import DiscreteFactor
-        >>> phi = DiscreteFactor(['x1', 'x2', 'x3'], [2, 2, 2], np.ones(8))
-        >>> phi
-        <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x7f8188fcaa90>
-        >>> print(phi)
-        +------+------+------+-----------------+
-        | x1   | x2   | x3   |   phi(x1,x2,x3) |
-        |------+------+------+-----------------|
-        | x1_0 | x2_0 | x3_0 |          1.0000 |
-        | x1_0 | x2_0 | x3_1 |          1.0000 |
-        | x1_0 | x2_1 | x3_0 |          1.0000 |
-        | x1_0 | x2_1 | x3_1 |          1.0000 |
-        | x1_1 | x2_0 | x3_0 |          1.0000 |
-        | x1_1 | x2_0 | x3_1 |          1.0000 |
-        | x1_1 | x2_1 | x3_0 |          1.0000 |
-        | x1_1 | x2_1 | x3_1 |          1.0000 |
-        +------+------+------+-----------------+
-        """
         if isinstance(variables, str):
             raise TypeError("Variables: Expected type list or array like, got string")
 

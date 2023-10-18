@@ -5,20 +5,21 @@ from pgmpy.models import BayesianNetwork, DynamicBayesianNetwork
 
 
 class ApproxInference(object):
+    """
+    Initializes the Approximate Inference class.
+
+    Parameters
+    ----------
+    model: Instance of pgmpy.models.BayesianNetwork or pgmpy.models.DynamicBayesianNetwork
+
+    Examples
+    --------
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model('alarm')
+    >>> infer = ApproxInference(model)
+    """
+
     def __init__(self, model):
-        """
-        Initializes the Approximate Inference class.
-
-        Parameters
-        ----------
-        model: Instance of pgmpy.models.BayesianNetwork or pgmpy.models.DynamicBayesianNetwork
-
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('alarm')
-        >>> infer = ApproxInference(model)
-        """
         if not isinstance(model, (BayesianNetwork, DynamicBayesianNetwork)):
             raise ValueError(
                 f"model should either be a Bayesian Network or Dynamic Bayesian Network. Got {type(model)}."

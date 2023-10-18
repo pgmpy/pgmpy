@@ -27,9 +27,31 @@ from pgmpy.utils import compat_fns
 
 
 class BIFReader(object):
-
     """
-    Base class for reading network file in bif format
+    Initializes a BIFReader object.
+
+    Parameters
+    ----------
+    path : file or str
+        File of bif data
+
+    string : str
+        String of bif data
+
+    include_properties: boolean
+        If True, gets the properties tag from the file and stores in graph properties.
+
+    n_jobs: int (default: -1)
+        Number of jobs to run in parallel. `-1` means use all processors.
+
+    Examples
+    --------
+    # dog-problem.bif file is present at
+    # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
+    >>> from pgmpy.readwrite import BIFReader
+    >>> reader = BIFReader("bif_test.bif")
+    <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
+    >>> model = reader.get_model()
 
     Reference
     ---------
@@ -38,32 +60,6 @@ class BIFReader(object):
     """
 
     def __init__(self, path=None, string=None, include_properties=False, n_jobs=-1):
-        """
-        Initializes a BIFReader object.
-
-        Parameters
-        ----------
-        path : file or str
-            File of bif data
-
-        string : str
-            String of bif data
-
-        include_properties: boolean
-            If True, gets the properties tag from the file and stores in graph properties.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        Examples
-        --------
-        # dog-problem.bif file is present at
-        # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
-        >>> model = reader.get_model()
-        """
         if path:
             with open(path, "r") as network:
                 self.network = network.read()
@@ -419,32 +415,28 @@ class BIFReader(object):
 
 
 class BIFWriter(object):
-
     """
-    Base class for writing BIF network file format
+    Initialise a BIFWriter Object
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+
+    round_values: int (default: None)
+        Round the probability values to `round_values` decimals. If None, keeps all decimal points.
+
+    Examples
+    ---------
+    >>> from pgmpy.readwrite import BIFWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> asia = get_example_model('asia')
+    >>> writer = BIFWriter(asia)
+    >>> writer
+    <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+    >>> writer.write_bif('asia.bif')
     """
 
     def __init__(self, model, round_values=None):
-        """
-        Initialise a BIFWriter Object
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-
-        round_values: int (default: None)
-            Round the probability values to `round_values` decimals. If None, keeps all decimal points.
-
-        Examples
-        ---------
-        >>> from pgmpy.readwrite import BIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> asia = get_example_model('asia')
-        >>> writer = BIFWriter(asia)
-        >>> writer
-        <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
-        >>> writer.write_bif('asia.bif')
-        """
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must be an instance of BayesianNetwork")
         self.model = model

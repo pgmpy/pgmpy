@@ -6,29 +6,26 @@ from collections import defaultdict
 
 class PomdpXReader(object):
     """
-    Class for reading PomdpX file format from files or strings
+    Initialize an instance of PomdpX reader class
+
+    Parameters
+    ----------
+    path : file or str
+        Path of the file containing PomdpX information.
+
+    string : str
+        String containing PomdpX information.
+
+    Example
+    -------
+    reader = PomdpXReader('TestPomdpX.xml')
+
+    Reference
+    ---------
+    http://bigbird.comp.nus.edu.sg/pmwiki/farm/appl/index.php?n=Main.PomdpXDocumentation
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initialize an instance of PomdpX reader class
-
-        Parameters
-        ----------
-        path : file or str
-            Path of the file containing PomdpX information.
-
-        string : str
-            String containing PomdpX information.
-
-        Example
-        -------
-        reader = PomdpXReader('TestPomdpX.xml')
-
-        Reference
-        ---------
-        http://bigbird.comp.nus.edu.sg/pmwiki/farm/appl/index.php?n=Main.PomdpXDocumentation
-        """
         if path:
             self.network = etree.ElementTree(file=path).getroot()
         elif string:
@@ -355,22 +352,21 @@ class PomdpXReader(object):
 
 class PomdpXWriter(object):
     """
-    Class for writing models in PomdpX
+    Initialise a PomdpXWriter Object
+
+    Parameters
+    ----------
+        model: A Bayesian of Markov Model
+            The model to write
+
+    encoding: String(optional)
+        Encoding for text data
+
+    prettyprint: Bool(optional)
+        Indentation in output XML if true
     """
 
     def __init__(self, model_data, encoding="utf-8", prettyprint=True):
-        """
-        Initialise a PomdpXWriter Object
-
-        Parameters
-        ---------------
-        model: A Bayesian of Markov Model
-            The model to write
-        encoding: String(optional)
-            Encoding for text data
-        prettyprint: Bool(optional)
-            Indentation in output XML if true
-        """
         self.model = model_data
 
         self.encoding = encoding

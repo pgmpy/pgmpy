@@ -69,72 +69,73 @@ class DynamicNode:
 
 
 class DynamicBayesianNetwork(DAG):
+    """
+    Base class for Dynamic Bayesian Network
+
+    This is a time variant model of the static Bayesian model, where each
+    time-slice has some static nodes and is then replicated over a certain
+    time period.
+
+    The nodes can be any hashable python objects.
+
+    Parameters
+    ----------
+    ebunch: Data to initialize graph.  If data=None (default) an empty
+          graph is created.  The data can be an edge list, or any NetworkX
+          graph object
+
+    Examples
+    --------
+    Create an empty Dynamic Bayesian Network with no nodes and no edges:
+    >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+    >>> dbn = DBN()
+
+    Adding nodes and edges inside the Dynamic Bayesian Network. A single
+    node can be added using the method below. For adding edges we need to
+    specify the time slice since edges can be across different time slices.
+
+    For example for a network as [image](http://s8.postimg.org/aaybw4x2t/Blank_Flowchart_New_Page_1.png),
+    we will need to add all the edges in the 2-TBN as:
+
+    >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
+    ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
+    ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
+    ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
+
+    We can query the edges and nodes in the network as:
+    >>> dbn.nodes()
+    ['G', 'D', 'I', 'L']
+    >>> dbn.edges()
+    [(('D', 1), ('G', 1)), (('I', 0), ('G', 0)), (('I', 0), ('I', 1)),
+     (('I', 1), ('G', 1)), (('G', 0), ('L', 0)), (('G', 0), ('G', 1)),
+     (('G', 0), ('L', 1)), (('D', 0), ('G', 0)), (('D', 0), ('D', 1)),
+     (('L', 0), ('L', 1)), (('G', 1), ('L', 1))]
+
+    If any variable is not present in the network while adding an edge,
+    pgmpy will automatically add that variable to the network.
+
+    But for adding nodes to the model we don't need to specify the time
+    slice as it is common in all the time slices. And therefore pgmpy
+    automatically replicated it all the time slices. For example, for
+    adding a new variable `S` in the above network we can simply do:
+    >>> dbn.add_node('S')
+    >>> dbn.nodes()
+    ['S', 'G', 'D', 'I', 'L']
+
+    Public Methods
+    --------------
+    add_node
+    add_nodes_from
+    add_edges
+    add_edges_from
+    add_cpds
+    initialize_initial_state
+    inter_slice
+    intra_slice
+    copy
+    """
+
     def __init__(self, ebunch=None):
-        """
-        Base class for Dynamic Bayesian Network
-
-        This is a time variant model of the static Bayesian model, where each
-        time-slice has some static nodes and is then replicated over a certain
-        time period.
-
-        The nodes can be any hashable python objects.
-
-        Parameters
-        ----------
-        ebunch: Data to initialize graph.  If data=None (default) an empty
-              graph is created.  The data can be an edge list, or any NetworkX
-              graph object
-
-        Examples
-        --------
-        Create an empty Dynamic Bayesian Network with no nodes and no edges:
-        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
-        >>> dbn = DBN()
-
-        Adding nodes and edges inside the dynamic bayesian network. A single
-        node can be added using the method below. For adding edges we need to
-        specify the time slice since edges can be across different time slices.
-
-        For example for a network as [image](http://s8.postimg.org/aaybw4x2t/Blank_Flowchart_New_Page_1.png),
-        we will need to add all the edges in the 2-TBN as:
-
-        >>> dbn.add_edges_from([(('D', 0), ('G', 0)), (('I', 0), ('G', 0)),
-        ...                     (('G', 0), ('L', 0)), (('D', 0), ('D', 1)),
-        ...                     (('I', 0), ('I', 1)), (('G', 0), ('G', 1)),
-        ...                     (('G', 0), ('L', 1)), (('L', 0), ('L', 1))])
-
-        We can query the edges and nodes in the network as:
-        >>> dbn.nodes()
-        ['G', 'D', 'I', 'L']
-        >>> dbn.edges()
-        [(('D', 1), ('G', 1)), (('I', 0), ('G', 0)), (('I', 0), ('I', 1)),
-         (('I', 1), ('G', 1)), (('G', 0), ('L', 0)), (('G', 0), ('G', 1)),
-         (('G', 0), ('L', 1)), (('D', 0), ('G', 0)), (('D', 0), ('D', 1)),
-         (('L', 0), ('L', 1)), (('G', 1), ('L', 1))]
-
-        If any variable is not present in the network while adding an edge,
-        pgmpy will automatically add that variable to the network.
-
-        But for adding nodes to the model we don't need to specify the time
-        slice as it is common in all the time slices. And therefore pgmpy
-        automatically replicated it all the time slices. For example, for
-        adding a new variable `S` in the above network we can simply do:
-        >>> dbn.add_node('S')
-        >>> dbn.nodes()
-        ['S', 'G', 'D', 'I', 'L']
-
-        Public Methods
-        --------------
-        add_node
-        add_nodes_from
-        add_edges
-        add_edges_from
-        add_cpds
-        initialize_initial_state
-        inter_slice
-        intra_slice
-        copy
-        """
         super(DynamicBayesianNetwork, self).__init__()
         if ebunch:
             self.add_edges_from(ebunch)
@@ -421,7 +422,7 @@ class DynamicBayesianNetwork(DAG):
 
     def add_cpds(self, *cpds):
         """
-        This method adds the cpds to the dynamic bayesian network.
+        This method adds the cpds to the Dynamic Bayesian Network.
         Note that while adding variables and the evidence in cpd,
         they have to be of the following form
         (node_name, time_slice)
@@ -602,10 +603,10 @@ class DynamicBayesianNetwork(DAG):
 
     def initialize_initial_state(self):
         """
-        This method will automatically re-adjust the cpds and the edges added to the bayesian network.
+        This method will automatically re-adjust the cpds and the edges added to the Bayesian Network.
         If an edge that is added as an intra time slice edge in the 0th timeslice, this method will
         automatically add it in the 1st timeslice. It will also add the cpds. However, to call this
-        method, one needs to add cpds as well as the edges in the bayesian network of the whole
+        method, one needs to add cpds as well as the edges in the Bayesian Network of the whole
         skeleton including the 0th and the 1st timeslice,.
 
         Examples
@@ -698,11 +699,11 @@ class DynamicBayesianNetwork(DAG):
 
     def copy(self):
         """
-        Returns a copy of the dynamic bayesian network.
+        Returns a copy of the Dynamic Bayesian Network.
 
         Returns
         -------
-        DynamicBayesianNetwork: copy of the dynamic bayesian network
+        DynamicBayesianNetwork: copy of the Dynamic Bayesian Network
 
         Examples
         --------
@@ -778,9 +779,9 @@ class DynamicBayesianNetwork(DAG):
 
     def get_constant_bn(self, t_slice=0):
         """
-        Returns a normal bayesian network object which has nodes from the first two
+        Returns a normal Bayesian Network object which has nodes from the first two
         time slices and all the edges in the first time slice and edges going from
-        first to second time slice. The returned bayesian network basically represents
+        first to second time slice. The returned Bayesian Network basically represents
         the part of the DBN which remains constant.
 
         The node names are changed to strings in the form `{var}_{time}`.
@@ -885,7 +886,7 @@ class DynamicBayesianNetwork(DAG):
             # Select the data frame for this time slice
             df_slice = data_copy.loc[:, colnames]
 
-            # Change the column time slice to match the constant bayesian network.
+            # Change the column time slice to match the constant Bayesian Network.
             tuple_colnames = [var.rsplit("_", 1) for var in df_slice.columns]
             new_colnames = [
                 str(node) + "_" + str(int(t) - t_slice) for (node, t) in tuple_colnames

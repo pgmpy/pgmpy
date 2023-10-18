@@ -19,38 +19,39 @@ from pgmpy.estimators import StructureEstimator
 
 
 class TreeSearch(StructureEstimator):
+    """
+    Search class for learning tree related graph structure. The algorithms
+    supported are Chow-Liu and Tree-augmented naive bayes (TAN).
+
+    Chow-Liu constructs the maximum-weight spanning tree with mutual information
+    score as edge weights.
+
+    TAN is an extension of Naive Bayes classifier to allow a tree structure over
+    the independent variables to account for interaction.
+
+    Parameters
+    ----------
+    data: pandas.DataFrame object
+        dataframe object where each column represents one variable.
+
+    root_node: str, int, or any hashable python object, default is None.
+        The root node of the tree structure. If None then root node is auto-picked
+        as the node with the highest sum of edge weights.
+
+    n_jobs: int (default: -1)
+        Number of jobs to run in parallel. `-1` means use all processors.
+
+    References
+    ----------
+    [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
+        distributions with dependence trees", IEEE Transactions on Information
+        Theory, IT-14 (3): 462–467
+
+    [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
+        Machine Learning 29: 131–163
+    """
+
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
-        """
-        Search class for learning tree related graph structure. The algorithms
-        supported are Chow-Liu and Tree-augmented naive bayes (TAN).
-
-        Chow-Liu constructs the maximum-weight spanning tree with mutual information
-        score as edge weights.
-
-        TAN is an extension of Naive Bayes classifier to allow a tree structure over
-        the independent variables to account for interaction.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame object
-            dataframe object where each column represents one variable.
-
-        root_node: str, int, or any hashable python object, default is None.
-            The root node of the tree structure. If None then root node is auto-picked
-            as the node with the highest sum of edge weights.
-
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. `-1` means use all processors.
-
-        References
-        ----------
-        [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-            distributions with dependence trees", IEEE Transactions on Information
-            Theory, IT-14 (3): 462–467
-
-        [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
-            Machine Learning 29: 131–163
-        """
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 

@@ -4,46 +4,46 @@ from itertools import combinations
 
 import networkx as nx
 
-from pgmpy.estimators import StructureEstimator, ScoreCache
-from pgmpy.estimators import K2Score
-from pgmpy.utils.mathext import powerset
 from pgmpy.base import DAG
+from pgmpy.estimators import K2Score, ScoreCache, StructureEstimator
 from pgmpy.global_vars import logger
+from pgmpy.utils.mathext import powerset
 
 
 class ExhaustiveSearch(StructureEstimator):
+    """
+    Search class for exhaustive searches over all DAGs with a given set of variables.
+    Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
+        An instance of `K2Score`, `BDeuScore`, `BicScore` or 'AICScore'.
+        This score is optimized during structure estimation by the `estimate`-method.
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    use_caching: boolean
+        If True, uses caching of score for faster computation.
+        Note: Caching only works for scoring methods which are decomposable. Can
+        give wrong results in case of custom scoring methods.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+    """
+
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
-        """
-        Search class for exhaustive searches over all DAGs with a given set of variables.
-        Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        scoring_method: Instance of a `StructureScore`-subclass (`K2Score` is used as default)
-            An instance of `K2Score`, `BDeuScore`, `BicScore` or 'AICScore'.
-            This score is optimized during structure estimation by the `estimate`-method.
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        use_caching: boolean
-            If True, uses caching of score for faster computation.
-            Note: Caching only works for scoring methods which are decomposable. Can
-            give wrong results in case of custom scoring methods.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-        """
         if scoring_method is not None:
             if use_cache:
                 self.scoring_method = ScoreCache.ScoreCache(scoring_method, data)

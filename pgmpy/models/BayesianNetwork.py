@@ -25,77 +25,74 @@ from pgmpy.utils import compat_fns
 
 class BayesianNetwork(DAG):
     """
-    Base class for Bayesian Models.
+    Initializes a Bayesian Network.
+    A models stores nodes and edges with conditional probability
+    distribution (cpd) and other attributes.
+
+    models hold directed edges.  Self loops are not allowed neither
+    multiple (parallel) edges.
+
+    Nodes can be any hashable python object.
+
+    Edges are represented as links between nodes.
+
+    Parameters
+    ----------
+    ebunch: input graph
+        Data to initialize graph.  If ebunch=None (default) an empty
+        graph is created.  The ebunch can be an edge list, or any
+        NetworkX graph object.
+
+    latents: list, array-like
+        List of variables which are latent (i.e. unobserved) in the model.
+
+    Examples
+    --------
+    Create an empty Bayesian Network with no nodes and no edges.
+
+    >>> from pgmpy.models import BayesianNetwork
+    >>> G = BayesianNetwork()
+
+    G can be grown in several ways.
+
+    **Nodes:**
+
+    Add one node at a time:
+
+    >>> G.add_node('a')
+
+    Add the nodes from any container (a list, set or tuple or the nodes
+    from another graph).
+
+    >>> G.add_nodes_from(['a', 'b'])
+
+    **Edges:**
+
+    G can also be grown by adding edges.
+
+    Add one edge,
+
+    >>> G.add_edge('a', 'b')
+
+    a list of edges,
+
+    >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
+
+    If some edges connect nodes not yet in the model, the nodes
+    are added automatically.  There are no errors when adding
+    nodes or edges that already exist.
+
+    **Shortcuts:**
+
+    Many common graph features allow python syntax for speed reporting.
+
+    >>> 'a' in G     # check if node in graph
+    True
+    >>> len(G)  # number of nodes in graph
+    3
     """
 
     def __init__(self, ebunch=None, latents=set()):
-        """
-        Initializes a Bayesian Model.
-        A models stores nodes and edges with conditional probability
-        distribution (cpd) and other attributes.
-
-        models hold directed edges.  Self loops are not allowed neither
-        multiple (parallel) edges.
-
-        Nodes can be any hashable python object.
-
-        Edges are represented as links between nodes.
-
-        Parameters
-        ----------
-        data : input graph
-            Data to initialize graph.  If data=None (default) an empty
-            graph is created.  The data can be an edge list, or any
-            NetworkX graph object.
-
-        latents: list, array-like
-            List of variables which are latent (i.e. unobserved) in the model.
-
-        Examples
-        --------
-        Create an empty bayesian model with no nodes and no edges.
-
-        >>> from pgmpy.models import BayesianNetwork
-        >>> G = BayesianNetwork()
-
-        G can be grown in several ways.
-
-        **Nodes:**
-
-        Add one node at a time:
-
-        >>> G.add_node('a')
-
-        Add the nodes from any container (a list, set or tuple or the nodes
-        from another graph).
-
-        >>> G.add_nodes_from(['a', 'b'])
-
-        **Edges:**
-
-        G can also be grown by adding edges.
-
-        Add one edge,
-
-        >>> G.add_edge('a', 'b')
-
-        a list of edges,
-
-        >>> G.add_edges_from([('a', 'b'), ('b', 'c')])
-
-        If some edges connect nodes not yet in the model, the nodes
-        are added automatically.  There are no errors when adding
-        nodes or edges that already exist.
-
-        **Shortcuts:**
-
-        Many common graph features allow python syntax for speed reporting.
-
-        >>> 'a' in G     # check if node in graph
-        True
-        >>> len(G)  # number of nodes in graph
-        3
-        """
         super(BayesianNetwork, self).__init__(ebunch=ebunch, latents=latents)
         self.cpds = []
         self.cardinalities = defaultdict(int)
@@ -452,8 +449,8 @@ class BayesianNetwork(DAG):
 
     def to_markov_model(self):
         """
-        Converts bayesian model to markov model. The markov model created would
-        be the moral graph of the bayesian model.
+        Converts Bayesian Network to Markov Model. The Markov Model created would
+        be the moral graph of the Bayesian Network.
 
         Examples
         --------
@@ -475,7 +472,7 @@ class BayesianNetwork(DAG):
 
     def to_junction_tree(self):
         """
-        Creates a junction tree (or clique tree) for a given bayesian model.
+        Creates a junction tree (or clique tree) for a given Bayesian Network.
 
         For converting a Bayesian Model into a Clique tree, first it is converted
         into a Markov one.
@@ -883,7 +880,7 @@ class BayesianNetwork(DAG):
 
     def is_imap(self, JPD):
         """
-        Checks whether the bayesian model is Imap of given JointProbabilityDistribution
+        Checks whether the Bayesian Network is Imap of given JointProbabilityDistribution
 
         Parameters
         ----------
@@ -892,7 +889,7 @@ class BayesianNetwork(DAG):
         Returns
         -------
         is IMAP: True or False
-            True if bayesian model is Imap for given Joint Probability Distribution False otherwise
+            True if Bayesian Network is Imap for given Joint Probability Distribution False otherwise
 
         Examples
         --------
@@ -1000,7 +997,7 @@ class BayesianNetwork(DAG):
     @staticmethod
     def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
         """
-        Returns a randomly generated bayesian network on `n_nodes` variables
+        Returns a randomly generated Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
 
         Parameters

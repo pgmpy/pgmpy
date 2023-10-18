@@ -10,32 +10,29 @@ from pgmpy.utils import compat_fns
 
 class UAIReader(object):
     """
-    Class for reading UAI file format from files or strings.
+    Initialize an instance of UAI reader class
+
+    Parameters
+    ----------
+    path : file or str
+        Path of the file containing UAI information.
+
+    string : str
+        String containing UAI information.
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import UAIReader
+    >>> reader = UAIReader('TestUai.uai')
+    >>> model = reader.get_model()
+
+    Reference
+    ---------
+    [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
+    [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initialize an instance of UAI reader class
-
-        Parameters
-        ----------
-        path : file or str
-            Path of the file containing UAI information.
-
-        string : str
-            String containing UAI information.
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader('TestUai.uai')
-        >>> model = reader.get_model()
-
-        Reference
-        ---------
-        [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
-        [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
-        """
         if path:
             with open(path, "r") as f:
                 self.network = f.read()
@@ -300,29 +297,26 @@ class UAIReader(object):
 
 class UAIWriter(object):
     """
-    Class for writing models in UAI.
+    Initialize an instance of UAI writer class
+
+    Parameters
+    ----------
+    model: A Bayesian or Markov model
+        The model to write
+
+    round_values: int (default: None)
+        The number to decimals to which to round the probability values. If None, keeps all decimals points.
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import UAIWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model('asia')
+    >>> writer = UAIWriter(asia)
+    >>> writer.write_uai('asia.uai')
     """
 
     def __init__(self, model, round_values=None):
-        """
-        Initialize an instance of UAI writer class
-
-        Parameters
-        ----------
-        model: A Bayesian or Markov model
-            The model to write
-
-        round_values: int (default: None)
-            The number to decimals to which to round the probability values. If None, keeps all decimals points.
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import UAIWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
-        >>> writer = UAIWriter(asia)
-        >>> writer.write_uai('asia.uai')
-        """
         if isinstance(model, BayesianNetwork):
             self.network = "BAYES\n"
         elif isinstance(model, MarkovNetwork):

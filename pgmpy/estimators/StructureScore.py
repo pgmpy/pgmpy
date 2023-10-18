@@ -8,35 +8,36 @@ from pgmpy.estimators import BaseEstimator
 
 
 class StructureScore(BaseEstimator):
+    """
+    Abstract base class for structure scoring classes in pgmpy. Use any of the derived classes
+    K2Score, BDeuScore, BicScore or AICScore. Scoring classes are
+    used to measure how well a model is able to describe the given data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    Reference
+    ---------
+    Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3
+    """
+
     def __init__(self, data, **kwargs):
-        """
-        Abstract base class for structure scoring classes in pgmpy. Use any of the derived classes
-        K2Score, BDeuScore, BicScore or AICScore. Scoring classes are
-        used to measure how well a model is able to describe the given data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        Reference
-        ---------
-        Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3
-        """
         super(StructureScore, self).__init__(data, **kwargs)
 
     def score(self, model):
@@ -88,37 +89,38 @@ class StructureScore(BaseEstimator):
 
 
 class K2Score(StructureScore):
+    """
+    Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
+    The K2 score is the result of setting all Dirichlet hyperparameters/pseudo_counts to 1.
+    The `score`-method measures how well a model is able to describe the given data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ---------
+    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3.4-18.3.6 (esp. page 806)
+    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+    http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    """
+
     def __init__(self, data, **kwargs):
-        """
-        Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
-        The K2 score is the result of setting all Dirichlet hyperparameters/pseudo_counts to 1.
-        The `score`-method measures how well a model is able to describe the given data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ---------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3.4-18.3.6 (esp. page 806)
-        [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
-        """
         super(K2Score, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
@@ -159,42 +161,43 @@ class K2Score(StructureScore):
 
 
 class BDeuScore(StructureScore):
+    """
+    Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
+    The BDeu score is the result of setting all Dirichlet hyperparameters/pseudo_counts to
+    `equivalent_sample_size/variable_cardinality`.
+    The `score`-method measures how well a model is able to describe the given data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    equivalent_sample_size: int (default: 10)
+        The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet hyperparameters.
+        The score is sensitive to this value, runs with different values might be useful.
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ---------
+    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3.4-18.3.6 (esp. page 806)
+    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+    http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    """
+
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
-        """
-        Class for Bayesian structure scoring for BayesianNetworks with Dirichlet priors.
-        The BDeu score is the result of setting all Dirichlet hyperparameters/pseudo_counts to
-        `equivalent_sample_size/variable_cardinality`.
-        The `score`-method measures how well a model is able to describe the given data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        equivalent_sample_size: int (default: 10)
-            The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet hyperparameters.
-            The score is sensitive to this value, runs with different values might be useful.
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ---------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3.4-18.3.6 (esp. page 806)
-        [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
-        """
         self.equivalent_sample_size = equivalent_sample_size
         super(BDeuScore, self).__init__(data, **kwargs)
 
@@ -239,46 +242,47 @@ class BDeuScore(StructureScore):
 
 
 class BDsScore(BDeuScore):
+    """
+    Class for Bayesian structure scoring for BayesianNetworks with
+    Dirichlet priors.  The BDs score is the result of setting all Dirichlet
+    hyperparameters/pseudo_counts to
+    `equivalent_sample_size/modified_variable_cardinality` where for the
+    modified_variable_cardinality only the number of parent configurations
+    where there were observed variable counts are considered.  The
+    `score`-method measures how well a model is able to describe the given
+    data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    equivalent_sample_size: int (default: 10)
+        The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet
+        hyperparameters.
+        The score is sensitive to this value, runs with different values might be useful.
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ---------
+    [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks.
+    Journal of Machine Learning Research, 2016, pp. 438–48
+
+    """
+
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
-        """
-        Class for Bayesian structure scoring for BayesianNetworks with
-        Dirichlet priors.  The BDs score is the result of setting all Dirichlet
-        hyperparameters/pseudo_counts to
-        `equivalent_sample_size/modified_variable_cardinality` where for the
-        modified_variable_cardinality only the number of parent configurations
-        where there were observed variable counts are considered.  The
-        `score`-method measures how well a model is able to describe the given
-        data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        equivalent_sample_size: int (default: 10)
-            The equivalent/imaginary sample size (of uniform pseudo samples) for the dirichlet
-            hyperparameters.
-            The score is sensitive to this value, runs with different values might be useful.
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ---------
-        [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks.
-        Journal of Machine Learning Research, 2016, pp. 438–48
-
-        """
         super(BDsScore, self).__init__(data, equivalent_sample_size, **kwargs)
 
     def structure_prior_ratio(self, operation):
@@ -343,40 +347,41 @@ class BDsScore(BDeuScore):
 
 
 class BicScore(StructureScore):
+    """
+    Class for Bayesian structure scoring for BayesianNetworks with
+    Dirichlet priors.  The BIC/MDL score ("Bayesian Information Criterion",
+    also "Minimal Descriptive Length") is a log-likelihood score with an
+    additional penalty for network complexity, to avoid overfitting.  The
+    `score`-method measures how well a model is able to describe the given
+    data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ---------
+    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3.4-18.3.6 (esp. page 802)
+    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+    http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    """
+
     def __init__(self, data, **kwargs):
-        """
-        Class for Bayesian structure scoring for BayesianNetworks with
-        Dirichlet priors.  The BIC/MDL score ("Bayesian Information Criterion",
-        also "Minimal Descriptive Length") is a log-likelihood score with an
-        additional penalty for network complexity, to avoid overfitting.  The
-        `score`-method measures how well a model is able to describe the given
-        data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ---------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3.4-18.3.6 (esp. page 802)
-        [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
-        """
         super(BicScore, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
@@ -411,39 +416,40 @@ class BicScore(StructureScore):
 
 
 class AICScore(StructureScore):
+    """
+    Class for Bayesian structure scoring for BayesianNetworks with
+    Dirichlet priors.  The AIC score ("Akaike Information Criterion) is a log-likelihood score with an
+    additional penalty for network complexity, to avoid overfitting.  The
+    `score`-method measures how well a model is able to describe the given
+    data set.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+
+    complete_samples_only: bool (optional, default `True`)
+        Specifies how to deal with missing data, if present. If set to `True` all rows
+        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+        every row where neither the variable nor its parents are `np.NaN` is used.
+        This sets the behavior of the `state_count`-method.
+
+    References
+    ---------
+    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3.4-18.3.6 (esp. page 802)
+    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
+    http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    """
+
     def __init__(self, data, **kwargs):
-        """
-        Class for Bayesian structure scoring for BayesianNetworks with
-        Dirichlet priors.  The AIC score ("Akaike Information Criterion) is a log-likelihood score with an
-        additional penalty for network complexity, to avoid overfitting.  The
-        `score`-method measures how well a model is able to describe the given
-        data set.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states (or values)
-            that the variable can take. If unspecified, the observed values in the data set
-            are taken to be the only possible states.
-
-        complete_samples_only: bool (optional, default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            This sets the behavior of the `state_count`-method.
-
-        References
-        ---------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3.4-18.3.6 (esp. page 802)
-        [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
-        """
         super(AICScore, self).__init__(data, **kwargs)
 
     def local_score(self, variable, parents):

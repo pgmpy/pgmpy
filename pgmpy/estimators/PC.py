@@ -27,28 +27,29 @@ CI_TESTS = {
 
 
 class PC(StructureEstimator):
+    """
+    Class for constraint-based estimation of DAGs using the PC algorithm
+    from a given data set.  Identifies (conditional) dependencies in data
+    set using statistical independence tests and estimates a DAG pattern
+    that satisfies the identified dependencies. The DAG pattern can then be
+    completed to a faithful DAG, if possible.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.  (If some
+        values in the data are missing the data cells should be set to
+        `numpy.NaN`.  Note that pandas converts each column containing
+        `numpy.NaN`s to dtype `float`.)
+
+    References
+    ----------
+    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
+        2009, Section 18.2
+    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    """
+
     def __init__(self, data=None, independencies=None, **kwargs):
-        """
-        Class for constraint-based estimation of DAGs using the PC algorithm
-        from a given data set.  Identifies (conditional) dependencies in data
-        set using statistical independence tests and estimates a DAG pattern
-        that satisfies the identified dependencies. The DAG pattern can then be
-        completed to a faithful DAG, if possible.
-
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            dataframe object where each column represents one variable.  (If some
-            values in the data are missing the data cells should be set to
-            `numpy.NaN`.  Note that pandas converts each column containing
-            `numpy.NaN`s to dtype `float`.)
-
-        References
-        ----------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
-            2009, Section 18.2
-        [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550), http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        """
         super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(

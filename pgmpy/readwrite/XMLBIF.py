@@ -14,7 +14,24 @@ from pgmpy.utils import compat_fns
 
 class XMLBIFReader(object):
     """
-    Base class for reading network file in XMLBIF format.
+    Initialisation of XMLBIFReader object.
+
+    Parameters
+    ----------
+    path : file or str
+        File of XMLBIF data
+        File of XMLBIF data
+
+    string : str
+        String of XMLBIF data
+
+    Examples
+    --------
+    # xmlbif_test.xml is the file present in
+    # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
+    >>> from pgmpy.readwrite import XMLBIFReader
+    >>> reader = XMLBIFReader("xmlbif_test.xml")
+    >>> model = reader.get_model()
 
     Reference
     ---------
@@ -22,26 +39,6 @@ class XMLBIFReader(object):
     """
 
     def __init__(self, path=None, string=None):
-        """
-        Initialisation of XMLBIFReader object.
-
-        Parameters
-        ----------
-        path : file or str
-            File of XMLBIF data
-            File of XMLBIF data
-
-        string : str
-            String of XMLBIF data
-
-        Examples
-        --------
-        # xmlbif_test.xml is the file present in
-        # http://www.cs.cmu.edu/~fgcozman/Research/InterchangeFormat/
-        >>> from pgmpy.readwrite import XMLBIFReader
-        >>> reader = XMLBIFReader("xmlbif_test.xml")
-        >>> model = reader.get_model()
-        """
         if path:
             self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
         elif string:
@@ -250,7 +247,26 @@ class XMLBIFReader(object):
 
 class XMLBIFWriter(object):
     """
-    Base class for writing XMLBIF network file format.
+    Initialise a XMLBIFWriter object.
+
+    Parameters
+    ----------
+    model: BayesianNetwork Instance
+        Model to write
+
+    encoding: str (optional)
+        Encoding for text data
+
+    prettyprint: Bool(optional)
+        Indentation in output XML if true
+
+    Examples
+    --------
+    >>> from pgmpy.readwrite import XMLBIFWriter
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model('asia')
+    >>> writer = XMLBIFWriter(model)
+    >>> writer.write_xmlbif('asia.xml')
 
     Reference
     ---------
@@ -258,28 +274,6 @@ class XMLBIFWriter(object):
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        """
-        Initialise a XMLBIFWriter object.
-
-        Parameters
-        ----------
-        model: BayesianNetwork Instance
-            Model to write
-
-        encoding: str (optional)
-            Encoding for text data
-
-        prettyprint: Bool(optional)
-            Indentation in output XML if true
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import XMLBIFWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model('asia')
-        >>> writer = XMLBIFWriter(model)
-        >>> writer.write_xmlbif('asia.xml')
-        """
         if not isinstance(model, BayesianNetwork):
             raise TypeError("model must an instance of BayesianNetwork")
         self.model = model

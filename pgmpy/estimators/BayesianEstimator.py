@@ -13,11 +13,12 @@ from pgmpy.models import BayesianNetwork
 
 
 class BayesianEstimator(ParameterEstimator):
+    """
+    Class used to compute parameters for a model using Bayesian Parameter Estimation.
+    See `MaximumLikelihoodEstimator` for constructor parameters.
+    """
+
     def __init__(self, model, data, **kwargs):
-        """
-        Class used to compute parameters for a model using Bayesian Parameter Estimation.
-        See `MaximumLikelihoodEstimator` for constructor parameters.
-        """
         if not isinstance(model, BayesianNetwork):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for BayesianNetwork"

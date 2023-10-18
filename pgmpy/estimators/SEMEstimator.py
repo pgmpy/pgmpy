@@ -375,22 +375,18 @@ class SEMEstimator(object):
 
 class IVEstimator:
     """
-    Implements Instrumental Variable (IV) based estimator.
+    Initialize IVEstimator object.
+
+    Parameters
+    ----------
+    model: pgmpy.models.SEM
+        The model for which estimation need to be done.
+
+    Examples
+    --------
     """
 
     def __init__(self, model):
-        """
-        Initialize IVEstimator object.
-
-        Parameters
-        ----------
-        model: pgmpy.models.SEM
-            The model for which estimation need to be done.
-
-        Examples
-        --------
-
-        """
         self.model = model
 
     def fit(self, X, Y, data, ivs=None, civs=None):

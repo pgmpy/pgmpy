@@ -3,31 +3,32 @@ from pgmpy.estimators import StructureScore
 
 
 class ScoreCache(StructureScore):
+    """
+    A wrapper class for StructureScore instances, which implement a decomposable score,
+    that caches local scores.
+    Based on the global decomposition property of Bayesian networks for decomposable scores.
+
+    Parameters
+    ----------
+    base_scorer: StructureScore instance
+         Has to be a decomposable score.
+    data: pandas DataFrame instance
+        DataFrame instance where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+    max_size: int (optional, default 10_000)
+        The maximum number of elements allowed in the cache. When the limit is reached, the least recently used
+        entries will be discarded.
+    **kwargs
+        Additional arguments that will be handed to the super constructor.
+
+    Reference
+    ---------
+    Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+    Section 18.3
+    """
+
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):
-        """
-        A wrapper class for StructureScore instances, which implement a decomposable score,
-        that caches local scores.
-        Based on the global decomposition property of Bayesian networks for decomposable scores.
-
-        Parameters
-        ----------
-        base_scorer: StructureScore instance
-             Has to be a decomposable score.
-        data: pandas DataFrame instance
-            DataFrame instance where each column represents one variable.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
-        max_size: int (optional, default 10_000)
-            The maximum number of elements allowed in the cache. When the limit is reached, the least recently used
-            entries will be discarded.
-        **kwargs
-            Additional arguments that will be handed to the super constructor.
-
-        Reference
-        ---------
-        Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-        Section 18.3
-        """
         assert isinstance(
             base_scorer, StructureScore
         ), "Base scorer has to be of type StructureScore."
@@ -52,23 +53,24 @@ _PREV, _NEXT, _KEY, _VALUE = 0, 1, 2, 3
 
 
 class LRUCache:
+    """
+    Least-Recently-Used cache.
+    Acts as a wrapper around an arbitrary function and caches the return values.
+
+    Based on the implementation of Raymond Hettinger
+    (https://stackoverflow.com/questions/2437617/limiting-the-size-of-a-python-dictionary)
+
+    Parameters
+    ----------
+    original_function: callable
+        The original function that will be wrapped. Return values will be cached.
+        The function parameters have to be hashable.
+    max_size: int (optional, default 10_000)
+        The maximum number of elements allowed within the cache. If the size would be exceeded,
+        the least recently used element will be removed from the cache.
+    """
+
     def __init__(self, original_function, max_size=10000):
-        """
-        Least-Recently-Used cache.
-        Acts as a wrapper around an arbitrary function and caches the return values.
-
-        Based on the implementation of Raymond Hettinger
-        (https://stackoverflow.com/questions/2437617/limiting-the-size-of-a-python-dictionary)
-
-        Parameters
-        ----------
-        original_function: callable
-            The original function that will be wrapped. Return values will be cached.
-            The function parameters have to be hashable.
-        max_size: int (optional, default 10_000)
-            The maximum number of elements allowed within the cache. If the size would be exceeded,
-            the least recently used element will be removed from the cache.
-        """
         self.original_function = original_function
         self.max_size = max_size
         self.mapping = {}
