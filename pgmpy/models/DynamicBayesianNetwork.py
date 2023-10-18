@@ -442,7 +442,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D', 0),('G', 0)),(('I', 0),('G', 0)),(('D', 0),('D', 1)),(('I', 0),('I', 1))])
         >>> grade_cpd = TabularCPD(('G', 0), 3, [[0.3, 0.05, 0.9, 0.5],
-        ...                                      [0.4, 0.25, 0.8, 0.03],
+        ...                                      [0.4, 0.25, 0.08, 0.3],
         ...                                      [0.3, 0.7, 0.02, 0.2]],
         ...                        evidence=[('I', 0),('D', 0)],
         ...                        evidence_card=[2, 2])
@@ -497,7 +497,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                      [0.4,0.25,0.8,0.03],
+        ...                                      [0.4,0.25,0.08,0.3],
         ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
@@ -552,7 +552,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
-        ...                                      [0.4,0.25,0.8,0.03],
+        ...                                      [0.4,0.25,0.08,0.3],
         ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
         >>> dbn.add_cpds(grade_cpd)
         >>> dbn.get_cpds()
@@ -711,7 +711,7 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn = DBN()
         >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
         >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3, 0.05, 0.9,  0.5 ],
-        ...                                      [0.4, 0.25, 0.8,  0.03],
+        ...                                      [0.4, 0.25, 0.08,  0.3],
         ...                                      [0.3,  0.7, 0.02, 0.2 ]],
         ...                         [('I', 0), ('D', 0)],[2,2])
         >>> dbn.add_cpds(grade_cpd)
