@@ -18,9 +18,9 @@ from pgmpy.factors.discrete import (
     JointProbabilityDistribution,
     TabularCPD,
 )
+from pgmpy.global_vars import logger
 from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.utils import compat_fns
-from pgmpy.global_vars import logger
 
 
 class BayesianNetwork(DAG):
@@ -232,24 +232,27 @@ class BayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import BayesianNetwork
         >>> from pgmpy.factors.discrete.CPD import TabularCPD
-        >>> student = BayesianNetwork([('diff', 'grades'), ('intel', 'grades')])
+        >>> student = BayesianNetwork([('diff', 'grades'), ('aptitude', 'grades')])
         >>> grades_cpd = TabularCPD('grades', 3, [[0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.1,0.1,0.1,0.1,0.1,0.1],
         ...                                       [0.8,0.8,0.8,0.8,0.8,0.8]],
-        ...                         evidence=['diff', 'intel'], evidence_card=[2, 3])
+        ...                         evidence=['diff', 'aptitude'], evidence_card=[2, 3],
+        ...                         state_names={'grades': ['gradeA', 'gradeB', 'gradeC'],
+        ...                                      'diff': ['easy', 'hard'],
+        ...                                      'aptitude': ['low', 'medium', 'high']})
         >>> student.add_cpds(grades_cpd)
 
-        +------+-----------------------+---------------------+
-        |diff: |          easy         |         hard        |
-        +------+------+------+---------+------+------+-------+
-        |intel:| dumb |  avg |  smart  | dumb | avg  | smart |
-        +------+------+------+---------+------+------+-------+
-        |gradeA| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeB| 0.1  | 0.1  |   0.1   |  0.1 |  0.1 |   0.1 |
-        +------+------+------+---------+------+------+-------+
-        |gradeC| 0.8  | 0.8  |   0.8   |  0.8 |  0.8 |   0.8 |
-        +------+------+------+---------+------+------+-------+
+        +---------+-------------------------+------------------------+
+        |diff:    |          easy           |         hard           |
+        +---------+------+--------+---------+------+--------+--------+
+        |aptitude:| low  | medium |  high   | low  | medium |  high  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeA   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeB   | 0.1  | 0.1    |   0.1   |  0.1 |  0.1   |   0.1  |
+        +---------+------+--------+---------+------+--------+--------+
+        |gradeC   | 0.8  | 0.8    |   0.8   |  0.8 |  0.8   |   0.8  |
+        +---------+------+--------+---------+------+--------+--------+
         """
         for cpd in cpds:
             if not isinstance(cpd, (TabularCPD, ContinuousFactor)):
