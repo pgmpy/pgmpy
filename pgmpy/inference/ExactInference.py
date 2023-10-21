@@ -675,7 +675,7 @@ class VariableElimination(Inference):
         3
         """
         induced_graph = self.induced_graph(elimination_order)
-        return nx.graph_clique_number(induced_graph) - 1
+        return max((len(clique) for clique in nx.find_cliques(induced_graph))) - 1
 
 
 class BeliefPropagation(Inference):
