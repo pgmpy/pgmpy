@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+from joblib.externals.loky import get_reusable_executor
 
 from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator
@@ -176,6 +177,8 @@ class TestMLE(unittest.TestCase):
         del self.d1
         del self.d2
 
+        get_reusable_executor().shutdown(wait=True)
+
 
 class TestMLETorch(unittest.TestCase):
     def setUp(self):
@@ -345,5 +348,7 @@ class TestMLETorch(unittest.TestCase):
         del self.m1
         del self.d1
         del self.d2
+
+        get_reusable_executor().shutdown(wait=True)
 
         config.set_backend("numpy")

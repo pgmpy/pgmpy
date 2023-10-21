@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+from joblib.externals.loky import get_reusable_executor
 
 from pgmpy import config
 from pgmpy.estimators import ExpectationMaximization as EM
@@ -40,6 +41,14 @@ class TestEMObserved(unittest.TestCase):
 
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.3))
 
+    def tearDown(self):
+        del self.model1
+        del self.model2
+        del self.data1
+        del self.data2
+
+        get_reusable_executor().shutdown(wait=True)
+
 
 class TestEMObservedTorch(unittest.TestCase):
     def setUp(self):
@@ -74,4 +83,11 @@ class TestEMObservedTorch(unittest.TestCase):
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.3))
 
     def tearDown(self):
+        del self.model1
+        del self.model2
+        del self.data1
+        del self.data2
+
+        get_reusable_executor().shutdown(wait=True)
+
         config.set_backend("numpy")
