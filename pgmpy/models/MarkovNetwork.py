@@ -406,13 +406,23 @@ class MarkovNetwork(UndirectedGraph):
             graph_working_copy = nx.Graph(graph_copy.edges())
             neighbors = list(graph_working_copy.neighbors(node))
             graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
-            clique_dict = nx.cliques_containing_node(
-                graph_working_copy, nodes=([node] + neighbors)
-            )
+
+            clique_dict = {var: [] for var in [node] + neighbors}
+            max_cliques = list(nx.find_cliques(graph_working_copy))
+            for var in [node] + neighbors:
+                for clique in max_cliques:
+                    if var in clique:
+                        clique_dict[var].append(clique)
+
             graph_working_copy.remove_node(node)
-            clique_dict_removed = nx.cliques_containing_node(
-                graph_working_copy, nodes=neighbors
-            )
+
+            clique_dict_removed = {var: [] for var in neighbors}
+            max_cliques = list(nx.find_cliques(graph_working_copy))
+            for var in neighbors:
+                for clique in max_cliques:
+                    if var in clique:
+                        clique_dict_removed[var].append(clique)
+
             return clique_dict, clique_dict_removed
 
         if not order:
