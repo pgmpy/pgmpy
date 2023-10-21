@@ -3,6 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
+from joblib.externals.loky import get_reusable_executor
 
 from pgmpy.estimators import PC
 from pgmpy.independencies import Independencies
@@ -238,6 +239,9 @@ class TestPCEstimatorFromIndependencies(unittest.TestCase):
                 or (set(estimated_model.edges()) == expected_edges_2)
             )
 
+    def tearDown(self):
+        get_reusable_executor().shutdown(wait=True)
+
 
 class TestPCEstimatorFromDiscreteData(unittest.TestCase):
     def test_build_skeleton_chi_square(self):
@@ -349,6 +353,9 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
 
+    def tearDown(self):
+        get_reusable_executor().shutdown(wait=True)
+
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
@@ -433,6 +440,9 @@ class TestPCEstimatorFromContinuousData(unittest.TestCase):
 
             expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
             self.assertEqual(set(dag.edges()), expected_edges)
+
+    def tearDown(self):
+        get_reusable_executor().shutdown(wait=True)
 
 
 class TestPCRealModels(unittest.TestCase):

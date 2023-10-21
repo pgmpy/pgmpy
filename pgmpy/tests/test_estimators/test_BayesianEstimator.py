@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+from joblib.externals.loky import get_reusable_executor
 
 from pgmpy import config
 from pgmpy.estimators import BayesianEstimator
@@ -192,6 +193,7 @@ class TestBayesianEstimator(unittest.TestCase):
         del self.d2
         del self.est1
         del self.est2
+        get_reusable_executor().shutdown(wait=True)
 
 
 class TestBayesianEstimatorTorch(unittest.TestCase):
@@ -380,5 +382,6 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         del self.d2
         del self.est1
         del self.est2
+        get_reusable_executor().shutdown(wait=True)
 
         config.set_backend("numpy")
