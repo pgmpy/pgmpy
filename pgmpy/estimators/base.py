@@ -4,8 +4,6 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from pgmpy.utils.decorators import convert_args_tuple
-
 
 class BaseEstimator(object):
     """
@@ -23,21 +21,13 @@ class BaseEstimator(object):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
     """
 
-    def __init__(self, data=None, state_names=None, complete_samples_only=True):
+    def __init__(self, data=None, state_names=None):
         self.data = data
         # data can be None in the case when learning structure from
         # independence conditions. Look into PC.py.
         if self.data is not None:
-            self.complete_samples_only = complete_samples_only
-
             self.variables = list(data.columns.values)
 
             if not isinstance(state_names, dict):
@@ -67,7 +57,6 @@ class BaseEstimator(object):
         self,
         variable,
         parents=[],
-        complete_samples_only=None,
         weighted=False,
         reindex=True,
     ):
@@ -84,12 +73,6 @@ class BaseEstimator(object):
         parents: list
             Optional list of variable parents, if conditional counting is desired.
             Order of parents in list is reflected in the returned DataFrame
-
-        complete_samples_only: bool
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.NaN` somewhere are ignored. If `False` then
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            Desired default behavior can be passed to the class constructor.
 
         weighted: bool
             If True, data must have a `_weight` column specifying the weight of the
@@ -131,25 +114,15 @@ class BaseEstimator(object):
         """
         parents = list(parents)
 
-        # default for how to deal with missing data can be set in class constructor
-        if complete_samples_only is None:
-            complete_samples_only = self.complete_samples_only
-        # ignores either any row containing NaN, or only those where the variable or its parents is NaN
-        data = (
-            self.data.dropna()
-            if complete_samples_only
-            else self.data.dropna(subset=[variable] + parents)
-        )
-
         if weighted and ("_weight" not in self.data.columns):
             raise ValueError("data must contain a `_weight` column if weighted=True")
 
         if not parents:
             # count how often each state of 'variable' occurred
             if weighted:
-                state_count_data = data.groupby([variable])["_weight"].sum()
+                state_count_data = self.data.groupby([variable])["_weight"].sum()
             else:
-                state_count_data = data.loc[:, variable].value_counts()
+                state_count_data = self.data.loc[:, variable].value_counts()
 
             state_counts = (
                 state_count_data.reindex(self.state_names[variable])
@@ -162,12 +135,14 @@ class BaseEstimator(object):
             # count how often each state of 'variable' occurred, conditional on parents' states
             if weighted:
                 state_count_data = (
-                    data.groupby([variable] + parents)["_weight"].sum().unstack(parents)
+                    self.data.groupby([variable] + parents)["_weight"]
+                    .sum()
+                    .unstack(parents)
                 )
 
             else:
                 state_count_data = (
-                    data.groupby([variable] + parents).size().unstack(parents)
+                    self.data.groupby([variable] + parents).size().unstack(parents)
                 )
 
             if not isinstance(state_count_data.columns, pd.MultiIndex):
@@ -209,12 +184,6 @@ class ParameterEstimator(BaseEstimator):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
     """
 
     def __init__(self, model, data, **kwargs):
@@ -236,12 +205,6 @@ class ParameterEstimator(BaseEstimator):
         ----------
         variable: string
             Name of the variable for which the state count is to be done.
-
-        complete_samples_only: bool
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.NaN` somewhere are ignored. If `False` then
-            every row where neither the variable nor its parents are `np.NaN` is used.
-            Desired default behavior can be passed to the class constructor.
 
         Returns
         -------
@@ -291,12 +254,6 @@ class StructureEstimator(BaseEstimator):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
     """
 
     def __init__(self, data=None, independencies=None, **kwargs):

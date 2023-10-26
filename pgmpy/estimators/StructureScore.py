@@ -25,12 +25,6 @@ class StructureScore(BaseEstimator):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
-
     Reference
     ---------
     Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
@@ -106,12 +100,6 @@ class K2Score(StructureScore):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
-
     References
     ---------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
@@ -182,12 +170,6 @@ class BDeuScore(StructureScore):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
 
     References
     ---------
@@ -268,12 +250,6 @@ class BDsScore(BDeuScore):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
 
     References
     ---------
@@ -367,12 +343,6 @@ class BicScore(StructureScore):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
-
     References
     ---------
     [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
@@ -434,12 +404,6 @@ class AICScore(StructureScore):
         A dict indicating, for each variable, the discrete set of states (or values)
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
 
     References
     ---------

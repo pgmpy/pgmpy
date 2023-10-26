@@ -24,12 +24,6 @@ class MmhcEstimator(StructureEstimator):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
-
     References
     ----------
     Tsamardinos et al., The max-min hill-climbing Bayesian network structure learning algorithm (2005)

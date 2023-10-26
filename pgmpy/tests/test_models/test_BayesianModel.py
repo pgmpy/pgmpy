@@ -707,9 +707,7 @@ class TestBayesianModelFitPredict(unittest.TestCase):
             )
 
     def test_fit_missing_data(self):
-        self.model2.fit(
-            self.data2, state_names={"C": [0, 1]}, complete_samples_only=False
-        )
+        self.model2.fit(self.data2, state_names={"C": [0, 1]})
         cpds = set(
             [
                 TabularCPD("A", 2, [[0.5], [0.5]]),
