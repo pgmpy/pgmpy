@@ -160,7 +160,7 @@ class LinearGaussianCPD(BaseFactor):
         self.sigma_yx = sigma_est
         return self.beta, self.sigma_yx
 
-    def fit(self, data, states, estimator=None, complete_samples_only=True, **kwargs):
+    def fit(self, data, states, estimator=None, **kwargs):
         """
         Determine βs from data
 
@@ -169,10 +169,6 @@ class LinearGaussianCPD(BaseFactor):
         data: pandas.DataFrame
             Dataframe containing samples from the conditional distribution, p(Y|X)
             estimator: 'MLE' or 'MAP'
-
-        completely_samples_only: boolean (True or False)
-            Are they downsampled or complete? Defaults to True
-
         """
         if estimator == "MLE":
             mean, variance = self.maximum_likelihood_estimator(data, states)

@@ -1,10 +1,10 @@
-import numpy as np
 import networkx as nx
+import numpy as np
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
 from pgmpy.global_vars import logger
+from pgmpy.models import BayesianNetwork
 
 
 class LinearGaussianBayesianNetwork(BayesianNetwork):
@@ -240,9 +240,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(
-        self, data, estimator=None, state_names=[], complete_samples_only=True, **kwargs
-    ):
+    def fit(self, data, estimator=None, state_names=[], **kwargs):
         """
         For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
         """

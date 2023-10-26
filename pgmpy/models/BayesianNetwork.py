@@ -515,7 +515,6 @@ class BayesianNetwork(DAG):
         data,
         estimator=None,
         state_names=[],
-        complete_samples_only=True,
         n_jobs=-1,
         **kwargs,
     ):
@@ -541,11 +540,6 @@ class BayesianNetwork(DAG):
             A dict indicating, for each variable, the discrete set of states
             that the variable can take. If unspecified, the observed values
             in the data set are taken to be the only possible states.
-
-        complete_samples_only: bool (default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
 
         n_jobs: int (default: -1)
             Number of threads/processes to use for estimation. It improves speed only
@@ -582,7 +576,6 @@ class BayesianNetwork(DAG):
             self,
             data,
             state_names=state_names,
-            complete_samples_only=complete_samples_only,
         )
         cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
         self.add_cpds(*cpds_list)
