@@ -211,11 +211,6 @@ class ParameterEstimator(BaseEstimator):
             every row where neither the variable nor its parents are `np.NaN` is used.
             This sets the behavior of the `state_count`-method.
         """
-
-        # if not (set(model.nodes()) - model.latents) <= set(data.columns.values):
-        #     raise ValueError(
-        #         "variable names of the model must be identical to column names in data"
-        #     )
         self.model = model
 
         super(ParameterEstimator, self).__init__(data, **kwargs)

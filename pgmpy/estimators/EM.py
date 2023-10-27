@@ -198,25 +198,24 @@ class ExpectationMaximization(ParameterEstimator):
             self.state_names[var] = list(range(n_states_dict[var]))
 
         # Step 3: Initialize CPDs.
-        # Step 3.1: Set a random seed.
-        if seed is not None:
-            np.random.seed(seed)
-
-        fixed_cpds = []
-        # Step 3.2: Learn the CPDs of variables which don't involve
+        # Step 3.1: Learn the CPDs of variables which don't involve
         #           latent variables using MLE.
+        fixed_cpds = []
         fixed_cpd_vars = (
             set(self.model.nodes())
             - self.model.latents
             - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
         )
-        model_all_obs = self.model.copy()
-        model_all_obs.latents = set()
-        mle = MaximumLikelihoodEstimator(model_all_obs, self.data)
+
+        mle = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
+        mle.model = self.model
+        mle.data = self.data
+        mle.state_names = self.state_names
+
         for var in fixed_cpd_vars:
             fixed_cpds.append(mle.estimate_cpd(var))
 
-        # Step 3.3: Randomly initialize the CPDs involving latent variables.
+        # Step 3.2: Randomly initialize the CPDs involving latent variables.
         latent_cpds = []
         vars_with_latents = set(self.model_copy.nodes()) - fixed_cpd_vars
         for node in vars_with_latents:
@@ -231,6 +230,7 @@ class ExpectationMaximization(ParameterEstimator):
                     state_names={
                         var: self.state_names[var] for var in chain([node], parents)
                     },
+                    seed=seed,
                 )
             )
 
@@ -239,6 +239,7 @@ class ExpectationMaximization(ParameterEstimator):
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
 
+        mle.model = self.model_copy
         # Step 4: Run the EM algorithm.
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
@@ -246,7 +247,8 @@ class ExpectationMaximization(ParameterEstimator):
             weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = fixed_cpds.copy()
-            mle = MaximumLikelihoodEstimator(self.model_copy, weighted_data)
+            mle.data = weighted_data
+            # mle = MaximumLikelihoodEstimator(self.model_copy, weighted_data)
             for var in vars_with_latents:
                 new_cpds.append(mle.estimate_cpd(var, weighted=True))
 
