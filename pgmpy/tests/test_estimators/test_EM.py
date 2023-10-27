@@ -14,11 +14,11 @@ from pgmpy.utils import get_example_model
 class TestEM(unittest.TestCase):
     def setUp(self):
         self.model1 = get_example_model("cancer")
-        self.data1 = self.model1.simulate(int(1e4))
+        self.data1 = self.model1.simulate(int(1e4), seed=42)
 
         self.model2 = BayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
-        self.data2 = self.model2.simulate(int(1e4))
+        self.data2 = self.model2.simulate(int(1e4), seed=42)
 
     def test_get_parameters(self):
         ## All observed
@@ -54,11 +54,11 @@ class TestEMTorch(unittest.TestCase):
         config.set_backend("torch")
 
         self.model1 = get_example_model("cancer")
-        self.data1 = self.model1.simulate(int(1e4))
+        self.data1 = self.model1.simulate(int(1e4), seed=42)
 
         self.model2 = BayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
-        self.data2 = self.model2.simulate(int(1e4))
+        self.data2 = self.model2.simulate(int(1e4), seed=42)
 
     def test_get_parameters(self):
         est = EM(self.model1, self.data1)
@@ -75,7 +75,7 @@ class TestEMTorch(unittest.TestCase):
             orig_cpd = self.model2.get_cpds(var)
 
             if "Smoker" in orig_cpd.variables:
-                orig_cpd.state_names["Smoker"] = [0, 1]
+                orig_cpd.state_names["Smoker"] = [1, 0]
 
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
