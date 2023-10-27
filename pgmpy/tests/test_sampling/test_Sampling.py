@@ -183,7 +183,6 @@ class TestBayesianModelSampling(unittest.TestCase):
         self.assertEqual(list(index_to_weight[0].round(2)), [0.4, 0.6])
         self.assertEqual(list(index_to_weight[1].round(2)), [0.75, 0.25])
 
-
     def test_forward_sample(self):
         # Test without state names
         sample = self.sampling_inference.forward_sample(int(1e5))
