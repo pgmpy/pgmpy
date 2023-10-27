@@ -4,3 +4,4 @@ pytest-cov
 coverage >= 4.3.4
 mock
 black
+pre-commit
