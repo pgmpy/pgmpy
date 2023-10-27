@@ -65,12 +65,12 @@ class BayesianModelInference(Inference):
         return cached_values
 
     @staticmethod
-    def _reduce(variable_cpd, variable_evid, sc):
+    def _reduce_marg(variable_cpd, variable_evid, reduce_index, sc):
         """
         Method to compute values of the `variable_cpd` when it it reduced on
-        `variable_evid` with states `sc_values`. This is a stripped down
-        version DiscreteFactor.reduce to only compute the values for faster
-        runtime.
+        `variable_evid` with states `sc_values`. Rest of the evidence variables
+        of `variable_cpd` are marginalized. This is a stripped down version
+        DiscreteFactor.reduce to only compute the values for faster runtime.
 
         Parameters
         ----------
@@ -96,8 +96,14 @@ class BayesianModelInference(Inference):
             ]
         except KeyError:
             values = sc
-        slice_ = [slice(None), *values]
-        return variable_cpd.values[tuple(slice_)]
+
+        slice_ = [slice(None) for i in range(len(variable_cpd.variables))]
+        for i, index in enumerate(reduce_index):
+            slice_[index] = values[i]
+
+        reduced_values = variable_cpd.values[tuple(slice_)]
+        marg_values = compat_fns.einsum(reduced_values, range(reduced_values.ndim), [0])
+        return marg_values / marg_values.sum()
 
     def pre_compute_reduce_maps(self, variable, evidence=None, state_combinations=None):
         """
@@ -111,6 +117,10 @@ class BayesianModelInference(Inference):
         variable: Bayesian Model Node
             node of the Bayesian network
 
+        evidence: list
+            List of evidence variables to compute the reduced values for. Rest
+            of the parent varaibles of the node are marginalized.
+
         state_combinations: list (default=None)
             List of tuple of state combinations for which to compute the reductions maps.
 
@@ -123,7 +133,7 @@ class BayesianModelInference(Inference):
         if evidence is None:
             evidence = [
                 var
-                for var in variable_cpd.variables[:0:-1]
+                for var in variable_cpd.variables[1:]
                 if var not in self.model.latents
             ]
 
@@ -135,9 +145,13 @@ class BayesianModelInference(Inference):
                 )
             ]
 
+        reduce_index = [variable_cpd.variables.index(var) for var in evidence]
+
         weights_list = compat_fns.stack(
             [
-                BayesianModelInference._reduce(variable_cpd, evidence, sc)
+                BayesianModelInference._reduce_marg(
+                    variable_cpd, evidence, reduce_index, sc
+                )
                 for sc in state_combinations
             ]
         )
