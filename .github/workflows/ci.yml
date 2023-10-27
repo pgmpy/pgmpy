@@ -14,7 +14,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{matrix.python-version}}
-          cache: 'pip'
       - name: Print python info
         run: |
           which python
