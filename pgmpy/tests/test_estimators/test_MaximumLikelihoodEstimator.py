@@ -50,7 +50,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
         self.assertEqual(self.mle1.estimate_cpd("B"), self.cpds[1])
         self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(self.mle1.get_parameters()), 3)
+        self.assertEqual(len(self.mle1.get_parameters(n_jobs=1)), 3)
 
     def test_estimate_cpd(self):
         self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
@@ -102,7 +102,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(mle.estimate_cpd("A"), self.cpds[0])
         self.assertEqual(mle.estimate_cpd("B"), self.cpds[1])
         self.assertEqual(mle.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(mle.get_parameters()), 3)
+        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
 
     def test_nonoccurring_values(self):
         mle = MaximumLikelihoodEstimator(
@@ -131,7 +131,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(mle.estimate_cpd("A"), cpds[0])
         self.assertEqual(mle.estimate_cpd("B"), cpds[1])
         self.assertEqual(mle.estimate_cpd("C"), cpds[2])
-        self.assertEqual(len(mle.get_parameters()), 3)
+        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
 
     def test_missing_data(self):
         e1 = MaximumLikelihoodEstimator(self.m1, self.d2, state_names={"C": [0, 1]})
@@ -149,7 +149,7 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(e1.estimate_cpd("A"), cpds1[0])
         self.assertEqual(e1.estimate_cpd("B"), cpds1[1])
         self.assertEqual(e1.estimate_cpd("C"), cpds1[2])
-        self.assertEqual(len(e1.get_parameters()), 3)
+        self.assertEqual(len(e1.get_parameters(n_jobs=1)), 3)
 
     def tearDown(self):
         del self.m1
@@ -201,7 +201,7 @@ class TestMLETorch(unittest.TestCase):
         self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
         self.assertEqual(self.mle1.estimate_cpd("B"), self.cpds[1])
         self.assertEqual(self.mle1.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(self.mle1.get_parameters()), 3)
+        self.assertEqual(len(self.mle1.get_parameters(n_jobs=1)), 3)
 
     def test_estimate_cpd(self):
         self.assertEqual(self.mle1.estimate_cpd("A"), self.cpds[0])
@@ -253,7 +253,7 @@ class TestMLETorch(unittest.TestCase):
         self.assertEqual(mle.estimate_cpd("A"), self.cpds[0])
         self.assertEqual(mle.estimate_cpd("B"), self.cpds[1])
         self.assertEqual(mle.estimate_cpd("C"), self.cpds[2])
-        self.assertEqual(len(mle.get_parameters()), 3)
+        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
 
     def test_nonoccurring_values(self):
         mle = MaximumLikelihoodEstimator(
@@ -282,7 +282,7 @@ class TestMLETorch(unittest.TestCase):
         self.assertEqual(mle.estimate_cpd("A"), cpds[0])
         self.assertEqual(mle.estimate_cpd("B"), cpds[1])
         self.assertEqual(mle.estimate_cpd("C"), cpds[2])
-        self.assertEqual(len(mle.get_parameters()), 3)
+        self.assertEqual(len(mle.get_parameters(n_jobs=1)), 3)
 
     def test_missing_data(self):
         e1 = MaximumLikelihoodEstimator(self.m1, self.d2, state_names={"C": [0, 1]})
@@ -300,7 +300,7 @@ class TestMLETorch(unittest.TestCase):
         self.assertEqual(e1.estimate_cpd("A"), cpds1[0])
         self.assertEqual(e1.estimate_cpd("B"), cpds1[1])
         self.assertEqual(e1.estimate_cpd("C"), cpds1[2])
-        self.assertEqual(len(e1.get_parameters()), 3)
+        self.assertEqual(len(e1.get_parameters(n_jobs=1)), 3)
 
     def tearDown(self):
         del self.m1
