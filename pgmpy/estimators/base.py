@@ -187,10 +187,30 @@ class ParameterEstimator(BaseEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
-        if not (set(model.nodes()) - model.latents) <= set(data.columns.values):
-            raise ValueError(
-                "variable names of the model must be identical to column names in data"
-            )
+        """
+        Base class for parameter estimators in pgmpy.
+
+        Parameters
+        ----------
+        model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork or pgmpy.models.NoisyOrModel model
+            for which parameter estimation is to be done.
+
+        data: pandas DataFrame object
+            dataframe object with column names identical to the variable names of the model.
+            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+        state_names: dict (optional)
+            A dict indicating, for each variable, the discrete set of states (or values)
+            that the variable can take. If unspecified, the observed values in the data set
+            are taken to be the only possible states.
+
+        complete_samples_only: bool (optional, default `True`)
+            Specifies how to deal with missing data, if present. If set to `True` all rows
+            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
+            every row where neither the variable nor its parents are `np.NaN` is used.
+            This sets the behavior of the `state_count`-method.
+        """
         self.model = model
 
         super(ParameterEstimator, self).__init__(data, **kwargs)

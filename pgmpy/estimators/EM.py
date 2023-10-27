@@ -87,7 +87,9 @@ class ExpectationMaximization(ParameterEstimator):
             )
             for index, latent_var in enumerate(latent_card.keys()):
                 df[latent_var] = latent_combinations[:, index]
-            weights = df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
+            weights = np.e ** (
+                df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1)
+            )
             df["_weight"] = (weights / weights.sum()) * n_counts[
                 tuple(data_unique.iloc[i])
             ]
@@ -195,14 +197,30 @@ class ExpectationMaximization(ParameterEstimator):
         for var in self.model_copy.latents:
             self.state_names[var] = list(range(n_states_dict[var]))
 
-        # Step 3: Initialize random CPDs if starting values aren't provided.
-        if seed is not None:
-            np.random.seed(seed)
+        # Step 3: Initialize CPDs.
+        # Step 3.1: Learn the CPDs of variables which don't involve
+        #           latent variables using MLE.
+        fixed_cpds = []
+        fixed_cpd_vars = (
+            set(self.model.nodes())
+            - self.model.latents
+            - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+        )
 
-        cpds = []
-        for node in self.model_copy.nodes():
+        mle = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
+        mle.model = self.model
+        mle.data = self.data
+        mle.state_names = self.state_names
+
+        for var in fixed_cpd_vars:
+            fixed_cpds.append(mle.estimate_cpd(var))
+
+        # Step 3.2: Randomly initialize the CPDs involving latent variables.
+        latent_cpds = []
+        vars_with_latents = set(self.model_copy.nodes()) - fixed_cpd_vars
+        for node in vars_with_latents:
             parents = list(self.model_copy.predecessors(node))
-            cpds.append(
+            latent_cpds.append(
                 TabularCPD.get_random(
                     variable=node,
                     evidence=parents,
@@ -212,23 +230,27 @@ class ExpectationMaximization(ParameterEstimator):
                     state_names={
                         var: self.state_names[var] for var in chain([node], parents)
                     },
+                    seed=seed,
                 )
             )
 
-        self.model_copy.add_cpds(*cpds)
+        self.model_copy.add_cpds(*list(chain(fixed_cpds, latent_cpds)))
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_iter)
 
+        mle.model = self.model_copy
         # Step 4: Run the EM algorithm.
         for _ in range(max_iter):
             # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
             #           possible state of latent variables.
             weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
-            new_cpds = MaximumLikelihoodEstimator(
-                self.model_copy, weighted_data
-            ).get_parameters(n_jobs=n_jobs, weighted=True)
+            new_cpds = fixed_cpds.copy()
+            mle.data = weighted_data
+            # mle = MaximumLikelihoodEstimator(self.model_copy, weighted_data)
+            for var in vars_with_latents:
+                new_cpds.append(mle.estimate_cpd(var, weighted=True))
 
             # Step 4.3: Check of convergence and max_iter
             if self._is_converged(new_cpds, atol=atol):
@@ -241,4 +263,4 @@ class ExpectationMaximization(ParameterEstimator):
                 if show_progress and config.SHOW_PROGRESS:
                     pbar.update(1)
 
-        return cpds
+        return new_cpds

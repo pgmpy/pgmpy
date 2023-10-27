@@ -45,9 +45,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for BayesianNetwork"
             )
+
         elif set(model.nodes()) > set(data.columns):
             raise ValueError(
-                f"Maximum Likelihood Estimator works only for models with all observed variables. Found latent variables: {model.latents}."
+                f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
             )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
