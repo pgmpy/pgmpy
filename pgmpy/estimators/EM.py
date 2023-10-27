@@ -128,7 +128,7 @@ class ExpectationMaximization(ParameterEstimator):
         latent_card=None,
         max_iter=100,
         atol=1e-08,
-        n_jobs=-1,
+        n_jobs=1,
         batch_size=1000,
         seed=None,
         show_progress=True,
@@ -151,9 +151,9 @@ class ExpectationMaximization(ParameterEstimator):
             The absolute accepted tolerance for checking convergence. If the parameters
             change is less than atol in an iteration, the algorithm will exit.
 
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. Default: -1 uses all the processors.
-            Suggest to use n_jobs=1 when dataset size is less than 1000.
+        n_jobs: int (default: 1)
+            Number of jobs to run in parallel.
+            Using n_jobs > 1 for small models or datasets might be slower.
 
         batch_size: int (default: 1000)
             Number of data used to compute weights in a batch.

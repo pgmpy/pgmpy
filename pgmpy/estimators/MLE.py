@@ -52,15 +52,16 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, n_jobs=-1, weighted=False):
+    def get_parameters(self, n_jobs=1, weighted=False):
         """
         Method to estimate the model parameters (CPDs) using Maximum Likelihood
         Estimation.
 
         Parameters
         ----------
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. Default: -1 uses all the processors.
+        n_jobs: int (default: 1)
+            Number of jobs to run in parallel. Default: 1 uses all the processors.
+            Using n_jobs > 1 for small models might be slower.
 
         weighted: bool
             If weighted=True, the data must contain a `_weight` column specifying the

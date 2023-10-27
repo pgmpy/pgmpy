@@ -35,7 +35,7 @@ class BayesianEstimator(ParameterEstimator):
         prior_type="BDeu",
         equivalent_sample_size=5,
         pseudo_counts=None,
-        n_jobs=-1,
+        n_jobs=1,
         weighted=False,
     ):
         """
@@ -58,6 +58,16 @@ class BayesianEstimator(ParameterEstimator):
                 the size for each variable separately.
             - A prior_type of 'K2' is a shorthand for 'dirichlet' + setting every pseudo_count to 1,
                 regardless of the cardinality of the variable.
+
+        equivalent_sample_size: int
+            Refer `priort_type` for more details.
+
+        pseudo_counts: int (default: None)
+            Refer `priort_type` for more details.
+
+        n_jobs: int (default: 1)
+            Number of jobs to run in parallel. Default: 1 uses all the processors.
+            Using n_jobs > 1 for small models might be slower.
 
         weighted: bool
             If weighted=True, the data must contain a `_weight` column specifying the
