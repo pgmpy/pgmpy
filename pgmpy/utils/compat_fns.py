@@ -1,4 +1,5 @@
 ## Redefines function for pytorch and numpy backends, so that they have same behavior
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -12,8 +13,13 @@ def size(arr):
 
 
 def copy(arr):
-    if isinstance(arr, np.ndarray):
-        return np.array(arr)
+    from pgmpy import config
+
+    if config.BACKEND == "numpy":
+        if isinstance(arr, np.ndarray):
+            return np.array(arr)
+        elif isinstance(arr, (int, float)):
+            return deepcopy(arr)
     else:
         return torch.clone(arr)
 
