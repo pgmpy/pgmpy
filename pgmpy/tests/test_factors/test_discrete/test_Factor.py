@@ -369,6 +369,13 @@ class TestFactorMethods(unittest.TestCase):
         self.phi5.marginalize([self.tup3])
         np_test.assert_array_equal(self.phi5.values, np.array([276]))
 
+        # Issue 1687. Marginalization when factor on single variable.
+        joint = DiscreteFactor(["x"], [2], np.array([0.3, 0.7]))
+        marginal = joint.marginalize(["x"], inplace=False)
+        self.assertEqual(marginal.values, 1.0)
+        self.assertEqual(marginal.variables, [])
+        self.assertEqual(list(marginal.cardinality), [])
+
     def test_marginalize_scopeerror(self):
         self.assertRaises(ValueError, self.phi.marginalize, ["x4"])
         self.phi.marginalize(["x1"])
