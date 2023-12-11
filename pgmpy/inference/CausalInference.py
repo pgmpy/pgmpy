@@ -505,12 +505,19 @@ class CausalInference(object):
 
         Examples
         --------
+        >>> from pgmpy.models import BayesianNetwork
+        >>> from pgmpy.inference import CausalInference
+
+        >>> dag = BayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        >>> infer = CausalInference(dag)
+        >>> infer.get_minimal_adjustment_set("X_1", "X_2")
+        {'Z'}
 
         References
         ----------
         [1] Perkovic, Emilija, et al. "Complete graphical characterization and construction of adjustment sets in Markov equivalence classes of ancestral graphs." The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
         """
-        backdoor_graph = self.get_proper_backdoor_graph(X, Y, inplace=False)
+        backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)
 
     def query(
