@@ -35,12 +35,6 @@ class ExhaustiveSearch(StructureEstimator):
         If True, uses caching of score for faster computation.
         Note: Caching only works for scoring methods which are decomposable. Can
         give wrong results in case of custom scoring methods.
-
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
     """
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):

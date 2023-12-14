@@ -1,10 +1,10 @@
 import unittest
 
-from pandas import DataFrame
 from numpy import NaN
+from pandas import DataFrame
 
-from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import ParameterEstimator
+from pgmpy.models import BayesianNetwork
 
 
 class TestParameterEstimator(unittest.TestCase):
@@ -31,17 +31,8 @@ class TestParameterEstimator(unittest.TestCase):
         )
 
     def test_missing_data(self):
-        e = ParameterEstimator(
-            self.m1, self.d2, state_names={"C": [0, 1]}, complete_samples_only=False
-        )
-        self.assertEqual(
-            e.state_counts("A", complete_samples_only=True).values.tolist(), [[0], [0]]
-        )
+        e = ParameterEstimator(self.m1, self.d2, state_names={"C": [0, 1]})
         self.assertEqual(e.state_counts("A").values.tolist(), [[1], [1]])
-        self.assertEqual(
-            e.state_counts("C", complete_samples_only=True).values.tolist(),
-            [[0, 0, 0, 0], [0, 0, 0, 0]],
-        )
         self.assertEqual(
             e.state_counts("C").values.tolist(), [[0, 0, 0, 0], [1, 0, 0, 0]]
         )

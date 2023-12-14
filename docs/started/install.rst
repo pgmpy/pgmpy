@@ -1,7 +1,7 @@
 Installation
 ============
 
-pgmpy requires Python 3.7+. pgmpy is hosted on both pypi and anaconda. For installation through pypi, use the command:
+pgmpy requires Python >=3.8, <=3.11. pgmpy is hosted on both pypi and anaconda. For installation through pypi, use the command:
 
 .. code-block:: bash
 
@@ -25,7 +25,7 @@ Requirements
 
 If installing manually, the following non-optional dependencies needs to be installed:
 
-* Python 3.7+ 
+* Python 3.7+
 * numpy
 * scipy
 * scikit-learn
@@ -35,4 +35,3 @@ If installing manually, the following non-optional dependencies needs to be inst
 * statsmodels
 * tqdm
 * joblib
-

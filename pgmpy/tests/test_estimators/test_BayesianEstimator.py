@@ -133,7 +133,7 @@ class TestBayesianEstimator(unittest.TestCase):
                 self.est3.estimate_cpd("C"),
             ]
         )
-        self.assertSetEqual(set(self.est3.get_parameters()), cpds)
+        self.assertSetEqual(set(self.est3.get_parameters(n_jobs=1)), cpds)
 
     def test_get_parameters2(self):
         pseudo_counts = {
@@ -157,7 +157,7 @@ class TestBayesianEstimator(unittest.TestCase):
         self.assertSetEqual(
             set(
                 self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts
+                    prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
                 )
             ),
             cpds,
@@ -181,7 +181,7 @@ class TestBayesianEstimator(unittest.TestCase):
         self.assertSetEqual(
             set(
                 self.est3.get_parameters(
-                    prior_type="dirichlet", pseudo_counts=pseudo_counts
+                    prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
                 )
             ),
             cpds,
@@ -320,7 +320,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             self.est3.estimate_cpd("B"),
             self.est3.estimate_cpd("C"),
         ]
-        all_cpds = self.est3.get_parameters()
+        all_cpds = self.est3.get_parameters(n_jobs=1)
         self.assertListEqual(
             sorted(cpds, key=lambda t: t.variables[0]),
             sorted(all_cpds, key=lambda t: t.variables[0]),
@@ -346,7 +346,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             ]
         )
         all_cpds = self.est3.get_parameters(
-            prior_type="dirichlet", pseudo_counts=pseudo_counts
+            prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
         )
         self.assertListEqual(
             sorted(cpds, key=lambda t: t.variables[0]),
@@ -369,7 +369,7 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
             ]
         )
         all_cpds = self.est3.get_parameters(
-            prior_type="dirichlet", pseudo_counts=pseudo_counts
+            prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1
         )
         self.assertListEqual(
             sorted(cpds, key=lambda t: t.variables[0]),

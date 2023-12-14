@@ -515,8 +515,7 @@ class BayesianNetwork(DAG):
         data,
         estimator=None,
         state_names=[],
-        complete_samples_only=True,
-        n_jobs=-1,
+        n_jobs=1,
         **kwargs,
     ):
         """
@@ -542,15 +541,9 @@ class BayesianNetwork(DAG):
             that the variable can take. If unspecified, the observed values
             in the data set are taken to be the only possible states.
 
-        complete_samples_only: bool (default `True`)
-            Specifies how to deal with missing data, if present. If set to `True` all rows
-            that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
-
-        n_jobs: int (default: -1)
-            Number of threads/processes to use for estimation. It improves speed only
-            for large networks (>100 nodes). For smaller networks might reduce
-            performance.
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
 
         Returns
         -------
@@ -582,12 +575,11 @@ class BayesianNetwork(DAG):
             self,
             data,
             state_names=state_names,
-            complete_samples_only=complete_samples_only,
         )
         cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
         self.add_cpds(*cpds_list)
 
-    def fit_update(self, data, n_prev_samples=None, n_jobs=-1):
+    def fit_update(self, data, n_prev_samples=None, n_jobs=1):
         """
         Method to update the parameters of the BayesianNetwork with more data.
         Internally, uses BayesianEstimator with dirichlet prior, and uses
@@ -603,10 +595,9 @@ class BayesianNetwork(DAG):
             This parameter determines how much weight should the new data be given.
             If None, n_prev_samples = nrow(data).
 
-        n_jobs: int (default: -1)
-            Number of threads/processes to use for estimation. It improves speed only
-            for large networks (>100 nodes). For smaller networks might reduce
-            performance.
+        n_jobs: int (default: 1)
+            Number of threads/processes to use for estimation. Using n_jobs > 1
+            for small models or datasets might be slower.
 
         Returns
         -------
