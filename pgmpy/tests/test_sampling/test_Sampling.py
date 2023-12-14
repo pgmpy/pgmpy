@@ -148,12 +148,40 @@ class TestBayesianModelSampling(unittest.TestCase):
     def test_pre_compute_reduce_maps(self):
         base_infer = BayesianModelInference(self.bayesian_model)
         state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
-            "J", [(1, 1), (0, 1)]
+            "J", ["A", "R"], [(1, 1), (1, 0)]
         )
         self.assertEqual(state_to_index[(1, 1)], 0)
-        self.assertEqual(state_to_index[(0, 1)], 1)
+        self.assertEqual(state_to_index[(1, 0)], 1)
         self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
         self.assertEqual(list(index_to_weight[1]), [0.6, 0.4])
+
+        # Make sure the order of the evidence variables doen't matter
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["R", "A"], [(1, 1), (1, 0)]
+        )
+        self.assertEqual(state_to_index[(1, 1)], 0)
+        self.assertEqual(state_to_index[(1, 0)], 1)
+        self.assertEqual(list(index_to_weight[0]), [0.1, 0.9])
+        self.assertEqual(list(index_to_weight[1]), [0.7, 0.3])
+
+    def test_pred_compute_reduce_maps_partial_evidence(self):
+        base_infer = BayesianModelInference(self.bayesian_model)
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["A"], [(1,), (0,)]
+        )
+        self.assertEqual(state_to_index[(1,)], 0)
+        self.assertEqual(state_to_index[(0,)], 1)
+        self.assertEqual(list(index_to_weight[0].round(2)), [0.35, 0.65])
+        self.assertEqual(list(index_to_weight[1].round(2)), [0.8, 0.2])
+
+        # Make sure the order of the evidence variables doen't matter
+        state_to_index, index_to_weight = base_infer.pre_compute_reduce_maps(
+            "J", ["R"], [(1,), (0,)]
+        )
+        self.assertEqual(state_to_index[(1,)], 0)
+        self.assertEqual(state_to_index[(0,)], 1)
+        self.assertEqual(list(index_to_weight[0].round(2)), [0.4, 0.6])
+        self.assertEqual(list(index_to_weight[1].round(2)), [0.75, 0.25])
 
     def test_forward_sample(self):
         # Test without state names

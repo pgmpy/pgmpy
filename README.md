@@ -7,11 +7,11 @@ pgmpy
 [![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
 
-pgmpy is a python library for working with Probabilistic Graphical Models.  
+pgmpy is a python library for working with Probabilistic Graphical Models.
 
-Documentation  and list of algorithms supported is at our official site http://pgmpy.org/  
-Examples on using pgmpy: https://github.com/pgmpy/pgmpy/tree/dev/examples  
-Basic tutorial on Probabilistic Graphical models using pgmpy: https://github.com/pgmpy/pgmpy_notebook  
+Documentation  and list of algorithms supported is at our official site http://pgmpy.org/
+Examples on using pgmpy: https://github.com/pgmpy/pgmpy/tree/dev/examples
+Basic tutorial on Probabilistic Graphical models using pgmpy: https://github.com/pgmpy/pgmpy_notebook
 
 Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
 
@@ -20,9 +20,9 @@ We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 Dependencies
 =============
 pgmpy has the following non-optional dependencies:
-- python 3.6 or higher
+- python >=3.8, <=3.11
 - networkX
-- scipy 
+- scipy
 - numpy
 - pytorch
 
@@ -48,7 +48,7 @@ $ pip install pgmpy
 
 To install pgmpy from the source code:
 ```
-$ git clone https://github.com/pgmpy/pgmpy 
+$ git clone https://github.com/pgmpy/pgmpy
 $ cd pgmpy/
 $ pip install -r requirements.txt
 $ python setup.py install
@@ -123,4 +123,3 @@ Please use the following bibtex for citing `pgmpy` in your research:
 License
 =======
 pgmpy is released under MIT License. You can read about our license at [here](https://github.com/pgmpy/pgmpy/blob/dev/LICENSE)
-

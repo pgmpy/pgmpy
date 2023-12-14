@@ -28,11 +28,6 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         that the variable can take. If unspecified, the observed values
         in the data set are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.NaN` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-
     Examples
     --------
     >>> import numpy as np
@@ -50,22 +45,24 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for BayesianNetwork"
             )
+
         elif set(model.nodes()) > set(data.columns):
             raise ValueError(
-                f"Maximum Likelihood Estimator works only for models with all observed variables. Found latent variables: {model.latents}."
+                f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
             )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
-    def get_parameters(self, n_jobs=-1, weighted=False):
+    def get_parameters(self, n_jobs=1, weighted=False):
         """
         Method to estimate the model parameters (CPDs) using Maximum Likelihood
         Estimation.
 
         Parameters
         ----------
-        n_jobs: int (default: -1)
-            Number of jobs to run in parallel. Default: -1 uses all the processors.
+        n_jobs: int (default: 1)
+            Number of jobs to run in parallel. Default: 1 uses all the processors.
+            Using n_jobs > 1 for small models might be slower.
 
         weighted: bool
             If weighted=True, the data must contain a `_weight` column specifying the

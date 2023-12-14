@@ -131,7 +131,6 @@ html_theme = "alabaster"
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "analytics_id": "UA-177825880-1",
     "sidebar_width": "280px",
     "logo": "logo.png",
     "page_width": "1000px",
@@ -183,6 +182,7 @@ html_sidebars = {
         "relations.html",
         "donate.html",
         "ethicalads.html",
+        "ga.html",
         "searchbox.html",
     ]
 }

@@ -36,12 +36,6 @@ class HillClimbSearch(StructureEstimator):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    complete_samples_only: bool (optional, default `True`)
-        Specifies how to deal with missing data, if present. If set to `True` all rows
-        that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-        every row where neither the variable nor its parents are `np.NaN` is used.
-        This sets the behavior of the `state_count`-method.
-
     use_caching: boolean
         If True, uses caching of score for faster computation.
         Note: Caching only works for scoring methods which are decomposable. Can

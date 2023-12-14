@@ -597,7 +597,7 @@ class TabularCPD(DiscreteFactor):
         return self.variables[:0:-1]
 
     @staticmethod
-    def get_random(variable, evidence=None, cardinality=None, state_names={}):
+    def get_random(variable, evidence=None, cardinality=None, state_names={}, seed=42):
         """
         Generates a TabularCPD instance with random values on `variable` with
         parents/evidence `evidence` with cardinality/number of states as given
@@ -638,6 +638,8 @@ class TabularCPD(DiscreteFactor):
         ...                         'B': ['b1', 'b2'],
         ...                         'C': ['c1', 'c2']})
         """
+        generator = np.random.default_rng(seed=seed)
+
         if evidence is None:
             evidence = []
 
@@ -649,7 +651,7 @@ class TabularCPD(DiscreteFactor):
                     raise ValueError(f"Cardinality for variable: {var} not specified.")
 
         if len(evidence) == 0:
-            values = np.random.rand(cardinality[variable], 1)
+            values = generator.random((cardinality[variable], 1))
             values = values / np.sum(values, axis=0)
             node_cpd = TabularCPD(
                 variable=variable,
@@ -659,7 +661,7 @@ class TabularCPD(DiscreteFactor):
             )
         else:
             parent_card = [cardinality[var] for var in evidence]
-            values = np.random.rand(cardinality[variable], np.prod(parent_card))
+            values = generator.random((cardinality[variable], np.prod(parent_card)))
             values = values / np.sum(values, axis=0)
             node_cpd = TabularCPD(
                 variable=variable,
