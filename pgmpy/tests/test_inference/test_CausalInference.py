@@ -106,6 +106,8 @@ class TestAdjustmentSet(unittest.TestCase):
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertEqual(adj_set, {"Z"})
 
+        self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="W", Y="Y")
+
         # M graph
         dag2 = BayesianNetwork(
             [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")]
@@ -136,6 +138,14 @@ class TestAdjustmentSet(unittest.TestCase):
         infer = CausalInference(dag_lat2)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
+
+    def test_issue_1710(self):
+        dag = BayesianNetwork([("X_1", "X_2"), ("Z", "X_1"), ("Z", "X_2")])
+        infer = CausalInference(dag)
+        adj_set = infer.get_minimal_adjustment_set("X_1", "X_2")
+
+        self.assertEqual(adj_set, {"Z"})
+        self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="X_3", Y="Y")
 
 
 class TestBackdoorPaths(unittest.TestCase):
