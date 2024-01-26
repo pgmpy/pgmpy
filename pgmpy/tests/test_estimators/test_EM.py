@@ -40,6 +40,25 @@ class TestEM(unittest.TestCase):
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
+    def test_get_parameters_initial_cpds(self):
+        # All observed. Specify initial CPDs.
+        est = EM(self.model1, self.data1)
+        smoker_initial = None # Specify the initial CPD
+        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+
+        # Test the values
+
+        # With latents. Specify initial CPDs only for latent.
+        est = EM(self.model2, self.data2)
+        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        # Test the values
+
+        # With latents. Specify initial CPDs for both latents and observed.
+        est = EM(self.model2, self.data2)
+        # Add another observed only initial CPD here.
+        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial, }, seed=42, n_jobs=1, show_progress=False)
+        # Test the values
+
     def tearDown(self):
         del self.model1
         del self.model2
