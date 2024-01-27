@@ -4,7 +4,9 @@ import itertools
 from collections import defaultdict
 
 import numpy as np
+from scipy.special import logsumexp
 from networkx.algorithms import bipartite
+from pgmpy.factors.base import factor_log_sum
 
 from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.base import UndirectedGraph
@@ -434,6 +436,15 @@ class FactorGraph(UndirectedGraph):
             raise ValueError("DiscreteFactor for all the random variables not defined.")
 
         return np.sum(factor.values)
+
+    def get_log_partition_function(self):
+        factor = self.factors[0]
+        factor = factor_log_sum(
+            factor, *[self.factors[i] for i in range(1, len(self.factors))]
+        )
+        if set(factor.scope()) != set(self.get_variable_nodes()):
+            raise ValueError("DiscreteFactor for all the random variables not defined.")
+        return logsumexp(factor.values)
 
     def copy(self):
         """

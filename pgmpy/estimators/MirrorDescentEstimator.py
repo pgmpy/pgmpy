@@ -15,6 +15,8 @@ class MirrorDescentEstimator(MarginalEstimator):
         iterations: int,
         alpha: Optional[float] = None,
         show_progress: bool = True,
+        potential_min: Optional[float] = None,
+        potential_max: Optional[float] = None,
     ) -> JunctionTree:
         # Step 1: Map each marginal to the first clique that contains it.
         if self.data is None:
@@ -24,13 +26,14 @@ class MirrorDescentEstimator(MarginalEstimator):
             alpha = 2.0 / len(self.data) ** 2
 
         clique_to_marginal = self._clique_to_marginal(
-            marginals=FactorDict.from_dataframe(df=self.data, marginals=marginals)
+            marginals=FactorDict.from_dataframe(df=self.data, marginals=marginals),
+            clique_nodes=self.belief_propagation.junction_tree.nodes(),
         )
 
         # Step 2: Perform one gradient update to initialize variables.
-        theta = self.belief_propagation.junction_tree.factor_dict
+        theta = self.belief_propagation.junction_tree.clique_beliefs
         self.belief_propagation.calibrate()
-        mu = self.belief_propagation.junction_tree.factor_dict
+        mu = self.belief_propagation.junction_tree.clique_beliefs
         loss, dL = self._marginal_loss(
             marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
         )
@@ -50,11 +53,17 @@ class MirrorDescentEstimator(MarginalEstimator):
             for __ in range(25):
                 # Take gradient step.
                 theta = omega - alpha * dL
+                
+                if potential_min:
+                    theta.max(potential_min, inplace=True)
+
+                if potential_max:
+                    theta.min(potential_max, inplace=True)
 
                 # Assign gradient step to the junction tree.
-                self.belief_propagation.junction_tree.factor_dict = theta
+                self.belief_propagation.junction_tree.clique_beliefs = theta
                 self.belief_propagation.calibrate()
-                mu = self.belief_propagation.junction_tree.factor_dict
+                mu = self.belief_propagation.junction_tree.clique_beliefs
                 loss, dL = self._marginal_loss(
                     marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
                 )

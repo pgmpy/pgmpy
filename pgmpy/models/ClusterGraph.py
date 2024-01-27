@@ -213,18 +213,13 @@ class ClusterGraph(UndirectedGraph):
             self.factors.remove(factor)
 
     @property
-    def factor_dict(self) -> FactorDict:
-        return FactorDict(
-            {
-                clique: self.get_factors(clique)
-                for clique in self.nodes()
-            }
-        )
+    def clique_beliefs(self) -> FactorDict:
+        return FactorDict({clique: self.get_factors(clique) for clique in self.nodes()})
 
-    @factor_dict.setter
-    def factor_dict(self, factor_dict: FactorDict) -> None:
+    @clique_beliefs.setter
+    def clique_beliefs(self, clique_beliefs: FactorDict) -> None:
         self.remove_factors(*self.get_factors())
-        self.add_factors(*factor_dict.values())
+        self.add_factors(*clique_beliefs.values())
 
     def get_cardinality(self, node=None):
         """

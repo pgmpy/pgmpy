@@ -304,12 +304,13 @@ class MarginalEstimator(BaseEstimator):
         super().__init__(data, **kwargs)
         self.belief_propagation = BeliefPropagation(model=model)
 
+    @staticmethod
     def _clique_to_marginal(
-        self, marginals: FactorDict
+        marginals: FactorDict, clique_nodes: List[Tuple[str, ...]]
     ) -> Dict[Tuple[str, ...], List[DiscreteFactor]]:
         _clique_to_marginal = defaultdict(lambda: [])
         for marginal_clique, marginal in marginals.items():
-            for clique in self.belief_propagation.junction_tree.nodes():
+            for clique in clique_nodes:
                 if set(marginal_clique) <= set(clique):
                     _clique_to_marginal[clique].append(marginal)
                     break

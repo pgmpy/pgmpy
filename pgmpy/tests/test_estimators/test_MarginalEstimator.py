@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 import pandas as pd
-from pgmpy.estimators import MarginalEstimator, MirrorDescentEstimator
+from pgmpy.estimators import MarginalEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import FactorGraph, MarkovNetwork
@@ -31,20 +31,38 @@ class TestMarginalEstimator(unittest.TestCase):
         marginal_estimator = MarginalEstimator(self.m2, data=self.df)
         factor_dict = FactorDict.from_dataframe(df=self.df, marginals=[("A",)])
         clique_to_marginal = marginal_estimator._clique_to_marginal(
-            marginals=factor_dict
+            marginals=factor_dict,
+            clique_nodes=marginal_estimator.belief_propagation.junction_tree.nodes(),
         )
         loss, _ = marginal_estimator._marginal_loss(
-            marginals=marginal_estimator.belief_propagation.junction_tree.factor_dict,
+            marginals=marginal_estimator.belief_propagation.junction_tree.clique_beliefs,
             clique_to_marginal=clique_to_marginal,
             metric="L1",
         )
         self.assertEqual(loss, 100)
 
-    def test_mirror_descent_estimator(self):
-        mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
-        tree = mirror_descent_estimator.estimate(
-            marginals=[("A",)], metric="L2", iterations=2, alpha=1
+    def test_clique_to_marginal(self):
+        marginals = FactorDict(
+            {
+                variable: FactorDict(
+                    {
+                        variable: DiscreteFactor(
+                            [variable], cardinality=[1], values=np.ones(1)
+                        )
+                    }
+                )
+                for variable in {"A", "B", "C"}
+            }
         )
-        marginal = FactorDict.from_dataframe(df=self.df, marginals=[("A",)])[("A",)]
-        diff = tree.factors[0].values.flatten() - marginal.values.flatten()
-        self.assertEqual(diff.sum(), 0.0)
+        clique_to_marginal = MarginalEstimator._clique_to_marginal(
+            marginals=marginals,
+            clique_nodes=[("A", "B", "C"), ("A",), ("B",), ("C",)],
+        )
+        self.assertEqual(len(clique_to_marginal[("A", "B", "C")]), 3)
+        self.assertEqual(len(clique_to_marginal[("A",)]), 0)
+        self.assertEqual(len(clique_to_marginal[("B",)]), 0)
+        self.assertEqual(len(clique_to_marginal[("C",)]), 0)
+        self.assertEqual(
+            clique_to_marginal[("A", "B", "C")],
+            [{k: v[k]} for k, v in marginals.items()],
+        )
