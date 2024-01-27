@@ -5,7 +5,7 @@ from collections import defaultdict
 import numpy as np
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors import factor_product
+from pgmpy.factors import FactorDict, factor_product
 
 
 class ClusterGraph(UndirectedGraph):
@@ -211,6 +211,20 @@ class ClusterGraph(UndirectedGraph):
         """
         for factor in factors:
             self.factors.remove(factor)
+
+    @property
+    def factor_dict(self) -> FactorDict:
+        return FactorDict(
+            {
+                clique: self.get_factors(clique)
+                for clique in self.nodes()
+            }
+        )
+
+    @factor_dict.setter
+    def factor_dict(self, factor_dict: FactorDict) -> None:
+        self.remove_factors(*self.get_factors())
+        self.add_factors(*factor_dict.values())
 
     def get_cardinality(self, node=None):
         """

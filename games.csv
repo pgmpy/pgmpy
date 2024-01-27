@@ -1,0 +1,283 @@
+date,visitorTeam,visitorTeamAbbr,visitorFinalScore,homeTeam,homeTeamAbbr,homeFinalScore
+09/07/2023,Detroit Lions,DET,21,Kansas City Chiefs,KC,20
+09/10/2023,Tampa Bay Buccaneers,TB,20,Minnesota Vikings,MIN,17
+09/10/2023,Tennessee Titans,TEN,15,New Orleans Saints,NO,16
+09/10/2023,Carolina Panthers,CAR,10,Atlanta Falcons,ATL,24
+09/10/2023,Houston Texans,HOU,9,Baltimore Ravens,BAL,25
+09/10/2023,San Francisco 49ers,SF,30,Pittsburgh Steelers,PIT,7
+09/10/2023,Arizona Cardinals,ARI,16,Washington Commanders,WAS,20
+09/10/2023,Cincinnati Bengals,CIN,3,Cleveland Browns,CLE,24
+09/10/2023,Jacksonville Jaguars,JAC,31,Indianapolis Colts,IND,21
+09/10/2023,Miami Dolphins,MIA,36,Los Angeles Chargers,LAC,34
+09/10/2023,Los Angeles Rams,LAR,30,Seattle Seahawks,SEA,13
+09/10/2023,Las Vegas Raiders,LV,17,Denver Broncos,DEN,16
+09/10/2023,Green Bay Packers,GB,38,Chicago Bears,CHI,20
+09/10/2023,Philadelphia Eagles,PHI,25,New England Patriots,NE,20
+09/10/2023,Dallas Cowboys,DAL,40,New York Giants,NYG,0
+09/11/2023,Buffalo Bills,BUF,16,New York Jets,NYJ,22
+09/14/2023,Minnesota Vikings,MIN,28,Philadelphia Eagles,PHI,34
+09/17/2023,Indianapolis Colts,IND,31,Houston Texans,HOU,20
+09/17/2023,Los Angeles Chargers,LAC,24,Tennessee Titans,TEN,27
+09/17/2023,Seattle Seahawks,SEA,37,Detroit Lions,DET,31
+09/17/2023,Green Bay Packers,GB,24,Atlanta Falcons,ATL,25
+09/17/2023,Las Vegas Raiders,LV,10,Buffalo Bills,BUF,38
+09/17/2023,Baltimore Ravens,BAL,27,Cincinnati Bengals,CIN,24
+09/17/2023,Kansas City Chiefs,KC,17,Jacksonville Jaguars,JAC,9
+09/17/2023,Chicago Bears,CHI,17,Tampa Bay Buccaneers,TB,27
+09/17/2023,New York Giants,NYG,31,Arizona Cardinals,ARI,28
+09/17/2023,San Francisco 49ers,SF,30,Los Angeles Rams,LAR,23
+09/17/2023,Washington Commanders,WAS,35,Denver Broncos,DEN,33
+09/17/2023,New York Jets,NYJ,10,Dallas Cowboys,DAL,30
+09/17/2023,Miami Dolphins,MIA,24,New England Patriots,NE,17
+09/18/2023,New Orleans Saints,NO,20,Carolina Panthers,CAR,17
+09/18/2023,Cleveland Browns,CLE,22,Pittsburgh Steelers,PIT,26
+09/21/2023,New York Giants,NYG,12,San Francisco 49ers,SF,30
+09/24/2023,New Orleans Saints,NO,17,Green Bay Packers,GB,18
+09/24/2023,Los Angeles Chargers,LAC,28,Minnesota Vikings,MIN,24
+09/24/2023,New England Patriots,NE,15,New York Jets,NYJ,10
+09/24/2023,Denver Broncos,DEN,20,Miami Dolphins,MIA,70
+09/24/2023,Indianapolis Colts,IND,22,Baltimore Ravens,BAL,19
+09/24/2023,Atlanta Falcons,ATL,6,Detroit Lions,DET,20
+09/24/2023,Buffalo Bills,BUF,37,Washington Commanders,WAS,3
+09/24/2023,Houston Texans,HOU,37,Jacksonville Jaguars,JAC,17
+09/24/2023,Tennessee Titans,TEN,3,Cleveland Browns,CLE,27
+09/24/2023,Carolina Panthers,CAR,27,Seattle Seahawks,SEA,37
+09/24/2023,Dallas Cowboys,DAL,16,Arizona Cardinals,ARI,28
+09/24/2023,Chicago Bears,CHI,10,Kansas City Chiefs,KC,41
+09/24/2023,Pittsburgh Steelers,PIT,23,Las Vegas Raiders,LV,18
+09/25/2023,Philadelphia Eagles,PHI,25,Tampa Bay Buccaneers,TB,11
+09/25/2023,Los Angeles Rams,LAR,16,Cincinnati Bengals,CIN,19
+09/28/2023,Detroit Lions,DET,34,Green Bay Packers,GB,20
+10/01/2023,Atlanta Falcons,ATL,7,Jacksonville Jaguars,JAC,23
+10/01/2023,Cincinnati Bengals,CIN,3,Tennessee Titans,TEN,27
+10/01/2023,Denver Broncos,DEN,31,Chicago Bears,CHI,28
+10/01/2023,Tampa Bay Buccaneers,TB,26,New Orleans Saints,NO,9
+10/01/2023,Pittsburgh Steelers,PIT,6,Houston Texans,HOU,30
+10/01/2023,Baltimore Ravens,BAL,28,Cleveland Browns,CLE,3
+10/01/2023,Washington Commanders,WAS,31,Philadelphia Eagles,PHI,34
+10/01/2023,Minnesota Vikings,MIN,21,Carolina Panthers,CAR,13
+10/01/2023,Miami Dolphins,MIA,20,Buffalo Bills,BUF,48
+10/01/2023,Los Angeles Rams,LAR,29,Indianapolis Colts,IND,23
+10/01/2023,Las Vegas Raiders,LV,17,Los Angeles Chargers,LAC,24
+10/01/2023,Arizona Cardinals,ARI,16,San Francisco 49ers,SF,35
+10/01/2023,New England Patriots,NE,3,Dallas Cowboys,DAL,38
+10/01/2023,Kansas City Chiefs,KC,23,New York Jets,NYJ,20
+10/02/2023,Seattle Seahawks,SEA,24,New York Giants,NYG,3
+10/05/2023,Chicago Bears,CHI,40,Washington Commanders,WAS,20
+10/08/2023,Jacksonville Jaguars,JAC,25,Buffalo Bills,BUF,20
+10/08/2023,New Orleans Saints,NO,34,New England Patriots,NE,0
+10/08/2023,Baltimore Ravens,BAL,10,Pittsburgh Steelers,PIT,17
+10/08/2023,Houston Texans,HOU,19,Atlanta Falcons,ATL,21
+10/08/2023,Carolina Panthers,CAR,24,Detroit Lions,DET,42
+10/08/2023,Tennessee Titans,TEN,16,Indianapolis Colts,IND,23
+10/08/2023,New York Giants,NYG,16,Miami Dolphins,MIA,31
+10/08/2023,Philadelphia Eagles,PHI,23,Los Angeles Rams,LAR,14
+10/08/2023,Cincinnati Bengals,CIN,34,Arizona Cardinals,ARI,20
+10/08/2023,New York Jets,NYJ,31,Denver Broncos,DEN,21
+10/08/2023,Kansas City Chiefs,KC,27,Minnesota Vikings,MIN,20
+10/08/2023,Dallas Cowboys,DAL,10,San Francisco 49ers,SF,42
+10/09/2023,Green Bay Packers,GB,13,Las Vegas Raiders,LV,17
+10/12/2023,Denver Broncos,DEN,8,Kansas City Chiefs,KC,19
+10/15/2023,Baltimore Ravens,BAL,24,Tennessee Titans,TEN,16
+10/15/2023,Minnesota Vikings,MIN,19,Chicago Bears,CHI,13
+10/15/2023,New Orleans Saints,NO,13,Houston Texans,HOU,20
+10/15/2023,Indianapolis Colts,IND,20,Jacksonville Jaguars,JAC,37
+10/15/2023,San Francisco 49ers,SF,17,Cleveland Browns,CLE,19
+10/15/2023,Seattle Seahawks,SEA,13,Cincinnati Bengals,CIN,17
+10/15/2023,Washington Commanders,WAS,24,Atlanta Falcons,ATL,16
+10/15/2023,Carolina Panthers,CAR,21,Miami Dolphins,MIA,42
+10/15/2023,New England Patriots,NE,17,Las Vegas Raiders,LV,21
+10/15/2023,Detroit Lions,DET,20,Tampa Bay Buccaneers,TB,6
+10/15/2023,Arizona Cardinals,ARI,9,Los Angeles Rams,LAR,26
+10/15/2023,Philadelphia Eagles,PHI,14,New York Jets,NYJ,20
+10/15/2023,New York Giants,NYG,9,Buffalo Bills,BUF,14
+10/16/2023,Dallas Cowboys,DAL,20,Los Angeles Chargers,LAC,17
+10/19/2023,Jacksonville Jaguars,JAC,31,New Orleans Saints,NO,24
+10/22/2023,Las Vegas Raiders,LV,12,Chicago Bears,CHI,30
+10/22/2023,Detroit Lions,DET,6,Baltimore Ravens,BAL,38
+10/22/2023,Cleveland Browns,CLE,39,Indianapolis Colts,IND,38
+10/22/2023,Washington Commanders,WAS,7,New York Giants,NYG,14
+10/22/2023,Buffalo Bills,BUF,25,New England Patriots,NE,29
+10/22/2023,Atlanta Falcons,ATL,16,Tampa Bay Buccaneers,TB,13
+10/22/2023,Arizona Cardinals,ARI,10,Seattle Seahawks,SEA,20
+10/22/2023,Pittsburgh Steelers,PIT,24,Los Angeles Rams,LAR,17
+10/22/2023,Green Bay Packers,GB,17,Denver Broncos,DEN,19
+10/22/2023,Los Angeles Chargers,LAC,17,Kansas City Chiefs,KC,31
+10/22/2023,Miami Dolphins,MIA,17,Philadelphia Eagles,PHI,31
+10/23/2023,San Francisco 49ers,SF,17,Minnesota Vikings,MIN,22
+10/26/2023,Tampa Bay Buccaneers,TB,18,Buffalo Bills,BUF,24
+10/29/2023,Los Angeles Rams,LAR,20,Dallas Cowboys,DAL,43
+10/29/2023,Minnesota Vikings,MIN,24,Green Bay Packers,GB,10
+10/29/2023,Atlanta Falcons,ATL,23,Tennessee Titans,TEN,28
+10/29/2023,New Orleans Saints,NO,38,Indianapolis Colts,IND,27
+10/29/2023,New England Patriots,NE,17,Miami Dolphins,MIA,31
+10/29/2023,New York Jets,NYJ,13,New York Giants,NYG,10
+10/29/2023,Jacksonville Jaguars,JAC,20,Pittsburgh Steelers,PIT,10
+10/29/2023,Philadelphia Eagles,PHI,38,Washington Commanders,WAS,31
+10/29/2023,Houston Texans,HOU,13,Carolina Panthers,CAR,15
+10/29/2023,Cleveland Browns,CLE,20,Seattle Seahawks,SEA,24
+10/29/2023,Cincinnati Bengals,CIN,31,San Francisco 49ers,SF,17
+10/29/2023,Baltimore Ravens,BAL,31,Arizona Cardinals,ARI,24
+10/29/2023,Kansas City Chiefs,KC,9,Denver Broncos,DEN,24
+10/29/2023,Chicago Bears,CHI,13,Los Angeles Chargers,LAC,30
+10/30/2023,Las Vegas Raiders,LV,14,Detroit Lions,DET,26
+11/02/2023,Tennessee Titans,TEN,16,Pittsburgh Steelers,PIT,20
+11/05/2023,Miami Dolphins,MIA,14,Kansas City Chiefs,KC,21
+11/05/2023,Tampa Bay Buccaneers,TB,37,Houston Texans,HOU,39
+11/05/2023,Los Angeles Rams,LAR,3,Green Bay Packers,GB,20
+11/05/2023,Chicago Bears,CHI,17,New Orleans Saints,NO,24
+11/05/2023,Seattle Seahawks,SEA,3,Baltimore Ravens,BAL,37
+11/05/2023,Minnesota Vikings,MIN,31,Atlanta Falcons,ATL,28
+11/05/2023,Arizona Cardinals,ARI,0,Cleveland Browns,CLE,27
+11/05/2023,Washington Commanders,WAS,20,New England Patriots,NE,17
+11/05/2023,Indianapolis Colts,IND,27,Carolina Panthers,CAR,13
+11/05/2023,New York Giants,NYG,6,Las Vegas Raiders,LV,30
+11/05/2023,Dallas Cowboys,DAL,23,Philadelphia Eagles,PHI,28
+11/05/2023,Buffalo Bills,BUF,18,Cincinnati Bengals,CIN,24
+11/06/2023,Los Angeles Chargers,LAC,27,New York Jets,NYJ,6
+11/09/2023,Carolina Panthers,CAR,13,Chicago Bears,CHI,16
+11/12/2023,Indianapolis Colts,IND,10,New England Patriots,NE,6
+11/12/2023,New Orleans Saints,NO,19,Minnesota Vikings,MIN,27
+11/12/2023,Houston Texans,HOU,30,Cincinnati Bengals,CIN,27
+11/12/2023,Cleveland Browns,CLE,33,Baltimore Ravens,BAL,31
+11/12/2023,Green Bay Packers,GB,19,Pittsburgh Steelers,PIT,23
+11/12/2023,Tennessee Titans,TEN,6,Tampa Bay Buccaneers,TB,20
+11/12/2023,San Francisco 49ers,SF,34,Jacksonville Jaguars,JAC,3
+11/12/2023,Detroit Lions,DET,41,Los Angeles Chargers,LAC,38
+11/12/2023,Atlanta Falcons,ATL,23,Arizona Cardinals,ARI,25
+11/12/2023,Washington Commanders,WAS,26,Seattle Seahawks,SEA,29
+11/12/2023,New York Giants,NYG,17,Dallas Cowboys,DAL,49
+11/12/2023,New York Jets,NYJ,12,Las Vegas Raiders,LV,16
+11/13/2023,Denver Broncos,DEN,24,Buffalo Bills,BUF,22
+11/16/2023,Cincinnati Bengals,CIN,20,Baltimore Ravens,BAL,34
+11/19/2023,Los Angeles Chargers,LAC,20,Green Bay Packers,GB,23
+11/19/2023,Arizona Cardinals,ARI,16,Houston Texans,HOU,21
+11/19/2023,New York Giants,NYG,31,Washington Commanders,WAS,19
+11/19/2023,Dallas Cowboys,DAL,33,Carolina Panthers,CAR,10
+11/19/2023,Tennessee Titans,TEN,14,Jacksonville Jaguars,JAC,34
+11/19/2023,Pittsburgh Steelers,PIT,10,Cleveland Browns,CLE,13
+11/19/2023,Las Vegas Raiders,LV,13,Miami Dolphins,MIA,20
+11/19/2023,Chicago Bears,CHI,26,Detroit Lions,DET,31
+11/19/2023,Tampa Bay Buccaneers,TB,14,San Francisco 49ers,SF,27
+11/19/2023,Seattle Seahawks,SEA,16,Los Angeles Rams,LAR,17
+11/19/2023,New York Jets,NYJ,6,Buffalo Bills,BUF,32
+11/19/2023,Minnesota Vikings,MIN,20,Denver Broncos,DEN,21
+11/20/2023,Philadelphia Eagles,PHI,21,Kansas City Chiefs,KC,17
+11/23/2023,Green Bay Packers,GB,29,Detroit Lions,DET,22
+11/23/2023,Washington Commanders,WAS,10,Dallas Cowboys,DAL,45
+11/23/2023,San Francisco 49ers,SF,31,Seattle Seahawks,SEA,13
+11/24/2023,Miami Dolphins,MIA,34,New York Jets,NYJ,13
+11/26/2023,Jacksonville Jaguars,JAC,24,Houston Texans,HOU,21
+11/26/2023,Carolina Panthers,CAR,10,Tennessee Titans,TEN,17
+11/26/2023,Tampa Bay Buccaneers,TB,20,Indianapolis Colts,IND,27
+11/26/2023,New Orleans Saints,NO,15,Atlanta Falcons,ATL,24
+11/26/2023,Pittsburgh Steelers,PIT,16,Cincinnati Bengals,CIN,10
+11/26/2023,New England Patriots,NE,7,New York Giants,NYG,10
+11/26/2023,Cleveland Browns,CLE,12,Denver Broncos,DEN,29
+11/26/2023,Los Angeles Rams,LAR,37,Arizona Cardinals,ARI,14
+11/26/2023,Kansas City Chiefs,KC,31,Las Vegas Raiders,LV,17
+11/26/2023,Buffalo Bills,BUF,34,Philadelphia Eagles,PHI,37
+11/26/2023,Baltimore Ravens,BAL,20,Los Angeles Chargers,LAC,10
+11/27/2023,Chicago Bears,CHI,12,Minnesota Vikings,MIN,10
+11/30/2023,Seattle Seahawks,SEA,35,Dallas Cowboys,DAL,41
+12/03/2023,Indianapolis Colts,IND,31,Tennessee Titans,TEN,28
+12/03/2023,Detroit Lions,DET,33,New Orleans Saints,NO,28
+12/03/2023,Atlanta Falcons,ATL,13,New York Jets,NYJ,8
+12/03/2023,Los Angeles Chargers,LAC,6,New England Patriots,NE,0
+12/03/2023,Arizona Cardinals,ARI,24,Pittsburgh Steelers,PIT,10
+12/03/2023,Miami Dolphins,MIA,45,Washington Commanders,WAS,15
+12/03/2023,Denver Broncos,DEN,17,Houston Texans,HOU,22
+12/03/2023,Carolina Panthers,CAR,18,Tampa Bay Buccaneers,TB,21
+12/03/2023,Cleveland Browns,CLE,19,Los Angeles Rams,LAR,36
+12/03/2023,San Francisco 49ers,SF,42,Philadelphia Eagles,PHI,19
+12/03/2023,Kansas City Chiefs,KC,19,Green Bay Packers,GB,27
+12/04/2023,Cincinnati Bengals,CIN,34,Jacksonville Jaguars,JAC,31
+12/07/2023,New England Patriots,NE,21,Pittsburgh Steelers,PIT,18
+12/10/2023,Carolina Panthers,CAR,6,New Orleans Saints,NO,28
+12/10/2023,Detroit Lions,DET,13,Chicago Bears,CHI,28
+12/10/2023,Indianapolis Colts,IND,14,Cincinnati Bengals,CIN,34
+12/10/2023,Los Angeles Rams,LAR,31,Baltimore Ravens,BAL,37
+12/10/2023,Tampa Bay Buccaneers,TB,29,Atlanta Falcons,ATL,25
+12/10/2023,Houston Texans,HOU,6,New York Jets,NYJ,30
+12/10/2023,Jacksonville Jaguars,JAC,27,Cleveland Browns,CLE,31
+12/10/2023,Seattle Seahawks,SEA,16,San Francisco 49ers,SF,28
+12/10/2023,Minnesota Vikings,MIN,3,Las Vegas Raiders,LV,0
+12/10/2023,Denver Broncos,DEN,24,Los Angeles Chargers,LAC,7
+12/10/2023,Buffalo Bills,BUF,20,Kansas City Chiefs,KC,17
+12/10/2023,Philadelphia Eagles,PHI,13,Dallas Cowboys,DAL,33
+12/11/2023,Tennessee Titans,TEN,28,Miami Dolphins,MIA,27
+12/11/2023,Green Bay Packers,GB,22,New York Giants,NYG,24
+12/14/2023,Los Angeles Chargers,LAC,21,Las Vegas Raiders,LV,63
+12/16/2023,Minnesota Vikings,MIN,24,Cincinnati Bengals,CIN,27
+12/16/2023,Pittsburgh Steelers,PIT,13,Indianapolis Colts,IND,30
+12/16/2023,Denver Broncos,DEN,17,Detroit Lions,DET,42
+12/17/2023,Atlanta Falcons,ATL,7,Carolina Panthers,CAR,9
+12/17/2023,Chicago Bears,CHI,17,Cleveland Browns,CLE,20
+12/17/2023,New York Giants,NYG,6,New Orleans Saints,NO,24
+12/17/2023,Tampa Bay Buccaneers,TB,34,Green Bay Packers,GB,20
+12/17/2023,Houston Texans,HOU,19,Tennessee Titans,TEN,16
+12/17/2023,New York Jets,NYJ,0,Miami Dolphins,MIA,30
+12/17/2023,Kansas City Chiefs,KC,27,New England Patriots,NE,17
+12/17/2023,Washington Commanders,WAS,20,Los Angeles Rams,LAR,28
+12/17/2023,San Francisco 49ers,SF,45,Arizona Cardinals,ARI,29
+12/17/2023,Dallas Cowboys,DAL,10,Buffalo Bills,BUF,31
+12/17/2023,Baltimore Ravens,BAL,23,Jacksonville Jaguars,JAC,7
+12/18/2023,Philadelphia Eagles,PHI,17,Seattle Seahawks,SEA,20
+12/21/2023,New Orleans Saints,NO,22,Los Angeles Rams,LAR,30
+12/23/2023,Cincinnati Bengals,CIN,11,Pittsburgh Steelers,PIT,34
+12/23/2023,Buffalo Bills,BUF,24,Los Angeles Chargers,LAC,22
+12/24/2023,Cleveland Browns,CLE,36,Houston Texans,HOU,22
+12/24/2023,Detroit Lions,DET,30,Minnesota Vikings,MIN,24
+12/24/2023,Seattle Seahawks,SEA,20,Tennessee Titans,TEN,17
+12/24/2023,Indianapolis Colts,IND,10,Atlanta Falcons,ATL,29
+12/24/2023,Washington Commanders,WAS,28,New York Jets,NYJ,30
+12/24/2023,Green Bay Packers,GB,33,Carolina Panthers,CAR,30
+12/24/2023,Jacksonville Jaguars,JAC,12,Tampa Bay Buccaneers,TB,30
+12/24/2023,Arizona Cardinals,ARI,16,Chicago Bears,CHI,27
+12/24/2023,Dallas Cowboys,DAL,20,Miami Dolphins,MIA,22
+12/24/2023,New England Patriots,NE,26,Denver Broncos,DEN,23
+12/25/2023,Las Vegas Raiders,LV,20,Kansas City Chiefs,KC,14
+12/25/2023,New York Giants,NYG,25,Philadelphia Eagles,PHI,33
+12/25/2023,Baltimore Ravens,BAL,33,San Francisco 49ers,SF,19
+12/28/2023,New York Jets,NYJ,20,Cleveland Browns,CLE,37
+12/30/2023,Detroit Lions,DET,19,Dallas Cowboys,DAL,20
+12/31/2023,Atlanta Falcons,ATL,17,Chicago Bears,CHI,37
+12/31/2023,Tennessee Titans,TEN,3,Houston Texans,HOU,26
+12/31/2023,New Orleans Saints,NO,23,Tampa Bay Buccaneers,TB,13
+12/31/2023,San Francisco 49ers,SF,27,Washington Commanders,WAS,10
+12/31/2023,Carolina Panthers,CAR,0,Jacksonville Jaguars,JAC,26
+12/31/2023,New England Patriots,NE,21,Buffalo Bills,BUF,27
+12/31/2023,Miami Dolphins,MIA,19,Baltimore Ravens,BAL,56
+12/31/2023,Las Vegas Raiders,LV,20,Indianapolis Colts,IND,23
+12/31/2023,Los Angeles Rams,LAR,26,New York Giants,NYG,25
+12/31/2023,Arizona Cardinals,ARI,35,Philadelphia Eagles,PHI,31
+12/31/2023,Pittsburgh Steelers,PIT,30,Seattle Seahawks,SEA,23
+12/31/2023,Los Angeles Chargers,LAC,9,Denver Broncos,DEN,16
+12/31/2023,Cincinnati Bengals,CIN,17,Kansas City Chiefs,KC,25
+12/31/2023,Green Bay Packers,GB,33,Minnesota Vikings,MIN,10
+01/06/2024,Pittsburgh Steelers,PIT,17,Baltimore Ravens,BAL,10
+01/06/2024,Houston Texans,HOU,23,Indianapolis Colts,IND,19
+01/07/2024,Atlanta Falcons,ATL,17,New Orleans Saints,NO,48
+01/07/2024,Jacksonville Jaguars,JAC,20,Tennessee Titans,TEN,28
+01/07/2024,Cleveland Browns,CLE,14,Cincinnati Bengals,CIN,31
+01/07/2024,Minnesota Vikings,MIN,20,Detroit Lions,DET,30
+01/07/2024,New York Jets,NYJ,17,New England Patriots,NE,3
+01/07/2024,Tampa Bay Buccaneers,TB,9,Carolina Panthers,CAR,0
+01/07/2024,Denver Broncos,DEN,14,Las Vegas Raiders,LV,27
+01/07/2024,Kansas City Chiefs,KC,13,Los Angeles Chargers,LAC,12
+01/07/2024,Los Angeles Rams,LAR,21,San Francisco 49ers,SF,20
+01/07/2024,Seattle Seahawks,SEA,21,Arizona Cardinals,ARI,20
+01/07/2024,Chicago Bears,CHI,9,Green Bay Packers,GB,17
+01/07/2024,Philadelphia Eagles,PHI,10,New York Giants,NYG,27
+01/07/2024,Dallas Cowboys,DAL,38,Washington Commanders,WAS,10
+01/07/2024,Buffalo Bills,BUF,21,Miami Dolphins,MIA,14
+01/13/2024,Cleveland Browns,CLE,14,Houston Texans,HOU,45
+01/13/2024,Miami Dolphins,MIA,7,Kansas City Chiefs,KC,26
+01/14/2024,Green Bay Packers,GB,48,Dallas Cowboys,DAL,32
+01/14/2024,Los Angeles Rams,LAR,23,Detroit Lions,DET,24
+01/15/2024,Pittsburgh Steelers,PIT,17,Buffalo Bills,BUF,31
+01/15/2024,Philadelphia Eagles,PHI,9,Tampa Bay Buccaneers,TB,32
+01/20/2024,Houston Texans,HOU,10,Baltimore Ravens,BAL,34
+01/20/2024,Green Bay Packers,GB,21,San Francisco 49ers,SF,24
+01/21/2024,Tampa Bay Buccaneers,TB,23,Detroit Lions,DET,31
+01/21/2024,Kansas City Chiefs,KC,27,Buffalo Bills,BUF,24

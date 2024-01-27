@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 
-from collections import OrderedDict
+from collections import defaultdict
+from typing import Dict, List, Tuple
 
 import pandas as pd
+import numpy as np
+from pgmpy.factors import FactorDict
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.inference.ExactInference import BeliefPropagation
+
+from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
 
 
 class BaseEstimator(object):
@@ -285,3 +292,88 @@ class StructureEstimator(BaseEstimator):
 
     def estimate(self):
         pass
+
+
+class MarginalEstimator(BaseEstimator):
+    def __init__(
+        self,
+        model: MarkovNetwork | FactorGraph | JunctionTree,
+        data: pd.DataFrame,
+        **kwargs,
+    ):
+        super().__init__(data, **kwargs)
+        self.belief_propagation = BeliefPropagation(model=model)
+
+    def _clique_to_marginal(
+        self, marginals: FactorDict
+    ) -> Dict[Tuple[str, ...], List[DiscreteFactor]]:
+        _clique_to_marginal = defaultdict(lambda: [])
+        for marginal_clique, marginal in marginals.items():
+            for clique in self.belief_propagation.junction_tree.nodes():
+                if set(marginal_clique) <= set(clique):
+                    _clique_to_marginal[clique].append(marginal)
+                    break
+        return _clique_to_marginal
+
+    def _marginal_loss(
+        self,
+        marginals: FactorDict,
+        clique_to_marginal: Dict[Tuple[str, ...], List[DiscreteFactor]],
+        metric: str,
+    ) -> Tuple[float, FactorDict]:
+        """Compute the loss and gradient for a given dictionary of potentials."""
+        loss = 0.0
+        gradient = FactorDict({})
+
+        for clique, mu in marginals.items():
+            # Initialize a gradient for this clique as zero.
+            gradient[clique] = mu.identity_factor() * 0
+
+            # Iterate over all marginals involving this clique.
+            for y in clique_to_marginal[clique]:
+                # Step 1: Marginalize the clique to the size of `y`.
+                projection_variables = list(set(mu.scope()) - set(y.scope()))
+                mu2 = mu.marginalize(
+                    variables=projection_variables,
+                    inplace=False,
+                )
+
+                if not isinstance(mu2, DiscreteFactor):
+                    raise TypeError(f"Expecting a DiscreteFactor but found {type(mu2)}")
+
+                # Step 2: Compute the difference between the `mu2` and `y`.
+                diff_factor = mu2 + (y * -1)
+
+                if not diff_factor:
+                    raise ValueError("An error occured when calculating the gradient.")
+
+                diff = diff_factor.values.flatten()
+
+                # Step 3: Compute the loss and gradient based upon the metric.
+                if metric == "L1":
+                    loss += abs(diff).sum()
+                    grad = diff.sign() if hasattr(diff, "sign") else np.sign(diff)
+                elif metric == "L2":
+                    loss += 0.5 * (diff @ diff)
+                    grad = diff
+                else:
+                    raise ValueError("Metric must be one of L1 or L2.")
+
+                # Step 4: Update the gradient from this marginal.
+                gradient[clique] += DiscreteFactor(
+                    variables=mu2.scope(),
+                    cardinality=mu2.cardinality,
+                    values=grad,
+                    state_names=mu2.state_names,
+                )
+
+        return loss, gradient
+
+    def estimate(
+        self,
+        marginals: List[Tuple[str, ...]],
+        metric: str,
+        iterations: int,
+        alpha: float,
+    ) -> MarkovNetwork | FactorGraph:
+        raise NotImplementedError
