@@ -66,3 +66,23 @@ class TestMarginalEstimator(unittest.TestCase):
             clique_to_marginal[("A", "B", "C")],
             [{k: v[k]} for k, v in marginals.items()],
         )
+
+    def test_clique_to_marginal_no_matching_cliques(self):
+        marginals = FactorDict(
+            {
+                variable: FactorDict(
+                    {
+                        variable: DiscreteFactor(
+                            [variable], cardinality=[1], values=np.ones(1)
+                        )
+                    }
+                )
+                for variable in {"A", "B", "C"}
+            }
+        )
+        self.assertRaises(
+            ValueError,
+            MarginalEstimator._clique_to_marginal,
+            marginals,
+            [("D",)],
+        )

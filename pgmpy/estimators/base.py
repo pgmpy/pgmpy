@@ -330,6 +330,12 @@ class MarginalEstimator(BaseEstimator):
                 if set(marginal_clique) <= set(clique):
                     _clique_to_marginal[clique].append(marginal)
                     break
+            else:
+                raise ValueError(
+                    "Could not find a correponding clique for"
+                    + f" marginal: {marginal_clique}"
+                    + f" out of cliques: {clique_nodes}"
+                )
         return _clique_to_marginal
 
     def _marginal_loss(
