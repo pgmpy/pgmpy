@@ -76,23 +76,6 @@ def factor_product(*args):
         return reduce(lambda phi1, phi2: phi1 * phi2, args)
 
 
-def factor_log_sum(*args):
-    if not all(isinstance(phi, BaseFactor) for phi in args):
-        raise TypeError("Arguments must be log factors")
-    # Check if all of the arguments are of the same type
-    elif len(set(map(type, args))) != 1:
-        raise NotImplementedError(
-            "All the args are expected to be instances of the same factor class."
-        )
-
-    log_args = [args.log(inplace=False) for args in args]
-
-    if len(log_args) == 1:
-        return log_args[0].copy()
-    else:
-        return reduce(lambda phi1, phi2: phi1 + phi2, log_args)
-
-
 def factor_sum_product(output_vars, factors):
     """
     For a given set of factors: `args` returns the result of $ \sum_{var \not \in output_vars} \prod \textit{args} $.
