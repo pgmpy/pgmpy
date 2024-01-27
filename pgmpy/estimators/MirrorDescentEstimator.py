@@ -30,7 +30,7 @@ class MirrorDescentEstimator(MarginalEstimator):
             clique_nodes=self.belief_propagation.junction_tree.nodes(),
         )
 
-        # Step 2: Perform one gradient update to initialize variables.
+        # Step 2: Perform calibration to initialize variables.
         theta = self.belief_propagation.junction_tree.clique_beliefs
         self.belief_propagation.calibrate()
         mu = self.belief_propagation.junction_tree.clique_beliefs
@@ -53,7 +53,7 @@ class MirrorDescentEstimator(MarginalEstimator):
             for __ in range(25):
                 # Take gradient step.
                 theta = omega - alpha * dL
-                
+
                 if potential_min:
                     theta.max(potential_min, inplace=True)
 
