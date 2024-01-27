@@ -138,7 +138,9 @@ class TestFactorDict(unittest.TestCase):
         self.assertTrue(np.all(factor.values.flatten() == frequencies))
 
     def test_factor_dict_from_pandas_wrong_column(self):
-        self.assertRaises(KeyError, FactorDict.from_dataframe, self.data1, ["cheeseburger"])
+        self.assertRaises(
+            KeyError, FactorDict.from_dataframe, self.data1, ["cheeseburger"]
+        )
 
     def test_factor_dict_from_pandas_titanic(self):
         marginal1 = ("Race", "Sex", "Income")
@@ -153,3 +155,37 @@ class TestFactorDict(unittest.TestCase):
         self.assertTrue(np.all(factor_dict[marginal1].values == race_sex_income))
         self.assertTrue(np.all(factor_dict[marginal2].values == race_sex))
         self.assertTrue(np.all(factor_dict[marginal3].values == age_hoursperweek))
+
+    def test_factor_dict_max(self):
+        factor_dict1 = FactorDict(
+            {tuple(phi.scope()): phi for phi in [self.phi1, self.phi2]}
+        )
+        [
+            self.assertTrue(np.all(i.values >= 3))
+            for i in factor_dict1.max(3, inplace=False).values()
+        ]
+
+    def test_factor_dict_max_inplace(self):
+        factor_dict1 = FactorDict(
+            {tuple(phi.scope()): phi for phi in [self.phi1, self.phi2]}
+        )
+        [self.assertTrue(not np.all(i.values >= 3)) for i in factor_dict1.values()]
+        factor_dict1.max(3, inplace=True)
+        [self.assertTrue(np.all(i.values >= 3)) for i in factor_dict1.values()]
+
+    def test_factor_dict_min(self):
+        factor_dict1 = FactorDict(
+            {tuple(phi.scope()): phi for phi in [self.phi1, self.phi2]}
+        )
+        [
+            self.assertTrue(np.all(i.values <= 3))
+            for i in factor_dict1.min(3, inplace=False).values()
+        ]
+
+    def test_factor_dict_min_inplace(self):
+        factor_dict1 = FactorDict(
+            {tuple(phi.scope()): phi for phi in [self.phi1, self.phi2]}
+        )
+        [self.assertTrue(not np.all(i.values <= 3)) for i in factor_dict1.values()]
+        factor_dict1.min(3, inplace=True)
+        [self.assertTrue(np.all(i.values <= 3)) for i in factor_dict1.values()]

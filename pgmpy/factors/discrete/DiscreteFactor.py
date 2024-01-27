@@ -1,5 +1,6 @@
 from collections import namedtuple
 from itertools import product
+from numbers import Number
 
 import numpy as np
 import pandas as pd
@@ -803,14 +804,20 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             return phi
 
     def max(self, const, inplace=True):
+        if not isinstance(const, Number):
+            raise TypeError("`max` operation only supports scalar arguments.")
+
         phi = self if inplace else self.copy()
-        np.maximum(phi.values, const, out=phi.values)
+        np.maximum(phi.values, np.array(const), out=phi.values)
         if not inplace:
             return phi
 
     def min(self, const, inplace=True):
+        if not isinstance(const, Number):
+            raise TypeError("`max` operation only supports scalar arguments.")
+
         phi = self if inplace else self.copy()
-        np.minimum(phi.values, const, out=phi.values)
+        np.minimum(phi.values, np.array(const), out=phi.values)
         if not inplace:
             return phi
 
