@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import numpy as np
@@ -295,6 +295,22 @@ class StructureEstimator(BaseEstimator):
 
 
 class MarginalEstimator(BaseEstimator):
+    """
+    Base class for marginal estimators in pgmpy.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+    """
+
     def __init__(
         self,
         model: MarkovNetwork | FactorGraph | JunctionTree,
@@ -322,7 +338,27 @@ class MarginalEstimator(BaseEstimator):
         clique_to_marginal: Dict[Tuple[str, ...], List[DiscreteFactor]],
         metric: str,
     ) -> Tuple[float, FactorDict]:
-        """Compute the loss and gradient for a given dictionary of potentials."""
+        """
+        Compute the loss and gradient for a given dictionary of clique beliefs.
+
+        Parameters
+        ----------
+        marginals: FactorDict
+            A mapping from a clique to an observed marginal represented by a `DiscreteFactor`.
+
+        clique_to_marginal: Dict[Tuple[str, ...], List[DiscreteFactor]]
+            A mapping from a Junction Tree's clique to a list of corresponding marginals
+            such that a clique is a superset of the marginal with the constraint that
+            each marginal only appears once across all cliques.
+
+        metric: str
+            One of either 'L1' or 'L2'.
+
+        Returns
+        -------
+        Loss and gradient of the loss: Tuple[float, pgmpy.factors.FactorDict.FactorDict]
+            Marginal loss and the gradients of the loss with respect to the estimated beliefs.
+        """
         loss = 0.0
         gradient = FactorDict({})
 
@@ -373,8 +409,11 @@ class MarginalEstimator(BaseEstimator):
     def estimate(
         self,
         marginals: List[Tuple[str, ...]],
-        metric: str,
-        iterations: int,
-        alpha: float,
-    ) -> MarkovNetwork | FactorGraph:
+        metric: str = "L2",
+        iterations: int = 100,
+        alpha: Optional[float] = None,
+        show_progress: bool = True,
+        min_belief: Optional[float] = None,
+        max_belief: Optional[float] = None,
+    ) -> JunctionTree:
         raise NotImplementedError
