@@ -265,7 +265,7 @@ class ExpectationMaximization(ParameterEstimator):
             # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
             new_cpds = fixed_cpds.copy()
             mle.data = weighted_data
-            for var in (vars_with_latents + set(init_cpds.keys())):
+            for var in (vars_with_latents.union(set(init_cpds.keys()))):
                 new_cpds.append(mle.estimate_cpd(var, weighted=True))
 
             # Step 4.3: Check of convergence and max_iter
