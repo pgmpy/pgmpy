@@ -417,7 +417,7 @@ class MarginalEstimator(BaseEstimator):
         marginals: List[Tuple[str, ...]],
         metric: str = "L2",
         iterations: int = 100,
-        alpha: Optional[float] = None,
+        stepsize: Optional[float] = None,
         show_progress: bool = True,
         min_belief: Optional[float] = None,
         max_belief: Optional[float] = None,

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from numbers import Number
+import numpy as np
 from typing import Optional, Tuple, List
 from tqdm.auto import tqdm
 
@@ -13,7 +15,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         marginals: List[Tuple[str, ...]],
         metric: str = "L2",
         iterations: int = 100,
-        alpha: Optional[float] = None,
+        stepsize: Optional[float] = None,
         show_progress: bool = True,
         min_belief: Optional[float] = None,
         max_belief: Optional[float] = None,
@@ -33,9 +35,10 @@ class MirrorDescentEstimator(MarginalEstimator):
         iterations: int
             The number of iterations to run mirror descent optimization.
 
-        alpha: Optional[float]
-            The step size of each mirror descent gradient step. If None,
-            alpha is defaulted as: `alpha = 2.0 / len(self.data) ** 2`
+        stepsize: Optional[float]
+            The step size of each mirror descent gradient.
+            If None, stepsize is defaulted as: `alpha = 2.0 / len(self.data) ** 2`
+            and a line search is conducted each iteration.
 
         show_progress: bool
             Whether to show a tqdm progress bar during during optimization.
@@ -94,12 +97,29 @@ class MirrorDescentEstimator(MarginalEstimator):
         | a(1) | b(1) |     1.5000 |
         +------+------+------------+
         """
-        # Step 1: Map each marginal to the first clique that contains it.
+        # Step 1: Setup variables such as data, step size, and clique to marginal mapping.
         if self.data is None:
             raise ValueError(f"No data was found to fit to the marginals {marginals}")
 
-        if not alpha:
-            alpha = 2.0 / len(self.data) ** 2
+        n = len(self.data)
+
+        _no_line_search = stepsize is not None
+        if stepsize is None:
+            alpha = 1.0 / n**2
+
+            def _step_size_fn() -> float:
+                return 2.0 * alpha
+
+        elif isinstance(stepsize, Number):
+            alpha = stepsize
+
+            def _step_size_fn() -> float:
+                return alpha
+
+        else:
+            raise ValueError(
+                f"stepsize must be either float or None. Found {type(stepsize)}"
+            )
 
         clique_to_marginal = self._clique_to_marginal(
             marginals=FactorDict.from_dataframe(df=self.data, marginals=marginals),
@@ -110,21 +130,29 @@ class MirrorDescentEstimator(MarginalEstimator):
         theta = self.belief_propagation.junction_tree.clique_beliefs
         self.belief_propagation.calibrate()
         mu = self.belief_propagation.junction_tree.clique_beliefs
-        loss, dL = self._marginal_loss(
+        answer = self._marginal_loss(
             marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
         )
 
-        if loss == 0:
+        if answer[0] == 0:
             return self.belief_propagation.model
 
         # Step 3: Optimize the potentials based off the observed marginals.
         pbar = tqdm(range(iterations)) if show_progress else range(iterations)
-        for _ in pbar:
+        for i in pbar:
             omega, nu = theta, mu
-            curr_loss = loss
+            curr_loss, dL = answer
+            alpha = _step_size_fn()
 
             if isinstance(pbar, tqdm):
-                pbar.set_description(f"Loss: {round(loss, 2)}")
+                pbar.set_description_str(
+                    ",\t".join(
+                        [
+                            "Loss: {:e}".format(curr_loss),
+                            "Grad Norm: {:e}".format(np.sqrt(dL.dot(dL))),
+                        ]
+                    )
+                )
 
             for __ in range(25):
                 # Take gradient step.
@@ -138,14 +166,19 @@ class MirrorDescentEstimator(MarginalEstimator):
 
                 # Assign gradient step to the junction tree.
                 self.belief_propagation.junction_tree.clique_beliefs = theta
+
+                # Calibrate to propogate gradients through the graph.
                 self.belief_propagation.calibrate()
                 mu = self.belief_propagation.junction_tree.clique_beliefs
-                loss, dL = self._marginal_loss(
+
+                # Compute the new loss with respect to the updated beliefs.
+                answer = self._marginal_loss(
                     marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
                 )
                 # If we haven't appreciably improved, try reducing the step size.
                 # Otherwise, we break to the next iteration.
-                if curr_loss - loss >= 0.5 * alpha * dL.dot(nu - mu):
+                _line_search = 0.5 * alpha * dL.dot(nu - mu)
+                if _no_line_search or curr_loss - answer[0] >= _line_search:
                     break
                 alpha *= 0.5
 
