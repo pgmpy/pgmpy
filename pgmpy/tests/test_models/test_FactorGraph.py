@@ -1,9 +1,10 @@
+import numpy as np
 import unittest
 
-import numpy as np
-
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
+from pgmpy.models import FactorGraph
+from pgmpy.models import MarkovNetwork
+from pgmpy.models import JunctionTree
 from pgmpy.tests import help_functions as hf
 
 

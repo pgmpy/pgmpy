@@ -1,8 +1,6 @@
 import unittest
-
 import numpy as np
 import numpy.testing as np_test
-
 from pgmpy.models import NoisyOrModel
 
 

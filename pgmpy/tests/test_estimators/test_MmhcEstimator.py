@@ -1,9 +1,9 @@
 import unittest
 
-import numpy as np
 import pandas as pd
+import numpy as np
 
-from pgmpy.estimators import K2Score, MmhcEstimator
+from pgmpy.estimators import MmhcEstimator, K2Score
 from pgmpy.factors.discrete import TabularCPD
 
 

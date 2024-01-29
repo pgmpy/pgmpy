@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from itertools import chain
 
-import networkx as nx
 import numpy as np
+import networkx as nx
 
 
 class NoisyOrModel(nx.DiGraph):

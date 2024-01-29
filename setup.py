@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from os.path import exists, sys
-
-from setuptools import find_packages, setup
+from os.path import exists
+from os.path import sys
+from setuptools import setup, find_packages
 
 
 def parse_version(fpath):
@@ -40,8 +40,8 @@ def parse_requirements(fname="requirements.txt", with_version=False):
     Returns:
         List[str]: list of requirements items
     """
-    import re
     from os.path import exists
+    import re
 
     require_fpath = fname
 

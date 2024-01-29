@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from pgmpy.factors.distributions import BaseDistribution, GaussianDistribution
+from pgmpy.factors.distributions import BaseDistribution
+from pgmpy.factors.distributions import GaussianDistribution
 
 
 class CanonicalDistribution(BaseDistribution):
