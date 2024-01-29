@@ -4,9 +4,8 @@ import numpy as np
 import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
+from pgmpy.inference import Inference, VariableElimination
 from pgmpy.models import BayesianNetwork
-from pgmpy.inference import Inference
-from pgmpy.inference import VariableElimination
 
 
 class TestStateNameInit(unittest.TestCase):

@@ -1,7 +1,8 @@
 import unittest
+
+import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-import numpy as np
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 

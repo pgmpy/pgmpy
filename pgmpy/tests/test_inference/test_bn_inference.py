@@ -3,9 +3,9 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pgmpy.models import BayesianNetwork
-from pgmpy.metrics import BayesianModelProbability
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.metrics import BayesianModelProbability
+from pgmpy.models import BayesianNetwork
 
 
 class TestBnInference(unittest.TestCase):

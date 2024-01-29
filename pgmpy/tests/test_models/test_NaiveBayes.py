@@ -1,11 +1,11 @@
 import unittest
 
 import networkx as nx
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from pgmpy.models import NaiveBayes
 from pgmpy.independencies import Independencies
+from pgmpy.models import NaiveBayes
 
 
 class TestBaseModelCreation(unittest.TestCase):

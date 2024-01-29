@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pgmpy.independencies import IndependenceAssertion
 from pgmpy.global_vars import logger
+from pgmpy.independencies import IndependenceAssertion
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):

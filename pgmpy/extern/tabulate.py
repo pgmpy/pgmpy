@@ -25,16 +25,15 @@
 
 """Pretty-print tabular data."""
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
+
+import re
 from collections import namedtuple
 from platform import python_version_tuple
-import re
-
 
 if python_version_tuple()[0] < "3":
-    from itertools import izip_longest
     from functools import partial
+    from itertools import izip_longest
 
     _none_type = type(None)
     _int_type = int
@@ -42,8 +41,8 @@ if python_version_tuple()[0] < "3":
     _text_type = unicode
     _binary_type = str
 else:
+    from functools import partial, reduce
     from itertools import zip_longest as izip_longest
-    from functools import reduce, partial
 
     _none_type = type(None)
     _int_type = int

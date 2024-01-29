@@ -1,8 +1,10 @@
 import unittest
-from mock import Mock, MagicMock, call
-from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache
-from pgmpy.estimators import BicScore
+
 import pandas as pd
+from mock import MagicMock, Mock, call
+
+from pgmpy.estimators import BicScore
+from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache
 
 
 class TestScoreCache(unittest.TestCase):

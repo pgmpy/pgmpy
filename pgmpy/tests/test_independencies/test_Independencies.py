@@ -1,6 +1,6 @@
 import unittest
 
-from pgmpy.independencies import Independencies, IndependenceAssertion
+from pgmpy.independencies import IndependenceAssertion, Independencies
 
 
 class TestIndependenceAssertion(unittest.TestCase):

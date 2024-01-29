@@ -1,15 +1,15 @@
 from .base import (
     BaseGradLogPDF,
+    BaseSimulateHamiltonianDynamics,
+    BayesianModelInference,
     GradLogPDFGaussian,
     LeapFrog,
     ModifiedEuler,
-    BaseSimulateHamiltonianDynamics,
-    BayesianModelInference,
     _return_samples,
 )
 from .HMC import HamiltonianMC, HamiltonianMCDA
 from .NUTS import NoUTurnSampler, NoUTurnSamplerDA
-from .Sampling import GibbsSampling, BayesianModelSampling
+from .Sampling import BayesianModelSampling, GibbsSampling
 
 __all__ = [
     "LeapFrog",

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import unittest
+
 from pgmpy.base import UndirectedGraph
 from pgmpy.tests import help_functions as hf
-import unittest
 
 
 class TestUndirectedGraphCreation(unittest.TestCase):

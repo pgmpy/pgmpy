@@ -44,8 +44,12 @@ class TestEM(unittest.TestCase):
     def test_get_parameters_initial_cpds(self):
         # All observed. Specify initial CPDs.
         est = EM(self.model1, self.data1)
-        smoker_initial = TabularCPD('Smoker', 2, [[0.1], [0.9]], state_names={'Smoker': ['True', 'False']})
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        smoker_initial = TabularCPD(
+            "Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]}
+        )
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False
+        )
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -53,7 +57,9 @@ class TestEM(unittest.TestCase):
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False
+        )
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -62,25 +68,29 @@ class TestEM(unittest.TestCase):
 
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
-            if orig_cpd.variables[0] == 'Smoker':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
+            if orig_cpd.variables[0] == "Smoker":
+                self.assertTrue(
+                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
         # With latents. Specify initial CPDs for both latents and observed.
         est = EM(self.model2, self.data2)
         xray_initial = TabularCPD(
-                variable='Xray',
-                variable_card=2,
-                values=[[0.1, 0.8], [0.9, 0.2]],
-                evidence=['Cancer'],
-                evidence_card=[2],
-                state_names={
-                    'Xray': ['positive', 'negative'],
-                    'Cancer': ['True', 'False']
-                    }
-                )
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial, 'Xray': xray_initial}, seed=42, n_jobs=1, show_progress=False)
+            variable="Xray",
+            variable_card=2,
+            values=[[0.1, 0.8], [0.9, 0.2]],
+            evidence=["Cancer"],
+            evidence_card=[2],
+            state_names={"Xray": ["positive", "negative"], "Cancer": ["True", "False"]},
+        )
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
+            seed=42,
+            n_jobs=1,
+            show_progress=False,
+        )
 
         for est_cpd in cpds:
             var = est_cpd.variables[0]
@@ -90,10 +100,18 @@ class TestEM(unittest.TestCase):
 
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
-            if orig_cpd.variables[0] == 'Smoker':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
-            elif orig_cpd.variables[0] == 'Xray':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([[0.799, 0.093], [0.201, 0.907]]), atol=0.01))
+            if orig_cpd.variables[0] == "Smoker":
+                self.assertTrue(
+                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                )
+            elif orig_cpd.variables[0] == "Xray":
+                self.assertTrue(
+                    np.allclose(
+                        est_cpd.values,
+                        np.array([[0.799, 0.093], [0.201, 0.907]]),
+                        atol=0.01,
+                    )
+                )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
@@ -139,8 +157,12 @@ class TestEMTorch(unittest.TestCase):
     def test_get_parameters_initial_cpds(self):
         # All observed. Specify initial CPDs.
         est = EM(self.model1, self.data1)
-        smoker_initial = TabularCPD('Smoker', 2, [[0.1], [0.9]], state_names={'Smoker': ['True', 'False']})
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        smoker_initial = TabularCPD(
+            "Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]}
+        )
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False
+        )
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -148,7 +170,9 @@ class TestEMTorch(unittest.TestCase):
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False
+        )
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -157,25 +181,29 @@ class TestEMTorch(unittest.TestCase):
 
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
-            if orig_cpd.variables[0] == 'Smoker':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
+            if orig_cpd.variables[0] == "Smoker":
+                self.assertTrue(
+                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
         # With latents. Specify initial CPDs for both latents and observed.
         est = EM(self.model2, self.data2)
         xray_initial = TabularCPD(
-                variable='Xray',
-                variable_card=2,
-                values=[[0.1, 0.8], [0.9, 0.2]],
-                evidence=['Cancer'],
-                evidence_card=[2],
-                state_names={
-                    'Xray': ['positive', 'negative'],
-                    'Cancer': ['True', 'False']
-                    }
-                )
-        cpds = est.get_parameters(init_cpds={'Smoker': smoker_initial, 'Xray': xray_initial}, seed=42, n_jobs=1, show_progress=False)
+            variable="Xray",
+            variable_card=2,
+            values=[[0.1, 0.8], [0.9, 0.2]],
+            evidence=["Cancer"],
+            evidence_card=[2],
+            state_names={"Xray": ["positive", "negative"], "Cancer": ["True", "False"]},
+        )
+        cpds = est.get_parameters(
+            init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
+            seed=42,
+            n_jobs=1,
+            show_progress=False,
+        )
 
         for est_cpd in cpds:
             var = est_cpd.variables[0]
@@ -185,10 +213,18 @@ class TestEMTorch(unittest.TestCase):
 
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
-            if orig_cpd.variables[0] == 'Smoker':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
-            elif orig_cpd.variables[0] == 'Xray':
-                self.assertTrue(np.allclose(est_cpd.values, np.array([[0.799, 0.093], [0.201, 0.907]]), atol=0.01))
+            if orig_cpd.variables[0] == "Smoker":
+                self.assertTrue(
+                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                )
+            elif orig_cpd.variables[0] == "Xray":
+                self.assertTrue(
+                    np.allclose(
+                        est_cpd.values,
+                        np.array([[0.799, 0.093], [0.201, 0.907]]),
+                        atol=0.01,
+                    )
+                )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 

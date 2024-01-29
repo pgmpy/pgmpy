@@ -1,5 +1,5 @@
-import unittest
 import random
+import unittest
 
 from tqdm.auto import tqdm
 
