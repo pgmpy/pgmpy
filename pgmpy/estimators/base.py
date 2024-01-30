@@ -328,11 +328,27 @@ class MarginalEstimator(BaseEstimator):
     def _clique_to_marginal(
         marginals: FactorDict, clique_nodes: List[Tuple[str, ...]]
     ) -> Dict[Tuple[str, ...], List[DiscreteFactor]]:
-        _clique_to_marginal = defaultdict(lambda: [])
+        """
+        Construct a minimal mapping from cliques to marginals.
+
+        Parameters
+        ----------
+        marginals: FactorDict
+            A mapping from cliques to factors.
+
+        clique_nodes: List[Tuple[str, ...]]
+            Cliques that exist within a different FactorDict.
+
+        Returns
+        -------
+        clique_to_marginal: A mapping from clique to a list of marginals
+        such that each clique is a super set of the marginals it is associated with.
+        """
+        clique_to_marginal = defaultdict(lambda: [])
         for marginal_clique, marginal in marginals.items():
             for clique in clique_nodes:
                 if set(marginal_clique) <= set(clique):
-                    _clique_to_marginal[clique].append(marginal)
+                    clique_to_marginal[clique].append(marginal)
                     break
             else:
                 raise ValueError(
@@ -340,7 +356,7 @@ class MarginalEstimator(BaseEstimator):
                     + f" marginal: {marginal_clique}"
                     + f" out of cliques: {clique_nodes}"
                 )
-        return _clique_to_marginal
+        return clique_to_marginal
 
     def _marginal_loss(
         self,
