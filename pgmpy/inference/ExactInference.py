@@ -823,7 +823,10 @@ class BeliefPropagation(Inference):
         Daphne Koller and Nir Friedman.
         """
         # Initialize clique beliefs as well as sepset beliefs
-        self.clique_beliefs = self.junction_tree.clique_beliefs
+        self.clique_beliefs = {
+            clique: self.junction_tree.get_factors(clique)
+            for clique in self.junction_tree.nodes()
+        }
         self.sepset_beliefs = {
             frozenset(edge): None for edge in self.junction_tree.edges()
         }

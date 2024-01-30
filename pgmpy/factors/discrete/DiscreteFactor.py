@@ -803,24 +803,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
-    def max(self, const, inplace=True):
-        if not isinstance(const, Number):
-            raise TypeError("`max` operation only supports scalar arguments.")
-
-        phi = self if inplace else self.copy()
-        np.maximum(phi.values, np.array(const), out=phi.values)
-        if not inplace:
-            return phi
-
-    def min(self, const, inplace=True):
-        if not isinstance(const, Number):
-            raise TypeError("`max` operation only supports scalar arguments.")
-
-        phi = self if inplace else self.copy()
-        np.minimum(phi.values, np.array(const), out=phi.values)
-        if not inplace:
-            return phi
-
     def sample(self, n):
         """
         Normalizes the factor and samples state combinations from it.

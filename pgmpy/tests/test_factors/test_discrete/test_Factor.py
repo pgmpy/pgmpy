@@ -944,28 +944,6 @@ class TestFactorMethods(unittest.TestCase):
     def test_maximize_typeerror(self):
         self.assertRaises(TypeError, self.phi.maximize, "x1")
 
-    def test_max(self):
-        self.assertTrue(np.all(self.phi1.max(const=6, inplace=False).values >= 6))
-
-    def test_max_typeerror(self):
-        self.assertRaises(TypeError, self.phi1.max, [6, 10], False)
-
-    def test_max_inplace(self):
-        phi = self.phi1.copy()
-        phi.max(const=6, inplace=True)
-        self.assertTrue(np.all(phi.values >= 6))
-
-    def test_min(self):
-        self.assertTrue(np.all(self.phi1.min(const=6, inplace=False).values <= 6))
-
-    def test_min_typeerror(self):
-        self.assertRaises(TypeError, self.phi1.min, [6, 10], False)
-
-    def test_min_inplace(self):
-        phi = self.phi1.copy()
-        phi.min(const=6, inplace=True)
-        self.assertTrue(np.all(phi.values <= 6))
-
     def tearDown(self):
         del self.phi
         del self.phi1

@@ -37,16 +37,6 @@ class FactorDict(dict):
     def get_factors(self):
         return set(self.values())
 
-    def max(self, const, inplace=True):
-        return FactorDict(
-            {clique: self[clique].max(const, inplace=inplace) for clique in self}
-        )
-
-    def min(self, const, inplace=True):
-        return FactorDict(
-            {clique: self[clique].min(const, inplace=inplace) for clique in self}
-        )
-
     def __mul__(self, const):
         return FactorDict({clique: const * self[clique] for clique in self})
 

@@ -3,6 +3,7 @@ from numbers import Number
 import numpy as np
 from typing import Optional, Tuple, List
 from tqdm.auto import tqdm
+from scipy.special import logsumexp
 
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.factors import FactorDict
@@ -10,6 +11,46 @@ from pgmpy.models import JunctionTree
 
 
 class MirrorDescentEstimator(MarginalEstimator):
+    def _calibrate(self, theta: FactorDict, n: int) -> FactorDict:
+        """
+        Wrapper for JunctionTree.calibrate that handles:
+            1) getting and setting clique_beliefs
+            2) normalizing cliques in log-space
+            3) returning marginal values in the original space
+
+        Parameters
+        ----------
+        theta: FactorDict
+            Mapping of clique to factors in a JunctionTree.
+
+        n: int
+            Total number of observations from a dataset.
+
+        Returns
+        -------
+        mu: FactorDict
+            Mapping of clique to factors representing marginal beliefs.
+        """
+        # Assign a new value for theta.
+        self.belief_propagation.junction_tree.clique_beliefs = theta
+
+        # TODO: Currently, belief propogation operates in the original space.
+        # To be compatible with this function and for better numerical conditioning,
+        # allow calibration to happen in log-space.
+        self.belief_propagation.calibrate()
+        mu = self.belief_propagation.junction_tree.clique_beliefs
+        cliques = list(mu.keys())
+        clique = cliques[0]
+
+        # Normalize each clique (in log-space) for numerical stability
+        # and then convert the marginals back to probability space so
+        # they are comparable with the observed marginals.
+        log_z = logsumexp(mu[clique].values)
+        for clique in cliques:
+            mu[clique] += np.log(n) - log_z
+            np.exp(mu[clique].values, out=mu[clique].values)
+        return mu
+
     def estimate(
         self,
         marginals: List[Tuple[str, ...]],
@@ -17,8 +58,6 @@ class MirrorDescentEstimator(MarginalEstimator):
         iterations: int = 100,
         stepsize: Optional[float] = None,
         show_progress: bool = True,
-        min_belief: Optional[float] = None,
-        max_belief: Optional[float] = None,
     ) -> JunctionTree:
         """
         Method to estimate the marginals for a given dataset.
@@ -43,13 +82,10 @@ class MirrorDescentEstimator(MarginalEstimator):
         show_progress: bool
             Whether to show a tqdm progress bar during during optimization.
 
-        min_belief: Optional[float]
-            An additional constraint that ensures no belief's value
-            goes below `min_belief`.
+        Notes
+        -------
+        Estimation occurs in log-space.
 
-        max_belief: Optional[float]
-            An additional constraint that ensures no belief's value
-            goes above `max_belief`.
 
         Returns
         -------
@@ -75,13 +111,13 @@ class MirrorDescentEstimator(MarginalEstimator):
         +------+------+------------+
         | a    | b    |   phi(a,b) |
         +======+======+============+
-        | a(0) | b(0) |     0.9998 |
+        | a(0) | b(0) |     1.0000 |
         +------+------+------------+
-        | a(0) | b(1) |     0.9998 |
+        | a(0) | b(1) |     1.0000 |
         +------+------+------------+
-        | a(1) | b(0) |     0.9998 |
+        | a(1) | b(0) |     1.0000 |
         +------+------+------------+
-        | a(1) | b(1) |     1.9995 |
+        | a(1) | b(1) |     2.0000 |
         +------+------+------------+
         >>> tree2 = MirrorDescentEstimator(model=model, data=data).estimate(marginals=[("a",)])
         >>> print(tree2.factors[0])
@@ -104,22 +140,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         n = len(self.data)
 
         _no_line_search = stepsize is not None
-        if stepsize is None:
-            alpha = 1.0 / n**2
-
-            def _step_size_fn() -> float:
-                return 2.0 * alpha
-
-        elif isinstance(stepsize, Number):
-            alpha = stepsize
-
-            def _step_size_fn() -> float:
-                return alpha
-
-        else:
-            raise ValueError(
-                f"stepsize must be either float or None. Found {type(stepsize)}"
-            )
+        alpha = stepsize if isinstance(stepsize, Number) else 1.0 / n**2
 
         clique_to_marginal = self._clique_to_marginal(
             marginals=FactorDict.from_dataframe(df=self.data, marginals=marginals),
@@ -127,22 +148,23 @@ class MirrorDescentEstimator(MarginalEstimator):
         )
 
         # Step 2: Perform calibration to initialize variables.
-        theta = self.belief_propagation.junction_tree.clique_beliefs
-        self.belief_propagation.calibrate()
-        mu = self.belief_propagation.junction_tree.clique_beliefs
+        theta = (
+            self.theta
+            if self.theta
+            else self.belief_propagation.junction_tree.clique_beliefs
+        )
+        mu = self._calibrate(theta=theta, n=n)
         answer = self._marginal_loss(
             marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
         )
 
-        if answer[0] == 0:
-            return self.belief_propagation.model
-
         # Step 3: Optimize the potentials based off the observed marginals.
         pbar = tqdm(range(iterations)) if show_progress else range(iterations)
-        for i in pbar:
+        for _ in pbar:
             omega, nu = theta, mu
             curr_loss, dL = answer
-            alpha = _step_size_fn()
+            if not _no_line_search:
+                alpha *= 2
 
             if isinstance(pbar, tqdm):
                 pbar.set_description_str(
@@ -150,6 +172,7 @@ class MirrorDescentEstimator(MarginalEstimator):
                         [
                             "Loss: {:e}".format(curr_loss),
                             "Grad Norm: {:e}".format(np.sqrt(dL.dot(dL))),
+                            "alpha: {:e}".format(alpha),
                         ]
                     )
                 )
@@ -158,18 +181,8 @@ class MirrorDescentEstimator(MarginalEstimator):
                 # Take gradient step.
                 theta = omega - alpha * dL
 
-                if min_belief:
-                    theta.max(min_belief, inplace=True)
-
-                if max_belief:
-                    theta.min(max_belief, inplace=True)
-
-                # Assign gradient step to the junction tree.
-                self.belief_propagation.junction_tree.clique_beliefs = theta
-
                 # Calibrate to propogate gradients through the graph.
-                self.belief_propagation.calibrate()
-                mu = self.belief_propagation.junction_tree.clique_beliefs
+                mu = self._calibrate(theta=theta, n=n)
 
                 # Compute the new loss with respect to the updated beliefs.
                 answer = self._marginal_loss(
@@ -177,10 +190,11 @@ class MirrorDescentEstimator(MarginalEstimator):
                 )
                 # If we haven't appreciably improved, try reducing the step size.
                 # Otherwise, we break to the next iteration.
-                _line_search = 0.5 * alpha * dL.dot(nu - mu)
-                if _no_line_search or curr_loss - answer[0] >= _line_search:
+                _step = 0.5 * alpha * dL.dot(nu - mu)
+                if _no_line_search or curr_loss - answer[0] >= _step:
                     break
                 alpha *= 0.5
 
-        self.factors = theta
+        self.theta = theta
+        self.belief_propagation.junction_tree.clique_beliefs = mu
         return self.belief_propagation.junction_tree

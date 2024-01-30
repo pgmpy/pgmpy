@@ -300,6 +300,9 @@ class MarginalEstimator(BaseEstimator):
 
     Parameters
     ----------
+    model: MarkovNetwork | FactorGraph | JunctionTree
+        A model to optimize, using Belief Propogation and an estimation method.
+
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
         (If some values in the data are missing the data cells should be set to `numpy.NaN`.
@@ -319,6 +322,7 @@ class MarginalEstimator(BaseEstimator):
     ):
         super().__init__(data, **kwargs)
         self.belief_propagation = BeliefPropagation(model=model)
+        self.theta = None
 
     @staticmethod
     def _clique_to_marginal(
@@ -419,7 +423,5 @@ class MarginalEstimator(BaseEstimator):
         iterations: int = 100,
         stepsize: Optional[float] = None,
         show_progress: bool = True,
-        min_belief: Optional[float] = None,
-        max_belief: Optional[float] = None,
     ) -> JunctionTree:
         raise NotImplementedError
