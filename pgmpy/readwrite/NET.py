@@ -24,7 +24,6 @@ from pgmpy.utils import compat_fns
 
 
 class NETWriter(object):
-
     """
     Base class for writing network file in net format
 
