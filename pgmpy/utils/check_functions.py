@@ -1,6 +1,7 @@
 """
 Contains simple check functions
 """
+
 import numpy as np
 
 
