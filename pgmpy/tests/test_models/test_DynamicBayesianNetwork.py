@@ -434,6 +434,26 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         for cpd in model.cpds:
             np_test.assert_almost_equal(cpd.values, 0.5, decimal=1)
 
+        model = DBN(
+            [
+                (("A", 0), ("B", 0)),
+                (("A", 0), ("C", 0)),
+                (("B", 0), ("D", 0)),
+                (("C", 0), ("D", 0)),
+                (("A", 0), ("A", 1)),
+                (("B", 0), ("B", 1)),
+                (("C", 0), ("C", 1)),
+                (("D", 0), ("D", 1)),
+            ]
+        )
+        model.fit(
+            df, state_names={"A": [0, 1, 2], "B": [0, 1, 2], "C": [0, 1], "D": [0, 1]}
+        )
+        self.assertTrue(model.check_model())
+        self.assertEqual(len(model.cpds), 8)
+        for cpd in model.cpds:
+            np_test.assert_almost_equal(cpd.values, 0.5, decimal=1)
+
         self.assertRaises(ValueError, model.fit, df, "bayesian")
         self.assertRaises(ValueError, model.fit, df.values)
         wrong_colnames = []
