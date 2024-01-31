@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 from numbers import Number
-from typing import List, Tuple
 import numpy as np
-import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 from pgmpy.factors.discrete import DiscreteFactor
 
 
 class FactorDict(dict):
     @classmethod
-    def from_dataframe(
-        cls, df: pd.DataFrame, marginals: List[Tuple[str, ...]]
-    ) -> FactorDict:
+    def from_dataframe(cls, df, marginals):
         if df.isnull().values.any():
             raise ValueError("df cannot contain None or np.NaN values.")
 

@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import numpy as np
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference.ExactInference import BeliefPropagation
-
-from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
 
 
 class BaseEstimator(object):
@@ -314,20 +311,13 @@ class MarginalEstimator(BaseEstimator):
         are taken to be the only possible states.
     """
 
-    def __init__(
-        self,
-        model: MarkovNetwork | FactorGraph | JunctionTree,
-        data: pd.DataFrame,
-        **kwargs,
-    ):
+    def __init__(self, model, data, **kwargs):
         super().__init__(data, **kwargs)
         self.belief_propagation = BeliefPropagation(model=model)
         self.theta = None
 
     @staticmethod
-    def _clique_to_marginal(
-        marginals: FactorDict, clique_nodes: List[Tuple[str, ...]]
-    ) -> Dict[Tuple[str, ...], List[DiscreteFactor]]:
+    def _clique_to_marginal(marginals, clique_nodes):
         """
         Construct a minimal mapping from cliques to marginals.
 
@@ -358,12 +348,7 @@ class MarginalEstimator(BaseEstimator):
                 )
         return clique_to_marginal
 
-    def _marginal_loss(
-        self,
-        marginals: FactorDict,
-        clique_to_marginal: Dict[Tuple[str, ...], List[DiscreteFactor]],
-        metric: str,
-    ) -> Tuple[float, FactorDict]:
+    def _marginal_loss(self, marginals, clique_to_marginal, metric):
         """
         Compute the loss and gradient for a given dictionary of clique beliefs.
 
@@ -432,12 +417,5 @@ class MarginalEstimator(BaseEstimator):
 
         return loss, gradient
 
-    def estimate(
-        self,
-        marginals: List[Tuple[str, ...]],
-        metric: str = "L2",
-        iterations: int = 100,
-        stepsize: Optional[float] = None,
-        show_progress: bool = True,
-    ) -> JunctionTree:
-        raise NotImplementedError
+    def estimate(self):
+        pass

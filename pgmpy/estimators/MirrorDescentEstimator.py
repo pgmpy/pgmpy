@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-from numbers import Number
 import numpy as np
-from typing import Optional, Tuple, List
 from tqdm.auto import tqdm
 from scipy.special import logsumexp
 
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.factors import FactorDict
-from pgmpy.models import JunctionTree
 
 
 class MirrorDescentEstimator(MarginalEstimator):
-    def _calibrate(self, theta: FactorDict, n: int) -> FactorDict:
+    def _calibrate(self, theta, n):
         """
         Wrapper for JunctionTree.calibrate that handles:
             1) getting and setting clique_beliefs
@@ -53,12 +50,12 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     def estimate(
         self,
-        marginals: List[Tuple[str, ...]],
-        metric: str = "L2",
-        iterations: int = 100,
-        stepsize: Optional[float] = None,
-        show_progress: bool = True,
-    ) -> JunctionTree:
+        marginals,
+        metric="L2",
+        iterations=100,
+        stepsize=None,
+        show_progress=True,
+    ):
         """
         Method to estimate the marginals for a given dataset.
 
@@ -140,7 +137,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         n = len(self.data)
 
         _no_line_search = stepsize is not None
-        alpha = stepsize if isinstance(stepsize, Number) else 1.0 / n**2
+        alpha = stepsize if isinstance(stepsize, float) else 1.0 / n**2
 
         clique_to_marginal = self._clique_to_marginal(
             marginals=FactorDict.from_dataframe(df=self.data, marginals=marginals),
