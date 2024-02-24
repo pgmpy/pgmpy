@@ -142,7 +142,9 @@ class BaseEstimator(object):
 
             else:
                 state_count_data = (
-                    self.data.groupby([variable] + parents, observed=True).size().unstack(parents)
+                    self.data.groupby([variable] + parents, observed=True)
+                    .size()
+                    .unstack(parents)
                 )
 
             if not isinstance(state_count_data.columns, pd.MultiIndex):
