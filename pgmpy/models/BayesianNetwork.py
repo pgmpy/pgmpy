@@ -620,7 +620,7 @@ class BayesianNetwork(DAG):
 
         # Step 1: Compute the pseudo_counts for the dirichlet prior.
         pseudo_counts = {
-            var: self.get_cpds(var).get_values() * n_prev_samples
+            var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples
             for var in data.columns
         }
 
