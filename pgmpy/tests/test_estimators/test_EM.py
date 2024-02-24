@@ -9,7 +9,7 @@ from pgmpy.estimators import ExpectationMaximization as EM
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import BayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
+from pgmpy.utils import compat_fns, get_example_model
 
 
 class TestEM(unittest.TestCase):
@@ -183,7 +183,11 @@ class TestEMTorch(unittest.TestCase):
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(
-                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                    np.allclose(
+                        compat_fns.to_numpy(est_cpd.values),
+                        np.array([0.123, 0.877]),
+                        atol=0.01,
+                    )
                 )
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
@@ -215,12 +219,16 @@ class TestEMTorch(unittest.TestCase):
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(
-                    np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
+                    np.allclose(
+                        compat_fns.to_numpy(est_cpd.values),
+                        np.array([0.123, 0.877]),
+                        atol=0.01,
+                    )
                 )
             elif orig_cpd.variables[0] == "Xray":
                 self.assertTrue(
                     np.allclose(
-                        est_cpd.values,
+                        compat_fns.to_numpy(est_cpd.values),
                         np.array([[0.799, 0.093], [0.201, 0.907]]),
                         atol=0.01,
                     )
