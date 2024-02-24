@@ -634,7 +634,11 @@ class BayesianNetwork(DAG):
         cpds = _est.get_parameters(
             prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs
         )
+
+        # Temporarily disable logger to stop giving warning about replacing CPDs.
+        logger.disabled = True
         self.add_cpds(*cpds)
+        logger.disabled = False
 
     def predict(self, data, stochastic=False, n_jobs=-1):
         """
