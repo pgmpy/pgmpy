@@ -6,10 +6,10 @@ from collections import defaultdict
 import numpy as np
 from networkx.algorithms import bipartite
 
-from pgmpy.models.MarkovNetwork import MarkovNetwork
 from pgmpy.base import UndirectedGraph
-from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.factors import factor_product
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.models.MarkovNetwork import MarkovNetwork
 
 
 class FactorGraph(UndirectedGraph):
@@ -470,3 +470,13 @@ class FactorGraph(UndirectedGraph):
             copy.add_factors(*factors_copy)
 
         return copy
+
+    def point_mass_message(self, var, obs):
+        """
+        Returns the point mass message for the variable given the observed state.
+        """
+        card = self.get_cardinality(var)
+        # Create an array with 1 at the index of the evidence and 0 elsewhere
+        message = np.zeros(card)
+        message[obs] = 1
+        return message
