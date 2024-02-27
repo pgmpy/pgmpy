@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import itertools
+from functools import reduce
 
 import networkx as nx
 import numpy as np
@@ -1235,3 +1236,51 @@ class BeliefPropagation(Inference):
             map_query_results[var] = value
 
         return map_query_results
+
+
+class BeliefPropagationForFactorGraphs(Inference):
+    def __init__(self, model):
+        print("buidling custom model (work in progress)")
+
+    @staticmethod
+    def variable_node_message(incoming_messages):
+        """
+        The outgoing message is the element wise product of all incoming messages
+        """
+        if len(incoming_messages) == 1:
+            return incoming_messages[0]
+        outgoing_message = np.multiply(*incoming_messages)
+        # Normalise
+        return outgoing_message / np.sum(outgoing_message)
+
+    @staticmethod
+    def factor_node_message(incoming_messages, factor, target_var):
+        """
+        Returns the outgoing message for a factor node, which is the multiplication of the incoming messages with the factor function (CPT)
+
+        The variables' order in the incoming messages list must match the variable's order in the CPT's dimensions
+        """
+        cpt = factor.values
+        vars = factor.variables
+
+        assert (
+            len(incoming_messages) == cpt.ndim - 1
+        ), f"Error computing factor node message for {target_var}. The number of incoming messages must equal the card(CPT) - 1"
+
+        # Ensure that the target var is on the CPT's 0th axis
+        # Find idx of target var in the vars list
+        target_var_idx = vars.index(target_var)
+        if target_var_idx != 0:
+            # Move target var to the 0th axis
+            cpt = np.moveaxis(cpt, target_var_idx, 0)
+
+        # Invert incoming_messages, so that the first message corresponds to the last dimension of the CPT
+        incoming_messages = list(reversed(incoming_messages))
+
+        # Reduce the CPT with the inverted list of incoming messages
+        outgoing_message = reduce(
+            lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt
+        )
+
+        # Normalise
+        return outgoing_message / sum(outgoing_message)

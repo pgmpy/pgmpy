@@ -1,9 +1,12 @@
+from .ApproxInference import ApproxInference
 from .base import Inference
 from .CausalInference import CausalInference
-from .ExactInference import BeliefPropagation
-from .ExactInference import VariableElimination
-from .ApproxInference import ApproxInference
 from .dbn_inference import DBNInference
+from .ExactInference import (
+    BeliefPropagation,
+    BeliefPropagationForFactorGraphs,
+    VariableElimination,
+)
 from .mplp import Mplp
 
 __all__ = [
@@ -11,6 +14,7 @@ __all__ = [
     "VariableElimination",
     "DBNInference",
     "BeliefPropagation",
+    "BeliefPropagationForFactorGraphs",
     "BayesianModelSampling",
     "CausalInference",
     "ApproxInference",
