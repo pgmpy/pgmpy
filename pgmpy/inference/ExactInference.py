@@ -1240,7 +1240,63 @@ class BeliefPropagation(Inference):
 
 class BeliefPropagationForFactorGraphs(Inference):
     def __init__(self, model):
-        print("buidling custom model (work in progress)")
+        self.model = model
+
+    def query(self, var, evidences):
+        """
+        Returns the posterior distribution of the queried variable, recursively going through the graph until reaching a root variable, or an observed variable.
+        The recursion is implemented with the process_var and process_factor methods.
+        """
+        return self.process_var(var, evidences)
+
+    def process_var(self, var, evidences, from_factor=None, debug=False):
+        """
+        Returns the message outgoing from the variable node, given the incoming messages from its neighbouring factors.
+
+        evidences: dict with the observed variables and their values
+        var: str, the variable from which we want to compute the outgoing message
+        from_factor: str, the factor asking to process that variable, as part of the recursion.
+        from_factor is None for the first call, i.e. for the queried variable from which we want to compute the posterior.
+        """
+        # Stopping criteria: if the variable is observed, return the point mass message of the observation
+        if var in evidences.keys():
+            return self.model.point_mass_message(var, evidences[var])
+        # Else, get the incoming messages from all neighbouring factors
+        else:
+            incoming_messages = []
+            for factor in self.model.neighbors(var):
+                if factor != from_factor:
+                    incoming_messages.append(
+                        self.process_factor(factor, evidences, from_var=var)
+                    )
+            return self.variable_node_message(incoming_messages)
+
+    def process_factor(self, factor, evidences, from_var: str):
+        """
+        Returns the message outgoing from the factor node, given the incoming messages from its neighbouring variables.
+
+        factor: str, the factor from which we want to compute the outgoing message
+        from_var: str, the variable asking to process that factor, as part of the recursion.
+        from_var is None for the first call, i.e. for the queried variable from which we want to compute the posterior.
+        """
+        # from_var can't be null
+        assert from_var is not None, "from_var must be specified"
+
+        vars = factor.variables
+        # Stopping criteria: if the factor is connected to only one variable, return the factor function which is the prior of from_var
+        if len(vars) == 1:
+            prior = factor.values
+            assert prior.ndim == 1, "The factor function must be a 1D array"
+            return prior
+        # Else, get the incoming messages from all neighbouring variables
+        else:
+            incoming_messages = []
+            for var in vars:
+                if var != from_var:
+                    incoming_messages.append(
+                        self.process_var(var, evidences, from_factor=factor)
+                    )
+            return self.factor_node_message(incoming_messages, factor, from_var)
 
     @staticmethod
     def variable_node_message(incoming_messages):
