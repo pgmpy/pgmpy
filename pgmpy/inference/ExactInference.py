@@ -1249,7 +1249,19 @@ class BeliefPropagationForFactorGraphs(Inference):
 
         Currently works for one input variable
         """
-        return self.process_var(variables[0], evidence, None, debug=show_progress)
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(variables)
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
+            )
+
+        agg_res = {}
+        for var in variables:
+            res = self.process_var(var, evidence, None, debug=show_progress)
+            agg_res[var] = res
+        return agg_res
 
     def process_var(self, var, evidences, from_factor, debug=False):
         """
