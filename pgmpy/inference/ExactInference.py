@@ -1242,14 +1242,16 @@ class BeliefPropagationForFactorGraphs(Inference):
     def __init__(self, model):
         self.model = model
 
-    def query(self, var, evidences):
+    def query(self, variables, evidence, show_progress=False, joint=None):
         """
-        Returns the posterior distribution of the queried variable, recursively going through the graph until reaching a root variable, or an observed variable.
+        Returns the posterior distribution of the queried variable, recursively going through the graph until reaching a root/leaf variable, or an observed variable.
         The recursion is implemented with the process_var and process_factor methods.
-        """
-        return self.process_var(var, evidences)
 
-    def process_var(self, var, evidences, from_factor=None, debug=False):
+        Currently works for one input variable
+        """
+        return self.process_var(variables[0], evidence, None, debug=show_progress)
+
+    def process_var(self, var, evidences, from_factor, debug=False):
         """
         Returns the message outgoing from the variable node, given the incoming messages from its neighbouring factors.
 
@@ -1258,17 +1260,28 @@ class BeliefPropagationForFactorGraphs(Inference):
         from_factor: str, the factor asking to process that variable, as part of the recursion.
         from_factor is None for the first call, i.e. for the queried variable from which we want to compute the posterior.
         """
-        # Stopping criteria: if the variable is observed, return the point mass message of the observation
         if var in evidences.keys():
+            # Stopping criteria: observed variable
+            # If the variable is observed, return the point mass message for the observation
             return self.model.point_mass_message(var, evidences[var])
-        # Else, get the incoming messages from all neighbouring factors
+
+        incoming_factors = [
+            factor
+            for factor in list(self.model.neighbors(var))
+            if factor != from_factor
+        ]
+        if len(incoming_factors) == 0:
+            # Stopping criteria: is leaf variable
+            # This var is a leaf variable which hasn't been observed. Returning a uniform message.
+            card = self.model.get_cardinality(var)
+            return np.ones(card) / card
         else:
+            # Else, get the incoming messages from all neighbouring factors
             incoming_messages = []
-            for factor in self.model.neighbors(var):
-                if factor != from_factor:
-                    incoming_messages.append(
-                        self.process_factor(factor, evidences, from_var=var)
-                    )
+            for factor in incoming_factors:
+                incoming_messages.append(
+                    self.process_factor(factor, evidences, from_var=var)
+                )
             return self.variable_node_message(incoming_messages)
 
     def process_factor(self, factor, evidences, from_var: str):
@@ -1282,20 +1295,20 @@ class BeliefPropagationForFactorGraphs(Inference):
         # from_var can't be null
         assert from_var is not None, "from_var must be specified"
 
-        vars = factor.variables
-        # Stopping criteria: if the factor is connected to only one variable, return the factor function which is the prior of from_var
-        if len(vars) == 1:
+        incoming_vars = [var for var in factor.variables if var != from_var]
+        if len(incoming_vars) == 0:
+            # Stopping criteriar: is root variable
+            # If the factor is connected to only one variable, return the factor function which is the prior of from_var
             prior = factor.values
             assert prior.ndim == 1, "The factor function must be a 1D array"
             return prior
-        # Else, get the incoming messages from all neighbouring variables
         else:
+            # Else, get the incoming messages from all neighbouring variables
             incoming_messages = []
-            for var in vars:
-                if var != from_var:
-                    incoming_messages.append(
-                        self.process_var(var, evidences, from_factor=factor)
-                    )
+            for var in incoming_vars:
+                incoming_messages.append(
+                    self.process_var(var, evidences, from_factor=factor)
+                )
             return self.factor_node_message(incoming_messages, factor, from_var)
 
     @staticmethod
