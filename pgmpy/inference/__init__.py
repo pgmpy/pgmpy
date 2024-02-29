@@ -5,7 +5,7 @@ from .CausalInference import CausalInference
 # from .dbn_inference import DBNInference
 from .ExactInference import (
     BeliefPropagation,
-    BeliefPropagationForFactorGraphs,
+    BeliefPropagationWithMessageParsing,
     VariableElimination,
 )
 from .mplp import Mplp
@@ -15,7 +15,7 @@ __all__ = [
     "VariableElimination",
     # "DBNInference",
     "BeliefPropagation",
-    "BeliefPropagationForFactorGraphs",
+    "BeliefPropagationWithMessageParsing",
     "BayesianModelSampling",
     "CausalInference",
     "ApproxInference",

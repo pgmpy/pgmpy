@@ -21,8 +21,8 @@ from pgmpy.inference.EliminationOrder import (
 from pgmpy.models import (
     BayesianNetwork,
     DynamicBayesianNetwork,
+    FactorGraph,
     JunctionTree,
-    MarkovNetwork,
 )
 from pgmpy.utils import compat_fns
 
@@ -1238,16 +1238,24 @@ class BeliefPropagation(Inference):
         return map_query_results
 
 
-class BeliefPropagationForFactorGraphs(Inference):
-    def __init__(self, model):
+class BeliefPropagationWithMessageParsing(Inference):
+    """
+    Class for performing efficient inference using Belief Propagation method on factor graphs.
+
+    The message-parsing algorithm recursively parses the factor graph, until reaching a root/leaf
+    variable or an observed variable, to propagate the model's beliefs. From the Algorithm 2.1 in
+    https://www.mbmlbook.com/LearningSkills_Testing_out_the_model.html by Microsoft researchers.
+    """
+
+    def __init__(self, model: FactorGraph):
+        assert isinstance(
+            model, FactorGraph
+        ), "Model must be an instance of FactorGraph"
         self.model = model
 
     def query(self, variables, evidence, show_progress=False, joint=None):
         """
-        Returns the posterior distribution of the queried variable, recursively going through the graph until reaching a root/leaf variable, or an observed variable.
-        The recursion is implemented with the process_var and process_factor methods.
-
-        Currently works for one input variable
+        Returns the posterior distribution of the queried variable by recursively parsing the graph.
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
