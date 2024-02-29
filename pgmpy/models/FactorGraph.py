@@ -480,3 +480,10 @@ class FactorGraph(UndirectedGraph):
         message = np.zeros(card)
         message[obs] = 1
         return message
+
+    def uniform_message(self, var):
+        """
+        Returns a uniform message of a given variable
+        """
+        card = self.get_cardinality(var)
+        return np.ones(card) / card

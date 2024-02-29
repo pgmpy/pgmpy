@@ -1259,11 +1259,13 @@ class BeliefPropagationForFactorGraphs(Inference):
 
         agg_res = {}
         for var in variables:
-            res = self.process_var(var, evidence, None, debug=show_progress)
+            res = self.schedule_variable_node_messages(
+                var, evidence, None, debug=show_progress
+            )
             agg_res[var] = res
         return agg_res
 
-    def process_var(self, var, evidences, from_factor, debug=False):
+    def schedule_variable_node_messages(self, var, evidences, from_factor, debug=False):
         """
         Returns the message outgoing from the variable node, given the incoming messages from its neighbouring factors.
 
@@ -1273,8 +1275,7 @@ class BeliefPropagationForFactorGraphs(Inference):
         from_factor is None for the first call, i.e. for the queried variable from which we want to compute the posterior.
         """
         if var in evidences.keys():
-            # Stopping criteria: observed variable
-            # If the variable is observed, return the point mass message for the observation
+            # Is an observed variable
             return self.model.point_mass_message(var, evidences[var])
 
         incoming_factors = [
@@ -1282,21 +1283,20 @@ class BeliefPropagationForFactorGraphs(Inference):
             for factor in list(self.model.neighbors(var))
             if factor != from_factor
         ]
+
         if len(incoming_factors) == 0:
-            # Stopping criteria: is leaf variable
-            # This var is a leaf variable which hasn't been observed. Returning a uniform message.
-            card = self.model.get_cardinality(var)
-            return np.ones(card) / card
+            # Is an unobserved leaf variable
+            return self.calc_variable_node_message([], var)
         else:
             # Else, get the incoming messages from all neighbouring factors
             incoming_messages = []
             for factor in incoming_factors:
                 incoming_messages.append(
-                    self.process_factor(factor, evidences, from_var=var)
+                    self.schedule_factor_node_messages(factor, evidences, from_var=var)
                 )
-            return self.variable_node_message(incoming_messages)
+            return self.calc_variable_node_message(incoming_messages, var)
 
-    def process_factor(self, factor, evidences, from_var: str):
+    def schedule_factor_node_messages(self, factor, evidences, from_var: str):
         """
         Returns the message outgoing from the factor node, given the incoming messages from its neighbouring variables.
 
@@ -1304,53 +1304,57 @@ class BeliefPropagationForFactorGraphs(Inference):
         from_var: str, the variable asking to process that factor, as part of the recursion.
         from_var is None for the first call, i.e. for the queried variable from which we want to compute the posterior.
         """
-        # from_var can't be null
         assert from_var is not None, "from_var must be specified"
 
         incoming_vars = [var for var in factor.variables if var != from_var]
         if len(incoming_vars) == 0:
-            # Stopping criteriar: is root variable
-            # If the factor is connected to only one variable, return the factor function which is the prior of from_var
-            prior = factor.values
-            assert prior.ndim == 1, "The factor function must be a 1D array"
-            return prior
+            # from_var is a root variable. The factor is its prior
+            return self.calc_factor_node_message([], factor, from_var)
         else:
             # Else, get the incoming messages from all neighbouring variables
             incoming_messages = []
             for var in incoming_vars:
                 incoming_messages.append(
-                    self.process_var(var, evidences, from_factor=factor)
+                    self.schedule_variable_node_messages(
+                        var, evidences, from_factor=factor
+                    )
                 )
-            return self.factor_node_message(incoming_messages, factor, from_var)
+            return self.calc_factor_node_message(incoming_messages, factor, from_var)
 
-    @staticmethod
-    def variable_node_message(incoming_messages):
+    def calc_variable_node_message(self, incoming_messages, var):
         """
         The outgoing message is the element wise product of all incoming messages
+
+        If there are no incoming messages, returns a uniform message
+        If there is only one incoming message, returns that message
+        Otherwise, returns the product of all incoming messages
         """
-        if len(incoming_messages) == 1:
+        if len(incoming_messages) == 0:
+            return self.model.uniform_message(var)
+        elif len(incoming_messages) == 1:
             return incoming_messages[0]
-        outgoing_message = np.multiply(*incoming_messages)
-        # Normalise
-        return outgoing_message / np.sum(outgoing_message)
+        else:
+            outgoing_message = np.multiply(*incoming_messages)
+            return outgoing_message / np.sum(outgoing_message)
 
     @staticmethod
-    def factor_node_message(incoming_messages, factor, target_var):
+    def calc_factor_node_message(incoming_messages, factor, target_var):
         """
         Returns the outgoing message for a factor node, which is the multiplication of the incoming messages with the factor function (CPT)
 
         The variables' order in the incoming messages list must match the variable's order in the CPT's dimensions
         """
         cpt = factor.values
-        vars = factor.variables
 
         assert (
             len(incoming_messages) == cpt.ndim - 1
         ), f"Error computing factor node message for {target_var}. The number of incoming messages must equal the card(CPT) - 1"
 
+        if len(incoming_messages) == 0:
+            return cpt
+
         # Ensure that the target var is on the CPT's 0th axis
-        # Find idx of target var in the vars list
-        target_var_idx = vars.index(target_var)
+        target_var_idx = factor.variables.index(target_var)
         if target_var_idx != 0:
             # Move target var to the 0th axis
             cpt = np.moveaxis(cpt, target_var_idx, 0)
