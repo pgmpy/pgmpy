@@ -1,10 +1,9 @@
-import numpy as np
 import unittest
 
+import numpy as np
+
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.models import FactorGraph
-from pgmpy.models import MarkovNetwork
-from pgmpy.models import JunctionTree
+from pgmpy.models import FactorGraph, JunctionTree, MarkovNetwork
 from pgmpy.tests import help_functions as hf
 
 
@@ -106,20 +105,20 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
-    def test_point_mass_message(self):
+    def test_get_point_mass_message(self):
         self.graph.add_node("a")
         phi = DiscreteFactor(["a"], [3], np.random.rand(3))
         self.graph.add_factors(phi)
         self.graph.add_edge("a", phi)
-        message = self.graph.point_mass_message("a", 0)
+        message = self.graph.get_point_mass_message("a", 0)
         assert (message == np.array([1, 0, 0])).all()
 
-    def test_uniform_message(self):
+    def test_get_uniform_message(self):
         self.graph.add_node("a")
         phi = DiscreteFactor(["a"], [4], np.random.rand(4))
         self.graph.add_factors(phi)
         self.graph.add_edge("a", phi)
-        message = self.graph.uniform_message("a")
+        message = self.graph.get_uniform_message("a")
         assert (message == np.array([0.25, 0.25, 0.25, 0.25])).all()
 
 

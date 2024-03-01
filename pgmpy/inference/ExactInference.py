@@ -1340,7 +1340,7 @@ class BeliefPropagationWithMessageParsing(Inference):
         """
         if variable in evidence.keys():
             # Is an observed variable
-            return self.model.point_mass_message(variable, evidence[variable])
+            return self.model.get_point_mass_message(variable, evidence[variable])
 
         incoming_factors = [
             factor
@@ -1412,7 +1412,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             list of messages coming to this variable node
         """
         if len(incoming_messages) == 0:
-            return self.model.uniform_message(variable)
+            return self.model.get_uniform_message(variable)
         elif len(incoming_messages) == 1:
             return incoming_messages[0]
         else:

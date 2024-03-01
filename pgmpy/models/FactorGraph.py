@@ -471,9 +471,28 @@ class FactorGraph(UndirectedGraph):
 
         return copy
 
-    def point_mass_message(self, variable, observation):
+    def get_point_mass_message(self, variable, observation):
         """
         Returns a point mass message for the variable given the observed state.
+
+        Parameters
+        ----------
+        variable: str
+            The variable for which the message needs to be computed.
+        observation: int
+            The observed state of the variable.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> G = FactorGraph()
+        >>> G.add_node("a")
+        >>> phi = DiscreteFactor(["a"], [4], np.random.rand(4))
+        >>> G.add_factors(phi)
+        >>> G.add_edges_from([("a", phi)])
+        >>> G.get_point_mass_message("a", 1)
+        array([0, 1, 0, 0])
         """
         card = self.get_cardinality(variable)
         # Create an array with 1 at the index of the evidence and 0 elsewhere
@@ -481,9 +500,25 @@ class FactorGraph(UndirectedGraph):
         message[observation] = 1
         return message
 
-    def uniform_message(self, variable):
+    def get_uniform_message(self, variable):
         """
         Returns a uniform message for the given variable
+
+        Parameters
+        ----------
+        variable: str
+            The variable for which the message needs to be computed.
+
+        Examples
+        --------
+        >>> from pgmpy.models import FactorGraph
+        >>> G = FactorGraph()
+        >>> G.add_node("a")
+        >>> phi = DiscreteFactor(["a"], [4], np.random.rand(4))
+        >>> G.add_factors(phi)
+        >>> G.add_edges_from([("a", phi)])
+        >>> G.get_get_uniform_message("a")
+        array([0.25, 0.25, 0.25, 0.25])
         """
         card = self.get_cardinality(variable)
         return np.ones(card) / card
