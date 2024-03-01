@@ -2,7 +2,7 @@ from .ApproxInference import ApproxInference
 from .base import Inference
 from .CausalInference import CausalInference
 
-# from .dbn_inference import DBNInference
+from .dbn_inference import DBNInference
 from .ExactInference import (
     BeliefPropagation,
     BeliefPropagationWithMessageParsing,
@@ -13,7 +13,7 @@ from .mplp import Mplp
 __all__ = [
     "Inference",
     "VariableElimination",
-    # "DBNInference",
+    "DBNInference",
     "BeliefPropagation",
     "BeliefPropagationWithMessageParsing",
     "BayesianModelSampling",
