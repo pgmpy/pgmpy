@@ -1141,22 +1141,21 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
             ]
         )
 
+        self.belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
+
     def test_query_single_variable(self):
-        belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
-        res = belief_propagation.query(["C"], {})
+        res = self.belief_propagation.query(["C"], {})
         assert np.allclose(res["C"], np.array([0.217, 0.783]), atol=1e-20)
 
     def test_query_multiple_variable(self):
-        belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
-        res = belief_propagation.query(["A", "B", "C", "D"], {})
+        res = self.belief_propagation.query(["A", "B", "C", "D"], {})
         assert np.allclose(res["A"], np.array([0.4, 0.6]), atol=1e-20)
         assert np.allclose(res["B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(res["C"], np.array([0.217, 0.783]), atol=1e-20)
         assert np.allclose(res["D"], np.array([0.168, 0.143, 0.689]), atol=1e-20)
 
     def test_query_single_variable_with_evidence(self):
-        belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
-        res = belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
         assert np.allclose(
             res["B"], np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
         )
@@ -1164,8 +1163,7 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
 
 
     def test_query_multiple_variable_with_evidence(self):
-        belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
-        res = belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
         assert np.allclose(
             res["B"], np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
         )
