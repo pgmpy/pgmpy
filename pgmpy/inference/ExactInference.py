@@ -1342,8 +1342,8 @@ class BeliefPropagationWithMessageParsing(Inference):
         elif len(incoming_messages) == 1:
             return incoming_messages[0]
         else:
-            outgoing_message = np.multiply(*incoming_messages)
-            return outgoing_message / np.sum(outgoing_message)
+            outgoing_message = reduce(np.multiply, incoming_messages)
+        return outgoing_message / np.sum(outgoing_message)
 
     @staticmethod
     def calc_factor_node_message(incoming_messages, factor, target_var):
@@ -1374,6 +1374,5 @@ class BeliefPropagationWithMessageParsing(Inference):
         outgoing_message = reduce(
             lambda cpt_reduced, m: np.matmul(cpt_reduced, m), incoming_messages, cpt
         )
-
         # Normalise
         return outgoing_message / sum(outgoing_message)
