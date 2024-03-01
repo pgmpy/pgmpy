@@ -6,7 +6,8 @@ import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.inference.ExactInference import BeliefPropagationWithMessageParsing
+from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -1110,3 +1111,32 @@ class TestBeliefPropagation(unittest.TestCase):
     def tearDown(self):
         del self.junction_tree
         del self.bayesian_model
+
+
+class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
+    def setUp(self):
+        self.factor_graph = FactorGraph()
+        self.factor_graph.add_nodes_from(["A", "B", "C", "D"])
+
+        phi1 = DiscreteFactor(["A"], [2], [0.4, 0.6])
+        phi2 = DiscreteFactor(
+            ["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]]
+        )
+        phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
+        phi4 = DiscreteFactor(
+            ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
+        )
+
+        self.factor_graph.add_factors(phi1, phi2, phi3, phi4)
+
+        self.factor_graph.add_edges_from(
+            [
+                (phi1, "A"),
+                ("A", phi2),
+                (phi2, "B"),
+                ("B", phi3),
+                (phi3, "C"),
+                ("B", phi4),
+                (phi4, "D"),
+            ]
+        )
