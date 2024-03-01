@@ -1161,7 +1161,6 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         )
         assert np.allclose(res["C"], np.array([0.14166667, 0.85833333]), atol=1e-20)
 
-
     def test_query_multiple_variable_with_evidence(self):
         res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
         assert np.allclose(
