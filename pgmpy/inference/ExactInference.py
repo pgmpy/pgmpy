@@ -1319,7 +1319,7 @@ class BeliefPropagationWithMessageParsing(Inference):
         agg_res = {}
         for var in variables:
             res = self.schedule_variable_node_messages(var, evidence, None)
-            agg_res[var] = res
+            agg_res[var] = DiscreteFactor([var], [len(res)], res)
         return agg_res
 
     def schedule_variable_node_messages(self, variable, evidence, from_factor):
