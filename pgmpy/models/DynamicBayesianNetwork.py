@@ -567,6 +567,51 @@ class DynamicBayesianNetwork(DAG):
                 cpd = self.get_cpds(cpd)
             self.cpds.remove(cpd)
 
+    def get_cardinality(self, node=None):
+        """
+        Returns the cardinality of the node.
+
+        Parameter
+        ---------
+        node: tuple (node_name, time_slice)
+            The node should be in the following form (node_name, time_slice).
+            Here, node_name is the node that is inserted while the time_slice is
+            an integer value, which denotes the index of the time_slice that the
+            node belongs to.
+
+        Returns
+        -------
+        int or dict : If node is specified returns the cardinality of the node.
+                      If node is not specified returns a dictionary with the given
+                      variable as keys and their respective cardinality as values.
+
+        Examples:
+        -------
+        >>> from pgmpy.models import DynamicBayesianNetwork as DBN
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> dbn = DBN()
+        >>> dbn.add_edges_from([(('D',0),('G',0)),(('I',0),('G',0)),(('D',0),('D',1)),(('I',0),('I',1))])
+        >>> grade_cpd =  TabularCPD(('G',0), 3, [[0.3,0.05,0.9,0.5],
+        ...                                      [0.4,0.25,0.8,0.03],
+        ...                                      [0.3,0.7,0.02,0.2]], [('I', 0),('D', 0)],[2,2])
+        >>> dbn.add_cpds(grade_cpd)
+        >>> dbn.get_cardinality(('D',0))
+        2
+        >>> dbn.get_cardinality()
+        defaultdict(int, {('D', 0): 2, ('D', 1): 2, ('G', 0): 3, ('I', 0): 2, ('I', 1): 2})
+        """
+        if node:
+            if node not in super(DynamicBayesianNetwork, self).nodes():
+                raise ValueError('Node not present in the model.')
+            else:
+                temp_node = (node[0], 0) if node[1] else node
+                return self.get_cpds(temp_node).cardinality[0]
+        else:
+            cardinalities = defaultdict(int)
+            for cpd in self.cpds:
+                cardinalities[cpd.variable] = cpd.cardinality[0]
+            return cardinalities
+
     def check_model(self):
         """
         Check the model for various errors. This method checks for the following

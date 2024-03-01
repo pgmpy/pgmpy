@@ -314,6 +314,23 @@ class TestDynamicBayesianNetworkMethods(unittest.TestCase):
         self.assertEqual(self.network.get_cpds(("I", 0)).variable, ("I", 0))
         self.assertEqual(self.network.get_cpds(("I", 1)).variable, ("I", 1))
 
+    def test_get_cardinality(self):
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
+        self.assertDictEqual(self.network.get_cardinality(),
+                             {('D', 0): 2, ('D', 1): 2, ('G', 0): 3, ('I', 0): 2, ('I', 1): 2})
+
+    def test_get_cardinality_with_node(self):
+        self.network.add_edges_from(
+            [(('D', 0), ('G', 0)), (('I', 0), ('G', 0)), (('D', 0), ('D', 1)), (('I', 0), ('I', 1))])
+        self.network.add_cpds(self.grade_cpd, self.d_i_cpd, self.diff_cpd, self.intel_cpd, self.i_i_cpd)
+        self.assertEqual(self.network.get_cardinality(('D',0)), 2)
+        self.assertEqual(self.network.get_cardinality(('D',1)), 2)
+        self.assertEqual(self.network.get_cardinality(('G',0)), 3)
+        self.assertEqual(self.network.get_cardinality(('I',0)), 2)
+        self.assertEqual(self.network.get_cardinality(('I',1)), 2)
+
     def test_initialize_initial_state(self):
         self.network.add_nodes_from(["D", "G", "I", "S", "L"])
         self.network.add_edges_from(
