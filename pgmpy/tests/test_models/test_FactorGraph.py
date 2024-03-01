@@ -106,6 +106,22 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
     def tearDown(self):
         del self.graph
 
+    def test_point_mass_message(self):
+        self.graph.add_node("a")
+        phi = DiscreteFactor(["a"], [3], np.random.rand(3))
+        self.graph.add_factors(phi)
+        self.graph.add_edge("a", phi)
+        message = self.graph.point_mass_message("a", 0)
+        assert (message == np.array([1, 0, 0])).all()
+
+    def test_uniform_message(self):
+        self.graph.add_node("a")
+        phi = DiscreteFactor(["a"], [4], np.random.rand(4))
+        self.graph.add_factors(phi)
+        self.graph.add_edge("a", phi)
+        message = self.graph.uniform_message("a")
+        assert (message == np.array([0.25, 0.25, 0.25, 0.25])).all()
+
 
 class TestFactorGraphMethods(unittest.TestCase):
     def setUp(self):
