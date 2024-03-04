@@ -1317,6 +1317,15 @@ class BeliefPropagationWithMessageParsing(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+        
+        # Can't have the same variables in both `evidence` and `virtual_evidence`
+        common_vars = set(evidence if evidence is not None else []).intersection(
+            set(virtual_evidence if virtual_evidence is not None else [])
+        )
+        if common_vars:
+            raise ValueError(
+                f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+            )
 
         agg_res = {}
         for var in variables:

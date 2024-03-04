@@ -1184,7 +1184,10 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         res = self.belief_propagation.query(
             ["B", "C"],
             evidence={"D": 0},
-            virtual_evidence={"A": [np.array([0.1, 0.9]), np.array([0.2, 0.8])], "B": [np.array([0.3, 0.6, 0.1])]},
+            virtual_evidence={
+                "A": [np.array([0.1, 0.9]), np.array([0.2, 0.8])],
+                "B": [np.array([0.3, 0.6, 0.1])],
+            },
         )
         assert np.allclose(
             res["B"].values, np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20
@@ -1192,3 +1195,12 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         assert np.allclose(
             res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20
         )
+
+    def test_query_error_obs_var_has_evidence(self):
+        with self.assertRaises(
+            ValueError,
+            msg="Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {'A'}",
+        ):
+            self.belief_propagation.query(
+                ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
+            )
