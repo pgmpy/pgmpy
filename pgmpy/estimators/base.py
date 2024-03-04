@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
-from collections import OrderedDict
+from collections import defaultdict
 
 import pandas as pd
+import numpy as np
+from pgmpy.factors import FactorDict
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.inference.ExactInference import BeliefPropagation
 
 
 class BaseEstimator(object):
@@ -284,6 +288,136 @@ class StructureEstimator(BaseEstimator):
             self.variables = self.independencies.get_all_variables()
 
         super(StructureEstimator, self).__init__(data=data, **kwargs)
+
+    def estimate(self):
+        pass
+
+
+class MarginalEstimator(BaseEstimator):
+    """
+    Base class for marginal estimators in pgmpy.
+
+    Parameters
+    ----------
+    model: MarkovNetwork | FactorGraph | JunctionTree
+        A model to optimize, using Belief Propogation and an estimation method.
+
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
+        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+
+    state_names: dict (optional)
+        A dict indicating, for each variable, the discrete set of states (or values)
+        that the variable can take. If unspecified, the observed values in the data set
+        are taken to be the only possible states.
+    """
+
+    def __init__(self, model, data, **kwargs):
+        super().__init__(data, **kwargs)
+        self.belief_propagation = BeliefPropagation(model=model)
+        self.theta = None
+
+    @staticmethod
+    def _clique_to_marginal(marginals, clique_nodes):
+        """
+        Construct a minimal mapping from cliques to marginals.
+
+        Parameters
+        ----------
+        marginals: FactorDict
+            A mapping from cliques to factors.
+
+        clique_nodes: List[Tuple[str, ...]]
+            Cliques that exist within a different FactorDict.
+
+        Returns
+        -------
+        clique_to_marginal: A mapping from clique to a list of marginals
+        such that each clique is a super set of the marginals it is associated with.
+        """
+        clique_to_marginal = defaultdict(lambda: [])
+        for marginal_clique, marginal in marginals.items():
+            for clique in clique_nodes:
+                if set(marginal_clique) <= set(clique):
+                    clique_to_marginal[clique].append(marginal)
+                    break
+            else:
+                raise ValueError(
+                    "Could not find a correponding clique for"
+                    + f" marginal: {marginal_clique}"
+                    + f" out of cliques: {clique_nodes}"
+                )
+        return clique_to_marginal
+
+    def _marginal_loss(self, marginals, clique_to_marginal, metric):
+        """
+        Compute the loss and gradient for a given dictionary of clique beliefs.
+
+        Parameters
+        ----------
+        marginals: FactorDict
+            A mapping from a clique to an observed marginal represented by a `DiscreteFactor`.
+
+        clique_to_marginal: Dict[Tuple[str, ...], List[DiscreteFactor]]
+            A mapping from a Junction Tree's clique to a list of corresponding marginals
+            such that a clique is a superset of the marginal with the constraint that
+            each marginal only appears once across all cliques.
+
+        metric: str
+            One of either 'L1' or 'L2'.
+
+        Returns
+        -------
+        Loss and gradient of the loss: Tuple[float, pgmpy.factors.FactorDict.FactorDict]
+            Marginal loss and the gradients of the loss with respect to the estimated beliefs.
+        """
+        loss = 0.0
+        gradient = FactorDict({})
+
+        for clique, mu in marginals.items():
+            # Initialize a gradient for this clique as zero.
+            gradient[clique] = mu.identity_factor() * 0
+
+            # Iterate over all marginals involving this clique.
+            for y in clique_to_marginal[clique]:
+                # Step 1: Marginalize the clique to the size of `y`.
+                projection_variables = list(set(mu.scope()) - set(y.scope()))
+                mu2 = mu.marginalize(
+                    variables=projection_variables,
+                    inplace=False,
+                )
+
+                if not isinstance(mu2, DiscreteFactor):
+                    raise TypeError(f"Expecting a DiscreteFactor but found {type(mu2)}")
+
+                # Step 2: Compute the difference between the `mu2` and `y`.
+                diff_factor = mu2 + (y * -1)
+
+                if not diff_factor:
+                    raise ValueError("An error occured when calculating the gradient.")
+
+                diff = diff_factor.values.flatten()
+
+                # Step 3: Compute the loss and gradient based upon the metric.
+                if metric == "L1":
+                    loss += abs(diff).sum()
+                    grad = diff.sign() if hasattr(diff, "sign") else np.sign(diff)
+                elif metric == "L2":
+                    loss += 0.5 * (diff @ diff)
+                    grad = diff
+                else:
+                    raise ValueError("Metric must be one of L1 or L2.")
+
+                # Step 4: Update the gradient from this marginal.
+                gradient[clique] += DiscreteFactor(
+                    variables=mu2.scope(),
+                    cardinality=mu2.cardinality,
+                    values=grad,
+                    state_names=mu2.state_names,
+                )
+
+        return loss, gradient
 
     def estimate(self):
         pass
