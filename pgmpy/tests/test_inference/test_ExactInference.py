@@ -6,7 +6,8 @@ import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import BayesianNetwork, JunctionTree, MarkovNetwork
+from pgmpy.inference.ExactInference import BeliefPropagationWithMessageParsing
+from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -1110,3 +1111,63 @@ class TestBeliefPropagation(unittest.TestCase):
     def tearDown(self):
         del self.junction_tree
         del self.bayesian_model
+
+
+class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
+    def setUp(self):
+        self.factor_graph = FactorGraph()
+        self.factor_graph.add_nodes_from(["A", "B", "C", "D"])
+
+        phi1 = DiscreteFactor(["A"], [2], [0.4, 0.6])
+        phi2 = DiscreteFactor(
+            ["B", "A"], [3, 2], [[0.2, 0.05], [0.3, 0.15], [0.5, 0.8]]
+        )
+        phi3 = DiscreteFactor(["C", "B"], [2, 3], [[0.4, 0.5, 0.1], [0.6, 0.5, 0.9]])
+        phi4 = DiscreteFactor(
+            ["D", "B"], [3, 3], [[0.1, 0.1, 0.2], [0.3, 0.2, 0.1], [0.6, 0.7, 0.7]]
+        )
+
+        self.factor_graph.add_factors(phi1, phi2, phi3, phi4)
+
+        self.factor_graph.add_edges_from(
+            [
+                (phi1, "A"),
+                ("A", phi2),
+                (phi2, "B"),
+                ("B", phi3),
+                (phi3, "C"),
+                ("B", phi4),
+                (phi4, "D"),
+            ]
+        )
+
+        self.belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
+
+    def test_query_single_variable(self):
+        res = self.belief_propagation.query(["C"], {})
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+
+    def test_query_multiple_variable(self):
+        res = self.belief_propagation.query(["A", "B", "C", "D"], {})
+        assert np.allclose(res["A"].values, np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(res["D"].values, np.array([0.168, 0.143, 0.689]), atol=1e-20)
+
+    def test_query_single_variable_with_evidence(self):
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        assert np.allclose(
+            res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
+        )
+
+    def test_query_multiple_variable_with_evidence(self):
+        res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
+        assert np.allclose(
+            res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
+        )
