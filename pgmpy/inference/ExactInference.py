@@ -1265,7 +1265,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    def query(self, variables, evidence={}, virtual_evidence=[]):
+    def query(self, variables, evidence={}, virtual_evidence={}):
         """
         Returns the a dict of posterior distributions for each of the queried `variables`,
         given the `evidence`.
@@ -1276,9 +1276,8 @@ class BeliefPropagationWithMessageParsing(Inference):
             list of variables for which you want to compute the posterior
         evidence: dict (default: {})
             a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: list (default: [])
-            a list of pgmpy.factors.discrete.TabularCPD representing the virtual
-            evidences.
+        virtual_evidence: dict (default: {})
+            a dict key, virtual message list pair as {var: [virtual_message]}
 
         Examples
         --------
@@ -1341,6 +1340,8 @@ class BeliefPropagationWithMessageParsing(Inference):
             the variable node from which to compute the outgoing message
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
+        virtual_evidence: dict (default: {})
+            a dict key, virtual message list pair as {var: [virtual_message]}
         from_factor: str
             the factor requesting the message, as part of the recursion.
             None for the first time this function is called.
@@ -1348,6 +1349,10 @@ class BeliefPropagationWithMessageParsing(Inference):
         if variable in evidence.keys():
             # Is an observed variable
             return self.model.get_point_mass_message(variable, evidence[variable])
+
+        virtual_messages = []
+        if variable in virtual_evidence.keys():
+            virtual_messages = virtual_evidence[variable]
 
         incoming_factors = [
             factor
@@ -1357,7 +1362,7 @@ class BeliefPropagationWithMessageParsing(Inference):
 
         if len(incoming_factors) == 0:
             # Is an unobserved leaf variable
-            return self.calc_variable_node_message(variable, [])
+            return self.calc_variable_node_message(variable, [] + virtual_messages)
         else:
             # Else, get the incoming messages from all incoming factors
             incoming_messages = []
@@ -1367,7 +1372,9 @@ class BeliefPropagationWithMessageParsing(Inference):
                         factor, evidence, virtual_evidence, from_variable=variable
                     )
                 )
-            return self.calc_variable_node_message(variable, incoming_messages)
+            return self.calc_variable_node_message(
+                variable, incoming_messages + virtual_messages
+            )
 
     def schedule_factor_node_messages(
         self, factor, evidence, virtual_evidence, from_variable
@@ -1383,9 +1390,8 @@ class BeliefPropagationWithMessageParsing(Inference):
             the factor from which we want to compute the outgoing message
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: list
-            a list of pgmpy.factors.discrete.TabularCPD representing the virtual
-            evidences.
+        virtual_evidence: dict (default: {})
+            a dict key, virtual message list pair as {var: [virtual_message]}
         from_variable: str
             the variable requesting the message, as part of the recursion.
         """
