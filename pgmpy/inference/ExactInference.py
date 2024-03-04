@@ -1277,7 +1277,7 @@ class BeliefPropagationWithMessageParsing(Inference):
         evidence: dict (default: {})
             a dict key, value pair as {var: state_of_var_observed}
         virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message]}
+            a dict key, virtual message list pair as {var: [virtual_message_array]}
 
         Examples
         --------
@@ -1317,7 +1317,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
-        
+
         # Can't have the same variables in both `evidence` and `virtual_evidence`
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(virtual_evidence if virtual_evidence is not None else [])
@@ -1350,7 +1350,7 @@ class BeliefPropagationWithMessageParsing(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
         virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message]}
+            a dict key, virtual message list pair as {var: [virtual_message_array]}
         from_factor: str
             the factor requesting the message, as part of the recursion.
             None for the first time this function is called.
@@ -1400,7 +1400,7 @@ class BeliefPropagationWithMessageParsing(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
         virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message]}
+            a dict key, virtual messages list pair as {var: [virtual_message_array]}
         from_variable: str
             the variable requesting the message, as part of the recursion.
         """
