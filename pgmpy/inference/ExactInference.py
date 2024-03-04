@@ -1265,7 +1265,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    def query(self, variables, evidence):
+    def query(self, variables, evidence={}, virtual_evidence=[]):
         """
         Returns the a dict of posterior distributions for each of the queried `variables`,
         given the `evidence`.
@@ -1274,8 +1274,11 @@ class BeliefPropagationWithMessageParsing(Inference):
         ----------
         variables: list
             list of variables for which you want to compute the posterior
-        evidence: dict
+        evidence: dict (default: {})
             a dict key, value pair as {var: state_of_var_observed}
+        virtual_evidence: list (default: [])
+            a list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
 
         Examples
         --------
@@ -1318,11 +1321,15 @@ class BeliefPropagationWithMessageParsing(Inference):
 
         agg_res = {}
         for var in variables:
-            res = self.schedule_variable_node_messages(var, evidence, None)
+            res = self.schedule_variable_node_messages(
+                var, evidence, virtual_evidence, None
+            )
             agg_res[var] = DiscreteFactor([var], [len(res)], res)
         return agg_res
 
-    def schedule_variable_node_messages(self, variable, evidence, from_factor):
+    def schedule_variable_node_messages(
+        self, variable, evidence, virtual_evidence, from_factor
+    ):
         """
         Returns the message sent by the variable to the factor requesting it.
         For that, the variable requests the messages coming from its neighbouring
@@ -1357,12 +1364,14 @@ class BeliefPropagationWithMessageParsing(Inference):
             for factor in incoming_factors:
                 incoming_messages.append(
                     self.schedule_factor_node_messages(
-                        factor, evidence, from_variable=variable
+                        factor, evidence, virtual_evidence, from_variable=variable
                     )
                 )
             return self.calc_variable_node_message(variable, incoming_messages)
 
-    def schedule_factor_node_messages(self, factor, evidence, from_variable):
+    def schedule_factor_node_messages(
+        self, factor, evidence, virtual_evidence, from_variable
+    ):
         """
         Returns the message sent from the factor to the variable requesting it.
         For that, the factor requests the messages coming from its neighbouring
@@ -1374,6 +1383,9 @@ class BeliefPropagationWithMessageParsing(Inference):
             the factor from which we want to compute the outgoing message
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
+        virtual_evidence: list
+            a list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences.
         from_variable: str
             the variable requesting the message, as part of the recursion.
         """
@@ -1389,7 +1401,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             for var in incoming_vars:
                 incoming_messages.append(
                     self.schedule_variable_node_messages(
-                        var, evidence, from_factor=factor
+                        var, evidence, virtual_evidence, from_factor=factor
                     )
                 )
             return self.calc_factor_node_message(
