@@ -1390,6 +1390,14 @@ class BeliefPropagationWithMessageParsing(Inference):
         Returns the a dict of posterior distributions for each of the queried `variables`,
         given the `evidence`.
 
+        Returns
+        -------
+        If `get_messages` is False, returns a dict of variable, posterior distribution pairs: {variable: DiscreteFactor}
+        If `get_messages` is True, returns
+            a dict of variable, posterior distribution pairs: {variable: DiscreteFactor}, and
+            a dict of all messages sent from a factor to a node: {"{factor.variables} -> variable": np.array}
+
+
         Parameters
         ----------
         variables: list
@@ -1403,6 +1411,8 @@ class BeliefPropagationWithMessageParsing(Inference):
             that gets added to the list of computed messages incoming to the variable node. There's no need to use
             the `Inference._virtual_evidence()` method. Hence, a dict with arrays makes the code faster/cleaner
             than a list of TabularCPD.
+        get_messages: bool (default: False)
+            If True, returns all messages sent from a factor to a node, in addition to the query result.
 
         Examples
         --------
