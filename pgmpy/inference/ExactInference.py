@@ -1346,10 +1346,10 @@ class BeliefPropagationWithMessageParsing(Inference):
                     )
 
                     if self.all_messages is not None:
-                        self.all_messages[f"{factor.variables} -> {variable}"] = (
-                            incoming_message
-                        )
-
+                        # Store the message if it's not already stored
+                        key = f"{factor.variables} -> {variable}"
+                        if key not in self.all_messages.keys():
+                            self.all_messages[key] = incoming_message
                     incoming_messages.append(incoming_message)
                 return self.bp.calc_variable_node_message(
                     variable, incoming_messages + virtual_messages
