@@ -1265,7 +1265,127 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    def query(self, variables, evidence={}, virtual_evidence={}):
+    class BeliefPropagationQuery(object):
+        """
+        Class to manage the message scheduling for a specific query and return the query result with
+        optional additional elements
+
+        Parameters
+        ----------
+        same as in the query method
+        """
+
+        def __init__(
+            self,
+            belief_propagation,
+            variables,
+            evidence,
+            virtual_evidence,
+            get_messages,
+        ):
+            self.bp = belief_propagation
+            self.variables = variables
+            self.evidence = evidence
+            self.virtual_evidence = virtual_evidence
+            self.all_messages = {} if get_messages else None
+
+        def run(self):
+            agg_res = {}
+            for variable in self.variables:
+                res = self.schedule_variable_node_messages(
+                    variable,
+                    from_factor=None,
+                )
+                agg_res[variable] = DiscreteFactor([variable], [len(res)], res)
+            if self.all_messages is None:
+                return agg_res
+            else:
+                return agg_res, self.all_messages
+
+        def schedule_variable_node_messages(self, variable, from_factor):
+            """
+            Returns the message sent by the variable to the factor requesting it.
+            For that, the variable requests the messages coming from its neighbouring
+            factors, except the one making the request.
+
+            Parameters
+            ----------
+            variable: str
+                the variable node from which to compute the outgoing message
+            from_factor: str
+                the factor requesting the message, as part of the recursion.
+                None for the first time this function is called.
+            """
+            if variable in self.evidence.keys():
+                # Is an observed variable
+                return self.bp.model.get_point_mass_message(
+                    variable, self.evidence[variable]
+                )
+
+            virtual_messages = []
+            if variable in self.virtual_evidence.keys():
+                virtual_messages = self.virtual_evidence[variable]
+
+            incoming_factors = [
+                factor
+                for factor in list(self.bp.model.neighbors(variable))
+                if factor != from_factor
+            ]
+
+            if len(incoming_factors) == 0:
+                # Is an unobserved leaf variable
+                return self.bp.calc_variable_node_message(
+                    variable, [] + virtual_messages
+                )
+            else:
+                # Else, get the incoming messages from all incoming factors
+                incoming_messages = []
+                for factor in incoming_factors:
+                    incoming_message = self.schedule_factor_node_messages(
+                        factor, from_variable=variable
+                    )
+
+                    if self.all_messages is not None:
+                        self.all_messages[f"{factor.variables} -> {variable}"] = (
+                            incoming_message
+                        )
+
+                    incoming_messages.append(incoming_message)
+                return self.bp.calc_variable_node_message(
+                    variable, incoming_messages + virtual_messages
+                )
+
+        def schedule_factor_node_messages(self, factor, from_variable):
+            """
+            Returns the message sent from the factor to the variable requesting it.
+            For that, the factor requests the messages coming from its neighbouring
+            variables, except the one making the request.
+
+            Parameters
+            ----------
+            factor: str
+                the factor from which we want to compute the outgoing message
+            from_variable: str
+                the variable requesting the message, as part of the recursion.
+            """
+            assert from_variable is not None, "from_var must be specified"
+
+            incoming_vars = [var for var in factor.variables if var != from_variable]
+            if len(incoming_vars) == 0:
+                # from_var is a root variable. The factor is its prior
+                return self.bp.calc_factor_node_message(factor, [], from_variable)
+            else:
+                # Else, get the incoming messages from all incoming variables
+                incoming_messages = []
+                for var in incoming_vars:
+                    incoming_messages.append(
+                        self.schedule_variable_node_messages(var, from_factor=factor)
+                    )
+                return self.bp.calc_factor_node_message(
+                    factor, incoming_messages, from_variable
+                )
+
+    def query(self, variables, evidence={}, virtual_evidence={}, get_messages=False):
         """
         Returns the a dict of posterior distributions for each of the queried `variables`,
         given the `evidence`.
@@ -1331,101 +1451,10 @@ class BeliefPropagationWithMessageParsing(Inference):
                 f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
             )
 
-        agg_res = {}
-        for var in variables:
-            res = self.schedule_variable_node_messages(
-                var, evidence, virtual_evidence, None
-            )
-            agg_res[var] = DiscreteFactor([var], [len(res)], res)
-        return agg_res
-
-    def schedule_variable_node_messages(
-        self, variable, evidence, virtual_evidence, from_factor
-    ):
-        """
-        Returns the message sent by the variable to the factor requesting it.
-        For that, the variable requests the messages coming from its neighbouring
-        factors, except the one making the request.
-
-        Parameters
-        ----------
-        variable: str
-            the variable node from which to compute the outgoing message
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message_array]}
-        from_factor: str
-            the factor requesting the message, as part of the recursion.
-            None for the first time this function is called.
-        """
-        if variable in evidence.keys():
-            # Is an observed variable
-            return self.model.get_point_mass_message(variable, evidence[variable])
-
-        virtual_messages = []
-        if variable in virtual_evidence.keys():
-            virtual_messages = virtual_evidence[variable]
-
-        incoming_factors = [
-            factor
-            for factor in list(self.model.neighbors(variable))
-            if factor != from_factor
-        ]
-
-        if len(incoming_factors) == 0:
-            # Is an unobserved leaf variable
-            return self.calc_variable_node_message(variable, [] + virtual_messages)
-        else:
-            # Else, get the incoming messages from all incoming factors
-            incoming_messages = []
-            for factor in incoming_factors:
-                incoming_messages.append(
-                    self.schedule_factor_node_messages(
-                        factor, evidence, virtual_evidence, from_variable=variable
-                    )
-                )
-            return self.calc_variable_node_message(
-                variable, incoming_messages + virtual_messages
-            )
-
-    def schedule_factor_node_messages(
-        self, factor, evidence, virtual_evidence, from_variable
-    ):
-        """
-        Returns the message sent from the factor to the variable requesting it.
-        For that, the factor requests the messages coming from its neighbouring
-        variables, except the one making the request.
-
-        Parameters
-        ----------
-        factor: str
-            the factor from which we want to compute the outgoing message
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual messages list pair as {var: [virtual_message_array]}
-        from_variable: str
-            the variable requesting the message, as part of the recursion.
-        """
-        assert from_variable is not None, "from_var must be specified"
-
-        incoming_vars = [var for var in factor.variables if var != from_variable]
-        if len(incoming_vars) == 0:
-            # from_var is a root variable. The factor is its prior
-            return self.calc_factor_node_message(factor, [], from_variable)
-        else:
-            # Else, get the incoming messages from all incoming variables
-            incoming_messages = []
-            for var in incoming_vars:
-                incoming_messages.append(
-                    self.schedule_variable_node_messages(
-                        var, evidence, virtual_evidence, from_factor=factor
-                    )
-                )
-            return self.calc_factor_node_message(
-                factor, incoming_messages, from_variable
-            )
+        query = self.BeliefPropagationQuery(
+            self, variables, evidence, virtual_evidence, get_messages
+        )
+        return query.run()
 
     def calc_variable_node_message(self, variable, incoming_messages):
         """
