@@ -1265,10 +1265,10 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    class _BeliefPropagationQueryManagement(object):
+    class _RecursiveMessageSchedulingQuery(object):
         """
-        Private class used in `BeliefPropagationWithMessageParsing.query()` to efficiently manage
-        the message scheduling across the different queried variables.
+        Private class used in `BeliefPropagationWithMessageParsing.query()` to efficiently
+        manage the message scheduling across the different queried variables, in a recursive way.
 
         Parameters
         ----------
@@ -1387,8 +1387,9 @@ class BeliefPropagationWithMessageParsing(Inference):
 
     def query(self, variables, evidence={}, virtual_evidence={}, get_messages=False):
         """
-        Returns the a dict of posterior distributions for each of the queried `variables`,
-        given the `evidence`.
+        Computes the posterior distributions for each of the queried variable,
+        given the `evidence`, and the `virtual_evidence`. Optionally also resturns
+        the computed messages.
 
         Returns
         -------
@@ -1462,7 +1463,7 @@ class BeliefPropagationWithMessageParsing(Inference):
                 f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
             )
 
-        query = self._BeliefPropagationQueryManagement(
+        query = self._RecursiveMessageSchedulingQuery(
             self, variables, evidence, virtual_evidence, get_messages
         )
         return query.run()
