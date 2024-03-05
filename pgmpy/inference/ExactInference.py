@@ -1279,9 +1279,10 @@ class BeliefPropagationWithMessageParsing(Inference):
         virtual_evidence: dict (default: {})
             a dict key, virtual message list pair as {var: [virtual_message_array]}
             Note: in message-parsing BP, handling virtual evidence is more straightforward that in the junction
-            tree BP implemented in the `BeliefPropagation` class. Each virtual evidence becomes a virtual message 
-            that gets added to the list of computed messages incoming to the variable node. Hence, a dict makes the 
-            code faster/cleaner than a list of TabularCPD.
+            tree BP implemented in the `BeliefPropagation` class. Each virtual evidence becomes a virtual message
+            that gets added to the list of computed messages incoming to the variable node. There's no need to use
+            the `Inference._virtual_evidence()` method. Hence, a dict with arrays makes the code faster/cleaner 
+            than a list of TabularCPD.
 
         Examples
         --------
