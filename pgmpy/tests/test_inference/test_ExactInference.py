@@ -1204,3 +1204,14 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
             self.belief_propagation.query(
                 ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
             )
+
+    def test_query_can_return_all_computed_messages(self):
+        res, messages = self.belief_propagation.query(["B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        print(messages)
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(messages["['C', 'B'] -> B"], np.array([0.33333333, 0.33333333, 0.33333333]), atol=1e-20)
+        assert np.allclose(messages["['D', 'B'] -> B"], np.array([0.33333333, 0.33333333, 0.33333333]), atol=1e-20)
+
+
