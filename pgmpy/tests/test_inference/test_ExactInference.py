@@ -1205,13 +1205,50 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
                 ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
             )
 
-    def test_query_can_return_all_computed_messages(self):
+    def test_query_single_variable_can_return_all_computed_messages(self):
         res, messages = self.belief_propagation.query(["B"], get_messages=True)
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
-        print(messages)
+
+        # Assert on messages values
         assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
-        assert np.allclose(messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
-        assert np.allclose(messages["['C', 'B'] -> B"], np.array([0.33333333, 0.33333333, 0.33333333]), atol=1e-20)
-        assert np.allclose(messages["['D', 'B'] -> B"], np.array([0.33333333, 0.33333333, 0.33333333]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
 
+    def test_query_multiple_variable_returns_each_message_once(self):
+        res, messages = self.belief_propagation.query(["C", "B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
 
+        # Message common to both B and C
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+
+        # Message specific to B
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+
+        # Messages specific to C
+        assert np.allclose(
+            messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
+        )
