@@ -1265,10 +1265,10 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    class BeliefPropagationQuery(object):
+    class _BeliefPropagationQueryManagement(object):
         """
-        Class to manage the message scheduling for a specific query and return the query result with
-        optional additional elements
+        Private class used in `BeliefPropagationWithMessageParsing.query()` to efficiently manage
+        the message scheduling across the different queried variables.
 
         Parameters
         ----------
@@ -1462,7 +1462,7 @@ class BeliefPropagationWithMessageParsing(Inference):
                 f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
             )
 
-        query = self.BeliefPropagationQuery(
+        query = self._BeliefPropagationQueryManagement(
             self, variables, evidence, virtual_evidence, get_messages
         )
         return query.run()
