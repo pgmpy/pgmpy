@@ -1249,7 +1249,7 @@ class BeliefPropagationWithMessageParsing(Inference):
     Parameters
     ----------
     model: FactorGraph
-        model for which inference is to performed
+        Model on which to run the inference.
 
     References
     ----------
@@ -1265,24 +1265,23 @@ class BeliefPropagationWithMessageParsing(Inference):
             model.check_model()
         self.model = model
 
-    def query(self, variables, evidence={}, virtual_evidence={}):
+    def query(self, variables, evidence=None, virtual_evidence=None):
         """
         Returns the a dict of posterior distributions for each of the queried `variables`,
-        given the `evidence`.
+        given the `evidence` and the `virtual_evidence`.
 
         Parameters
         ----------
         variables: list
-            list of variables for which you want to compute the posterior
-        evidence: dict (default: {})
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message_array]}
-            Note: in message-parsing BP, handling virtual evidence is more straightforward that in the junction
-            tree BP implemented in the `BeliefPropagation` class. Each virtual evidence becomes a virtual message
-            that gets added to the list of computed messages incoming to the variable node. There's no need to use
-            the `Inference._virtual_evidence()` method. Hence, a dict with arrays makes the code faster/cleaner
-            than a list of TabularCPD.
+            List of variables for which you want to compute the posterior.
+        evidence: dict (default: None)
+            A dict key, value pair as {var: state_of_var_observed}.
+            None if no evidence.
+        virtual_evidence: list (default: None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences. Each virtual evidence becomes a virtual message that gets added to
+            the list of computed messages incoming to the variable node.
+            None if no virtual evidence.
 
         Examples
         --------
@@ -1335,13 +1334,17 @@ class BeliefPropagationWithMessageParsing(Inference):
         agg_res = {}
         for var in variables:
             res = self.schedule_variable_node_messages(
-                var, evidence, virtual_evidence, None
+                var, None, evidence, virtual_evidence
             )
             agg_res[var] = DiscreteFactor([var], [len(res)], res)
         return agg_res
 
     def schedule_variable_node_messages(
-        self, variable, evidence, virtual_evidence, from_factor
+        self,
+        variable,
+        from_factor,
+        evidence,
+        virtual_evidence,
     ):
         """
         Returns the message sent by the variable to the factor requesting it.
@@ -1351,21 +1354,25 @@ class BeliefPropagationWithMessageParsing(Inference):
         Parameters
         ----------
         variable: str
-            the variable node from which to compute the outgoing message
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message_array]}
-        from_factor: str
-            the factor requesting the message, as part of the recursion.
+            The variable node from which to compute the outgoing message
+        from_factor: pgmpy.factors.discrete.DiscreteFactor or None.
+            The factor requesting the message, as part of the recursion.
             None for the first time this function is called.
+        evidence: dict
+            A dict key, value pair as {var: state_of_var_observed}.
+            None if no evidence.
+        virtual_evidence: list
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences. Each virtual evidence becomes a virtual message that gets added to
+            the list of computed messages incoming to the variable node.
+            None if no virtual evidence.
         """
-        if variable in evidence.keys():
+        if evidence is not None and variable in evidence.keys():
             # Is an observed variable
             return self.model.get_point_mass_message(variable, evidence[variable])
 
         virtual_messages = []
-        if variable in virtual_evidence.keys():
+        if virtual_evidence is not None and variable in virtual_evidence.keys():
             virtual_messages = virtual_evidence[variable]
 
         incoming_factors = [
@@ -1383,7 +1390,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             for factor in incoming_factors:
                 incoming_messages.append(
                     self.schedule_factor_node_messages(
-                        factor, evidence, virtual_evidence, from_variable=variable
+                        factor, variable, evidence, virtual_evidence
                     )
                 )
             return self.calc_variable_node_message(
@@ -1391,7 +1398,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             )
 
     def schedule_factor_node_messages(
-        self, factor, evidence, virtual_evidence, from_variable
+        self, factor, from_variable, evidence, virtual_evidence
     ):
         """
         Returns the message sent from the factor to the variable requesting it.
@@ -1400,14 +1407,18 @@ class BeliefPropagationWithMessageParsing(Inference):
 
         Parameters
         ----------
-        factor: str
-            the factor from which we want to compute the outgoing message
-        evidence: dict
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual messages list pair as {var: [virtual_message_array]}
+        factor: pgmpy.factors.discrete.DiscreteFactor
+            The factor from which we want to compute the outgoing message.
         from_variable: str
-            the variable requesting the message, as part of the recursion.
+            The variable requesting the message, as part of the recursion.
+        evidence: dict
+            A dict key, value pair as {var: state_of_var_observed}.
+            None if no evidence.
+        virtual_evidence: list
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences. Each virtual evidence becomes a virtual message that gets added to
+            the list of computed messages incoming to the variable node.
+            None if no virtual evidence.
         """
         assert from_variable is not None, "from_var must be specified"
 
@@ -1421,7 +1432,7 @@ class BeliefPropagationWithMessageParsing(Inference):
             for var in incoming_vars:
                 incoming_messages.append(
                     self.schedule_variable_node_messages(
-                        var, evidence, virtual_evidence, from_factor=factor
+                        var, factor, evidence, virtual_evidence
                     )
                 )
             return self.calc_factor_node_message(
