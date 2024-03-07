@@ -1312,7 +1312,8 @@ class BeliefPropagationWithMessageParsing(Inference):
         ... )
         >>> belief_propagation = BeliefPropagation(factor_graph)
         >>> belief_propagation.query(variables=['B', 'C'],
-        ...                          evidence={'A': 1, 'D': 0})
+        ...                          evidence={'D': 0},
+        ...                          virtual_evidence=[TabularCPD(['A'], 2, [[0.3], [0.7]])])
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)

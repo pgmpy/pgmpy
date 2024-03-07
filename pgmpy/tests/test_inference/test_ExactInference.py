@@ -1179,8 +1179,6 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
             res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
         )
 
-    # test can take only one virtual evidence per variable
-
     def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
         ve = [
             TabularCPD("A", 2, [[0.027], [0.972]]),
@@ -1194,6 +1192,20 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         )
         assert np.allclose(
             res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20
+        )
+
+    def test_query_allows_multiple_virtual_evidence_per_variable(self):
+        ve1 = [
+            TabularCPD("A", 2, [[0.1], [0.9]]),
+            TabularCPD("A", 2, [[0.3], [0.7]]),
+        ]
+        res1 = self.belief_propagation.query(["B"], virtual_evidence=ve1)
+        cpd = TabularCPD("A", 2, [[0.1 * 0.3], [0.9 * 0.7]])
+        cpd.normalize()
+        res2 = self.belief_propagation.query(["B"], virtual_evidence=[cpd])
+        assert np.allclose(res1["B"].values, res2["B"].values, atol=1e-20)
+        assert np.allclose(
+            res2["B"].values, np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20
         )
 
     def test_query_error_obs_var_has_evidence(self):
