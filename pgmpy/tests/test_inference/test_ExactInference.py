@@ -1220,7 +1220,6 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
     def test_query_single_variable_can_return_all_computed_messages(self):
         res, messages = self.belief_propagation.query(["B"], get_messages=True)
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
-
         # Assert on messages values
         assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
         assert np.allclose(
