@@ -1249,7 +1249,7 @@ class BeliefPropagationWithMessageParsing(Inference):
     Parameters
     ----------
     model: FactorGraph
-        model for which inference is to performed
+        Model on which to run the inference.
 
     References
     ----------
@@ -1272,7 +1272,7 @@ class BeliefPropagationWithMessageParsing(Inference):
 
         Parameters
         ----------
-        same as in the query method
+        Same as in the query method.
         """
 
         def __init__(
@@ -1302,7 +1302,11 @@ class BeliefPropagationWithMessageParsing(Inference):
             else:
                 return agg_res, self.all_messages
 
-        def schedule_variable_node_messages(self, variable, from_factor):
+        def schedule_variable_node_messages(
+            self,
+            variable,
+            from_factor,
+        ):
             """
             Returns the message sent by the variable to the factor requesting it.
             For that, the variable requests the messages coming from its neighbouring
@@ -1311,20 +1315,28 @@ class BeliefPropagationWithMessageParsing(Inference):
             Parameters
             ----------
             variable: str
-                the variable node from which to compute the outgoing message
-            from_factor: str
-                the factor requesting the message, as part of the recursion.
+                The variable node from which to compute the outgoing message
+            from_factor: pgmpy.factors.discrete.DiscreteFactor or None.
+                The factor requesting the message, as part of the recursion.
                 None for the first time this function is called.
             """
-            if variable in self.evidence.keys():
+            if self.evidence is not None and variable in self.evidence.keys():
                 # Is an observed variable
                 return self.bp.model.get_point_mass_message(
                     variable, self.evidence[variable]
                 )
 
             virtual_messages = []
-            if variable in self.virtual_evidence.keys():
-                virtual_messages = self.virtual_evidence[variable]
+            if (
+                self.virtual_evidence is not None
+                and variable
+                in self.bp._get_virtual_evidence_var_list(self.virtual_evidence)
+            ):
+                virtual_messages = [
+                    cpd.values
+                    for cpd in self.virtual_evidence
+                    if cpd.variables[0] == variable
+                ]
 
             incoming_factors = [
                 factor
@@ -1342,14 +1354,15 @@ class BeliefPropagationWithMessageParsing(Inference):
                 incoming_messages = []
                 for factor in incoming_factors:
                     incoming_message = self.schedule_factor_node_messages(
-                        factor, from_variable=variable
+                        factor, variable
                     )
 
                     if self.all_messages is not None:
                         # Store the message if it's not already stored
-                        key = f"{factor.variables} -> {variable}"
-                        if key not in self.all_messages.keys():
-                            self.all_messages[key] = incoming_message
+                        factor_node_key = f"{factor.variables} -> {variable}"
+                        if factor_node_key not in self.all_messages.keys():
+                            self.all_messages[factor_node_key] = incoming_message
+
                     incoming_messages.append(incoming_message)
                 return self.bp.calc_variable_node_message(
                     variable, incoming_messages + virtual_messages
@@ -1363,10 +1376,10 @@ class BeliefPropagationWithMessageParsing(Inference):
 
             Parameters
             ----------
-            factor: str
-                the factor from which we want to compute the outgoing message
+            factor: pgmpy.factors.discrete.DiscreteFactor
+                The factor from which we want to compute the outgoing message.
             from_variable: str
-                the variable requesting the message, as part of the recursion.
+                The variable requesting the message, as part of the recursion.
             """
             assert from_variable is not None, "from_var must be specified"
 
@@ -1379,41 +1392,42 @@ class BeliefPropagationWithMessageParsing(Inference):
                 incoming_messages = []
                 for var in incoming_vars:
                     incoming_messages.append(
-                        self.schedule_variable_node_messages(var, from_factor=factor)
+                        self.schedule_variable_node_messages(var, factor)
                     )
                 return self.bp.calc_factor_node_message(
                     factor, incoming_messages, from_variable
                 )
 
-    def query(self, variables, evidence={}, virtual_evidence={}, get_messages=False):
+    def query(
+        self, variables, evidence=None, virtual_evidence=None, get_messages=False
+    ):
         """
         Computes the posterior distributions for each of the queried variable,
-        given the `evidence`, and the `virtual_evidence`. Optionally also resturns
+        given the `evidence`, and the `virtual_evidence`. Optionally also returns
         the computed messages.
-
-        Returns
-        -------
-        If `get_messages` is False, returns a dict of variable, posterior distribution pairs: {variable: DiscreteFactor}
-        If `get_messages` is True, returns
-            a dict of variable, posterior distribution pairs: {variable: DiscreteFactor}, and
-            a dict of all messages sent from a factor to a node: {"{factor.variables} -> variable": np.array}
-
 
         Parameters
         ----------
         variables: list
-            list of variables for which you want to compute the posterior
-        evidence: dict (default: {})
-            a dict key, value pair as {var: state_of_var_observed}
-        virtual_evidence: dict (default: {})
-            a dict key, virtual message list pair as {var: [virtual_message_array]}
-            Note: in message-parsing BP, handling virtual evidence is more straightforward that in the junction
-            tree BP implemented in the `BeliefPropagation` class. Each virtual evidence becomes a virtual message
-            that gets added to the list of computed messages incoming to the variable node. There's no need to use
-            the `Inference._virtual_evidence()` method. Hence, a dict with arrays makes the code faster/cleaner
-            than a list of TabularCPD.
-        get_messages: bool (default: False)
-            If True, returns all messages sent from a factor to a node, in addition to the query result.
+            List of variables for which you want to compute the posterior.
+        evidence: dict or None (default: None)
+            A dict key, value pair as {var: state_of_var_observed}.
+            None if no evidence.
+        virtual_evidence: list or None (default: None)
+            A list of pgmpy.factors.discrete.TabularCPD representing the virtual
+            evidences. Each virtual evidence becomes a virtual message that gets added to
+            the list of computed messages incoming to the variable node.
+            None if no virtual evidence.
+
+        Returns
+        -------
+        If `get_messages` is False, returns a dict of the variables, posterior distributions
+            pairs: {variable: pgmpy.factors.discrete.DiscreteFactor}.
+        If `get_messages` is True, returns:
+            1. A dict of the variables, posterior distributions pairs:
+            {variable: pgmpy.factors.discrete.DiscreteFactor}
+            2. A dict of all messages sent from a factor to a node:
+            {"{pgmpy.factors.discrete.DiscreteFactor.variables} -> variable": np.array}.
 
         Examples
         --------
@@ -1444,7 +1458,8 @@ class BeliefPropagationWithMessageParsing(Inference):
         ... )
         >>> belief_propagation = BeliefPropagation(factor_graph)
         >>> belief_propagation.query(variables=['B', 'C'],
-        ...                          evidence={'A': 1, 'D': 0})
+        ...                          evidence={'D': 0},
+        ...                          virtual_evidence=[TabularCPD(['A'], 2, [[0.3], [0.7]])])
         """
         common_vars = set(evidence if evidence is not None else []).intersection(
             set(variables)
@@ -1455,13 +1470,15 @@ class BeliefPropagationWithMessageParsing(Inference):
             )
 
         # Can't have the same variables in both `evidence` and `virtual_evidence`
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(virtual_evidence if virtual_evidence is not None else [])
-        )
-        if common_vars:
-            raise ValueError(
-                f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
-            )
+        if evidence is not None and virtual_evidence is not None:
+            self._check_virtual_evidence(virtual_evidence)
+
+            ve_names = self._get_virtual_evidence_var_list(virtual_evidence)
+            common_vars = set(evidence).intersection(set(ve_names))
+            if common_vars:
+                raise ValueError(
+                    f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+                )
 
         query = self._RecursiveMessageSchedulingQuery(
             self, variables, evidence, virtual_evidence, get_messages
