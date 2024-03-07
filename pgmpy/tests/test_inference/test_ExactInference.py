@@ -1173,21 +1173,21 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         )
 
     def test_query_single_variable_with_virtual_evidence(self):
-        res = self.belief_propagation.query(
-            ["B"], virtual_evidence={"A": [np.array([0.1, 0.9])]}
-        )
+        ve = [TabularCPD("A", 2, [[0.1], [0.9]])]
+        res = self.belief_propagation.query(["B"], virtual_evidence=ve)
         assert np.allclose(
             res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
         )
 
+    # test can take only one virtual evidence per variable
+
     def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
+        ve = [
+            TabularCPD("A", 2, [[0.027], [0.972]]),
+            TabularCPD("B", 3, [[0.3], [0.6], [0.1]]),
+        ]
         res = self.belief_propagation.query(
-            ["B", "C"],
-            evidence={"D": 0},
-            virtual_evidence={
-                "A": [np.array([0.1, 0.9]), np.array([0.2, 0.8])],
-                "B": [np.array([0.3, 0.6, 0.1])],
-            },
+            ["B", "C"], evidence={"D": 0}, virtual_evidence=ve
         )
         assert np.allclose(
             res["B"].values, np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20

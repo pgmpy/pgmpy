@@ -1274,10 +1274,10 @@ class BeliefPropagationWithMessageParsing(Inference):
         ----------
         variables: list
             List of variables for which you want to compute the posterior.
-        evidence: dict (default: None)
+        evidence: dict or None (default: None)
             A dict key, value pair as {var: state_of_var_observed}.
             None if no evidence.
-        virtual_evidence: list (default: None)
+        virtual_evidence: list or None (default: None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
             evidences. Each virtual evidence becomes a virtual message that gets added to
             the list of computed messages incoming to the variable node.
@@ -1323,13 +1323,15 @@ class BeliefPropagationWithMessageParsing(Inference):
             )
 
         # Can't have the same variables in both `evidence` and `virtual_evidence`
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(virtual_evidence if virtual_evidence is not None else [])
-        )
-        if common_vars:
-            raise ValueError(
-                f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
-            )
+        if evidence is not None and virtual_evidence is not None:
+            self._check_virtual_evidence(virtual_evidence)
+
+            ve_names = self._get_virtual_evidence_var_list(virtual_evidence)
+            common_vars = set(evidence).intersection(set(ve_names))
+            if common_vars:
+                raise ValueError(
+                    f"Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {common_vars}"
+                )
 
         agg_res = {}
         for var in variables:
@@ -1358,10 +1360,10 @@ class BeliefPropagationWithMessageParsing(Inference):
         from_factor: pgmpy.factors.discrete.DiscreteFactor or None.
             The factor requesting the message, as part of the recursion.
             None for the first time this function is called.
-        evidence: dict
+        evidence: dict or None
             A dict key, value pair as {var: state_of_var_observed}.
             None if no evidence.
-        virtual_evidence: list
+        virtual_evidence: list or None
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
             evidences. Each virtual evidence becomes a virtual message that gets added to
             the list of computed messages incoming to the variable node.
@@ -1372,8 +1374,13 @@ class BeliefPropagationWithMessageParsing(Inference):
             return self.model.get_point_mass_message(variable, evidence[variable])
 
         virtual_messages = []
-        if virtual_evidence is not None and variable in virtual_evidence.keys():
-            virtual_messages = virtual_evidence[variable]
+        if (
+            virtual_evidence is not None
+            and variable in self._get_virtual_evidence_var_list(virtual_evidence)
+        ):
+            virtual_messages = [
+                cpd.values for cpd in virtual_evidence if cpd.variables[0] == variable
+            ]
 
         incoming_factors = [
             factor
