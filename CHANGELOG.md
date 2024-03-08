@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.25] - 2024-03-08
+### Added 
+1. `init_cpds` argument to `ExpecattionMaximiation.get_parameters` to specify initialization values.
+2. BeliefPropagation with message passing for Factor Graphs.
+3. Marginal Inference for undirected graphs.
+
+### Fixed
+1. Incompatibality with networkx==3.2.
+2. `CausalInference.get_minimal_adjustment_set` to accept string variable names.
+3. Bug in EM when latent varaibles are present.
+4. `compat_fns.copy` to consider the case when int or float is passed.
+5. Fixes issue with `BayesianNetwork.fit_update` when running with CUDA backend.
+
+### Changed
+1. Documentation Updates
+2. Optimizations for Hill Climb Search algorithm.
+3. Tests shutdown parallel workers in teardown.
+4. Removes the `complete_samples_only` argument from `BaseEstimator.state_counts`.
+5. Default number of cores to use changed to 1 for parameter estimation methods. 
+
 ## [0.1.24] - 2023-06-30
 ### Added
 1. Added support for python 3.11.
@@ -14,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 1. Warnings use a logger instance.
 2. Fixes documentation.
+3. Fixes variables name arguments for `CausalInference.get_minimal_adjustment_set`
 
 ### Changed
 1. Adds argument to specify samples for ApproxInference.
