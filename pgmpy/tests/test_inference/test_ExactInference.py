@@ -1144,11 +1144,11 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         self.belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
 
     def test_query_single_variable(self):
-        res = self.belief_propagation.query(["C"], {})
+        res = self.belief_propagation.query(["C"])
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
 
     def test_query_multiple_variable(self):
-        res = self.belief_propagation.query(["A", "B", "C", "D"], {})
+        res = self.belief_propagation.query(["A", "B", "C", "D"])
         assert np.allclose(res["A"].values, np.array([0.4, 0.6]), atol=1e-20)
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
@@ -1170,4 +1170,96 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
         )
         assert np.allclose(
             res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20
+        )
+
+    def test_query_single_variable_with_virtual_evidence(self):
+        ve = [TabularCPD("A", 2, [[0.1], [0.9]])]
+        res = self.belief_propagation.query(["B"], virtual_evidence=ve)
+        assert np.allclose(
+            res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
+        )
+
+    def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
+        ve = [
+            TabularCPD("A", 2, [[0.027], [0.972]]),
+            TabularCPD("B", 3, [[0.3], [0.6], [0.1]]),
+        ]
+        res = self.belief_propagation.query(
+            ["B", "C"], evidence={"D": 0}, virtual_evidence=ve
+        )
+        assert np.allclose(
+            res["B"].values, np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20
+        )
+        assert np.allclose(
+            res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20
+        )
+
+    def test_query_allows_multiple_virtual_evidence_per_variable(self):
+        ve1 = [
+            TabularCPD("A", 2, [[0.1], [0.9]]),
+            TabularCPD("A", 2, [[0.3], [0.7]]),
+        ]
+        res1 = self.belief_propagation.query(["B"], virtual_evidence=ve1)
+        cpd = TabularCPD("A", 2, [[0.1 * 0.3], [0.9 * 0.7]])
+        cpd.normalize()
+        res2 = self.belief_propagation.query(["B"], virtual_evidence=[cpd])
+        assert np.allclose(res1["B"].values, res2["B"].values, atol=1e-20)
+        assert np.allclose(
+            res2["B"].values, np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20
+        )
+
+    def test_query_error_obs_var_has_evidence(self):
+        with self.assertRaises(
+            ValueError,
+            msg="Can't have the same variables in both `evidence` and `virtual_evidence`. Found in both: {'A'}",
+        ):
+            self.belief_propagation.query(
+                ["B"], evidence={"A": 1}, virtual_evidence={"A": [np.array([0.1, 0.9])]}
+            )
+
+    def test_query_single_variable_can_return_all_computed_messages(self):
+        res, messages = self.belief_propagation.query(["B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        # Assert on messages values
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+
+    def test_query_multiple_variable_returns_each_message_once(self):
+        res, messages = self.belief_propagation.query(["C", "B"], get_messages=True)
+        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+
+        # Message common to both B and C
+        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(
+            messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20
+        )
+
+        # Message specific to B
+        assert np.allclose(
+            messages["['C', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+        assert np.allclose(
+            messages["['D', 'B'] -> B"],
+            np.array([0.33333333, 0.33333333, 0.33333333]),
+            atol=1e-20,
+        )
+
+        # Messages specific to C
+        assert np.allclose(
+            messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20
         )
