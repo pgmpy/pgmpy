@@ -175,27 +175,23 @@ class Inference(object):
 
         return bn, evidence
 
-    def _virtual_evidence(self, virtual_evidence):
+    def _check_virtual_evidence(self, virtual_evidence):
         """
-        Modifies the model to incorporate virtual evidence. For each virtual evidence
-        variable a binary variable is added as the child of the evidence variable to
-        the model. The state 0 probabilities of the child is the evidence.
+        Checks the virtual evidence's format is correct. Each evidence must:
+        - Be a TabularCPD instance
+        - Be targeted to a single variable
+        - Be defined on a variable which is in the model
+        - Have the same cardinality as its corresponding variable in the model
 
         Parameters
         ----------
-        virtual_evidence: dict
-            A dict of TabularCPD instances specifying the virtual evidence for each
+        virtual_evidence: list
+            A list of TabularCPD instances specifying the virtual evidence for each
             of the evidence variables.
-
-        Returns
-        -------
-        None
-
-        References
-        ----------
-        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks: Presentation and comparison on a simple example." International Conference on Information Processing and Management of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
         """
         for cpd in virtual_evidence:
+            if not isinstance(cpd, TabularCPD):
+                raise ValueError("Virtual evidence should be a TabularCPD")
             var = cpd.variables[0]
             if var not in self.model.nodes():
                 raise ValueError(
@@ -210,6 +206,28 @@ class Inference(object):
                 raise ValueError(
                     "The number of states/cardinality for the evidence should be same as the number of states/cardinality of the variable in the model"
                 )
+
+    def _virtual_evidence(self, virtual_evidence):
+        """
+        Modifies the model to incorporate virtual evidence. For each virtual evidence
+        variable a binary variable is added as the child of the evidence variable to
+        the model. The state 0 probabilities of the child is the evidence.
+
+        Parameters
+        ----------
+        virtual_evidence: list
+            A list of TabularCPD instances specifying the virtual evidence for each
+            of the evidence variables.
+
+        Returns
+        -------
+        None
+
+        References
+        ----------
+        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks: Presentation and comparison on a simple example." International Conference on Information Processing and Management of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
+        """
+        self._check_virtual_evidence(virtual_evidence)
 
         bn = self.model.copy()
         for cpd in virtual_evidence:
@@ -230,3 +248,16 @@ class Inference(object):
             bn.add_cpds(new_cpd)
 
         self.__init__(bn)
+
+    @staticmethod
+    def _get_virtual_evidence_var_list(virtual_evidence):
+        """
+        Returns the list of variables that have a virtual evidence.
+
+        Parameters
+        ----------
+        virtual_evidence: list
+            A list of TabularCPD instances specifying the virtual evidence for each
+            of the evidence variables.
+        """
+        return [cpd.variables[0] for cpd in virtual_evidence]
