@@ -45,7 +45,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         log_z = logsumexp(mu[clique].values)
         for clique in cliques:
             mu[clique] += np.log(n) - log_z
-            np.exp(mu[clique].values, out=mu[clique].values)
+            mu[clique].values = mu[clique].values.exp()
         return mu
 
     def estimate(
