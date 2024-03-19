@@ -128,3 +128,10 @@ def transpose(arr, axis):
         return np.transpose(arr, axes=axis)
     else:
         return torch.permute(arr, dims=axis)
+
+
+def exp(arr):
+    if isinstance(arr, np.ndarray):
+        return np.exp(arr)
+    else:
+        return arr.exp()

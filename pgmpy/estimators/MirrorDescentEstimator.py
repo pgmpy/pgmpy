@@ -5,6 +5,7 @@ from scipy.special import logsumexp
 
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.factors import FactorDict
+from pgmpy.utils import compat_fns
 
 
 class MirrorDescentEstimator(MarginalEstimator):
@@ -45,7 +46,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         log_z = logsumexp(mu[clique].values)
         for clique in cliques:
             mu[clique] += np.log(n) - log_z
-            mu[clique].values = mu[clique].values.exp()
+            mu[clique].values = compat_fns.exp(mu[clique].values)
         return mu
 
     def estimate(
