@@ -1,13 +1,16 @@
 # coding:utf-8
 
+import copy
 from itertools import chain
 
 import numpy as np
 from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
+from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.inference.ExactInference import BeliefPropagation
+from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
@@ -175,3 +178,61 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         )
         cpd.normalize()
         return cpd
+
+
+class IterativeProportionalEstimator(ParameterEstimator):
+    LAPLACE_SMOOTHING = 1e-2
+
+    def __init__(self, model, data, **kwargs):
+        if not isinstance(model, JunctionTree):
+            raise NotImplementedError(
+                "Maximum Likelihood Estimate is only implemented for JunctionTree."
+            )
+
+        if set(model.nodes()) > set(data.columns):
+            raise ValueError(
+                "Nodes detected in the model that are not present in the dataset. "
+                + "Refine the model so that all parameters can be estimated from the data."
+            )
+
+        super().__init__(model, data, **kwargs)
+
+    def get_parameters(self):
+        """Method to estimate the model parameters (Clique Beliefs) using Maximum Likelihood Estimation.
+
+        Returns
+        -------
+        Estimated parameters: FactorDict
+            Clique beliefs for each clique in the JunctionTree.
+        """
+        if not isinstance(self.model, JunctionTree):
+            raise TypeError(
+                "`UndirectedMaximumLikelihoodEstimator.model` must be a `JunctionTree`."
+            )
+
+        if not hasattr(self.model, "clique_beliefs"):
+            raise NotImplementedError(
+                "A model containing clique beliefs is required to estimate parameters."
+            )
+
+        clique_beliefs = self.model.clique_beliefs
+
+        if not isinstance(clique_beliefs, FactorDict):
+            raise TypeError(
+                "`UndirectedMaximumLikelihoodEstimator.model.clique_beliefs` must be a `FactorDict`."
+            )
+
+        # These are the variables as represented by the `JunctionTree`.
+        cliques = list(clique_beliefs.keys())
+        marginals = FactorDict.from_dataframe(df=self.data, marginals=cliques)
+        all_variables = set(self.model.states.keys())
+        potentials = FactorDict()
+        variables = set()
+        for clique in cliques:
+            new = tuple(all_variables - variables & set(clique))
+            variables.update(clique)
+            potentials[clique] = (
+                marginals[clique].log()
+                + -1 * marginals[clique].marginalize(variables=new, inplace=False).log()
+            ).exp()
+        return potentials
