@@ -177,7 +177,3 @@ class TestMarginalEstimatorTorch(unittest.TestCase):
         del self.df
 
         config.set_backend("numpy")
-
-
-if __name__ == "__main__":
-    unittest.main()
