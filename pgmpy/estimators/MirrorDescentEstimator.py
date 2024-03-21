@@ -32,7 +32,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         # Assign a new value for theta.
         self.belief_propagation.junction_tree.clique_beliefs = theta
 
-        # TODO: Currently, belief propogation operates in the original space.
+        # TODO: Currently, belief propagation operates in the original space.
         # To be compatible with this function and for better numerical conditioning,
         # allow calibration to happen in log-space.
         self.belief_propagation.calibrate()
