@@ -55,9 +55,6 @@ class TestMarginalEstimator(unittest.TestCase):
         diff = tree.factors[0].values.flatten() - marginal.values.flatten()
         self.assertAlmostEqual(diff.sum(), 0.0)
 
-    def test_junction_tree(self):
-        pass
-
     def test_mirror_descent_warm_start(self):
         df = pd.DataFrame({"A": np.repeat([0, 1], 50), "B": np.repeat([1, 0], 50)})
         model = JunctionTree()
