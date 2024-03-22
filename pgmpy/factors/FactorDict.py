@@ -9,6 +9,21 @@ from pgmpy.factors.discrete import DiscreteFactor
 class FactorDict(dict):
     @classmethod
     def from_dataframe(cls, df, marginals):
+        """Create a `FactorDict` from a given set of marginals.
+
+        Parameters
+        ----------
+        df: pandas DataFrame object
+
+        marginals: List[Tuple[str]]
+            List of Tuples containing the names of the marginals.
+
+        Returns
+        -------
+        Factor dictionary: FactorDict
+            FactorDict with each marginal's Factor representing the empirical
+                frequency of the marginal from the dataset.
+        """
         if df.isnull().values.any():
             raise ValueError("df cannot contain None or np.NaN values.")
 

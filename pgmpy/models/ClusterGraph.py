@@ -214,6 +214,26 @@ class ClusterGraph(UndirectedGraph):
 
     @property
     def clique_beliefs(self) -> FactorDict:
+        """
+        Return a mapping from the cliques to their factor representations.
+
+        Returns
+        -------
+        FactorDict: mapping from cliques to factors
+
+        Examples
+        --------
+        >>> from pgmpy.models import ClusterGraph
+        >>> from pgmpy.factors.discrete import DiscreteFactor
+        >>> G = ClusterGraph()
+        >>> G.add_nodes_from([('a', 'b', 'c'), ('a', 'b'), ('a', 'c')])
+        >>> G.add_edges_from([(('a', 'b', 'c'), ('a', 'b')),
+        ...                   (('a', 'b', 'c'), ('a', 'c'))])
+        >>> phi1 = DiscreteFactor(['a', 'b', 'c'], [2, 2, 2], np.random.rand(8))
+        >>> phi2 = DiscreteFactor(['a', 'b'], [2, 2], np.random.rand(4))
+        >>> phi3 = DiscreteFactor(['a', 'c'], [2, 2], np.random.rand(4))
+        >>> G.clique_beliefs
+        """
         return FactorDict({clique: self.get_factors(clique) for clique in self.nodes()})
 
     @clique_beliefs.setter
