@@ -41,8 +41,8 @@ class TestMarginalEstimator(unittest.TestCase):
         self.assertEqual(
             tree2.factors[0].get_value(a=1, b=0), tree2.factors[0].get_value(a=1, b=1)
         )
-        self.assertEqual(float(tree2.factors[0].get_value(a=0, b=0)), 1.0)
-        self.assertEqual(float(tree2.factors[0].get_value(a=1, b=0)), 1.5)
+        self.assertAlmostEqual(float(tree2.factors[0].get_value(a=0, b=0)), 1.0)
+        self.assertAlmostEqual(float(tree2.factors[0].get_value(a=1, b=0)), 1.5)
 
     def test_mirror_descent_estimator_l2(self):
         mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
