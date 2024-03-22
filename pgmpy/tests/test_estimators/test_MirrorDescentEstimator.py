@@ -21,7 +21,7 @@ class TestMarginalEstimator(unittest.TestCase):
         self.m2.add_edges_from([("A", self.factor)])
         self.m2.check_model()
 
-    def estimate_example_smoke_test(self):
+    def test_estimate_example_smoke_test(self):
         data = pd.DataFrame(data={"a": [0, 0, 1, 1, 1], "b": [0, 1, 0, 1, 1]})
         model = FactorGraph()
         model.add_nodes_from(["a", "b"])
@@ -31,11 +31,20 @@ class TestMarginalEstimator(unittest.TestCase):
         tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a", "b")]
         )
-        self.assertTrue(np.all(tree1.factors[0].values, np.array([1.0, 1.0, 1.0, 2.0])))
+        np.testing.assert_array_equal(
+            tree1.factors[0].values,
+            [
+                [
+                    1.0,
+                    1.0,
+                ],
+                [1.0, 2.0],
+            ],
+        )
         tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a",)]
         )
-        self.assertTrue(np.all(tree2.factors[0].values, np.array([1.0, 1.0, 1.5, 1.5])))
+        np.testing.assert_array_equal(tree2.factors[0].values, [[1.0, 1.0], [1.5, 1.5]])
 
     def test_mirror_descent_estimator_l2(self):
         mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
@@ -104,6 +113,7 @@ class TestMarginalEstimator(unittest.TestCase):
                 (("b", "c"), ("c", "e")),
             ]
         )
+        self.assertTrue(len(model.nodes) > 1)
         for node in model.nodes():
             model.add_factors(
                 DiscreteFactor(
