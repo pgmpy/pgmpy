@@ -35,7 +35,14 @@ class TestMarginalEstimator(unittest.TestCase):
         tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
             marginals=[("a",)]
         )
-        np.testing.assert_array_equal(tree2.factors[0].values, [[1.0, 1.0], [1.5, 1.5]])
+        self.assertEqual(
+            tree2.factors[0].get_value(a=0, b=0), tree2.factors[0].get_value(a=0, b=1)
+        )
+        self.assertEqual(
+            tree2.factors[0].get_value(a=1, b=0), tree2.factors[0].get_value(a=1, b=1)
+        )
+        self.assertEqual(tree2.factors[0].get_value(a=0, b=0), 1.0)
+        self.assertEqual(tree2.factors[0].get_value(a=1, b=0), 1.5)
 
     def test_mirror_descent_estimator_l2(self):
         mirror_descent_estimator = MirrorDescentEstimator(self.m2, data=self.df)
