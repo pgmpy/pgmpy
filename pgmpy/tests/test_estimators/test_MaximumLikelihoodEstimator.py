@@ -178,8 +178,6 @@ class TestMLE(unittest.TestCase):
 
     def test_estimate_potentials_smoke_test(self):
         self.assertEqual(self.mle3.estimate_potentials(), self.potentials2)
-        print(self.potentials2[("A", "C")])
-        print(self.potentials2[("B", "C")])
 
     def test_estimate_potentials(self):
         self.assertEqual(self.mle2.estimate_potentials(), self.potentials1)
