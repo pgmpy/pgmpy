@@ -802,19 +802,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
-    def log(self, inplace: bool = False):
-        phi = self if inplace else self.copy()
-        # Add in a small constant for numerical stability.
-        phi.values = np.log(phi.values + 1e-100)
-        if not inplace:
-            return phi
-
-    def exp(self, inplace: bool = False):
-        phi = self if inplace else self.copy()
-        phi.values = np.exp(phi.values)
-        if not inplace:
-            return phi
-
     def sample(self, n):
         """
         Normalizes the factor and samples state combinations from it.
