@@ -300,7 +300,7 @@ class MarginalEstimator(BaseEstimator):
     Parameters
     ----------
     model: MarkovNetwork | FactorGraph | JunctionTree
-        A model to optimize, using Belief Propogation and an estimation method.
+        A model to optimize, using Belief Propagation and an estimation method.
 
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
@@ -344,7 +344,7 @@ class MarginalEstimator(BaseEstimator):
                     break
             else:
                 raise ValueError(
-                    "Could not find a correponding clique for"
+                    "Could not find a corresponding clique for"
                     + f" marginal: {marginal_clique}"
                     + f" out of cliques: {clique_nodes}"
                 )

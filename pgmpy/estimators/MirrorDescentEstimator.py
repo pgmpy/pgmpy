@@ -5,6 +5,7 @@ from scipy.special import logsumexp
 
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.factors import FactorDict
+from pgmpy.utils import compat_fns
 
 
 class MirrorDescentEstimator(MarginalEstimator):
@@ -31,7 +32,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         # Assign a new value for theta.
         self.belief_propagation.junction_tree.clique_beliefs = theta
 
-        # TODO: Currently, belief propogation operates in the original space.
+        # TODO: Currently, belief propagation operates in the original space.
         # To be compatible with this function and for better numerical conditioning,
         # allow calibration to happen in log-space.
         self.belief_propagation.calibrate()
@@ -45,7 +46,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         log_z = logsumexp(mu[clique].values)
         for clique in cliques:
             mu[clique] += np.log(n) - log_z
-            np.exp(mu[clique].values, out=mu[clique].values)
+            mu[clique].values = compat_fns.exp(mu[clique].values)
         return mu
 
     def estimate(
