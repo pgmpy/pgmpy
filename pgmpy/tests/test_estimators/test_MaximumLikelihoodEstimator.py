@@ -19,7 +19,7 @@ class TestMLE(unittest.TestCase):
         self.m2 = JunctionTree()
         self.m2.add_nodes_from([("A", "B")])
         self.m3 = JunctionTree()
-        self.m3.add_nodes_from([("A", "C"), ("B", "C")])
+        self.m3.add_edges_from([(("A", "C"), ("B", "C"))])
 
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
@@ -177,10 +177,26 @@ class TestMLE(unittest.TestCase):
         self.assertEqual(len(e1.get_parameters(n_jobs=1)), 3)
 
     def test_estimate_potentials_smoke_test(self):
-        self.assertEqual(self.mle3.estimate_potentials(), self.potentials2)
+        joint = self.mle3.estimate_potentials().product()
+        self.assertEqual(
+            joint.marginalize(variables=["B"], inplace=False),
+            self.potentials2[("A", "C")].normalize(inplace=False),
+        )
+        self.assertEqual(
+            joint.marginalize(variables=["A"], inplace=False),
+            self.potentials2[("B", "C")].normalize(inplace=False),
+        )
+
+    def test_partition_function(self):
+        model = self.m3.copy()
+        model.clique_beliefs = self.mle3.estimate_potentials()
+        self.assertEqual(model.get_partition_function(), 1.0)
 
     def test_estimate_potentials(self):
-        self.assertEqual(self.mle2.estimate_potentials(), self.potentials1)
+        self.assertEqual(
+            self.mle2.estimate_potentials()[("A", "B")],
+            self.potentials1[("A", "B")].normalize(inplace=False),
+        )
 
     def tearDown(self):
         del self.m1

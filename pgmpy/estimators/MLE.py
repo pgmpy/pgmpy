@@ -190,20 +190,21 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
     def estimate_potentials(self):
         """
-        Implements Iterative Proportional Fitting to estimate potentials for an
-        Undirected Graphical Model Junction Tree.
+        Implements Iterative Proportional Fitting to estimate potentials specifically
+        for a Decomposable Undirected Graphical Model. Decomposability is enforced
+        by using a Junction Tree.
 
         Returns
         -------
         Estimated potentials: pgmpy.factors.FactorDict
             Estimated potentials for the entire graphical model.
 
-        Reference
+        References
         ---------
-        Algorithm 19.2 Iterative Proportional Fitting algorithm for tabular MRFs
-        & Section 19.5.7.4 IPF for decomposable graphical models
-        ML Machine Learning - A Probabilistic Perspective
-        Kevin P. Murphy.
+        [1] Kevin P. Murphy, ML Machine Learning - A Probabilistic Perspective
+            Algorithm 19.2 Iterative Proportional Fitting algorithm for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
+        [2] Eric P. Xing, Meng Song, Li Zhou, Probabilistic Graphical Models 10-708, Spring 2014.
+            https://www.cs.cmu.edu/~epxing/Class/10708-14/scribe_notes/scribe_note_lecture8.pdf.
 
         Examples
         --------
@@ -212,7 +213,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         >>> from pgmpy.estimators import MaximumLikelihoodEstimator
         >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
         >>> model = JunctionTree()
-        >>> model.add_nodes_from([("A", "C"), ("B", "C")])
+        >>> model.add_edges_from([(("A", "C"), ("B", "C"))])
         >>> potentials = MaximumLikelihoodEstimator(model, data).estimate_potentials()
         >>> print(potentials[("A", "C")])
         +------+------+------------+
@@ -220,9 +221,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         +======+======+============+
         | A(0) | C(0) |     0.0000 |
         +------+------+------------+
-        | A(0) | C(1) |     2.0000 |
+        | A(0) | C(1) |     0.6667 |
         +------+------+------------+
-        | A(1) | C(0) |     1.0000 |
+        | A(1) | C(0) |     0.3333 |
         +------+------+------------+
         | A(1) | C(1) |     0.0000 |
         +------+------+------------+
@@ -232,11 +233,11 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         +======+======+============+
         | B(0) | C(0) |     1.0000 |
         +------+------+------------+
-        | B(0) | C(1) |     1.0000 |
+        | B(0) | C(1) |     0.5000 |
         +------+------+------------+
         | B(1) | C(0) |     0.0000 |
         +------+------+------------+
-        | B(1) | C(1) |     1.0000 |
+        | B(1) | C(1) |     0.5000 |
         +------+------+------------+
         """
         if not isinstance(self.model, JunctionTree):
@@ -258,6 +259,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         # These are the variables as represented by the `JunctionTree`.
         cliques = list(clique_beliefs.keys())
+        empirical_marginals = FactorDict.from_dataframe(df=self.data, marginals=cliques)
+        potentials = FactorDict({})
+        seen = set()
+
         # ML Machine Learning - A Probabilistic Perspective
         # Chapter 19, Algorithm 19.2, Page 682:
         # Update each clique by multiplying the potential value by
@@ -265,4 +270,17 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         # Since the potential values are equal to the expected counts
         # for a JunctionTree, we can simplify this to just the empirical counts.
         # This is also described in section 19.5.7.4.
-        return FactorDict.from_dataframe(df=self.data, marginals=cliques)
+        for clique in cliques:
+            # Calculate the running sepset between the new clique and all of the
+            # variables we have previously seen.
+            variables = tuple(set(clique) - seen)
+            seen.update(clique)
+            potentials[clique] = empirical_marginals[clique]
+
+            # Divide out the sepset.
+            if variables:
+                marginalized = empirical_marginals[clique].marginalize(
+                    variables=variables, inplace=False
+                )
+                potentials[clique] = potentials[clique] / marginalized
+        return potentials
