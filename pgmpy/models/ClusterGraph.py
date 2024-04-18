@@ -6,6 +6,7 @@ import numpy as np
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
+from pgmpy.utils import compat_fns
 
 
 class ClusterGraph(UndirectedGraph):
@@ -317,7 +318,7 @@ class ClusterGraph(UndirectedGraph):
             factor = factor_product(
                 factor, *[self.factors[i] for i in range(1, len(self.factors))]
             )
-            return np.sum(factor.values)
+            return compat_fns.sum(factor.values)
 
     def check_model(self):
         """

@@ -3,6 +3,7 @@ from __future__ import annotations
 from numbers import Number
 import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
+from pgmpy.factors.base import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 
 
@@ -66,3 +67,6 @@ class FactorDict(dict):
 
     def dot(self, other):
         return sum((self[clique] * other[clique]).values.sum() for clique in self)
+
+    def product(self):
+        return factor_product(*self.get_factors())

@@ -135,3 +135,10 @@ def exp(arr):
         return np.exp(arr)
     else:
         return arr.exp()
+
+
+def sum(arr):
+    if isinstance(arr, np.ndarray):
+        return np.sum(arr)
+    else:
+        return torch.sum(arr)

@@ -6,8 +6,9 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from pgmpy.estimators import ParameterEstimator
+from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import BayesianNetwork, JunctionTree
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
@@ -16,7 +17,7 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
     Parameters
     ----------
-    model: A pgmpy.models.BayesianNetwork instance
+    model: A pgmpy.models.BayesianNetwork or pgmpy.models.JunctionTree instance
 
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names of the network.
@@ -41,22 +42,29 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
     """
 
     def __init__(self, model, data, **kwargs):
-        if not isinstance(model, BayesianNetwork):
+        if not isinstance(model, BayesianNetwork) and not isinstance(
+            model, JunctionTree
+        ):
             raise NotImplementedError(
-                "Maximum Likelihood Estimate is only implemented for BayesianNetwork"
+                "Maximum Likelihood Estimate is only implemented for BayesianNetwork and JunctionTree"
             )
 
         elif set(model.nodes()) > set(data.columns):
-            raise ValueError(
-                f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
-            )
+            if isinstance(model, BayesianNetwork):
+                raise ValueError(
+                    f"Found latent variables: {model.latents}. Maximum Likelihood doesn't support latent variables, please use ExpectationMaximization"
+                )
+            else:
+                raise ValueError(
+                    "Nodes detected in the model that are not present in the dataset. "
+                    + "Refine the model so that all parameters can be estimated from the data."
+                )
 
         super(MaximumLikelihoodEstimator, self).__init__(model, data, **kwargs)
 
     def get_parameters(self, n_jobs=1, weighted=False):
         """
-        Method to estimate the model parameters (CPDs) using Maximum Likelihood
-        Estimation.
+        Method to estimate the model parameters using Maximum Likelihood Estimation.
 
         Parameters
         ----------
@@ -71,8 +79,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         Returns
         -------
-        Estimated parameters: list
+        Estimated parameters: list or pgmpy.factors.FactorDict
             List of pgmpy.factors.discrete.TabularCPDs, one for each variable of the model
+            Or a FactorDict representing potential values of a Junction Tree
 
         Examples
         --------
@@ -90,6 +99,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         <TabularCPD representing P(A:2) at 0x7f7b4dfd4fd0>,
         <TabularCPD representing P(D:2 | C:2) at 0x7f7b4df822b0>]
         """
+
+        if isinstance(self.model, JunctionTree):
+            return self.estimate_potentials()
 
         parameters = Parallel(n_jobs=n_jobs)(
             delayed(self.estimate_cpd)(node, weighted) for node in self.model.nodes()
@@ -175,3 +187,100 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         )
         cpd.normalize()
         return cpd
+
+    def estimate_potentials(self):
+        """
+        Implements Iterative Proportional Fitting to estimate potentials specifically
+        for a Decomposable Undirected Graphical Model. Decomposability is enforced
+        by using a Junction Tree.
+
+        Returns
+        -------
+        Estimated potentials: pgmpy.factors.FactorDict
+            Estimated potentials for the entire graphical model.
+
+        References
+        ---------
+        [1] Kevin P. Murphy, ML Machine Learning - A Probabilistic Perspective
+            Algorithm 19.2 Iterative Proportional Fitting algorithm for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
+        [2] Eric P. Xing, Meng Song, Li Zhou, Probabilistic Graphical Models 10-708, Spring 2014.
+            https://www.cs.cmu.edu/~epxing/Class/10708-14/scribe_notes/scribe_note_lecture8.pdf.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from pgmpy.models import JunctionTree
+        >>> from pgmpy.estimators import MaximumLikelihoodEstimator
+        >>> data = pd.DataFrame(data={'A': [0, 0, 1], 'B': [0, 1, 0], 'C': [1, 1, 0]})
+        >>> model = JunctionTree()
+        >>> model.add_edges_from([(("A", "C"), ("B", "C"))])
+        >>> potentials = MaximumLikelihoodEstimator(model, data).estimate_potentials()
+        >>> print(potentials[("A", "C")])
+        +------+------+------------+
+        | A    | C    |   phi(A,C) |
+        +======+======+============+
+        | A(0) | C(0) |     0.0000 |
+        +------+------+------------+
+        | A(0) | C(1) |     0.6667 |
+        +------+------+------------+
+        | A(1) | C(0) |     0.3333 |
+        +------+------+------------+
+        | A(1) | C(1) |     0.0000 |
+        +------+------+------------+
+        >>> print(potentials[("B", "C")])
+        +------+------+------------+
+        | B    | C    |   phi(B,C) |
+        +======+======+============+
+        | B(0) | C(0) |     1.0000 |
+        +------+------+------------+
+        | B(0) | C(1) |     0.5000 |
+        +------+------+------------+
+        | B(1) | C(0) |     0.0000 |
+        +------+------+------------+
+        | B(1) | C(1) |     0.5000 |
+        +------+------+------------+
+        """
+        if not isinstance(self.model, JunctionTree):
+            raise NotImplementedError(
+                "Iterative Proportional Fitting is only implemented for Junction Trees."
+            )
+
+        if not hasattr(self.model, "clique_beliefs"):
+            raise NotImplementedError(
+                "A model containing clique beliefs is required to estimate parameters."
+            )
+
+        clique_beliefs = self.model.clique_beliefs
+
+        if not isinstance(clique_beliefs, FactorDict):
+            raise TypeError(
+                "`UndirectedMaximumLikelihoodEstimator.model.clique_beliefs` must be a `FactorDict`."
+            )
+
+        # These are the variables as represented by the `JunctionTree`.
+        cliques = list(clique_beliefs.keys())
+        empirical_marginals = FactorDict.from_dataframe(df=self.data, marginals=cliques)
+        potentials = FactorDict({})
+        seen = set()
+
+        # ML Machine Learning - A Probabilistic Perspective
+        # Chapter 19, Algorithm 19.2, Page 682:
+        # Update each clique by multiplying the potential value by
+        # the ratio of the empirical counts over expected counts.
+        # Since the potential values are equal to the expected counts
+        # for a JunctionTree, we can simplify this to just the empirical counts.
+        # This is also described in section 19.5.7.4.
+        for clique in cliques:
+            # Calculate the running sepset between the new clique and all of the
+            # variables we have previously seen.
+            variables = tuple(set(clique) - seen)
+            seen.update(clique)
+            potentials[clique] = empirical_marginals[clique]
+
+            # Divide out the sepset.
+            if variables:
+                marginalized = empirical_marginals[clique].marginalize(
+                    variables=variables, inplace=False
+                )
+                potentials[clique] = potentials[clique] / marginalized
+        return potentials
