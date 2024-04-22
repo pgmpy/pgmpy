@@ -20,7 +20,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
     Defined above, we have the following mapping from variable
     assignments to the index of the row vector in the value field:
-    
+
     +-----+-----+-----+-------------------+
     |  x1 |  x2 |  x3 |    phi(x1, x2, x3)|
     +-----+-----+-----+-------------------+
