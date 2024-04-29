@@ -109,14 +109,25 @@ For more detailed jupyter notebooks and basic tutorials on Graphical Models chec
 
 Citing
 ======
-Please use the following bibtex for citing `pgmpy` in your research:
+If you use `pgmpy` in your scientific work, please consider citing us:
+
 ```
-@inproceedings{ankan2015pgmpy,
-  title={pgmpy: Probabilistic graphical models using python},
-  author={Ankan, Ankur and Panda, Abinash},
-  booktitle={Proceedings of the 14th Python in Science Conference (SCIPY 2015)},
-  year={2015},
-  organization={Citeseer}
+Ankan, Ankur, Abinash, Panda. "pgmpy: Probabilistic Graphical Models using Python." Proceedings of the Python in Science Conference. SciPy, 2015.
+```
+
+Bibtex:
+```
+@inproceedings{Ankan2015,
+  series = {SciPy},
+  title = {pgmpy: Probabilistic Graphical Models using Python},
+  ISSN = {2575-9752},
+  url = {http://dx.doi.org/10.25080/Majora-7b98e3ed-001},
+  DOI = {10.25080/majora-7b98e3ed-001},
+  booktitle = {Proceedings of the Python in Science Conference},
+  publisher = {SciPy},
+  author = {Ankan,  Ankur and Panda,  Abinash},
+  year = {2015},
+  collection = {SciPy}
 }
 ```
 
