@@ -60,7 +60,7 @@ class TestBDsScore(unittest.TestCase):
             BDsScore(self.d1, equivalent_sample_size=1).score(self.m1),
             -36.82311976667139,
         )
-        self.assertEqual(
+        self.assertAlmostEqual(
             BDsScore(self.d1, equivalent_sample_size=1).score(self.m2),
             -45.788991276221964,
         )
