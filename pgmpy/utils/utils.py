@@ -1,5 +1,7 @@
 import gzip
 
+import pandas as pd
+
 try:
     from importlib.resources import files
 except:
@@ -112,3 +114,64 @@ def get_example_model(model):
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
+
+
+def discretize(data, cardinality, labels=dict(), method="rounding"):
+    """
+    Discretizes a given continuous dataset.
+
+    Parameters
+    ----------
+    data: pandas.DataFrame
+        The dataset to discretize. All columns must have continuous values.
+
+    cardinality: dict
+        A dictionary of the form (str: int) representing the number of bins
+        to create for each of the variables.
+
+    labels: dict (default: None)
+        A dictionary of the form (str: list) representing the label names for
+        each variable in the discretized dataframe.
+
+    method: rounding or quantile
+        If rounding, equal width bins are created and data is discretized into these bins. Refer pandas.cut for more details.
+        If quantile, creates bins such that each bin has an equal number of datapoints. Refer pandas.qcut for more details.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.utils import discretize
+    >>> rng = np.random.default_rng(42)
+    >>> X = rng.standard_normal(1000)
+    >>> Y = 0.2 * X + rng.standard_normal(1000)
+    >>> Z = 0.4 * X + 0.5 * Y + rng.standard_normal(1000)
+    >>> df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+    >>> df_disc = discretize(df, cardinality={'X': 3, 'Y': 3, 'Z': 3}, labels={'X': ['low', 'mid', 'high'], 'Y': ['low', 'mid', 'high'], 'Z': ['low', 'mid', 'high']})
+    >>> df_disc.head()
+        X    Y    Z
+    0   mid  mid  mid
+    1   mid  mid  low
+    2   mid  mid  mid
+    3  high  mid  mid
+    4   low  mid  low
+
+    Returns
+    -------
+    pandas.DataFrame: A discretized dataframe.
+    """
+    df_copy = data.copy()
+    if method == "rounding":
+        for column in data.columns:
+            df_copy[column] = pd.cut(
+                df_copy[column],
+                bins=cardinality[column],
+                include_lowest=True,
+                labels=labels.get(column),
+            )
+    elif method == "quantile":
+        for column in data.columns:
+            df_copy[column] = pd.qcut(
+                df_copy[column], q=cardinality[column], labels=labels.get(column)
+            )
+
+    return df_copy
