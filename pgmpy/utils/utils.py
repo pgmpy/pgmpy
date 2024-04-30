@@ -1,5 +1,7 @@
 import gzip
 
+import pandas as pd
+
 try:
     from importlib.resources import files
 except:
@@ -112,3 +114,28 @@ def get_example_model(model):
         content = f.read()
     reader = BIFReader(string=content.decode("utf-8"), n_jobs=1)
     return reader.get_model()
+
+
+def discretize(data, cardinality, labels=dict(), method="rounding"):
+    """
+    Method to discretize a given dataset.
+
+    Parameters
+    ==========
+    """
+    df_copy = data.copy()
+    if method == "rounding":
+        for column in data.columns:
+            df_copy[column] = pd.cut(
+                df_copy[column],
+                bins=cardinality[column],
+                include_lowest=True,
+                labels=labels.get(column),
+            )
+    elif method == "quantile":
+        for column in data.columns:
+            df_copy[column] = pd.qcut(
+                df_copy[column], q=cardinality[column], labels=labels.get(column)
+            )
+
+    return df_copy
