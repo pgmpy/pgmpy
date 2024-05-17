@@ -81,10 +81,13 @@ class XBNReader(object):
         >>> reader.get_static_properties()
         {'FORMAT': 'MSR DTAS XML', 'VERSION': '0.2', 'CREATOR': 'Microsoft Research DTAS'}
         """
-        return {
-            tags.tag: tags.get("VALUE")
-            for tags in self.bnmodel.find("STATICPROPERTIES")
-        }
+        if self.bnmodel.find("STATICPROPERTIES") is not None:
+            return {
+                tags.tag: tags.get("VALUE")
+                for tags in self.bnmodel.find("STATICPROPERTIES")
+            }
+        else:
+            return {}
 
     def get_variables(self):
         """
@@ -368,17 +371,17 @@ class XBNWriter(object):
                 "VAR",
                 attrib={
                     "NAME": var,
-                    "TYPE": data[var]["TYPE"],
-                    "XPOS": data[var]["XPOS"],
-                    "YPOS": data[var]["YPOS"],
+                    "TYPE": data[var].get("TYPE", ""),
+                    "XPOS": data[var].get("XPOS", ""),
+                    "YPOS": data[var].get("YPOS", ""),
                 },
             )
             etree.SubElement(
                 variable,
                 "DESCRIPTION",
-                attrib={"DESCRIPTION": data[var]["DESCRIPTION"]},
+                attrib={"DESCRIPTION": data[var].get("DESCRIPTION", "")},
             )
-            for state in data[var]["STATES"]:
+            for state in self.model.states[var]:
                 etree.SubElement(variable, "STATENAME").text = state
 
     def set_edges(self, edge_list):
@@ -420,7 +423,9 @@ class XBNWriter(object):
             cpd_values = cpd.get_values().transpose()
             var = cpd.variable
             dist = etree.SubElement(
-                distributions, "DIST", attrib={"TYPE": self.model.nodes[var]["TYPE"]}
+                distributions,
+                "DIST",
+                attrib={"TYPE": self.model.nodes[var].get("TYPE", "")},
             )
             etree.SubElement(dist, "PRIVATE", attrib={"NAME": var})
             dpis = etree.SubElement(dist, "DPIS")
@@ -442,3 +447,23 @@ class XBNWriter(object):
                 etree.SubElement(dpis, "DPI").text = (
                     " " + " ".join(map(str, cpd_values[0])) + " "
                 )
+
+    def write_xbn(self, filename):
+        """
+        Writes the BIF data into a file
+
+        Parameters
+        ----------
+        filename : Name of the file
+
+        Example
+        -------
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> asia = get_example_model('asia')
+        >>> writer = XBNWriter(asia)
+        >>> writer.write_xbn(filename='asia.xbn')
+        """
+        writer = self.__str__()
+        with open(filename, "wb") as fout:
+            fout.write(writer)
