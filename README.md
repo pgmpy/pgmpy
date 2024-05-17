@@ -7,45 +7,21 @@ pgmpy
 [![Join the chat at https://gitter.im/pgmpy/pgmpy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/)
 
-pgmpy is a python library for working with Probabilistic Graphical Models.
+pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from both causal inference and probabilistic inference literatures to allow users to seamlessly work between both. It implements algorithms for structure learning/causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
 
-Documentation  and list of algorithms supported is at our official site http://pgmpy.org/
-Examples on using pgmpy: https://github.com/pgmpy/pgmpy/tree/dev/examples
-Basic tutorial on Probabilistic Graphical models using pgmpy: https://github.com/pgmpy/pgmpy_notebook
+The documentation is available at: https://pgmpy.org/
+Installation instructions are available at: https://pgmpy.org/started/install.html
+
+Example notebooks are available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
+
+Tutorials on Bayesian Networks: https://github.com/pgmpy/pgmpy_notebook
 
 Our mailing list is at https://groups.google.com/forum/#!forum/pgmpy .
 
 We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
 
-Dependencies
-=============
-pgmpy has the following non-optional dependencies:
-- python >=3.8, <=3.11
-- networkX
-- scipy
-- numpy
-- pytorch
-
-Some of the functionality would also require:
-- tqdm
-- pandas
-- pyparsing
-- statsmodels
-- joblib
-
 Installation
 =============
-pgmpy is available both on pypi and anaconda. For installing through anaconda use:
-```bash
-$ conda install -c ankurankan pgmpy
-```
-
-For installing through pip:
-```bash
-$ pip install -r requirements.txt  # only if you want to run unittests
-$ pip install pgmpy
-```
-
 To install pgmpy from the source code:
 ```
 $ git clone https://github.com/pgmpy/pgmpy
@@ -90,10 +66,8 @@ to see the coverage of existing code use following command
 $ pytest --cov-report html --cov=pgmpy
 ```
 
-Documentation and usage
-=======================
-
-The documentation is hosted at: http://pgmpy.org/
+Documentation
+=============
 
 We use sphinx to build the documentation. Please refer: https://pgmpy.org/exact_infer/bp.html for steps to build docs locally.
 
