@@ -95,12 +95,7 @@ Documentation and usage
 
 The documentation is hosted at: http://pgmpy.org/
 
-We use sphinx to build the documentation. To build the documentation on your local system use:
-```
-$ cd /path/to/pgmpy/docs
-$ make html
-```
-The generated docs will be in _build/html
+We use sphinx to build the documentation. Please refer: https://pgmpy.org/exact_infer/bp.html for steps to build docs locally.
 
 Examples
 ========
