@@ -1238,11 +1238,11 @@ class BeliefPropagation(Inference):
         return map_query_results
 
 
-class BeliefPropagationWithMessageParsing(Inference):
+class BeliefPropagationWithMessagePassing(Inference):
     """
     Class for performing efficient inference using Belief Propagation method on factor graphs with no loops.
 
-    The message-parsing algorithm recursively parses the factor graph to propagate the
+    The message-passing algorithm recursively parses the factor graph to propagate the
     model's beliefs to infer the posterior distribution of the queried variable. The recursion
     stops when reaching an observed variable or a unobserved root/leaf variable.
 
@@ -1269,7 +1269,7 @@ class BeliefPropagationWithMessageParsing(Inference):
 
     class _RecursiveMessageSchedulingQuery(object):
         """
-        Private class used in `BeliefPropagationWithMessageParsing.query()` to efficiently
+        Private class used in `BeliefPropagationWithMessagePassing.query()` to efficiently
         manage the message scheduling across the different queried variables, in a recursive way.
 
         Parameters
