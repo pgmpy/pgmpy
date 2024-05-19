@@ -3,7 +3,8 @@ import unittest
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
-from pgmpy.metrics import correlation_score, log_likelihood_score, structure_score
+from pgmpy.estimators.CITests import chi_square
+from pgmpy.metrics import *
 from pgmpy.utils import get_example_model
 
 
@@ -107,3 +108,24 @@ class TestLogLikelihoodScore(unittest.TestCase):
         self.assertRaises(
             ValueError, log_likelihood_score, self.model, df_wrong_columns
         )
+
+
+class TestImpliedCI(unittest.TestCase):
+    def setUp(self):
+        self.model_cancer = get_example_model("cancer")
+        self.model_alarm = get_example_model("alarm")
+
+        self.df_cancer = self.model_cancer.simulate(int(1e3), seed=42)
+        self.df_alarm = self.model_alarm.simulate(int(1e3), seed=42)
+
+    def test_implied_cis(self):
+        tests = implied_cis(self.model_cancer, self.df_cancer, chi_square)
+        self.assertEqual(tests.shape[0], 6)
+        self.assertEqual(
+            list(tests.loc[:, "p-value"].values.round(4)),
+            [0.9816, 1.0, 0.3491, 0.8061, 0.896, 0.9917],
+        )
+
+    def test_fisher_c(self):
+        p_value = fisher_c(self.model_cancer, self.df_cancer, chi_square)
+        self.assertEqual(p_value, 0)

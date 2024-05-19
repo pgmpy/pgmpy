@@ -1,6 +1,8 @@
 from itertools import combinations
 
+import numpy as np
 import pandas as pd
+from scipy import stats
 from sklearn.metrics import f1_score
 
 from pgmpy.base import DAG
@@ -251,3 +253,51 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
 
     # Step 2: Compute the score and return
     return supported_methods[scoring_method](data, **kwargs).score(model)
+
+
+def implied_cis(model, data, ci_test):
+    """
+    Each missing edge between two variables in a DAG implies a Conditional Independence.
+    This runs a statistical test to.
+    """
+    if not isinstance(model, (DAG, BayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+        )
+
+    cis = []
+    for u, v in combinations(model.nodes(), 2):
+        if not ((u in model[v]) or (v in model[u])):
+            Z = list(model.minimal_dseparator(u, v))
+            test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
+            cis.append([u, v, Z, test_results[1]])
+    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
+    return cis
+
+
+def fisher_c(model, data, ci_test):
+    """
+    Given a model, takes the implied CIs in form of X \ci Y | pa(X) U pa(Y) and then
+    combines the individual tests.
+    """
+    if not isinstance(model, (DAG, BayesianNetwork)):
+        raise ValueError(
+            f"model must be an instance of DAG or BayesianNetwork. Got {type(model)}"
+        )
+
+    if len(model.latents) > 0:
+        raise ValueError(
+            f"This test can not be performed on models with latent variables."
+        )
+
+    cis = []
+    for u, v in combinations(model.nodes(), 2):
+        if not ((u in model[v]) or (v in model[u])):
+            Z = set(model.predecessors(u)).union(model.predecessors(v))
+            test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
+            cis.append([u, v, Z, test_results[0]])
+    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
+
+    C = -2 * np.log(cis.loc[:, "p-value"]).sum()
+    p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
+    return p_value
