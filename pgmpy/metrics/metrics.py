@@ -1,10 +1,13 @@
+import math
 from itertools import combinations
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.metrics import f1_score
+from tqdm import tqdm
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.models import BayesianNetwork
 
@@ -255,7 +258,7 @@ def structure_score(model, data, scoring_method="bic", **kwargs):
     return supported_methods[scoring_method](data, **kwargs).score(model)
 
 
-def implied_cis(model, data, ci_test):
+def implied_cis(model, data, ci_test, show_progress=True):
     """
     Each missing edge between two variables in a DAG implies a Conditional Independence.
     This runs a statistical test to.
@@ -266,7 +269,15 @@ def implied_cis(model, data, ci_test):
         )
 
     cis = []
-    for u, v in combinations(model.nodes(), 2):
+
+    if show_progress and config.SHOW_PROGRESS:
+        comb_iter = tqdm(
+            combinations(model.nodes(), 2), total=math.comb(len(model.nodes()), 2)
+        )
+    else:
+        comb_iter = combinations(model.nodes(), 2)
+
+    for u, v in comb_iter:
         if not ((u in model[v]) or (v in model[u])):
             Z = list(model.minimal_dseparator(u, v))
             test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
@@ -275,7 +286,7 @@ def implied_cis(model, data, ci_test):
     return cis
 
 
-def fisher_c(model, data, ci_test):
+def fisher_c(model, data, ci_test, show_progress=True):
     """
     Given a model, takes the implied CIs in form of X \ci Y | pa(X) U pa(Y) and then
     combines the individual tests.
@@ -291,13 +302,22 @@ def fisher_c(model, data, ci_test):
         )
 
     cis = []
-    for u, v in combinations(model.nodes(), 2):
+
+    if show_progress and config.SHOW_PROGRESS:
+        comb_iter = tqdm(
+            combinations(model.nodes(), 2), total=math.comb(len(model.nodes()), 2)
+        )
+    else:
+        comb_iter = combinations(model.nodes(), 2)
+
+    for u, v in comb_iter:
         if not ((u in model[v]) or (v in model[u])):
             Z = set(model.predecessors(u)).union(model.predecessors(v))
             test_results = ci_test(X=u, Y=v, Z=Z, data=data, boolean=False)
-            cis.append([u, v, Z, test_results[0]])
-    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p-value"])
+            cis.append([u, v, Z, test_results[1]])
+    cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
+    cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
 
-    C = -2 * np.log(cis.loc[:, "p-value"]).sum()
+    C = -2 * np.log(cis.loc[:, "p_value"]).sum()
     p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
     return p_value
