@@ -145,13 +145,9 @@ class TestImpliedCI(unittest.TestCase):
             copy=False,
         )
         self.model_alarm_random = DAG(self.model_alarm_random.edges())
-        # self.model_alarm_random.get_random_cpds(inplace=True)
 
         self.df_cancer = self.model_cancer.simulate(int(1e3), seed=42)
-        # self.df_cancer_random = self.model_cancer_random.simulate(int(1e3), seed=42)
-
         self.df_alarm = self.model_alarm.simulate(int(1e3), seed=42)
-        # self.df_alarm_random = self.model_alarm_random.simulate(int(1e3), seed=42)
 
     def test_implied_cis(self):
         cancer_tests = implied_cis(self.model_cancer, self.df_cancer, chi_square)
