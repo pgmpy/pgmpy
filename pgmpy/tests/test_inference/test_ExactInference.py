@@ -6,7 +6,7 @@ import numpy.testing as np_test
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.inference.ExactInference import BeliefPropagationWithMessageParsing
+from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
 from pgmpy.models import BayesianNetwork, FactorGraph, JunctionTree, MarkovNetwork
 
 
@@ -1113,7 +1113,7 @@ class TestBeliefPropagation(unittest.TestCase):
         del self.bayesian_model
 
 
-class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
+class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
     def setUp(self):
         self.factor_graph = FactorGraph()
         self.factor_graph.add_nodes_from(["A", "B", "C", "D"])
@@ -1141,7 +1141,7 @@ class TestBeliefPropagationWithMessageParsing(unittest.TestCase):
             ]
         )
 
-        self.belief_propagation = BeliefPropagationWithMessageParsing(self.factor_graph)
+        self.belief_propagation = BeliefPropagationWithMessagePassing(self.factor_graph)
 
     def test_query_single_variable(self):
         res = self.belief_propagation.query(["C"])
