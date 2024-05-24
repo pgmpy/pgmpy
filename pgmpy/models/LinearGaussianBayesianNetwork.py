@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
@@ -163,52 +164,45 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
         """
         variables = list(nx.topological_sort(self))
-        mean = np.zeros(len(variables))
-        covariance = np.zeros((len(variables), len(variables)))
+        var_to_index = {var: i for i, var in enumerate(variables)}
+        n_nodes = len(self.nodes())
 
-        for node_idx in range(len(variables)):
-            cpd = self.get_cpds(variables[node_idx])
-            coefficients = cpd.mean.copy()
-            coefficients.pop(0)
-            mean[node_idx] = (
-                sum(
-                    [
-                        coeff * mean[variables.index(parent)]
-                        for coeff, parent in zip(coefficients, cpd.evidence)
-                    ]
-                )
-                + cpd.mean[0]
-            )
-            covariance[node_idx, node_idx] = (
-                sum(
-                    [
-                        coeff
-                        * coeff
-                        * covariance[variables.index(parent), variables.index(parent)]
-                        for coeff, parent in zip(coefficients, cpd.evidence)
-                    ]
-                )
-                + cpd.variance
+        # Step 1: Get the intercept of each variable.
+        intercept = {}
+        for var in variables:
+            intercept[var] = self.get_cpds(node=var).mean[0]
+
+        # Step 2: Populate the adjacency matrix, mean, and variance matrix
+        mean = []
+        B = np.zeros((n_nodes, n_nodes))
+        omega = np.zeros((n_nodes, n_nodes))
+        for var in variables:
+            cpd = self.get_cpds(node=var)
+            for i, evidence_var in enumerate(cpd.evidence):
+                B[var_to_index[evidence_var], var_to_index[var]] = cpd.mean[i + 1]
+            omega[var_to_index[var], var_to_index[var]] = cpd.variance
+            mean.append(
+                (
+                    cpd.mean * (np.array([1] + [intercept[u] for u in cpd.evidence]))
+                ).sum()
             )
 
-        for node_i_idx in range(len(variables)):
-            for node_j_idx in range(len(variables)):
-                if covariance[node_j_idx, node_i_idx] != 0:
-                    covariance[node_i_idx, node_j_idx] = covariance[
-                        node_j_idx, node_i_idx
-                    ]
-                else:
-                    cpd_j = self.get_cpds(variables[node_j_idx])
-                    coefficients = cpd_j.mean.copy()
-                    coefficients.pop(0)
-                    covariance[node_i_idx, node_j_idx] = sum(
-                        [
-                            coeff * covariance[node_i_idx, variables.index(parent)]
-                            for coeff, parent in zip(coefficients, cpd_j.evidence)
-                        ]
-                    )
+        # Step 3: Compute the implied covariance matrix
+        I = np.eye(n_nodes)
+        inv = np.linalg.inv((I - B))
+        implied_cov = inv.T @ omega @ inv
 
-        return GaussianDistribution(variables, mean, covariance)
+        return mean, implied_cov
+
+    def simulate(self, n=1000):
+        """
+        Simulates data from the given model.
+        """
+        mean, cov = self.to_joint_gaussian()
+        variables = list(nx.topological_sort(self))
+        return pd.DataFrame(
+            np.random.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
+        )
 
     def check_model(self):
         """
