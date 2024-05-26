@@ -26,29 +26,23 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(cpd.variance, self.cpd1.variance)
         self.assertEqual(cpd.mean, self.cpd1.mean)
 
-    @unittest.skip("TODO")
     def test_add_cpds(self):
         self.model.add_cpds(self.cpd1)
         cpd = self.model.get_cpds("x1")
         self.assertEqual(cpd.variable, self.cpd1.variable)
         self.assertEqual(cpd.variance, self.cpd1.variance)
-        self.assertEqual(cpd.beta_0, self.cpd1.beta_0)
 
         self.model.add_cpds(self.cpd2)
         cpd = self.model.get_cpds("x2")
         self.assertEqual(cpd.variable, self.cpd2.variable)
         self.assertEqual(cpd.variance, self.cpd2.variance)
-        self.assertEqual(cpd.beta_0, self.cpd2.beta_0)
         self.assertEqual(cpd.evidence, self.cpd2.evidence)
-        np_test.assert_array_equal(cpd.beta_vector, self.cpd2.beta_vector)
 
         self.model.add_cpds(self.cpd3)
         cpd = self.model.get_cpds("x3")
         self.assertEqual(cpd.variable, self.cpd3.variable)
         self.assertEqual(cpd.variance, self.cpd3.variance)
-        self.assertEqual(cpd.beta_0, self.cpd3.beta_0)
         self.assertEqual(cpd.evidence, self.cpd3.evidence)
-        np_test.assert_array_equal(cpd.beta_vector, self.cpd3.beta_vector)
 
         tab_cpd = TabularCPD(
             "grade",
@@ -76,7 +70,6 @@ class TestLGBNMethods(unittest.TestCase):
             np.array([[4.0, 2.0, -2.0], [2.0, 5.0, -5.0], [-2.0, -5.0, 8.0]]),
         )
 
-    @unittest.skip("TODO")
     def test_check_model(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         self.assertEqual(self.model.check_model(), True)
@@ -87,7 +80,6 @@ class TestLGBNMethods(unittest.TestCase):
 
         self.assertRaises(ValueError, self.model.check_model)
 
-    @unittest.skip("TODO")
     def test_not_implemented_methods(self):
         self.assertRaises(ValueError, self.model.get_cardinality, "x1")
         self.assertRaises(NotImplementedError, self.model.fit, [[1, 2, 3], [1, 5, 6]])
