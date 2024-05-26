@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
@@ -126,19 +127,14 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
     def to_joint_gaussian(self):
         """
-        The linear Gaussian Bayesian Networks are an alternative
-        representation for the class of multivariate Gaussian distributions.
-        This method returns an equivalent joint Gaussian distribution.
+        Linear Gaussian Bayesian Networks can be represented using a joint
+        Gaussian distribution over all the variables. This method gives
+        the mean and covariance of this equivalent joint gaussian distribution.
 
         Returns
         -------
-        GaussianDistribution: An equivalent joint Gaussian
-                                   distribution for the network.
-
-        Reference
-        ---------
-        Section 7.2, Example 7.3,
-        Probabilistic Graphical Models, Principles and Techniques
+        mean, cov: np.ndarray, np.ndarray
+            The mean and the covariance matrix of the joint gaussian distribution.
 
         Examples
         --------
@@ -149,66 +145,78 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> jgd = model.to_joint_gaussian()
-        >>> jgd.variables
-        ['x1', 'x2', 'x3']
-        >>> jgd.mean
-        array([[ 1. ],
-               [-4.5],
-               [ 8.5]])
-        >>> jgd.covariance
+        >>> mean, cov = model.to_joint_gaussian()
+        >>> mean
+        array([ 1. ], [-4.5], [ 8.5])
+        >>> cov
         array([[ 4.,  2., -2.],
                [ 2.,  5., -5.],
                [-2., -5.,  8.]])
 
         """
         variables = list(nx.topological_sort(self))
-        mean = np.zeros(len(variables))
-        covariance = np.zeros((len(variables), len(variables)))
+        var_to_index = {var: i for i, var in enumerate(variables)}
+        n_nodes = len(self.nodes())
 
-        for node_idx in range(len(variables)):
-            cpd = self.get_cpds(variables[node_idx])
-            coefficients = cpd.mean.copy()
-            coefficients.pop(0)
-            mean[node_idx] = (
-                sum(
-                    [
-                        coeff * mean[variables.index(parent)]
-                        for coeff, parent in zip(coefficients, cpd.evidence)
-                    ]
-                )
-                + cpd.mean[0]
-            )
-            covariance[node_idx, node_idx] = (
-                sum(
-                    [
-                        coeff
-                        * coeff
-                        * covariance[variables.index(parent), variables.index(parent)]
-                        for coeff, parent in zip(coefficients, cpd.evidence)
-                    ]
-                )
-                + cpd.variance
-            )
+        # Step 1: Compute the mean for each variable.
+        mean = {}
+        for var in variables:
+            cpd = self.get_cpds(node=var)
+            mean[var] = (
+                cpd.mean * (np.array([1] + [mean[u] for u in cpd.evidence]))
+            ).sum()
+        mean = np.array([mean[u] for u in variables])
 
-        for node_i_idx in range(len(variables)):
-            for node_j_idx in range(len(variables)):
-                if covariance[node_j_idx, node_i_idx] != 0:
-                    covariance[node_i_idx, node_j_idx] = covariance[
-                        node_j_idx, node_i_idx
-                    ]
-                else:
-                    cpd_j = self.get_cpds(variables[node_j_idx])
-                    coefficients = cpd_j.mean.copy()
-                    coefficients.pop(0)
-                    covariance[node_i_idx, node_j_idx] = sum(
-                        [
-                            coeff * covariance[node_i_idx, variables.index(parent)]
-                            for coeff, parent in zip(coefficients, cpd_j.evidence)
-                        ]
-                    )
+        # Step 2: Populate the adjacency matrix, and variance matrix
+        B = np.zeros((n_nodes, n_nodes))
+        omega = np.zeros((n_nodes, n_nodes))
+        for var in variables:
+            cpd = self.get_cpds(node=var)
+            for i, evidence_var in enumerate(cpd.evidence):
+                B[var_to_index[evidence_var], var_to_index[var]] = cpd.mean[i + 1]
+            omega[var_to_index[var], var_to_index[var]] = cpd.variance
 
-        return GaussianDistribution(variables, mean, covariance)
+        # Step 3: Compute the implied covariance matrix
+        I = np.eye(n_nodes)
+        inv = np.linalg.inv((I - B))
+        implied_cov = inv.T @ omega @ inv
+
+        return mean, implied_cov
+
+    def simulate(self, n=1000, seed=None):
+        """
+        Simulates data from the given model.
+
+        Parameters
+        ----------
+        n: int
+            The number of samples to draw from the model.
+
+        seed: int (default: None)
+            Seed for the random number generator.
+
+        Returns
+        -------
+        pandas.DataFrame: generated samples
+            A pandas data frame with the generated samples.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> model.simulate(n=500, seed=42)
+        """
+        mean, cov = self.to_joint_gaussian()
+        variables = list(nx.topological_sort(self))
+        rng = np.random.default_rng(seed=seed)
+        return pd.DataFrame(
+            rng.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
+        )
 
     def check_model(self):
         """
