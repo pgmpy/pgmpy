@@ -90,3 +90,17 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertRaises(
             NotImplementedError, self.model.is_imap, [[1, 2, 3], [1, 5, 6]]
         )
+
+    def test_simulate(self):
+        model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        cpd_x1 = LinearGaussianCPD("x1", [1], 4)
+        cpd_x2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+        cpd_x3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
+        model.add_cpds(cpd_x1, cpd_x2, cpd_x3)
+
+        df_cont = model.simulate(n=10000)
+
+        x1 = 1 + np.random.normal(0, 2, 10000)
+        x2 = -5 + 0.5 * x1 + np.random.normal(0, 2, 10000)
+        x3 = 4 + -1 * x2 + np.random.normal(0, np.sqrt(3), 10000)
+        df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
