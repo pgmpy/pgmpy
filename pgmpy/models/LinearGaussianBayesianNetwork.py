@@ -127,19 +127,14 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
     def to_joint_gaussian(self):
         """
-        The linear Gaussian Bayesian Networks are an alternative
-        representation for the class of multivariate Gaussian distributions.
-        This method returns an equivalent joint Gaussian distribution.
+        Linear Gaussian Bayesian Networks can be represented using a joint
+        Gaussian distribution over all the variables. This method gives
+        the mean and covariance of this equivalent joint gaussian distribution.
 
         Returns
         -------
-        GaussianDistribution: An equivalent joint Gaussian
-                                   distribution for the network.
-
-        Reference
-        ---------
-        Section 7.2, Example 7.3,
-        Probabilistic Graphical Models, Principles and Techniques
+        mean, cov: np.ndarray, np.ndarray
+            The mean and the covariance matrix of the joint gaussian distribution.
 
         Examples
         --------
@@ -150,14 +145,10 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
         >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> jgd = model.to_joint_gaussian()
-        >>> jgd.variables
-        ['x1', 'x2', 'x3']
-        >>> jgd.mean
-        array([[ 1. ],
-               [-4.5],
-               [ 8.5]])
-        >>> jgd.covariance
+        >>> mean, cov = model.to_joint_gaussian()
+        >>> mean
+        array([ 1. ], [-4.5], [ 8.5])
+        >>> cov
         array([[ 4.,  2., -2.],
                [ 2.,  5., -5.],
                [-2., -5.,  8.]])
@@ -167,13 +158,16 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         var_to_index = {var: i for i, var in enumerate(variables)}
         n_nodes = len(self.nodes())
 
-        # Step 1: Get the intercept of each variable.
-        intercept = {}
+        # Step 1: Compute the mean for each variable.
+        mean = {}
         for var in variables:
-            intercept[var] = self.get_cpds(node=var).mean[0]
+            cpd = self.get_cpds(node=var)
+            mean[var] = (
+                cpd.mean * (np.array([1] + [mean[u] for u in cpd.evidence]))
+            ).sum()
+        mean = np.array([mean[u] for u in variables])
 
-        # Step 2: Populate the adjacency matrix, mean, and variance matrix
-        mean = []
+        # Step 2: Populate the adjacency matrix, and variance matrix
         B = np.zeros((n_nodes, n_nodes))
         omega = np.zeros((n_nodes, n_nodes))
         for var in variables:
@@ -181,11 +175,6 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
             for i, evidence_var in enumerate(cpd.evidence):
                 B[var_to_index[evidence_var], var_to_index[var]] = cpd.mean[i + 1]
             omega[var_to_index[var], var_to_index[var]] = cpd.variance
-            mean.append(
-                (
-                    cpd.mean * (np.array([1] + [intercept[u] for u in cpd.evidence]))
-                ).sum()
-            )
 
         # Step 3: Compute the implied covariance matrix
         I = np.eye(n_nodes)
