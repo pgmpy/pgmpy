@@ -60,15 +60,14 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.model.add_cpds, 1)
         self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
 
-    @unittest.skip("TODO")
     def test_to_joint_gaussian(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        jgd = self.model.to_joint_gaussian()
-        self.assertEqual(jgd.variables, ["x1", "x2", "x3"])
-        np_test.assert_array_equal(jgd.mean, np.array([[1.0], [-4.5], [8.5]]))
-        np_test.assert_array_equal(
-            jgd.covariance,
+        mean, cov = self.model.to_joint_gaussian()
+        np_test.assert_array_almost_equal(mean, np.array([1.0, -4.5, 8.5]), decimal=3)
+        np_test.assert_array_almost_equal(
+            cov,
             np.array([[4.0, 2.0, -2.0], [2.0, 5.0, -5.0], [-2.0, -5.0, 8.0]]),
+            decimal=3,
         )
 
     def test_check_model(self):
@@ -93,15 +92,18 @@ class TestLGBNMethods(unittest.TestCase):
         )
 
     def test_simulate(self):
-        model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        cpd_x1 = LinearGaussianCPD("x1", [1], 4)
-        cpd_x2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
-        cpd_x3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
-        model.add_cpds(cpd_x1, cpd_x2, cpd_x3)
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df_cont = self.model.simulate(n=10000, seed=42)
 
-        df_cont = model.simulate(n=10000)
-
-        x1 = 1 + np.random.normal(0, 2, 10000)
-        x2 = -5 + 0.5 * x1 + np.random.normal(0, 2, 10000)
-        x3 = 4 + -1 * x2 + np.random.normal(0, np.sqrt(3), 10000)
+        # Same model in terms of equations
+        rng = np.random.default_rng(seed=42)
+        x1 = 1 + rng.normal(0, 2, 10000)
+        x2 = -5 + 0.5 * x1 + rng.normal(0, 2, 10000)
+        x3 = 4 + -1 * x2 + rng.normal(0, np.sqrt(3), 10000)
         df_equ = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3})
+
+        np_test.assert_array_almost_equal(df_cont.mean(), df_equ.mean(), decimal=1)
+        np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
+
+    def tearDown(self):
+        del self.model, self.cpd1, self.cpd2, self.cpd3

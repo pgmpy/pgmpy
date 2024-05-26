@@ -183,14 +183,28 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
 
         return mean, implied_cov
 
-    def simulate(self, n=1000):
+    def simulate(self, n=1000, seed=None):
         """
         Simulates data from the given model.
+
+        Parameters
+        ----------
+        n: int
+            The number of samples to draw from the model.
+
+        seed: int (default: None)
+            Seed for the random number generator.
+
+        Returns
+        -------
+        pandas.DataFrame: generated samples
+            A pandas data frame with the generated samples.
         """
         mean, cov = self.to_joint_gaussian()
         variables = list(nx.topological_sort(self))
+        rng = np.random.default_rng(seed=seed)
         return pd.DataFrame(
-            np.random.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
+            rng.multivariate_normal(mean=mean, cov=cov, size=n), columns=variables
         )
 
     def check_model(self):
