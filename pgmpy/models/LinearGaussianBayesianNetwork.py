@@ -199,6 +199,17 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         -------
         pandas.DataFrame: generated samples
             A pandas data frame with the generated samples.
+
+        Examples
+        --------
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> cpd1 = LinearGaussianCPD('x1', [1], 4)
+        >>> cpd2 = LinearGaussianCPD('x2', [-5, 0.5], 4, ['x1'])
+        >>> cpd3 = LinearGaussianCPD('x3', [4, -1], 3, ['x2'])
+        >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> model.simulate(n=500, seed=42)
         """
         mean, cov = self.to_joint_gaussian()
         variables = list(nx.topological_sort(self))
