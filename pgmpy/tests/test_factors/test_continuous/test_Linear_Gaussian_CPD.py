@@ -1,13 +1,13 @@
 import unittest
+
+import numpy as np
 import numpy.testing as np_test
 import pandas as pd
-import numpy as np
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 
 
 class TestLGCPD(unittest.TestCase):
-    # @unittest.skip("TODO")
     def test_class_init(self):
         mu = np.array([7, 13])
         sigma = np.array([[4, 3], [3, 6]])
@@ -85,9 +85,3 @@ class TestLGCPD(unittest.TestCase):
             cpd2.__str__(),
             "P(y | x1, x2, x3) = N(1*x1 + " "4.56*x2 + 8*x3 + 0.67; 2)",
         )
-
-
-#    def test_mle_fit(self):
-#        cpd = LinearGaussianCPD('Y',  [0.2, -2, 3, 7], 9.6, ['X1', 'X2', 'X3'])
-#        gbn_values = pd.read_csv('gbn_values.csv')
-#        cpd.fit(gbn_values)
