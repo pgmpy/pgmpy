@@ -7,6 +7,7 @@ import pandas as pd
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.utils import get_example_model
 
 
 class TestLGBNMethods(unittest.TestCase):
@@ -104,6 +105,12 @@ class TestLGBNMethods(unittest.TestCase):
 
         np_test.assert_array_almost_equal(df_cont.mean(), df_equ.mean(), decimal=1)
         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
+
+    def test_get_random_cpds(self):
+        model = get_example_model("alarm")
+        model_lin = LinearGaussianBayesianNetwork(model.edges())
+        cpds = model_lin.get_random_cpds()
+        self.assertEqual(len(cpds), len(model.nodes()))
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
