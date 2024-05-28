@@ -83,5 +83,5 @@ class TestLGCPD(unittest.TestCase):
         self.assertEqual(cpd1.__str__(), "P(x) = N(0.23; 0.56)")
         self.assertEqual(
             cpd2.__str__(),
-            "P(y | x1, x2, x3) = N(1*x1 + " "4.56*x2 + 8*x3 + 0.67; 2)",
+            "P(y | x1, x2, x3) = N(1.0*x1 + 4.56*x2 + 8.0*x3 + 0.67; 2)",
         )

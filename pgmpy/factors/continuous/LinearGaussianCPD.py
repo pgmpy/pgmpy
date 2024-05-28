@@ -74,7 +74,7 @@ class LinearGaussianCPD(BaseFactor):
 
         """
         self.variable = variable
-        self.mean = evidence_mean
+        self.mean = np.array(evidence_mean)
         self.variance = evidence_variance
         self.evidence = evidence
         self.sigma_yx = None
