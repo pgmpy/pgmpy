@@ -125,6 +125,42 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         return super(LinearGaussianBayesianNetwork, self).remove_cpds(*cpds)
 
+    def get_random_cpds(self, loc=0, scale=1, seed=None):
+        """
+        Generates random Linear Gaussian CPDs for the model. The coefficients
+        are sampled from a normal distribution with mean `loc` and standard
+        deviation `scale`.
+
+        Parameters
+        ----------
+        loc: float
+            The mean of the normal distribution from which the coefficients are
+            sampled.
+
+        scale: float
+            The standard deviation of the normal distribution from which the
+            coefficients are sampled.
+
+        seed: int
+            The seed for the random number generator.
+        """
+        rng = np.random.default_rng(seed=seed)
+
+        cpds = []
+        for var in self.nodes():
+            parents = self.get_parents(var)
+            cpds.append(
+                LinearGaussianCPD(
+                    var,
+                    evidence_mean=rng.normal(
+                        loc=loc, scale=scale, size=(len(parents) + 1)
+                    ),
+                    evidence_variance=rng.normal(loc=loc, scale=scale),
+                    evidence=parents,
+                )
+            )
+        return cpds
+
     def to_joint_gaussian(self):
         """
         Linear Gaussian Bayesian Networks can be represented using a joint
@@ -181,7 +217,8 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         inv = np.linalg.inv((I - B))
         implied_cov = inv.T @ omega @ inv
 
-        return mean, implied_cov
+        # Round because numerical errors can lead to non-symmetric cov matrix.
+        return mean.round(decimals=8), implied_cov.round(decimals=8)
 
     def simulate(self, n=1000, seed=None):
         """
@@ -211,6 +248,11 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> model.simulate(n=500, seed=42)
         """
+        if len(self.cpds) != len(self.nodes()):
+            raise ValueError(
+                "Each node in the model should have a CPD associated with it"
+            )
+
         mean, cov = self.to_joint_gaussian()
         variables = list(nx.topological_sort(self))
         rng = np.random.default_rng(seed=seed)

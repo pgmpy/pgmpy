@@ -74,7 +74,7 @@ class LinearGaussianCPD(BaseFactor):
 
         """
         self.variable = variable
-        self.mean = evidence_mean
+        self.mean = np.array(evidence_mean)
         self.variance = evidence_variance
         self.evidence = evidence
         self.sigma_yx = None
@@ -220,6 +220,8 @@ class LinearGaussianCPD(BaseFactor):
         return copy_cpd
 
     def __str__(self):
+        mean = self.mean.round(3)
+        variance = round(self.variance, 3)
         if self.evidence and list(self.mean):
             # P(Y| X1, X2, X3) = N(-2*X1_mu + 3*X2_mu + 7*X3_mu; 0.2)
             rep_str = "P({node} | {parents}) = N({mu} + {b_0}; {sigma})".format(
@@ -228,17 +230,17 @@ class LinearGaussianCPD(BaseFactor):
                 mu=" + ".join(
                     [
                         f"{coeff}*{parent}"
-                        for coeff, parent in zip(self.mean[1:], self.evidence)
+                        for coeff, parent in zip(mean[1:], self.evidence)
                     ]
                 ),
-                b_0=str(self.mean[0]),
-                sigma=str(self.variance),
+                b_0=str(mean[0]),
+                sigma=str(variance),
             )
         else:
             # P(X) = N(1, 4)
-            rep_str = "P({X}) = N({beta_0}; {variance})".format(
-                X=str(self.variable),
-                beta_0=str(self.mean[0]),
-                variance=str(self.variance),
-            )
+            rep_str = f"P({str(self.variable)}) = N({str(mean[0])}; {str(variance)})"
         return rep_str
+
+    def __repr__(self):
+        str_repr = self.__str__()
+        return f"<LinearGaussianCPD: {str_repr} at {hex(id(self))}"
