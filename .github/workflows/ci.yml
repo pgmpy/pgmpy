@@ -3,7 +3,7 @@ on: [push, pull_request]
 jobs:
   build:
     name: Running tests - OS - ${{ matrix.os }}; Python - ${{ matrix.python-version}}
-    runs-on: [self-hosted, windows-latest, macOS-latest]
+    runs-on: self-hosted
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
