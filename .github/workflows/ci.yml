@@ -24,6 +24,7 @@ jobs:
           pip install pip -U
           pip install black -U
           pip install -r requirements.txt -U
+          pip install pytest-xdist
       - name: Check formatting
         run: |
           black --diff .
@@ -32,4 +33,4 @@ jobs:
         run: |
           pip freeze
       - name: Run tests
-        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
+        run: pytest -n auto --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbosepyt
