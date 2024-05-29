@@ -33,4 +33,4 @@ jobs:
         run: |
           pip freeze
       - name: Run tests
-        run: pytest -n auto --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbosepyt
+        run: pytest -n auto --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
