@@ -25,7 +25,6 @@ Requirements
 
 If installing manually, the following non-optional dependencies needs to be installed:
 
-* Python 3.7+
 * numpy
 * scipy
 * scikit-learn
