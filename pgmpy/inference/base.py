@@ -5,7 +5,7 @@ from itertools import chain
 
 import numpy as np
 
-from pgmpy.factors.discrete import TabularCPD
+from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
     BayesianNetwork,
     DynamicBayesianNetwork,
@@ -178,7 +178,7 @@ class Inference(object):
     def _check_virtual_evidence(self, virtual_evidence):
         """
         Checks the virtual evidence's format is correct. Each evidence must:
-        - Be a TabularCPD instance
+        - Be a TabularCPD instance or a DiscreteFactor on a single variable.
         - Be targeted to a single variable
         - Be defined on a variable which is in the model
         - Have the same cardinality as its corresponding variable in the model
@@ -190,8 +190,15 @@ class Inference(object):
             of the evidence variables.
         """
         for cpd in virtual_evidence:
-            if not isinstance(cpd, TabularCPD):
-                raise ValueError("Virtual evidence should be a TabularCPD")
+            if not isinstance(cpd, (TabularCPD, DiscreteFactor)):
+                raise ValueError(
+                    f"Virtual evidence should be an instance of TabularCPD or DiscreteFactor. Got: {type(cpd)}"
+                )
+            if isinstance(cpd, DiscreteFactor):
+                if len(cpd.variables) > 1:
+                    raise ValueError(
+                        f"If cpd is an instance of DiscreteFactor, it should be defined on a single variable. Got: {cpd}"
+                    )
             var = cpd.variables[0]
             if var not in self.model.nodes():
                 raise ValueError(
