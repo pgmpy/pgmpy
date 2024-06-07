@@ -1,0 +1,12 @@
+@inproceedings{Ankan2015,
+  series = {SciPy},
+  title = {pgmpy: Probabilistic Graphical Models using Python},
+  ISSN = {2575-9752},
+  url = {http://dx.doi.org/10.25080/Majora-7b98e3ed-001},
+  DOI = {10.25080/majora-7b98e3ed-001},
+  booktitle = {Proceedings of the Python in Science Conference},
+  publisher = {SciPy},
+  author = {Ankan,  Ankur and Panda,  Abinash},
+  year = {2015},
+  collection = {SciPy}
+}
