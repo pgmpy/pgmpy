@@ -44,22 +44,19 @@ Citing
 If you use `pgmpy` in your scientific work, please consider citing us:
 
 ```
-Ankan, Ankur, Abinash, Panda. "pgmpy: Probabilistic Graphical Models using Python." Proceedings of the Python in Science Conference. SciPy, 2015.
+Ankur Ankan, & Abinash Panda ( 2015 ). pgmpy: Probabilistic Graphical Models using Python . In Proceedings of the 14th Python in Science Conference (pp. 6 - 11 ).
 ```
 
 Bibtex:
 ```
-@inproceedings{Ankan2015,
-  series = {SciPy},
-  title = {pgmpy: Probabilistic Graphical Models using Python},
-  ISSN = {2575-9752},
-  url = {http://dx.doi.org/10.25080/Majora-7b98e3ed-001},
-  DOI = {10.25080/majora-7b98e3ed-001},
-  booktitle = {Proceedings of the Python in Science Conference},
-  publisher = {SciPy},
-  author = {Ankan,  Ankur and Panda,  Abinash},
-  year = {2015},
-  collection = {SciPy}
+@InProceedings{ ankur_ankan-proc-scipy-2015,
+  author    = { {A}nkur {A}nkan and {A}binash {P}anda },
+  title     = { pgmpy: {P}robabilistic {G}raphical {M}odels using {P}ython },
+  booktitle = { {P}roceedings of the 14th {P}ython in {S}cience {C}onference },
+  pages     = { 6 - 11 },
+  year      = { 2015 },
+  editor    = { {K}athryn {H}uff and {J}ames {B}ergstra },
+  doi       = { 10.25080/Majora-7b98e3ed-001 }
 }
 ```
 
