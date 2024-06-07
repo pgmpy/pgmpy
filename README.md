@@ -1,7 +1,6 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/pgmpylogovariant.png" width="300"/>
+  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/pgmpylogovariant.png" width="200" height="200"/>
 </div>
-<br/>
 <div align="center">
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
