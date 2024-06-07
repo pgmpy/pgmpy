@@ -16,6 +16,9 @@ preferred-citation:
   - family-names: "Panda"
     given-names: "Abinash"
   doi: "10.25080/majora-7b98e3ed-001"
-  journal: "Proceedings of the Python in Science Conference"
+  journal: "Proceedings of the 14th Python in Science Conference"
+  start: 6
+  end: 11
   title: "pgmpy: Probabilistic Graphical Models using Python"
+  issue: 14
   year: 2015
