@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/pgmpylogovariant.png" width="250" height="250"/>
+  <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/pgmpylogovariant.png" width="250" height="300"/>
 </div>
 <div align="center">
 
