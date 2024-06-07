@@ -49,7 +49,7 @@ Ankur Ankan, & Abinash Panda ( 2015 ). pgmpy: Probabilistic Graphical Models usi
 
 Bibtex:
 ```
-@InProceedings{ ankur_ankan-proc-scipy-2015,
+@InProceedings{ Ankan2015,
   author    = { {A}nkur {A}nkan and {A}binash {P}anda },
   title     = { pgmpy: {P}robabilistic {G}raphical {M}odels using {P}ython },
   booktitle = { {P}roceedings of the 14th {P}ython in {S}cience {C}onference },
