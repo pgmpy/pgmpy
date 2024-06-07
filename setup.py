@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from os.path import exists
-from os.path import sys
-from setuptools import setup, find_packages
+from os.path import exists, sys
+
+from setuptools import find_packages, setup
 
 
 def parse_version(fpath):
@@ -40,8 +40,8 @@ def parse_requirements(fname="requirements.txt", with_version=False):
     Returns:
         List[str]: list of requirements items
     """
-    from os.path import exists
     import re
+    from os.path import exists
 
     require_fpath = fname
 
@@ -132,9 +132,10 @@ if __name__ == "__main__":
         url="https://github.com/pgmpy/pgmpy",
         license="MIT",
         classifiers=[
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
+            "Programming Language :: Python :: 3.12",
             "Intended Audience :: Education",
             "Intended Audience :: Science/Research",
             "Operating System :: Unix",
