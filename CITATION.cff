@@ -1,12 +1,21 @@
-@inproceedings{Ankan2015,
-  series = {SciPy},
-  title = {pgmpy: Probabilistic Graphical Models using Python},
-  ISSN = {2575-9752},
-  url = {http://dx.doi.org/10.25080/Majora-7b98e3ed-001},
-  DOI = {10.25080/majora-7b98e3ed-001},
-  booktitle = {Proceedings of the Python in Science Conference},
-  publisher = {SciPy},
-  author = {Ankan,  Ankur and Panda,  Abinash},
-  year = {2015},
-  collection = {SciPy}
-}
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Ankan"
+  given-names: "Ankur"
+- family-names: "Panda"
+  given-names: "Abinash"
+title: "pgmpy: Probabilistic Graphical Models using Python"
+version: 0.1.25
+url: "https://github.com/pgmpy/pgmpy"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Ankan"
+    given-names: "Ankur"
+  - family-names: "Panda"
+    given-names: "Abinash"
+  doi: "10.25080/majora-7b98e3ed-001"
+  journal: "Proceedings of the Python in Science Conference"
+  title: "pgmpy: Probabilistic Graphical Models using Python"
+  year: 2015
