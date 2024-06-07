@@ -17,7 +17,7 @@
 
 [![Join the pgmpy Discord server](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/DRkdKaumBs)
 [![Read the Docs](https://img.shields.io/badge/-Docs-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white&link=https://inseq.org)](https://pgmpy.org)
-[![Examples](https://img.shields.io/badge/-Tutorial-orange?style=for-the-badge&logo=Jupyter&logoColor=white&link=https://github.com/pgmpy/pgmpy/tree/dev/examples)](https://github.com/pgmpy/pgmpy/tree/dev/examples)
+[![Examples](https://img.shields.io/badge/-Examples-orange?style=for-the-badge&logo=Jupyter&logoColor=white&link=https://github.com/pgmpy/pgmpy/tree/dev/examples)](https://github.com/pgmpy/pgmpy/tree/dev/examples)
 [![Tutorial](https://img.shields.io/badge/-Tutorial-orange?style=for-the-badge&logo=Jupyter&logoColor=white&link=https://github.com/pgmpy/pgmpy_notebook)](https://github.com/pgmpy/pgmpy_notebook)
 
 </div>
