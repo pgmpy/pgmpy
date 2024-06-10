@@ -1077,6 +1077,7 @@ class DAG(nx.DiGraph):
         >>> model = get_example_model('alarm')
         >>> model.to_graphviz()
         <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> model.draw('model.png', prog='neato')
         """
         return nx.nx_agraph.to_agraph(self)
 
