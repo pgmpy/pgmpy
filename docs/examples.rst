@@ -2,8 +2,8 @@ Example Notebooks
 =================
 
 .. toctree::
-   :maxdepth: 1
    :hidden:
+   :maxdepth: 0
 
    examples/Earthquake.ipynb
    examples/Monty Hall Problem.ipynb
