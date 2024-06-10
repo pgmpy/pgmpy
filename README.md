@@ -24,13 +24,10 @@
 
 pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from both causal inference and probabilistic inference literatures to allow users to seamlessly work between both. It implements algorithms for structure learning/causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
 
-The documentation is available at: https://pgmpy.org/
-
-Installation instructions are available at: https://pgmpy.org/started/install.html
-
-Our mailing list is at: https://groups.google.com/forum/#!forum/pgmpy .
-
-We have our community chat at [gitter](https://gitter.im/pgmpy/pgmpy).
+- Documentation: https://pgmpy.org/
+- Installation: https://pgmpy.org/started/install.html
+- Mailing List: https://groups.google.com/forum/#!forum/pgmpy .
+- Community chat: [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
 
 
 Examples
