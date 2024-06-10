@@ -32,9 +32,16 @@ pgmpy is a Python package for working with Bayesian Networks and related models 
 
 Examples
 --------
-Example Jupyter notebooks: https://github.com/pgmpy/pgmpy/tree/dev/examples
+- Creating a Bayesian Network: [link](https://pgmpy.org/examples/Creating%20a%20Discrete%20Bayesian%20Network.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Creating%20a%20Discrete%20Bayesian%20Network.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Structure Learning/Causal Discovery: [link](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Structure%20Learning%20in%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Parameter Learning: [link](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Inference: [link](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Inference%20in%20Discrete%20Bayesian%20Networks.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Causal Inference: [link](https://pgmpy.org/examples/Causal%20Inference.html) | <a target="_blank" href="https://colab.research.google.com/github/https://pgmpy.org/examples/Causal%20Inference.html"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
+- Extending pgmpy: [link](https://pgmpy.org/examples/Extending%20pgmpy.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Extending%20pgmpy.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 
-Tutorial Jupyter notebooks: https://github.com/pgmpy/pgmpy_notebook/
+
+- Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
+- Tutorials: https://github.com/pgmpy/pgmpy_notebook/
 
 Citing
 ======
