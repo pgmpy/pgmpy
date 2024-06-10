@@ -3,6 +3,7 @@ Example Notebooks
 
 .. toctree::
    :maxdepth: 1
+   :numbered:
    :hidden:
 
    examples/Earthquake.ipynb
