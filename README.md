@@ -24,10 +24,10 @@
 
 pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from both causal inference and probabilistic inference literatures to allow users to seamlessly work between both. It implements algorithms for structure learning/causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
 
-- Documentation: https://pgmpy.org/
-- Installation: https://pgmpy.org/started/install.html
-- Mailing List: https://groups.google.com/forum/#!forum/pgmpy .
-- Community chat: [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
+- **Documentation:** https://pgmpy.org/
+- **Installation:** https://pgmpy.org/started/install.html
+- **Mailing List:** https://groups.google.com/forum/#!forum/pgmpy .
+- **Community chat:** [discord](https://discord.gg/DRkdKaumBs) (Older chat at: [gitter](https://gitter.im/pgmpy/pgmpy))
 
 
 Examples
@@ -39,6 +39,7 @@ Examples
 - Causal Inference: [link](https://pgmpy.org/examples/Causal%20Inference.html) | <a target="_blank" href="https://colab.research.google.com/github/https://pgmpy.org/examples/Causal%20Inference.html"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 - Extending pgmpy: [link](https://pgmpy.org/examples/Extending%20pgmpy.html) | <a target="_blank" href="https://colab.research.google.com/github/ankurankan/pgmpy/blob/dev/examples/Extending%20pgmpy.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/> </a>
 
+***
 
 - Full List of Examples: https://github.com/pgmpy/pgmpy/tree/dev/examples
 - Tutorials: https://github.com/pgmpy/pgmpy_notebook/
