@@ -5,7 +5,7 @@ Example Notebooks
    :hidden:
    :maxdepth: 0
 
-   examples/Earthquake.ipynb
+   examples/Basic Operations on Bayesian Network.ipynb
    examples/Monty Hall Problem.ipynb
    examples/Creating a Discrete Bayesian Network.ipynb
    examples/Inference in Discrete Bayesian Networks.ipynb
