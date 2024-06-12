@@ -10,18 +10,30 @@
 .. image:: https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev
    :target: https://github.com/pgmpy/pgmpy/actions?query=branch%3Adev
 
-.. image:: https://codecov.io/gh/pgmpy/pgmpy/branch/dev/graph/badge.svg
-   :target: https://codecov.io/gh/pgmpy/pgmpy
-
-.. image:: https://api.codacy.com/project/badge/Grade/78a8256c90654c6892627f6d8bbcea14
-   :target: https://www.codacy.com/gh/pgmpy/pgmpy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pgmpy/pgmpy&amp;utm_campaign=Badge_Grade
-
 .. image:: https://img.shields.io/pypi/dm/pgmpy.svg
    :target: https://pypistats.org/packages/pgmpy
 
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/pgmpy/pgmpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+.. image:: https://img.shields.io/pypi/v/pgmpy?color=blue
+   :target: https://pypi.org/project/pgmpy/
 
+.. image:: https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue
+   :target: https://pypi.org/project/pgmpy/
+
+.. image:: https://img.shields.io/github/license/pgmpy/pgmpy
+   :target: https://github.com/pgmpy/pgmpy/blob/dev/LICENSE
+
+.. image:: http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat
+   :target: http://pgmpy.org/pgmpy-benchmarks/
+
+.. |br| raw:: html
+
+   <br />
+   <br />
+
+
+.. image:: https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white
+   :align: center
+   :target: https://discord.gg/DRkdKaumBs
 
 .. toctree::
    :maxdepth: 2
