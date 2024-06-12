@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from statsmodels.multivariate.manova import MANOVA
 from xgboost import XGBClassifier, XGBRegressor
 
 from pgmpy.global_vars import logger
@@ -656,23 +657,31 @@ def _get_predictions(X, Y, Z, data):
     # Step 2: Check variable type of X, choose estimator, and compute predictions.
     if data.loc[:, X].dtype == "category":
         clf_x = XGBClassifier(enable_categorical=enable_categorical)
+        x, x_cat_index = pd.factorize(data.loc[:, X])
+        clf_x.fit(data.loc[:, Z], x)
+        pred_x = clf_x.predict_proba(data.loc[:, Z])
     else:
         clf_x = XGBRegressor(enable_categorical=enable_categorical)
-
-    clf_x.fit(data.loc[:, Z], data.loc[:, X])
-    pred_x = clf_x.predict(data.loc[:, Z])
+        x = data.loc[:, X]
+        x_cat_index = None
+        clf_x.fit(data.loc[:, Z], x)
+        pred_x = clf_x.predict(data.loc[:, Z])
 
     # Step 3: Check variable type of Y, choose estimator, and compute predictions.
     if data.loc[:, Y].dtype == "category":
         clf_y = XGBClassifier(enable_categorical=enable_categorical)
+        y, y_cat_index = pd.factorize(data.loc[:, Y])
+        clf_y.fit(data.loc[:, Z], y)
+        pred_y = clf_y.predict_proba(data.loc[:, Z])
     else:
         clf_y = XGBRegressor(enable_categorical=enable_categorical)
-
-    clf_y.fit(data.loc[:, Z], data.loc[:, Y])
-    pred_y = clf_y.predict(data.loc[:, Z])
+        y = data.loc[:, Y]
+        y_cat_index = None
+        clf_y.fit(data.loc[:, Z], y)
+        pred_y = clf_y.predict(data.loc[:, Z])
 
     # Step 4: Return the predictions.
-    return (pred_x, pred_y)
+    return (pred_x, pred_y, x_cat_index, y_cat_index)
 
 
 def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
@@ -688,27 +697,31 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
         )
 
     # Step 2: Get the predictions
-    pred_x, pred_y = _get_predictions(X, Y, Z, data)
+    pred_x, pred_y, x_cat_index, y_cat_index = _get_predictions(X, Y, Z, data)
 
     # Step 3: Compute the residuals
     if data.loc[:, X].dtype == "category":
-        # TODO
-        pass
+        x = pd.get_dummies(data.loc[:, X]).loc[:, x_cat_index.categories]
+        res_x = x - pred_x
     else:
         res_x = data.loc[:, X] - pred_x
 
     if data.loc[:, Y].dtype == "category":
-        # TODO
-        pass
+        y = pd.get_dummies(data.loc[:, Y]).loc[:, y_cat_index.categories]
+        res_y = y - pred_y
     else:
         res_y = data.loc[:, Y] - pred_y
 
     if isinstance(res_x, pd.Series) and isinstance(res_y, pd.Series):
         coef, p_value = stats.pearsonr(res_x, res_y)
     else:
-        manova = MANOVA(endog=X, exog=Y)
-        # TODO: Extract the values
-        coef, p_value = pd.DataFrame((manova.mv_test().results["x0"]["stat"]))
+        if isinstance(res_x, pd.DataFrame):
+            manova_t = MANOVA(endog=res_x, exog=res_y)
+        else:
+            manova_t = MANOVA(endog=res_y, exog=res_x)
+        coef, p_value = pd.DataFrame((manova_t.mv_test().results["x0"]["stat"])).iloc[
+            1, [0, 4]
+        ]
 
     if boolean:
         if p_value >= kwargs["significance_level"]:

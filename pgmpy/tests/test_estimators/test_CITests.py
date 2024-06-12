@@ -377,22 +377,35 @@ class TestResidualMethod(unittest.TestCase):
         self.assertEqual(round(p_value, 4), 0)
 
     def test_pillai(self):
-        ci_pillai(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_indep, boolean=False)
 
-        ci_pillai(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False)
+        indep_coefs = [-0.0641, -0.0108, 0.0105, 0.0036, 0.0105]
+        indep_pvalues = [0.0429, 0.7335, 0.0331, 0.4694, 0.0331]
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
+            coef, p_value = ci_pillai(
+                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_indep, boolean=False
+            )
+            self.assertEqual(round(coef, 4), indep_coefs[i])
+            self.assertEqual(round(p_value, 4), indep_pvalues[i])
 
-        ci_pillai(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_indep_cont_cont,
-            boolean=False,
-        )
-
-        ci_pillai(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_dep_cont_cont,
-            boolean=False,
-        )
+        dep_coefs = [0.3362, 0.3678, 0.3362, 0.0019, 0.3362]
+        dep_pvalues = [0, 0, 0, 0.7535, 0]
+        for df_dep in [
+            self.df_dep,
+            self.df_dep_cont_cont,
+            self.df_dep_cat_cont,
+            self.df_dep_cat_cat,
+            self.df_dep_ord_cont,
+        ]:
+            coef, p_value = ci_pillai(
+                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False
+            )
+            self.assertEqual(round(coef, 4), dep_coefs[i])
+            self.assertEqual(round(p_value, 4), dep_pvalues[i])
