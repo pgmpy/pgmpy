@@ -1,11 +1,13 @@
-import unittest
 import math
+import unittest
 
 import numpy as np
 import pandas as pd
 from numpy import testing as np_test
 
 from pgmpy.estimators.CITests import *
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 np.random.seed(42)
 
@@ -77,7 +79,7 @@ class TestPearsonr(unittest.TestCase):
         )
 
 
-class TestChiSquare(unittest.TestCase):
+class TestDiscreteTests(unittest.TestCase):
     def setUp(self):
         self.df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
 
@@ -248,3 +250,153 @@ class TestChiSquare(unittest.TestCase):
             stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
             np_test.assert_almost_equal(p_value, 0, decimal=5)
+
+
+class TestResidualMethod(unittest.TestCase):
+    def setUp(self):
+        # Create a combination of mixed data types
+
+        self.model_indep = LinearGaussianBayesianNetwork(
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+            ]
+        )
+        self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
+        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 2)
+        self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
+        self.cpd_x = LinearGaussianCPD("X", [0, 0.2, 0.3, 0.4], 1, ["Z1", "Z2", "Z3"])
+        self.cpd_y_indep = LinearGaussianCPD(
+            "Y", [0, 0.3, 0.4, 0.5], 1, ["Z1", "Z2", "Z3"]
+        )
+        self.model_indep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
+        )
+        self.df_indep = self.model_indep.simulate(n=1000, seed=42)
+
+        self.df_indep_cont_cont = self.df_indep.copy()
+        self.df_indep_cont_cont.Z2 = pd.cut(
+            self.df_indep_cont_cont.Z2,
+            bins=4,
+            ordered=False,
+            labels=["z21", "z22", "z23", "z24"],
+        )
+
+        self.df_indep_cat_cont = self.df_indep_cont_cont.copy()
+        self.df_indep_cat_cont.X = pd.cut(
+            self.df_indep_cat_cont.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+
+        self.df_indep_cat_cat = self.df_indep_cont_cont.copy()
+        self.df_indep_cat_cat.X = pd.cut(
+            self.df_indep_cat_cat.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+        self.df_indep_cat_cat.Y = pd.cut(
+            self.df_indep_cat_cat.Y,
+            bins=4,
+            ordered=False,
+            labels=["y1", "y2", "y3", "y4"],
+        )
+
+        self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
+        self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
+
+        self.model_dep = LinearGaussianBayesianNetwork(
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+                ("X", "Y"),
+            ]
+        )
+        self.cpd_y_dep = LinearGaussianCPD(
+            "Y", [0, 0.3, 0.4, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
+        )
+        self.model_dep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
+        )
+        self.df_dep = self.model_dep.simulate(n=1000, seed=42)
+
+        self.df_dep_cont_cont = self.df_dep.copy()
+        self.df_dep_cont_cont.Z2 = pd.cut(
+            self.df_dep_cont_cont.Z2,
+            bins=4,
+            ordered=False,
+            labels=["z21", "z22", "z23", "z24"],
+        )
+
+        self.df_dep_cat_cont = self.df_dep_cont_cont.copy()
+        self.df_dep_cat_cont.X = pd.cut(
+            self.df_dep_cat_cont.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+
+        self.df_dep_cat_cat = self.df_dep_cont_cont.copy()
+        self.df_dep_cat_cat.X = pd.cut(
+            self.df_dep_cat_cat.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+        self.df_dep_cat_cat.Y = pd.cut(
+            self.df_dep_cat_cat.Y,
+            bins=4,
+            ordered=False,
+            labels=["y1", "y2", "y3", "y4"],
+        )
+
+        self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
+        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
+
+    def test_pearsonr(self):
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_indep, boolean=False
+        )
+        self.assertEqual(round(coef, 4), -0.0272)
+        self.assertEqual(round(p_value, 4), 0.3896)
+
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False
+        )
+        self.assertEqual(round(coef, 4), 0.4222)
+        self.assertEqual(round(p_value, 4), 0)
+
+    def test_pillai(self):
+        ci_pillai(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_indep, boolean=False)
+
+        ci_pillai(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False)
+
+        ci_pillai(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep_cont_cont,
+            boolean=False,
+        )
+
+        ci_pillai(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_dep_cont_cont,
+            boolean=False,
+        )
+
+        import ipdb
+
+        ipdb.set_trace()

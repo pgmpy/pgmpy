@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from xgboost import XGBClassifier, XGBRegressor
 
-from pgmpy.independencies import IndependenceAssertion
 from pgmpy.global_vars import logger
+from pgmpy.independencies import IndependenceAssertion
 
 
 def independence_match(X, Y, Z, independencies, **kwargs):
@@ -635,6 +636,79 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         residual_X = data.loc[:, X] - data.loc[:, Z].dot(X_coef)
         residual_Y = data.loc[:, Y] - data.loc[:, Z].dot(Y_coef)
         coef, p_value = stats.pearsonr(residual_X, residual_Y)
+
+    if boolean:
+        if p_value >= kwargs["significance_level"]:
+            return True
+        else:
+            return False
+    else:
+        return coef, p_value
+
+
+def _get_predictions(X, Y, Z, data):
+    # Step 1: Check if any of the conditional variables are categorical
+    if any(data.loc[:, Z].dtypes == "category"):
+        enable_categorical = True
+    else:
+        enable_categorical = False
+
+    # Step 2: Check variable type of X, choose estimator, and compute predictions.
+    if data.loc[:, X].dtype == "category":
+        clf_x = XGBClassifier(enable_categorical=enable_categorical)
+    else:
+        clf_x = XGBRegressor(enable_categorical=enable_categorical)
+
+    clf_x.fit(data.loc[:, Z], data.loc[:, X])
+    pred_x = clf_x.predict(data.loc[:, Z])
+
+    # Step 3: Check variable type of Y, choose estimator, and compute predictions.
+    if data.loc[:, Y].dtype == "category":
+        clf_y = XGBClassifier(enable_categorical=enable_categorical)
+    else:
+        clf_y = XGBRegressor(enable_categorical=enable_categorical)
+
+    clf_y.fit(data.loc[:, Z], data.loc[:, Y])
+    pred_y = clf_y.predict(data.loc[:, Z])
+
+    # Step 4: Return the predictions.
+    return (pred_x, pred_y)
+
+
+def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
+    # Step 1: Test if the inputs are correct
+    if not hasattr(Z, "__iter__"):
+        raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
+    else:
+        Z = list(Z)
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
+        )
+
+    # Step 2: Get the predictions
+    pred_x, pred_y = _get_predictions(X, Y, Z, data)
+
+    # Step 3: Compute the residuals
+    if data.loc[:, X].dtype == "category":
+        # TODO
+        pass
+    else:
+        res_x = data.loc[:, X] - pred_x
+
+    if data.loc[:, Y].dtype == "category":
+        # TODO
+        pass
+    else:
+        res_y = data.loc[:, Y] - pred_y
+
+    if isinstance(res_x, pd.Series) and isinstance(res_y, pd.Series):
+        coef, p_value = stats.pearsonr(res_x, res_y)
+    else:
+        manova = MANOVA(endog=X, exog=Y)
+        # TODO: Extract the values
+        coef, p_value = pd.DataFrame((manova.mv_test().results["x0"]["stat"]))
 
     if boolean:
         if p_value >= kwargs["significance_level"]:
