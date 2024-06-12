@@ -396,7 +396,3 @@ class TestResidualMethod(unittest.TestCase):
             data=self.df_dep_cont_cont,
             boolean=False,
         )
-
-        import ipdb
-
-        ipdb.set_trace()
