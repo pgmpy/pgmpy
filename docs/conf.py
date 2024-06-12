@@ -133,7 +133,7 @@ html_theme = "alabaster"
 html_theme_options = {
     "sidebar_width": "320px",
     "logo": "logo.png",
-    "page_width": "1920px",
+    "page_width": "1200px",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
