@@ -9,3 +9,4 @@ statsmodels>=0.13
 tqdm>=4.64
 joblib>=1.2
 opt_einsum>=3.3
+xgboost>=2.0.3
