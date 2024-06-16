@@ -649,6 +649,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
 
 def _get_predictions(X, Y, Z, data, **kwargs):
+    """
+    Function to get predictions using XGBoost for `ci_pillai`.
+    """
     # Step 1: Check if any of the conditional variables are categorical
     if any(data.loc[:, Z].dtypes == "category"):
         enable_categorical = True
