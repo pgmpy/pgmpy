@@ -24,10 +24,10 @@ class TestMLE(unittest.TestCase):
         self.d1 = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         self.d2 = pd.DataFrame(
             data={
-                "A": [0, np.NaN, 1],
+                "A": [0, np.nan, 1],
                 "B": [0, 1, 0],
-                "C": [1, 1, np.NaN],
-                "D": [np.NaN, "Y", np.NaN],
+                "C": [1, 1, np.nan],
+                "D": [np.nan, "Y", np.nan],
             }
         )
         # Use Example from ML Machine Learning - A Probabilistic Perspective

@@ -51,7 +51,7 @@ class SEMGraph(DAG):
     ...                err_var={})
 
     Defining a model (Education [2]) with all the parameters set. For not setting any
-    parameter `np.NaN` can be explicitly passed.
+    parameter `np.nan` can be explicitly passed.
     >>> sem_edu = SEMGraph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
     ...                            ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
     ...                            ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),
@@ -100,7 +100,7 @@ class SEMGraph(DAG):
             if len(t) == 3:
                 self.graph.add_edge(t[0], t[1], weight=t[2])
             elif len(t) == 2:
-                self.graph.add_edge(t[0], t[1], weight=np.NaN)
+                self.graph.add_edge(t[0], t[1], weight=np.nan)
             else:
                 raise ValueError(
                     f"Expected tuple length: 2 or 3. Got {t} of len {len(t)}"
@@ -114,7 +114,7 @@ class SEMGraph(DAG):
         self.err_graph.add_nodes_from(self.graph.nodes())
         for t in err_corr:
             if len(t) == 2:
-                self.err_graph.add_edge(t[0], t[1], weight=np.NaN)
+                self.err_graph.add_edge(t[0], t[1], weight=np.nan)
             elif len(t) == 3:
                 self.err_graph.add_edge(t[0], t[1], weight=t[2])
             else:
@@ -125,7 +125,7 @@ class SEMGraph(DAG):
         # Set the error variances
         for var in self.err_graph.nodes():
             self.err_graph.nodes[var]["weight"] = (
-                err_var[var] if var in err_var.keys() else np.NaN
+                err_var[var] if var in err_var.keys() else np.nan
             )
 
         self.full_graph_struct = self._get_full_graph_struct()
@@ -1189,7 +1189,7 @@ class SEM(SEMGraph):
         ...                      err_var={})
 
         Defining a model (Education [2]) with all the parameters set. For not setting any
-        parameter `np.NaN` can be explicitly passed.
+        parameter `np.nan` can be explicitly passed.
         >>> sem_edu = SEM.from_graph(ebunch=[('intelligence', 'academic', 0.8), ('intelligence', 'scale_1', 0.7),
         ...                                  ('intelligence', 'scale_2', 0.64), ('intelligence', 'scale_3', 0.73),
         ...                                  ('intelligence', 'scale_4', 0.82), ('academic', 'SAT_score', 0.98),

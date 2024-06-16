@@ -1,6 +1,6 @@
 import unittest
 
-from numpy import NaN
+from numpy import nan
 from pandas import DataFrame
 
 from pgmpy.estimators import ParameterEstimator
@@ -15,10 +15,10 @@ class TestParameterEstimator(unittest.TestCase):
         )
         self.d2 = DataFrame(
             data={
-                "A": [0, NaN, 1],
+                "A": [0, nan, 1],
                 "B": [0, 1, 0],
-                "C": [1, 1, NaN],
-                "D": [NaN, "Y", NaN],
+                "C": [1, 1, nan],
+                "D": [nan, "Y", nan],
             }
         )
 

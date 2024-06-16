@@ -80,12 +80,12 @@ class TestBayesianEstimator(unittest.TestCase):
         cpd_C_correct = TabularCPD(
             "C",
             2,
-            [[0.0, 0.0, 1.0, np.NaN], [1.0, 1.0, 0.0, np.NaN]],
+            [[0.0, 0.0, 1.0, np.nan], [1.0, 1.0, 0.0, np.nan]],
             evidence=["A", "B"],
             evidence_card=[2, 2],
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
-        # manual comparison because np.NaN != np.NaN
+        # manual comparison because np.nan != np.nan
         self.assertTrue(
             (
                 (cpd_C.values == cpd_C_correct.values)
@@ -268,12 +268,12 @@ class TestBayesianEstimatorTorch(unittest.TestCase):
         cpd_C_correct = TabularCPD(
             "C",
             2,
-            [[0.0, 0.0, 1.0, np.NaN], [1.0, 1.0, 0.0, np.NaN]],
+            [[0.0, 0.0, 1.0, np.nan], [1.0, 1.0, 0.0, np.nan]],
             evidence=["A", "B"],
             evidence_card=[2, 2],
             state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
         )
-        # manual comparison because np.NaN != np.NaN
+        # manual comparison because np.nan != np.nan
         self.assertTrue(
             (
                 (cpd_C.values == cpd_C_correct.values)

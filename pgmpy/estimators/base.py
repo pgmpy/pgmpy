@@ -2,8 +2,9 @@
 
 from collections import defaultdict
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference.ExactInference import BeliefPropagation
@@ -18,8 +19,8 @@ class BaseEstimator(object):
     ----------
     data: pandas DataFrame object
         object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
     state_names: dict (optional)
         A dict indicating, for each variable, the discrete set of states (or values)
@@ -183,8 +184,8 @@ class ParameterEstimator(BaseEstimator):
 
     data: pandas DataFrame object
         dataframe object with column names identical to the variable names of the model.
-        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
     state_names: dict (optional)
         A dict indicating, for each variable, the discrete set of states (or values)
@@ -203,8 +204,8 @@ class ParameterEstimator(BaseEstimator):
 
         data: pandas DataFrame object
             dataframe object with column names identical to the variable names of the model.
-            (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-            Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+            (If some values in the data are missing the data cells should be set to `numpy.nan`.
+            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
         state_names: dict (optional)
             A dict indicating, for each variable, the discrete set of states (or values)
@@ -214,7 +215,7 @@ class ParameterEstimator(BaseEstimator):
         complete_samples_only: bool (optional, default `True`)
             Specifies how to deal with missing data, if present. If set to `True` all rows
             that contain `np.Nan` somewhere are ignored. If `False` then, for each variable,
-            every row where neither the variable nor its parents are `np.NaN` is used.
+            every row where neither the variable nor its parents are `np.nan` is used.
             This sets the behavior of the `state_count`-method.
         """
         self.model = model
@@ -273,8 +274,8 @@ class StructureEstimator(BaseEstimator):
     ----------
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
     state_names: dict (optional)
         A dict indicating, for each variable, the discrete set of states (or values)
@@ -304,8 +305,8 @@ class MarginalEstimator(BaseEstimator):
 
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
     state_names: dict (optional)
         A dict indicating, for each variable, the discrete set of states (or values)

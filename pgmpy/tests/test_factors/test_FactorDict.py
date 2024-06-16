@@ -1,6 +1,6 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import pandas as pd
 
 from pgmpy.factors import FactorDict
@@ -16,10 +16,10 @@ class TestFactorDict(unittest.TestCase):
         )
         self.data2 = pd.DataFrame(
             data={
-                "A": [0, np.NaN, 1],
+                "A": [0, np.nan, 1],
                 "B": [0, 1, 0],
-                "C": [1, 1, np.NaN],
-                "D": [np.NaN, "Y", np.NaN],
+                "C": [1, 1, np.nan],
+                "D": [np.nan, "Y", np.nan],
             }
         )
         self.data3 = pd.DataFrame(
