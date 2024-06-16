@@ -647,7 +647,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
         return coef, p_value
 
 
-def _get_predictions(X, Y, Z, data):
+def _get_predictions(X, Y, Z, data, **kwargs):
     # Step 1: Check if any of the conditional variables are categorical
     if any(data.loc[:, Z].dtypes == "category"):
         enable_categorical = True
@@ -656,12 +656,16 @@ def _get_predictions(X, Y, Z, data):
 
     # Step 2: Check variable type of X, choose estimator, and compute predictions.
     if data.loc[:, X].dtype == "category":
-        clf_x = XGBClassifier(enable_categorical=enable_categorical)
+        clf_x = XGBClassifier(
+            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+        )
         x, x_cat_index = pd.factorize(data.loc[:, X])
         clf_x.fit(data.loc[:, Z], x)
         pred_x = clf_x.predict_proba(data.loc[:, Z])
     else:
-        clf_x = XGBRegressor(enable_categorical=enable_categorical)
+        clf_x = XGBRegressor(
+            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+        )
         x = data.loc[:, X]
         x_cat_index = None
         clf_x.fit(data.loc[:, Z], x)
@@ -669,12 +673,16 @@ def _get_predictions(X, Y, Z, data):
 
     # Step 3: Check variable type of Y, choose estimator, and compute predictions.
     if data.loc[:, Y].dtype == "category":
-        clf_y = XGBClassifier(enable_categorical=enable_categorical)
+        clf_y = XGBClassifier(
+            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+        )
         y, y_cat_index = pd.factorize(data.loc[:, Y])
         clf_y.fit(data.loc[:, Z], y)
         pred_y = clf_y.predict_proba(data.loc[:, Z])
     else:
-        clf_y = XGBRegressor(enable_categorical=enable_categorical)
+        clf_y = XGBRegressor(
+            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+        )
         y = data.loc[:, Y]
         y_cat_index = None
         clf_y.fit(data.loc[:, Z], y)
@@ -697,7 +705,7 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
         )
 
     # Step 2: Get the predictions
-    pred_x, pred_y, x_cat_index, y_cat_index = _get_predictions(X, Y, Z, data)
+    pred_x, pred_y, x_cat_index, y_cat_index = _get_predictions(X, Y, Z, data, **kwargs)
 
     # Step 3: Compute the residuals
     if data.loc[:, X].dtype == "category":
