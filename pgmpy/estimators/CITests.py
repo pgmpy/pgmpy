@@ -745,6 +745,11 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
             f"Variable data. Expected type: pandas.DataFrame. Got type: {type(data)}"
         )
 
+    # Step 1.1: If no conditional variables are specified, use a constant value.
+    if len(Z) == 0:
+        Z = ["cont_Z"]
+        data.loc[:, "cont_Z"] = np.ones(data.shape[0])
+
     # Step 2: Get the predictions
     pred_x, pred_y, x_cat_index, y_cat_index = _get_predictions(X, Y, Z, data, **kwargs)
 

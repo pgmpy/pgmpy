@@ -377,6 +377,30 @@ class TestResidualMethod(unittest.TestCase):
         self.assertEqual(round(p_value, 4), 0)
 
     def test_pillai(self):
+        # Non-conditional tests
+        indep_coefs = [0.1572, 0.1572, 0.1523, 0.1607, 0.1523]
+        indep_pvalues = [0, 0, 0, 0.0, 0]
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
+            coef, p_value = ci_pillai(
+                X="X",
+                Y="Y",
+                Z=[],
+                data=df_indep,
+                boolean=False,
+                seed=42,
+            )
+            self.assertEqual(round(coef, 4), indep_coefs[i])
+            self.assertEqual(round(p_value, 4), indep_pvalues[i])
+
+        # Conditional tests
         indep_coefs = [0.0010, 0.0023, 0.0042, 0.0263, 0.0042]
         indep_pvalues = [0.3086, 0.1277, 0.3841, 0.0500, 0.3841]
         for i, df_indep in enumerate(
