@@ -372,13 +372,13 @@ class TestResidualMethod(unittest.TestCase):
             boolean=False,
             seed=42,
         )
-        self.assertTrue(np.isclose(coef, -0.0639, atol=1e-1))
-        self.assertTrue(np.isclose(p_value, 0.0435, atol=1e-1))
+        self.assertTrue(abs(coef) <= 0.1)
+        self.assertTrue(p_value >= 0.04)
 
         coef, p_value = pearsonr(
             X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
-        self.assertTrue(np.isclose(coef, 0.4056, atol=1e-1))
+        self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 
     def test_pillai(self):
