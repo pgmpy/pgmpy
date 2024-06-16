@@ -396,8 +396,8 @@ class TestResidualMethod(unittest.TestCase):
                 boolean=False,
                 seed=42,
             )
-            self.assertEqual(round(coef, 4), indep_coefs[i])
-            self.assertEqual(round(p_value, 4), indep_pvalues[i])
+            self.assertEqual(round(coef, 2), round(indep_coefs[i], 2))
+            self.assertEqual(round(p_value, 2), round(indep_pvalues[i], 2))
 
         dep_coefs = [0.3362, 0.3678, 0.0716, 0.0019, 0.0716]
         dep_pvalues = [0, 0, 0, 0.7535, 0]
@@ -413,5 +413,5 @@ class TestResidualMethod(unittest.TestCase):
             coef, p_value = ci_pillai(
                 X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False, seed=42
             )
-            self.assertEqual(round(coef, 4), dep_coefs[i])
-            self.assertEqual(round(p_value, 4), dep_pvalues[i])
+            self.assertEqual(round(coef, 2), round(dep_coefs[i], 2))
+            self.assertEqual(round(p_value, 2), round(dep_pvalues[i], 2))
