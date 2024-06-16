@@ -694,6 +694,46 @@ def _get_predictions(X, Y, Z, data, **kwargs):
 
 
 def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
+    r"""
+    A mixed-data residualization based conditional independence test[1].
+
+    Uses XGBoost estimator to compute LS residuals[2], and then does an
+    association test (Pillai's Trace) on the residuals.
+
+    Parameters
+    ----------
+    X: str
+        The first variable for testing the independence condition X \u27C2 Y | Z
+
+    Y: str
+        The second variable for testing the independence condition X \u27C2 Y | Z
+
+    Z: list/array-like
+        A list of conditional variable for testing the condition X \u27C2 Y | Z
+
+    data: pandas.DataFrame
+        The dataset in which to test the indepenedence condition.
+
+    boolean: bool
+        If boolean=True, an additional argument `significance_level` must
+            be specified. If p_value of the test is greater than equal to
+            `significance_level`, returns True. Otherwise returns False.
+
+        If boolean=False, returns the pearson correlation coefficient and p_value
+            of the test.
+
+    Returns
+    -------
+    CI Test results: tuple or bool
+        If boolean=True, returns True if p-value >= significance_level, else False. If
+        boolean=False, returns a tuple of (Pearson's correlation Coefficient, p-value)
+
+    References
+    ----------
+    [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial Intelligence.
+    [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for Covariates. Journal of the American Statistical Association.
+    [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate general linear hypothesis. Computational Statistics & Data Analysis.
+    """
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -725,6 +765,7 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
     else:
         res_y = data.loc[:, Y] - pred_y
 
+    # Step 4: Compute Pillai's trace.
     if isinstance(res_x, pd.Series):
         res_x = res_x.to_frame()
     if isinstance(res_y, pd.Series):
@@ -739,12 +780,14 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
 
     coef = (np.array(cancor) ** 2).sum()
 
+    # Step 5: Compute p-value using f-approximation [3].
     s = min(res_x.shape[1], res_y.shape[1])
     df1 = res_x.shape[1] * res_y.shape[1]
     df2 = s * (data.shape[0] - 1 + s - res_x.shape[1] - res_y.shape[1])
     f_stat = (coef / df1) * (df2 / (s - coef))
     p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
+    # Step 6: Return
     if boolean:
         if p_value >= kwargs["significance_level"]:
             return True
