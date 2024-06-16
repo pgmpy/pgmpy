@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.cross_decomposition import CCA
 from statsmodels.multivariate.manova import MANOVA
 from xgboost import XGBClassifier, XGBRegressor
 
@@ -709,27 +710,40 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
 
     # Step 3: Compute the residuals
     if data.loc[:, X].dtype == "category":
-        x = pd.get_dummies(data.loc[:, X]).loc[:, x_cat_index.categories]
+        x = pd.get_dummies(data.loc[:, X]).loc[
+            :, x_cat_index.categories[x_cat_index.codes]
+        ]
         res_x = x - pred_x
     else:
         res_x = data.loc[:, X] - pred_x
 
     if data.loc[:, Y].dtype == "category":
-        y = pd.get_dummies(data.loc[:, Y]).loc[:, y_cat_index.categories]
+        y = pd.get_dummies(data.loc[:, Y]).loc[
+            :, y_cat_index.categories[y_cat_index.codes]
+        ]
         res_y = y - pred_y
     else:
         res_y = data.loc[:, Y] - pred_y
 
-    if isinstance(res_x, pd.Series) and isinstance(res_y, pd.Series):
-        coef, p_value = stats.pearsonr(res_x, res_y)
-    else:
-        if isinstance(res_x, pd.DataFrame):
-            manova_t = MANOVA(endog=res_x, exog=res_y)
-        else:
-            manova_t = MANOVA(endog=res_y, exog=res_x)
-        coef, p_value = pd.DataFrame((manova_t.mv_test().results["x0"]["stat"])).iloc[
-            1, [0, 4]
-        ]
+    if isinstance(res_x, pd.Series):
+        res_x = res_x.to_frame()
+    if isinstance(res_y, pd.Series):
+        res_y = res_y.to_frame()
+
+    cca = CCA(scale=False, n_components=min(res_x.shape[1], res_y.shape[1]))
+    res_x_c, res_y_c = cca.fit_transform(res_x, res_y)
+
+    cancor = []
+    for i in range(min(res_x.shape[1], res_y.shape[1])):
+        cancor.append(np.corrcoef(res_x_c[:, [i]].T, res_y_c[:, [i]].T)[0, 1])
+
+    coef = (np.array(cancor) ** 2).sum()
+
+    s = min(res_x.shape[1], res_y.shape[1])
+    df1 = res_x.shape[1] * res_y.shape[1]
+    df2 = s * (data.shape[0] - 1 + s - res_x.shape[1] - res_y.shape[1])
+    f_stat = (coef / df1) * (df2 / (s - coef))
+    p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
     if boolean:
         if p_value >= kwargs["significance_level"]:

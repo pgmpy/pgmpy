@@ -267,11 +267,11 @@ class TestResidualMethod(unittest.TestCase):
             ]
         )
         self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
-        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 2)
+        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
         self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
-        self.cpd_x = LinearGaussianCPD("X", [0, 0.2, 0.3, 0.4], 1, ["Z1", "Z2", "Z3"])
+        self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         self.cpd_y_indep = LinearGaussianCPD(
-            "Y", [0, 0.3, 0.4, 0.5], 1, ["Z1", "Z2", "Z3"]
+            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
         )
         self.model_indep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
@@ -323,7 +323,7 @@ class TestResidualMethod(unittest.TestCase):
             ]
         )
         self.cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.3, 0.4, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
+            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
         )
         self.model_dep.add_cpds(
             self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
@@ -377,8 +377,8 @@ class TestResidualMethod(unittest.TestCase):
         self.assertEqual(round(p_value, 4), 0)
 
     def test_pillai(self):
-        indep_coefs = [-0.0641, -0.0108, 0.0105, 0.0036, 0.0105]
-        indep_pvalues = [0.0429, 0.7335, 0.0331, 0.4694, 0.0331]
+        indep_coefs = [0.0010, 0.0023, 0.0042, 0.0263, 0.0042]
+        indep_pvalues = [0.3086, 0.1277, 0.3841, 0.0500, 0.3841]
         for i, df_indep in enumerate(
             [
                 self.df_indep,
@@ -396,11 +396,11 @@ class TestResidualMethod(unittest.TestCase):
                 boolean=False,
                 seed=42,
             )
-            self.assertEqual(round(coef, 2), round(indep_coefs[i], 2))
-            self.assertEqual(round(p_value, 2), round(indep_pvalues[i], 2))
+            self.assertEqual(round(coef, 4), indep_coefs[i])
+            self.assertEqual(round(p_value, 4), indep_pvalues[i])
 
-        dep_coefs = [0.3362, 0.3678, 0.0716, 0.0019, 0.0716]
-        dep_pvalues = [0, 0, 0, 0.7535, 0]
+        dep_coefs = [0.1322, 0.1609, 0.1154, 0.1256, 0.1154]
+        dep_pvalues = [0, 0, 0, 0, 0]
         for i, df_dep in enumerate(
             [
                 self.df_dep,
