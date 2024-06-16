@@ -661,14 +661,18 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     # Step 2: Check variable type of X, choose estimator, and compute predictions.
     if data.loc[:, X].dtype == "category":
         clf_x = XGBClassifier(
-            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+            enable_categorical=enable_categorical,
+            seed=kwargs.get("seed"),
+            random_state=kwargs.get("seed"),
         )
         x, x_cat_index = pd.factorize(data.loc[:, X])
         clf_x.fit(data.loc[:, Z], x)
         pred_x = clf_x.predict_proba(data.loc[:, Z])
     else:
         clf_x = XGBRegressor(
-            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+            enable_categorical=enable_categorical,
+            seed=kwargs.get("seed"),
+            random_state=kwargs.get("seed"),
         )
         x = data.loc[:, X]
         x_cat_index = None
@@ -678,14 +682,18 @@ def _get_predictions(X, Y, Z, data, **kwargs):
     # Step 3: Check variable type of Y, choose estimator, and compute predictions.
     if data.loc[:, Y].dtype == "category":
         clf_y = XGBClassifier(
-            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+            enable_categorical=enable_categorical,
+            seed=kwargs.get("seed"),
+            random_state=kwargs.get("seed"),
         )
         y, y_cat_index = pd.factorize(data.loc[:, Y])
         clf_y.fit(data.loc[:, Z], y)
         pred_y = clf_y.predict_proba(data.loc[:, Z])
     else:
         clf_y = XGBRegressor(
-            enable_categorical=enable_categorical, seed=kwargs.get("seed")
+            enable_categorical=enable_categorical,
+            seed=kwargs.get("seed"),
+            random_state=kwargs.get("seed"),
         )
         y = data.loc[:, Y]
         y_cat_index = None
