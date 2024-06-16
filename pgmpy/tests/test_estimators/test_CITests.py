@@ -365,15 +365,20 @@ class TestResidualMethod(unittest.TestCase):
 
     def test_pearsonr(self):
         coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_indep, boolean=False
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
         )
-        self.assertEqual(round(coef, 4), -0.0272)
-        self.assertEqual(round(p_value, 4), 0.3896)
+        self.assertEqual(round(coef, 4), -0.0639)
+        self.assertEqual(round(p_value, 4), 0.0435)
 
         coef, p_value = pearsonr(
-            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
         )
-        self.assertEqual(round(coef, 4), 0.4222)
+        self.assertEqual(round(coef, 4), 0.4056)
         self.assertEqual(round(p_value, 4), 0)
 
     def test_pillai(self):
