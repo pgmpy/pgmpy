@@ -16,6 +16,7 @@ CI_TESTS = {
     "chi_square": chi_square,
     "independence_match": independence_match,
     "pearsonr": pearsonr,
+    "pillai": ci_pillai,
     "g_sq": g_sq,
     "log_likelihood": log_likelihood,
     "freeman_tuckey": freeman_tuckey,
