@@ -8,7 +8,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-
+        group: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -23,6 +23,7 @@ jobs:
         run: |
           pip install pip -U
           pip install black -U
+          pip install pytest-split
           pip install -r requirements.txt -U
       - name: Check formatting
         run: |
@@ -32,4 +33,4 @@ jobs:
         run: |
           pip freeze
       - name: Run tests
-        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --verbose
+        run: pytest --cov-config .coveragerc --cov-report html --cov-report term --cov=pgmpy --splits 5 --group ${{ matrix.group }} --verbose
