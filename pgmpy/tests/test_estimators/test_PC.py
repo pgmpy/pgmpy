@@ -365,90 +365,92 @@ class TestPCEstimatorFromDiscreteData(unittest.TestCase):
 
 class TestPCEstimatorFromContinuousData(unittest.TestCase):
     def test_build_skeleton(self):
-        for variant in ["orig", "stable", "parallel"]:
-            # Fake dataset no: 1
-            np.random.seed(42)
-            data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
-            data["F"] = data["A"] + data["B"] + data["C"]
-            est = PC(data=data)
-            skel, sep_sets = est.estimate(
-                variant=variant,
-                ci_test="pearsonr",
-                return_type="skeleton",
-                n_jobs=2,
-                show_progress=False,
-            )
-            expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
-            expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
-            expected_sepsets = {
-                frozenset(("D", "F")): tuple(),
-                frozenset(("D", "B")): tuple(),
-                frozenset(("A", "C")): tuple(),
-                frozenset(("D", "E")): tuple(),
-                frozenset(("E", "F")): tuple(),
-                frozenset(("E", "C")): tuple(),
-                frozenset(("E", "B")): tuple(),
-                frozenset(("D", "C")): tuple(),
-                frozenset(("A", "B")): tuple(),
-                frozenset(("A", "E")): tuple(),
-                frozenset(("B", "C")): tuple(),
-                frozenset(("A", "D")): tuple(),
-                # This one is only for stable version.
-                frozenset(("C", "B")): tuple(),
-            }
-            for u, v in skel.edges():
-                self.assertTrue(
-                    ((u, v) in expected_edges_stable)
-                    or ((v, u) in expected_edges_stable)
+        for ci_test in ["pearsonr", "pillai"]:
+            for variant in ["orig", "stable", "parallel"]:
+                # Fake dataset no: 1
+                np.random.seed(42)
+                data = pd.DataFrame(np.random.randn(10000, 5), columns=list("ABCDE"))
+                data["F"] = data["A"] + data["B"] + data["C"]
+                est = PC(data=data)
+                skel, sep_sets = est.estimate(
+                    variant=variant,
+                    ci_test=ci_test,
+                    return_type="skeleton",
+                    n_jobs=2,
+                    show_progress=False,
                 )
+                expected_edges = {("A", "F"), ("B", "F"), ("C", "F")}
+                expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
+                expected_sepsets = {
+                    frozenset(("D", "F")): tuple(),
+                    frozenset(("D", "B")): tuple(),
+                    frozenset(("A", "C")): tuple(),
+                    frozenset(("D", "E")): tuple(),
+                    frozenset(("E", "F")): tuple(),
+                    frozenset(("E", "C")): tuple(),
+                    frozenset(("E", "B")): tuple(),
+                    frozenset(("D", "C")): tuple(),
+                    frozenset(("A", "B")): tuple(),
+                    frozenset(("A", "E")): tuple(),
+                    frozenset(("B", "C")): tuple(),
+                    frozenset(("A", "D")): tuple(),
+                    # This one is only for stable version.
+                    frozenset(("C", "B")): tuple(),
+                }
+                for u, v in skel.edges():
+                    self.assertTrue(
+                        ((u, v) in expected_edges_stable)
+                        or ((v, u) in expected_edges_stable)
+                    )
 
-            for key, value in sep_sets.items():
-                self.assertEqual(sep_sets[key], expected_sepsets[key])
+                for key, value in sep_sets.items():
+                    self.assertEqual(sep_sets[key], expected_sepsets[key])
 
-            # Fake dataset no: 2. Expected model structure X <- Z -> Y
-            def fake_ci(X, Y, Z=tuple(), **kwargs):
-                if X == "X" and Y == "Y" and Z == ("Z",):
-                    return True
-                elif X == "Y" and Y == "X" and Z == ("Z",):
-                    return True
-                else:
-                    return False
+                # Fake dataset no: 2. Expected model structure X <- Z -> Y
+                def fake_ci(X, Y, Z=tuple(), **kwargs):
+                    if X == "X" and Y == "Y" and Z == ("Z",):
+                        return True
+                    elif X == "Y" and Y == "X" and Z == ("Z",):
+                        return True
+                    else:
+                        return False
 
-            np.random.seed(42)
-            data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
-            est = PC(data=data)
-            skel, sep_sets = est.estimate(
-                variant=variant,
-                ci_test=fake_ci,
-                return_type="skeleton",
-                n_jobs=2,
-                show_progress=False,
-            )
-            expected_edges = {("X", "Z"), ("Y", "Z")}
-            expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
-
-            for u, v in skel.edges():
-                self.assertTrue(
-                    ((u, v) in expected_edges) or ((v, u) in expected_edges)
+                np.random.seed(42)
+                data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
+                est = PC(data=data)
+                skel, sep_sets = est.estimate(
+                    variant=variant,
+                    ci_test=fake_ci,
+                    return_type="skeleton",
+                    n_jobs=2,
+                    show_progress=False,
                 )
-            self.assertEqual(sep_sets, expected_sepsets)
+                expected_edges = {("X", "Z"), ("Y", "Z")}
+                expected_sepsets = {frozenset(("X", "Y")): ("Z",)}
+
+                for u, v in skel.edges():
+                    self.assertTrue(
+                        ((u, v) in expected_edges) or ((v, u) in expected_edges)
+                    )
+                self.assertEqual(sep_sets, expected_sepsets)
 
     def test_build_dag(self):
-        for variant in ["orig", "stable", "parallel"]:
-            np.random.seed(42)
-            data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
-            data["sum"] = data.sum(axis=1)
-            est = PC(data=data)
-            dag = est.estimate(
-                variant=variant,
-                ci_test="pearsonr",
-                return_type="dag",
-                n_jobs=2,
-                show_progress=False,
-            )
+        for ci_test in ["pearsonr", "pillai"]:
+            for variant in ["orig", "stable", "parallel"]:
+                np.random.seed(42)
+                data = pd.DataFrame(np.random.randn(10000, 3), columns=list("XYZ"))
+                data["sum"] = data.sum(axis=1)
+                est = PC(data=data)
+                dag = est.estimate(
+                    variant=variant,
+                    ci_test=ci_test,
+                    return_type="dag",
+                    n_jobs=2,
+                    show_progress=False,
+                )
 
-            expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
-            self.assertEqual(set(dag.edges()), expected_edges)
+                expected_edges = {("Z", "sum"), ("X", "sum"), ("Y", "sum")}
+                self.assertEqual(set(dag.edges()), expected_edges)
 
     def tearDown(self):
         get_reusable_executor().shutdown(wait=True)
