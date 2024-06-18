@@ -63,11 +63,8 @@ Daft is a python package that uses matplotlib to render high quality plots suita
 The output of the two plots above.
 
 .. image:: sachs_daft_plain.png
-   :scale: 75%
 
 .. image:: sachs_daft_shell.png
-   :scale: 75%
-
 
 
 3. Using `networkx.drawing`
