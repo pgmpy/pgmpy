@@ -8,8 +8,8 @@ pgmpy offers a few different ways to plot the model structure.
 2. Using `networkx.drawing` module (https://networkx.org/documentation/stable/reference/drawing.html)
 3. Using `daft` (https://docs.daft-pgm.org/)
 
-Using `pygraphviz`
-------------------
+1. Using `pygraphviz`
+---------------------
 
 `pygraphviz` is a Python wrapper to Graphviz that has a lot for functionality
 for graph visualization. pgmpy provides a method to create a pygraphviz object from
@@ -37,8 +37,8 @@ The output `sachs.png` is shown below. Users can also tryout other layout method
    :scale: 75%
 
 
-Using `daft`
-------------
+2. Using `daft`
+---------------
 Daft is a python package that uses matplotlib to render high quality plots suitable for publications.
 
 .. code-block:: python
@@ -70,8 +70,8 @@ The output of the two plots above.
 
 
 
-Using `networkx.drawing`
-------------------------
+3. Using `networkx.drawing`
+---------------------------
 
 Lastly, as both `pgmpy.models.BayesianNetwork` and `pgmpy.base.DAG` inherit `networkx.DiGraph`, all of networkx's drawing functionality can be directly used on both DAGs and Bayesian Networks.
 
