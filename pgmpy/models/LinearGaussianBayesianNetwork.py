@@ -294,10 +294,44 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
     def fit(self, data, method="mle"):
         """
         Estimates the parameters of the model using the given `data`.
+
+        Parameters
+        ----------
+        data: pd.DataFrame
+            A pandas DataFrame with the data to which to fit the model
+            structure. All variables must be continuous valued.
+
+        Returns
+        -------
+        None: The estimated LinearGaussianCPDs are added to the model. They can
+            be accessed using `model.cpds`.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> df = pd.DataFrame(np.random.normal(0, 1, (100, 3)), columns=['x1', 'x2', 'x3'])
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> model.fit(df)
+        >>> model.cpds
+        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
+         <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
+         <LinearGaussianCPD: P(x3 | x2) = N(0.006*x2 + -0.1; 0.922) at 0x7eb6abbdba10]
         """
+        # Step 1: Check the input
+        if len(missing_vars := (set(self.model.nodes()) - set(data.columns))) > 0:
+            raise ValueError(
+                f"Following variables are missing in the data: {missing_vars}"
+            )
+
+        # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
         for node in self.nodes():
             parents = self.get_parents(node)
+
+            # Step 2.1: If node doesn't have any parents (i.e. root node),
+            #           simply take the mean and variance.
             if len(parents) == 0:
                 cpds.append(
                     LinearGaussianCPD(
@@ -306,6 +340,9 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                         evidence_variance=data.loc[:, node].var(),
                     )
                 )
+
+            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
+            #           Compute error variance using predicted values.
             else:
                 lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
                 error_var = (data.loc[:, node] - lm.predict(data.loc[:, parents])).var()
@@ -318,6 +355,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                     )
                 )
 
+        # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
 
     def predict(self, data):
