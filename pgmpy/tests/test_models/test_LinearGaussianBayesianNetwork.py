@@ -106,6 +106,7 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
 
     def test_fit(self):
+        # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(int(1e5), seed=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -124,6 +125,30 @@ class TestLGBNMethods(unittest.TestCase):
                 self.assertEqual(
                     round(cpd_orig.mean[index + 1], 1),
                     round(cpd_est.mean[est_index + 1], 1),
+                )
+
+        # Test fit on the alarm model
+        model = get_example_model("alarm")
+        model_lin = LinearGaussianBayesianNetwork(model.edges())
+        cpds = model_lin.get_random_cpds()
+        model_lin.add_cpds(*cpds)
+        df = model_lin.simulate(int(1e6), seed=42)
+
+        new_model_lin = LinearGaussianBayesianNetwork(model.edges())
+        new_model_lin.fit(df, method="mle")
+
+        for node in model_lin.nodes():
+            cpd_orig = model_lin.get_cpds(node)
+            cpd_est = new_model_lin.get_cpds(node)
+
+            self.assertEqual(cpd_orig.variable, cpd_est.variable)
+            self.assertTrue(abs(cpd_orig.variance - cpd_est.variance) < 0.1)
+            self.assertTrue(abs(cpd_orig.mean[0] - cpd_est.mean[0]) < 0.1)
+
+            for index, evid_var in enumerate(cpd_orig.evidence):
+                est_index = cpd_est.evidence.index(evid_var)
+                self.assertTrue(
+                    abs(cpd_orig.mean[index + 1] - cpd_est.mean[est_index + 1]) < 0.1
                 )
 
     def test_get_random_cpds(self):
