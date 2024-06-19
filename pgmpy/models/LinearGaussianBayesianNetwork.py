@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
@@ -155,7 +156,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                     evidence_mean=rng.normal(
                         loc=loc, scale=scale, size=(len(parents) + 1)
                     ),
-                    evidence_variance=rng.normal(loc=loc, scale=scale),
+                    evidence_variance=abs(rng.normal(loc=loc, scale=scale)),
                     evidence=parents,
                 )
             )
@@ -290,14 +291,34 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(self, data, estimator=None, state_names=[], **kwargs):
+    def fit(self, data, method="mle"):
         """
-        For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
+        Estimates the parameters of the model using the given `data`.
         """
+        cpds = []
+        for node in self.nodes():
+            parents = self.get_parents(node)
+            if len(parents) == 0:
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        evidence_mean=[data.loc[:, node].mean()],
+                        evidence_variance=data.loc[:, node].var(),
+                    )
+                )
+            else:
+                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
+                error_var = (data.loc[:, node] - lm.predict(data.loc[:, parents])).var()
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        evidence_mean=np.append([lm.intercept_], lm.coef_),
+                        evidence_variance=error_var,
+                        evidence=parents,
+                    )
+                )
 
-        raise NotImplementedError(
-            "fit method has not been implemented for LinearGaussianBayesianNetwork."
-        )
+        self.add_cpds(*cpds)
 
     def predict(self, data):
         """
