@@ -83,9 +83,6 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_not_implemented_methods(self):
         self.assertRaises(ValueError, self.model.get_cardinality, "x1")
-        self.assertRaises(
-            NotImplementedError, self.model.predict, [[1, 2, 3], [1, 5, 6]]
-        )
         self.assertRaises(NotImplementedError, self.model.to_markov_model)
         self.assertRaises(
             NotImplementedError, self.model.is_imap, [[1, 2, 3], [1, 5, 6]]
@@ -150,6 +147,47 @@ class TestLGBNMethods(unittest.TestCase):
                 self.assertTrue(
                     abs(cpd_orig.mean[index + 1] - cpd_est.mean[est_index + 1]) < 0.1
                 )
+
+    def test_predict(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        df = self.model.simulate(int(10), seed=42)
+        df = df.drop("x2", axis=1)
+        variables, mu, cov = self.model.predict(df)
+        self.assertEqual(variables, ["x2"])
+        self.assertEqual(mu.shape, (10, 1))
+        self.assertTrue(
+            np.allclose(
+                mu.round(2).squeeze(),
+                [-5.31, -5.63, -4.71, -3.3, -4.82, -2.61, -5.98, -3.25, -3.94, -5.32],
+            )
+        )
+        self.assertEqual(cov.round(2).squeeze(), 1.71)
+
+        # Test predict on the alarm model
+        model = get_example_model("alarm")
+        model_lin = LinearGaussianBayesianNetwork(model.edges())
+        cpds = model_lin.get_random_cpds(seed=42)
+        model_lin.add_cpds(*cpds)
+        df = model_lin.simulate(int(5), seed=42)
+
+        variables, mu, cov = model_lin.predict(df.drop(["HISTORY", "CO"], axis=1))
+        self.assertEqual(mu.shape, (5, 2))
+        expected_mu = np.array(
+            [[0.89, 0.86], [0.04, 0.85], [-1.37, 0.91], [-1.23, 0.85], [-2.08, 0.85]]
+        )
+        expected_cov = np.array([[0.42, 0.19], [1.94, 0.18]])
+
+        if variables == ["HISTORY", "CO"]:
+            expected_mu = expected_mu[:, [1, 0]]
+            expected_cov = expected_cov.T
+            expected_cov[0, 0], expected_cov[1, 1] = (
+                expected_cov[1, 1],
+                expected_cov[0, 0],
+            )
+
+        self.assertTrue(np.allclose(mu, expected_mu, atol=1e-2))
+        self.assertEqual(cov.shape, (2, 2))
+        self.assertTrue(np.allclose(cov, expected_cov, atol=1e-2))
 
     def test_get_random_cpds(self):
         model = get_example_model("alarm")

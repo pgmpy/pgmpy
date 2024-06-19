@@ -320,7 +320,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
          <LinearGaussianCPD: P(x3 | x2) = N(0.006*x2 + -0.1; 0.922) at 0x7eb6abbdba10]
         """
         # Step 1: Check the input
-        if len(missing_vars := (set(self.model.nodes()) - set(data.columns))) > 0:
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
             raise ValueError(
                 f"Following variables are missing in the data: {missing_vars}"
             )
@@ -358,13 +358,64 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         # Step 3: Add the estimated CPDs to the model
         self.add_cpds(*cpds)
 
-    def predict(self, data):
+    def predict(self, data, distribution="joint"):
         """
-        For now, predict method has not been implemented for LinearGaussianBayesianNetwork.
+        Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The dataframe with missing variable which to predict.
+
+        Returns
+        -------
+        variables: list
+            The list of variables on which the returned conditional distribution is defined on.
+
+        mu: np.array
+            The mean array of the conditional joint distribution over the missing variables corresponding to each row of data.
+
+        cov: np.array
+            The covariance of the conditional joint distribution over the missing variables.
+        Examples
+        --------
+        >>>
         """
-        raise NotImplementedError(
-            "predict method has not been implemented for LinearGaussianBayesianNetwork."
+        # Step 0: Check the inputs
+        missing_vars = list(set(self.nodes()) - set(data.columns))
+
+        if len(missing_vars) == 0:
+            raise ValueError("No missing variables in the data")
+
+        # Step 1: Create separate mean and cov matrices for missing and known variables.
+        mu, cov = self.to_joint_gaussian()
+        variable_order = list(nx.topological_sort(self))
+        missing_indexes = [variable_order.index(var) for var in missing_vars]
+        remain_vars = [var for var in variable_order if var not in missing_vars]
+
+        mu_a = mu[missing_indexes]
+        mu_b = np.delete(mu, missing_indexes)
+
+        cov_aa = cov[missing_indexes, missing_indexes]
+        cov_bb = np.delete(
+            np.delete(cov, missing_indexes, axis=0), missing_indexes, axis=1
         )
+        cov_ab = np.delete(cov[missing_indexes, :], missing_indexes, axis=1)
+
+        # Step 2: Compute the conditional distributions
+        cov_bb_inv = np.linalg.inv(cov_bb)
+        mu_cond = (
+            np.atleast_2d(mu_a)
+            + (
+                cov_ab
+                @ cov_bb_inv
+                @ (data.loc[:, remain_vars].values - np.atleast_2d(mu_b)).T
+            ).T
+        )
+        cov_cond = cov_aa - cov_ab @ cov_bb_inv @ cov_ab.T
+
+        # Step 3: Return values
+        return ([variable_order[i] for i in missing_indexes], mu_cond, cov_cond)
 
     def to_markov_model(self):
         """
