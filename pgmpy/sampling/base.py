@@ -595,9 +595,10 @@ def _return_samples(samples, state_names_map=None):
     """
     A utility function to return samples according to type
     """
-    df = pd.DataFrame.from_records(samples)
+    if isinstance(samples, np.recarray):
+        samples = pd.DataFrame(samples)
     if state_names_map is not None:
-        for var in df.columns:
+        for var in samples.columns:
             if var != "_weight":
-                df[var] = df[var].map(state_names_map[var])
-    return df
+                samples[var] = samples[var].map(state_names_map[var])
+    return samples
