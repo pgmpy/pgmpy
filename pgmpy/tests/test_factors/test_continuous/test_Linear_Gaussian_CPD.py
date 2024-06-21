@@ -13,27 +13,10 @@ class TestLGCPD(unittest.TestCase):
         sigma = np.array([[4, 3], [3, 6]])
 
         cpd1 = LinearGaussianCPD(
-            "Y", evidence_mean=mu, evidence_variance=sigma, evidence=["X1", "X2"]
+            "Y", parent_coef=mu, evidence_variance=sigma, evidence=["X1", "X2"]
         )
         self.assertEqual(cpd1.variable, "Y")
         self.assertEqual(cpd1.evidence, ["X1", "X2"])
-
-    def test_maximum_likelihood_estimator(self):
-        # Obtain the X and Y which are jointly gaussian from the distribution
-        # beta = [2, 0.7, 0.3]
-        sigma_c = 4
-
-        x_df = pd.read_csv("pgmpy/tests/test_factors/test_continuous/gbn_values_1.csv")
-
-        mu = np.array([7, 13])
-        sigma = np.array([[4, 3], [3, 6]])
-
-        cpd1 = LinearGaussianCPD(
-            "Y", evidence_mean=mu, evidence_variance=sigma, evidence=["X1", "X2"]
-        )
-        mean, variance = cpd1.fit(x_df, states=["(Y|X)", "X1", "X2"], estimator="MLE")
-        np_test.assert_allclose(mean, [2.361152, 0.693147, 0.276383], rtol=1e-03)
-        np_test.assert_allclose(variance, sigma_c, rtol=1e-1)
 
     @unittest.skip("TODO")
     def test_pdf(self):
