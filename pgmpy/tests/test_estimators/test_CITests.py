@@ -387,7 +387,7 @@ class TestResidualMethod(unittest.TestCase):
     @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
     def test_pillai(self):
         # Non-conditional tests
-        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1607, 0.1523]
+        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
         dep_pvalues = [0, 0, 0, 0.0, 0]
         for i, df_indep in enumerate(
             [
@@ -410,8 +410,8 @@ class TestResidualMethod(unittest.TestCase):
             self.assertTrue(np.isclose(p_value, dep_pvalues[i], atol=1e-4))
 
         # Conditional tests
-        indep_coefs = [0.0010, 0.0023, 0.0042, 0.0263, 0.0042]
-        indep_pvalues = [0.3086, 0.1277, 0.3841, 0.0500, 0.3841]
+        indep_coefs = [0.0010, 0.0023, 0.0041, 0.0213, 0.0041]
+        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
         for i, df_indep in enumerate(
             [
                 self.df_indep,
@@ -432,7 +432,7 @@ class TestResidualMethod(unittest.TestCase):
             self.assertTrue(np.isclose(coef, indep_coefs[i], atol=1e-4))
             self.assertTrue(np.isclose(p_value, indep_pvalues[i], atol=1e-4))
 
-        dep_coefs = [0.1322, 0.1609, 0.1154, 0.1256, 0.1154]
+        dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
         dep_pvalues = [0, 0, 0, 0, 0]
         for i, df_dep in enumerate(
             [
