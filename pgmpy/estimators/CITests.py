@@ -769,7 +769,8 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
         x = pd.get_dummies(data.loc[:, X]).loc[
             :, x_cat_index.categories[x_cat_index.codes]
         ]
-        res_x = x - pred_x
+        # Drop last column to avoid multicollinearity
+        res_x = (x - pred_x).iloc[:, :-1]
     else:
         res_x = data.loc[:, X] - pred_x
 
@@ -777,7 +778,8 @@ def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
         y = pd.get_dummies(data.loc[:, Y]).loc[
             :, y_cat_index.categories[y_cat_index.codes]
         ]
-        res_y = y - pred_y
+        # Drop last column to avoid multicollinearity
+        res_y = (y - pred_y).iloc[:, :-1]
     else:
         res_y = data.loc[:, Y] - pred_y
 
