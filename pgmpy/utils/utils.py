@@ -203,7 +203,7 @@ def llm_pairwise_orient(
         The LLM to use. Currently only Google's gemini is supported.
     """
     if llm_model.startswith("gemini"):
-        if os.environ["GEMINI_API_KEY"] == None:
+        if "GEMINI_API_KEY" not in os.environ:
             raise ValueError(
                 "Please set GEMINI_API_KEY environment variable with the API key to use"
             )
