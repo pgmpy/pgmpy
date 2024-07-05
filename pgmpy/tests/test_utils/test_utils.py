@@ -1,8 +1,10 @@
+import os
 import random
 import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 from tqdm.auto import tqdm
 
 from pgmpy.utils import discretize, get_example_model, llm_pairwise_orient
@@ -70,6 +72,9 @@ class TestDiscretization(unittest.TestCase):
 
 
 class TestPairwiseOrientation(unittest.TestCase):
+    @pytest.mark.skipif(
+        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
+    )
     def test_llm(self):
         descriptions = {
             "Age": "The age of a person",
