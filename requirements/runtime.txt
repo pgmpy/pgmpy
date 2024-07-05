@@ -10,3 +10,4 @@ tqdm>=4.64
 joblib>=1.2
 opt_einsum>=3.3
 xgboost>=2.0.3
+google-generativeai>=0.7.1
