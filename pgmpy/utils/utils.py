@@ -211,6 +211,9 @@ def llm_pairwise_orient(
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
         model = genai.GenerativeModel(model_name=llm_model)
 
+        if domain == None:
+            domain = "Causal Inference"
+
         prompt = f""" You are an expert in {domain}. You are given two variables with the following descriptions:
             <A>: {descriptions[x]}
             <B>: {descriptions[y]}
