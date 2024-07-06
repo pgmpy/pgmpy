@@ -15,7 +15,7 @@ class ExpertInLoop(StructureEstimator):
 
     def test_all(self, dag):
         """
-        Runs CI tests on all possible combinations of variables in the model.
+        Runs CI tests on all possible combinations of variables in `dag`.
 
         Parameters
         ----------
@@ -24,7 +24,7 @@ class ExpertInLoop(StructureEstimator):
 
         Returns
         -------
-        pd.DataFrame: The results of all the tests.
+        pd.DataFrame: The results with p-values and effect sizes of all the tests.
         """
         cis = []
         for u, v in combinations(list(dag.nodes()), 2):
@@ -58,6 +58,8 @@ class ExpertInLoop(StructureEstimator):
         variable_descriptions=None,
     ):
         """
+        Estimates a DAG from the data.
+
         Parameters
         ----------
         pval_threshold: float
@@ -76,58 +78,65 @@ class ExpertInLoop(StructureEstimator):
             False, prompts the user to specify the direction between the edges.
 
         variable_descriptions: dict
-            A dict of the form {var: description}.
+            A dict of the form {var: description} giving a text description of
+            each variable in the model.
         """
+        # Step 0: Create a new DAG on all the variables with no edge.
         nodes = list(self.data.columns)
         dag = DAG()
         dag.add_nodes_from(nodes)
 
         blacklisted_edges = []
         while True:
+            # Step 1: Compute effects and p-values between every combination of variables.
             all_effects = self.test_all(dag)
 
+            # Step 2: Remove any edges between variables that are not sufficiently associated.
             edge_effects = all_effects[all_effects.edge_present == True]
             edge_effects = edge_effects[
                 (edge_effects.effect < effect_size_threshold)
                 & (edge_effects.p_val > pval_threshold)
             ]
             remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
-            # print(f"Removing edges: {remove_edges}")
             for edge in remove_edges:
                 dag.remove_edge(edge[0], edge[1])
 
+            # Step 3: Add edge between variables which have significant association.
             nonedge_effects = all_effects[all_effects.edge_present == False]
             nonedge_effects = nonedge_effects[
                 (nonedge_effects.effect >= effect_size_threshold)
                 & (nonedge_effects.p_val <= pval_threshold)
             ]
 
-            if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
-                break
-
+            # Step 3.2: Else determine the edge direction and add it if not in blacklisted_edges.
             if len(blacklisted_edges) > 0:
+                blacklisted_edges_us = [edge[0] for edge in blacklisted_edges]
+                blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
                 nonedge_effects = nonedge_effects.loc[
-                    (
-                        (nonedge_effects.u in [edge[0] for edge in blacklisted_edges])
-                        & (nonedge_effects.v in [edge[1] for edge in blacklisted_edges])
-                    )
-                    or (
-                        (nonedge_effects.u in [edge[1] for edge in blacklisted_edges])
-                        & (nonedge_effects.v in [edge[0] for edge in blacklisted_edges])
+                    ~(
+                        (
+                            nonedge_effects.u.isin(blacklisted_edges_us)
+                            & nonedge_effects.v.isin(blacklisted_edges_vs)
+                        )
+                        | (
+                            nonedge_effects.u.isin(blacklisted_edges_vs)
+                            & nonedge_effects.v.isin(blacklisted_edges_us)
+                        )
                     ),
                     :,
                 ]
-            if len(blacklisted_edges) > 0:
-                import ipdb
 
-                ipdb.set_trace()
+            # Step 3.1: Exit loop if all correlations in data are explained by the model.
+            if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
+                break
+
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-            # print(f"Adding: {selected_edge.u} -- {selected_edge.v}")
             edge_direction = llm_pairwise_orient(
                 selected_edge.u, selected_edge.v, variable_descriptions
             )
+
+            # Step 3.3: Blacklist the edge if it creates a cycle, else add it to the DAG.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):
-                # print(f"Blacklisting: {edge_direction}")
                 blacklisted_edges.append(edge_direction)
             else:
                 dag.add_edges_from([edge_direction])
