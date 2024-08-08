@@ -1,11 +1,13 @@
+import os
 import random
 import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 from tqdm.auto import tqdm
 
-from pgmpy.utils import discretize, get_example_model
+from pgmpy.utils import discretize, get_example_model, llm_pairwise_orient
 
 
 class TestDAGCreation(unittest.TestCase):
@@ -67,3 +69,36 @@ class TestDiscretization(unittest.TestCase):
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
+
+
+class TestPairwiseOrientation(unittest.TestCase):
+    @pytest.mark.skipif(
+        "GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set"
+    )
+    def test_llm(self):
+        descriptions = {
+            "Age": "The age of a person",
+            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
+            "Education": "The highest level of education the person has finished",
+            "MaritalStatus": "The marital status of the person",
+            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
+            "Relationship": "The relationship status of the person",
+            "Race": "The ethnicity of the person",
+            "Sex": "The sex or gender of the person",
+            "HoursPerWeek": "The number of hours per week the person works",
+            "NativeCountry": "The native country of the person",
+            "Income": "The income i.e. amount of money the person makes",
+        }
+
+        self.assertEqual(
+            llm_pairwise_orient(
+                x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"
+            ),
+            ("Age", "Income"),
+        )
+        self.assertEqual(
+            llm_pairwise_orient(
+                x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"
+            ),
+            ("Age", "Income"),
+        )

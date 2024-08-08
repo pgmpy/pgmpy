@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.distributions import GaussianDistribution
@@ -155,7 +156,7 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
                     evidence_mean=rng.normal(
                         loc=loc, scale=scale, size=(len(parents) + 1)
                     ),
-                    evidence_variance=rng.normal(loc=loc, scale=scale),
+                    evidence_variance=abs(rng.normal(loc=loc, scale=scale)),
                     evidence=parents,
                 )
             )
@@ -290,22 +291,131 @@ class LinearGaussianBayesianNetwork(BayesianNetwork):
         """
         raise ValueError("Cardinality is not defined for continuous variables.")
 
-    def fit(self, data, estimator=None, state_names=[], **kwargs):
+    def fit(self, data, method="mle"):
         """
-        For now, fit method has not been implemented for LinearGaussianBayesianNetwork.
-        """
+        Estimates the parameters of the model using the given `data`.
 
-        raise NotImplementedError(
-            "fit method has not been implemented for LinearGaussianBayesianNetwork."
-        )
+        Parameters
+        ----------
+        data: pd.DataFrame
+            A pandas DataFrame with the data to which to fit the model
+            structure. All variables must be continuous valued.
 
-    def predict(self, data):
+        Returns
+        -------
+        None: The estimated LinearGaussianCPDs are added to the model. They can
+            be accessed using `model.cpds`.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> df = pd.DataFrame(np.random.normal(0, 1, (100, 3)), columns=['x1', 'x2', 'x3'])
+        >>> model = LinearGaussianBayesianNetwork([('x1', 'x2'), ('x2', 'x3')])
+        >>> model.fit(df)
+        >>> model.cpds
+        [<LinearGaussianCPD: P(x1) = N(-0.114; 0.911) at 0x7eb77d30cec0,
+         <LinearGaussianCPD: P(x2 | x1) = N(0.07*x1 + -0.075; 1.172) at 0x7eb77171fb60,
+         <LinearGaussianCPD: P(x3 | x2) = N(0.006*x2 + -0.1; 0.922) at 0x7eb6abbdba10]
         """
-        For now, predict method has not been implemented for LinearGaussianBayesianNetwork.
+        # Step 1: Check the input
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+            raise ValueError(
+                f"Following variables are missing in the data: {missing_vars}"
+            )
+
+        # Step 2: Estimate the LinearGaussianCPDs
+        cpds = []
+        for node in self.nodes():
+            parents = self.get_parents(node)
+
+            # Step 2.1: If node doesn't have any parents (i.e. root node),
+            #           simply take the mean and variance.
+            if len(parents) == 0:
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        evidence_mean=[data.loc[:, node].mean()],
+                        evidence_variance=data.loc[:, node].var(),
+                    )
+                )
+
+            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
+            #           Compute error variance using predicted values.
+            else:
+                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
+                error_var = (data.loc[:, node] - lm.predict(data.loc[:, parents])).var()
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        evidence_mean=np.append([lm.intercept_], lm.coef_),
+                        evidence_variance=error_var,
+                        evidence=parents,
+                    )
+                )
+
+        # Step 3: Add the estimated CPDs to the model
+        self.add_cpds(*cpds)
+
+    def predict(self, data, distribution="joint"):
         """
-        raise NotImplementedError(
-            "predict method has not been implemented for LinearGaussianBayesianNetwork."
+        Predicts the distribution of the missing variable (i.e. missing columns) in the given dataset.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The dataframe with missing variable which to predict.
+
+        Returns
+        -------
+        variables: list
+            The list of variables on which the returned conditional distribution is defined on.
+
+        mu: np.array
+            The mean array of the conditional joint distribution over the missing variables corresponding to each row of data.
+
+        cov: np.array
+            The covariance of the conditional joint distribution over the missing variables.
+        Examples
+        --------
+        >>>
+        """
+        # Step 0: Check the inputs
+        missing_vars = list(set(self.nodes()) - set(data.columns))
+
+        if len(missing_vars) == 0:
+            raise ValueError("No missing variables in the data")
+
+        # Step 1: Create separate mean and cov matrices for missing and known variables.
+        mu, cov = self.to_joint_gaussian()
+        variable_order = list(nx.topological_sort(self))
+        missing_indexes = [variable_order.index(var) for var in missing_vars]
+        remain_vars = [var for var in variable_order if var not in missing_vars]
+
+        mu_a = mu[missing_indexes]
+        mu_b = np.delete(mu, missing_indexes)
+
+        cov_aa = cov[missing_indexes, missing_indexes]
+        cov_bb = np.delete(
+            np.delete(cov, missing_indexes, axis=0), missing_indexes, axis=1
         )
+        cov_ab = np.delete(cov[missing_indexes, :], missing_indexes, axis=1)
+
+        # Step 2: Compute the conditional distributions
+        cov_bb_inv = np.linalg.inv(cov_bb)
+        mu_cond = (
+            np.atleast_2d(mu_a)
+            + (
+                cov_ab
+                @ cov_bb_inv
+                @ (data.loc[:, remain_vars].values - np.atleast_2d(mu_b)).T
+            ).T
+        )
+        cov_cond = cov_aa - cov_ab @ cov_bb_inv @ cov_ab.T
+
+        # Step 3: Return values
+        return ([variable_order[i] for i in missing_indexes], mu_cond, cov_cond)
 
     def to_markov_model(self):
         """

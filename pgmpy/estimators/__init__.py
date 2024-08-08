@@ -19,6 +19,7 @@ from pgmpy.estimators.EM import ExpectationMaximization
 from pgmpy.estimators.PC import PC
 from pgmpy.estimators.base import MarginalEstimator
 from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
+from pgmpy.estimators.expert import ExpertInLoop
 
 __all__ = [
     "BaseEstimator",
@@ -40,6 +41,7 @@ __all__ = [
     "IVEstimator",
     "MmhcEstimator",
     "PC",
+    "ExpertInLoop",
     "ExpectationMaximization",
     "MarginalEstimator",
     "MirrorDescentEstimator",

@@ -50,6 +50,7 @@
    structure_estimator/base.rst
    metrics/metrics.rst
    readwrite/base.rst
+   plotting.rst
    examples.rst
    tutorial.rst
 

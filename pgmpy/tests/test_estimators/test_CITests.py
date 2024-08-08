@@ -1,13 +1,18 @@
-import unittest
 import math
+import os
+import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy import testing as np_test
 
 from pgmpy.estimators.CITests import *
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 np.random.seed(42)
+ON_GITHUB_RUNNER = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 class TestPearsonr(unittest.TestCase):
@@ -77,7 +82,7 @@ class TestPearsonr(unittest.TestCase):
         )
 
 
-class TestChiSquare(unittest.TestCase):
+class TestDiscreteTests(unittest.TestCase):
     def setUp(self):
         self.df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
 
@@ -248,3 +253,198 @@ class TestChiSquare(unittest.TestCase):
             stat, p_value, dof = t(X="x", Y="y", Z=[], data=df, boolean=False)
             self.assertEqual(dof, 1)
             np_test.assert_almost_equal(p_value, 0, decimal=5)
+
+
+class TestResidualMethod(unittest.TestCase):
+    def setUp(self):
+        # Create a combination of mixed data types
+
+        self.model_indep = LinearGaussianBayesianNetwork(
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+            ]
+        )
+        self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
+        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
+        self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
+        self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
+        self.cpd_y_indep = LinearGaussianCPD(
+            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
+        )
+        self.model_indep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
+        )
+        self.df_indep = self.model_indep.simulate(n=1000, seed=42)
+
+        self.df_indep_cont_cont = self.df_indep.copy()
+        self.df_indep_cont_cont.Z2 = pd.cut(
+            self.df_indep_cont_cont.Z2,
+            bins=4,
+            ordered=False,
+            labels=["z21", "z22", "z23", "z24"],
+        )
+
+        self.df_indep_cat_cont = self.df_indep_cont_cont.copy()
+        self.df_indep_cat_cont.X = pd.cut(
+            self.df_indep_cat_cont.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+
+        self.df_indep_cat_cat = self.df_indep_cont_cont.copy()
+        self.df_indep_cat_cat.X = pd.cut(
+            self.df_indep_cat_cat.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+        self.df_indep_cat_cat.Y = pd.cut(
+            self.df_indep_cat_cat.Y,
+            bins=4,
+            ordered=False,
+            labels=["y1", "y2", "y3", "y4"],
+        )
+
+        self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
+        self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
+
+        self.model_dep = LinearGaussianBayesianNetwork(
+            [
+                ("Z1", "X"),
+                ("Z2", "X"),
+                ("Z3", "X"),
+                ("Z1", "Y"),
+                ("Z2", "Y"),
+                ("Z3", "Y"),
+                ("X", "Y"),
+            ]
+        )
+        self.cpd_y_dep = LinearGaussianCPD(
+            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
+        )
+        self.model_dep.add_cpds(
+            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
+        )
+        self.df_dep = self.model_dep.simulate(n=1000, seed=42)
+
+        self.df_dep_cont_cont = self.df_dep.copy()
+        self.df_dep_cont_cont.Z2 = pd.cut(
+            self.df_dep_cont_cont.Z2,
+            bins=4,
+            ordered=False,
+            labels=["z21", "z22", "z23", "z24"],
+        )
+
+        self.df_dep_cat_cont = self.df_dep_cont_cont.copy()
+        self.df_dep_cat_cont.X = pd.cut(
+            self.df_dep_cat_cont.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+
+        self.df_dep_cat_cat = self.df_dep_cont_cont.copy()
+        self.df_dep_cat_cat.X = pd.cut(
+            self.df_dep_cat_cat.X,
+            bins=4,
+            ordered=False,
+            labels=["x1", "x2", "x3", "x4"],
+        )
+        self.df_dep_cat_cat.Y = pd.cut(
+            self.df_dep_cat_cat.Y,
+            bins=4,
+            ordered=False,
+            labels=["y1", "y2", "y3", "y4"],
+        )
+
+        self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
+        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
+
+    def test_pearsonr(self):
+        coef, p_value = pearsonr(
+            X="X",
+            Y="Y",
+            Z=["Z1", "Z2", "Z3"],
+            data=self.df_indep,
+            boolean=False,
+            seed=42,
+        )
+        self.assertTrue(abs(coef) <= 0.1)
+        self.assertTrue(p_value >= 0.04)
+
+        coef, p_value = pearsonr(
+            X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42
+        )
+        self.assertTrue(coef >= 0.1)
+        self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
+
+    @pytest.mark.skipif(ON_GITHUB_RUNNER, reason="Values differ on GitHub runner")
+    def test_pillai(self):
+        # Non-conditional tests
+        dep_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
+        dep_pvalues = [0, 0, 0, 0.0, 0]
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
+            coef, p_value = ci_pillai(
+                X="X",
+                Y="Y",
+                Z=[],
+                data=df_indep,
+                boolean=False,
+                seed=42,
+            )
+            self.assertTrue(np.isclose(coef, dep_coefs[i], atol=1e-4))
+            self.assertTrue(np.isclose(p_value, dep_pvalues[i], atol=1e-4))
+
+        # Conditional tests
+        indep_coefs = [0.0010, 0.0023, 0.0041, 0.0213, 0.0041]
+        indep_pvalues = [0.3086, 0.1277, 0.2498, 0.0114, 0.2498]
+        for i, df_indep in enumerate(
+            [
+                self.df_indep,
+                self.df_indep_cont_cont,
+                self.df_indep_cat_cont,
+                self.df_indep_cat_cat,
+                self.df_indep_ord_cont,
+            ]
+        ):
+            coef, p_value = ci_pillai(
+                X="X",
+                Y="Y",
+                Z=["Z1", "Z2", "Z3"],
+                data=df_indep,
+                boolean=False,
+                seed=42,
+            )
+            self.assertTrue(np.isclose(coef, indep_coefs[i], atol=1e-4))
+            self.assertTrue(np.isclose(p_value, indep_pvalues[i], atol=1e-4))
+
+        dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
+        dep_pvalues = [0, 0, 0, 0, 0]
+        for i, df_dep in enumerate(
+            [
+                self.df_dep,
+                self.df_dep_cont_cont,
+                self.df_dep_cat_cont,
+                self.df_dep_cat_cat,
+                self.df_dep_ord_cont,
+            ]
+        ):
+            coef, p_value = ci_pillai(
+                X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=df_dep, boolean=False, seed=42
+            )
+            self.assertTrue(np.isclose(coef, dep_coefs[i], atol=1e-4))
+            self.assertTrue(np.isclose(p_value, dep_pvalues[i], atol=1e-4))

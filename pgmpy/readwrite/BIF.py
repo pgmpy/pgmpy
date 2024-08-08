@@ -104,7 +104,7 @@ class BIFReader(object):
         A method that returns variable grammar
         """
         # Defining an expression for valid word
-        word_expr = Word(pp.unicode.alphanums + "_" + "-")
+        word_expr = Word(pp.unicode.alphanums + "_" + "-" + ".")
         word_expr2 = Word(initChars=printables, excludeChars=["{", "}", ",", " "])
         name_expr = Suppress("variable") + word_expr + Suppress("{")
         state_expr = ZeroOrMore(word_expr2 + Optional(Suppress(",")))

@@ -16,6 +16,7 @@ CI_TESTS = {
     "chi_square": chi_square,
     "independence_match": independence_match,
     "pearsonr": pearsonr,
+    "pillai": ci_pillai,
     "g_sq": g_sq,
     "log_likelihood": log_likelihood,
     "freeman_tuckey": freeman_tuckey,
@@ -194,6 +195,9 @@ class PC(StructureEstimator):
         pdag = self.skeleton_to_pdag(skel, separating_sets)
 
         # Step 3: Either return the CPDAG or fully orient the edges to build a DAG.
+        if self.data is not None:
+            pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
+
         if return_type.lower() in ("pdag", "cpdag"):
             return pdag
         elif return_type.lower() == "dag":
