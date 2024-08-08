@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 from numbers import Number
+
 import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
+
 from pgmpy.factors.base import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 
@@ -26,7 +29,7 @@ class FactorDict(dict):
                 frequency of the marginal from the dataset.
         """
         if df.isnull().values.any():
-            raise ValueError("df cannot contain None or np.NaN values.")
+            raise ValueError("df cannot contain None or np.nan values.")
 
         factor_dict = cls({})
         for marginal in marginals:

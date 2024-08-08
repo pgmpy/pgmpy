@@ -29,8 +29,8 @@ class ExpectationMaximization(ParameterEstimator):
     data: pandas DataFrame object
         DataFrame object with column names identical to the variable names
         of the network.  (If some values in the data are missing the data
-        cells should be set to `numpy.NaN`.  Note that pandas converts each
-        column containing `numpy.NaN`s to dtype `float`.)
+        cells should be set to `numpy.nan`.  Note that pandas converts each
+        column containing `numpy.nan`s to dtype `float`.)
 
     state_names: dict (optional)
         A dict indicating, for each variable, the discrete set of states

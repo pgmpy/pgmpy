@@ -40,8 +40,8 @@ class PC(StructureEstimator):
     data: pandas DataFrame object
         dataframe object where each column represents one variable.  (If some
         values in the data are missing the data cells should be set to
-        `numpy.NaN`.  Note that pandas converts each column containing
-        `numpy.NaN`s to dtype `float`.)
+        `numpy.nan`.  Note that pandas converts each column containing
+        `numpy.nan`s to dtype `float`.)
 
     References
     ----------
