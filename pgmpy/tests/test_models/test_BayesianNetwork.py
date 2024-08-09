@@ -118,7 +118,7 @@ class TestBaseModelCreation(unittest.TestCase):
         del self.G
 
 
-class TestBayesianModelMethods(unittest.TestCase):
+class TestBayesianNetworkMethods(unittest.TestCase):
     def setUp(self):
         self.G = BayesianNetwork([("a", "d"), ("b", "d"), ("d", "e"), ("b", "c")])
         self.G1 = BayesianNetwork([("diff", "grade"), ("intel", "grade")])
@@ -295,13 +295,27 @@ class TestBayesianModelMethods(unittest.TestCase):
 
     def test_get_immoralities(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
-        self.assertEqual(G.get_immoralities(), {("w", "x"), ("w", "z")})
+        imm = G.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
+
         G1 = BayesianNetwork([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
-        self.assertEqual(G1.get_immoralities(), {("w", "x"), ("w", "z")})
+        imm = G1.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
+
         G2 = BayesianNetwork(
             [("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")]
         )
-        self.assertEqual(G2.get_immoralities(), {("w", "z")})
+        imm = G2.get_immoralities()
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(imm["y"], [("w", "z")])
 
     def test_is_iequivalent(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
@@ -326,6 +340,11 @@ class TestBayesianModelMethods(unittest.TestCase):
             for j in range(4):
                 if i != j:
                     self.assertFalse(dags[i].is_iequivalent(dags[j]))
+
+        # Example from Issue #1806.
+        G1 = DAG([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
+        G2 = DAG([("B", "A"), ("C", "A"), ("D", "B"), ("D", "C")])
+        self.assertFalse(G1.is_iequivalent(G2))
 
     def test_copy(self):
         model_copy = self.G1.copy()
@@ -410,9 +429,8 @@ class TestBayesianModelMethods(unittest.TestCase):
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
     def test_get_random_cpds(self):
-        model = BayesianNetwork(
-            DAG.get_random(n_nodes=5, edge_prob=0.5, seed=42).edges()
-        )
+        model = BayesianNetwork(DAG.get_random(n_nodes=5, edge_prob=0.5).edges())
+        model.add_nodes_from(list(range(5)))
 
         cpds = model.get_random_cpds()
         self.assertEqual(len(cpds), 5)
@@ -548,7 +566,7 @@ class TestBayesianModelMethods(unittest.TestCase):
         del self.G1
 
 
-class TestBayesianModelCPD(unittest.TestCase):
+class TestBayesianNetworkCPD(unittest.TestCase):
     def setUp(self):
         self.G = BayesianNetwork([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
         self.G2 = DAG([("d", "g"), ("i", "g"), ("g", "l"), ("i", "s")])
@@ -869,7 +887,7 @@ class TestBayesianModelCPD(unittest.TestCase):
         del self.G
 
 
-class TestBayesianModelSampleProb(unittest.TestCase):
+class TestBayesianNetworkSampleProb(unittest.TestCase):
     def setUp(self):
         self.model = get_example_model("asia")
         self.samples = self.model.simulate(int(1e5), seed=42)
@@ -928,7 +946,7 @@ class TestBayesianModelSampleProb(unittest.TestCase):
         )
 
 
-class TestBayesianModelFitPredict(unittest.TestCase):
+class TestBayesianNetworkFitPredict(unittest.TestCase):
     def setUp(self):
         self.model_disconnected = BayesianNetwork()
         self.model_disconnected.add_nodes_from(["A", "B", "C", "D", "E"])

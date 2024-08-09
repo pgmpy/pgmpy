@@ -529,13 +529,15 @@ class DAG(nx.DiGraph):
         >>> student.get_immoralities()
         {('diff', 'intel')}
         """
-        immoralities = set()
+        immoralities = dict()
         for node in self.nodes():
+            parent_pairs = []
             for parents in itertools.combinations(self.predecessors(node), 2):
                 if not self.has_edge(parents[0], parents[1]) and not self.has_edge(
                     parents[1], parents[0]
                 ):
-                    immoralities.add(tuple(sorted(parents)))
+                    parent_pairs.append(tuple(sorted(parents)))
+            immoralities[node] = parent_pairs
         return immoralities
 
     def is_dconnected(self, start, end, observed=None, include_latents=False):
