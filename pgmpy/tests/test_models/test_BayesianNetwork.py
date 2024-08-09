@@ -295,27 +295,26 @@ class TestBayesianNetworkMethods(unittest.TestCase):
     def test_get_immoralities(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
         imm = G.get_immoralities()
-        self.assertEqual(imm['x'], [])
-        self.assertEqual(imm['z'], [])
-        self.assertEqual(imm['w'], [])
-        self.assertEqual(sorted(imm['y']), sorted([("w", "x"), ("w", "z")]))
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
 
         G1 = BayesianNetwork([("x", "y"), ("z", "y"), ("z", "x"), ("w", "y")])
         imm = G1.get_immoralities()
-        self.assertEqual(imm['x'], [])
-        self.assertEqual(imm['z'], [])
-        self.assertEqual(imm['w'], [])
-        self.assertEqual(sorted(imm['y']), sorted([("w", "x"), ("w", "z")]))
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(sorted(imm["y"]), sorted([("w", "x"), ("w", "z")]))
 
         G2 = BayesianNetwork(
             [("x", "y"), ("z", "y"), ("x", "z"), ("w", "y"), ("w", "x")]
         )
         imm = G2.get_immoralities()
-        self.assertEqual(imm['x'], [])
-        self.assertEqual(imm['z'], [])
-        self.assertEqual(imm['w'], [])
-        self.assertEqual(imm['y'], [('w', 'z')])
-
+        self.assertEqual(imm["x"], [])
+        self.assertEqual(imm["z"], [])
+        self.assertEqual(imm["w"], [])
+        self.assertEqual(imm["y"], [("w", "z")])
 
     def test_is_iequivalent(self):
         G = BayesianNetwork([("x", "y"), ("z", "y"), ("x", "z"), ("w", "y")])
@@ -342,8 +341,8 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                     self.assertFalse(dags[i].is_iequivalent(dags[j]))
 
         # Example from Issue #1806.
-        G1 = DAG([('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'D')])
-        G2 = DAG([('B', 'A'), ('C', 'A'), ('D', 'B'), ('D', 'C')])
+        G1 = DAG([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
+        G2 = DAG([("B", "A"), ("C", "A"), ("D", "B"), ("D", "C")])
         self.assertFalse(G1.is_iequivalent(G2))
 
     def test_copy(self):
