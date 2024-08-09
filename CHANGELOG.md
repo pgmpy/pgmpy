@@ -4,8 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.26] - 2024-08-09
+### Added
+1. Support for returning Belief Propagation messages in Factor Graph BP.
+2. Maximum Likelihood Estimator for Junction Tree.
+3. Adds a simple discretization method: `pgmpy.utils.discretize`.
+4. Two new metrics for model testing: `pgmpy.metrics.implied_cis` and `pgmpy.metrics.fisher_c`.
+5. Support for Linear Gaussian Bayesian Networks: estimation, prediction, simulation and random model generation.
+7. New mixed data Conditional Independence test based on canonical correlations.
+8. New LLM based structure learning / causal discovery algorithm. Also LLM based pairwise variable orientation method.
+
+
+### Fixed
+1. Reading and Writing from XBN file format.
+2. Documentation for plotting models.
+3. Fixes PC algorithm to add disconnected nodes in the final model.
+4. Allows `.` in variables names in BIF file format.
+
+### Changed
+1. Allows `virtual_evidence` parameter in inference methods to accept DiscreteFactor objects.
+
 ## [0.1.25] - 2024-03-08
-### Added 
+### Added
 1. `init_cpds` argument to `ExpecattionMaximiation.get_parameters` to specify initialization values.
 2. BeliefPropagation with message passing for Factor Graphs.
 3. Marginal Inference for undirected graphs.
@@ -22,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 2. Optimizations for Hill Climb Search algorithm.
 3. Tests shutdown parallel workers in teardown.
 4. Removes the `complete_samples_only` argument from `BaseEstimator.state_counts`.
-5. Default number of cores to use changed to 1 for parameter estimation methods. 
+5. Default number of cores to use changed to 1 for parameter estimation methods.
 
 ## [0.1.24] - 2023-06-30
 ### Added
