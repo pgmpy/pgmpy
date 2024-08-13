@@ -5,6 +5,8 @@ import pandas as pd
 from pgmpy.estimators import AICScore, BDeuScore, BDsScore, BicScore, K2Score
 from pgmpy.models import BayesianNetwork
 
+# Score values in the tests are compared to R package bnlearn
+
 
 class TestBDeuScore(unittest.TestCase):
     def setUp(self):
@@ -21,7 +23,9 @@ class TestBDeuScore(unittest.TestCase):
         self.titanic_data2 = self.titanic_data[["Survived", "Sex", "Pclass"]]
 
     def test_score(self):
+        # Values Matched with bnlearn
         self.assertAlmostEqual(BDeuScore(self.d1).score(self.m1), -9.907103407446435)
+        self.assertAlmostEqual(BDeuScore(self.d1).score(self.m2), -9.839964104608821)
         self.assertEqual(BDeuScore(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
@@ -87,6 +91,7 @@ class TestBicScore(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(BicScore(self.d1).score(self.m1), -10.698440814229318)
+        self.assertAlmostEqual(BicScore(self.d1).score(self.m2), -9.625886526130714)
         self.assertEqual(BicScore(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
@@ -121,6 +126,7 @@ class TestK2Score(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(K2Score(self.d1).score(self.m1), -10.73813429536977)
+        self.assertAlmostEqual(K2Score(self.d1).score(self.m2), -10.345091707260167)
         self.assertEqual(K2Score(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
@@ -155,6 +161,7 @@ class TestAICScore(unittest.TestCase):
 
     def test_score(self):
         self.assertAlmostEqual(AICScore(self.d1).score(self.m1), -15.205379370888767)
+        self.assertAlmostEqual(AICScore(self.d1).score(self.m2), -13.68213122712422)
         self.assertEqual(AICScore(self.d1).score(BayesianNetwork()), 0)
 
     def test_score_titanic(self):
