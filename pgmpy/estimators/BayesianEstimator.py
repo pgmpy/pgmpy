@@ -60,13 +60,13 @@ class BayesianEstimator(ParameterEstimator):
                 regardless of the cardinality of the variable.
 
         equivalent_sample_size: int
-            Refer `priort_type` for more details.
+            Refer `prior_type` for more details.
 
         pseudo_counts: int (default: None)
-            Refer `priort_type` for more details.
+            Refer `prior_type` for more details.
 
         n_jobs: int (default: 1)
-            Number of jobs to run in parallel. Default: 1 uses all the processors.
+            Number of jobs to run in parallel. Default: 1.
             Using n_jobs > 1 for small models might be slower.
 
         weighted: bool
