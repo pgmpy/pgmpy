@@ -35,7 +35,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
 
 
 def chi_square(X, Y, Z, data, boolean=True, **kwargs):
-    r"""
+    """
     Chi-square conditional independence test.
     Tests the null hypothesis that X is independent from Y given Zs.
 
@@ -577,7 +577,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
 
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
-    r"""
+    """
     Computes Pearson correlation coefficient and p-value for testing non-correlation.
     Should be used only on continuous data. In case when :math:`Z != \null` uses
     linear regression and computes pearson coefficient on residuals.
@@ -705,7 +705,7 @@ def _get_predictions(X, Y, Z, data, **kwargs):
 
 
 def ci_pillai(X, Y, Z, data, boolean=True, **kwargs):
-    r"""
+    """
     A mixed-data residualization based conditional independence test[1].
 
     Uses XGBoost estimator to compute LS residuals[2], and then does an
