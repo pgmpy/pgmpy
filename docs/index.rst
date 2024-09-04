@@ -54,10 +54,13 @@
    examples.rst
    tutorial.rst
 
-pgmpy is a pure python implementation for Bayesian Networks with a focus on
-modularity and extensibility. Implementations of various alogrithms for Structure
-Learning, Parameter Estimation, Approximate (Sampling Based) and Exact
-inference, and Causal Inference are available.
+pgmpy is a Python package for causal inference and probabilistic inference
+using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
+modularity and extensibility. Implementations of various algorithms for Causal
+Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
+(Sampling Based) and Exact inference, and Causal Inference are available.
+
+|
 
 Supported Data Types
 ====================
@@ -66,7 +69,7 @@ Supported Data Types
    :header-rows: 1
 
    * -
-     - Structure Learning
+     - Casual Discovery / Structure Learning
      - Parameter Estimation
      - Causal Inference
      - Probabilistic Inference
@@ -77,11 +80,11 @@ Supported Data Types
      - Yes
    * - **Continuous**
      - Yes (only PC)
-     - No
+     - Yes
      - Yes (partial)
-     - No
+     - Yes
    * - **Hybrid**
-     - No
+     - Yes (only PC)
      - No
      - No
      - No
@@ -91,6 +94,8 @@ Supported Data Types
      - Yes (ApproximateInference)
      - Yes
 
+|
+
 Algorithms
 ==========
 
@@ -98,10 +103,16 @@ Algorithms
    :file: algorithms.csv
    :header-rows: 1
 
+|
 
-Example notebooks are also available at: https://github.com/pgmpy/pgmpy/tree/dev/examples
+Examples
+========
 
-Tutorial notebooks are also available at: https://github.com/pgmpy/pgmpy_notebook
+**Example notebooks:** https://pgmpy.org/examples.html
+
+**Tutorial notebooks:** https://pgmpy.org/tutorial.html
+
+|
 
 Citation
 ========
