@@ -1,6 +1,7 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="318" height="300"/>
 </div>
+<br/>
 <div align="center">
 
 ![Build](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev)
@@ -22,7 +23,7 @@
 
 </div>
 
-pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from both causal inference and probabilistic inference literatures to allow users to seamlessly work between both. It implements algorithms for structure learning/causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
+pgmpy is a Python package for working with Bayesian Networks and related models such as Directed Acyclic Graphs, Dynamic Bayesian Networks, and Structural Equation Models. It combines features from causal inference and probabilistic inference literatures to allow users to seamlessly work between them. It implements algorithms for structure learning/causal discovery, parameter estimation, probabilistic and causal inference, and simulations.
 
 - **Documentation:** https://pgmpy.org/
 - **Installation:** https://pgmpy.org/started/install.html
@@ -49,7 +50,7 @@ Citing
 If you use `pgmpy` in your scientific work, please consider citing us:
 
 ```
-Ankur Ankan, & Abinash Panda ( 2015 ). pgmpy: Probabilistic Graphical Models using Python . In Proceedings of the 14th Python in Science Conference (pp. 6 - 11 ).
+Ankur Ankan, & Abinash Panda ( 2015 ). pgmpy: Probabilistic Graphical Models using Python. In Proceedings of the 14th Python in Science Conference (pp. 6 - 11 ).
 ```
 
 Bibtex:
