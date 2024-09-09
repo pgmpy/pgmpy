@@ -62,6 +62,12 @@ Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
 
 |
 
+.. figure:: pgmpy_workflow.png
+
+   Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
+
+|
+
 Supported Data Types
 ====================
 
