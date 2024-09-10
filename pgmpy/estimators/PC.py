@@ -56,7 +56,7 @@ class PC(StructureEstimator):
     def estimate(
         self,
         variant="stable",
-        ci_test="chi_square",
+        ci_test="pillai",
         max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
@@ -66,9 +66,9 @@ class PC(StructureEstimator):
     ):
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
-        is a constraint-based structure learning algorithm[1]. The independencies
-        in the dataset are identified by doing statistical independece test. This
-        method returns a DAG/PDAG structure which is faithful to the independencies
+        is a constraint-based structure learning algorithm[1]. The independences
+        in the dataset are identified by doing statistical independence test. This
+        method returns a DAG/PDAG structure which is faithful to the independences
         implied by the dataset.
 
         Parameters
@@ -263,7 +263,7 @@ class PC(StructureEstimator):
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
-            pbar.set_description("Working for n conditional variables: 0")
+            pbar.set_description("Testing with 0 conditional variables")
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
@@ -349,7 +349,7 @@ class PC(StructureEstimator):
 
             else:
                 raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
+                    f"Argument variant must be one of (orig, stable, parallel). Got: {variant}"
                 )
 
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
@@ -364,7 +364,7 @@ class PC(StructureEstimator):
             if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
                 pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
+                    f"Testing with {lim_neighbors} conditional variables"
                 )
 
         if show_progress and config.SHOW_PROGRESS:
