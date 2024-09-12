@@ -524,8 +524,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
     >>> chi_square(X='A', Y='B', Z=['D', 'E'], data=data, boolean=True, significance_level=0.05)
     False
     """
-
     # Step 1: Check if the arguments are valid and type conversions.
+    #         And select only the relevant columns of data.
     if hasattr(Z, "__iter__"):
         Z = list(Z)
     else:
@@ -535,6 +535,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         raise ValueError(
             f"The variables X or Y can't be in Z. Found {X if X in Z else Y} in Z."
         )
+
+    data = data.loc[:, [X] + [Y] + Z]
 
     # Step 2: Do a simple contingency test if there are no conditional variables.
     if len(Z) == 0:
@@ -550,7 +552,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
         for z_state, df in data.groupby(Z):
             try:
                 c, _, d, _ = stats.chi2_contingency(
-                    df.groupby([X, Y]).size().unstack(Y, fill_value=0), lambda_=lambda_
+                    df.loc[:, [X, Y]].groupby([X, Y]).size().unstack(Y, fill_value=0),
+                    lambda_=lambda_,
                 )
                 chi += c
                 dof += d
