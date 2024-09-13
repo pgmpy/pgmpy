@@ -469,6 +469,38 @@ class TestPCRealModels(unittest.TestCase):
         asia_model = get_example_model("asia")
         data = asia_model.simulate(n_samples=int(1e3), seed=42)
         est = PC(data)
-        dag = est.estimate(
-            variant="stable", max_cond_vars=1, n_jobs=2, show_progress=False
+        # cpdag = est.estimate(
+        #     variant="stable", return_type='cpdag', max_cond_vars=5, n_jobs=2, show_progress=False
+        # )
+        # self.assertEqual(set(cpdag.edges()), {('tub', 'xray'), ('either', 'lung'), ('xray', 'either'), ('dysp', 'bronc'), ('bronc', 'smoke'), ('bronc', 'dysp')})
+
+        fixed_edges = [("asia", "tub"), ("smoke", "lung"), ("either", "dysp")]
+        cpdag = est.estimate(
+            variant="stable",
+            return_type="cpdag",
+            max_cond_vars=5,
+            fixed_edges=fixed_edges,
+            n_jobs=2,
+            show_progress=False,
         )
+
+        self.assertEqual(
+            set(cpdag.edges()),
+            {
+                ("either", "lung"),
+                ("either", "dysp"),
+                ("bronc", "smoke"),
+                ("lung", "either"),
+                ("asia", "tub"),
+                ("either", "xray"),
+                ("xray", "either"),
+                ("bronc", "dysp"),
+            },
+        )
+
+        for edge in fixed_edges:
+            self.assertTrue(edge in set(cpdag.edges()))
+
+        import ipdb
+
+        ipdb.set_trace()

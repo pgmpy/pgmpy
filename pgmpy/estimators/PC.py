@@ -193,7 +193,7 @@ class PC(StructureEstimator):
             )
 
         if fixed_edges is not None:
-            if not (set(*chain(fixed_edges)) <= set(self.data.columns)):
+            if not (set(chain(*fixed_edges)) <= set(self.data.columns)):
                 raise ValueError(
                     "Some of the variables specified in `fixed_edges` argument do not exist in the data"
                 )
@@ -203,7 +203,7 @@ class PC(StructureEstimator):
             fixed_edges = set()
 
         if white_list is not None:
-            if not (set(*chain(white_list)) <= set(self.data.columns)):
+            if not (set(chain(*white_list)) <= set(self.data.columns)):
                 raise ValueError(
                     "Some of the variables specified in `fixed_edges` argument do not exist in the data"
                 )
@@ -213,7 +213,7 @@ class PC(StructureEstimator):
             white_list = set()
 
         if black_list is not None:
-            if not (set(*chain(white_list)) <= set(self.data.columns)):
+            if not (set(chain(*black_list)) <= set(self.data.columns)):
                 raise ValueError(
                     "Some of the variables specified in `fixed_edges` argument do not exist in the data"
                 )
@@ -238,7 +238,6 @@ class PC(StructureEstimator):
 
         if return_type.lower() == "skeleton":
             return skel, separating_sets
-
         # Step 2: Orient the edges based on build the PDAG/CPDAG.
         pdag = self.skeleton_to_pdag(skel, separating_sets)
 
@@ -359,12 +358,14 @@ class PC(StructureEstimator):
 
             elif variant == "stable":
                 # In case of stable, precompute neighbors as this is the stable algorithm.
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                neighbors = {node: sorted(list(graph[node])) for node in graph.nodes()}
                 for u, v in graph.edges():
                     if ((u, v) not in fixed_edges) and ((v, u) not in fixed_edges):
+                        u_neighbors = [node for node in neighbors[u] if node != v]
+                        v_neighbors = [node for node in neighbors[v] if node != u]
                         for separating_set in chain(
-                            combinations(set(neighbors[u]) - set([v]), lim_neighbors),
-                            combinations(set(neighbors[v]) - set([u]), lim_neighbors),
+                            combinations(u_neighbors, lim_neighbors),
+                            combinations(v_neighbors, lim_neighbors),
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.
@@ -382,12 +383,14 @@ class PC(StructureEstimator):
                                 break
 
             elif variant == "parallel":
-                neighbors = {node: set(graph[node]) for node in graph.nodes()}
+                neighbors = {node: sorted(list(graph[node])) for node in graph.nodes()}
 
                 def _parallel_fun(u, v):
+                    u_neighbors = [node for node in neighbors[u] if node != v]
+                    v_neighbors = [node for node in neighbors[v] if node != u]
                     for separating_set in chain(
-                        combinations(set(graph.neighbors(u)) - set([v]), lim_neighbors),
-                        combinations(set(graph.neighbors(v)) - set([u]), lim_neighbors),
+                        combinations(u_neighbors, lim_neighbors),
+                        combinations(v_neighbors, lim_neighbors),
                     ):
                         if ci_test(
                             u,
@@ -480,7 +483,7 @@ class PC(StructureEstimator):
         """
 
         pdag = skeleton.to_directed()
-        node_pairs = list(permutations(pdag.nodes(), 2))
+        node_pairs = list(combinations(pdag.nodes(), 2))
 
         # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges as X->Z<-Y
         # (Algorithm 3.4 in Koller & Friedman PGM, page 86)
@@ -489,6 +492,7 @@ class PC(StructureEstimator):
             if not skeleton.has_edge(X, Y):
                 for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                     if Z not in separating_sets[frozenset((X, Y))]:
+                        print(f"Selected triplet: {X, Z, Y}")
                         pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         progress = True
