@@ -56,7 +56,7 @@ class PC(StructureEstimator):
     def estimate(
         self,
         variant="stable",
-        ci_test="pillai",
+        ci_test="chi_square",
         max_cond_vars=5,
         return_type="dag",
         significance_level=0.01,
@@ -197,6 +197,8 @@ class PC(StructureEstimator):
                 )
             else:
                 fixed_edges = set(fixed_edges)
+        else:
+            fixed_edges = set()
 
         if white_list is not None:
             if not (set(*chain(white_list)) <= set(self.data.columns)):
@@ -205,6 +207,8 @@ class PC(StructureEstimator):
                 )
             else:
                 white_list = set(white_list)
+        else:
+            white_list = set()
 
         if black_list is not None:
             if not (set(*chain(white_list)) <= set(self.data.columns)):
@@ -213,6 +217,8 @@ class PC(StructureEstimator):
                 )
             else:
                 black_list = set(black_list)
+        else:
+            black_list = set()
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
