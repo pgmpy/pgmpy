@@ -91,6 +91,8 @@ class PC(StructureEstimator):
             the dataset. If `str` values should be one of:
                 "independence_match": If using this option, an additional parameter
                         `independencies` must be specified.
+                "pillai": Uses a canonical correlation based test. Works for any
+                        combination of data types.
                 "chi_square": Uses the Chi-Square independence test. This works
                         only for discrete datasets.
                 "pearsonr": Uses the pertial correlation based on pearson
