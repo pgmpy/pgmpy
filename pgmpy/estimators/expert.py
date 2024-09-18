@@ -6,7 +6,7 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_pillai
-from pgmpy.utils import llm_pairwise_orient
+from pgmpy.utils import llm_pairwise_orient, manual_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
@@ -131,9 +131,14 @@ class ExpertInLoop(StructureEstimator):
                 break
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-            edge_direction = llm_pairwise_orient(
-                selected_edge.u, selected_edge.v, variable_descriptions
-            )
+            if use_llm:
+                edge_direction = llm_pairwise_orient(
+                    selected_edge.u, selected_edge.v, variable_descriptions
+                )
+            else:
+                edge_direction = manual_pairwise_orient(
+                    selected_edge.u, selected_edge.v
+                )
 
             # Step 3.3: Blacklist the edge if it creates a cycle, else add it to the DAG.
             if nx.has_path(dag, edge_direction[1], edge_direction[0]):
