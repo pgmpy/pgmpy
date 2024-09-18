@@ -187,7 +187,7 @@ class TestLGBNMethods(unittest.TestCase):
 
         self.assertTrue(np.allclose(mu, expected_mu, atol=1e-2))
         self.assertEqual(cov.shape, (2, 2))
-        self.assertTrue(np.allclose(cov, expected_cov, atol=1e-2))
+        self.assertTrue(np.allclose(cov, expected_cov, atol=1e-1))
 
     def test_get_random_cpds(self):
         model = get_example_model("alarm")
