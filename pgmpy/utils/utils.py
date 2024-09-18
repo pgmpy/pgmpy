@@ -234,3 +234,24 @@ def llm_pairwise_orient(
             raise ValueError(
                 "Results from the LLM are unclear. Try calling the function again."
             )
+
+
+def manual_pairwise_orient(x, y):
+    """
+    Generates a prompt for the user to input the direction between the variables.
+
+    Parameters
+    ----------
+    x: str
+        The first variable's name
+
+    y: str
+        The second variable's name
+    """
+    user_input = input(
+        f"Select the edge direction between {x} and {y}. \n 1. {x} -> {y} \n 2. {x} <- {y} \n"
+    )
+    if user_input == "1":
+        return (x, y)
+    elif user_input == "2":
+        return (y, x)
