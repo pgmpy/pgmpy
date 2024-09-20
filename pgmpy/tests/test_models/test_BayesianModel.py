@@ -331,7 +331,9 @@ class TestBayesianModelMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
-        model = BayesianModel.get_random(n_nodes=5, edge_prob=0.6, n_states=range(2, 7))
+        model = BayesianModel.get_random(
+            n_nodes=5, edge_prob=0.6, n_states={0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
+        )
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
