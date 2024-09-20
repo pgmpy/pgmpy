@@ -990,7 +990,9 @@ class BayesianNetwork(DAG):
         return list(blanket_nodes)
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
+    def get_random(
+        n_nodes=5, edge_prob=0.5, node_names=None, n_states=None, latents=False
+    ):
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
         with edge probabiliy of `edge_prob` between variables.
@@ -1004,9 +1006,15 @@ class BayesianNetwork(DAG):
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
-        n_states: int or list (array-like) (default: None)
-            The number of states of each variable. When None randomly
-            generates the number of states.
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
+
+        n_states: int or dict (default: None)
+            The number of states of each variable in the form
+            {variable: no_of_states}. If a single value is provided,
+            all nodes will have the same number of states. When None
+            randomly generates the number of states.
 
         latents: bool (default: False)
             If True, also creates latent variables.
@@ -1031,16 +1039,23 @@ class BayesianNetwork(DAG):
          <TabularCPD representing P(4:4 | 1:1, 3:3) at 0x7f97e16eae80>,
          <TabularCPD representing P(2:2) at 0x7f97e1682c40>]
         """
+        if node_names is None:
+            node_names = list(range(n_nodes))
+
         if n_states is None:
             n_states = np.random.randint(low=1, high=5, size=n_nodes)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
+
         elif isinstance(n_states, int):
             n_states = np.array([n_states] * n_nodes)
-        else:
-            n_states = np.array(n_states)
+            n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
-        n_states_dict = {i: n_states[i] for i in range(n_nodes)}
+        elif isinstance(n_states, dict):
+            n_states_dict = n_states
 
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, latents=latents)
+        dag = DAG.get_random(
+            n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents
+        )
         bn_model = BayesianNetwork(dag.edges(), latents=dag.latents)
         bn_model.add_nodes_from(dag.nodes())
 

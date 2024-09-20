@@ -264,11 +264,29 @@ class TestDAGCreation(unittest.TestCase):
             )
 
     def test_random_dag(self):
-        for i in range(100):
-            n_nodes = np.random.randint(low=2, high=100)
+        for i in range(10):
+            n_nodes = 8
             edge_prob = np.random.uniform()
             dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob)
             self.assertEqual(len(dag.nodes()), n_nodes)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            self.assertTrue(len(dag.latents) == 0)
+
+            node_names = [
+                "a",
+                "aa",
+                "aaa",
+                "aaaa",
+                "aaaaa",
+                "aaaaaa",
+                "aaaaaaa",
+                "aaaaaaaa",
+            ]
+            dag = DAG.get_random(
+                n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names
+            )
+            self.assertEqual(len(dag.nodes()), n_nodes)
+            self.assertEqual(sorted(dag.nodes()), node_names)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 

@@ -350,16 +350,60 @@ class TestBayesianModelMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        # With node names
+        node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
+        model = BayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.5, node_names=node_names
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
         model = BayesianNetwork.get_random(n_nodes=5, edge_prob=0.6, n_states=5)
         self.assertEqual(len(model.nodes()), 5)
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        # With node names
         model = BayesianNetwork.get_random(
-            n_nodes=5, edge_prob=0.6, n_states=range(2, 7)
+            n_nodes=5, edge_prob=0.6, node_names=node_names, n_states=5
         )
         self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        model = BayesianNetwork.get_random(
+            n_nodes=5, edge_prob=0.6, n_states={0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.cpds), 5)
+        for cpd in model.cpds:
+            self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
+
+        # With node names
+        model = BayesianNetwork.get_random(
+            n_nodes=5,
+            edge_prob=0.6,
+            node_names=node_names,
+            n_states={"a": 2, "aa": 3, "aaa": 4, "aaaa": 5, "aaaaa": 6},
+        )
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(sorted(model.nodes()), node_names)
+        self.assertEqual(
+            model.states,
+            {
+                "a": [0, 1],
+                "aa": [0, 1, 2],
+                "aaa": [0, 1, 2, 3],
+                "aaaa": [0, 1, 2, 3, 4],
+                "aaaaa": [0, 1, 2, 3, 4, 5],
+            },
+        )
         self.assertEqual(len(model.cpds), 5)
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))

@@ -4,6 +4,7 @@ import itertools
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.global_vars import logger
@@ -1014,7 +1015,7 @@ class DAG(nx.DiGraph):
         return daft_pgm
 
     @staticmethod
-    def get_random(n_nodes=5, edge_prob=0.5, latents=False):
+    def get_random(n_nodes=5, edge_prob=0.5, node_names=None, latents=False):
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes with
         edge probability being `edge_prob`.
@@ -1027,6 +1028,10 @@ class DAG(nx.DiGraph):
         edge_prob: float
             The probability of edge between any two nodes in the topologically
             sorted DAG.
+
+        node_names: list (default: None)
+            A list of variables names to use in the random graph.
+            If None, the node names are integer values starting from 0.
 
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
@@ -1051,13 +1056,17 @@ class DAG(nx.DiGraph):
         )
 
         # Step 2: Use the upper triangular part of the matrix as adjacency.
-        nodes = list(range(n_nodes))
-        edges = nx.convert_matrix.from_numpy_array(
-            np.triu(adj_mat, k=1), create_using=nx.DiGraph
-        ).edges()
+        if node_names is None:
+            node_names = list(range(n_nodes))
 
-        dag = DAG(edges)
-        dag.add_nodes_from(nodes)
+        adj_pd = pd.DataFrame(
+            np.triu(adj_mat, k=1), columns=node_names, index=node_names
+        )
+        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
+
+        dag = DAG(nx_dag)
+        dag.add_nodes_from(node_names)
+
         if latents:
             dag.latents = set(
                 np.random.choice(
