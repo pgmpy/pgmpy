@@ -1067,12 +1067,6 @@ class DAG(nx.DiGraph):
         dag = DAG(nx_dag)
         dag.add_nodes_from(node_names)
 
-        # edges = nx.convert_matrix.from_numpy_array(
-        #     np.triu(adj_mat, k=1), create_using=nx.DiGraph
-        # ).edges()
-
-        # dag = DAG(edges)
-        # dag.add_nodes_from(nodes)
         if latents:
             dag.latents = set(
                 np.random.choice(
