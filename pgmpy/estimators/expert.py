@@ -1,8 +1,10 @@
+import sys
 from itertools import combinations
 
 import networkx as nx
 import pandas as pd
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_pillai
@@ -55,7 +57,10 @@ class ExpertInLoop(StructureEstimator):
         pval_threshold=0.05,
         effect_size_threshold=0.05,
         use_llm=True,
+        llm_model="gemini/gemini-pro",
         variable_descriptions=None,
+        show_progress=True,
+        **kwargs,
     ):
         """
         Estimates a DAG from the data.
@@ -77,9 +82,20 @@ class ExpertInLoop(StructureEstimator):
             Whether to use a Large Language Model for edge orientation. If
             False, prompts the user to specify the direction between the edges.
 
+        llm_model: str (default: gemini/gemini-pro)
+            The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
+            for available model options. Default is gemini-pro.
+
         variable_descriptions: dict
             A dict of the form {var: description} giving a text description of
             each variable in the model.
+
+        show_progress: bool (default: True)
+            If True, prints info of the running status.
+
+        kwargs: kwargs
+            Any additional parameters to pass to litellm.completion method.
+            Please refer documentation at: https://docs.litellm.ai/docs/completion/input#input-params-1
         """
         # Step 0: Create a new DAG on all the variables with no edge.
         nodes = list(self.data.columns)
@@ -133,8 +149,15 @@ class ExpertInLoop(StructureEstimator):
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             if use_llm:
                 edge_direction = llm_pairwise_orient(
-                    selected_edge.u, selected_edge.v, variable_descriptions
+                    selected_edge.u, selected_edge.v, variable_descriptions, **kwargs
                 )
+
+                if config.SHOW_PROGRESS and show_progress:
+                    sys.stdout.write(
+                        f"\rQueried for edge orientation between {selected_edge.u} and {selected_edge.v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
+                    )
+                    sys.stdout.flush()
+
             else:
                 edge_direction = manual_pairwise_orient(
                     selected_edge.u, selected_edge.v

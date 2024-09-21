@@ -1,8 +1,8 @@
 import gzip
 import os
 
-import google.generativeai as genai
 import pandas as pd
+from litellm import completion
 
 try:
     from importlib.resources import files
@@ -180,7 +180,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
 
 
 def llm_pairwise_orient(
-    x, y, descriptions, domain=None, llm_model="gemini-1.5-flash", **kwargs
+    x, y, descriptions, system_prompt=None, llm_model="gemini/gemini-pro", **kwargs
 ):
     """
     Asks a Large Language Model (LLM) for the orientation of an edge between `x` and `y`.
@@ -196,44 +196,43 @@ def llm_pairwise_orient(
     description: dict
         A dict of the form {variable: description} containing text description of the variables.
 
-    domain: str
-        The domain of the variables. The LLM is prompted to be an expert in the domain.
+    system_prompt: str
+        A system prompt to give the LLM.
 
-    llm: str (default: gemini)
-        The LLM to use. Currently only Google's gemini is supported.
+    llm_model: str (default: gemini/gemini-pro)
+        The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
+        for available model options. Default is gemini-pro.
+
+    kwargs: kwargs
+        Any additional parameters to pass to litellm.completion method.
     """
-    if llm_model.startswith("gemini"):
-        if "GEMINI_API_KEY" not in os.environ:
-            raise ValueError(
-                "Please set GEMINI_API_KEY environment variable with the API key to use"
-            )
+    if system_prompt is None:
+        system_prompt = "You are an expert in Causal Inference"
 
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel(model_name=llm_model)
+    prompt = f""" {system_prompt}. You are given two variables with the following descriptions:
+        <A>: {descriptions[x]}
+        <B>: {descriptions[y]}
 
-        if domain == None:
-            domain = "Causal Inference"
+        Which of the following two options is the most likely causal direction between them:
+        1. <A> causes <B>
+        2. <B> causes <A>
 
-        prompt = f""" You are an expert in {domain}. You are given two variables with the following descriptions:
-            <A>: {descriptions[x]}
-            <B>: {descriptions[y]}
+        Return a single letter answer between the choices above. I do not need the reasoning behind it. Do not add any formatting in the answer.
+        """
 
-            Which of the following two options is the most likely causal direction between them:
-            1. <A> causes <B>
-            2. <B> causes <A>
-
-            Return a single letter answer between the choices above. I do not need the reasoning behind it. Do not add any formatting in the answer.
-            """
-        response = model.generate_content([prompt])
-        response_txt = response.text.strip().lower().replace("*", "")
-        if response_txt in ("a", "1"):
-            return (x, y)
-        elif response_txt in ("b", "2"):
-            return (y, x)
-        else:
-            raise ValueError(
-                "Results from the LLM are unclear. Try calling the function again."
-            )
+    response = completion(
+        model=llm_model, messages=[{"role": "user", "content": prompt}]
+    )
+    response = response.choices[0].message.content
+    response_txt = response.strip().lower().replace("*", "")
+    if response_txt in ("a", "1"):
+        return (x, y)
+    elif response_txt in ("b", "2"):
+        return (y, x)
+    else:
+        raise ValueError(
+            "Results from the LLM are unclear. Try calling the function again."
+        )
 
 
 def manual_pairwise_orient(x, y):
