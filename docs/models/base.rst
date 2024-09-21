@@ -19,7 +19,6 @@ Models
    dbn.rst
    sem.rst
    naive.rst
-   noisyor.rst
    markovnetwork.rst
    junctiontree.rst
    clustergraph.rst

@@ -179,7 +179,7 @@ class ParameterEstimator(BaseEstimator):
 
     Parameters
     ----------
-    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork or pgmpy.models.NoisyOrModel model
+    model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork model
         for which parameter estimation is to be done.
 
     data: pandas DataFrame object
@@ -199,7 +199,7 @@ class ParameterEstimator(BaseEstimator):
 
         Parameters
         ----------
-        model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork or pgmpy.models.NoisyOrModel model
+        model: pgmpy.models.BayesianNetwork or pgmpy.models.MarkovNetwork model
             for which parameter estimation is to be done.
 
         data: pandas DataFrame object
