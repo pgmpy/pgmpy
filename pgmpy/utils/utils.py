@@ -180,7 +180,12 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
 
 
 def llm_pairwise_orient(
-    x, y, descriptions, system_prompt=None, llm_model="gemini/gemini-pro", **kwargs
+    x,
+    y,
+    descriptions,
+    system_prompt=None,
+    llm_model="gemini/gemini-1.5-flash",
+    **kwargs,
 ):
     """
     Asks a Large Language Model (LLM) for the orientation of an edge between `x` and `y`.

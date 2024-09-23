@@ -57,7 +57,7 @@ class ExpertInLoop(StructureEstimator):
         pval_threshold=0.05,
         effect_size_threshold=0.05,
         use_llm=True,
-        llm_model="gemini/gemini-pro",
+        llm_model="gemini/gemini-1.5-flash",
         variable_descriptions=None,
         show_progress=True,
         **kwargs,
@@ -82,9 +82,9 @@ class ExpertInLoop(StructureEstimator):
             Whether to use a Large Language Model for edge orientation. If
             False, prompts the user to specify the direction between the edges.
 
-        llm_model: str (default: gemini/gemini-pro)
+        llm_model: str (default: gemini/gemini-1.5-flash)
             The LLM model to use. Please refer to litellm documentation (https://docs.litellm.ai/docs/providers)
-            for available model options. Default is gemini-pro.
+            for available model options. Default is gemini-1.5-flash
 
         variable_descriptions: dict
             A dict of the form {var: description} giving a text description of
@@ -96,6 +96,29 @@ class ExpertInLoop(StructureEstimator):
         kwargs: kwargs
             Any additional parameters to pass to litellm.completion method.
             Please refer documentation at: https://docs.litellm.ai/docs/completion/input#input-params-1
+
+        Returns
+        -------
+        pgmpy.base.DAG: A DAG representing the learned causal structure.
+
+        Examples
+        --------
+        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.estimators import ExpertInLoop
+        >>> model = get_example_model('cancer')
+        >>> df = model.simulate(int(1e3))
+        >>> variable_descriptions = {
+        ...     "Smoker": "A binary variable representing whether a person smokes or not.",
+        ...     "Cancer": "A binary variable representing whether a person has cancer. ",
+        ...     "Xray": "A binary variable representing the result of an X-ray test.",
+        ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not."
+        ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath. "}
+        >>> dag = ExpertInLoop(df).estimate(
+        ...                 effect_size_threshold=0.0001,
+        ...                 use_llm=True,
+        ...                 variable_descriptions=variable_descriptions)
+        >>> dag.edges()
+        OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
         """
         # Step 0: Create a new DAG on all the variables with no edge.
         nodes = list(self.data.columns)
@@ -149,7 +172,11 @@ class ExpertInLoop(StructureEstimator):
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             if use_llm:
                 edge_direction = llm_pairwise_orient(
-                    selected_edge.u, selected_edge.v, variable_descriptions, **kwargs
+                    selected_edge.u,
+                    selected_edge.v,
+                    variable_descriptions,
+                    llm_model=llm_model,
+                    **kwargs,
                 )
 
                 if config.SHOW_PROGRESS and show_progress:

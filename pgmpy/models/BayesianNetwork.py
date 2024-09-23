@@ -1334,9 +1334,11 @@ class BayesianNetwork(DAG):
 
         # Step 5: Postprocess and return
         if include_latents:
-            return samples
+            return samples.astype("category")
         else:
-            return samples.loc[:, list(set(self.nodes()) - self.latents)]
+            return (samples.loc[:, list(set(self.nodes()) - self.latents)]).astype(
+                "category"
+            )
 
     def save(self, filename, filetype="bif"):
         """
