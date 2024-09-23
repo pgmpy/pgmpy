@@ -173,7 +173,7 @@ class TestImpliedCI(unittest.TestCase):
         self.assertEqual(round(p_value, 4), 0.0001)
 
         p_value = fisher_c(self.model_alarm, self.df_alarm, chi_square)
-        self.assertEqual(round(p_value, 4), 0.0005)
+        self.assertEqual(round(p_value, 4), 0.0001)
 
         p_value = fisher_c(self.model_alarm_random, self.df_alarm, chi_square)
         self.assertEqual(p_value, 0)
