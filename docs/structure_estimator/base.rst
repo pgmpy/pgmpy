@@ -4,6 +4,7 @@ Structure Learning
 - :doc:`pc`
 - :doc:`hill`
 - :doc:`tree`
+- :doc:`expert`
 - :doc:`mmhc`
 - :doc:`exhaustive`
 
@@ -14,5 +15,6 @@ Structure Learning
    pc.rst
    hill.rst
    tree.rst
+   expert.rst
    mmhc.rst
    exhaustive.rst
