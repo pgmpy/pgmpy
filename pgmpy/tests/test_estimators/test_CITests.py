@@ -412,8 +412,14 @@ class TestResidualMethod(unittest.TestCase):
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
 
-        self.assertTrue((np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all())
-        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)).all())
+        self.assertTrue(
+            (np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all()
+        )
+        self.assertTrue(
+            (
+                np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
+            ).all()
+        )
 
         # Conditional tests
         indep_coefs = [0.0014, 0.0058, 0.0073, 0.0185, 0.0073]
@@ -441,8 +447,14 @@ class TestResidualMethod(unittest.TestCase):
 
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
-        self.assertTrue((np.array(computed_coefs).round(2) == np.array(indep_coefs).round(2)).all())
-        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(indep_pvalues).round(2)).all())
+        self.assertTrue(
+            (np.array(computed_coefs).round(2) == np.array(indep_coefs).round(2)).all()
+        )
+        self.assertTrue(
+            (
+                np.array(computed_pvalues).round(2) == np.array(indep_pvalues).round(2)
+            ).all()
+        )
 
         dep_coefs = [0.1322, 0.1609, 0.1158, 0.1188, 0.1158]
         dep_pvalues = [0, 0, 0, 0, 0]
@@ -465,5 +477,11 @@ class TestResidualMethod(unittest.TestCase):
             computed_coefs.append(coef)
             computed_pvalues.append(p_value)
 
-        self.assertTrue((np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all())
-        self.assertTrue((np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)).all())
+        self.assertTrue(
+            (np.array(computed_coefs).round(2) == np.array(dep_coefs).round(2)).all()
+        )
+        self.assertTrue(
+            (
+                np.array(computed_pvalues).round(2) == np.array(dep_pvalues).round(2)
+            ).all()
+        )
