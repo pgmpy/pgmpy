@@ -15,6 +15,9 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           cache: 'pip'
+          cache-dependency-path: |
+            **/requirements/*.txt
+
       - name: Print python info
         run: |
           which python
